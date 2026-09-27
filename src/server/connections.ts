@@ -76,6 +76,8 @@ export function credentialsFromFields(provider: ProviderDef, fields: Record<stri
     if (!f.secret) settings[f.key] = v;
     else if (f.key === "password") creds.password = v;
     else if (f.key === "connectionString") creds.connectionString = v;
+    // Basic-auth providers (e.g. Zendesk API tokens) send the token as the Basic password.
+    else if (provider.authType === "basic") creds.password = v;
     else creds.token = v;
     if (f.key === "username" || f.key === "email") creds.username = f.key === "email" ? `${v}/token` : v;
   }
@@ -87,7 +89,9 @@ export async function createConnection(db: Db, userId: string, workspaceId: stri
   const provider = getProvider(providerId);
   if (!provider) throw notFound("Unknown provider");
   if (provider.authType === "oauth2" && !fields.token) throw new HttpError(400, "USE_OAUTH", `${provider.name} connects with OAuth`);
-  const creds = provider.authType === "oauth2" ? { type: "oauth2" as const, token: fields.token, settings: {} } : credentialsFromFields(provider, fields);
+  // A pasted token for an OAuth app (e.g. a Slack bot token) has unknown scopes: record the provider's
+  // declared scopes, flagged as unverified — the provider still enforces the token's real scopes.
+  const creds = provider.authType === "oauth2" ? { type: "oauth2" as const, token: fields.token, settings: { tokenPasted: "true" } } : credentialsFromFields(provider, fields);
   const id = await identify(provider, creds);
   const enc = encryptSecret(creds);
   const [row] = await db
@@ -99,7 +103,7 @@ export async function createConnection(db: Db, userId: string, workspaceId: stri
       authType: provider.authType,
       accountId: id.accountId,
       accountLabel: id.label,
-      scopes: provider.authType === "oauth2" ? [] : provider.actions.flatMap((a) => a.requiredScopes),
+      scopes: [...new Set(provider.actions.flatMap((a) => a.requiredScopes))],
       settings: creds.settings ?? {},
       secretEnc: enc.ciphertext,
       keyId: enc.keyId,
@@ -192,25 +196,26 @@ export async function getRuntimeCredentials(db: Db, opts: { connectionId: string
 }
 
 async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: StoredSecret; conn: typeof schema.connection.$inferSelect }> {
-  return db.transaction(async (tx) => {
+  // The row lock serializes refreshes: a rotating refresh token is only ever spent once.
+  // A denial is COMMITTED (connection expired + its flows paused) before the error is raised,
+  // so throwing never rolls back the state the rest of the app relies on.
+  const outcome = await db.transaction(async (tx) => {
     const [conn] = await tx.select().from(schema.connection).where(eq(schema.connection.id, connectionId)).for("update");
     let secret = decryptSecret<StoredSecret>(conn!.secretEnc, conn!.keyId);
     // Another worker refreshed while we waited for the lock → use its token.
-    if (conn!.accessExpiresAt && conn!.accessExpiresAt.getTime() - Date.now() >= 60_000) return { secret, conn: conn! };
+    if (conn!.accessExpiresAt && conn!.accessExpiresAt.getTime() - Date.now() >= 60_000) return { ok: true as const, secret, conn: conn! };
     const provider = getProvider(conn!.provider)!;
-    if (!provider.oauth || !secret.refreshToken) {
-      await tx.update(schema.connection).set({ status: "expired", statusReason: "Access token expired and cannot be refreshed" }).where(eq(schema.connection.id, connectionId));
-      throw new ConnectionError("CONNECTION_EXPIRED", `${conn!.label} expired — reconnect it`);
-    }
-    const tokens = await tokenRequest(provider, { grant_type: "refresh_token", refresh_token: secret.refreshToken });
-    if ("error" in tokens) {
-      await tx.update(schema.connection).set({ status: "expired", statusReason: `Refresh denied: ${tokens.error}`, updatedAt: new Date() }).where(eq(schema.connection.id, connectionId));
+    const deny = async (reason: string) => {
+      await tx.update(schema.connection).set({ status: "expired", statusReason: reason.slice(0, 300), updatedAt: new Date() }).where(eq(schema.connection.id, connectionId));
       await tx
         .update(schema.flow)
         .set({ pausedReason: `connection:${connectionId}:expired`, pausedAt: new Date() })
         .where(and(usesConnection(connectionId), isNull(schema.flow.deletedAt), isNull(schema.flow.pausedReason)));
-      throw new ConnectionError("CONNECTION_EXPIRED", `${conn!.label} could not be refreshed (${tokens.error}) — reconnect it`);
-    }
+      return { ok: false as const, message: `${conn!.label} ${reason} — reconnect it` };
+    };
+    if (!provider.oauth || !secret.refreshToken) return deny("expired and can't be refreshed");
+    const tokens = await tokenRequest(provider, { grant_type: "refresh_token", refresh_token: secret.refreshToken });
+    if ("error" in tokens) return deny(`could not be refreshed (${tokens.error})`);
     secret = { ...secret, token: tokens.access_token, refreshToken: tokens.refresh_token ?? secret.refreshToken };
     const enc = encryptSecret(secret);
     const expiresAt = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null;
@@ -219,8 +224,10 @@ async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: St
       .set({ secretEnc: enc.ciphertext, keyId: enc.keyId, accessExpiresAt: expiresAt, credVersion: sql`${schema.connection.credVersion} + 1`, updatedAt: new Date() })
       .where(eq(schema.connection.id, connectionId))
       .returning();
-    return { secret, conn: updated! };
+    return { ok: true as const, secret, conn: updated! };
   });
+  if (!outcome.ok) throw new ConnectionError("CONNECTION_EXPIRED", outcome.message);
+  return { secret: outcome.secret, conn: outcome.conn };
 }
 
 /* ───────────── OAuth (authorization code + PKCE) ───────────── */
