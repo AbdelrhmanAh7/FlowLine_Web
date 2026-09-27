@@ -1,0 +1,17 @@
+
+> flowline@0.1.0 test:integration C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+> node scripts/with-env.mjs .env.test vitest run --project integration
+
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+migrated postgres://***@localhost:5433/flowline_test
+
+ Test Files  4 passed (4)
+      Tests  34 passed (34)
+   Start at  14:02:12
+   Duration  5.74s (import 65%, tests 30%, transform 4%)
+

@@ -1,0 +1,1570 @@
+[WebServer] 
+[WebServer] > flowline@0.1.0 db:migrate:test C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+[WebServer] > node scripts/with-env.mjs .env.test tsx src/db/migrate.ts
+[WebServer] 
+[WebServer] migrated postgres://***@localhost:5433/flowline_test
+[WebServer] 
+[WebServer] > flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+[WebServer] > node scripts/dev-test.mjs
+[WebServer] 
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] 2026-09-27T11:02:21.123Z [worker] starting LAPTOP-AGGSOJ7U-60488-99cdc7
+[WebServer] ▲ Next.js 16.3.6 (Turbopack)
+[WebServer] - Local:         http://localhost:3100
+[WebServer] - Network:       http://100.73.156.121:3100
+[WebServer] - Environments: .env
+[WebServer] ✓ Ready in 387ms
+[WebServer] ✓ Running next.config.ts took 47ms
+[WebServer] 
+[WebServer]  GET /api/health?require=worker 200 in 276ms (next.js: 187ms, application-code: 90ms)
+
+Running 27 tests using 2 workers
+
+[WebServer]  POST /api/auth/sign-up/email 200 in 749ms (next.js: 645ms, application-code: 104ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 904ms (next.js: 793ms, application-code: 111ms)
+[WebServer]  POST /api/workspaces 201 in 131ms (next.js: 100ms, application-code: 30ms)
+[WebServer]  POST /api/workspaces 201 in 22ms (next.js: 2ms, application-code: 20ms)
+[WebServer]  POST /api/onboarding 200 in 55ms (next.js: 40ms, application-code: 15ms)
+[WebServer]  POST /api/onboarding 200 in 10ms (next.js: 1.7ms, application-code: 9ms)
+[WebServer]  POST /api/workspaces/3913d3c6-7f3b-4780-8982-f4c2f21efa7a/flows 201 in 737ms (next.js: 717ms, application-code: 20ms)
+[WebServer]  POST /api/workspaces/85622e90-e93c-4de8-a164-da63b10dddd5/flows 201 in 694ms (next.js: 673ms, application-code: 21ms)
+[WebServer]  GET /w/e2e-c11416/flows/8d47a81b-01ff-40e9-9467-acd475e2e630 200 in 926ms (next.js: 644ms, application-code: 282ms)
+[WebServer]  GET /w/e2e-6a6df3/flows/a6dcad82-c77f-4955-987b-dcf36b880a71 200 in 926ms (next.js: 644ms, application-code: 282ms)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 1.6ms, application-code: 6ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+[WebServer]  GET /api/flows/8d47a81b-01ff-40e9-9467-acd475e2e630 200 in 801ms (next.js: 783ms, application-code: 18ms)
+[WebServer]  GET /api/flows/a6dcad82-c77f-4955-987b-dcf36b880a71 200 in 758ms (next.js: 736ms, application-code: 22ms)
+[WebServer]  GET /api/flows/8d47a81b-01ff-40e9-9467-acd475e2e630/runs 200 in 747ms (next.js: 724ms, application-code: 22ms)
+[WebServer]  GET /api/flows/a6dcad82-c77f-4955-987b-dcf36b880a71/runs 200 in 791ms (next.js: 768ms, application-code: 23ms)
+[WebServer]  PUT /api/flows/8d47a81b-01ff-40e9-9467-acd475e2e630 200 in 41ms (next.js: 14ms, application-code: 27ms)
+[WebServer]  POST /api/flows/8d47a81b-01ff-40e9-9467-acd475e2e630/runs 422 in 36ms (next.js: 14ms, application-code: 21ms)
+[WebServer]  POST /api/test/faults 200 in 29ms (next.js: 21ms, application-code: 8ms)
+  ok  1 [chromium] › e2e\failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses (6.1s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 82ms (next.js: 14ms, application-code: 68ms)
+[WebServer]  POST /api/workspaces 201 in 31ms (next.js: 1.8ms, application-code: 29ms)
+[WebServer]  POST /api/onboarding 200 in 23ms (next.js: 1.6ms, application-code: 21ms)
+[WebServer]  POST /api/workspaces/983f3749-ff1a-4af3-b5ce-2320ff3db9a6/flows 201 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  GET /w/e2e-6426bf/flows/759510eb-65b0-4af9-804e-c08a72d3facd 200 in 64ms (next.js: 16ms, application-code: 49ms)
+[WebServer]  PUT /api/flows/a6dcad82-c77f-4955-987b-dcf36b880a71 200 in 26ms (next.js: 2ms, application-code: 23ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+[WebServer]  GET /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 200 in 28ms (next.js: 15ms, application-code: 13ms)
+[WebServer]  GET /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd/runs 200 in 24ms (next.js: 1.9ms, application-code: 22ms)
+[WebServer]  POST /api/test/faults 200 in 9ms (next.js: 2.0ms, application-code: 7ms)
+[WebServer]  GET /api/flows/a6dcad82-c77f-4955-987b-dcf36b880a71 200 in 11ms (next.js: 1.8ms, application-code: 9ms)
+  ok  2 [chromium] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards (6.8s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 85ms (next.js: 15ms, application-code: 70ms)
+[WebServer]  POST /api/workspaces 201 in 22ms (next.js: 1.8ms, application-code: 20ms)
+[WebServer]  POST /api/onboarding 200 in 24ms (next.js: 1.2ms, application-code: 22ms)
+[WebServer]  POST /api/workspaces/7b3101c5-4480-45db-b2f4-d48a8f4e5d7c/flows 201 in 26ms (next.js: 14ms, application-code: 12ms)
+[WebServer]  GET /w/e2e-966b16/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 63ms (next.js: 14ms, application-code: 49ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.3ms, application-code: 6ms)
+[WebServer]  GET /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 13ms (next.js: 3ms, application-code: 10ms)
+[WebServer]  GET /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1/runs 200 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  GET /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 41ms (next.js: 16ms, application-code: 25ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 19ms (next.js: 1.9ms, application-code: 17ms)
+[WebServer]  PUT /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 39ms (next.js: 13ms, application-code: 25ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 16ms (next.js: 1.4ms, application-code: 14ms)
+[WebServer]  GET /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 16ms (next.js: 1.5ms, application-code: 14ms)
+[WebServer]  PUT /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 39ms (next.js: 18ms, application-code: 21ms)
+[WebServer]  GET /api/flows/073653c3-8e7c-4756-aa86-c9038887b5f1 200 in 15ms (next.js: 1.7ms, application-code: 13ms)
+  ok  4 [chromium] › e2e\canvas.spec.ts:81:7 › canvas interactions & keyboard map › arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01) (3.6s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 83ms (next.js: 13ms, application-code: 69ms)
+[WebServer]  POST /api/workspaces 201 in 16ms (next.js: 1.6ms, application-code: 14ms)
+[WebServer]  POST /api/onboarding 200 in 24ms (next.js: 1.3ms, application-code: 22ms)
+[WebServer]  POST /api/workspaces/a73658ca-8da2-4d96-9501-344e2229042b/flows 201 in 28ms (next.js: 14ms, application-code: 14ms)
+[WebServer]  GET /w/e2e-c62b89/flows/49b62e66-a7c8-4fb0-bfab-03aff82d0480 200 in 58ms (next.js: 14ms, application-code: 44ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 200 in 35ms (next.js: 14ms, application-code: 21ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 3ms, application-code: 5ms)
+[WebServer]  GET /api/flows/49b62e66-a7c8-4fb0-bfab-03aff82d0480 200 in 26ms (next.js: 2ms, application-code: 24ms)
+[WebServer]  POST /api/test/faults 200 in 10ms (next.js: 2ms, application-code: 8ms)
+[WebServer]  GET /api/flows/49b62e66-a7c8-4fb0-bfab-03aff82d0480/runs 200 in 29ms (next.js: 17ms, application-code: 12ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 23ms (next.js: 14ms, application-code: 8ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 31ms (next.js: 14ms, application-code: 16ms)
+[WebServer]  GET /api/flows/49b62e66-a7c8-4fb0-bfab-03aff82d0480 200 in 12ms (next.js: 1.5ms, application-code: 11ms)
+  ok  5 [chromium] › e2e\canvas.spec.ts:101:7 › canvas interactions & keyboard map › opening and selecting does not mark the flow dirty or bump its revision (3.3s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 85ms (next.js: 15ms, application-code: 70ms)
+[WebServer]  POST /api/workspaces 201 in 18ms (next.js: 1.9ms, application-code: 17ms)
+[WebServer]  POST /api/onboarding 200 in 25ms (next.js: 1.3ms, application-code: 24ms)
+[WebServer]  POST /api/workspaces/aef99b05-db41-42b9-bdcd-c898c41f583f/flows 201 in 28ms (next.js: 14ms, application-code: 14ms)
+[WebServer]  GET /w/e2e-1c07b8/flows/b25828e2-0fd7-4144-a94d-9b6715272ecb 200 in 58ms (next.js: 13ms, application-code: 44ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.5ms, application-code: 5ms)
+[WebServer]  GET /api/flows/b25828e2-0fd7-4144-a94d-9b6715272ecb 200 in 41ms (next.js: 15ms, application-code: 26ms)
+[WebServer]  GET /api/flows/b25828e2-0fd7-4144-a94d-9b6715272ecb/runs 200 in 29ms (next.js: 16ms, application-code: 13ms)
+[WebServer]  GET /api/flows/b25828e2-0fd7-4144-a94d-9b6715272ecb 200 in 14ms (next.js: 2ms, application-code: 11ms)
+  ok  6 [chromium] › e2e\canvas.spec.ts:113:7 › canvas interactions & keyboard map › drawer tabs follow the WAI-ARIA keyboard pattern (879ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 84ms (next.js: 14ms, application-code: 71ms)
+[WebServer]  POST /api/workspaces 201 in 28ms (next.js: 1.4ms, application-code: 27ms)
+[WebServer]  POST /api/onboarding 200 in 25ms (next.js: 1.3ms, application-code: 23ms)
+[WebServer]  POST /api/workspaces/fde5aa3a-aa7c-474f-931c-29f07126073c/flows 201 in 35ms (next.js: 14ms, application-code: 21ms)
+[WebServer]  GET /w/e2e-2b01be/flows/98404411-1cfd-41ec-a800-a3c5b7f9685a 200 in 88ms (next.js: 17ms, application-code: 72ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 33ms (next.js: 16ms, application-code: 18ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.7ms, application-code: 5ms)
+[WebServer]  GET /api/flows/98404411-1cfd-41ec-a800-a3c5b7f9685a 200 in 26ms (next.js: 1.6ms, application-code: 24ms)
+[WebServer]  GET /api/flows/98404411-1cfd-41ec-a800-a3c5b7f9685a/runs 200 in 28ms (next.js: 15ms, application-code: 12ms)
+  ok  7 [chromium] › e2e\canvas.spec.ts:133:7 › canvas interactions & keyboard map › invalid connections are refused with an explanation (976ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 84ms (next.js: 14ms, application-code: 70ms)
+[WebServer]  POST /api/workspaces 201 in 18ms (next.js: 1.6ms, application-code: 17ms)
+[WebServer]  POST /api/onboarding 200 in 23ms (next.js: 2.0ms, application-code: 21ms)
+[WebServer]  POST /api/workspaces/5ad4e8ff-96e7-49bc-83fd-e9920462a53d/flows 201 in 28ms (next.js: 14ms, application-code: 14ms)
+[WebServer]  GET /w/e2e-bc41b0/flows/86b193ec-1aec-493c-acde-560e64f9830f 200 in 61ms (next.js: 16ms, application-code: 45ms)
+[WebServer]  GET /api/health 200 in 22ms (next.js: 2ms, application-code: 20ms)
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f 200 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 200 in 27ms (next.js: 15ms, application-code: 12ms)
+[WebServer]  POST /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 202 in 31ms (next.js: 1.5ms, application-code: 29ms)
+[WebServer] 2026-09-27T11:02:39.131Z [worker] run 30775197-eea6-4462-935c-d6a337aa1598 claimed
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 200 in 82ms (next.js: 2ms, application-code: 80ms)
+[WebServer] 2026-09-27T11:02:39.250Z [worker] run 30775197-eea6-4462-935c-d6a337aa1598 done
+[WebServer]  GET /api/runs/30775197-eea6-4462-935c-d6a337aa1598 200 in 807ms (next.js: 786ms, application-code: 21ms)
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 200 in 30ms (next.js: 13ms, application-code: 17ms)
+[WebServer]  GET /w/e2e-bc41b0/runs?run=30775197-eea6-4462-935c-d6a337aa1598 200 in 552ms (next.js: 532ms, application-code: 20ms)
+[WebServer]  GET /api/workspaces/5ad4e8ff-96e7-49bc-83fd-e9920462a53d/runs? 200 in 771ms (next.js: 752ms, application-code: 19ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 500 in 20ms (next.js: 13ms, application-code: 7ms)
+[WebServer]  POST /api/test/faults 200 in 13ms (next.js: 1.8ms, application-code: 11ms)
+[WebServer]  PUT /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 200 in 25ms (next.js: 2ms, application-code: 23ms)
+[WebServer]  GET /api/flows/759510eb-65b0-4af9-804e-c08a72d3facd 200 in 12ms (next.js: 2ms, application-code: 10ms)
+[WebServer]  POST /api/test/faults 200 in 10ms (next.js: 1.4ms, application-code: 9ms)
+  ok  3 [chromium] › e2e\failures.spec.ts:39:5 › save failure: silent retries then recovery, and manual retry after repeated failures (13.6s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 83ms (next.js: 15ms, application-code: 68ms)
+[WebServer]  POST /api/workspaces 201 in 31ms (next.js: 1.8ms, application-code: 30ms)
+[WebServer]  POST /api/onboarding 200 in 12ms (next.js: 2ms, application-code: 10ms)
+[WebServer]  POST /api/workspaces/b2a20d0d-e67b-4fb1-b4e4-42c49344e136/flows 201 in 39ms (next.js: 15ms, application-code: 24ms)
+[WebServer]  POST /api/test/faults 200 in 23ms (next.js: 1.6ms, application-code: 21ms)
+[WebServer]  GET /w/e2e-0e7794/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 200 in 65ms (next.js: 16ms, application-code: 49ms)
+[WebServer]  POST /api/runs/30775197-eea6-4462-935c-d6a337aa1598/rerun 202 in 821ms (next.js: 787ms, application-code: 34ms)
+[WebServer] 2026-09-27T11:02:43.012Z [worker] run 22fdbec3-7d16-48e7-bd6f-e2f38554ca60 claimed
+[WebServer] 2026-09-27T11:02:43.044Z [worker] run 22fdbec3-7d16-48e7-bd6f-e2f38554ca60 done
+[WebServer]  GET /api/workspaces/5ad4e8ff-96e7-49bc-83fd-e9920462a53d/runs? 200 in 64ms (next.js: 19ms, application-code: 45ms)
+[WebServer]  GET /w/e2e-bc41b0/runs?run=22fdbec3-7d16-48e7-bd6f-e2f38554ca60 200 in 36ms (next.js: 20ms, application-code: 16ms)
+[WebServer]  GET /api/runs/22fdbec3-7d16-48e7-bd6f-e2f38554ca60 200 in 42ms (next.js: 17ms, application-code: 24ms)
+[WebServer]  GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 500 in 29ms (next.js: 20ms, application-code: 9ms)
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 200 in 51ms (next.js: 17ms, application-code: 34ms)
+[WebServer]  GET /api/flows/86b193ec-1aec-493c-acde-560e64f9830f/runs 200 in 19ms (next.js: 3ms, application-code: 17ms)
+[WebServer]  GET /api/runs/22fdbec3-7d16-48e7-bd6f-e2f38554ca60 200 in 28ms (next.js: 1.6ms, application-code: 26ms)
+  ok  8 [chromium] › e2e\canvas.spec.ts:153:7 › canvas interactions & keyboard map › re-run from a step reuses upstream outputs (4.9s)
+[WebServer]  GET / 200 in 99ms (next.js: 43ms, application-code: 56ms)
+[WebServer]  GET /sign-up 200 in 38ms (next.js: 23ms, application-code: 15ms)
+[WebServer]  GET /api/auth-config 200 in 33ms (next.js: 30ms, application-code: 3ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 500 in 21ms (next.js: 14ms, application-code: 7ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 88ms (next.js: 15ms, application-code: 73ms)
+[WebServer]  GET /onboarding 200 in 82ms (next.js: 24ms, application-code: 58ms)
+[WebServer]  GET /onboarding 200 in 44ms (next.js: 3ms, application-code: 41ms)
+[WebServer]  POST /api/workspaces 201 in 32ms (next.js: 1.7ms, application-code: 30ms)
+[WebServer]  POST /api/workspaces/e743580c-2fce-4e95-bb04-109f4c180ddf/flows 201 in 34ms (next.js: 14ms, application-code: 20ms)
+[WebServer]  POST /api/onboarding 200 in 13ms (next.js: 1.4ms, application-code: 11ms)
+[WebServer]  GET /w/journey-co-11/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 47ms (next.js: 17ms, application-code: 30ms)
+[WebServer]  GET /api/health 200 in 25ms (next.js: 3ms, application-code: 23ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 27ms (next.js: 15ms, application-code: 12ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/runs 200 in 29ms (next.js: 15ms, application-code: 14ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 500 in 22ms (next.js: 13ms, application-code: 9ms)
+[WebServer]  PUT /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 42ms (next.js: 14ms, application-code: 27ms)
+[WebServer]  GET /w/journey-co-11/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 51ms (next.js: 13ms, application-code: 38ms)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 2ms, application-code: 5ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 18ms (next.js: 2ms, application-code: 16ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/runs 200 in 27ms (next.js: 16ms, application-code: 11ms)
+[WebServer]  POST /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/runs 202 in 37ms (next.js: 1.8ms, application-code: 35ms)
+[WebServer] 2026-09-27T11:02:49.124Z [worker] run 0d4df2b1-ce76-4afa-b9c5-cad1f76979d7 claimed
+[WebServer] 2026-09-27T11:02:49.151Z [worker] run 0d4df2b1-ce76-4afa-b9c5-cad1f76979d7 done
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/runs 200 in 37ms (next.js: 1.5ms, application-code: 36ms)
+[WebServer]  GET /api/runs/0d4df2b1-ce76-4afa-b9c5-cad1f76979d7 200 in 43ms (next.js: 18ms, application-code: 24ms)
+[WebServer]  GET /w/journey-co-11/runs?run=0d4df2b1-ce76-4afa-b9c5-cad1f76979d7 200 in 25ms (next.js: 15ms, application-code: 10ms)
+[WebServer]  GET /api/workspaces/e743580c-2fce-4e95-bb04-109f4c180ddf/runs? 200 in 35ms (next.js: 17ms, application-code: 18ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5 200 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/runs 200 in 26ms (next.js: 14ms, application-code: 12ms)
+[WebServer]  GET /api/runs/0d4df2b1-ce76-4afa-b9c5-cad1f76979d7 200 in 23ms (next.js: 1.5ms, application-code: 22ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 500 in 25ms (next.js: 1.5ms, application-code: 24ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7 200 in 31ms (next.js: 16ms, application-code: 14ms)
+[WebServer]  GET /api/flows/82659e6d-59ba-422e-b842-d6bdcd9eb1a5/versions 200 in 791ms (next.js: 757ms, application-code: 34ms)
+[WebServer]  GET /api/flows/9d7cf5c0-d365-4151-bec7-37795f38e7c7/runs 200 in 30ms (next.js: 18ms, application-code: 12ms)
+[WebServer]  POST /api/test/faults 200 in 21ms (next.js: 3ms, application-code: 18ms)
+  ok 10 [chromium] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow (7.4s)
+  ok  9 [chromium] › e2e\failures.spec.ts:63:5 › load failure: the canvas shows an error with a working Retry (8.3s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 94ms (next.js: 15ms, application-code: 78ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 71ms (next.js: 1.6ms, application-code: 69ms)
+[WebServer]  POST /api/workspaces 201 in 23ms (next.js: 2.0ms, application-code: 21ms)
+[WebServer]  POST /api/onboarding 200 in 11ms (next.js: 1.7ms, application-code: 10ms)
+[WebServer]  POST /api/workspaces 201 in 21ms (next.js: 3ms, application-code: 17ms)
+[WebServer]  POST /api/onboarding 200 in 68ms (next.js: 3ms, application-code: 65ms)
+[WebServer]  POST /api/workspaces/bca887c3-4ab9-47a8-a8fb-61cd71a8b1b4/flows 201 in 34ms (next.js: 14ms, application-code: 20ms)
+[WebServer]  GET /w/e2e-36fc89/flows/ba5eba47-9f63-4fdc-819e-1ae6f1277eb2 200 in 64ms (next.js: 17ms, application-code: 47ms)
+[WebServer]  GET /api/health 200 in 12ms (next.js: 3ms, application-code: 10ms)
+[WebServer]  GET /api/flows/ba5eba47-9f63-4fdc-819e-1ae6f1277eb2 200 in 14ms (next.js: 1.8ms, application-code: 12ms)
+[WebServer]  GET /api/flows/ba5eba47-9f63-4fdc-819e-1ae6f1277eb2/runs 200 in 25ms (next.js: 2ms, application-code: 23ms)
+[WebServer]  GET /w/e2e-60b000/templates 200 in 694ms (next.js: 612ms, application-code: 82ms)
+[WebServer]  PUT /api/flows/ba5eba47-9f63-4fdc-819e-1ae6f1277eb2 200 in 49ms (next.js: 16ms, application-code: 32ms)
+[WebServer]  GET /api/flows/ba5eba47-9f63-4fdc-819e-1ae6f1277eb2 200 in 16ms (next.js: 2ms, application-code: 14ms)
+[WebServer]  POST /api/test/faults 200 in 21ms (next.js: 1.6ms, application-code: 20ms)
+  ok 12 [chromium] › e2e\failures.spec.ts:74:5 › offline: edits kept locally, run disabled, reconciled on reconnect (1.1s)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.6ms, application-code: 5ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 94ms (next.js: 16ms, application-code: 78ms)
+[WebServer]  POST /api/workspaces 201 in 29ms (next.js: 1.9ms, application-code: 27ms)
+[WebServer]  POST /api/onboarding 200 in 17ms (next.js: 1.6ms, application-code: 16ms)
+[WebServer]  POST /api/workspaces/4886ddbd-99b6-44be-9f79-ca797997261c/flows 201 in 34ms (next.js: 16ms, application-code: 18ms)
+[WebServer]  POST /api/workspaces/786f35d4-1124-49b9-a2dd-5b693dfcc7b6/flows 201 in 18ms (next.js: 1.5ms, application-code: 16ms)
+[WebServer]  GET /w/e2e-60b000/flows/1911843e-4d32-4d65-a708-6593aa853d37 200 in 64ms (next.js: 18ms, application-code: 47ms)
+[WebServer]  GET /w/e2e-161c19/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 51ms (next.js: 3ms, application-code: 48ms)
+[WebServer]  GET /api/flows/1911843e-4d32-4d65-a708-6593aa853d37 200 in 20ms (next.js: 3ms, application-code: 17ms)
+[WebServer]  GET /api/flows/1911843e-4d32-4d65-a708-6593aa853d37/runs 200 in 33ms (next.js: 18ms, application-code: 15ms)
+  ok 11 [chromium] › e2e\library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; integration templates explain why they're disabled (1.7s)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 1.9ms, application-code: 6ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 34ms (next.js: 16ms, application-code: 17ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79/runs 200 in 25ms (next.js: 2ms, application-code: 22ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 87ms (next.js: 3ms, application-code: 85ms)
+[WebServer]  POST /api/workspaces 201 in 22ms (next.js: 2ms, application-code: 20ms)
+[WebServer]  POST /api/onboarding 200 in 17ms (next.js: 1.9ms, application-code: 15ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 15ms (next.js: 2ms, application-code: 12ms)
+[WebServer]  PUT /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 31ms (next.js: 1.5ms, application-code: 30ms)
+[WebServer]  PUT /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 409 in 25ms (next.js: 2.0ms, application-code: 23ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 14ms (next.js: 1.5ms, application-code: 13ms)
+[WebServer]  PUT /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 21ms (next.js: 2ms, application-code: 19ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79 200 in 11ms (next.js: 1.8ms, application-code: 10ms)
+[WebServer]  GET /api/flows/a42eb1e1-1e14-41c8-899b-96bec7003e79/versions 200 in 36ms (next.js: 15ms, application-code: 21ms)
+[WebServer]  POST /api/test/faults 200 in 25ms (next.js: 2.0ms, application-code: 23ms)
+  ok 13 [chromium] › e2e\failures.spec.ts:97:5 › offline conflict: newer server copy is never silently overwritten (1.3s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 96ms (next.js: 17ms, application-code: 79ms)
+[WebServer]  GET /w/e2e-73270b/settings 200 in 632ms (next.js: 586ms, application-code: 46ms)
+[WebServer]  POST /api/workspaces 201 in 22ms (next.js: 2ms, application-code: 20ms)
+[WebServer]  POST /api/onboarding 200 in 15ms (next.js: 2ms, application-code: 13ms)
+[WebServer]  POST /api/workspaces/3b053769-176b-4351-b3c1-c1f4d112d298/flows 201 in 31ms (next.js: 18ms, application-code: 13ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+[WebServer]  GET /w/e2e-b5d4ac/flows 200 in 635ms (next.js: 583ms, application-code: 52ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 2.0ms, application-code: 7ms)
+  ok 15 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 1440px (1.2s)
+[WebServer]  GET /api/workspaces/3b053769-176b-4351-b3c1-c1f4d112d298/flows 200 in 60ms (next.js: 56ms, application-code: 4ms)
+[WebServer]  GET /api/workspaces/3b053769-176b-4351-b3c1-c1f4d112d298/overview 200 in 63ms
+[WebServer]  GET /api/workspaces/d63ac7de-731a-4b90-a798-7cb4d5c536d4/members 200 in 806ms (next.js: 789ms, application-code: 18ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 92ms (next.js: 17ms, application-code: 75ms)
+[WebServer]  POST /api/workspaces 201 in 26ms (next.js: 1.7ms, application-code: 25ms)
+[WebServer]  POST /api/onboarding 200 in 12ms (next.js: 2.0ms, application-code: 10ms)
+[WebServer]  POST /api/workspaces/bab0b4f6-d53b-4e8a-8264-ff0e4e127dc4/flows 201 in 19ms (next.js: 1.8ms, application-code: 17ms)
+[WebServer]  GET /w/e2e-f69ff7/flows 200 in 60ms (next.js: 18ms, application-code: 42ms)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+[WebServer]  GET /api/workspaces/bab0b4f6-d53b-4e8a-8264-ff0e4e127dc4/flows 200 in 24ms (next.js: 1.9ms, application-code: 22ms)
+[WebServer]  GET /api/workspaces/bab0b4f6-d53b-4e8a-8264-ff0e4e127dc4/overview 200 in 64ms
+  ok 16 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 1280px (604ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 84ms (next.js: 2ms, application-code: 81ms)
+[WebServer]  POST /api/workspaces 201 in 36ms (next.js: 1.8ms, application-code: 34ms)
+[WebServer]  POST /api/onboarding 200 in 19ms (next.js: 3ms, application-code: 15ms)
+[WebServer]  POST /api/workspaces/a8c0c61c-1f32-4557-a5d9-b8c0c2deca52/flows 201 in 34ms (next.js: 18ms, application-code: 16ms)
+[WebServer]  GET /w/e2e-fcce9f/flows 200 in 78ms (next.js: 16ms, application-code: 61ms)
+[WebServer]  GET /api/health 200 in 31ms (next.js: 2ms, application-code: 29ms)
+[WebServer]  GET /api/workspaces/a8c0c61c-1f32-4557-a5d9-b8c0c2deca52/overview 200 in 39ms (next.js: 18ms, application-code: 21ms)
+[WebServer]  GET /api/workspaces/a8c0c61c-1f32-4557-a5d9-b8c0c2deca52/flows 200 in 24ms (next.js: 5ms, application-code: 19ms)
+  ok 17 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 1279px (653ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 95ms (next.js: 17ms, application-code: 78ms)
+[WebServer]  POST /api/workspaces 201 in 29ms (next.js: 2ms, application-code: 26ms)
+[WebServer]  POST /api/onboarding 200 in 27ms (next.js: 1.7ms, application-code: 26ms)
+[WebServer]  POST /api/workspaces/3acab315-67dd-4462-9aec-166eebb8aab5/flows 201 in 16ms (next.js: 1.8ms, application-code: 14ms)
+[WebServer]  PATCH /api/workspaces/d63ac7de-731a-4b90-a798-7cb4d5c536d4 200 in 885ms (next.js: 864ms, application-code: 21ms)
+[WebServer]  GET /w/e2e-70f68a/flows 200 in 89ms (next.js: 18ms, application-code: 72ms)
+[WebServer]  GET /w/e2e-73270b/settings 200 in 61ms (next.js: 20ms, application-code: 41ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 3ms, application-code: 8ms)
+[WebServer]  GET /api/workspaces/3acab315-67dd-4462-9aec-166eebb8aab5/flows 200 in 34ms (next.js: 21ms, application-code: 13ms)
+[WebServer]  GET /api/workspaces/3acab315-67dd-4462-9aec-166eebb8aab5/overview 200 in 36ms (next.js: 1.9ms, application-code: 34ms)
+  ok 18 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 1024px (689ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 77ms (next.js: 2.0ms, application-code: 75ms)
+[WebServer]  POST /api/workspaces 201 in 57ms (next.js: 1.6ms, application-code: 56ms)
+[WebServer]  GET /w/e2e-73270b/settings 200 in 68ms (next.js: 3ms, application-code: 65ms)
+[WebServer]  POST /api/onboarding 200 in 14ms (next.js: 2ms, application-code: 12ms)
+[WebServer]  POST /api/workspaces/f815f87f-3656-4c66-b208-596c124096c9/flows 201 in 17ms (next.js: 1.8ms, application-code: 15ms)
+[WebServer]  GET /api/health 200 in 10ms (next.js: 2ms, application-code: 8ms)
+[WebServer]  GET /w/e2e-acbd34/flows 200 in 97ms (next.js: 17ms, application-code: 79ms)
+[WebServer]  GET /api/workspaces/d63ac7de-731a-4b90-a798-7cb4d5c536d4/members 200 in 46ms (next.js: 19ms, application-code: 27ms)
+  ok 14 [chromium] › e2e\library.spec.ts:19:5 › settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves (4.4s)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+  ok 19 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 768px (654ms)
+[WebServer]  GET /api/workspaces/f815f87f-3656-4c66-b208-596c124096c9/flows 200 in 36ms (next.js: 2ms, application-code: 34ms)
+[WebServer]  GET /api/workspaces/f815f87f-3656-4c66-b208-596c124096c9/overview 200 in 61ms (next.js: 18ms, application-code: 43ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 107ms (next.js: 19ms, application-code: 88ms)
+[WebServer]  POST /api/workspaces 201 in 25ms (next.js: 1.8ms, application-code: 23ms)
+[WebServer]  POST /api/onboarding 200 in 23ms (next.js: 1.8ms, application-code: 21ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 77ms (next.js: 3ms, application-code: 74ms)
+[WebServer]  POST /api/workspaces/754c641a-923a-48fd-bb9a-259a1cd0a63c/flows 201 in 30ms (next.js: 16ms, application-code: 14ms)
+[WebServer]  POST /api/workspaces 201 in 33ms (next.js: 19ms, application-code: 14ms)
+[WebServer]  POST /api/onboarding 200 in 12ms (next.js: 1.8ms, application-code: 11ms)
+[WebServer]  POST /api/workspaces/bc78d09e-61f5-4fae-999c-aa27c8a731fa/flows 201 in 14ms (next.js: 1.8ms, application-code: 12ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 99ms (next.js: 2ms, application-code: 97ms)
+[WebServer]  GET /w/e2e-4640a9/flows 200 in 78ms (next.js: 15ms, application-code: 62ms)
+[WebServer]  POST /api/workspaces 201 in 36ms (next.js: 2ms, application-code: 34ms)
+[WebServer]  POST /api/onboarding 200 in 14ms (next.js: 1.8ms, application-code: 12ms)
+[WebServer]  POST /api/workspaces/444393a9-f4bd-49a3-beac-b74d51b3e75d/flows 201 in 25ms (next.js: 1.6ms, application-code: 23ms)
+[WebServer]  POST /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892/runs 202 in 50ms (next.js: 18ms, application-code: 32ms)
+[WebServer] 2026-09-27T11:02:57.427Z [worker] run afab4398-a184-4e75-923a-91ec317fae04 claimed
+[WebServer] 2026-09-27T11:02:57.457Z [worker] run afab4398-a184-4e75-923a-91ec317fae04 done
+[WebServer]  GET /api/runs/afab4398-a184-4e75-923a-91ec317fae04 200 in 32ms (next.js: 16ms, application-code: 16ms)
+[WebServer]  GET /w/tenant-b-9/flows 200 in 48ms (next.js: 3ms, application-code: 45ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 2ms, application-code: 9ms)
+[WebServer]  GET /api/workspaces/bc78d09e-61f5-4fae-999c-aa27c8a731fa/flows 200 in 22ms (next.js: 6ms, application-code: 15ms)
+[WebServer]  GET /api/workspaces/bc78d09e-61f5-4fae-999c-aa27c8a731fa/overview 200 in 29ms (next.js: 4ms, application-code: 25ms)
+  ok 21 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 767px (580ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 87ms (next.js: 2ms, application-code: 85ms)
+[WebServer]  POST /api/workspaces 201 in 25ms (next.js: 1.6ms, application-code: 23ms)
+[WebServer]  POST /api/onboarding 200 in 15ms (next.js: 2ms, application-code: 12ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 4ms, application-code: 7ms)
+[WebServer]  POST /api/workspaces/08cfdc33-d10e-43ec-ab3a-1bb374ca6578/flows 201 in 44ms (next.js: 1.8ms, application-code: 43ms)
+[WebServer]  GET /api/workspaces/444393a9-f4bd-49a3-beac-b74d51b3e75d/flows 200 in 34ms (next.js: 21ms, application-code: 13ms)
+[WebServer]  GET /api/workspaces/444393a9-f4bd-49a3-beac-b74d51b3e75d/overview 200 in 36ms (next.js: 17ms, application-code: 19ms)
+[WebServer]  GET /w/e2e-5d5b1f/flows 200 in 63ms (next.js: 15ms, application-code: 48ms)
+[WebServer]  GET /w/tenant-b-9/runs 200 in 79ms (next.js: 17ms, application-code: 62ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 1.9ms, application-code: 7ms)
+[WebServer]  GET /api/workspaces/444393a9-f4bd-49a3-beac-b74d51b3e75d/runs? 200 in 32ms (next.js: 18ms, application-code: 14ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 2ms, application-code: 8ms)
+  ok 22 [chromium] › e2e\responsive.spec.ts:42:9 › breakpoints › shell at 375px (667ms)
+[WebServer]  GET /api/workspaces/08cfdc33-d10e-43ec-ab3a-1bb374ca6578/overview 200 in 39ms (next.js: 4ms, application-code: 35ms)
+[WebServer]  GET /api/workspaces/08cfdc33-d10e-43ec-ab3a-1bb374ca6578/flows 200 in 39ms (next.js: 20ms, application-code: 18ms)
+[WebServer]  GET /w/tenant-a-9/flows 404 in 82ms (next.js: 3ms, application-code: 79ms)
+[WebServer]  GET /w/tenant-b-9/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892 200 in 63ms (next.js: 18ms, application-code: 45ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 97ms (next.js: 16ms, application-code: 81ms)
+[WebServer]  POST /api/workspaces 201 in 27ms (next.js: 3ms, application-code: 23ms)
+[WebServer]  POST /api/onboarding 200 in 14ms (next.js: 2ms, application-code: 11ms)
+[WebServer]  POST /api/workspaces/5f819ba8-5d43-4cad-a8ad-4bf7f63c2725/flows 201 in 21ms (next.js: 2ms, application-code: 19ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+[WebServer]  GET /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892 404 in 54ms (next.js: 19ms, application-code: 36ms)
+[WebServer]  GET /w/e2e-a81164/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 57ms (next.js: 3ms, application-code: 53ms)
+[WebServer]  GET /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892 404 in 16ms (next.js: 2ms, application-code: 13ms)
+[WebServer]  GET /api/runs/afab4398-a184-4e75-923a-91ec317fae04 404 in 28ms (next.js: 17ms, application-code: 12ms)
+[WebServer]  GET /api/workspaces/754c641a-923a-48fd-bb9a-259a1cd0a63c/runs 404 in 13ms (next.js: 2ms, application-code: 11ms)
+[WebServer]  GET /api/workspaces/754c641a-923a-48fd-bb9a-259a1cd0a63c/flows 404 in 12ms (next.js: 2ms, application-code: 10ms)
+[WebServer]  GET /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892/versions 404 in 28ms (next.js: 17ms, application-code: 11ms)
+[WebServer]  PUT /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892 404 in 21ms (next.js: 2ms, application-code: 19ms)
+[WebServer]  POST /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892/runs 404 in 31ms (next.js: 20ms, application-code: 11ms)
+[WebServer]  POST /api/runs/afab4398-a184-4e75-923a-91ec317fae04/rerun 404 in 39ms (next.js: 20ms, application-code: 20ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 3ms, application-code: 5ms)
+[WebServer]  GET /api/flows/2418e8e2-360f-4a8b-a14d-2bc0713f3892 200 in 21ms (next.js: 2ms, application-code: 18ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 15ms (next.js: 2ms, application-code: 13ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99/runs 200 in 18ms (next.js: 1.6ms, application-code: 17ms)
+  ok 20 [chromium] › e2e\tenancy.spec.ts:4:5 › two users in separate workspaces cannot see each other's flows or runs (2.2s)
+[WebServer]  GET /api/me 401 in 33ms (next.js: 26ms, application-code: 7ms)
+[WebServer]  GET /w/e2e-a81164/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 166ms (next.js: 17ms, application-code: 149ms)
+[WebServer]  GET /app 307 in 84ms (next.js: 34ms, application-code: 50ms)
+[WebServer]  GET /sign-in 200 in 81ms (next.js: 20ms, application-code: 61ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 4ms, application-code: 8ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 35ms (next.js: 20ms, application-code: 16ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99/runs 200 in 13ms (next.js: 1.7ms, application-code: 12ms)
+[WebServer]  GET /api/auth-config 200 in 5ms (next.js: 3ms, application-code: 3ms)
+  ok 24 [chromium] › e2e\tenancy.spec.ts:45:5 › unauthenticated API access is rejected and app routes redirect to sign-in (596ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 81ms (next.js: 14ms, application-code: 67ms)
+[WebServer]  POST /api/workspaces 201 in 66ms (next.js: 1.6ms, application-code: 64ms)
+[WebServer]  GET /w/e2e-a81164/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 74ms (next.js: 16ms, application-code: 58ms)
+[WebServer]  POST /api/onboarding 200 in 13ms (next.js: 2ms, application-code: 10ms)
+[WebServer]  POST /api/workspaces/d4bdb5c1-1040-413f-9e36-4978efe7b623/flows 201 in 28ms (next.js: 14ms, application-code: 13ms)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 1.8ms, application-code: 6ms)
+[WebServer]  GET /w/e2e-a9d088/flows/14bb28a0-9777-4635-bb37-39f408d7f60a 200 in 52ms (next.js: 3ms, application-code: 50ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99 200 in 19ms (next.js: 2ms, application-code: 17ms)
+[WebServer]  GET /api/flows/ba5ec268-1001-494f-9097-4b7fccf60d99/runs 200 in 34ms (next.js: 17ms, application-code: 17ms)
+  ok 23 [chromium] › e2e\responsive.spec.ts:58:5 › builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile (1.9s)
+[WebServer]  GET /api/health 200 in 13ms (next.js: 5ms, application-code: 9ms)
+[WebServer]  GET /api/flows/14bb28a0-9777-4635-bb37-39f408d7f60a 200 in 43ms (next.js: 19ms, application-code: 24ms)
+[WebServer]  GET /w/e2e-a9d088/flows 200 in 102ms (next.js: 16ms, application-code: 86ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 83ms (next.js: 2ms, application-code: 81ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 2ms, application-code: 9ms)
+[WebServer]  GET /api/workspaces/d4bdb5c1-1040-413f-9e36-4978efe7b623/flows 200 in 45ms (next.js: 20ms, application-code: 25ms)
+[WebServer]  POST /api/workspaces 201 in 71ms (next.js: 2ms, application-code: 69ms)
+[WebServer]  GET /api/workspaces/d4bdb5c1-1040-413f-9e36-4978efe7b623/overview 200 in 47ms (next.js: 16ms, application-code: 31ms)
+[WebServer]  POST /api/onboarding 200 in 18ms (next.js: 2ms, application-code: 16ms)
+[WebServer]  POST /api/workspaces/31e03bf8-73e0-4a2d-b6b1-2de2550ae268/flows 201 in 32ms (next.js: 1.7ms, application-code: 31ms)
+[WebServer]  POST /api/auth/sign-out 200 in 56ms (next.js: 17ms, application-code: 39ms)
+[WebServer]  GET /sign-in 200 in 32ms (next.js: 3ms, application-code: 29ms)
+[WebServer]  GET /w/e2e-73c7ea/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df 200 in 111ms (next.js: 19ms, application-code: 92ms)
+[WebServer]  GET /api/auth-config 200 in 5ms (next.js: 1.7ms, application-code: 3ms)
+  ok 25 [chromium] › e2e\tenancy.spec.ts:51:5 › sign-out clears local drafts (1.1s)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.9ms, application-code: 5ms)
+[WebServer]  GET /api/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df 200 in 20ms (next.js: 1.9ms, application-code: 18ms)
+[WebServer]  GET /api/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df/runs 200 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  GET /api/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df 200 in 31ms (next.js: 15ms, application-code: 16ms)
+[WebServer]  POST /api/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df/runs 202 in 27ms (next.js: 1.8ms, application-code: 25ms)
+[WebServer] 2026-09-27T11:03:01.636Z [worker] run 7bd45b64-3b50-4011-8825-dea8cd9a3318 claimed
+[WebServer] 2026-09-27T11:03:01.664Z [worker] run 7bd45b64-3b50-4011-8825-dea8cd9a3318 done
+[WebServer]  GET /api/flows/91ee1c53-a6d4-4565-ae7e-d05b6d3122df/runs 200 in 39ms (next.js: 2ms, application-code: 37ms)
+[WebServer]  GET /api/runs/7bd45b64-3b50-4011-8825-dea8cd9a3318 200 in 40ms (next.js: 16ms, application-code: 23ms)
+  ok 26 [chromium] › e2e\responsive.spec.ts:91:5 › mobile is monitor-only: editing disabled with a persistent banner, running still works (2.0s)
+[WebServer]  POST /api/auth/sign-up/email 200 in 81ms (next.js: 13ms, application-code: 67ms)
+[WebServer]  POST /api/workspaces 201 in 36ms (next.js: 2ms, application-code: 34ms)
+[WebServer]  POST /api/onboarding 200 in 19ms (next.js: 1.7ms, application-code: 17ms)
+[WebServer]  POST /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/flows 201 in 28ms (next.js: 14ms, application-code: 14ms)
+[WebServer]  POST /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 202 in 40ms (next.js: 13ms, application-code: 27ms)
+[WebServer] 2026-09-27T11:03:02.413Z [worker] run 59d4e3f0-f791-4384-a5dd-d956961762d2 claimed
+[WebServer] 2026-09-27T11:03:02.442Z [worker] run 59d4e3f0-f791-4384-a5dd-d956961762d2 done
+[WebServer]  GET /api/runs/59d4e3f0-f791-4384-a5dd-d956961762d2 200 in 33ms (next.js: 16ms, application-code: 17ms)
+[WebServer]  POST /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/flows 201 in 27ms (next.js: 1.6ms, application-code: 26ms)
+[WebServer]  GET /api/flows/92b7ba8b-cc57-41f7-8a24-733ea0d5476c 200 in 25ms (next.js: 14ms, application-code: 11ms)
+[WebServer]  PUT /api/flows/92b7ba8b-cc57-41f7-8a24-733ea0d5476c 200 in 28ms (next.js: 1.6ms, application-code: 26ms)
+[WebServer]  POST /api/flows/92b7ba8b-cc57-41f7-8a24-733ea0d5476c/runs 202 in 30ms (next.js: 1.4ms, application-code: 29ms)
+[WebServer] 2026-09-27T11:03:02.586Z [worker] run bd764d15-9bbc-40bc-a154-17ebeef3cfcb claimed
+[WebServer] 2026-09-27T11:03:02.607Z [worker] run bd764d15-9bbc-40bc-a154-17ebeef3cfcb done
+[WebServer]  GET /api/runs/bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 19ms (next.js: 2ms, application-code: 17ms)
+[WebServer]  GET /api/runs/bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 22ms (next.js: 1.4ms, application-code: 20ms)
+[WebServer]  GET /w/acme-workspace-11/flows 200 in 57ms (next.js: 15ms, application-code: 42ms)
+[WebServer]  GET /api/health 200 in 10ms (next.js: 2ms, application-code: 7ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/flows 200 in 13ms (next.js: 2ms, application-code: 11ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/overview 200 in 38ms (next.js: 22ms, application-code: 17ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 72ms (next.js: 14ms, application-code: 58ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.9ms, application-code: 5ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 33ms (next.js: 14ms, application-code: 19ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 200 in 28ms (next.js: 17ms, application-code: 12ms)
+[WebServer]  GET /api/runs/59d4e3f0-f791-4384-a5dd-d956961762d2 200 in 32ms (next.js: 17ms, application-code: 15ms)
+[WebServer]  GET /w/acme-workspace-11/runs?run=bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 60ms (next.js: 16ms, application-code: 45ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.5ms, application-code: 6ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/runs? 200 in 29ms (next.js: 15ms, application-code: 15ms)
+[WebServer]  GET /api/runs/bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 17ms (next.js: 2ms, application-code: 14ms)
+[WebServer]  GET /w/acme-workspace-11/integrations 200 in 615ms (next.js: 568ms, application-code: 47ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.5ms, application-code: 5ms)
+[WebServer]  GET /w/acme-workspace-11/templates 200 in 60ms (next.js: 14ms, application-code: 47ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.4ms, application-code: 5ms)
+[WebServer]  GET /w/acme-workspace-11/settings 200 in 54ms (next.js: 14ms, application-code: 39ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.4ms, application-code: 5ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/members 200 in 29ms (next.js: 15ms, application-code: 14ms)
+[WebServer]  GET /w/acme-workspace-11/flows 200 in 58ms (next.js: 15ms, application-code: 44ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 1.9ms, application-code: 7ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/flows 200 in 24ms (next.js: 14ms, application-code: 9ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/overview 200 in 43ms (next.js: 16ms, application-code: 27ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 57ms (next.js: 14ms, application-code: 43ms)
+[WebServer]  GET /api/health 200 in 25ms (next.js: 1.8ms, application-code: 23ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 25ms (next.js: 15ms, application-code: 10ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 200 in 32ms (next.js: 15ms, application-code: 16ms)
+[WebServer]  GET /api/runs/59d4e3f0-f791-4384-a5dd-d956961762d2 200 in 31ms (next.js: 16ms, application-code: 15ms)
+[WebServer]  GET /w/acme-workspace-11/runs?run=bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 61ms (next.js: 15ms, application-code: 46ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/runs? 200 in 31ms (next.js: 15ms, application-code: 16ms)
+[WebServer]  GET /api/runs/bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 16ms (next.js: 2ms, application-code: 14ms)
+[WebServer]  GET /w/acme-workspace-11/integrations 200 in 59ms (next.js: 15ms, application-code: 44ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.7ms, application-code: 5ms)
+[WebServer]  GET /w/acme-workspace-11/templates 200 in 57ms (next.js: 14ms, application-code: 43ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.7ms, application-code: 5ms)
+[WebServer]  GET /w/acme-workspace-11/settings 200 in 54ms (next.js: 13ms, application-code: 40ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.8ms, application-code: 5ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/members 200 in 26ms (next.js: 15ms, application-code: 12ms)
+[WebServer]  GET /w/acme-workspace-11/flows 200 in 51ms (next.js: 13ms, application-code: 38ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.6ms, application-code: 5ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/flows 200 in 25ms (next.js: 15ms, application-code: 10ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/overview 200 in 44ms (next.js: 16ms, application-code: 28ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 58ms (next.js: 14ms, application-code: 44ms)
+[WebServer]  GET /api/health 200 in 24ms (next.js: 1.7ms, application-code: 22ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 26ms (next.js: 16ms, application-code: 10ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 200 in 28ms (next.js: 15ms, application-code: 13ms)
+[WebServer]  GET /api/runs/59d4e3f0-f791-4384-a5dd-d956961762d2 200 in 34ms (next.js: 15ms, application-code: 19ms)
+[WebServer]  GET /w/acme-workspace-11/runs?run=bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 55ms (next.js: 15ms, application-code: 40ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.6ms, application-code: 6ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/runs? 200 in 32ms (next.js: 16ms, application-code: 16ms)
+[WebServer]  GET /api/runs/bd764d15-9bbc-40bc-a154-17ebeef3cfcb 200 in 17ms (next.js: 1.9ms, application-code: 15ms)
+[WebServer]  GET /w/acme-workspace-11/integrations 200 in 60ms (next.js: 14ms, application-code: 46ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.6ms, application-code: 4ms)
+[WebServer]  GET /w/acme-workspace-11/templates 200 in 54ms (next.js: 13ms, application-code: 41ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.5ms, application-code: 4ms)
+[WebServer]  GET /w/acme-workspace-11/settings 200 in 51ms (next.js: 13ms, application-code: 37ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.8ms, application-code: 5ms)
+[WebServer]  GET /api/workspaces/ce528f0e-5308-4267-af4d-78234e4e0664/members 200 in 29ms (next.js: 14ms, application-code: 15ms)
+[WebServer]  GET / 200 in 36ms (next.js: 1.9ms, application-code: 34ms)
+[WebServer]  GET /sign-up 200 in 23ms (next.js: 3ms, application-code: 20ms)
+[WebServer]  GET /api/auth-config 200 in 4ms (next.js: 1.4ms, application-code: 2ms)
+[WebServer]  GET / 200 in 38ms (next.js: 2ms, application-code: 36ms)
+[WebServer]  GET /sign-up 200 in 21ms (next.js: 1.9ms, application-code: 19ms)
+[WebServer]  GET /api/auth-config 200 in 3ms (next.js: 1.4ms, application-code: 2ms)
+[WebServer]  GET / 200 in 34ms (next.js: 2ms, application-code: 31ms)
+[WebServer]  GET /sign-up 200 in 20ms (next.js: 1.8ms, application-code: 19ms)
+[WebServer]  GET /api/auth-config 200 in 4ms (next.js: 1.6ms, application-code: 2ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 78ms (next.js: 12ms, application-code: 65ms)
+[WebServer]  GET /onboarding 200 in 40ms (next.js: 2ms, application-code: 38ms)
+[WebServer]  POST /api/workspaces 201 in 27ms (next.js: 1.5ms, application-code: 25ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 54ms (next.js: 14ms, application-code: 40ms)
+[WebServer]  GET /api/health 200 in 7ms (next.js: 1.9ms, application-code: 5ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 34ms (next.js: 16ms, application-code: 18ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 200 in 26ms (next.js: 16ms, application-code: 10ms)
+[WebServer]  POST /api/test/faults 200 in 16ms (next.js: 3ms, application-code: 12ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 65ms (next.js: 21ms, application-code: 44ms)
+[WebServer]  GET /api/health 200 in 11ms (next.js: 3ms, application-code: 8ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 500 in 9ms (next.js: 1.7ms, application-code: 7ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 500 in 29ms (next.js: 15ms, application-code: 15ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 500 in 20ms (next.js: 13ms, application-code: 7ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 500 in 39ms (next.js: 15ms, application-code: 24ms)
+[WebServer]  POST /api/test/faults 200 in 13ms (next.js: 1.4ms, application-code: 12ms)
+[WebServer]  GET /w/acme-workspace-11/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 58ms (next.js: 15ms, application-code: 43ms)
+[WebServer]  GET /api/health 200 in 8ms (next.js: 2.0ms, application-code: 6ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 35ms (next.js: 15ms, application-code: 20ms)
+[WebServer]  GET /api/flows/3c119404-2d60-4daf-854e-5d095d45918e/runs 200 in 30ms (next.js: 16ms, application-code: 14ms)
+[WebServer]  PUT /api/flows/3c119404-2d60-4daf-854e-5d095d45918e 200 in 31ms (next.js: 1.7ms, application-code: 29ms)
+[WebServer]  POST /api/auth/sign-up/email 200 in 83ms (next.js: 17ms, application-code: 67ms)
+[WebServer]  POST /api/workspaces 201 in 20ms (next.js: 3ms, application-code: 17ms)
+[WebServer]  POST /api/onboarding 200 in 14ms (next.js: 3ms, application-code: 12ms)
+[WebServer]  POST /api/workspaces/e7e5b66a-063f-4678-afa8-1cede0d9074a/flows 201 in 28ms (next.js: 17ms, application-code: 11ms)
+[WebServer]  GET /w/e2e-2e4c5d/flows/3fbf4e99-8903-4b47-b86d-6781f1cef9cd 200 in 60ms (next.js: 14ms, application-code: 46ms)
+[WebServer]  GET /api/health 200 in 6ms (next.js: 1.5ms, application-code: 5ms)
+[WebServer]  GET /api/flows/3fbf4e99-8903-4b47-b86d-6781f1cef9cd 200 in 29ms (next.js: 16ms, application-code: 13ms)
+[WebServer]  GET /api/flows/3fbf4e99-8903-4b47-b86d-6781f1cef9cd/runs 200 in 27ms (next.js: 16ms, application-code: 11ms)
+[WebServer]  GET /w/e2e-2e4c5d/runs?q=zzz-no-match 200 in 62ms (next.js: 18ms, application-code: 43ms)
+[WebServer]  GET /api/health 200 in 9ms (next.js: 1.8ms, application-code: 7ms)
+[WebServer]  GET /api/workspaces/e7e5b66a-063f-4678-afa8-1cede0d9074a/runs?q=zzz-no-match 200 in 41ms (next.js: 18ms, application-code: 23ms)
+  ok 27 [chromium] › e2e\responsive.spec.ts:123:5 › capture screens & states at 1440 / 1024 / 375 (29.4s)
+
+  27 passed (1.2m)
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\node_modules\\.pnpm\\@playwright+test@1.63.0\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--reporter=list,json"
+    ],
+    "configFile": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\playwright.config.ts",
+    "rootDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 2,
+    "webServer": {
+      "command": "pnpm db:migrate:test && pnpm dev:test",
+      "url": "http://localhost:3100/api/health?require=worker",
+      "reuseExistingServer": true,
+      "timeout": 180000,
+      "stdout": "pipe",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [
+    {
+      "title": "canvas.spec.ts",
+      "file": "canvas.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "canvas interactions & keyboard map",
+          "file": "canvas.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "select, duplicate, nudge, delete, undo/redo, Esc, and typing guards",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6845,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:22.701Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-d47bfb339e9e092e79e7",
+              "file": "canvas.spec.ts",
+              "line": 5,
+              "column": 7
+            },
+            {
+              "title": "arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3582,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:29.677Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-f75505637dcc754007f6",
+              "file": "canvas.spec.ts",
+              "line": 81,
+              "column": 7
+            },
+            {
+              "title": "opening and selecting does not mark the flow dirty or bump its revision",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3279,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:33.266Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-e9c466eb34f9663e1b1a",
+              "file": "canvas.spec.ts",
+              "line": 101,
+              "column": 7
+            },
+            {
+              "title": "drawer tabs follow the WAI-ARIA keyboard pattern",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 879,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:36.551Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-eab9295cfbca2214ed11",
+              "file": "canvas.spec.ts",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "invalid connections are refused with an explanation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 976,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:37.435Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-69b9c6a10a32ee704841",
+              "file": "canvas.spec.ts",
+              "line": 133,
+              "column": 7
+            },
+            {
+              "title": "re-run from a step reuses upstream outputs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4912,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:38.418Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-927888373102848cf844",
+              "file": "canvas.spec.ts",
+              "line": 153,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "failures.spec.ts",
+      "file": "failures.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "invalid flow: run is blocked with reasons, fields show errors, API refuses",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6104,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:22.666Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-cdaa0e5747a85e0714f2",
+          "file": "failures.spec.ts",
+          "line": 8,
+          "column": 5
+        },
+        {
+          "title": "save failure: silent retries then recovery, and manual retry after repeated failures",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 13612,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:28.894Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-c99cfc771c64e99df2d2",
+          "file": "failures.spec.ts",
+          "line": 39,
+          "column": 5
+        },
+        {
+          "title": "load failure: the canvas shows an error with a working Retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8275,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:42.516Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-8427803765ac99ff92d6",
+          "file": "failures.spec.ts",
+          "line": 63,
+          "column": 5
+        },
+        {
+          "title": "offline: edits kept locally, run disabled, reconciled on reconnect",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1065,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:50.800Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-2c1d40aa8ac34ae4a69a",
+          "file": "failures.spec.ts",
+          "line": 74,
+          "column": 5
+        },
+        {
+          "title": "offline conflict: newer server copy is never silently overwritten",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1268,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:51.873Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-d450b759fc5fffc3bfaf",
+          "file": "failures.spec.ts",
+          "line": 97,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "journey.spec.ts",
+      "file": "journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "new user builds, saves, reopens, runs and inspects a flow",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7405,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:43.342Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf222bad70f76648f722-9cda9ba8148d48378804",
+          "file": "journey.spec.ts",
+          "line": 9,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "library.spec.ts",
+      "file": "library.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "templates: a local template creates a flow and opens the canvas; integration templates explain why they're disabled",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1712,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:50.756Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ad0ae3d52ea8a2949ca9-75a5a62b7623f4f0b91f",
+          "file": "library.spec.ts",
+          "line": 4,
+          "column": 5
+        },
+        {
+          "title": "settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4352,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:52.473Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ad0ae3d52ea8a2949ca9-5304e2b06b8f7cb9a848",
+          "file": "library.spec.ts",
+          "line": 19,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "responsive.spec.ts",
+      "file": "responsive.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1918,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:58.251Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-4d78f1a04c936563e015",
+          "file": "responsive.spec.ts",
+          "line": 58,
+          "column": 5
+        },
+        {
+          "title": "mobile is monitor-only: editing disabled with a persistent banner, running still works",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1952,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:03:00.175Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-4a56524ca2636a3b8497",
+          "file": "responsive.spec.ts",
+          "line": 91,
+          "column": 5
+        },
+        {
+          "title": "capture screens & states at 1440 / 1024 / 375",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 240000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 29428,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:03:02.134Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-527920bac718ddd08926",
+          "file": "responsive.spec.ts",
+          "line": 123,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "breakpoints",
+          "file": "responsive.spec.ts",
+          "line": 32,
+          "column": 6,
+          "specs": [
+            {
+              "title": "shell at 1440px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1199,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:53.157Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-8bdc5dafb3c2d31e7d0a",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1280px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 604,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:54.363Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-3acb78e7570cd623b10c",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1279px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 653,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:54.975Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-3e0f446c612fc89d2bd9",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1024px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 689,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:55.634Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-bcd43ba04e2d07291de8",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 768px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 654,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:56.329Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-ad8f54d0558a172e2a2e",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 767px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 580,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:56.990Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-9c2c92556ce8450fe2b4",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 375px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 667,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-27T11:02:57.577Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-cc9fcac75b3062cb1a1d",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tenancy.spec.ts",
+      "file": "tenancy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "two users in separate workspaces cannot see each other's flows or runs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2204,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:56.835Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-e3ec70ec187c70695820",
+          "file": "tenancy.spec.ts",
+          "line": 4,
+          "column": 5
+        },
+        {
+          "title": "unauthenticated API access is rejected and app routes redirect to sign-in",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 596,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:59.046Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-87930d5b09808074dfb2",
+          "file": "tenancy.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "sign-out clears local drafts",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1122,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-27T11:02:59.649Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-6c53e32f3727009ec0a8",
+          "file": "tenancy.spec.ts",
+          "line": 51,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-27T11:02:19.142Z",
+    "duration": 72867.631,
+    "expected": 27,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

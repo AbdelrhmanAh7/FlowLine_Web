@@ -14,8 +14,9 @@ All times are 2026-09-27, local.
 | Fixed CR-01/CR-02 with regression tests; OpenCode a11y review fixes; per-user fault injection; robust test stack; docs | All suites green | `39b2e7e` |
 | Fable 5.1 critical security review | 9 findings (2 high); all fixed with tests | `c35485e` |
 | Local VLM (`qwen3-vl:8b`) visual comparison | Advisory; verified points recorded in VISUAL-REVIEW.md | — |
-| Codex retest on `c35485e` | see `artifacts/phase-1/codex-review/RETEST.md` | — |
-| Final full gate run on the final SHA | see `artifacts/phase-1/REPORT.md` | — |
+| Codex retest on `c35485e` | 18/18 PASS, 0 new findings (`artifacts/phase-1/codex-review/RETEST.md`) | `119aea2` |
+| Added `pnpm stop:test` after an EADDRINUSE harness transient | — | `d6894de` |
+| **Final full gate on `d6894de`** | lint ✓, typecheck ✓, unit 20/20, integration 34/34, E2E 27/27; 0 skipped/flaky → **PASS** | report commit follows |
 
 ## Helper usage (resource-limited laptop)
 
