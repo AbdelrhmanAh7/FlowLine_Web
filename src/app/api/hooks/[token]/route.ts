@@ -2,7 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { sha256Hex } from "@/server/crypto";
-import { verifyWebhookSignature, WEBHOOK_MAX_BYTES } from "@/server/publish";
+import type { FlowGraph } from "@/engine/types";
+import { verifyGithubSignature, verifyWebhookSignature, WEBHOOK_MAX_BYTES } from "@/server/publish";
 import { enqueueRunEx } from "@/server/runs";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +31,29 @@ export async function POST(req: Request, { params }: Ctx) {
   const [ep] = await db.select().from(schema.webhookEndpoint).where(eq(schema.webhookEndpoint.token, token));
   if (!ep || !ep.active) return reply(404, { error: "Unknown webhook" });
 
-  const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw);
-  if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
+  // The signature scheme comes from the PUBLISHED version's trigger config.
+  const [pub] = await db
+    .select({ graph: schema.flowVersion.graph })
+    .from(schema.flow)
+    .innerJoin(schema.flowVersion, eq(schema.flowVersion.id, schema.flow.publishedVersionId))
+    .where(eq(schema.flow.id, ep.flowId));
+  const trig = (pub?.graph as FlowGraph | undefined)?.nodes.find((n) => n.type === "trigger.webhook");
+  const scheme = (trig?.data.config as { signatureScheme?: string } | undefined)?.signatureScheme === "github" ? "github" : "flowline";
+  let signedAt = new Date();
+  if (scheme === "github") {
+    const g = verifyGithubSignature(ep.secretEnc, ep.keyId, req.headers.get("x-hub-signature-256"), raw);
+    if (!g.ok) return reply(401, { error: `Invalid signature: ${g.reason}` });
+  } else {
+    const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw);
+    if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
+    signedAt = new Date(sig.t * 1000);
+  }
 
-  const eventId = (req.headers.get("x-flowline-event-id") ?? "").trim();
+  const eventId = (req.headers.get(scheme === "github" ? "x-github-delivery" : "x-flowline-event-id") ?? "").trim();
   if (!eventId || eventId.length > 200 || !/^[\x21-\x7e]+$/.test(eventId)) return reply(400, { error: "x-flowline-event-id header is required (printable, ≤200 chars)" });
 
   let body: unknown = raw;
-  if ((req.headers.get("content-type") ?? "").includes("json")) {
+  if ((req.headers.get("content-type") ?? "").includes("json") || scheme === "github") {
     try {
       body = JSON.parse(raw);
     } catch {
@@ -50,7 +66,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const result = await db.transaction(async (tx) => {
       const inserted = await tx
         .insert(schema.webhookEvent)
-        .values({ endpointId: ep.id, eventId, bodySha256: bodySha, signedAt: new Date(sig.t * 1000), status: "accepted" })
+        .values({ endpointId: ep.id, eventId, bodySha256: bodySha, signedAt, status: "accepted" })
         .onConflictDoNothing({ target: [schema.webhookEvent.endpointId, schema.webhookEvent.eventId] })
         .returning();
       if (inserted.length === 0) {

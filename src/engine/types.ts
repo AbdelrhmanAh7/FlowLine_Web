@@ -36,6 +36,11 @@ export interface ManualTriggerConfig {
 export interface WebhookTriggerConfig {
   /** JSON text used as input for test runs from the canvas. */
   samplePayload: string;
+  /**
+   * "flowline": x-flowline-signature (t=,v1=HMAC of "t.body") + x-flowline-event-id.
+   * "github":   X-Hub-Signature-256 (sha256=HMAC of body) + X-GitHub-Delivery as the event id.
+   */
+  signatureScheme?: "flowline" | "github";
 }
 export interface ScheduleTriggerConfig {
   cron: string;

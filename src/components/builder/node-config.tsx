@@ -77,6 +77,16 @@ export function NodeConfigForm(props: FormProps) {
       return (
         <>
           <Notice tone="info">Publish the flow to get its webhook URL and signing secret. Each delivery must be signed and carry a unique event id; duplicates are ignored.</Notice>
+          <Select
+            id={`sig-${id}`}
+            label="Signature format"
+            value={s(cfg.signatureScheme) || "flowline"}
+            onChange={(v) => set({ signatureScheme: v })}
+            options={[
+              { value: "flowline", label: "Flowline (x-flowline-signature + event id)" },
+              { value: "github", label: "GitHub webhooks (X-Hub-Signature-256 + X-GitHub-Delivery)" },
+            ]}
+          />
           <JsonField id={`payload-${id}`} label="Sample payload for test runs (JSON)" value={s(cfg.samplePayload)} onChange={(v) => set({ samplePayload: v })} />
         </>
       );

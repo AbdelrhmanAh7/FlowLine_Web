@@ -148,6 +148,16 @@ export function signWebhook(secret: string, body: string, t = Math.floor(Date.no
   return `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${body}`).digest("hex")}`;
 }
 
+/** GitHub scheme: `X-Hub-Signature-256: sha256=<hex HMAC-SHA256(secret, raw body)>` (no timestamp; dedupe via X-GitHub-Delivery). */
+export function verifyGithubSignature(secretEnc: string, keyId: string, header: string | null, body: string): { ok: true } | { ok: false; reason: string } {
+  if (!header?.startsWith("sha256=")) return { ok: false, reason: "missing X-Hub-Signature-256" };
+  const secret = decryptSecret<string>(secretEnc, keyId);
+  const expected = createHmac("sha256", secret).update(body).digest();
+  const given = Buffer.from(header.slice(7), "hex");
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "signature mismatch" };
+  return { ok: true };
+}
+
 export function verifyWebhookSignature(secretEnc: string, keyId: string, header: string | null, body: string, now = Date.now()): { ok: true; t: number } | { ok: false; reason: string } {
   if (!header) return { ok: false, reason: "missing signature" };
   const parts = Object.fromEntries(header.split(",").map((p) => p.trim().split("=", 2) as [string, string]));
