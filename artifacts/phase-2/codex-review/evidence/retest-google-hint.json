@@ -1,0 +1,22 @@
+[
+  {
+    "at": "2026-09-27T20:04:07.601Z",
+    "provider": "google_sheets",
+    "hasConnectionId": false,
+    "authorizePath": "/google_sheets/oauth/authorize",
+    "hasLoginHint": false,
+    "matchesOriginalAccount": false
+  },
+  {
+    "at": "2026-09-27T20:04:08.091Z",
+    "provider": "google_sheets",
+    "hasConnectionId": true,
+    "authorizePath": "/google_sheets/oauth/authorize",
+    "hasLoginHint": true,
+    "matchesOriginalAccount": true
+  },
+  {
+    "at": "2026-09-27T20:04:08.105Z",
+    "result": "UI returned Connected after reconnect"
+  }
+]

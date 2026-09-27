@@ -28,3 +28,21 @@ All times are 2026-09-27, local.
 | Ollama | `qwen3-vl:8b` (local, GPU, unloaded after use) | Screenshot vs slide comparison | One model at a time |
 | Claude Fable 5.1 | subagent (read-only) | Critical security and correctness review | Alone |
 | Command Code | `poolside/laguna-s-2.1-free`, `stealth/ox-alpha` (both labelled FREE) | Setup/reproducibility review — **BLOCKED**: both requests were refused with "insufficient credits" (account billing). No credits were purchased. | — |
+
+# Phase 2 progress log
+
+All times are 2026-09-27, local. Branch `phase-2`.
+
+| Step | Result | Commit |
+|---|---|---|
+| Foundation: egress/SSRF guard, provider adapter contract, registry | unit: egress | `aac9deb` |
+| Engine v2 (DAG, parallel/join, pause/resume/cancel), sandboxed expressions + PDF, Docker code sandbox, credentials, approvals, usage ledger, triggers, scheduler, worker v2 | unit: engine-v2 | `bafb15d` |
+| API + UI: connections/OAuth, catalog, publish/triggers, webhook receiver, approvals, cancel, re-run preview, usage & limits, node forms, inspector v2 | — | `600b2d0`, `9b07789` |
+| 12 provider adapters + fake provider server + contract tests (Kimi Code, worktree) | 79 → 82 contract tests | `e9af074`, `8cdc5a1` |
+| Action-level integration tests; fixes for refresh-denial rollback, basic-auth tokens, pasted-token scopes | int: p2-actions (12) | `6d940e7` |
+| Six design templates, their integration tests, usable Templates page, fakes in the test stack | int: p2-templates (9) | `3090684`, `70c4b0c` |
+| Phase 2 UI E2E journeys; Phase 1 E2E updated for the changed UI | e2e 31/31 | `1e4e0d5` |
+| Live/sandbox suite (real Ollama + Postgres; SaaS BLOCKED without credentials). It found: real model obeyed embedded instructions 6/9 → quarantine 0/9; Postgres connect errors unmapped | live 9 PASS / 11 BLOCKED | `c2b7bd5` |
+| Fable 5.1 security review: 2 High, 4 Medium, 6 Low — all fixed; tests fail on old code | int: p2-postgres (13), p2-review-fixes (10) | `09c5a09` |
+| Codex exploratory test #1 on `d86d1d4` | 10 PASS / 3 FAIL / 1 BLOCKED; findings CX2-01…03 | — |
+| Fixed CX2-01…03 + redact() Date bug; provider-slow & activation states; p2-engine tests; Phase 2 docs | unit 80, integration + contract 269 total with unit, e2e 32 | `c7b7b54` |

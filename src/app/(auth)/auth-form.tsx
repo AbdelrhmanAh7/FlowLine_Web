@@ -153,6 +153,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
 function friendly(message: string, status: number) {
   if (status === 429) return "Too many attempts — wait a minute and try again.";
+  // Server-side outage (e.g. the database is unreachable): say so plainly instead of "Internal Server Error".
+  if (status >= 500) return "Flowline is temporarily unavailable on our side — nothing was saved. Try again in a moment.";
   if (/invalid email or password/i.test(message)) return "That email and password don't match.";
   if (/already exists|already in use/i.test(message)) return "An account with this email already exists. Sign in instead.";
   return message || "Something went wrong. Try again.";

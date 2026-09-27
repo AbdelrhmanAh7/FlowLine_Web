@@ -1,0 +1,622 @@
+{
+  "started": "2026-09-27T19:59:42.303Z",
+  "ended": "2026-09-27T20:01:14.570Z",
+  "revision": "c7b7b54",
+  "identity": {
+    "email": "[test account redacted]",
+    "slug": "codex-retest-muk8sr8f",
+    "blankUrl": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/f25f296a-556b-4382-aab7-b481dd692ddf",
+    "localUrl": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/afbc0268-0fe3-44e0-a94d-8027fd1074bc",
+    "templateUrl": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+    "sheetId": "retest-sheet-muk8sr8f",
+    "channel": "C_RETEST_muk8sr8f",
+    "approvalChannel": "C_APPROVE_muk8sr8f",
+    "repairChannel": "C_REPAIR_muk8sr8f"
+  },
+  "events": [
+    {
+      "at": "2026-09-27T19:59:42.304Z",
+      "kind": "phase-start",
+      "name": "signup"
+    },
+    {
+      "at": "2026-09-27T19:59:44.952Z",
+      "kind": "state",
+      "name": "signup-blank",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/f25f296a-556b-4382-aab7-b481dd692ddf",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 1 issue before publishing\n⚠ 1 issue\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\nReact Flow\n+ Add node\n/\n⚡\n\nStart with a trigger\n\nEvery flow begins with an event. Add a manual trigger, then connect transforms, conditions and outputs.\n\n+ Add a trigger\nor browse templates\n−\n100%\n+\nFit"
+    },
+    {
+      "at": "2026-09-27T19:59:44.952Z",
+      "kind": "phase-pass",
+      "name": "signup"
+    },
+    {
+      "at": "2026-09-27T19:59:44.954Z",
+      "kind": "phase-start",
+      "name": "template-oauth"
+    },
+    {
+      "at": "2026-09-27T19:59:46.845Z",
+      "kind": "state",
+      "name": "connected-google_sheets",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations?oauth=connected&connection=6082e276-6237-4e0f-8673-6f42e59d9022",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · 1\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 0 flows · used never\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions"
+    },
+    {
+      "at": "2026-09-27T19:59:48.013Z",
+      "kind": "state",
+      "name": "connected-slack",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · 2\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 0 flows · used never\n\nReconnect\nRemove\n💬\nSlack (alice @ Flowline)\nConnected\n\nalice @ Flowline · 0 flows · used never\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\nConnected\nConnected"
+    },
+    {
+      "at": "2026-09-27T19:59:48.452Z",
+      "kind": "console",
+      "type": "error",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/templates",
+      "sensitivePattern": false,
+      "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary name=\"templates/\" loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidd"
+    },
+    {
+      "at": "2026-09-27T19:59:48.575Z",
+      "kind": "state",
+      "name": "template-requirements",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/templates",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nTemplates\n\nEach card previews its node chain — using one drops you into the canvas.\n\nAll\nSales\nSupport\nMarketing\nData ops\nFinance\nEngineering\nSearch templates\n\nREADY TO RUN · LOCAL NODES\n\n⚡ Inbound lead\n→\n⇄ Normalise lead\n→\n⑂ 50+ employees?\n→\n◎ Hot lead\n\nLead Qualifier\n\nNormalise an inbound lead, check company size, and label it hot or nurture.\n\nSALES · 5 NODES\nUse template\n⚡ New ticket\n→\n⇄ Score urgency\n→\n⑂ Urgent?\n→\n◎ Escalate\n\nTicket Priority Router\n\nScore a support ticket by keywords and route urgent ones to an escalation output.\n\nSUPPORT · 5 NODES\nUse template\n⚡ Order batch\n→\n⇄ Sum items\n→\n⑂ Over $250?\n→\n◎ Flag for review\n\nOrder Totals Digest\n\nSum line items, apply a discount rule, and flag orders above a threshold.\n\nDATA OPS · 5 NODES\nUse template\n\nCONNECTED APPS · SET UP AFTER CREATING\n\n⚡ Form submitted\n→\n✦ Enrich lead\n→\n✦ Score lead\n→\n⑂ Hot lead?\n\nLead Enrichment Pipeline\n\nScore and enrich inbound form leads with AI, add hot ones to a sheet and alert sales in Slack.\n\nEnrich and score the lead\n✓ AI available\nAppend hot leads\n✓ Connected\nNotify the sales channel\n✓ Connected\nSetup (3 steps)\nSALES · 7 NODES\nUse template\n🕐 Every 15 min\n→\n⬡ Zendesk — Open tickets\n→\n⑂ Any tickets?\n→\n✦ Write digest\n\nSupport Ticket Triage\n\nEvery 15 minutes, pull open Zendesk tickets, have AI write a prioritized digest, and post it to Slack.\n\nRead open tickets\nNot connected\nWrite the triage digest\n✓ AI available\nPost the digest\n✓ Connected\nSetup (3 steps)\nSUPPORT · 6 NODES\nUse template\n🕐 Hourly\n→\n⬡ Gmail — Find invoices\n→\n⑂ Found one?\n→\n⬡ Gmail — Read message\n\nInvoice PDF Extractor\n\nHourly: find the newest invoice email, extract vendor, totals and due date from the PDF, log it to your ledger sheet, and reply (after approval).\n\nFind invoices, read the attachment, send the reply\nNot connected\nExtract invoice fields\n✓ AI available\nAppend to the ledger\n✓ Connected\nSetup (3 steps)\nFINANCE · 10 NODES\nUse template\n🕐 Hourly\n→\n⇅ Fetch pricing page\n→\n✦ Extract price\n→\n⛁ Last seen price\n\nCompetitor Price Watch\n\nHourly: fetch a competitor pricing page you're allowed to monitor, extract the price, compare with last time, and alert Slack on a material change.\n\nFetch the public pricing page (egress-protected)\n✓ Built in\nExtract the price\n✓ AI available\nAlert on changes\n✓ Connected\nSetup (3 steps)\nMARKETING · 8 NODES\nUse template\n🕐 Mondays 09:00\n→\n⬡ Query KPIs\n→\n✦ Write narrative\n→\n⬡ Email leadership\n\nWeekly KPI Digest\n\nMondays 09:00: query your warehouse, have AI write the narrative, and email it to leadership (after approval).\n\nQuery KPI rows (or swap in Snowflake)\nNot connected\nWrite the narrative\n✓ AI available\nEmail leadership\nNot connected\nSetup (4 steps)\nDATA OPS · 4 NODES\nUse template\n⚡ PR opened (GitHub)\n→\n⑂ Opened?\n→\n⬡ GitHub — Get PR\n→\n◎ Not an opened PR\n\nPR Review Router\n\nOn new GitHub pull requests: summarize the diff with AI, flag risky changes, and file a follow-up issue in Linear.\n\nRead the pull request and its files\nNot connected\nSummarize and assess risk\n✓ AI available\nFile follow-ups for risky PRs\nNot connected\nSetup (3 steps)\nENGINEERING · 9 NODES\nUse template"
+    },
+    {
+      "at": "2026-09-27T19:59:50.830Z",
+      "kind": "state",
+      "name": "template-ready",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\nNot run yet\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\nNot run yet\n\nScore lead\n\nAI · LABEL\n\nNot run yet\n\nHot lead?\n\nLOGIC · IF / ELSE\n\nNot run yet\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nNot run yet\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nNot run yet\n\nNurture\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit"
+    },
+    {
+      "at": "2026-09-27T19:59:52.283Z",
+      "kind": "state",
+      "name": "template-success",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n23ms\n\nScore lead\n\nAI · LABEL\n\n23ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\n29ms\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\n25ms\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#1\nSUCCESS\n6/6 · 243ms\nOpen in inspector →\n✕\n#1\nnow\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 23ms\n→\nScore lead\nSuccess\n· 23ms\n→\nHot lead?\nSuccess\n· 1ms\n→\nSheets — Add row\nSuccess\n· 29ms\n→\nNurture\nSkipped\n→\nSlack — Notify\nSuccess\n· 25ms\n\nRUN OUTPUT\n\n{}\nRun #1 succeeded"
+    },
+    {
+      "at": "2026-09-27T19:59:52.303Z",
+      "kind": "template-provider-state",
+      "rows": [
+        [
+          "Ada Lovelace",
+          "Analytical Engines Ltd",
+          "hot",
+          "fl_83a396f435a69fd63c10b7d5ddf602c5"
+        ]
+      ],
+      "messages": [
+        {
+          "channel": "C_RETEST_muk8sr8f",
+          "text": "Hot lead: Ada Lovelace",
+          "ts": "1760000000.000012",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_5f4f9f54037aef8a39ebabe062bf988c"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "at": "2026-09-27T19:59:53.524Z",
+      "kind": "state",
+      "name": "local-template-ready",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/afbc0268-0fe3-44e0-a94d-8027fd1074bc",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nInbound lead\n\nTRIGGER · MANUAL\n\nNot run yet\n\nNormalise lead\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n50+ employees?\n\nLOGIC · IF / ELSE\n\nNot run yet\n\ntrue\nfalse\n\nHot lead\n\nOUTPUT · RESULT\n\nNot run yet\n\nNurture\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit"
+    },
+    {
+      "at": "2026-09-27T19:59:53.524Z",
+      "kind": "phase-pass",
+      "name": "template-oauth"
+    },
+    {
+      "at": "2026-09-27T19:59:53.526Z",
+      "kind": "phase-start",
+      "name": "fault-rerun-retries"
+    },
+    {
+      "at": "2026-09-27T19:59:55.579Z",
+      "kind": "fault",
+      "data": {
+        "provider": "google_sheets",
+        "pathPattern": "retest-sheet-muk8sr8f-fault",
+        "mode": "429",
+        "times": 3
+      },
+      "status": 200,
+      "body": "{\"ok\":true}"
+    },
+    {
+      "at": "2026-09-27T19:59:57.039Z",
+      "kind": "state",
+      "name": "retry-429",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n20ms\n\nScore lead\n\nAI · LABEL\n\n20ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nRunning… 0s · retry 2 (rate limited)\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nQueued\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#2\nRUNNING\n4/6 · —\nCancel run\nOpen in inspector →\n✕\n#2\nnow\n#1\nnow\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 20ms\n→\nScore lead\nSuccess\n· 20ms\n→\nHot lead?\nSuccess\n· 1ms\n→\nSheets — Add row\nRunning… 0s · retry 2 (rate limited)\n→\nNurture\nSkipped\n→\nSlack — Notify\nQueued\n\nRunning…"
+    },
+    {
+      "at": "2026-09-27T19:59:58.444Z",
+      "kind": "state",
+      "name": "fault-failed",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n20ms\n\nScore lead\n\nAI · LABEL\n\n20ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\n✗ Google Sheets rate limit: rate limited\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nSkipped\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#2\nFAILED\n4/5 · 2.3s\nOpen in inspector →\n✕\n#2\nnow\n#1\nnow\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 20ms\n→\nScore lead\nSuccess\n· 20ms\n→\nHot lead?\nSuccess\n· 1ms\n→\nSheets — Add row\nFailed\n· 2.1s\n→\nNurture\nSkipped\n→\nSlack — Notify\nSkipped\n\n⚠ Google Sheets rate limit: rate limited\n\nRun #2 failed"
+    },
+    {
+      "at": "2026-09-27T19:59:59.589Z",
+      "kind": "state",
+      "name": "rerun-preview",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?run=98dc00ac-f486-43ab-a39f-01e6ba1a5b4f",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\nnow\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 20ms\n→\n✦ Score lead\nSuccess\n· 20ms\n→\n⑂ Hot lead?\nSuccess\n· 1ms\n→\n⬡ Sheets — Add row\nFailed\n· 2.1s\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nSkipped\n⚠ Sheets — Add row — Google Sheets rate limit: rate limited\nInspect\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\nnow\n⬡\nSheets — Add row\nFAILED\n\n2.1s · run #2 · v2 · integration.action · sheet · 1 attempt\n\n✕\nInput\nOutput\nError\nLog\n\n⚠ PROVIDER_RATE_LIMIT\n\nGoogle Sheets rate limit: rate limited\n\nSUGGESTED FIX\n\nThe app rate-limited us after retries. Wait a moment, then re-run from this step.\n\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRe-run #2 from “Sheets — Add row”\nREVISION\nThe run's original version (v2)\nThe current saved flow (includes your fixes)\n\nWILL RUN AGAIN · 2\n\nSheets — Add row\nnon-idempotent\n(was failed)\nSlack — Notify\nnon-idempotent\n(was skipped)\n\nREUSED FROM #2 · 4\n\nForm submitted, Enrich lead, Score lead, Hot lead?\n\nNo stored output for: Nurture — those steps will be skipped or re-run.\n\nCancel\nRe-run 2 steps\nRun #2 failed"
+    },
+    {
+      "at": "2026-09-27T20:00:03.342Z",
+      "kind": "state",
+      "name": "rerun-success",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?run=627f70ba-f6b5-4682-916d-0525beda0d44",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 156ms\nre-run\nnow\n⚡ Form submitted\nReused\n→\n✦ Enrich lead\nReused\n→\n✦ Score lead\nReused\n→\n⑂ Hot lead?\nReused\n→\n⬡ Sheets — Add row\nSuccess\n· 31ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nSuccess\n· 29ms\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\nnow\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\nnow\n⬡\nSlack — Notify\nSUCCESS\n\n29ms · run #3 · v2 · integration.action · slack · 1 attempt\n\n✕\naction\nslack.post_message\nprovider\nslack\nconnection\nSlack (alice @ Flowline)\nsideEffect\nnon_idempotent\nactionVersion\n1\nidempotencyKey\nfl_18f81ce575df991e1f86ac569fb7163f\nInput\nOutput\nError\nLog\n{\n  \"ts\": \"1760000000.000013\",\n  \"channel\": \"C_RETEST_muk8sr8f\"\n}\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRUN OUTPUT\n\n{}\nRe-running as #3"
+    },
+    {
+      "at": "2026-09-27T20:00:03.350Z",
+      "kind": "rerun-provider-state",
+      "rows": [
+        [
+          "Ada Lovelace",
+          "Analytical Engines Ltd",
+          "hot",
+          "fl_0ace859934ff5740eeae3e0131629aac"
+        ]
+      ],
+      "messages": [
+        {
+          "channel": "C_RETEST_muk8sr8f",
+          "text": "Hot lead: Ada Lovelace",
+          "ts": "1760000000.000012",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_5f4f9f54037aef8a39ebabe062bf988c"
+            }
+          }
+        },
+        {
+          "channel": "C_RETEST_muk8sr8f",
+          "text": "Hot lead: Ada Lovelace",
+          "ts": "1760000000.000013",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_18f81ce575df991e1f86ac569fb7163f"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "at": "2026-09-27T20:00:03.350Z",
+      "kind": "phase-pass",
+      "name": "fault-rerun-retries"
+    },
+    {
+      "at": "2026-09-27T20:00:03.353Z",
+      "kind": "phase-start",
+      "name": "approval"
+    },
+    {
+      "at": "2026-09-27T20:00:07.013Z",
+      "kind": "state",
+      "name": "approval-pending",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n20ms\n\nScore lead\n\nAI · LABEL\n\n23ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\n29ms\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\n⏸ Needs approval\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#4\nNEEDS APPROVAL\n5/6 · 217ms\nCancel run\nOpen in inspector →\n✕\n#4\nnow\n#3\nnow\n#2\n11s ago\n#1\n16s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 20ms\n→\nScore lead\nSuccess\n· 23ms\n→\nHot lead?\nSuccess\n· 1ms\n→\nSheets — Add row\nSuccess\n· 29ms\n→\nNurture\nSkipped\n→\nSlack — Notify\nNeeds approval\n· 23ms\n\nWaiting for a human decision. Review in the inspector →\n\nRun #4 is waiting for a human decision"
+    },
+    {
+      "at": "2026-09-27T20:00:07.437Z",
+      "kind": "state",
+      "name": "approval-args",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?run=b6358928-f7c5-4f3b-be07-4b190e68fa42",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#4\nLead Enrichment Pipeline\nNEEDS APPROVAL\n5/6 · 217ms\nnow\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 20ms\n→\n✦ Score lead\nSuccess\n· 23ms\n→\n⑂ Hot lead?\nSuccess\n· 1ms\n→\n⬡ Sheets — Add row\nSuccess\n· 29ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nNeeds approval\n· 23ms\n⏸ Slack — Notify — Waiting for approval to run Post message\nReview\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 156ms\nre-run\nnow\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n11s ago\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\n16s ago\n⬡\nSlack — Notify\nNEEDS APPROVAL\n\n23ms · run #4 · v3 · integration.action · slack · 1 attempt\n\n✕\nRun is waiting for a decision\nCancel run\n\nApproval required\n\nThis action will run with exactly these arguments on this connection. The decision applies only to this run and revision. Expires 9/28/2026, 11:00:05 PM.\n\n{\n  \"text\": \"Approve exact args muk8sr8f\",\n  \"channel\": \"C_APPROVE_muk8sr8f\"\n}\nNote\nApprove\nReject\nInput\nOutput\nError\nLog\n— (needs approval)\n↻ Re-run from this step\nWait for this run to finish (or cancel it)\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRun #4 is waiting for a human decision"
+    },
+    {
+      "at": "2026-09-27T20:00:10.446Z",
+      "kind": "state",
+      "name": "approval-success",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?run=b6358928-f7c5-4f3b-be07-4b190e68fa42",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#4\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 277ms\nnow\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 20ms\n→\n✦ Score lead\nSuccess\n· 23ms\n→\n⑂ Hot lead?\nSuccess\n· 1ms\n→\n⬡ Sheets — Add row\nSuccess\n· 29ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nSuccess\n· 43ms\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 156ms\nre-run\nnow\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n11s ago\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\n16s ago\n⬡\nSlack — Notify\nSUCCESS\n\n43ms · run #4 · v3 · integration.action · slack · 2 attempts\n\n✕\naction\nslack.post_message\nprovider\nslack\nconnection\nSlack (alice @ Flowline)\nsideEffect\nnon_idempotent\nactionVersion\n1\nidempotencyKey\nfl_a7bd73bbaa0fd97cf4089e140efbee41\nInput\nOutput\nError\nLog\n{\n  \"ts\": \"1760000000.000014\",\n  \"channel\": \"C_APPROVE_muk8sr8f\"\n}\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRUN OUTPUT\n\n{}\nRun #4 is waiting for a human decision\nDecision recorded — the run continues"
+    },
+    {
+      "at": "2026-09-27T20:00:10.451Z",
+      "kind": "approval-provider-state",
+      "messages": [
+        {
+          "channel": "C_APPROVE_muk8sr8f",
+          "text": "Approve exact args muk8sr8f",
+          "ts": "1760000000.000014",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_a7bd73bbaa0fd97cf4089e140efbee41"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "at": "2026-09-27T20:00:12.670Z",
+      "kind": "state",
+      "name": "approval-rejected",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?run=dfb4b9f3-67ab-4fb1-b1f4-dd69eb01e158",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#5\nLead Enrichment Pipeline\nNEEDS APPROVAL\n5/6 · 113ms\nnow\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 16ms\n→\n✦ Score lead\nSuccess\n· 12ms\n→\n⑂ Hot lead?\nSuccess\n· 0ms\n→\n⬡ Sheets — Add row\nSuccess\n· 15ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nNeeds approval\n· 9ms\n⏸ Slack — Notify — Waiting for approval to run Post message\nReview\n▸\n#4\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 277ms\nnow\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 156ms\nre-run\n13s ago\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n17s ago\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\n21s ago\n⬡\nSlack — Notify\nNEEDS APPROVAL\n\n9ms · run #5 · v4 · integration.action · slack · 1 attempt\n\n✕\nRun is waiting for a decision\nCancel run\n\nApproval required\n\nThis action will run with exactly these arguments on this connection. The decision applies only to this run and revision. Expires 9/28/2026, 11:00:11 PM.\n\n{\n  \"text\": \"Approve exact args muk8sr8f\",\n  \"channel\": \"C_APPROVE_muk8sr8f\"\n}\nNote\nApprove\nReject\nInput\nOutput\nError\nLog\n— (needs approval)\n↻ Re-run from this step\nWait for this run to finish (or cancel it)\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRun #5 is waiting for a human decision"
+    },
+    {
+      "at": "2026-09-27T20:00:12.672Z",
+      "kind": "rejection-provider-state",
+      "messages": [
+        {
+          "channel": "C_APPROVE_muk8sr8f",
+          "text": "Approve exact args muk8sr8f",
+          "ts": "1760000000.000014",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_a7bd73bbaa0fd97cf4089e140efbee41"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "at": "2026-09-27T20:00:12.672Z",
+      "kind": "phase-pass",
+      "name": "approval"
+    },
+    {
+      "at": "2026-09-27T20:00:12.673Z",
+      "kind": "phase-start",
+      "name": "slow-cancel-doubleclick"
+    },
+    {
+      "at": "2026-09-27T20:00:14.656Z",
+      "kind": "fault",
+      "data": {
+        "provider": "google_sheets",
+        "pathPattern": "retest-sheet-muk8sr8f-fault",
+        "mode": "timeout",
+        "times": 1
+      },
+      "status": 200,
+      "body": "{\"ok\":true}"
+    },
+    {
+      "at": "2026-09-27T20:00:23.951Z",
+      "kind": "state",
+      "name": "slow-provider",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n12ms\n\nScore lead\n\nAI · LABEL\n\n10ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n0ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nRunning… 8s · provider slow\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nQueued\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#6\nRUNNING\n4/6 · —\nCancel run\nOpen in inspector →\n✕\n#6\nnow\n#5\nnow\n#4\n11s ago\n#3\n17s ago\n#2\n21s ago\n#1\n25s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 12ms\n→\nScore lead\nSuccess\n· 10ms\n→\nHot lead?\nSuccess\n· 0ms\n→\nSheets — Add row\nRunning… 8s · provider slow\n→\nNurture\nSkipped\n→\nSlack — Notify\nQueued\n\nRunning…"
+    },
+    {
+      "at": "2026-09-27T20:00:24.776Z",
+      "kind": "state",
+      "name": "other-flow-during-slow",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/afbc0268-0fe3-44e0-a94d-8027fd1074bc",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nInbound lead\n\nTRIGGER · MANUAL\n\n0ms\n\nNormalise lead\n\nTRANSFORM · JSONATA\n\n1ms\n\n50+ employees?\n\nLOGIC · IF / ELSE\n\n0ms\n\ntrue\nfalse\n\nHot lead\n\nOUTPUT · RESULT\n\n1ms\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit\nRUNS\n#7\nSUCCESS\n4/4 · 39ms\nOpen in inspector →\n✕\n#7\nnow\nInbound lead\nSuccess\n· 0ms\n→\nNormalise lead\nSuccess\n· 1ms\n→\n50+ employees?\nSuccess\n· 0ms\n→\nHot lead\nSuccess\n· 1ms\n→\nNurture\nSkipped\n\nRUN OUTPUT\n\n{\n  \"hot_lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"tier\": \"hot\",\n    \"domain\": \"analytical.io\"\n  }\n}"
+    },
+    {
+      "at": "2026-09-27T20:00:26.711Z",
+      "kind": "state",
+      "name": "cancelled",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n12ms\n\nScore lead\n\nAI · LABEL\n\n10ms\n\nHot lead?\n\nLOGIC · IF / ELSE\n\n0ms\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\n? Outcome unknown\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nCancelled\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#6\nCANCELLED\n4/6 · 11.1s\nOpen in inspector →\n✕\n#6\n12s ago\n#5\n15s ago\n#4\n21s ago\n#3\n27s ago\n#2\n31s ago\n#1\n36s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nSuccess\n· 12ms\n→\nScore lead\nSuccess\n· 10ms\n→\nHot lead?\nSuccess\n· 0ms\n→\nSheets — Add row\nOutcome unknown\n· 11.0s\n→\nNurture\nSkipped\n→\nSlack — Notify\nCancelled\nCancelling — the run stops at the next safe point\nRun #6 was cancelled"
+    },
+    {
+      "at": "2026-09-27T20:00:26.711Z",
+      "kind": "phase-pass",
+      "name": "slow-cancel-doubleclick"
+    },
+    {
+      "at": "2026-09-27T20:00:26.712Z",
+      "kind": "phase-start",
+      "name": "monitoring"
+    },
+    {
+      "at": "2026-09-27T20:00:27.098Z",
+      "kind": "state",
+      "name": "dashboard-before-repair",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nFlows\nSearch flows\n+ New flow\n\nFLOWS\n\n3\n2 ran in 24h\n\nRUNS (24H)\n\n7\n66.7% success\n\nUSAGE (THIS MONTH)\n\nUSD 0.00\n3,150 AI tokens · 21 unpriced\n\nNEEDS ATTENTION\n\n2\n2 failed\n\nFLOW\tTRIGGER\tSTATUS\tLAST RUN\tSUCCESS\nLead Enrichment Pipeline7 nodes\tWebhook\t\nDraft\t12s ago\t60.0%\nLead Qualifier5 nodes\tManual\t\nHealthy\tnow\t100.0%\nUntitled flow0 nodes\tNo trigger\t\nDraft\tnever\t—\nRECENT ACTIVITY\nRun #7 Lead Qualifier · completed 4/4 steps in 39ms\nInspect →\nRun #6 Lead Enrichment Pipeline · in progress · step 5 of 6\nInspect →\nRun #5 Lead Enrichment Pipeline · failed — Post message was rejected\nInspect →\nRun #4 Lead Enrichment Pipeline · completed 6/6 steps in 277ms\nInspect →\nRun #3 Lead Enrichment Pipeline · completed 6/6 steps in 156ms\nInspect →\nRun #2 Lead Enrichment Pipeline · failed — Google Sheets rate limit: rate limited\nInspect →"
+    },
+    {
+      "at": "2026-09-27T20:00:27.261Z",
+      "kind": "console",
+      "type": "error",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs",
+      "sensitivePattern": false,
+      "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n      <RedirectBoundary>\n        <RedirectErrorBoundary router={{...}}>\n          <InnerLayoutRouter url=\"/w/codex-r"
+    },
+    {
+      "at": "2026-09-27T20:00:27.322Z",
+      "kind": "state",
+      "name": "run-history",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#7\nLead Qualifier\nSUCCESS\n4/4 · 39ms\nnow\n⚡ Inbound lead\nSuccess\n· 0ms\n→\n⇄ Normalise lead\nSuccess\n· 1ms\n→\n⑂ 50+ employees?\nSuccess\n· 0ms\n→\n◎ Hot lead\nSuccess\n· 1ms\n→\n◎ Nurture\nSkipped\n▸\n#6\nLead Enrichment Pipeline\nCANCELLED\n4/6 · 11.1s\n13s ago\n▸\n#5\nLead Enrichment Pipeline\nFAILED\n5/6 · 128ms\n16s ago\n▸\n#4\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 277ms\n22s ago\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 156ms\nre-run\n28s ago\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n32s ago\n▸\n#1\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 243ms\n36s ago"
+    },
+    {
+      "at": "2026-09-27T20:00:27.447Z",
+      "kind": "state",
+      "name": "runs-failed-filter",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?status=failed",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled"
+    },
+    {
+      "at": "2026-09-27T20:00:27.591Z",
+      "kind": "state",
+      "name": "runs-search",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?status=failed&q=Lead+Enrichment",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#5\nLead Enrichment Pipeline\nFAILED\n5/6 · 128ms\n16s ago\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 16ms\n→\n✦ Score lead\nSuccess\n· 12ms\n→\n⑂ Hot lead?\nSuccess\n· 0ms\n→\n⬡ Sheets — Add row\nSuccess\n· 15ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nFailed\n· 6ms\n⚠ Slack — Notify — Post message was rejected\nInspect\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n32s ago\n⬡\nSlack — Notify\nFAILED\n\n6ms · run #5 · v4 · integration.action · slack · 2 attempts\n\n✕\nInput\nOutput\nError\nLog\n\n⚠ APPROVAL_REJECTED\n\nPost message was rejected\n\nSUGGESTED FIX\n\nA reviewer rejected this action. Adjust the flow if needed and run again.\n\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS"
+    },
+    {
+      "at": "2026-09-27T20:00:28.006Z",
+      "kind": "state",
+      "name": "step-logs",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/runs?status=failed&q=Lead+Enrichment&run=dfb4b9f3-67ab-4fb1-b1f4-dd69eb01e158",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#5\nLead Enrichment Pipeline\nFAILED\n5/6 · 128ms\n16s ago\n⚡ Form submitted\nSuccess\n· 0ms\n→\n✦ Enrich lead\nSuccess\n· 16ms\n→\n✦ Score lead\nSuccess\n· 12ms\n→\n⑂ Hot lead?\nSuccess\n· 0ms\n→\n⬡ Sheets — Add row\nSuccess\n· 15ms\n→\n◎ Nurture\nSkipped\n→\n⬡ Slack — Notify\nFailed\n· 6ms\n⚠ Slack — Notify — Post message was rejected\nInspect\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 2.3s\n32s ago\n⬡\nSheets — Add row\nSUCCESS\n\n15ms · run #5 · v4 · integration.action · sheet · 1 attempt\n\n✕\naction\ngoogle_sheets.append_row\nprovider\ngoogle_sheets\nconnection\nGoogle Sheets (alice@flowline.test)\nsideEffect\nnon_idempotent\nactionVersion\n1\nidempotencyKey\nfl_a552403c85fa3e9bd6d77e745fa5dbe6\nInput\nOutput\nError\nLog\n11:00:10 PM\nqueued\n{\"trigger\":\"manual\",\"version\":4}\n11:00:11 PM\nclaimed\n{\"worker\":\"91203e\",\"interrupted\":[]}\n11:00:11 PM\nstep started\n11:00:11 PM\nstep succeeded\n11:00:12 PM\nresumed\n{\"worker\":\"91203e\",\"interrupted\":[]}\n11:00:12 PM\nfinished\n{\"code\":\"APPROVAL_REJECTED\",\"status\":\"failed\"}\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS"
+    },
+    {
+      "at": "2026-09-27T20:00:28.006Z",
+      "kind": "phase-pass",
+      "name": "monitoring"
+    },
+    {
+      "at": "2026-09-27T20:00:28.008Z",
+      "kind": "phase-start",
+      "name": "usage-budget"
+    },
+    {
+      "at": "2026-09-27T20:00:28.621Z",
+      "kind": "state",
+      "name": "usage-before",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/settings",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nSettings\nMembers\nGeneral\nAPI keys\nUsage & limits\nUsage this month\n\nFrom the durable usage ledger: every AI call and app action is recorded once. Costs use the prices you configure below; nothing is estimated from list prices.\n\nKIND\tPROVIDER / MODEL\tEVENTS\tTOKENS\tCOST\naction\tgoogle_sheets\t8\t0\tunpriced\naction\tslack\t3\t0\tunpriced\nai\tollama / fake-model\t10\t3,150\tunpriced\nLimits\nMONTHLY BUDGET (USD)\n\nCosted steps fail before running once reached. Blank = no limit.\n\nCONCURRENT RUNS\n\n1–20 per workspace\n\nQUEUED RUNS\n\nBeyond this, new runs are refused\n\nPRICES (USD)\n\nKeys: ai:<provider>/<model> (per million tokens), action:<action id> or action:<app>/* (per call). Unpriced usage is still counted and flagged.\n\n+ Add price\nSave limits\nNo changes to save\nPlans and payments: Phase 3."
+    },
+    {
+      "at": "2026-09-27T20:00:28.831Z",
+      "kind": "state",
+      "name": "budget-saved",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/settings",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nSettings\nMembers\nGeneral\nAPI keys\nUsage & limits\nUsage this month\n\nFrom the durable usage ledger: every AI call and app action is recorded once. Costs use the prices you configure below; nothing is estimated from list prices.\n\nKIND\tPROVIDER / MODEL\tEVENTS\tTOKENS\tCOST\naction\tgoogle_sheets\t8\t0\tunpriced\naction\tslack\t3\t0\tunpriced\nai\tollama / fake-model\t10\t3,150\tunpriced\nLimits\nMONTHLY BUDGET (USD)\n\nCosted steps fail before running once reached. Blank = no limit.\n\nCONCURRENT RUNS\n\n1–20 per workspace\n\nQUEUED RUNS\n\nBeyond this, new runs are refused\n\nPRICES (USD)\n\nKeys: ai:<provider>/<model> (per million tokens), action:<action id> or action:<app>/* (per call). Unpriced usage is still counted and flagged.\n\n✕\n+ Add price\nSave limits\nNo changes to save\nPlans and payments: Phase 3.\nUsage limits saved"
+    },
+    {
+      "at": "2026-09-27T20:00:30.647Z",
+      "kind": "state",
+      "name": "budget-refused",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\n✗ Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\n\nScore lead\n\nAI · LABEL\n\nSkipped\n\nHot lead?\n\nLOGIC · IF / ELSE\n\nSkipped\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nSkipped\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nSkipped\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#8\nFAILED\n1/2 · 41ms\nOpen in inspector →\n✕\n#8\nnow\n#6\n16s ago\n#5\n19s ago\n#4\n25s ago\n#3\n31s ago\n#2\n35s ago\n#1\n39s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nFailed\n· 7ms\n→\nScore lead\nSkipped\n→\nHot lead?\nSkipped\n→\nSheets — Add row\nSkipped\n→\nNurture\nSkipped\n→\nSlack — Notify\nSkipped\n\n⚠ Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\n\nRun #8 failed"
+    },
+    {
+      "at": "2026-09-27T20:00:31.058Z",
+      "kind": "phase-pass",
+      "name": "usage-budget"
+    },
+    {
+      "at": "2026-09-27T20:00:31.059Z",
+      "kind": "phase-start",
+      "name": "repair"
+    },
+    {
+      "at": "2026-09-27T20:00:34.525Z",
+      "kind": "state",
+      "name": "repair-active-builder",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/4dcd5e97-82b1-4634-bee3-27ecc0cceaf1",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nWebhook trigger\n\nTRIGGER · WEBHOOK\n\nNot run yet\n\nApp action\n\nSLACK · POST MESSAGE\n\nNot run yet\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nPublished v1"
+    },
+    {
+      "at": "2026-09-27T20:00:34.795Z",
+      "kind": "state",
+      "name": "dashboard-active",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nFlows\nSearch flows\n+ New flow\n\nFLOWS\n\n4\n2 ran in 24h\n\nRUNS (24H)\n\n8\n57.1% success\n\nUSAGE (THIS MONTH)\n\nUSD 0.00\n3,150 AI tokens · 21 unpriced\n\nNEEDS ATTENTION\n\n3\n3 failed\n\nFLOW\tTRIGGER\tSTATUS\tLAST RUN\tSUCCESS\nUntitled flow3 nodes\tWebhook\t\nActive\tnever\t—\nLead Enrichment Pipeline7 nodes\tWebhook\t\nFailed\tnow\t50.0%\nLead Qualifier5 nodes\tManual\t\nHealthy\t10s ago\t100.0%\nUntitled flow0 nodes\tNo trigger\t\nDraft\tnever\t—\nRECENT ACTIVITY\nRun #8 Lead Enrichment Pipeline · failed — Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\nInspect →\nRun #7 Lead Qualifier · completed 4/4 steps in 39ms\nInspect →\nRun #6 Lead Enrichment Pipeline · in progress · step 5 of 6\nInspect →\nRun #5 Lead Enrichment Pipeline · failed — Post message was rejected\nInspect →\nRun #4 Lead Enrichment Pipeline · completed 6/6 steps in 277ms\nInspect →\nRun #3 Lead Enrichment Pipeline · completed 6/6 steps in 156ms\nInspect →"
+    },
+    {
+      "at": "2026-09-27T20:00:34.799Z",
+      "kind": "revoke",
+      "status": 200,
+      "body": "{\"ok\":true,\"revoked\":3}"
+    },
+    {
+      "at": "2026-09-27T20:00:36.422Z",
+      "kind": "state",
+      "name": "repair-revoked-failed",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/4dcd5e97-82b1-4634-bee3-27ecc0cceaf1",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nWebhook trigger\n\nTRIGGER · WEBHOOK\n\n0ms\n\nApp action\n\nSLACK · POST MESSAGE\n\n✗ Slack rejected the connection (Slack: token_revoked). Flows using it are paused until it's reconnected.\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nRUNS\n#9\nFAILED\n1/2 · 54ms\nOpen in inspector →\n✕\n#9\nnow\nWebhook trigger\nSuccess\n· 0ms\n→\nApp action\nFailed\n· 32ms\n→\nOutput\nSkipped\n\n⚠ Slack rejected the connection (Slack: token_revoked). Flows using it are paused until it's reconnected.\n\nRun #9 failed"
+    },
+    {
+      "at": "2026-09-27T20:00:36.557Z",
+      "kind": "console",
+      "type": "error",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "sensitivePattern": false,
+      "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <RedirectErrorBoundary router={{...}}>\n      <InnerLayoutRouter url=\"/w/codex-r...\" tree={[...]} params={{slug:\"code...\"}} cacheNode={{rsc:{...}, ...}} ...>\n        <SegmentViewNode type=\"page\" pagePath=\"w/[slug]/"
+    },
+    {
+      "at": "2026-09-27T20:00:36.645Z",
+      "kind": "state",
+      "name": "repair-banner",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\n⚠\nYour Slack connection (alice @ Flowline) is expired — 2 flows are paused. Other flows keep running.\nReconnect Slack\n\nCONNECTED · 2\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 1 flow · used 22s ago\n\nReconnect\nRemove\n💬\nSlack (alice @ Flowline)\nExpired\n\nalice @ Flowline · 2 flows · used now\n\nSlack: token_revoked\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions"
+    },
+    {
+      "at": "2026-09-27T20:00:37.014Z",
+      "kind": "state",
+      "name": "dashboard-expired",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nFlows\nSearch flows\n+ New flow\n\nFLOWS\n\n4\n3 ran in 24h\n\nRUNS (24H)\n\n9\n50.0% success\n\nUSAGE (THIS MONTH)\n\nUSD 0.00\n3,150 AI tokens · 22 unpriced\n\nNEEDS ATTENTION\n\n5\n4 failed · 1 connection expired\n\nFLOW\tTRIGGER\tSTATUS\tLAST RUN\tSUCCESS\nUntitled flow3 nodes\tWebhook\t\nExpired\tnow\t0.0%\nLead Enrichment Pipeline7 nodes\tWebhook\t\nExpired\tnow\t50.0%\nLead Qualifier5 nodes\tManual\t\nHealthy\t12s ago\t100.0%\nUntitled flow0 nodes\tNo trigger\t\nDraft\tnever\t—\nRECENT ACTIVITY\nSlack (alice @ Flowline) connection expired — 2 flows paused\nReconnect →\nRun #9 Untitled flow · failed — Slack rejected the connection (Slack: token_revoked). Flows using it are paused until it's reconnected.\nInspect →\nRun #8 Lead Enrichment Pipeline · failed — Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\nInspect →\nRun #7 Lead Qualifier · completed 4/4 steps in 39ms\nInspect →\nRun #6 Lead Enrichment Pipeline · in progress · step 5 of 6\nInspect →\nRun #5 Lead Enrichment Pipeline · failed — Post message was rejected\nInspect →\nRun #4 Lead Enrichment Pipeline · completed 6/6 steps in 277ms\nInspect →"
+    },
+    {
+      "at": "2026-09-27T20:00:38.657Z",
+      "kind": "state",
+      "name": "other-flow-while-expired",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/afbc0268-0fe3-44e0-a94d-8027fd1074bc",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nInbound lead\n\nTRIGGER · MANUAL\n\n0ms\n\nNormalise lead\n\nTRANSFORM · JSONATA\n\n1ms\n\n50+ employees?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nHot lead\n\nOUTPUT · RESULT\n\n1ms\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit\nRUNS\n#10\nSUCCESS\n4/4 · 49ms\nOpen in inspector →\n✕\n#10\nnow\n#7\n14s ago\nInbound lead\nSuccess\n· 0ms\n→\nNormalise lead\nSuccess\n· 1ms\n→\n50+ employees?\nSuccess\n· 1ms\n→\nHot lead\nSuccess\n· 1ms\n→\nNurture\nSkipped\n\nRUN OUTPUT\n\n{\n  \"hot_lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"tier\": \"hot\",\n    \"domain\": \"analytical.io\"\n  }\n}\nRun #10 succeeded"
+    },
+    {
+      "at": "2026-09-27T20:00:39.005Z",
+      "kind": "state",
+      "name": "reconnect-dialog",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\n⚠\nYour Slack connection (alice @ Flowline) is expired — 2 flows are paused. Other flows keep running.\nReconnect Slack\n\nCONNECTED · 2\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 1 flow · used 24s ago\n\nReconnect\nRemove\n💬\nSlack (alice @ Flowline)\nExpired\n\nalice @ Flowline · 2 flows · used now\n\nSlack: token_revoked\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\nReconnect Slack\n\nUse credentials for the same account (alice @ Flowline). A different account is refused. Paused flows resume; nothing runs automatically.\n\nYou'll sign in at Slack and grant: chat:write, channels:history, channels:read.\n\nCancel\nContinue to Slack"
+    },
+    {
+      "at": "2026-09-27T20:00:39.392Z",
+      "kind": "state",
+      "name": "reconnected",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · 2\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 1 flow · used 25s ago\n\nReconnect\nRemove\n💬\nSlack (alice @ Flowline)\nConnected\n\nalice @ Flowline · 2 flows · used now\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\nReconnected — paused flows resumed (nothing ran automatically)\nReconnected — paused flows resumed (nothing ran automatically)"
+    },
+    {
+      "at": "2026-09-27T20:00:39.799Z",
+      "kind": "state",
+      "name": "dashboard-resumed",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nFlows\nSearch flows\n+ New flow\n\nFLOWS\n\n4\n3 ran in 24h\n\nRUNS (24H)\n\n10\n55.6% success\n\nUSAGE (THIS MONTH)\n\nUSD 0.00\n3,150 AI tokens · 22 unpriced\n\nNEEDS ATTENTION\n\n4\n4 failed\n\nFLOW\tTRIGGER\tSTATUS\tLAST RUN\tSUCCESS\nUntitled flow3 nodes\tWebhook\t\nActive · failing\tnow\t0.0%\nLead Enrichment Pipeline7 nodes\tWebhook\t\nFailed\t10s ago\t50.0%\nLead Qualifier5 nodes\tManual\t\nHealthy\tnow\t100.0%\nUntitled flow0 nodes\tNo trigger\t\nDraft\tnever\t—\nRECENT ACTIVITY\nRun #10 Lead Qualifier · completed 4/4 steps in 49ms\nInspect →\nRun #9 Untitled flow · failed — Slack rejected the connection (Slack: token_revoked). Flows using it are paused until it's reconnected.\nInspect →\nRun #8 Lead Enrichment Pipeline · failed — Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\nInspect →\nRun #7 Lead Qualifier · completed 4/4 steps in 39ms\nInspect →\nRun #6 Lead Enrichment Pipeline · in progress · step 5 of 6\nInspect →\nRun #5 Lead Enrichment Pipeline · failed — Post message was rejected\nInspect →"
+    },
+    {
+      "at": "2026-09-27T20:00:41.473Z",
+      "kind": "state",
+      "name": "repair-success",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/4dcd5e97-82b1-4634-bee3-27ecc0cceaf1",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nWebhook trigger\n\nTRIGGER · WEBHOOK\n\n0ms\n\nApp action\n\nSLACK · POST MESSAGE\n\n17ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nRUNS\n#11\nSUCCESS\n3/3 · 48ms\nOpen in inspector →\n✕\n#11\nnow\n#9\nnow\nWebhook trigger\nSuccess\n· 0ms\n→\nApp action\nSuccess\n· 17ms\n→\nOutput\nSuccess\n· 0ms\n\nRUN OUTPUT\n\n{\n  \"done\": {\n    \"ts\": \"1760000000.000015\",\n    \"channel\": \"C_REPAIR_muk8sr8f\"\n  }\n}\nRun #11 succeeded"
+    },
+    {
+      "at": "2026-09-27T20:00:41.476Z",
+      "kind": "repair-provider-state",
+      "messages": [
+        {
+          "channel": "C_REPAIR_muk8sr8f",
+          "text": "Retest repair",
+          "ts": "1760000000.000015",
+          "metadata": {
+            "event_type": "flowline_action",
+            "event_payload": {
+              "idempotency_key": "fl_30e8fbdd3373907bee832a1dea999acc"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "at": "2026-09-27T20:00:41.846Z",
+      "kind": "state",
+      "name": "dashboard-after-repair-success",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nFlows\nSearch flows\n+ New flow\n\nFLOWS\n\n4\n3 ran in 24h\n\nRUNS (24H)\n\n11\n60.0% success\n\nUSAGE (THIS MONTH)\n\nUSD 0.00\n3,150 AI tokens · 23 unpriced\n\nNEEDS ATTENTION\n\n4\n4 failed\n\nFLOW\tTRIGGER\tSTATUS\tLAST RUN\tSUCCESS\nUntitled flow3 nodes\tWebhook\t\nActive\tnow\t50.0%\nLead Enrichment Pipeline7 nodes\tWebhook\t\nFailed\t12s ago\t50.0%\nLead Qualifier5 nodes\tManual\t\nHealthy\tnow\t100.0%\nUntitled flow0 nodes\tNo trigger\t\nDraft\tnever\t—\nRECENT ACTIVITY\nRun #11 Untitled flow · completed 3/3 steps in 48ms\nInspect →\nRun #10 Lead Qualifier · completed 4/4 steps in 49ms\nInspect →\nRun #9 Untitled flow · failed — Slack rejected the connection (Slack: token_revoked). Flows using it are paused until it's reconnected.\nInspect →\nRun #8 Lead Enrichment Pipeline · failed — Monthly budget reached (0.0000 of 0.0100 used; this step needs up to 3.6600)\nInspect →\nRun #7 Lead Qualifier · completed 4/4 steps in 39ms\nInspect →\nRun #6 Lead Enrichment Pipeline · in progress · step 5 of 6\nInspect →"
+    },
+    {
+      "at": "2026-09-27T20:00:42.155Z",
+      "kind": "state",
+      "name": "reconnect-google-dialog",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · 2\n\n📊\nGoogle Sheets (alice@flowline.test)\nConnected\n\nalice@flowline.test · 1 flow · used 27s ago\n\nReconnect\nRemove\n💬\nSlack (alice @ Flowline)\nConnected\n\nalice @ Flowline · 2 flows · used now\n\nReconnect\nRemove\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\nReconnect Google Sheets\n\nUse credentials for the same account (alice@flowline.test). A different account is refused. Paused flows resume; nothing runs automatically.\n\nYou'll sign in at Google Sheets and grant: https://www.googleapis.com/auth/spreadsheets.\n\nCancel\nContinue to Google Sheets"
+    },
+    {
+      "at": "2026-09-27T20:00:42.186Z",
+      "kind": "google-hint-result",
+      "seen": false
+    },
+    {
+      "at": "2026-09-27T20:00:42.398Z",
+      "kind": "state",
+      "name": "google-reconnected",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/integrations",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · …\n\nCATALOG · …\n\nSearch integrations"
+    },
+    {
+      "at": "2026-09-27T20:00:42.398Z",
+      "kind": "phase-pass",
+      "name": "repair"
+    },
+    {
+      "at": "2026-09-27T20:00:42.400Z",
+      "kind": "phase-start",
+      "name": "queue-limit"
+    },
+    {
+      "at": "2026-09-27T20:00:43.022Z",
+      "kind": "state",
+      "name": "queue-limits-saved",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/settings",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\nSettings\nMembers\nGeneral\nAPI keys\nUsage & limits\nUsage this month\n\nFrom the durable usage ledger: every AI call and app action is recorded once. Costs use the prices you configure below; nothing is estimated from list prices.\n\nKIND\tPROVIDER / MODEL\tEVENTS\tTOKENS\tCOST\naction\tgoogle_sheets\t8\t0\tunpriced\naction\tslack\t5\t0\tunpriced\nai\tollama / fake-model\t10\t3,150\tunpriced\nLimits\nMONTHLY BUDGET (USD)\n\nCosted steps fail before running once reached. Blank = no limit.\n\nCONCURRENT RUNS\n\n1–20 per workspace\n\nQUEUED RUNS\n\nBeyond this, new runs are refused\n\nPRICES (USD)\n\nKeys: ai:<provider>/<model> (per million tokens), action:<action id> or action:<app>/* (per call). Unpriced usage is still counted and flagged.\n\n+ Add price\nSave limits\nNo changes to save\nPlans and payments: Phase 3.\nUsage limits saved"
+    },
+    {
+      "at": "2026-09-27T20:00:43.025Z",
+      "kind": "fault",
+      "data": {
+        "provider": "google_sheets",
+        "pathPattern": "retest-sheet-muk8sr8f-fault",
+        "mode": "timeout",
+        "times": 1
+      },
+      "status": 200,
+      "body": "{\"ok\":true}"
+    },
+    {
+      "at": "2026-09-27T20:00:43.563Z",
+      "kind": "state",
+      "name": "queue-first-running",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\nRunning…\n\nScore lead\n\nAI · LABEL\n\nQueued\n\nHot lead?\n\nLOGIC · IF / ELSE\n\nQueued\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nQueued\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nQueued\n\nNurture\n\nOUTPUT · RESULT\n\nQueued\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#12\nRUNNING\n1/7 · —\nCancel run\nOpen in inspector →\n✕\n#12\nnow\n#8\n14s ago\n#6\n29s ago\n#5\n32s ago\n#4\n38s ago\n#3\n44s ago\n#2\n48s ago\n#1\n53s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nRunning…\n→\nScore lead\nQueued\n→\nHot lead?\nQueued\n→\nSheets — Add row\nQueued\n→\nNurture\nQueued\n→\nSlack — Notify\nQueued\n\nRunning…"
+    },
+    {
+      "at": "2026-09-27T20:00:43.625Z",
+      "kind": "queue-second-client-1",
+      "status": 202,
+      "body": "{\"run\":{\"id\":\"2f3f5467-f878-4416-9920-3f169e0fccfe\",\"workspaceId\":\"d99f6878-b0d3-4ad6-b2af-6c727731e67f\",\"flowId\":\"d10f2d00-4866-44e3-8005-bb294589f014\",\"flowVersionId\":\"250d5227-482f-4a94-aadd-2d2f1c5465d9\",\"number\":13,\"status\":\"queued\",\"input\":{\"body\":{\"lead\":{\"name\":\"Ada Lovelace\",\"role\":\"VP Operations\",\"email\":\"ada@analytical.io\",\"company\":\"Analytical Engines Ltd\",\"industry\":\"Fintech\",\"employees\":250}}},\"output\":null,\"error\":null,\"rerunOfRunId\":null,\"rerunFromNodeId\":null,\"triggerKind\":\"manual\",\"triggerRef\":null,\"parentRunId\":null,\"parentNodeId\":null,\"policy\":{\"connections\":{\"sheet\":\"6082e276-6237-4e0f-8673-6f42e59d9022\",\"slack\":\"4cff5f13-7dbd-415c-97bc-8a3927cfcdba\"},\"actingUserId\":\"d8ff46f8-d819-4743-bd21-142080c141eb\"},\"cancelRequestedAt\":null,\"cancelRequestedBy\":null,\"deadlineAt\":\""
+    },
+    {
+      "at": "2026-09-27T20:00:43.681Z",
+      "kind": "state",
+      "name": "queue-second-client-1-ui",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\nRunning…\n\nScore lead\n\nAI · LABEL\n\nQueued\n\nHot lead?\n\nLOGIC · IF / ELSE\n\nQueued\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nQueued\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nQueued\n\nNurture\n\nOUTPUT · RESULT\n\nQueued\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#12\nRUNNING\n1/7 · —\nCancel run\nOpen in inspector →\n✕\n#12\nnow\n#8\n14s ago\n#6\n29s ago\n#5\n32s ago\n#4\n38s ago\n#3\n44s ago\n#2\n48s ago\n#1\n53s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nRunning…\n→\nScore lead\nQueued\n→\nHot lead?\nQueued\n→\nSheets — Add row\nQueued\n→\nNurture\nQueued\n→\nSlack — Notify\nQueued\n\nRunning…"
+    },
+    {
+      "at": "2026-09-27T20:00:43.707Z",
+      "kind": "queue-second-client-2",
+      "status": 429,
+      "body": "{\"error\":{\"code\":\"QUEUE_FULL\",\"message\":\"This workspace already has 1 queued runs (limit 1). Try again when some finish.\"}}"
+    },
+    {
+      "at": "2026-09-27T20:00:43.746Z",
+      "kind": "state",
+      "name": "queue-refusal-ui",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/d10f2d00-4866-44e3-8005-bb294589f014",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nForm submitted\n\nTRIGGER · WEBHOOK\n\n0ms\n\nEnrich lead\n\nAI · STRUCTURED JSON\n\nRunning…\n\nScore lead\n\nAI · LABEL\n\nQueued\n\nHot lead?\n\nLOGIC · IF / ELSE\n\nQueued\n\ntrue\nfalse\n\nSheets — Add row\n\nGOOGLE SHEETS · APPEND ROW\n\nQueued\n\nSlack — Notify\n\nSLACK · POST MESSAGE\n\nQueued\n\nNurture\n\nOUTPUT · RESULT\n\nQueued\n\nReact Flow\n+ Add node\n/\n−\n64%\n+\nFit\nRUNS\n#12\nRUNNING\n1/7 · —\nCancel run\nOpen in inspector →\n✕\n#12\nnow\n#8\n14s ago\n#6\n29s ago\n#5\n32s ago\n#4\n38s ago\n#3\n44s ago\n#2\n48s ago\n#1\n53s ago\nForm submitted\nSuccess\n· 0ms\n→\nEnrich lead\nRunning…\n→\nScore lead\nQueued\n→\nHot lead?\nQueued\n→\nSheets — Add row\nQueued\n→\nNurture\nQueued\n→\nSlack — Notify\nQueued\n\nRunning…"
+    },
+    {
+      "at": "2026-09-27T20:00:44.209Z",
+      "kind": "phase-pass",
+      "name": "queue-limit"
+    },
+    {
+      "at": "2026-09-27T20:00:44.211Z",
+      "kind": "phase-start",
+      "name": "pagination"
+    },
+    {
+      "at": "2026-09-27T20:01:14.534Z",
+      "kind": "phase-error",
+      "name": "pagination",
+      "error": "locator.textContent: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('run-dock').locator(':scope > div').first()\u001b[22m\n\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-codex\\artifacts\\phase-2\\codex-review\\scripts\\retest.mjs:245:35\n    at async phase (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-codex\\artifacts\\phase-2\\codex-review\\scripts\\retest.mjs:23:71)\n    at async file:///C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-codex/artifacts/phase-2/codex-review/scripts/retest.mjs:241:3"
+    },
+    {
+      "at": "2026-09-27T20:01:14.569Z",
+      "kind": "state",
+      "name": "pagination-error",
+      "url": "http://localhost:3100/w/codex-retest-muk8sr8f/flows/afbc0268-0fe3-44e0-a94d-8027fd1074bc",
+      "text": "Skip to content\nCodex Retest muk8sr8f\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCR\nCodex Retest\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nInbound lead\n\nTRIGGER · MANUAL\n\n0ms\n\nNormalise lead\n\nTRANSFORM · JSONATA\n\n1ms\n\n50+ employees?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nHot lead\n\nOUTPUT · RESULT\n\n1ms\n\nNurture\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit"
+    }
+  ]
+}

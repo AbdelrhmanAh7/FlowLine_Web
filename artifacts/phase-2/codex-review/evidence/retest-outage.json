@@ -1,0 +1,55 @@
+{
+  "started": "2026-09-27T19:56:40.722Z",
+  "ended": "2026-09-27T19:57:01.041Z",
+  "revision": "c7b7b54",
+  "identity": {
+    "email": "[test account redacted]",
+    "slug": null,
+    "blankUrl": null,
+    "localUrl": null,
+    "templateUrl": null,
+    "sheetId": "retest-sheet-muk8ov4i",
+    "channel": "C_RETEST_muk8ov4i",
+    "approvalChannel": "C_APPROVE_muk8ov4i",
+    "repairChannel": "C_REPAIR_muk8ov4i"
+  },
+  "events": [
+    {
+      "at": "2026-09-27T19:56:40.723Z",
+      "kind": "phase-start",
+      "name": "signup"
+    },
+    {
+      "at": "2026-09-27T19:56:46.166Z",
+      "kind": "response-error",
+      "status": 500,
+      "url": "http://localhost:3100/api/auth/sign-up/email"
+    },
+    {
+      "at": "2026-09-27T19:56:46.167Z",
+      "kind": "console",
+      "type": "error",
+      "url": "http://localhost:3100/sign-up",
+      "sensitivePattern": false,
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    },
+    {
+      "at": "2026-09-27T19:57:01.006Z",
+      "kind": "phase-error",
+      "name": "signup",
+      "error": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('heading', { name: 'Name your workspace' }) to be visible\u001b[22m\n\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-codex\\artifacts\\phase-2\\codex-review\\scripts\\retest.mjs:58:70\n    at async phase (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-codex\\artifacts\\phase-2\\codex-review\\scripts\\retest.mjs:23:71)\n    at async file:///C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-codex/artifacts/phase-2/codex-review/scripts/retest.mjs:52:3"
+    },
+    {
+      "at": "2026-09-27T19:57:01.041Z",
+      "kind": "state",
+      "name": "signup-error",
+      "url": "http://localhost:3100/sign-up",
+      "text": "Flowline\nCreate your account\n\nBuild and run flows on local nodes — no card required.\n\nG\nContinue with Google\nGoogle sign-in isn't configured on this server yet. Use email below.\n◉\nContinue with GitHub\nGitHub sign-in isn't configured on this server yet. Use email below.\nor with email\nNAME\nEMAIL\nPASSWORD\n\nAt least 8 characters\n\nInternal Server Error\n\nCreate account\n\nAlready have an account? Sign in\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNormalise lead\n\nTRANSFORM · JSONATA\n\nHot lead\n\nOUTPUT · RESULT\n\nEvery run is stored step by step, so you can see exactly what happened."
+    },
+    {
+      "at": "2026-09-27T19:57:01.041Z",
+      "kind": "fatal",
+      "error": "Error: Cannot continue without UI account\n    at file:///C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-codex/artifacts/phase-2/codex-review/scripts/retest.mjs:69:29"
+    }
+  ]
+}
