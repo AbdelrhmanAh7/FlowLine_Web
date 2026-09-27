@@ -111,7 +111,8 @@ function handleChat(reqBody: string, res: ServerResponse) {
   const r = JSON.parse(reqBody) as { model: string; format?: Schema; messages: { role: string; content: string }[] };
   const user = r.messages.find((m) => m.role === "user")?.content ?? "";
   // A real model reads HTML fine; this rule-based double strips markup first.
-  const content = user.replace(/<\/?untrusted_content>/g, "").replace(/<[^>]+>/g, "\n");
+  const data = /<untrusted_content>([\s\S]*)<\/untrusted_content>/.exec(user)?.[1] ?? user;
+  const content = data.replace(/<[^>]+>/g, "\n");
   state.requests.push({ at: new Date().toISOString(), model: r.model, hasSchema: Boolean(r.format), content: content.slice(0, 2000) });
   const fault = state.faults.find((f) => f.times > 0);
   if (fault) {

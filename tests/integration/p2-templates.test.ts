@@ -166,8 +166,12 @@ describe("the six design templates run end-to-end (deterministic provider double
     expect(sends).toHaveLength(1);
     expect(JSON.stringify(sends)).not.toContain("attacker@evil.test");
     const ai_ = await (await fetch(`${ai.url}/__fake/requests`)).json();
-    const system = JSON.stringify(ai_);
-    expect(system).toContain("IGNORE PREVIOUS INSTRUCTIONS"); // the model saw it as data…
+    const seen = JSON.stringify(ai_);
+    expect(seen).not.toContain("IGNORE PREVIOUS INSTRUCTIONS"); // quarantined before the model saw it…
+    expect(seen).toContain("[removed by Flowline: text that tried to instruct the AI]");
+    expect(s.extract!.meta).toMatchObject({ quarantinedLines: 1 }); // …and the step says so
+    const events = await db.select().from(schema.runEvent).where(eq(schema.runEvent.runId, id));
+    expect(events.map((e) => e.type)).toContain("ai_instructions_quarantined");
   });
 
   it("Competitor Price Watch: first observation alerts, unchanged is quiet, a >5% change alerts", async () => {

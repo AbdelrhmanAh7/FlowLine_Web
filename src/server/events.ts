@@ -9,6 +9,7 @@ export type RunEventType =
   | "step_started"
   | "step_succeeded"
   | "step_failed"
+  | "ai_instructions_quarantined"
   | "step_skipped"
   | "step_retry"
   | "step_verified"

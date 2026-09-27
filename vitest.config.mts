@@ -10,6 +10,9 @@ export default defineConfig({
       { resolve: { alias }, test: { name: "unit", include: ["tests/unit/**/*.test.ts"], environment: "node" } },
       // Provider adapter contract tests: adapters vs. the local fake provider server (no DB, no network).
       { resolve: { alias }, test: { name: "contract", include: ["tests/contract/**/*.test.ts"], environment: "node", testTimeout: 20000, fileParallelism: false } },
+      // Live/sandbox suite: real local Ollama, real Postgres, SaaS sandboxes (BLOCKED without credentials).
+      // Kept separate from the deterministic suites; results land in artifacts/phase-2/live-results.json.
+      { resolve: { alias }, test: { name: "live", include: ["tests/live/**/*.test.ts"], environment: "node", testTimeout: 200000, fileParallelism: false } },
       {
         resolve: { alias },
         test: {

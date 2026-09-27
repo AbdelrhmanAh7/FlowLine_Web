@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { injectFault, resetFaults, setupUser } from "./helpers";
 
-const OUT = "artifacts/phase-1/screenshots";
+const OUT = "artifacts/phase-2/screenshots";
 mkdirSync(OUT, { recursive: true });
 
 async function noHorizontalScroll(page: Page) {

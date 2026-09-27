@@ -166,7 +166,11 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
       const r = await provider.generate({ instructions: str(cfg.instructions), content, maxTokens, schema, model, signal: env.signal });
       const cost = aiCostMicros(price, r.usage.inputTokens, r.usage.outputTokens);
       await settleUsage(ctx.db, key, { costMicros: cost.cost, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, unpriced: cost.unpriced });
-      const meta = { provider: r.provider, model: r.model, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, costMicros: cost.cost, unpriced: cost.unpriced };
+      const meta = { provider: r.provider, model: r.model, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, costMicros: cost.cost, unpriced: cost.unpriced, quarantinedLines: r.quarantined.length };
+      if (r.quarantined.length && attempt === 1) {
+        env.log(`security: removed ${r.quarantined.length} line(s) from the content that tried to instruct the AI`);
+        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "ai_instructions_quarantined", nodeId: node.id, data: { lines: r.quarantined.length } });
+      }
       if (!schema) return { kind: "ok", output: { text: r.text }, meta, attempts: attempt };
       const problem = validateAgainstSchema(schema, r.json);
       if (problem) {

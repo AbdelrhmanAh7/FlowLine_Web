@@ -28,8 +28,13 @@ async function connect(creds: Credentials): Promise<Client> {
         : sslmode === "verify-ca" || sslmode === "verify-full"
           ? { rejectUnauthorized: true }
           : undefined;
-  const client = new Client({ connectionString: raw, ssl });
-  await client.connect();
+  const client = new Client({ connectionString: raw, ssl, connectionTimeoutMillis: 10_000 });
+  try {
+    await client.connect();
+  } catch (e) {
+    await client.end().catch(() => {});
+    mapPgError(e); // e.g. wrong password → auth, refused/unreachable → network
+  }
   return client;
 }
 
@@ -154,8 +159,8 @@ const provider: ProviderDef = {
   verification: {
     adapter: true,
     contractTested: true,
-    live: "not_run",
-    liveNote: "Verified separately against a local database",
+    live: "verified",
+    liveNote: "Sandbox-live verified against a real PostgreSQL 17 server (tests/live/postgres.test.ts)",
   },
 };
 
