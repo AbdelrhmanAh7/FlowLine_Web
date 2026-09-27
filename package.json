@@ -22,9 +22,10 @@
     "test": "vitest run --project unit",
     "test:integration": "node scripts/with-env.mjs .env.test vitest run --project integration",
     "test:e2e": "playwright test",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && pnpm test:integration",
     "dev:test": "node scripts/dev-test.mjs",
-    "stop:test": "node scripts/stop-test-stack.mjs"
+    "stop:test": "node scripts/stop-test-stack.mjs",
+    "test:contract": "vitest run --project contract"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",
@@ -32,18 +33,24 @@
     "@tanstack/react-query": "5.104.0",
     "@xyflow/react": "12.12.0",
     "better-auth": "1.7.6",
+    "cron-parser": "5.10.1",
     "drizzle-orm": "0.45.3",
+    "ipaddr.js": "2.5.0",
     "jsonata": "2.2.2",
     "next": "16.3.6",
+    "papaparse": "5.7.0",
     "pg": "8.23.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "undici": "8.11.2",
+    "unpdf": "1.8.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.3",
+    "@types/papaparse": "5.5.2",
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

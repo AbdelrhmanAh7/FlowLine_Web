@@ -8,6 +8,8 @@ export default defineConfig({
   test: {
     projects: [
       { resolve: { alias }, test: { name: "unit", include: ["tests/unit/**/*.test.ts"], environment: "node" } },
+      // Provider adapter contract tests: adapters vs. the local fake provider server (no DB, no network).
+      { resolve: { alias }, test: { name: "contract", include: ["tests/contract/**/*.test.ts"], environment: "node", testTimeout: 20000, fileParallelism: false } },
       {
         resolve: { alias },
         test: {
