@@ -9,7 +9,7 @@
  * Usage: `npx tsx e2e/fakes/provider-server.ts --port 4010`
  * or `const fake = await startFakeProviders()` from tests (ephemeral port).
  */
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { pathToFileURL } from "node:url";
@@ -59,6 +59,32 @@ interface TokenInfo {
   status: "active" | "revoked" | "expired";
 }
 
+/** Fake billing primitives (Stripe-shaped) used by the billing adapter tests. */
+interface FakeSubscription {
+  id: string;
+  object: "subscription";
+  customer: string;
+  status: string;
+  items: { data: { price: { id: string } }[] };
+  current_period_end: number;
+  cancel_at_period_end: boolean;
+  trial_end: number | null;
+}
+
+interface FakeCheckoutSession {
+  id: string;
+  object: "checkout.session";
+  mode: "subscription";
+  customer: string;
+  priceId: string;
+  trialDays: number | null;
+  success_url: string;
+  cancel_url: string;
+  status: "open" | "complete" | "failed";
+  subscription: string | null;
+  url: string;
+}
+
 interface GmailMessage {
   id: string;
   threadId: string;
@@ -88,6 +114,11 @@ interface State {
   githubComments: Record<string, { id: number; body: string; user: { login: string }; html_url: string; created_at: string }[]>;
   stripeCharges: Record<string, unknown>[];
   stripeRefunds: Record<string, unknown>[];
+  stripeCustomers: Record<string, unknown>[];
+  stripeCheckoutSessions: FakeCheckoutSession[];
+  stripeSubscriptions: FakeSubscription[];
+  stripeMeterEvents: Record<string, unknown>[];
+  stripeWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
 }
@@ -99,10 +130,16 @@ function seed(): State {
     ["revoked-token", { account: "a", status: "revoked" }],
     ["expired-token", { account: "a", status: "expired" }],
     ["sk_test_fake", { account: "a", status: "active" }],
+    ["sk_test_fake_billing", { account: "a", status: "active" }],
     ["rk_test_fake", { account: "a", status: "active" }],
   ]);
+  // Stripe billing ids are stored (and deduplicated) by the app under test, so they must
+  // stay unique across fake resets within a test run: start each counter at a random offset.
+  const stripeCounters = Object.fromEntries(
+    ["stripeCustomer", "stripeCheckout", "stripeSubscription", "stripeEvent", "stripeMeter", "stripeInvoice", "stripeCheckoutEmit"].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
+  );
   return {
-    counters: {},
+    counters: stripeCounters,
     tokens,
     oauthCodes: new Map(),
     refreshTokens: new Map([["denied-refresh-token", { account: "a", current: true, denied: true }]]),
@@ -194,6 +231,11 @@ function seed(): State {
       { id: "ch_test_2", object: "charge", amount: 30000, currency: "usd", status: "succeeded", created: 1759100000 },
     ],
     stripeRefunds: [],
+    stripeCustomers: [],
+    stripeCheckoutSessions: [],
+    stripeSubscriptions: [],
+    stripeMeterEvents: [],
+    stripeWebhooks: [],
     notionPages: [
       {
         object: "page",
@@ -391,7 +433,7 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
 
 // ---------------------------------------------------------------- providers
 
-type Handler = (ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: string, url: URL, body: string, account: AccountKey) => void;
+type Handler = (ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: string, url: URL, body: string, account: AccountKey) => void | Promise<void>;
 
 const j = (raw: string): Record<string, unknown> => {
   try {
@@ -784,7 +826,43 @@ const github: Handler = (ctx, req, res, path, url, body, account) => {
   return json(ctx, req, res, 404, { message: "Not Found" });
 };
 
-const stripe: Handler = (ctx, req, res, path, url, body) => {
+// ---------------------------------------------------------------- fake stripe billing
+
+function stripeEvent(state: State, type: string, object: unknown, opts: { id?: string; created?: number } = {}): Record<string, unknown> {
+  return { id: opts.id ?? `evt_fake_${next(state, "stripeEvent")}`, object: "event", type, created: opts.created ?? Math.floor(Date.now() / 1000), data: { object } };
+}
+
+/** Stripe signature scheme: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<payload>")>. */
+function signStripePayload(secret: string, payload: string, at?: number): string {
+  const t = at ?? Math.floor(Date.now() / 1000);
+  const v1 = createHmac("sha256", secret).update(`${t}.${payload}`, "utf8").digest("hex");
+  return `t=${t},v1=${v1}`;
+}
+
+/** Records (and, when FAKE_STRIPE_WEBHOOK_URL is set, sends) a signed webhook for the app under test. */
+async function sendStripeWebhook(ctx: Ctx, event: Record<string, unknown>): Promise<{ sent: boolean; payload: string; header: string }> {
+  const url = process.env.FAKE_STRIPE_WEBHOOK_URL || null;
+  const secret = process.env.FAKE_STRIPE_WEBHOOK_SECRET || "whsec_fake";
+  const payload = JSON.stringify(event);
+  const header = signStripePayload(secret, payload);
+  const rec = { id: String(event.id), type: String(event.type), url, sent: false, payload, header, at: new Date().toISOString() };
+  if (url) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "stripe-signature": header }, body: payload });
+      rec.sent = res.ok;
+    } catch {
+      rec.sent = false;
+    }
+  }
+  ctx.state.stripeWebhooks.push(rec);
+  return { sent: rec.sent, payload, header };
+}
+
+function subscriptionPayload(sub: FakeSubscription): Record<string, unknown> {
+  return { ...sub };
+}
+
+const stripe: Handler = async (ctx, req, res, path, url, body) => {
   const s = ctx.state;
   if (req.method === "GET" && path === "/v1/account") {
     return json(ctx, req, res, 200, {
@@ -827,6 +905,107 @@ const stripe: Handler = (ctx, req, res, path, url, body) => {
     s.stripeRefunds.push(refund);
     const { _idempotencyKey: _k, ...pub } = refund;
     return json(ctx, req, res, 200, pub);
+  }
+  // ---- billing (subscriptions, checkout, meter events) ----
+  if (req.method === "POST" && path === "/v1/customers") {
+    const form = parseForm(body);
+    const customer = { id: `cus_fake_${next(s, "stripeCustomer")}`, object: "customer", name: form.name ?? null, metadata: { workspaceId: form["metadata[workspaceId]"], workspaceSlug: form["metadata[workspaceSlug]"] } };
+    s.stripeCustomers.push(customer);
+    return json(ctx, req, res, 200, customer);
+  }
+  if (req.method === "POST" && path === "/v1/checkout/sessions") {
+    const form = parseForm(body);
+    const id = `cs_test_${next(s, "stripeCheckout")}`;
+    const session: FakeCheckoutSession = {
+      id,
+      object: "checkout.session",
+      mode: "subscription",
+      customer: form.customer ?? "",
+      priceId: form["line_items[0][price]"] ?? "",
+      trialDays: form["subscription_data[trial_period_days]"] ? Number(form["subscription_data[trial_period_days]"]) : null,
+      success_url: form.success_url ?? "",
+      cancel_url: form.cancel_url ?? "",
+      status: "open",
+      subscription: null,
+      url: `http://${req.headers.host}/stripe/checkout/${id}`,
+    };
+    s.stripeCheckoutSessions.push(session);
+    return json(ctx, req, res, 200, session);
+  }
+  if (req.method === "POST" && path === "/v1/billing/meter_events") {
+    const payload = j(body);
+    const identifier = String(payload.identifier ?? "");
+    const existing = s.stripeMeterEvents.find((e) => e.identifier === identifier);
+    if (existing) return json(ctx, req, res, 200, existing);
+    const event = { id: `mtr_fake_${next(s, "stripeMeter")}`, object: "billing.meter_event", event_name: payload.event_name, identifier, payload: payload.payload, created: Math.floor(Date.now() / 1000) };
+    s.stripeMeterEvents.push(event);
+    return json(ctx, req, res, 200, event);
+  }
+  const subMatch = /^\/v1\/subscriptions\/([^/]+)$/.exec(path);
+  if (subMatch && req.method === "POST") {
+    const sub = s.stripeSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]));
+    if (!sub) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such subscription: '${subMatch[1]}'` } });
+    const form = parseForm(body);
+    const price = form["items[0][price]"] ?? form.price;
+    if (price) sub.items = { data: [{ price: { id: price } }] };
+    if (form.cancel_at_period_end !== undefined) sub.cancel_at_period_end = form.cancel_at_period_end === "true";
+    await sendStripeWebhook(ctx, stripeEvent(s, "customer.subscription.updated", subscriptionPayload(sub)));
+    return json(ctx, req, res, 200, subscriptionPayload(sub));
+  }
+  if (subMatch && req.method === "DELETE") {
+    const sub = s.stripeSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]));
+    if (!sub) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such subscription: '${subMatch[1]}'` } });
+    sub.status = "canceled";
+    sub.cancel_at_period_end = false;
+    await sendStripeWebhook(ctx, stripeEvent(s, "customer.subscription.deleted", subscriptionPayload(sub)));
+    return json(ctx, req, res, 200, subscriptionPayload(sub));
+  }
+  // ---- hosted checkout pages (unauthenticated: a browser lands here) ----
+  const pageMatch = /^\/checkout\/([^/]+)$/.exec(path);
+  if (pageMatch && req.method === "GET") {
+    const session = s.stripeCheckoutSessions.find((x) => x.id === pageMatch[1]);
+    if (!session) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "No such checkout session" } });
+    const html = `<!doctype html><html><head><title>Fake Stripe checkout</title></head><body>
+<h1>Fake Stripe checkout (test mode)</h1>
+<p>Session ${session.id} — ${session.status}</p>
+<form method="post" action="/stripe/checkout/${session.id}/complete"><button type="submit">Pay (test card)</button></form>
+<form method="post" action="/stripe/checkout/${session.id}/fail"><button type="submit">Decline (test card)</button></form>
+</body></html>`;
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(html);
+    return;
+  }
+  const completeMatch = /^\/checkout\/([^/]+)\/(complete|fail)$/.exec(path);
+  if (completeMatch && req.method === "POST") {
+    const session = s.stripeCheckoutSessions.find((x) => x.id === completeMatch[1]);
+    if (!session) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "No such checkout session" } });
+    if (completeMatch[2] === "fail") {
+      session.status = "failed";
+      res.writeHead(303, { location: session.cancel_url || "/" });
+      res.end();
+      return;
+    }
+    if (session.status !== "complete") {
+      session.status = "complete";
+      const nowSec = Math.floor(Date.now() / 1000);
+      const sub: FakeSubscription = {
+        id: `sub_fake_${next(s, "stripeSubscription")}`,
+        object: "subscription",
+        customer: session.customer,
+        status: session.trialDays ? "trialing" : "active",
+        items: { data: [{ price: { id: session.priceId } }] },
+        current_period_end: nowSec + 30 * 24 * 3600,
+        cancel_at_period_end: false,
+        trial_end: session.trialDays ? nowSec + session.trialDays * 24 * 3600 : null,
+      };
+      session.subscription = sub.id;
+      s.stripeSubscriptions.push(sub);
+      await sendStripeWebhook(ctx, stripeEvent(s, "checkout.session.completed", { id: session.id, object: "checkout.session", customer: session.customer, subscription: sub.id }));
+      await sendStripeWebhook(ctx, stripeEvent(s, "customer.subscription.created", subscriptionPayload(sub)));
+    }
+    res.writeHead(303, { location: session.success_url || "/" });
+    res.end();
+    return;
   }
   return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "Unrecognized request URL" } });
 };
@@ -936,7 +1115,15 @@ function stateDump(state: State, provider: string): unknown {
     case "github":
       return { comments: state.githubComments };
     case "stripe":
-      return { charges: state.stripeCharges, refunds: state.stripeRefunds.map(({ _idempotencyKey, ...r }) => ({ ...r, idempotencyKey: _idempotencyKey })) };
+      return {
+        charges: state.stripeCharges,
+        refunds: state.stripeRefunds.map(({ _idempotencyKey, ...r }) => ({ ...r, idempotencyKey: _idempotencyKey })),
+        customers: state.stripeCustomers,
+        checkoutSessions: state.stripeCheckoutSessions,
+        subscriptions: state.stripeSubscriptions,
+        meterEvents: state.stripeMeterEvents,
+        webhooks: state.stripeWebhooks,
+      };
     case "notion":
       return { pages: state.notionPages };
     case "linear":
@@ -948,7 +1135,7 @@ function stateDump(state: State, provider: string): unknown {
   }
 }
 
-function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: string, url: URL, rawBody: string): boolean {
+async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: string, url: URL, rawBody: string): Promise<boolean> {
   if (req.method === "POST" && path === "/__fake/reset") {
     ctx.state = seed();
     ctx.requests.length = 0;
@@ -1005,6 +1192,46 @@ function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path
     }
     return json(ctx, req, res, 200, { ok: true }), true;
   }
+  // Builds a signed Stripe-style event WITHOUT sending it, so tests can post it
+  // themselves, replay it, or reorder it. Optional: id, created (event time), signAt (signature time).
+  if (req.method === "POST" && path === "/__fake/stripe/emit") {
+    const s = ctx.state;
+    const body = j(rawBody) as { type?: string; customer?: string; subscription?: Record<string, unknown>; id?: string; created?: number; signAt?: number };
+    if (!body.type) return json(ctx, req, res, 400, { error: "type is required" }), true;
+    const nowSec = Math.floor(Date.now() / 1000);
+    let object: unknown;
+    if (body.type.startsWith("customer.subscription.")) {
+      const sub = body.subscription ?? {};
+      object = {
+        id: sub.id ?? `sub_fake_${next(s, "stripeSubscription")}`,
+        object: "subscription",
+        customer: body.customer ?? sub.customer ?? "",
+        status: sub.status ?? "active",
+        items: { data: [{ price: { id: sub.price ?? "price_unknown" } }] },
+        current_period_end: sub.current_period_end ?? nowSec + 30 * 24 * 3600,
+        cancel_at_period_end: sub.cancel_at_period_end ?? false,
+        trial_end: sub.trial_end ?? null,
+      };
+    } else if (body.type === "checkout.session.completed") {
+      object = { id: `cs_test_emit_${next(s, "stripeCheckoutEmit")}`, object: "checkout.session", customer: body.customer ?? "", subscription: body.subscription?.id ?? null };
+    } else {
+      object = { id: `in_fake_${next(s, "stripeInvoice")}`, object: "invoice", customer: body.customer ?? "", subscription: body.subscription?.id ?? null };
+    }
+    const event = stripeEvent(s, body.type, object, { id: body.id, created: body.created });
+    const payload = JSON.stringify(event);
+    const header = signStripePayload(process.env.FAKE_STRIPE_WEBHOOK_SECRET || "whsec_fake", payload, body.signAt);
+    return json(ctx, req, res, 200, { id: event.id, payload, header }), true;
+  }
+  // Sends a signed invoice.payment_failed webhook for a known fake subscription.
+  if (req.method === "POST" && path === "/__fake/stripe/fail-payment") {
+    const s = ctx.state;
+    const body = j(rawBody) as { subscription?: string };
+    const sub = s.stripeSubscriptions.find((x) => x.id === body.subscription);
+    if (!sub) return json(ctx, req, res, 404, { error: `No such subscription: '${body.subscription}'` }), true;
+    const event = stripeEvent(s, "invoice.payment_failed", { id: `in_fake_${next(s, "stripeInvoice")}`, object: "invoice", customer: sub.customer, subscription: sub.id });
+    const result = await sendStripeWebhook(ctx, event);
+    return json(ctx, req, res, 200, { ok: true, id: event.id, sent: result.sent, payload: result.payload, header: result.header }), true;
+  }
   return false;
 }
 
@@ -1019,7 +1246,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
 
       if (url.pathname.startsWith("/__fake/")) {
         const rawBody = req.method === "POST" ? await readBody(req) : "";
-        if (handleControl(ctx, req, res, url.pathname, url, rawBody)) return;
+        if (await handleControl(ctx, req, res, url.pathname, url, rawBody)) return;
         return json(ctx, req, res, 404, { error: "unknown control endpoint" });
       }
 
@@ -1081,13 +1308,19 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
         return json(ctx, req, res, 404, { error: "unknown oauth endpoint" });
       }
 
-      const auth = authenticate(ctx.state, provider, req);
-      if (!auth.ok) return authFail(ctx, provider, req, res, auth.reason);
+      // Stripe's hosted checkout pages are reached by a browser without credentials.
+      const publicCheckoutPage = provider === "stripe" && path.startsWith("/checkout/");
+      let account: AccountKey = "a";
+      if (!publicCheckoutPage) {
+        const auth = authenticate(ctx.state, provider, req);
+        if (!auth.ok) return authFail(ctx, provider, req, res, auth.reason);
+        account = auth.account;
+      }
 
       const rawBody = ["POST", "PUT", "PATCH"].includes(req.method ?? "") ? await readBody(req) : "";
       ctx.requests[ctx.requests.length - 1]!.body = rawBody && (req.headers["content-type"] ?? "").includes("json") ? j(rawBody) : rawBody || undefined;
 
-      handler(ctx, req, res, path, url, rawBody, auth.account);
+      await handler(ctx, req, res, path, url, rawBody, account);
     })().catch((e) => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });

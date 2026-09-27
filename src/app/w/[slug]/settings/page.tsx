@@ -10,13 +10,15 @@ import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/componen
 import { api, ApiError } from "@/lib/api";
 import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
+import { BillingPlan } from "./billing-plan";
 import { Members } from "./members";
 
-type Tab = "members" | "general" | "keys" | "billing" | "audit";
+type Tab = "members" | "general" | "keys" | "plan" | "billing" | "audit";
 const TABS: { id: Tab; label: string }[] = [
   { id: "members", label: "Members" },
   { id: "general", label: "General" },
   { id: "keys", label: "API keys" },
+  { id: "plan", label: "Plan & billing" },
   { id: "billing", label: "Usage & limits" },
   { id: "audit", label: "Audit log" },
 ];
@@ -43,6 +45,7 @@ export default function SettingsPage() {
           {tab === "members" && <Members />}
           {tab === "general" && <General />}
           {tab === "keys" && <ApiKeys />}
+          {tab === "plan" && <BillingPlan />}
           {tab === "billing" && <Billing />}
           {tab === "audit" && <AuditLog />}
         </div>
@@ -261,7 +264,7 @@ function Billing() {
               <Button type="submit" variant="primary" loading={save.isPending} disabledReason={!isOwner ? "Only workspace owners can change limits" : !form ? "No changes to save" : null}>
                 Save limits
               </Button>
-              <span className="text-sm text-muted">Plans and payments: Phase 3.</span>
+              <span className="text-sm text-muted">Subscriptions and plans live under Plan &amp; billing.</span>
             </div>
           </form>
         )}

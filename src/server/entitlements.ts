@@ -9,9 +9,11 @@ export interface PlanEntitlements {
 }
 
 /**
- * Entitlements from the workspace's billing plan, or null when billing isn't configured.
- * Wired to src/billing (subscription → plan; past_due/canceled → free plan).
+ * Entitlements from the workspace's billing plan (active/trialing subscription → its plan; otherwise the
+ * configured free plan), or null when billing isn't configured. Loaded lazily to keep billing ↔ usage
+ * imports acyclic.
  */
-export async function planEntitlements(_tx: DbOrTx, _workspaceId: string): Promise<PlanEntitlements | null> {
-  return null;
+export async function planEntitlements(tx: DbOrTx, workspaceId: string): Promise<PlanEntitlements | null> {
+  const { getEntitlements } = await import("@/billing/service");
+  return getEntitlements(tx as typeof Db, workspaceId);
 }
