@@ -2,13 +2,14 @@
 
 import { useId, useRef, useState } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
-import { checkExpressionSyntax, evaluateExpression } from "@/engine/expression";
+import { evaluateExpression } from "@/engine/expression";
 import type { NodeType } from "@/engine/types";
 import { duration, pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
-import { Button, Field, Input, RUN_LABEL, RUN_TONE, StatusBadge, Textarea, cx, onTabListKeyDown } from "../ui";
+import { Button, Field, Input, RUN_LABEL, RUN_TONE, StatusBadge, cx, onTabListKeyDown } from "../ui";
 import type { RFNode } from "./graph-utils";
+import { NodeConfigForm } from "./node-config";
 
 type Tab = "configure" | "test" | "logs";
 const TABS: readonly Tab[] = ["configure", "test", "logs"];
@@ -111,7 +112,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
 
       {tab === "configure" && (
         <div className="grid grid-cols-2 gap-3 border-t border-line px-5 py-4">
-          <Button onClick={onDuplicate} disabledReason={readOnly ? readOnlyReason : node.type === "trigger.manual" ? "A flow can only have one trigger" : null} tooltipSide="top">
+          <Button onClick={onDuplicate} disabledReason={readOnly ? readOnlyReason : node.type.startsWith("trigger.") ? "A flow can only have one trigger" : null} tooltipSide="top">
             Duplicate <span className="data text-xs text-muted">{modKey()}D</span>
           </Button>
           <Button variant="danger" onClick={onDelete} disabledReason={readOnly ? readOnlyReason : null} tooltipSide="top">
@@ -124,8 +125,8 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
 }
 
 function ConfigureTab({ node, readOnly, readOnlyReason, issues, onChange }: { node: RFNode; readOnly: boolean; readOnlyReason?: string; issues: string[]; onChange: Props["onChange"] }) {
-  const cfg = node.data.config as Record<string, string>;
-  const setCfg = (k: string, v: string) => onChange({ config: { ...cfg, [k]: v } });
+  const cfg = node.data.config as Record<string, unknown>;
+  const set = (patch: Record<string, unknown>) => onChange({ config: { ...cfg, ...patch } });
   const id = node.id;
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-5">
@@ -140,57 +141,9 @@ function ConfigureTab({ node, readOnly, readOnlyReason, issues, onChange }: { no
       <Field label="Name" htmlFor={`label-${id}`}>
         <Input id={`label-${id}`} value={node.data.label} maxLength={80} onChange={(e) => onChange({ label: e.target.value })} />
       </Field>
-
-      {node.type === "trigger.manual" && (
-        <JsonField id={`payload-${id}`} label="Sample payload (JSON)" value={cfg.samplePayload ?? ""} onChange={(v) => setCfg("samplePayload", v)} hint="Sent as the run input when you press Run." />
-      )}
-      {node.type === "transform.json" && (
-        <ExpressionField id={`expr-${id}`} label="Expression (JSONata)" value={cfg.expression ?? ""} onChange={(v) => setCfg("expression", v)} hint={<>Evaluated against the upstream output. <code className="data">$</code> is the whole input.</>} />
-      )}
-      {node.type === "logic.condition" && (
-        <ExpressionField
-          id={`expr-${id}`}
-          label="Condition (JSONata)"
-          value={cfg.expression ?? ""}
-          onChange={(v) => setCfg("expression", v)}
-          hint={<>Truthy → <span className="text-success">true</span> branch, otherwise <span className="text-med">false</span>. Data passes through unchanged.</>}
-        />
-      )}
-      {node.type === "output" && (
-        <>
-          <Field label="Output key" htmlFor={`key-${id}`} hint="Name of this value in the run result.">
-            <Input id={`key-${id}`} className="data" value={cfg.key ?? ""} onChange={(e) => setCfg("key", e.target.value)} maxLength={64} />
-          </Field>
-          <ExpressionField id={`expr-${id}`} label="Value (JSONata, optional)" value={cfg.expression ?? ""} onChange={(v) => setCfg("expression", v)} hint="Leave empty to store the input as-is." allowEmpty />
-        </>
-      )}
+      <NodeConfigForm node={node} cfg={cfg} set={set} readOnly={readOnly} />
       <p className="text-sm text-muted">{NODE_DEFINITIONS[node.type as NodeType].description}</p>
     </fieldset>
-  );
-}
-
-function JsonField({ id, label, value, onChange, hint }: { id: string; label: string; value: string; onChange: (v: string) => void; hint: string }) {
-  let err: string | null = null;
-  if (value.trim()) {
-    try {
-      JSON.parse(value);
-    } catch (e) {
-      err = `Invalid JSON: ${(e as Error).message}`;
-    }
-  }
-  return (
-    <Field label={label} htmlFor={id} hint={hint} error={err}>
-      <Textarea id={id} mono rows={9} value={value} onChange={(e) => onChange(e.target.value)} invalid={Boolean(err)} />
-    </Field>
-  );
-}
-
-function ExpressionField({ id, label, value, onChange, hint, allowEmpty }: { id: string; label: string; value: string; onChange: (v: string) => void; hint: React.ReactNode; allowEmpty?: boolean }) {
-  const err = value.trim() ? checkExpressionSyntax(value) : allowEmpty ? null : "Expression is empty";
-  return (
-    <Field label={label} htmlFor={id} hint={hint} error={err}>
-      <Textarea id={id} mono rows={6} value={value} onChange={(e) => onChange(e.target.value)} invalid={Boolean(err)} />
-    </Field>
   );
 }
 
@@ -206,7 +159,7 @@ function Payload({ title, value, tone }: { title: string; value: unknown; tone?:
 function TestTab({ node, step }: { node: RFNode; step?: RunStepDto }) {
   const [preview, setPreview] = useState<{ ok: boolean; value: unknown } | null>(null);
   const cfg = node.data.config as Record<string, string>;
-  const hasExpr = node.type !== "trigger.manual" && (cfg.expression ?? "").trim() !== "";
+  const hasExpr = !node.type.startsWith("trigger.") && typeof cfg.expression === "string" && cfg.expression.trim() !== "";
   if (!step || step.status === "pending") {
     return <p className="text-base text-med">Run the flow to see this step&apos;s input and output here.</p>;
   }

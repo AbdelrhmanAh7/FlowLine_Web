@@ -83,3 +83,26 @@ export function canEdit(role: Role) {
 export function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
+
+/** Loads a connection and checks membership of its workspace (404 for non-members). */
+export async function requireConnection(user: CurrentUser, connectionId: string, minRole: Role = "viewer") {
+  if (!isUuid(connectionId)) throw notFound("Connection not found");
+  const [conn] = await db.select().from(schema.connection).where(eq(schema.connection.id, connectionId));
+  if (!conn) throw notFound("Connection not found");
+  const { role, workspace } = await requireWorkspace(user, conn.workspaceId, "viewer").catch(() => {
+    throw notFound("Connection not found");
+  });
+  if (RANK[role] < RANK[minRole]) throw forbidden(`This needs ${minRole} access; you are a ${role}`);
+  return { connection: conn, role, workspace };
+}
+
+export async function requireApproval(user: CurrentUser, approvalId: string, minRole: Role = "viewer") {
+  if (!isUuid(approvalId)) throw notFound("Approval not found");
+  const [a] = await db.select().from(schema.approval).where(eq(schema.approval.id, approvalId));
+  if (!a) throw notFound("Approval not found");
+  const { role, workspace } = await requireWorkspace(user, a.workspaceId, "viewer").catch(() => {
+    throw notFound("Approval not found");
+  });
+  if (RANK[role] < RANK[minRole]) throw forbidden(`This needs ${minRole} access; you are a ${role}`);
+  return { approval: a, role, workspace };
+}

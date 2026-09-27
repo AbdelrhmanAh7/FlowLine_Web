@@ -10,7 +10,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { run } = await requireRun(user, (await params).rid, "editor");
   checkRunRate(user.id);
-  const { fromNodeId } = await parseBody(req, z.object({ fromNodeId: z.string().min(1).max(64) }));
-  const next = await rerunFromStep(user, run, fromNodeId);
+  const { fromNodeId, revision } = await parseBody(req, z.object({ fromNodeId: z.string().min(1).max(64), revision: z.enum(["original", "latest"]).default("original") }));
+  const next = await rerunFromStep(user, run, fromNodeId, revision);
   return json({ run: next }, { status: 202 });
 });

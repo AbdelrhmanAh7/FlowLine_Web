@@ -2,7 +2,8 @@
 
 import { forwardRef, useEffect, useMemo, useState } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
-import type { NodeType } from "@/engine/types";
+import { TRIGGER_TYPES, type NodeType } from "@/engine/types";
+import { useCatalog } from "@/lib/catalog";
 import { cx } from "../ui";
 
 export const DRAG_MIME = "application/x-flowline-node";
@@ -22,7 +23,14 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
     const s = q.trim().toLowerCase();
     return Object.values(NODE_DEFINITIONS).filter((d) => !s || d.title.toLowerCase().includes(s) || d.description.toLowerCase().includes(s) || d.category.includes(s));
   }, [q]);
-  const disabledReason = (t: NodeType) => (t === "trigger.manual" && hasTrigger ? "This flow already has a trigger" : null);
+  const catalog = useCatalog();
+  const runtime = catalog.data?.runtime;
+  const disabledReason = (t: NodeType) => {
+    if (TRIGGER_TYPES.includes(t) && hasTrigger) return "This flow already has a trigger";
+    if (t === "code.js" && runtime && !runtime.codeSandbox.available) return `Unavailable: ${runtime.codeSandbox.reason}`;
+    if (t.startsWith("ai.") && runtime && !runtime.ai.available) return `Unavailable: ${runtime.ai.reason}`;
+    return null;
+  };
 
   // Keep keyboard highlight inside the filtered list (render-time adjustment).
   const clamped = Math.min(active, Math.max(0, items.length - 1));
@@ -61,7 +69,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
           }
         }}
       />
-      <ul id="palette-list" role="listbox" className="mt-2 flex flex-col gap-0.5">
+      <ul id="palette-list" role="listbox" className="mt-2 flex max-h-[min(60vh,480px)] flex-col gap-0.5 overflow-y-auto">
         {items.length === 0 && <li className="px-2 py-3 text-sm text-muted">No nodes match “{q}”.</li>}
         {items.map((d, i) => {
           const reason = disabledReason(d.type);
@@ -88,7 +96,9 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
             >
               <span aria-hidden className="mt-0.5 w-4 text-center text-accent">{d.icon}</span>
               <span className="min-w-0">
-                <span className="block text-base font-medium">{d.title}</span>
+                <span className="block text-base font-medium">
+                  {d.title} <span className="text-xs font-normal tracking-[0.4px] text-muted uppercase">{d.category}</span>
+                </span>
                 <span className="block text-sm text-muted">{reason ?? d.description}</span>
               </span>
             </li>

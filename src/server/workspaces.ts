@@ -117,7 +117,15 @@ export async function workspaceOverview(workspaceId: string) {
   };
 }
 
-export async function updateWorkspace(workspaceId: string, patch: { name?: string; timezone?: string }) {
+export interface WorkspaceLimitsPatch {
+  /** Monthly budget in currency units (null clears the limit). */
+  monthlyBudget?: number | null;
+  maxConcurrentRuns?: number;
+  maxQueuedRuns?: number;
+  prices?: Record<string, { inputPerMTok?: number; outputPerMTok?: number; perCall?: number }>;
+}
+
+export async function updateWorkspace(workspaceId: string, patch: { name?: string; timezone?: string } & WorkspaceLimitsPatch) {
   const set: Partial<typeof schema.workspace.$inferInsert> = { updatedAt: new Date() };
   if (patch.name !== undefined) {
     const clean = patch.name.trim();
@@ -129,6 +137,29 @@ export async function updateWorkspace(workspaceId: string, patch: { name?: strin
       throw new HttpError(400, "VALIDATION", "Unknown time zone");
     }
     set.timezone = patch.timezone;
+  }
+  if (patch.monthlyBudget !== undefined) {
+    if (patch.monthlyBudget !== null && !(patch.monthlyBudget >= 0 && patch.monthlyBudget <= 1_000_000)) throw new HttpError(400, "VALIDATION", "Budget must be between 0 and 1,000,000");
+    set.monthlyBudgetMicros = patch.monthlyBudget === null ? null : Math.round(patch.monthlyBudget * 1_000_000);
+  }
+  if (patch.maxConcurrentRuns !== undefined) {
+    if (!Number.isInteger(patch.maxConcurrentRuns) || patch.maxConcurrentRuns < 1 || patch.maxConcurrentRuns > 20) throw new HttpError(400, "VALIDATION", "Concurrent runs must be 1–20");
+    set.maxConcurrentRuns = patch.maxConcurrentRuns;
+  }
+  if (patch.maxQueuedRuns !== undefined) {
+    if (!Number.isInteger(patch.maxQueuedRuns) || patch.maxQueuedRuns < 1 || patch.maxQueuedRuns > 1000) throw new HttpError(400, "VALIDATION", "Queued runs must be 1–1000");
+    set.maxQueuedRuns = patch.maxQueuedRuns;
+  }
+  if (patch.prices !== undefined) {
+    const entries = Object.entries(patch.prices);
+    if (entries.length > 50) throw new HttpError(400, "VALIDATION", "At most 50 price entries");
+    const out: Record<string, { inputPerMTokMicros?: number; outputPerMTokMicros?: number; perCallMicros?: number }> = {};
+    for (const [k, v] of entries) {
+      if (!/^(ai|action|http|run):[A-Za-z0-9_.:/*-]{1,80}$/.test(k)) throw new HttpError(400, "VALIDATION", `Invalid price key "${k}"`);
+      const m = (n?: number) => (n === undefined ? undefined : Math.round(Math.max(0, Math.min(n, 10_000)) * 1_000_000));
+      out[k] = { inputPerMTokMicros: m(v.inputPerMTok), outputPerMTokMicros: m(v.outputPerMTok), perCallMicros: m(v.perCall) };
+    }
+    set.prices = out;
   }
   const [ws] = await db.update(schema.workspace).set(set).where(eq(schema.workspace.id, workspaceId)).returning();
   return ws;

@@ -3,7 +3,7 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { createContext, memo, useContext } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
-import type { NodeType } from "@/engine/types";
+import { NODE_TYPES, type NodeType } from "@/engine/types";
 import { duration } from "@/lib/format";
 import type { RunStepDto } from "@/lib/types";
 import { cx } from "../ui";
@@ -34,6 +34,12 @@ function StatusLine({ step }: { step?: RunStepDto }) {
       return <p className="truncate text-sm text-danger">✗ {step.error?.message ?? "Failed"}</p>;
     case "running":
       return <p className="text-sm text-info">Running…</p>;
+    case "waiting_approval":
+      return <p className="text-sm text-warning">⏸ Needs approval</p>;
+    case "uncertain":
+      return <p className="text-sm text-warning">? Outcome unknown</p>;
+    case "cancelled":
+      return <p className="text-sm text-muted">Cancelled</p>;
     case "skipped":
       return <p className="text-sm text-muted">Skipped</p>;
     default:
@@ -48,7 +54,16 @@ const DOT: Record<string, string> = {
   running: "bg-info",
   skipped: "bg-muted",
   pending: "bg-muted",
+  waiting_approval: "bg-warning",
+  uncertain: "bg-warning",
+  cancelled: "bg-muted",
 };
+
+/** "slack.post_message" → "SLACK · POST MESSAGE". */
+function actionSubtitle(actionId: string) {
+  const [p, a] = actionId.split(".");
+  return `${(p ?? "").replace(/_/g, " ")} · ${(a ?? "").replace(/_/g, " ")}`.toUpperCase();
+}
 
 export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selected }: NodeProps<RFNode>) {
   const { steps, issues, readOnly } = useContext(CanvasStatusContext);
@@ -74,7 +89,9 @@ export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selecte
         <span aria-hidden className={cx("size-2 shrink-0 rounded-full", step ? DOT[step.status] : "bg-muted")} />
         <span className="truncate">{data.label}</span>
       </p>
-      <p className="data mt-0.5 truncate text-[10px] tracking-[0.4px] text-muted uppercase">{def.subtitle}</p>
+      <p className="data mt-0.5 truncate text-[10px] tracking-[0.4px] text-muted uppercase">
+        {type === "integration.action" && (data.config as { actionId?: string }).actionId ? actionSubtitle((data.config as { actionId: string }).actionId) : def.subtitle}
+      </p>
       <div className="mt-1.5">
         <StatusLine step={step} />
       </div>
@@ -101,9 +118,5 @@ export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selecte
   );
 });
 
-export const nodeTypes = {
-  "trigger.manual": FlowNodeCard,
-  "transform.json": FlowNodeCard,
-  "logic.condition": FlowNodeCard,
-  output: FlowNodeCard,
-};
+// Every node type renders with the same card.
+export const nodeTypes = Object.fromEntries(NODE_TYPES.map((t) => [t, FlowNodeCard])) as Record<NodeType, typeof FlowNodeCard>;

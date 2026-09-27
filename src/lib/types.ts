@@ -22,7 +22,10 @@ export interface RunStepDto {
   nodeType: string;
   nodeLabel: string;
   position: number;
-  status: "pending" | "running" | "succeeded" | "failed" | "skipped" | "reused";
+  status: "pending" | "running" | "succeeded" | "failed" | "skipped" | "reused" | "waiting_approval" | "uncertain" | "cancelled";
+  meta?: Record<string, unknown> | null;
+  log?: string[] | null;
+  attempts?: number;
   input: unknown;
   output: unknown;
   error: { code: string; message: string } | null;
@@ -35,7 +38,9 @@ export interface RunStepDto {
 export interface RunDetailDto {
   id: string;
   number: number;
-  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  status: "queued" | "running" | "waiting_approval" | "succeeded" | "failed" | "cancelled";
+  triggerKind?: "manual" | "webhook" | "schedule" | "rerun" | "subflow";
+  cancelRequestedAt?: string | null;
   flowId: string;
   flowName: string;
   input: unknown;
@@ -50,6 +55,23 @@ export interface RunDetailDto {
   version: number | null;
   graph: FlowGraph | null;
   steps: RunStepDto[];
+  versionReason?: string | null;
+  approvals?: ApprovalDto[];
+  events?: { id: number; at: string; type: string; nodeId: string | null; data: unknown }[];
+}
+
+export interface ApprovalDto {
+  id: string;
+  nodeId: string;
+  kind: "approval" | "review";
+  actionId: string;
+  status: "pending" | "approved" | "rejected" | "expired" | "superseded";
+  resolution: string | null;
+  argsPreview: unknown;
+  requestedAt: string;
+  expiresAt: string;
+  decidedAt: string | null;
+  note: string | null;
 }
 
 export interface RunListItem {
@@ -62,7 +84,10 @@ export interface RunListItem {
   durationMs: number | null;
   error: RunDetailDto["error"];
   rerunOfRunId: string | null;
+  triggerKind?: RunDetailDto["triggerKind"];
   steps: Pick<RunStepDto, "nodeId" | "nodeType" | "nodeLabel" | "position" | "status" | "durationMs" | "error">[];
 }
 
 export const isActive = (s: string) => s === "queued" || s === "running";
+/** Not finished: active or waiting for a human. */
+export const isOpen = (s: string) => isActive(s) || s === "waiting_approval";

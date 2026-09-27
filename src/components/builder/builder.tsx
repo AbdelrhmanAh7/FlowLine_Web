@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createNode, newNodeId } from "@/engine/nodes";
-import type { FlowGraph, NodeType } from "@/engine/types";
+import { TRIGGER_TYPES, type FlowGraph, type NodeType } from "@/engine/types";
 import { checkConnection, validateGraph } from "@/engine/validate";
 import { api, ApiError } from "@/lib/api";
 import { loadDraft } from "@/lib/drafts";
@@ -32,6 +32,7 @@ import { CanvasStatusContext, nodeTypes } from "./flow-node";
 import { edgeId, toDomain, toRF, type RFEdge, type RFNode, type Snapshot } from "./graph-utils";
 import { NodeDrawer } from "./node-drawer";
 import { DRAG_MIME, NodePalette } from "./palette";
+import { PausedBanner, PublishControl } from "./publish-panel";
 import { RunDock } from "./run-dock";
 import { serialize, usePersistence, type SaveStatus } from "./use-persistence";
 
@@ -197,7 +198,15 @@ function Editor({ data }: { data: FlowResponse }) {
     enabled: Boolean(activeRunId),
     queryFn: () => api<{ run: RunDetailDto }>(`/api/runs/${activeRunId}`),
     select: (d) => d.run,
-    refetchInterval: (query) => (query.state.data && isActive(query.state.data.run.status) ? 700 : false),
+    refetchInterval: (query) => (query.state.data && isActive(query.state.data.run.status) ? 700 : query.state.data?.run.status === "waiting_approval" ? 4000 : false),
+  });
+  const cancelMut = useMutation({
+    mutationFn: (runId: string) => api<{ status: string }>(`/api/runs/${runId}/cancel`, { method: "POST" }),
+    onSuccess: (r) => {
+      toast(r.status === "cancelled" ? "Run cancelled" : "Cancelling — the run stops at the next safe point", "info");
+      void qc.invalidateQueries({ queryKey: ["run", activeRunId] });
+    },
+    onError: (e) => toast((e as ApiError).message, "danger"),
   });
   const run = runQ.data;
   const runActive = run ? isActive(run.status) : false;
@@ -225,13 +234,18 @@ function Editor({ data }: { data: FlowResponse }) {
             ? "A run is already in progress"
             : null;
 
+  // One id per Run click: a double-click or a network retry maps to the same run server-side.
+  const runLock = useRef(false);
   const runMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (clientRequestId: string) => {
       if (persistence.dirty) {
         const ok = await persistence.saveNow();
         if (!ok) throw new ApiError(0, "SAVE_FAILED", "Couldn't save your latest changes, so the run didn't start");
       }
-      return api<{ run: { id: string; number: number } }>(`/api/flows/${flow.id}/runs`, { method: "POST", json: {} });
+      return api<{ run: { id: string; number: number } }>(`/api/flows/${flow.id}/runs`, { method: "POST", json: { clientRequestId } });
+    },
+    onSettled: () => {
+      runLock.current = false;
     },
     onSuccess: ({ run: r }) => {
       setSelectedRunId(r.id);
@@ -245,11 +259,12 @@ function Editor({ data }: { data: FlowResponse }) {
     },
   });
   const startRun = useCallback(() => {
-    if (runReason || runMut.isPending) {
+    if (runReason || runMut.isPending || runLock.current) {
       if (runReason) toast(runReason, "warning");
       return;
     }
-    runMut.mutate();
+    runLock.current = true;
+    runMut.mutate(crypto.randomUUID().replace(/-/g, ""));
   }, [runReason, runMut, toast]);
 
   /* ───── graph editing ───── */
@@ -310,7 +325,7 @@ function Editor({ data }: { data: FlowResponse }) {
   const addNode = useCallback(
     (type: NodeType, at?: { x: number; y: number }) => {
       if (readOnly) return;
-      if (type === "trigger.manual" && snapshotRef.current.nodes.some((n) => n.type === "trigger.manual")) {
+      if (TRIGGER_TYPES.includes(type) && snapshotRef.current.nodes.some((n) => TRIGGER_TYPES.includes(n.type))) {
         toast("This flow already has a trigger", "warning");
         return;
       }
@@ -337,7 +352,7 @@ function Editor({ data }: { data: FlowResponse }) {
 
   const duplicateSelection = useCallback(() => {
     if (readOnly) return;
-    const sel = nodes.filter((n) => n.selected && n.type !== "trigger.manual");
+    const sel = nodes.filter((n) => n.selected && !TRIGGER_TYPES.includes(n.type));
     if (sel.length === 0) {
       if (nodes.some((n) => n.selected)) toast("A flow can only have one trigger", "warning");
       return;
@@ -528,7 +543,7 @@ function Editor({ data }: { data: FlowResponse }) {
           </Button>
         </div>
       )}
-      {paletteOpen && <NodePalette ref={paletteInput} hasTrigger={snapshot.nodes.some((n) => n.type === "trigger.manual")} onAdd={(t) => addNode(t)} onClose={() => setPaletteOpen(false)} allowDrag={viewportKind === "desktop"} />}
+      {paletteOpen && <NodePalette ref={paletteInput} hasTrigger={snapshot.nodes.some((n) => TRIGGER_TYPES.includes(n.type))} onAdd={(t) => addNode(t)} onClose={() => setPaletteOpen(false)} allowDrag={viewportKind === "desktop"} />}
 
       {/* Empty canvas */}
       {nodes.length === 0 && (
@@ -595,6 +610,11 @@ function Editor({ data }: { data: FlowResponse }) {
           />
         </nav>
         <SaveBadge status={persistence.status} lastSavedAt={persistence.lastSavedAt} onRetry={persistence.retryNow} error={persistence.error} />
+        {!isMobile && (
+          <span className="flex items-center gap-2">
+            <PublishControl flowId={flow.id} canEdit={canEditRole} dirty={persistence.dirty} saveNow={() => persistence.saveNow()} issueCount={issues.length} online={online} />
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {issues.length > 0 && (
             <div className="relative">
@@ -644,6 +664,7 @@ function Editor({ data }: { data: FlowResponse }) {
         </div>
       </header>
 
+      <PausedBanner flowId={flow.id} />
       {isMobile && (
         <div role="status" className="shrink-0 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
           Editing is disabled on mobile. You can run this flow and monitor results; open it on a larger screen to edit.
@@ -673,13 +694,13 @@ function Editor({ data }: { data: FlowResponse }) {
       {isMobile ? (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex h-[38%] min-h-48 shrink-0">{canvas}</div>
-          <RunDock variant="primary" run={run} loading={runQ.isLoading} runs={runsQ.data ?? []} workspaceSlug={workspace.slug} onSelectRun={setSelectedRunId} onSelectStep={selectNode} onClose={() => {}} />
+          <RunDock variant="primary" run={run} loading={runQ.isLoading} runs={runsQ.data ?? []} workspaceSlug={workspace.slug} onSelectRun={setSelectedRunId} onSelectStep={selectNode} onClose={() => {}} onCancel={() => run && cancelMut.mutate(run.id)} cancelling={cancelMut.isPending} canCancel={canEditRole} />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col" style={{ minWidth: width >= 1280 ? undefined : 0 }}>
           {canvas}
           {dockOpen && (
-            <RunDock variant="dock" run={run} loading={runQ.isLoading} runs={runsQ.data ?? []} workspaceSlug={workspace.slug} onSelectRun={setSelectedRunId} onSelectStep={selectNode} onClose={() => setDockOpen(false)} />
+            <RunDock variant="dock" run={run} loading={runQ.isLoading} runs={runsQ.data ?? []} workspaceSlug={workspace.slug} onSelectRun={setSelectedRunId} onSelectStep={selectNode} onClose={() => setDockOpen(false)} onCancel={() => run && cancelMut.mutate(run.id)} cancelling={cancelMut.isPending} canCancel={canEditRole} />
           )}
         </div>
       )}

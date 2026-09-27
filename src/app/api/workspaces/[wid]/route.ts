@@ -14,6 +14,16 @@ export const GET = route(async (_req, { params }: Ctx) => {
 export const PATCH = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "owner");
-  const patch = await parseBody(req, z.object({ name: z.string().optional(), timezone: z.string().optional() }));
+  const patch = await parseBody(
+    req,
+    z.object({
+      name: z.string().optional(),
+      timezone: z.string().optional(),
+      monthlyBudget: z.number().nullable().optional(),
+      maxConcurrentRuns: z.number().int().optional(),
+      maxQueuedRuns: z.number().int().optional(),
+      prices: z.record(z.string(), z.object({ inputPerMTok: z.number().optional(), outputPerMTok: z.number().optional(), perCall: z.number().optional() })).optional(),
+    }),
+  );
   return json({ workspace: await updateWorkspace(workspace.id, patch) });
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { duration, pretty, timeAgo } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunDetailDto, RunListItem } from "@/lib/types";
-import { RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
+import { Button, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
 
 interface Props {
   run: RunDetailDto | null | undefined;
@@ -15,9 +15,13 @@ interface Props {
   onSelectStep: (nodeId: string) => void;
   onClose: () => void;
   variant: "dock" | "primary";
+  onCancel?: () => void;
+  cancelling?: boolean;
+  canCancel?: boolean;
 }
 
-export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSelectStep, onClose, variant }: Props) {
+export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSelectStep, onClose, variant, onCancel, cancelling, canCancel }: Props) {
+  const open = run && (run.status === "queued" || run.status === "running" || run.status === "waiting_approval");
   return (
     <section
       aria-label="Run dock"
@@ -38,6 +42,11 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
           </span>
         )}
         <div className="ml-auto flex items-center gap-3">
+          {open && onCancel && (
+            <Button size="sm" variant="danger-ghost" onClick={onCancel} loading={cancelling} disabledReason={canCancel === false ? "Viewers can't cancel runs" : run?.cancelRequestedAt ? "Cancelling…" : null}>
+              Cancel run
+            </Button>
+          )}
           {run && (
             <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="text-sm text-accent hover:underline">
               Open in inspector →
@@ -112,7 +121,15 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                 </div>
               )}
               {(run.status === "queued" || run.status === "running") && (
-                <p className="text-sm text-info">{run.status === "queued" ? "Queued — waiting for the worker…" : "Running…"}</p>
+                <p className="text-sm text-info">{run.cancelRequestedAt ? "Cancelling…" : run.status === "queued" ? "Queued — waiting for the worker…" : "Running…"}</p>
+              )}
+              {run.status === "waiting_approval" && (
+                <p className="text-sm text-warning">
+                  Waiting for a human decision.{" "}
+                  <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="underline">
+                    Review in the inspector →
+                  </Link>
+                </p>
               )}
             </div>
           )}

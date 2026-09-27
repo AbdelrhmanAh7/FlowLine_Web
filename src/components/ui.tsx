@@ -227,6 +227,8 @@ export const RUN_TONE: Record<string, Tone> = {
   pending: "muted",
   skipped: "muted",
   reused: "success",
+  waiting_approval: "warning",
+  uncertain: "warning",
 };
 export const RUN_LABEL: Record<string, string> = {
   queued: "Queued",
@@ -237,6 +239,8 @@ export const RUN_LABEL: Record<string, string> = {
   pending: "Queued",
   skipped: "Skipped",
   reused: "Reused",
+  waiting_approval: "Needs approval",
+  uncertain: "Outcome unknown",
 };
 
 export function Kbd({ children }: { children: ReactNode }) {
