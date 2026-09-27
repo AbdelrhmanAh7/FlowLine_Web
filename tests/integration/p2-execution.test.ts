@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, schema } from "@/db";
 import { stopSandbox } from "@/engine/sandbox";
@@ -72,7 +72,7 @@ describe("AI nodes (deterministic provider double)", () => {
     const [step] = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, run.id)).then((r) => r.filter((s) => s.nodeId === "x"));
     expect(step!.meta).toMatchObject({ provider: "ollama", model: "fake-model" });
     expect((step!.meta as { inputTokens: number }).inputTokens).toBeGreaterThan(0);
-    const usage = await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.runId, run.id));
+    const usage = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.runId, run.id), eq(schema.usageEvent.kind, "ai")));
     expect(usage).toHaveLength(1);
     expect(usage[0]).toMatchObject({ status: "settled", kind: "ai", unpriced: false });
     expect(usage[0]!.costMicros).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ describe("AI nodes (deterministic provider double)", () => {
     const s1 = (await db.select().from(schema.runStep).where(eq(schema.runStep.runId, r1.id))).find((s) => s.nodeId === "c")!;
     expect(s1.status).toBe("succeeded");
     expect(s1.output).toMatchObject({ label: "high" });
-    const released = await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.runId, r1.id));
+    const released = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.runId, r1.id), eq(schema.usageEvent.kind, "ai")));
     expect(released.filter((u) => u.status === "released")).toHaveLength(1); // failed attempt not charged
     expect(released.filter((u) => u.status === "settled")).toHaveLength(1);
 
