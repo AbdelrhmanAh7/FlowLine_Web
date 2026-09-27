@@ -7,7 +7,7 @@
 # Configuration comes only from the environment (no .env files are copied into the image).
 FROM node:25-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable
+RUN npm install -g pnpm@10.32.1 --no-fund --no-audit
 WORKDIR /app
 
 FROM base AS deps
@@ -16,7 +16,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm build
+# Route modules are imported while Next collects page config; the pool is created but never connected.
+# Build-stage only placeholders — the runtime stage gets real configuration from its environment.
+RUN DATABASE_URL=postgres://build:build@127.0.0.1:1/build BETTER_AUTH_SECRET=build-only-placeholder-not-a-secret pnpm build
 
 FROM base AS runtime
 ARG GIT_SHA=unknown
