@@ -1,0 +1,14 @@
+[
+  {
+    "event": "state",
+    "name": "97-schedule-flow-ready",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/fdbd9544-4e15-48e7-a082-133670bab7da",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nSchedule trigger\n\nTRIGGER · SCHEDULE\n\nNot run yet\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit"
+  },
+  {
+    "event": "state",
+    "name": "98-schedule-published",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/fdbd9544-4e15-48e7-a082-133670bab7da",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\nTriggers\n✕\nSCHEDULE · ACTIVE\n\n0 9 * * * in Africa/Cairo · missed runs: run once\n\nNext run: 28 Sept 2026, 09:00 (Africa/Cairo)\n\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nSchedule trigger\n\nTRIGGER · SCHEDULE\n\nNot run yet\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nPublished v1"
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "event": "state",
+    "name": "75-node-duplicated",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\n● Unsaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 2 issues before publishing\n⚠ 2 issues\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 2 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nJSON transform copy\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⇄\nJSON transform copy\n\ntransform · jsonata · n9rji1 · run #12\n\n✕\nConfigure\nTest\nLogs\n⚠ JSON transform copy isn't connected to anything upstream\n⚠ JSON transform copy: $steps.nj5to2 (HTTP request) doesn't run before this step\nNAME\nEXPRESSION (JSONATA)\n\nEvaluated against the upstream output. $steps.<id> reads any upstream step.\n\nReshape data with a JSONata expression. `$steps.<id>` reads any upstream step.\n\nDuplicate\nCtrlD\nDelete\nDel",
+    "nodeCount": 5,
+    "saveStatus": "unsaved"
+  },
+  {
+    "event": "state",
+    "name": "76-node-deleted",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 4,
+    "saveStatus": "saved"
+  },
+  {
+    "event": "state",
+    "name": "77-undo-restored",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\n● Unsaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 2 issues before publishing\n⚠ 2 issues\n↶\n↷\nRuns\nCtrlJ\n▶ Run\nFix 2 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nJSON transform copy\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 5,
+    "saveStatus": "unsaved"
+  },
+  {
+    "event": "state",
+    "name": "78-redo-removed",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 4,
+    "saveStatus": "saved"
+  },
+  {
+    "event": "state",
+    "name": "79-autosave-after-redo",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 4,
+    "saveStatus": "saved"
+  },
+  {
+    "event": "state",
+    "name": "80-offline-banner-draft",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n●\nOffline mode\n— edits are kept on this device; running is disabled until you reconnect.\n← Flows\n/\nFlow name\n● Offline — kept on this device\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nYou're offline\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nYou're offline — running needs a connection\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n3ms\n\nJSON transform\n\nTRANSFORM · JSONATA\n\n1ms\n\nOutput\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 4,
+    "saveStatus": "offline"
+  },
+  {
+    "event": "state",
+    "name": "81-offline-edit-persisted",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nHTTP request\n\nHTTP · REQUEST\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit",
+    "nodeCount": 4,
+    "saveStatus": "saved"
+  }
+]

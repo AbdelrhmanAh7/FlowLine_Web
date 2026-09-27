@@ -25,6 +25,14 @@ import { api, ApiError } from "@/lib/api";
 import { loadDraft } from "@/lib/drafts";
 import { isTypingTarget, modKey, useOnline, useViewport, useWindowWidth } from "@/lib/hooks";
 import { isActive, type FlowResponse, type RunDetailDto, type RunListItem } from "@/lib/types";
+
+/** Toast per state a run leaves "queued/running" for — a paused or cancelled run is not a failure. */
+const RUN_TOAST: Record<string, [string, "success" | "danger" | "warning" | "info"]> = {
+  succeeded: ["succeeded", "success"],
+  failed: ["failed", "danger"],
+  cancelled: ["was cancelled", "info"],
+  waiting_approval: ["is waiting for a human decision", "warning"],
+};
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
 import { Button, ErrorState, Kbd, Skeleton, cx } from "../ui";
@@ -215,7 +223,8 @@ function Editor({ data }: { data: FlowResponse }) {
     if (prevStatus.current && isActive(prevStatus.current) && run && !isActive(run.status)) {
       void qc.invalidateQueries({ queryKey: ["flow-runs", flow.id] });
       void qc.invalidateQueries({ queryKey: ["overview"] });
-      toast(run.status === "succeeded" ? `Run #${run.number} succeeded` : `Run #${run.number} failed`, run.status === "succeeded" ? "success" : "danger");
+      const [msg, tone] = RUN_TOAST[run.status] ?? [`finished (${run.status})`, "info"];
+      toast(`Run #${run.number} ${msg}`, tone);
     }
     prevStatus.current = run?.status;
   }, [run, qc, flow.id, toast]);
@@ -464,7 +473,7 @@ function Editor({ data }: { data: FlowResponse }) {
   /* ───── layout ───── */
   const drawerVariant = isMobile ? "sheet" : "overlay";
   const showScrim = viewportKind === "tablet" && drawerNode;
-  const canvasStatus = useMemo(() => ({ steps, issues: issuesByNode, readOnly }), [steps, issuesByNode, readOnly]);
+  const canvasStatus = useMemo(() => ({ steps, events: run?.events, issues: issuesByNode, readOnly }), [steps, run?.events, issuesByNode, readOnly]);
 
   const edgesWithState = useMemo(
     () =>

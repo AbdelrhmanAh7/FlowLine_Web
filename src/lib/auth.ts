@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { redactString, safeErrorText } from "@/server/redact";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
@@ -40,6 +41,13 @@ export const auth = betterAuth({
     customRules: { "/sign-in/email": { window: 60, max: 10 }, "/sign-up/email": { window: 60, max: 10 } },
   },
   advanced: { database: { generateId: () => crypto.randomUUID() } },
+  // Better Auth logs failed DB queries verbatim (bound params include session tokens): scrub before logging.
+  logger: {
+    log: (level, message, ...args) => {
+      const text = [message, ...args.map((a) => (a instanceof Error ? safeErrorText(a) : typeof a === "string" ? a : ""))].filter(Boolean).join(" ");
+      (level === "error" ? console.error : level === "warn" ? console.warn : console.log)(`[auth] ${redactString(text)}`);
+    },
+  },
   plugins: [nextCookies()],
 });
 

@@ -5,16 +5,27 @@ import { createContext, memo, useContext } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { NODE_TYPES, type NodeType } from "@/engine/types";
 import { duration } from "@/lib/format";
-import type { RunStepDto } from "@/lib/types";
+import { useNow } from "@/lib/hooks";
+import { runningDetail } from "@/lib/run-status";
+import type { RunDetailDto, RunStepDto } from "@/lib/types";
 import { cx } from "../ui";
 import type { RFNode } from "./graph-utils";
 
 export interface CanvasStatus {
   steps: Map<string, RunStepDto>;
+  /** The shown run's events (retries), for the "provider slow / retrying" degraded state. */
+  events?: RunDetailDto["events"];
   issues: Map<string, string[]>;
   readOnly: boolean;
 }
 export const CanvasStatusContext = createContext<CanvasStatus>({ steps: new Map(), issues: new Map(), readOnly: false });
+
+function RunningLine({ step }: { step: RunStepDto }) {
+  const { events } = useContext(CanvasStatusContext);
+  const now = useNow(1000);
+  const d = runningDetail(step, events, now);
+  return <p className={cx("truncate text-sm", d.degraded ? "text-warning" : "text-info")}>{d.text}</p>;
+}
 
 function StatusLine({ step }: { step?: RunStepDto }) {
   if (!step) return <p className="text-sm text-muted">Not run yet</p>;
@@ -33,7 +44,7 @@ function StatusLine({ step }: { step?: RunStepDto }) {
     case "failed":
       return <p className="truncate text-sm text-danger">✗ {step.error?.message ?? "Failed"}</p>;
     case "running":
-      return <p className="text-sm text-info">Running…</p>;
+      return <RunningLine step={step} />;
     case "waiting_approval":
       return <p className="text-sm text-warning">⏸ Needs approval</p>;
     case "uncertain":

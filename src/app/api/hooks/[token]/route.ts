@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { safeErrorText } from "@/server/redact";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { sha256Hex } from "@/server/crypto";
@@ -108,7 +109,7 @@ export async function POST(req: Request, { params }: Ctx) {
     if ((cause as { code?: string }).code === "23505" && String((cause as { constraint?: string }).constraint).includes("signature")) {
       return reply(409, { error: "This signed delivery was already accepted (replay)" });
     }
-    console.error("[webhook] failed", err.message);
+    console.error("[webhook] failed", safeErrorText(e));
     return reply(500, { error: "Could not accept the event; retry with the same event id" });
   }
 }

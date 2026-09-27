@@ -106,3 +106,18 @@ can be applied without re-running everything.
 disables auth rate limits. In any other environment the route returns 404 and
 `consumeFault()` does nothing. E2E and integration tests run against the separate `flowline_test`
 database and the `.next-test` build directory on port 3100. No demo data is seeded into dev.
+
+## 7. Phase 2 decisions
+
+Phase 2 supersedes D6/D7/D8/D12: the Credits KPI now reads the real usage ledger (priced only from the workspace's own price table), Integrations shows the 12 real adapters with honest verification levels, flow statuses include Active / Paused / Expired from published triggers and connection health, and AI step cards show provider, model and tokens.
+
+| ID | Topic | Decision |
+|---|---|---|
+| D17 | Slide 8 node "Test" | The Test tab shows the node's latest input/output and previews expressions in the browser (no side effects, not recorded). Nodes with external effects or cost (HTTP, AI, app actions) are not "test-fired" in isolation — that would repeat side effects or bill silently; instead "Re-run from this step" executes the step with its stored upstream input after a preview that lists side-effect risk. |
+| D18 | Provider boundary | Deterministic suites double only the provider boundary (fake SaaS on :4010, fake Ollama on :4011, test env only via `FLOWLINE_PROVIDER_OVERRIDE`). Live checks are a separate suite (`pnpm test:live`) that uses real local Ollama and a real PostgreSQL server; SaaS live checks need owner-provided sandbox credentials and are reported BLOCKED without them — never faked. |
+| D19 | Embedded instructions in documents | Framing alone did not stop the local model (6/9 poisoned). Lines that address the AI or try to override its task are quarantined before the model sees them, and the step records how many. It is a heuristic layer: AI output stays data, action targets come from flow configuration, and sensitive actions need approval. |
+| D20 | Lost responses | A non-idempotent action whose outcome is unknown is verified with the provider where possible; otherwise a human decides (done / retry once / fail). This applies to app actions, non-idempotent HTTP requests, and interrupted subflows/loops with side-effecting children. |
+| D21 | Resume with redacted data | Users see redacted step data; resume and re-run use an encrypted copy of the real values, so downstream arguments and approval bindings don't change after redaction. |
+| D22 | Approvals and non-deterministic inputs | Approval binds exact arguments, so gated steps can't use `$now()`/`$millis()`/`$random()` in their input (validation + runtime). Compute such values in an earlier step. |
+| D23 | Code node | Runs only in a locked-down Docker container; without Docker the node is shown as unavailable. It never runs in the web or worker process. |
+| D24 | Catalog size | The deck's "120+" is not claimed: the count is computed from the registry (12). |

@@ -958,10 +958,21 @@ function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path
   // Simulates the user revoking the app's access at the provider: every access and refresh
   // token of that fake account stops working (fixture tokens included). Reconnecting via
   // OAuth issues fresh ones.
+  // A fresh access token for a fake account (tests paste it as a connection token).
+  if (req.method === "POST" && path === "/__fake/issue-token") {
+    const account = (j(rawBody).account === "b" ? "b" : "a") as AccountKey;
+    const token = `fake-at-${randomBytes(8).toString("hex")}`;
+    ctx.state.tokens.set(token, { account, status: "active" });
+    return json(ctx, req, res, 200, { token }), true;
+  }
   if (req.method === "POST" && path === "/__fake/revoke-account") {
     const account = (j(rawBody).account === "b" ? "b" : "a") as AccountKey;
     let n = 0;
-    for (const info of ctx.state.tokens.values()) if (info.account === account && info.status === "active") (info.status = "revoked"), n++;
+    for (const info of ctx.state.tokens.values()) {
+      if (info.account !== account || info.status !== "active") continue;
+      info.status = "revoked";
+      n++;
+    }
     for (const [t, info] of ctx.state.refreshTokens) if (info.account === account) ctx.state.refreshTokens.delete(t);
     return json(ctx, req, res, 200, { ok: true, revoked: n }), true;
   }

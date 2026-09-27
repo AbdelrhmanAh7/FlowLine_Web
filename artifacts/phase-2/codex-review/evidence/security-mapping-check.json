@@ -1,0 +1,50 @@
+[
+  {
+    "event": "state",
+    "name": "25-ssrf-metadata",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nRUNS\n#4\nFAILED\n1/2 · 29ms\nOpen in inspector →\n✕\n#4\nnow\n#1\n4m ago\nManual trigger\nSuccess\n· 0ms\n→\nHTTP request\nFailed\n· 1ms\n→\nJSON transform\nSkipped\n→\nOutput\nSkipped\n\n⚠ Plain http is only allowed for allowlisted hosts; use https"
+  },
+  {
+    "event": "state",
+    "name": "26-ssrf-metadata-inspector",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/runs?run=bfac5d00-01a7-4594-94ed-f6529f60c2d2",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#4\nUntitled flow\nFAILED\n1/2 · 29ms\nnow\n⚡ Manual trigger\nSuccess\n· 0ms\n→\n⇅ HTTP request\nFailed\n· 1ms\n→\n⇄ JSON transform\nSkipped\n→\n◎ Output\nSkipped\n⚠ HTTP request — Plain http is only allowed for allowlisted hosts; use https\nInspect\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 66ms\nre-run\n2m ago\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 1.4s\n2m ago\n▸\n#1\nUntitled flow\nSUCCESS\n4/4 · 123ms\n4m ago\n⇅\nHTTP request\nFAILED\n\n1ms · run #4 · v2 · http.request · nj5to2 · 1 attempt\n\n✕\nInput\nOutput\nError\nLog\n\n⚠ EGRESS_BLOCKED\n\nPlain http is only allowed for allowlisted hosts; use https\n\nSUGGESTED FIX\n\nThe address is private, internal or not allowed. Use a public HTTPS endpoint.\n\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS"
+  },
+  {
+    "event": "state",
+    "name": "25-ssrf-localhost-db",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nRUNS\n#5\nFAILED\n1/2 · 30ms\nOpen in inspector →\n✕\n#5\nnow\n#4\n16s ago\n#1\n4m ago\nManual trigger\nSuccess\n· 0ms\n→\nHTTP request\nFailed\n· 1ms\n→\nJSON transform\nSkipped\n→\nOutput\nSkipped\n\n⚠ Plain http is only allowed for allowlisted hosts; use https"
+  },
+  {
+    "event": "state",
+    "name": "26-ssrf-localhost-db-inspector",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/runs?run=884c01c6-dfee-4b5f-9064-46129c25ad57",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#5\nUntitled flow\nFAILED\n1/2 · 30ms\nnow\n⚡ Manual trigger\nSuccess\n· 0ms\n→\n⇅ HTTP request\nFailed\n· 1ms\n→\n⇄ JSON transform\nSkipped\n→\n◎ Output\nSkipped\n⚠ HTTP request — Plain http is only allowed for allowlisted hosts; use https\nInspect\n▸\n#4\nUntitled flow\nFAILED\n1/2 · 29ms\n16s ago\n▸\n#3\nLead Enrichment Pipeline\nSUCCESS\n6/6 · 66ms\nre-run\n2m ago\n▸\n#2\nLead Enrichment Pipeline\nFAILED\n4/5 · 1.4s\n2m ago\n▸\n#1\nUntitled flow\nSUCCESS\n4/4 · 123ms\n4m ago\n⇅\nHTTP request\nFAILED\n\n1ms · run #5 · v3 · http.request · nj5to2 · 1 attempt\n\n✕\nInput\nOutput\nError\nLog\n\n⚠ EGRESS_BLOCKED\n\nPlain http is only allowed for allowlisted hosts; use https\n\nSUGGESTED FIX\n\nThe address is private, internal or not allowed. Use a public HTTPS endpoint.\n\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS"
+  },
+  {
+    "event": "state",
+    "name": "27-invalid-jsonata",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\n● Unsaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 1 issue before publishing\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\n!\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit"
+  },
+  {
+    "event": "state",
+    "name": "28-non-upstream-reference",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\n● Unsaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 1 issue before publishing\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\n!\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit"
+  },
+  {
+    "event": "state",
+    "name": "29-missing-required-url",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\n● Unsaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\nFix 1 issue before publishing\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\n!\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit"
+  },
+  {
+    "event": "state",
+    "name": "30-blank-restored",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex QA muk5j2z7\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCI\nCodex Independent Tester\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ Plain http is only allowed for allowlisted hosts; use https\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nSkipped\n\nOutput\n\nOUTPUT · RESULT\n\nSkipped\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit"
+  }
+]

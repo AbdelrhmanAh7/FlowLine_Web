@@ -1,4 +1,5 @@
 import { CronExpressionParser } from "cron-parser";
+import { safeErrorText } from "@/server/redact";
 import { dueFires } from "@/engine/schedule-math";
 import { and, eq, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db";
@@ -66,7 +67,7 @@ export async function schedulerTick(db: Db, now = new Date()) {
           fired++;
         } catch (e) {
           await tx.update(schema.scheduleFire).set({ status: `skipped_limit` }).where(eq(schema.scheduleFire.id, ins[0]!.id));
-          console.warn("[scheduler] could not enqueue", (e as Error).message);
+          console.warn("[scheduler] could not enqueue", safeErrorText(e));
         }
       }
       const next = CronExpressionParser.parse(sc!.cron, { tz: sc!.timezone, currentDate: now }).next().toDate();

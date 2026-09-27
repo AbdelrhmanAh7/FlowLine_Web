@@ -250,13 +250,17 @@ export async function startOAuth(db: Db, opts: { userId: string; workspaceId: st
   const provider = getProvider(opts.providerId);
   if (!provider?.oauth) throw notFound("Provider doesn't use OAuth");
   if (!oauthConfigured(provider)) throw new HttpError(400, "OAUTH_NOT_CONFIGURED", `${provider.name} OAuth isn't configured on this server (${provider.oauth.clientIdEnv})`);
+  let loginHint: string | undefined;
   if (opts.connectionId) {
     const [conn] = await db
-      .select({ provider: schema.connection.provider })
+      .select({ provider: schema.connection.provider, accountLabel: schema.connection.accountLabel })
       .from(schema.connection)
       .where(and(eq(schema.connection.id, opts.connectionId), eq(schema.connection.workspaceId, opts.workspaceId)));
     if (!conn) throw notFound("Connection not found");
     if (conn.provider !== provider.id) throw new HttpError(409, "DIFFERENT_PROVIDER", `That connection is for ${conn.provider}, not ${provider.name}`);
+    // Reconnect must be the same account: pre-select it where the provider supports a hint (Google).
+    const email = /[^\s()<>]+@[^\s()<>]+\.[a-z]{2,}/i.exec(conn.accountLabel)?.[0];
+    if (email) loginHint = email;
   }
   const state = randomToken(24);
   let challenge: string | undefined;
@@ -287,6 +291,7 @@ export async function startOAuth(db: Db, opts: { userId: string; workspaceId: st
     u.searchParams.set("code_challenge_method", "S256");
   }
   for (const [k, v] of Object.entries(provider.oauth.extraParams ?? {})) u.searchParams.set(k, v);
+  if (loginHint) u.searchParams.set("login_hint", loginHint);
   return { url: u.toString() };
 }
 

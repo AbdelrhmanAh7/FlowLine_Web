@@ -156,9 +156,14 @@ test("double-clicked Run starts one run, and Cancel stops it mid-request", async
   const dock = page.getByTestId("run-dock");
   await expect(dock.getByText("RUNNING").first()).toBeVisible({ timeout: 20_000 });
   expect(await latestRuns(page.request, flowId!)).toHaveLength(1);
+  // Degraded, not failed: the provider is slow and the UI says so (design slide 13).
+  await expect(dock.getByTestId("running-sheet")).toHaveText(/Running… \d+s · provider slow/, { timeout: 20_000 });
+  await expect(page.locator('.react-flow__node[data-id="sheet"]')).toContainText("provider slow");
 
   await dock.getByRole("button", { name: "Cancel run" }).click();
   await expect(dock.getByText("CANCELLED").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("status").filter({ hasText: /Run #1 was cancelled/ })).toBeVisible(); // not "failed" (Codex CX2-03)
+  await expect(page.getByText(/Run #1 failed/)).toHaveCount(0);
   const runs = await latestRuns(page.request, flowId!);
   expect(runs).toHaveLength(1);
   expect(runs[0]!.status).toBe("cancelled");
@@ -177,6 +182,7 @@ test("approval: a gated Slack post waits, is approved in the inspector, and post
   await page.getByRole("button", { name: "▶ Run" }).click();
   const dock = page.getByTestId("run-dock");
   await expect(dock.getByText("NEEDS APPROVAL").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Run #1 failed/)).toHaveCount(0); // a paused run is not reported as failed (Codex CX2-03)
   expect(await slackMessages(page.request, channel)).toHaveLength(0);
 
   await dock.getByRole("link", { name: /Open in inspector/ }).click();
@@ -186,6 +192,60 @@ test("approval: a gated Slack post waits, is approved in the inspector, and post
   await panel.getByRole("button", { name: "Approve" }).click();
   await expect.poll(async () => (await latestRuns(page.request, flowId!))[0]!.status, { timeout: 20_000 }).toBe("succeeded");
   expect(await slackMessages(page.request, channel)).toEqual([expect.objectContaining({ text: "Hello Ada" })]);
+});
+
+test("repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs", async ({ page }) => {
+  test.setTimeout(120_000);
+  const { workspace } = await setupUser(page);
+  // A Google Sheets connection for the fake's second account (the other tests use the first).
+  const { token } = await (await page.request.post(`${FAKE}/__fake/issue-token`, { data: { account: "b" } })).json();
+  const conn = await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Ledger", fields: { token } } });
+  expect(conn.ok(), await conn.text()).toBeTruthy();
+  const connId = (await conn.json()).connection.id as string;
+  const mkFlow = async (name: string, graph: unknown) => {
+    const id = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name } })).json()).flow.id as string;
+    await saveGraph(page.request, id, graph);
+    return id;
+  };
+  const sheetId = `sheet-e2e-${randomUUID().slice(0, 8)}`;
+  const uses = await mkFlow("Uses Sheets", { nodes: [manual, act("sheet", "Add row", 1, "google_sheets.append_row", connId, `{ "spreadsheetId": "${sheetId}", "range": "A1", "row": [name] }`), out(2)], edges: line("t", "sheet", "o") });
+  const other = await mkFlow("Independent", {
+    nodes: [manual, { id: "x", type: "transform.json", position: pos(1), data: { label: "Shape", config: { expression: '{ "hello": name }' } } }, out(2)],
+    edges: line("t", "x", "o"),
+  });
+
+  // The user revokes the app at Google.
+  expect((await page.request.post(`${FAKE}/__fake/revoke-account`, { data: { account: "b" } })).ok()).toBeTruthy();
+  await page.goto(`/w/${workspace.slug}/flows/${uses}`);
+  await page.getByRole("button", { name: "▶ Run" }).click();
+  await expect(page.getByTestId("run-dock").getByText("FAILED").first()).toBeVisible({ timeout: 20_000 });
+
+  // Only that flow is paused; the other one still runs.
+  await page.goto(`/w/${workspace.slug}/flows`);
+  const row = (name: string) => page.getByRole("row").filter({ hasText: name });
+  await expect(row("Uses Sheets")).toContainText(/Expired|Paused/);
+  await expect(row("Independent")).not.toContainText(/Expired|Paused/);
+  const ok = await page.request.post(`/api/flows/${other}/runs`, { data: {} });
+  expect(ok.status()).toBe(202);
+  await expect.poll(async () => (await latestRuns(page.request, other))[0]!.status, { timeout: 20_000 }).toBe("succeeded");
+  const runsBefore = (await latestRuns(page.request, uses)).length;
+
+  // Integrations explains it and offers a same-account reconnect through OAuth.
+  await page.goto(`/w/${workspace.slug}/integrations`);
+  const banner = page.getByRole("alert").filter({ hasText: "Google Sheets" });
+  await expect(banner).toContainText(/1 flow is paused/);
+  await expect(banner).toContainText("Other flows keep running");
+  await banner.getByRole("button", { name: "Reconnect Google Sheets" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reconnect Google Sheets" });
+  await expect(dialog).toContainText("same account");
+  await dialog.getByRole("button", { name: "Continue to Google Sheets" }).click();
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/integrations`));
+  await expect(page.getByRole("alert").filter({ hasText: "Google Sheets" })).toHaveCount(0);
+
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await expect(row("Uses Sheets")).not.toContainText(/Expired|Paused/);
+  expect(await latestRuns(page.request, uses)).toHaveLength(runsBefore); // reconnect didn't run anything
+  expect(await sheetRows(page.request, sheetId)).toHaveLength(0);
 });
 
 test("mobile: Phase 2 pages fit a phone screen without horizontal scrolling", async ({ page }) => {

@@ -1,0 +1,131 @@
+[
+  {
+    "event": "b-identity",
+    "workspaceSlug": "codex-b-muk63g03"
+  },
+  {
+    "event": "console",
+    "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary name=\"flows/\" loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/w/codex-b...\" tree={[...]} params={{slug:\"code...\"}} cacheNode={{rsc:{...}, ...}} ...>\n                <SegmentViewNode type=\"page\" pagePath=\"w/[slug]/f...\">\n                  <SegmentTrieNode>\n                  <FlowsPage>\n                    <Dashboard>\n                      <div className=\"flex flex-col\">\n                        <PageHeader title=\"Flows\">\n                          <header className=\"sticky top...\">\n                            <div>\n                            <div className=\"flex flex-...\">\n                              <label>\n                              <Input id=\"flow-search\" placeholder=\"Search flows…\" value=\"\" onChange={function onChange} ...>\n                                <input\n                                  ref={null}\n                                  aria-invalid={undefined}\n                                  className=\"h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:te...\"\n                                  id=\"flow-search\"\n                                  placeholder=\"Search flows…\"\n                                  value=\"\"\n                                  onChange={function onChange}\n-                                 style={{caret-color:\"transparent\"}}\n                                >\n                              ...\n                        ...\n                ...\n              ...\n"
+  },
+  {
+    "event": "state",
+    "name": "61-tenant-b-own-flows",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/flows",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\nFlows\nSearch flows\n+ New flow\nRECENT ACTIVITY"
+  },
+  {
+    "event": "console",
+    "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n      <RedirectBoundary>\n        <RedirectErrorBoundary router={{...}}>\n          <InnerLayoutRouter url=\"/w/codex-b...\" tree={[...]} params={{slug:\"code...\"}} cacheNode={{rsc:{...}, ...}} ...>\n            <SegmentViewNode type=\"page\" pagePath=\"w/[slug]/r...\">\n              <SegmentTrieNode>\n              <RunsPage>\n                <Suspense>\n                  <RunInspector>\n                    <div className=\"flex min-h...\">\n                      <PageHeader>\n                      <div className=\"flex flex-...\">\n                        <div className=\"flex min-w...\">\n                          <div className=\"flex flex-...\">\n                            <label>\n                            <Input id=\"run-search\" placeholder=\"⌕ Search f...\" value=\"\" onChange={function onChange} ...>\n                              <input\n                                ref={null}\n                                aria-invalid={undefined}\n                                className=\"h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text...\"\n                                id=\"run-search\"\n                                placeholder=\"⌕ Search flows or #run id…\"\n                                value=\"\"\n                                onChange={function onChange}\n-                               style={{caret-color:\"transparent\"}}\n                              >\n                            ...\n                          ...\n                        ...\n            ...\n          ...\n"
+  },
+  {
+    "event": "state",
+    "name": "62-tenant-b-own-runs",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/runs",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled"
+  },
+  {
+    "event": "console",
+    "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <RedirectErrorBoundary router={{...}}>\n      <InnerLayoutRouter url=\"/w/codex-b...\" tree={[...]} params={{slug:\"code...\"}} cacheNode={{rsc:{...}, ...}} ...>\n        <SegmentViewNode type=\"page\" pagePath=\"w/[slug]/i...\">\n          <SegmentTrieNode>\n          <ClientPageRoot Component={function IntegrationsPage} serverProvidedParams={{...}}>\n            <IntegrationsPage params={Promise} searchParams={Promise}>\n              <Suspense>\n                <Integrations>\n                  <div className=\"flex flex-col\">\n                    <PageHeader>\n                    <div className=\"flex flex-...\">\n                      <section>\n                      <section>\n                        <div className=\"mb-3 flex ...\">\n                          <SectionLabel>\n                          <label>\n                          <Input id=\"int-search\" placeholder=\"⌕ Search i...\" value=\"\" onChange={function onChange} ...>\n                            <input\n                              ref={null}\n                              aria-invalid={undefined}\n                              className=\"h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-m...\"\n                              id=\"int-search\"\n                              placeholder=\"⌕ Search integrations…\"\n                              value=\"\"\n                              onChange={function onChange}\n-                             style={{caret-color:\"transparent\"}}\n                            >\n                        ...\n        ...\n      ...\n"
+  },
+  {
+    "event": "state",
+    "name": "63-tenant-b-own-integrations",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/integrations",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · …\n\nCATALOG · …\n\nSearch integrations"
+  },
+  {
+    "event": "response",
+    "status": 404,
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows"
+  },
+  {
+    "event": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "event": "navigation-status",
+    "name": "a-workspace",
+    "status": 404
+  },
+  {
+    "event": "state",
+    "name": "64-tenant-b-a-workspace",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/flows",
+    "text": "Flowline\n\n404\n\nWe couldn't find that page\n\nIt may have been moved or deleted, or it belongs to a workspace you're not a member of.\n\nGo to my workspace"
+  },
+  {
+    "event": "response",
+    "status": 404,
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/integrations"
+  },
+  {
+    "event": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "event": "navigation-status",
+    "name": "a-integrations",
+    "status": 404
+  },
+  {
+    "event": "state",
+    "name": "64-tenant-b-a-integrations",
+    "url": "http://localhost:3100/w/codex-qa-muk5j2z7/integrations",
+    "text": "Flowline\n\n404\n\nWe couldn't find that page\n\nIt may have been moved or deleted, or it belongs to a workspace you're not a member of.\n\nGo to my workspace"
+  },
+  {
+    "event": "navigation-status",
+    "name": "a-builder-via-b",
+    "status": 200
+  },
+  {
+    "event": "response",
+    "status": 404,
+    "url": "http://localhost:3100/api/flows/119916f0-4ea5-44c7-bb8e-1740881beddb"
+  },
+  {
+    "event": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "event": "state",
+    "name": "64-tenant-b-a-builder-via-b",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/flows/119916f0-4ea5-44c7-bb8e-1740881beddb",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\n← Flows\n/"
+  },
+  {
+    "event": "navigation-status",
+    "name": "a-template-flow-via-b",
+    "status": 200
+  },
+  {
+    "event": "response",
+    "status": 404,
+    "url": "http://localhost:3100/api/flows/82cec4c7-d897-4e91-908c-b74316f45514"
+  },
+  {
+    "event": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "event": "state",
+    "name": "64-tenant-b-a-template-flow-via-b",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/flows/82cec4c7-d897-4e91-908c-b74316f45514",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\n← Flows\n/\nFlow not found\n\n⚠ This flow doesn't exist\n\nIt may have been deleted, or it belongs to a workspace you're not a member of.\n\n← Back to flows"
+  },
+  {
+    "event": "navigation-status",
+    "name": "a-run-via-b",
+    "status": 200
+  },
+  {
+    "event": "console",
+    "text": "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n      <RedirectBoundary>\n        <RedirectErrorBoundary router={{...}}>\n          <InnerLayoutRouter url=\"/w/codex-b...\" tree={[...]} params={{slug:\"code...\"}} cacheNode={{rsc:{...}, ...}} ...>\n            <SegmentViewNode type=\"page\" pagePath=\"w/[slug]/r...\">\n              <SegmentTrieNode>\n              <RunsPage>\n                <Suspense>\n                  <RunInspector>\n                    <div className=\"flex min-h...\">\n                      <PageHeader>\n                      <div className=\"flex flex-...\">\n                        <div className=\"flex min-w...\">\n                          <div className=\"flex flex-...\">\n                            <label>\n                            <Input id=\"run-search\" placeholder=\"⌕ Search f...\" value=\"\" onChange={function onChange} ...>\n                              <input\n                                ref={null}\n                                aria-invalid={undefined}\n                                className=\"h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text...\"\n                                id=\"run-search\"\n                                placeholder=\"⌕ Search flows or #run id…\"\n                                value=\"\"\n                                onChange={function onChange}\n-                               style={{caret-color:\"transparent\"}}\n                              >\n                            ...\n                          ...\n                        ...\n            ...\n          ...\n"
+  },
+  {
+    "event": "state",
+    "name": "64-tenant-b-a-run-via-b",
+    "url": "http://localhost:3100/w/codex-b-muk63g03/runs?run=961cb9ae-a096-42c2-80d9-d77d78b29131",
+    "text": "Skip to content\nCodex B muk63g03\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCT\nCodex Tenant B\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled"
+  }
+]

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { duration, pretty, timeAgo } from "@/lib/format";
-import { modKey } from "@/lib/hooks";
-import type { RunDetailDto, RunListItem } from "@/lib/types";
+import { modKey, useNow } from "@/lib/hooks";
+import { runningDetail } from "@/lib/run-status";
+import type { RunDetailDto, RunListItem, RunStepDto } from "@/lib/types";
 import { Button, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
 
 interface Props {
@@ -100,10 +101,14 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                       )}
                     >
                       <span className="block max-w-36 truncate text-sm font-medium">{s.nodeLabel}</span>
-                      <StatusBadge tone={RUN_TONE[s.status] ?? "muted"} className="text-xs">
-                        {RUN_LABEL[s.status]}
-                        {s.durationMs != null && <span className="data">· {duration(s.durationMs)}</span>}
-                      </StatusBadge>
+                      {s.status === "running" ? (
+                        <RunningBadge step={s} events={run.events} />
+                      ) : (
+                        <StatusBadge tone={RUN_TONE[s.status] ?? "muted"} className="text-xs">
+                          {RUN_LABEL[s.status]}
+                          {s.durationMs != null && <span className="data">· {duration(s.durationMs)}</span>}
+                        </StatusBadge>
+                      )}
                     </button>
                     {i < run.steps.length - 1 && <span aria-hidden className="text-muted">→</span>}
                   </li>
@@ -136,5 +141,15 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
         </div>
       </div>
     </section>
+  );
+}
+
+function RunningBadge({ step, events }: { step: RunStepDto; events: RunDetailDto["events"] }) {
+  const now = useNow(1000);
+  const d = runningDetail(step, events, now);
+  return (
+    <StatusBadge tone={d.degraded ? "warning" : "info"} className="text-xs">
+      <span data-testid={`running-${step.nodeId}`}>{d.text}</span>
+    </StatusBadge>
   );
 }

@@ -1,0 +1,79 @@
+URL: http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb
+
+Skip to content
+Codex QA muk5j2z7
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CI
+Codex Independent Tester
+← Flows
+/
+Flow name
+● Unsaved
+Not published
+Triggers
+Publish to activate webhook/schedule triggers
+Publish
+Fix 2 issues before publishing
+⚠ 2 issues
+↶
+↷
+Nothing to redo
+Runs
+CtrlJ
+▶ Run
+Fix 2 issues before running
+
+Manual trigger
+
+TRIGGER · MANUAL
+
+Not run yet
+
+HTTP request
+
+HTTP · REQUEST
+
+Not run yet
+
+!
+
+JSON transform
+
+TRANSFORM · JSONATA
+
+Not run yet
+
+!
+React Flow
++ Add node
+/
+◎
+Output OUTPUT
+Stores a value in the run result under a key.
+⊞
+Subflow LOGIC
+Runs a pinned published version of another flow and returns its output.
+✦
+AI · Extract AI
+Extracts fields into JSON that must match a JSON Schema. Output that doesn't match fails the step.
+−
+100%
++
+Fit

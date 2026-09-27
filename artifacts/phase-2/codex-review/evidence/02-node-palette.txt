@@ -1,0 +1,117 @@
+URL: http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb
+
+Skip to content
+Codex QA muk5j2z7
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CI
+Codex Independent Tester
+← Flows
+/
+Flow name
+Saved
+Not published
+Triggers
+Publish to activate webhook/schedule triggers
+Publish
+Fix 1 issue before publishing
+⚠ 1 issue
+↶
+Nothing to undo
+↷
+Nothing to redo
+Runs
+CtrlJ
+▶ Run
+Fix 1 issue before running
+React Flow
++ Add node
+/
+⚡
+Manual trigger TRIGGER
+Starts the flow when you press Run. Sends the sample payload as input.
+⚡
+Webhook trigger TRIGGER
+Starts the published flow when a signed HTTP POST arrives. Duplicate event ids are ignored.
+🕐
+Schedule trigger TRIGGER
+Starts the published flow on a cron schedule in a time zone (DST-aware).
+⇄
+JSON transform DATA
+Reshape data with a JSONata expression. `$steps.<id>` reads any upstream step.
+⑂
+Condition LOGIC
+Routes data down the true or false branch. The branch not taken is skipped.
+◎
+Output OUTPUT
+Stores a value in the run result under a key.
+⏷
+Filter DATA
+Keeps array items where the predicate is true.
+↦
+Map fields DATA
+Builds an object field by field; each value is a JSONata expression.
+⋈
+Merge DATA
+Waits for all incoming branches, then combines what they produced.
+▦
+CSV DATA
+Parses CSV text into rows, or builds CSV from rows.
+🗎
+Read file DATA
+Reads an uploaded file, an upstream attachment, or a URL as text, JSON, CSV or PDF text (size-limited).
+⛁
+Store DATA
+Reads or writes a small workspace value (e.g. the last seen price) to compare across runs.
+↻
+Loop LOGIC
+Runs a published subflow once per item (bounded by max items).
+⊞
+Subflow LOGIC
+Runs a pinned published version of another flow and returns its output.
+⇅
+HTTP request INTEGRATION
+Calls a public HTTPS endpoint. Private/metadata addresses and unsafe redirects are blocked.
+✦
+AI · Generate AI
+Summarizes or writes text from the input using the configured AI provider.
+✦
+AI · Extract AI
+Extracts fields into JSON that must match a JSON Schema. Output that doesn't match fails the step.
+✦
+AI · Classify AI
+Assigns exactly one of the allowed labels, with a confidence and short reason.
+{}
+Code ADVANCED
+Runs JavaScript in an isolated container (no network, CPU/memory/time limits, no host secrets).
+⬡
+App action INTEGRATION
+Calls an action on a connected app (Sheets, Slack, HubSpot…) using a workspace connection.
+⚡
+
+Start with a trigger
+
+Every flow begins with an event. Add a manual trigger, then connect transforms, conditions and outputs.
+
++ Add a trigger
+or browse templates
+−
+100%
++
+Fit

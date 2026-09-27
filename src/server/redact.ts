@@ -16,7 +16,20 @@ const PATTERNS: [RegExp, string][] = [
   [/\bpat-[a-z0-9]{2,4}-[a-f0-9-]{20,}/gi, "[REDACTED_HUBSPOT_TOKEN]"],
   [/(postgres(?:ql)?:\/\/[^:\s/]+:)[^@\s]+@/gi, "$1[REDACTED]@"],
   [/\b(sk-ant-|sk-proj-|sk-)[A-Za-z0-9_-]{16,}/g, "[REDACTED_API_KEY]"],
+  // Drizzle/pg "Failed query … params: …" errors carry bound values (session tokens, emails): never log them.
+  [/(\bparams:\s*).*/g, "$1[omitted]"],
 ];
+
+/** Loggable text for an error (message + causes), with bound query params and known secret shapes removed. */
+export function safeErrorText(err: unknown): string {
+  const parts: string[] = [];
+  let e: unknown = err;
+  for (let i = 0; e && i < 4; i++) {
+    parts.push(e instanceof Error ? `${e.name}: ${e.message}` : String(e));
+    e = e instanceof Error ? (e as Error & { cause?: unknown }).cause : undefined;
+  }
+  return redactString(parts.join(" ← caused by "));
+}
 
 const SENSITIVE_KEYS = /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|secret|private[_-]?key|token)$/i;
 
@@ -31,6 +44,7 @@ export function redact<T>(value: T, secrets: readonly string[] = [], depth = 0):
   if (depth > 30) return value;
   if (typeof value === "string") return redactString(value, secrets) as T;
   if (Array.isArray(value)) return value.map((v) => redact(v, secrets, depth + 1)) as T;
+  if (value instanceof Date) return value; // timestamps carry no secrets; a plain-object copy would lose them
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {

@@ -1,0 +1,57 @@
+URL: http://localhost:3100/w/codex-qa-muk5j2z7/flows/119916f0-4ea5-44c7-bb8e-1740881beddb
+
+Skip to content
+Codex QA muk5j2z7
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CI
+Codex Independent Tester
+← Flows
+/
+Flow name
+Saved
+Not published
+Triggers
+Publish to activate webhook/schedule triggers
+Publish
+Fix 1 issue before publishing
+⚠ 1 issue
+↶
+Nothing to undo
+↷
+Nothing to redo
+Runs
+CtrlJ
+▶ Run
+Fix 1 issue before running
+React Flow
++ Add node
+/
+⚡
+
+Start with a trigger
+
+Every flow begins with an event. Add a manual trigger, then connect transforms, conditions and outputs.
+
++ Add a trigger
+or browse templates
+−
+100%
++
+Fit

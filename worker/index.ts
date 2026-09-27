@@ -4,6 +4,7 @@
  * executes them with the shared engine, and persists every step.
  */
 import { randomUUID } from "node:crypto";
+import { redactString, safeErrorText } from "@/server/redact";
 import { hostname } from "node:os";
 import { sql } from "drizzle-orm";
 import { Client } from "pg";
@@ -26,7 +27,7 @@ let wake: (() => void) | null = null;
 process.stdout.on("error", () => {});
 
 function log(...args: unknown[]) {
-  console.log(new Date().toISOString(), "[worker]", ...args);
+  console.log(new Date().toISOString(), "[worker]", ...args.map((a) => (a instanceof Error ? safeErrorText(a) : typeof a === "string" ? redactString(a) : a)));
 }
 
 async function beat() {
@@ -103,6 +104,6 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(safeErrorText(err));
   process.exit(1);
 });

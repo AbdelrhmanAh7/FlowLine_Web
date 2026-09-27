@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeErrorText } from "@/server/redact";
 import { ZodError, type ZodType } from "zod";
 
 export class HttpError extends Error {
@@ -46,7 +47,7 @@ export function route<C>(handler: Handler<C>): Handler<C> {
       if (err instanceof ZodError) {
         return NextResponse.json({ error: { code: "VALIDATION", message: "Invalid request", details: err.issues } }, { status: 400 });
       }
-      console.error("[api] unhandled", err);
+      console.error("[api] unhandled", safeErrorText(err));
       return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong on our side" } }, { status: 500 });
     }
   };

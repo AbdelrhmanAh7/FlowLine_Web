@@ -176,7 +176,7 @@ export async function rerunPreview(original: typeof schema.run.$inferSelect, fro
         sideEffect = a?.action.sideEffect ?? "unknown";
         sensitive = Boolean(a?.action.sensitive);
       }
-      if (n.type === "http.request") sideEffect = cfg.sideEffect ?? "non_idempotent";
+      if (n.type === "http.request") sideEffect = (cfg.method ?? "GET") === "GET" ? "none" : (cfg.sideEffect ?? "non_idempotent");
       const previously = byNode.get(n.id)?.status ?? "not run";
       return { nodeId: n.id, label: n.data.label, type: n.type, sideEffect, sensitive, previousStatus: previously };
     });

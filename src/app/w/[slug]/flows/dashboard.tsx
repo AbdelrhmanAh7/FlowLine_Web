@@ -18,6 +18,9 @@ export interface FlowRow {
   updatedAt: string;
   nodeCount: number;
   hasTrigger: boolean;
+  trigger: string | null;
+  publishedVersion: number | null;
+  pausedReason: string | null;
   lastRunAt: string | null;
   lastRunStatus: string | null;
   runCount: number;
@@ -56,8 +59,14 @@ interface Overview {
   }[];
 }
 
+const TRIGGER_LABEL: Record<string, string> = { "trigger.manual": "Manual", "trigger.webhook": "Webhook", "trigger.schedule": "Schedule" };
+
 export function flowStatus(f: FlowRow): { tone: Tone; label: string } {
+  // A broken connection pauses only the flows that use it (pausedReason = connection:<id>:<status>).
+  if (f.pausedReason) return f.pausedReason.endsWith(":expired") ? { tone: "danger", label: "Expired" } : { tone: "warning", label: "Paused" };
   if (f.lastRunStatus === "running" || f.lastRunStatus === "queued") return { tone: "info", label: "Running" };
+  if (f.lastRunStatus === "waiting_approval") return { tone: "warning", label: "Needs approval" };
+  if (f.publishedVersion != null && f.trigger && f.trigger !== "trigger.manual") return f.lastRunStatus === "failed" ? { tone: "danger", label: "Active · failing" } : { tone: "success", label: "Active" };
   if (f.lastRunStatus === "failed") return { tone: "danger", label: "Failed" };
   if (f.lastRunStatus === "succeeded") return { tone: "success", label: "Healthy" };
   return { tone: "muted", label: "Draft" };
@@ -179,7 +188,7 @@ export function Dashboard() {
                         </Link>
                         <span className="data ml-2 text-xs text-muted">{f.nodeCount} nodes</span>
                       </td>
-                      <td className="hidden px-4 py-3 text-med md:table-cell">{f.hasTrigger ? "Manual" : <span className="text-muted">No trigger</span>}</td>
+                      <td className="hidden px-4 py-3 text-med md:table-cell">{f.trigger ? TRIGGER_LABEL[f.trigger] ?? "Trigger" : <span className="text-muted">No trigger</span>}</td>
                       <td className="px-4 py-3">
                         <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                       </td>

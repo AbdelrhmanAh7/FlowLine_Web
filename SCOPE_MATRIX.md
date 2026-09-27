@@ -56,21 +56,44 @@ Nothing has been removed to make the gate easier to pass. Rows for later phases 
 
 ## Phase 2: automation and integrations
 
-| ID | Requirement | Source | Type | Acceptance test (planned) | Status |
-|---|---|---|---|---|---|
-| P2-01 | Integration connections (OAuth/API key), per-connection health | s10 | DESIGN | Connect a sandbox app; token stored encrypted | PLANNED |
-| P2-02 | Expired token → only the affected flows pause; Reconnect banner (degraded ≠ blocked) | s10, s13 | DESIGN | Expire a token → affected flows paused, the app stays usable | PLANNED |
-| P2-03 | Integration catalog with search (size per real connectors, not the deck's "120+") | s10 | DESIGN | Catalog lists only implemented connectors | PLANNED |
-| P2-04 | Webhook trigger | s5, s8, s11 | DESIGN | POST to a webhook starts a run | PLANNED |
-| P2-05 | Schedule trigger using the workspace timezone | s7, s11, s12 | DESIGN | Cron fires in the configured TZ | PLANNED |
-| P2-06 | LLM nodes (enrich/score/classify) with tokens/cost per step | s4, s8 | DESIGN | Run with a provider key; cost recorded | PLANNED |
-| P2-07 | App action nodes (Sheets, Slack, Gmail, HTTP fetch, SQL…) | s8, s11 | DESIGN | Sandbox connector E2E | PLANNED |
-| P2-08 | Integration templates (Lead Enrichment, Ticket Triage, …) usable | s11 | DESIGN | Template → runnable flow | PLANNED |
-| P2-09 | Credits/usage metering per run (real, not sample figures) | s7, s9 | DESIGN | Metered usage matches the run records | PLANNED |
-| P2-10 | Node "Test" execution in isolation from the drawer | s8 | DESIGN | Test a single node with sample input | PLANNED |
-| P2-11 | Provider-slow / partial-run degraded states ("Running… 12s provider slow") | s13 | DESIGN | Slow provider shows a degraded state and continues | PLANNED |
-| P2-12 | Per-node retries/backoff, timeouts, run cancellation | s13 | DESIGN | Transient failure retried; cancel stops the run | PLANNED |
-| P2-13 | Flow activation (Active/Paused/Expired statuses on the dashboard) | s7 | DESIGN | Status reflects the trigger + connection state | PLANNED |
+Evidence keys: `int:` = `tests/integration/<file>`, `contract:` = `tests/contract`, `unit:` = `tests/unit`, `e2e:` = `e2e/phase2.spec.ts` unless named, `live:` = `tests/live` (results in `artifacts/phase-2/live-results.json`), `codex:` = `artifacts/phase-2/codex-review`.
+Rows P2-01…P2-13 are the design rows planned in Phase 1; P2-14 onwards are the Phase 2 prompt's requirements.
+
+| ID | Requirement | Source | Type | Acceptance test | Status | Evidence |
+|---|---|---|---|---|---|---|
+| P2-01 | Integration connections (OAuth/API key/basic/connection string), encrypted, scoped, per-connection health | s10, prompt | DESIGN | Connect via OAuth (state+PKCE) and API key; secret never returned | PASS | e2e: template journey (OAuth through the UI); contract: oauth; int: p2-actions (isolation, refresh race, denied refresh) |
+| P2-02 | Expired token → only affected flows pause; Reconnect banner; same account; nothing auto-runs | s10, s13, prompt | DESIGN | Revoke → affected flow paused, other flow runs; reconnect with another account refused; same account restores without a run | PASS | int: p2-actions "expired auth pauses only…", "a denied refresh…"; int: p2-review-fixes L1 (same provider); codex: journey 9 |
+| P2-03 | Integration catalog computed from real adapters, with verification level | s10, prompt | DESIGN | 12 providers listed from the registry; badges adapter / contract / live | PASS | `/api/integrations/catalog`; e2e: library, mobile; contract (82) |
+| P2-04 | Signed webhook trigger: signature, dedupe, duplicates, ordering, failure after acceptance, replay | s5, s8, s11, prompt | DESIGN | Bad/stale signatures 401; same event id → same run; concurrent duplicates → 1 run; crash after acceptance keeps the run; replay under a new id refused | PASS | int: p2-triggers (5), p2-review-fixes M3 (2) |
+| P2-05 | Schedule trigger: time zone, DST, missed-run policy, concurrent schedulers | s7, s11, s12, prompt | DESIGN | skip / run_once / run_all; two schedulers fire once; DST spring/fall | PASS | int: p2-triggers (5); unit: engine-v2 DST (3) |
+| P2-06 | AI nodes (generate/extract/classify, schema JSON) record provider, model, tokens; no hard-coded model names or prices | s4, s8, prompt | DESIGN | Schema-valid JSON; usage settled once; model from config | PASS | int: p2-execution (AI); live: ai-ollama (real `qwen2.5:3b`) |
+| P2-07 | App actions for 12 providers; adapter / contract / sandbox-live distinguished | s8, s11, prompt | DESIGN | Contract tests vs provider doubles; live identity per provider | PARTIAL — live BLOCKED for 11 SaaS | contract (82); live: Postgres PASS; 11 SaaS BLOCKED (no sandbox credentials) |
+| P2-08 | The six design templates create independent, runnable flows with required connections, no fake counts | s11, prompt | DESIGN | Each template runs end-to-end; independence; setup placeholders block runs | PASS | int: p2-templates (9); e2e: template journey; e2e: library |
+| P2-09 | Durable usage ledger, unique events, enforced spending limits | s7, s9, prompt | DESIGN | Budget refusal before the call; racing reservations never overshoot; AI billed once across a re-run | PASS | int: p2-execution (budget, race); e2e: template journey (usage) |
+| P2-10 | Node "Test" from the drawer | s8 | DESIGN | Latest input/output + isolated expression preview; side-effecting nodes are exercised via "Re-run from this step" with a preview | PASS | node-drawer Test tab; DESIGN_DECISIONS D17 |
+| P2-11 | Provider-slow / retry degraded states | s13 | DESIGN | "Running… 12s · provider slow", "retry 2 (rate limited)" from real step timing/events | PASS | unit: run-status (4); e2e: cancel test (provider slow) |
+| P2-12 | Retries with backoff+jitter by error type, timeouts, cancellation | s13, prompt | DESIGN | 429 Retry-After retried; 5xx bounded; cancel queued/running mid-request | PASS | int: p2-actions "429…", p2-execution (retry, cancel); e2e: cancel |
+| P2-13 | Flow activation status (Active / Paused / Expired) on the dashboard | s7 | DESIGN | Status from the published trigger + connection state | PASS | dashboard `flowStatus`; e2e: dashboard status |
+| P2-14 | Queue + separate worker, leases, heartbeats, checkpoints/resume | prompt | DESIGN | Lost lease writes nothing; stale run requeued; resume keeps finished steps with real values | PASS | int: runs (lease, stale), p2-actions (crash resume), p2-review-fixes M4 |
+| P2-15 | Immutable published versions; run linked to version, input and permission policy | prompt | DESIGN | UPDATE on a version rejected; a queued run executes its own version after an edit | PASS | int: p2-engine (2) |
+| P2-16 | Run states incl. waiting_approval; step skipped and uncertain external outcome | prompt | DESIGN | Pause/uncertain/skip paths | PASS | unit: engine-v2; int: p2-actions (review) |
+| P2-17 | Per-workspace concurrency and queue limits; run timeout; rate limit | prompt | DESIGN | Extra runs held; quota refuses | PASS | int: p2-execution (2) |
+| P2-18 | Graph validation (types, references, connections), branching, bounded loops, parallel/join, versioned subflows | prompt | DESIGN | Invalid graphs refused; merges; loops bounded; subflow pinned; unpublished/foreign/self refused | PASS | unit: engine-v2 (validation, joins); int: p2-engine (subflows) |
+| P2-19 | Lost response on a non-idempotent action → verify or human review; no blind retry | prompt | DESIGN | Drop after/before commit; no verify → review; crash mid-call; a retry decision is one-shot | PASS | int: p2-actions (4), p2-review-fixes M1/M2 (3) |
+| P2-20 | Re-run from a step: known revision, preview, side-effect risk, re-authorization, no duplicates | prompt | DESIGN | Original vs latest revision; a demoted user's queued re-run refused; Sheets fault → UI re-run → one row | PASS | int: p2-engine (2), p2-actions "upstream message, rows and billing are not repeated"; e2e: template journey |
+| P2-21 | Safe HTTP / egress: SSRF incl. redirects, private and metadata addresses, narrow allowlist | prompt | DESIGN | Private/metadata/rebinding/redirect blocked; credentials not forwarded cross-origin | PASS | unit: egress; int: p2-execution (egress), p2-templates (price watch), p2-postgres (H1), p2-review-fixes L2 |
+| P2-22 | JSON map/filter/merge, CSV/JSON/file nodes | prompt | DESIGN | Data nodes produce the expected output | PASS | unit: engine-v2 "data nodes"; int: p2-templates (PDF) |
+| P2-23 | Code node only in a real sandbox; unavailable otherwise; never in the server process | prompt | DESIGN | No network, no host env, read-only fs, CPU/memory limits | PASS | int: p2-code-sandbox (7) |
+| P2-24 | Credentials separate from flows, encrypted, scoped; secrets never in logs/previews | prompt | DESIGN | Redaction of steps, events, approvals, errors | PASS | int: p2-actions (isolation), p2-review-fixes M4; codex: journey 10 |
+| P2-25 | Human approvals bound to run/revision/action/args/connection/approver + expiry | prompt | DESIGN | Altered, expired or revoked-approver decisions not honoured | PASS | int: p2-actions (2); e2e: approval |
+| P2-26 | Templates: file limits, authorized pricing sources, refusal of embedded instructions | prompt | DESIGN | Private pricing source refused; injected lines quarantined (real model: 0/9 poisoned, was 6/9) | PASS | int: p2-templates (price watch ×2, invoice injection); live: ai-ollama injection ×3 |
+| P2-27 | Dashboard, history and payload inspector from real data, redaction, pagination, event log | prompt | DESIGN | Paginated history; events tab; redacted payloads | PASS | e2e: canvas re-run, approval; codex: journey 10 |
+| P2-28 | Deterministic E2E suite (doubles only at provider boundaries) separate from the sandbox/live suite | prompt | DESIGN | `pnpm test:e2e` vs `pnpm test:live` | PASS | e2e; live |
+| P2-29 | Fault tests: expired auth / denied refresh, 429/5xx/timeout, invalid schemas, duplicate webhooks, worker crash, double-click Run, cancellation, unaffected flows | prompt | DESIGN | Each fault exercised | PASS | int: p2-actions, p2-execution, p2-triggers; e2e: double-click + cancel |
+| P2-30 | Races: balances, refresh tokens, scheduling; cross-workspace isolation | prompt | DESIGN | Racing reservations; one refresh; one fire; foreign connection unusable | PASS | int: p2-execution (race), p2-actions (refresh race, isolation), p2-triggers (schedulers) |
+| P2-31 | Independent agent-driven UI testing (Codex), fixes, retest | prompt | DESIGN | Codex report → fixes → retest | PENDING | codex: REPORT.md / RETEST.md |
+| P2-32 | Security review of critical execution code | prompt (critical) | EXTENSION | Fable 5.1 findings fixed with tests that fail on the old code | PASS | artifacts/phase-2/reviews/fable-security-review.md; int: p2-postgres, p2-review-fixes |
+| P2-33 | Phase 1 regressions re-run | prompt | DESIGN | All Phase 1 suites green | PASS | e2e (Phase 1 specs); int: runs, flows, tenancy, workspaces |
 
 ## Phase 3: agents / knowledge / copilot, collaboration, billing, release
 
