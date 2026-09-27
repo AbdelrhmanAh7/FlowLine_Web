@@ -32,6 +32,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
   const def = NODE_DEFINITIONS[node.type as NodeType];
   const headingId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
 
   return (
     <aside
@@ -43,7 +44,24 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
         variant === "sheet" ? "fixed inset-x-0 bottom-0 h-[92vh] animate-sheet-in rounded-t-xl border-t" : "absolute top-0 right-0 bottom-0 w-[var(--drawer-w)] max-w-full animate-drawer-in border-l shadow-[var(--shadow-popover)]",
       )}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-line px-5 pt-4 pb-3">
+      <div
+        className="flex touch-pan-y items-start justify-between gap-3 border-b border-line px-5 pt-4 pb-3"
+        // Swipe to dismiss (slide 14): drag the header right (overlay) or down (bottom sheet) past 80px.
+        onPointerDown={(e) => {
+          if ((e.target as HTMLElement).closest("button")) return;
+          swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerUp={(e) => {
+          const s = swipe.current;
+          swipe.current = null;
+          if (!s || s.id !== e.pointerId) return;
+          const dx = e.clientX - s.x;
+          const dy = e.clientY - s.y;
+          if ((variant === "sheet" ? dy : dx) > 80) onClose();
+        }}
+        onPointerCancel={() => (swipe.current = null)}
+      >
         <div className="min-w-0">
           <h2 id={headingId} className="flex items-center gap-2 text-lg font-semibold">
             <span aria-hidden className="text-accent">{def.icon}</span>

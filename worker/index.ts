@@ -10,6 +10,7 @@ import { Client } from "pg";
 import { db, pool } from "@/db";
 import * as schema from "@/db/schema";
 import { RUN_CHANNEL } from "@/server/runs";
+import { stopSandbox } from "@/engine/sandbox";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 
 const workerId = `${hostname()}-${process.pid}-${randomUUID().slice(0, 6)}`;
@@ -36,7 +37,7 @@ async function drain() {
     const id = await claimNextRun(db, workerId);
     if (!id) return;
     log("run", id, "claimed");
-    await processRun(db, id, workerId);
+    await processRun(db, id, workerId, log);
     log("run", id, "done");
   }
 }
@@ -75,6 +76,7 @@ async function main() {
   clearInterval(beatTimer);
   clearInterval(staleTimer);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
+  stopSandbox();
   await listener.end();
   await pool.end();
   log("stopped");

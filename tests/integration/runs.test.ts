@@ -307,3 +307,55 @@ describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
     expect(untouched.lastRunStatus).toBeNull();
   });
 });
+
+describe("worker lease (regression: Fable F1)", () => {
+  it("a worker that lost its lease writes nothing", async () => {
+    const { user, flow } = await setup();
+    const run = await enqueueRun(user, flow.id);
+    let claimed: string | null = null;
+    for (let i = 0; i < 25 && claimed !== run.id; i++) {
+      claimed = await claimNextRun(db, "worker-A");
+      if (claimed && claimed !== run.id) await processRun(db, claimed, "worker-A");
+    }
+    expect(claimed).toBe(run.id);
+    // Stale recovery handed the run to worker B meanwhile.
+    await db.update(schema.run).set({ lockedBy: "worker-B" }).where(eq(schema.run.id, run.id));
+    await processRun(db, run.id, "worker-A");
+    const after = await freshRun(run.id);
+    expect(after.status).toBe("running");
+    expect(after.lockedBy).toBe("worker-B");
+    expect((await stepsOf(run.id)).every((s) => s.status === "pending")).toBe(true);
+    // Worker B finishes it normally.
+    await processRun(db, run.id, "worker-B");
+    expect((await freshRun(run.id)).status).toBe("succeeded");
+  });
+
+  it("stale recovery revokes the lease and the run completes once", async () => {
+    const { user, flow } = await setup();
+    const run = await enqueueRun(user, flow.id);
+    await db.update(schema.run).set({ status: "running", lockedBy: "dead-worker", heartbeatAt: new Date(Date.now() - 120_000), attempts: 1 }).where(eq(schema.run.id, run.id));
+    await recoverStaleRuns(db);
+    await processRun(db, run.id, "dead-worker"); // the old worker wakes up: must be a no-op
+    expect((await freshRun(run.id)).status).toBe("queued");
+    await claimAndProcess(run.id);
+    const done = await freshRun(run.id);
+    expect(done.status).toBe("succeeded");
+    expect(done.attempts).toBe(2);
+  });
+
+  it("run detail hides worker internals (regression: Fable F7)", async () => {
+    const { user, flow } = await setup();
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    const detail = (await getRunDetail(run.id)) as Record<string, unknown>;
+    expect(detail).not.toHaveProperty("lockedBy");
+    expect(detail).not.toHaveProperty("attempts");
+    expect(detail).not.toHaveProperty("heartbeatAt");
+  });
+
+  it("listRuns clamps nonsense limits (regression: Fable F5)", async () => {
+    const { ws } = await setup();
+    await expect(listRuns(ws.id, { limit: -1 })).resolves.toEqual([]);
+    await expect(listRuns(ws.id, { limit: Number.NaN })).resolves.toEqual([]);
+  });
+});

@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-o
 import { db, schema } from "@/db";
 import type { RunStatus } from "@/db/schema";
 import { sampleInputFor } from "@/engine/execute";
+import { VALUE_MAX_BYTES } from "@/engine/expression";
 import type { FlowGraph } from "@/engine/types";
 import { topoOrder, validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "./access";
@@ -42,6 +43,9 @@ export async function enqueueRun(user: CurrentUser, flowId: string, opts: Enqueu
       }
     }
 
+    if (JSON.stringify(input ?? null).length > VALUE_MAX_BYTES) {
+      throw new HttpError(413, "INPUT_TOO_LARGE", `Run input must be under ${Math.round(VALUE_MAX_BYTES / 1024)}KB`);
+    }
     const version = await insertVersion(tx, user, flow, "run");
     const [{ runCounter }] = await tx
       .update(schema.workspace)
@@ -116,7 +120,7 @@ export async function listRuns(workspaceId: string, f: RunFilter = {}) {
     .innerJoin(schema.flow, eq(schema.flow.id, schema.run.flowId))
     .where(and(...where))
     .orderBy(desc(schema.run.createdAt))
-    .limit(Math.min(f.limit ?? 50, 100));
+    .limit(Math.min(Math.max(1, Math.trunc(f.limit ?? 50) || 50), 100));
   if (runs.length === 0) return [];
   const steps = await db
     .select({
@@ -147,7 +151,9 @@ export async function getRunDetail(runId: string) {
     .select({ version: schema.flowVersion.version, graph: schema.flowVersion.graph })
     .from(schema.flowVersion)
     .where(eq(schema.flowVersion.id, run.run.flowVersionId));
-  return { ...run.run, flowName: run.flowName, steps, version: version?.version ?? null, graph: version?.graph ?? null };
+  // Worker bookkeeping (host/pid lease, attempts, heartbeat) is internal.
+  const { lockedBy: _lockedBy, attempts: _attempts, heartbeatAt: _heartbeatAt, ...publicRun } = run.run;
+  return { ...publicRun, flowName: run.flowName, steps, version: version?.version ?? null, graph: version?.graph ?? null };
 }
 
 export async function workerStatus() {

@@ -4,6 +4,7 @@ import type { FlowEdge, FlowGraph, FlowNode, ValidationIssue } from "./types";
 
 export const MAX_NODES = 100;
 export const MAX_EDGES = 200;
+const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 export interface ConnectionCandidate {
   source: string;
@@ -78,6 +79,7 @@ function validateConfig(node: FlowNode): ValidationIssue[] {
     case "output": {
       const key = typeof cfg.key === "string" ? cfg.key.trim() : "";
       if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(key)) push("INVALID_OUTPUT_KEY", "output key must be letters, digits or _ (max 64)");
+      else if (RESERVED_KEYS.has(key)) push("RESERVED_OUTPUT_KEY", `"${key}" is reserved — choose another output key`);
       const expr = typeof cfg.expression === "string" ? cfg.expression : "";
       if (expr.trim() !== "") {
         const err = checkExpressionSyntax(expr);
@@ -115,6 +117,17 @@ export function validateGraph(graph: FlowGraph): ValidationIssue[] {
     const err = checkConnection({ nodes, edges: accepted }, e);
     if (err) issues.push({ code: "INVALID_EDGE", message: err, edgeId: e.id });
     else accepted.push(e);
+  }
+
+  // Two Output nodes writing the same key would silently overwrite each other.
+  const keyOwners = new Map<string, FlowNode[]>();
+  for (const n of nodes) {
+    if (n.type !== "output") continue;
+    const key = String((n.data.config as unknown as Record<string, unknown>).key ?? "").trim();
+    if (key) keyOwners.set(key, [...(keyOwners.get(key) ?? []), n]);
+  }
+  for (const [key, owners] of keyOwners) {
+    if (owners.length > 1) for (const n of owners) issues.push({ code: "DUPLICATE_OUTPUT_KEY", message: `${n.data.label}: output key "${key}" is used by ${owners.length} Output nodes`, nodeId: n.id });
   }
 
   for (const n of nodes) {

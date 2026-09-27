@@ -75,7 +75,7 @@ can be applied without re-running everything.
 | # | Source | Conflict | Decision |
 |---|---|---|---|
 | D1 | Slide 14 | Desktop ≥1280 requires sidebar 240 + canvas ≥840 + drawer 360 = **1440px**, so between 1280 and 1439px the three can't sit side by side. | The drawer **overlays** the canvas at every desktop width (slide 8: "drawer slides … over canvas"). At 1440 the visible canvas is exactly 840px. Nothing is hidden with `overflow`. |
-| D2 | Slide 14 | Tablet: "Sidebar collapses to 48px icon rail; drawer overlay + scrim". | Implemented. Swipe-to-dismiss is replaced by tapping the scrim or pressing ✕/Esc (EXTENSION gap, noted in the scope matrix). Tap-to-place: palette items insert at the viewport centre. |
+| D2 | Slide 14 | Tablet: "Sidebar collapses to 48px icon rail; drawer overlay + scrim, swipe to dismiss". | Implemented. Swipe the drawer header right (the bottom sheet swipes down) more than 80px to dismiss; tapping the scrim, ✕, or Esc also closes it. Tap-to-place: palette items insert at the viewport centre. |
 | D3 | Slide 14 | Mobile: "drawer → bottom sheet (92vh)", "Run monitor primary". | Implemented. The canvas is read-only (pan/zoom only), and the run dock fills the rest of the screen. **Running is allowed on mobile** because it isn't editing. |
 | D4 | Slide 5 | "✦ Now with GPT-5 nodes" | Not true in Phase 1, and the deck isn't approval for model names, so it reads "✦ Preview · local nodes, real runs". |
 | D5 | Slide 6 | "Free forever for 500 credits/month" | Pricing isn't approved and isn't shown. The copy reads "Build and run flows on local nodes — no card required." |

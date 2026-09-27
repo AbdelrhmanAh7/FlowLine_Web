@@ -71,7 +71,19 @@ test("builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet 
     const box = (await drawer.boundingBox())!;
     if (w >= 768) expect(Math.round(box.width)).toBe(360);
     else expect(box.height).toBeGreaterThan(h * 0.85);
-    if (w === 1024) await expect(page.getByRole("button", { name: "Close drawer", exact: true })).toBeVisible(); // scrim
+    if (w === 1024) {
+      await expect(page.getByRole("button", { name: "Close drawer", exact: true })).toBeVisible(); // scrim
+      // Swipe the drawer header to the right to dismiss it.
+      const header = drawer.getByRole("heading").first();
+      const hb = (await header.boundingBox())!;
+      await page.mouse.move(hb.x + 20, hb.y + hb.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(hb.x + 160, hb.y + hb.height / 2, { steps: 8 });
+      await page.mouse.up();
+      await expect(drawer).toHaveCount(0);
+      await page.locator('.react-flow__node[data-id="normalise"]').click();
+      await expect(drawer).toBeVisible();
+    }
     await noHorizontalScroll(page);
   }
 });

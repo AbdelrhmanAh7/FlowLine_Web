@@ -18,6 +18,18 @@ export async function createWorkspace(user: CurrentUser, name: string) {
   const clean = name.trim();
   if (clean.length < 2 || clean.length > 60) throw new HttpError(400, "VALIDATION", "Workspace name must be 2–60 characters");
   const base = slugify(clean);
+  // Two concurrent creates can pick the same free slug; the unique index rejects one — retry it.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await insertWorkspace(user, clean, base);
+    } catch (e) {
+      const code = (e as { code?: string; cause?: { code?: string } }).code ?? (e as { cause?: { code?: string } }).cause?.code;
+      if (code !== "23505" || attempt >= 4) throw e;
+    }
+  }
+}
+
+async function insertWorkspace(user: CurrentUser, clean: string, base: string) {
   return db.transaction(async (tx) => {
     let slug = base;
     for (let i = 2; ; i++) {

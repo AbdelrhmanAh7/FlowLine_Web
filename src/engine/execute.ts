@@ -13,6 +13,8 @@ export interface ExecuteOptions {
   reused?: Map<string, ReusedStep>;
   onStepStart?: (node: FlowNode, position: number) => Promise<void> | void;
   onStepDone?: (step: StepResult) => Promise<void> | void;
+  /** Expression evaluator. The execution worker passes a thread-isolated one; default is in-process. */
+  evaluate?: (source: string, input: unknown) => Promise<unknown>;
 }
 
 export interface ExecuteResult {
@@ -42,7 +44,9 @@ export async function executeGraph(graph: FlowGraph, runInput: unknown, opts: Ex
   const rerunSet = opts.fromNodeId ? descendants(graph, opts.fromNodeId) : null;
   const results = new Map<string, StepResult>();
   const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
-  const output: Record<string, unknown> = {};
+  // Null-prototype map: an output key like "__proto__" is stored as data, never as a prototype.
+  const output: Record<string, unknown> = Object.create(null);
+  const evaluate = opts.evaluate ?? evaluateExpression;
   let firstError: ExecuteResult["error"] = null;
 
   for (const [position, node] of order.entries()) {
@@ -89,7 +93,7 @@ export async function executeGraph(graph: FlowGraph, runInput: unknown, opts: Ex
     const t0 = performance.now();
     let step: StepResult;
     try {
-      const value = await runNode(node, input);
+      const value = await runNode(node, input, evaluate);
       step = { ...base, status: "succeeded", input, output: value };
       if (node.type === "output") output[(node.data.config as { key: string }).key] = value;
     } catch (err) {
@@ -105,23 +109,23 @@ export async function executeGraph(graph: FlowGraph, runInput: unknown, opts: Ex
   }
 
   const steps = order.map((n) => results.get(n.id)!);
-  return { status: firstError ? "failed" : "succeeded", steps, output, error: firstError };
+  return { status: firstError ? "failed" : "succeeded", steps, output: { ...output }, error: firstError };
 }
 
-async function runNode(node: FlowNode, input: unknown): Promise<unknown> {
+async function runNode(node: FlowNode, input: unknown, evaluate: (source: string, input: unknown) => Promise<unknown>): Promise<unknown> {
   const cfg = node.data.config as unknown as Record<string, string>;
   switch (node.type) {
     case "trigger.manual":
       return normalizeValue(input);
     case "transform.json":
-      return evaluateExpression(cfg.expression, input);
+      return evaluate(cfg.expression, input);
     case "logic.condition": {
-      const result = await evaluateExpression(cfg.expression, input);
+      const result = await evaluate(cfg.expression, input);
       const passed = Boolean(result) && !(Array.isArray(result) && result.length === 0);
       return { result, branch: passed ? "true" : "false" };
     }
     case "output":
-      return cfg.expression?.trim() ? evaluateExpression(cfg.expression, input) : normalizeValue(input);
+      return cfg.expression?.trim() ? evaluate(cfg.expression, input) : normalizeValue(input);
     default:
       throw new Error(`Unsupported node type ${node.type}`);
   }
