@@ -236,12 +236,9 @@ export function oauthConfigured(provider: ProviderDef) {
   return Boolean(provider.oauth && process.env[provider.oauth.clientIdEnv] && process.env[provider.oauth.clientSecretEnv]);
 }
 
-function oauthUrl(provider: ProviderDef, url: string) {
-  // Test env: send OAuth to the fake provider (same path shape); production uses the real URL.
-  if (process.env.FLOWLINE_ENV === "test" && process.env.FLOWLINE_PROVIDER_OVERRIDE) {
-    const u = new URL(url);
-    return `${resolveBase(provider)}/oauth/${u.pathname.split("/").pop()}`;
-  }
+function oauthUrl(provider: ProviderDef, kind: "authorize" | "token" | "revoke", url: string) {
+  // Test env: send OAuth to the fake provider's uniform /oauth/<kind> endpoints; production uses the real URL.
+  if (process.env.FLOWLINE_ENV === "test" && process.env.FLOWLINE_PROVIDER_OVERRIDE) return `${resolveBase(provider)}/oauth/${kind}`;
   return url;
 }
 
@@ -271,7 +268,7 @@ export async function startOAuth(db: Db, opts: { userId: string; workspaceId: st
     redirectAfter: opts.redirectAfter ?? null,
     expiresAt: new Date(Date.now() + 10 * 60_000),
   });
-  const u = new URL(oauthUrl(provider, provider.oauth.authorizeUrl));
+  const u = new URL(oauthUrl(provider, "authorize", provider.oauth.authorizeUrl));
   u.searchParams.set("response_type", "code");
   u.searchParams.set("client_id", process.env[provider.oauth.clientIdEnv]!);
   u.searchParams.set("redirect_uri", redirectUri());
@@ -290,7 +287,7 @@ type TokenResponse = { access_token: string; refresh_token?: string; expires_in?
 async function tokenRequest(provider: ProviderDef, params: Record<string, string>): Promise<TokenResponse> {
   const o = provider.oauth!;
   const body = new URLSearchParams({ ...params, client_id: process.env[o.clientIdEnv] ?? "", client_secret: process.env[o.clientSecretEnv] ?? "" });
-  const res = await safeFetch(oauthUrl(provider, o.tokenUrl), {
+  const res = await safeFetch(oauthUrl(provider, "token", o.tokenUrl), {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
     body: body.toString(),
@@ -365,7 +362,7 @@ export async function deleteConnection(db: Db, workspaceId: string, connectionId
   if (provider?.oauth?.revokeUrl) {
     try {
       const s = decryptSecret<StoredSecret>(conn.secretEnc, conn.keyId);
-      await safeFetch(oauthUrl(provider, provider.oauth.revokeUrl), { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: s.token ?? "" }).toString(), timeoutMs: 8000 });
+      await safeFetch(oauthUrl(provider, "revoke", provider.oauth.revokeUrl), { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: s.token ?? "" }).toString(), timeoutMs: 8000 });
     } catch {
       /* ignore */
     }
