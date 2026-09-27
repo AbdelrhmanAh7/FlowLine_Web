@@ -40,7 +40,7 @@ async function slackApprovalFlow(page: Page, workspaceId: string, channel: strin
   return flowId;
 }
 
-test("members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access", async ({ page, browser }) => {
+test("members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access", { tag: "@critical" }, async ({ page, browser }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
   const invitee = uniqueEmail("viewer");
@@ -100,7 +100,7 @@ test("members: invite link → accept; a VIEWER can see but not approve (UI + AP
   for (const a of ["member.invited", "member.joined", "approval.decided", "member.role_changed", "member.removed"]) await expect(audit).toContainText(a);
 });
 
-test("API keys: created with a one-time reveal, work against /api/v1, stop working when revoked", async ({ page }) => {
+test("API keys: created with a one-time reveal, work against /api/v1, stop working when revoked", { tag: "@critical" }, async ({ page }) => {
   const { workspace } = await setupUser(page, { template: "lead-qualifier" });
   await page.goto(`/w/${workspace.slug}/settings?tab=keys`);
   await page.getByLabel("Name").fill("CI");
@@ -123,7 +123,7 @@ test("API keys: created with a one-time reveal, work against /api/v1, stop worki
   expect(after.status()).toBe(401);
 });
 
-test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once", async ({ page }) => {
+test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once", { tag: "@critical" }, async ({ page }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
   // A published workflow the agent may run.
@@ -178,7 +178,7 @@ test.describe("Copilot", () => {
     return panel.getByTestId("copilot-proposal");
   };
 
-  test("valid generation with a missing credential → approve → saved draft, nothing ran", async ({ page }) => {
+  test("valid generation with a missing credential → approve → saved draft, nothing ran", { tag: "@critical" }, async ({ page }) => {
     const { workspace } = await setupUser(page);
     await page.goto(`/w/${workspace.slug}/flows`);
     await page.getByRole("button", { name: "✦ Create with Copilot" }).click();

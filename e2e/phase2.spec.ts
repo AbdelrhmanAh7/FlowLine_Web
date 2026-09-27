@@ -170,7 +170,7 @@ test("double-clicked Run starts one run, and Cancel stops it mid-request", async
   expect(await stepStatuses(page.request, runs[0]!.id)).toMatchObject({ o: expect.stringMatching(/pending|skipped|cancelled/) });
 });
 
-test("approval: a gated Slack post waits, is approved in the inspector, and posts exactly once", async ({ page }) => {
+test("approval: a gated Slack post waits, is approved in the inspector, and posts exactly once", { tag: "@critical" }, async ({ page }) => {
   const { workspace, flowId } = await setupUser(page, { template: "blank" });
   const channel = `C_E2E_${randomUUID().slice(0, 8)}`;
   const conn = await createConn(page.request, workspace.id, "slack");

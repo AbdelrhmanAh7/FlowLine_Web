@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { setupUser } from "./helpers";
 
-test("two users in separate workspaces cannot see each other's flows or runs", async ({ browser }) => {
+test("two users in separate workspaces cannot see each other's flows or runs", { tag: "@critical" }, async ({ browser }) => {
   const opts = { baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" } };
   const ctxA = await browser.newContext(opts);
   const ctxB = await browser.newContext(opts);

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectSaved, nodeIds, setupUser } from "./helpers";
 
 test.describe("canvas interactions & keyboard map", () => {
-  test("select, duplicate, nudge, delete, undo/redo, Esc, and typing guards", async ({ page }) => {
+  test("select, duplicate, nudge, delete, undo/redo, Esc, and typing guards", { tag: "@critical" }, async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
     await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
     await expect(page.locator(".react-flow__node")).toHaveCount(5);

@@ -6,7 +6,7 @@ import { connect, expectSaved, nodeIds, PASSWORD, uniqueEmail } from "./helpers"
  * landing → sign up → onboarding → build a flow on the canvas (drag, connect,
  * configure) → autosave → reload → run → inspect → verify persisted backend state.
  */
-test("new user builds, saves, reopens, runs and inspects a flow", async ({ page }) => {
+test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@critical" }, async ({ page }) => {
   const email = uniqueEmail("journey");
   const consoleErrors: string[] = [];
   page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));

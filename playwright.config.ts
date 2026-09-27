@@ -22,7 +22,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
     extraHTTPHeaders: { origin: BASE_URL },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
+    // Critical journeys (@critical) and cross-browser monitors (@cross-browser) also run on Firefox and WebKit (p3§22).
+    { name: "firefox", grep: /@critical|@cross-browser/, use: { ...devices["Desktop Firefox"], viewport: { width: 1440, height: 900 } } },
+    { name: "webkit", grep: /@critical|@cross-browser/, use: { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 } } },
+  ],
   webServer: {
     command: "pnpm db:migrate:test && pnpm dev:test",
     url: `${BASE_URL}/api/health?require=worker`,
