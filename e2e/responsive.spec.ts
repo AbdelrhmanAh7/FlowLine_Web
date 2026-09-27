@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { injectFault, resetFaults, setupUser } from "./helpers";
 
-const OUT = "artifacts/phase-2/screenshots";
+const OUT = "artifacts/phase-3/screenshots";
 mkdirSync(OUT, { recursive: true });
 
 async function noHorizontalScroll(page: Page) {
@@ -92,7 +92,7 @@ test("mobile is monitor-only: editing disabled with a persistent banner, running
   await page.setViewportSize({ width: 375, height: 812 });
   const u = await setupUser(page, { template: "lead-qualifier" });
   await page.goto(`/w/${u.workspace.slug}/flows/${u.flowId}`);
-  await expect(page.getByText("Editing is disabled on mobile")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Editing is disabled on mobile" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Add node/ })).toHaveCount(0);
   const node = page.locator('.react-flow__node[data-id="normalise"]');
   const other = page.locator('.react-flow__node[data-id="trigger"]');

@@ -47,6 +47,7 @@ export function isCapability(x: string): x is Capability {
 /** Human-readable reason for a refused capability (used in 403 messages and disabled-control tooltips). */
 export function denyReason(role: Role | null | undefined, capability: Capability): string {
   const allowed = CAPABILITIES[capability] as readonly Role[];
-  const who = allowed.length === 1 ? `${allowed[0]}s` : allowed.slice(0, -1).join(", ") + ` and ${allowed.at(-1)}s`;
-  return `Only workspace ${who} can do this${role ? `; you are ${role === "owner" ? "an" : "a"} ${role}` : ""}`;
+  const plural = allowed.map((r) => `${r}s`);
+  const who = plural.length === 1 ? plural[0] : `${plural.slice(0, -1).join(", ")} and ${plural.at(-1)}`;
+  return `Only workspace ${who} can do this${role ? `; you are ${/^[aeiou]/.test(role) ? "an" : "a"} ${role}` : ""}`;
 }

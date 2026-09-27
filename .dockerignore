@@ -1,0 +1,14 @@
+.git
+node_modules
+.next
+.next-*
+.env
+.env.*
+artifacts
+test-results
+playwright-report
+design-reference
+*.pptx
+tsconfig.tsbuildinfo
+e2e
+tests

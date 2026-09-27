@@ -21,7 +21,11 @@ test("settings: owner renames the workspace and sets a timezone; values persist;
   const { workspace } = await setupUser(page);
   await page.goto(`/w/${workspace.slug}/settings`);
   await expect(page.getByText("(you)")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Invite" })).toHaveAccessibleDescription(/Phase 3/);
+  // Invites shipped in Phase 3 (was a disabled "Phase 3" control); the full journey is in phase3.spec.ts.
+  const invite = page.getByRole("button", { name: "Create invite link" });
+  await expect(invite).toHaveAccessibleDescription("Enter an email");
+  await page.getByLabel("Email").fill("someone@example.test");
+  await expect(invite).not.toHaveAttribute("aria-disabled", "true");
 
   await page.getByRole("button", { name: "General" }).click();
   const save = page.getByRole("button", { name: "Save changes" });
