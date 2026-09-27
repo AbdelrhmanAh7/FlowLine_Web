@@ -17,7 +17,12 @@ interface Schema {
 
 type Fault = { mode: "500" | "timeout" | "bad_json"; times: number };
 
-const state = { requests: [] as { at: string; model: string; hasSchema: boolean; content: string }[], faults: [] as Fault[] };
+const state = { requests: [] as { at: string; model: string; hasSchema: boolean; content: string }[], faults: [] as Fault[], price: 49 };
+
+/** A public-looking pricing page for the Competitor Price Watch template (test double). */
+function pricingPage() {
+  return `<!doctype html><html><body><h1>Pricing</h1><p>Plan: Pro</p><p>Price: ${state.price}</p><p>Currency: USD</p></body></html>`;
+}
 
 function body(req: IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -71,6 +76,8 @@ function fill(schema: Schema, content: string): unknown {
     // keyword heuristics for common label sets
     const hit = schema.enum.find((l) => lc.includes(l.toLowerCase()));
     if (hit) return hit;
+    const head = content.match(/"headcount":\s*(\d+)/);
+    if (schema.enum.includes("hot") && head) return Number(head[1]) >= 100 ? "hot" : Number(head[1]) >= 20 ? "warm" : "cold";
     if (schema.enum.includes("urgent") && /(down|outage|breach|cannot log ?in|all users)/i.test(content)) return "urgent";
     if (schema.enum.includes("high") && /(down|outage|breach|enterprise|risky|migration|drop table)/i.test(content)) return "high";
     return schema.enum.at(-1);
@@ -78,6 +85,10 @@ function fill(schema: Schema, content: string): unknown {
   if (schema.type === "object" && schema.properties) {
     const out: Record<string, unknown> = {};
     for (const [k, s] of Object.entries(schema.properties)) {
+      if (s.type === "boolean") {
+        out[k] = k === "risky" ? /migration|drop table|secret|password/i.test(content) : false;
+        continue;
+      }
       if (s.type === "object" || s.enum || s.type === "array") out[k] = fill(s, content);
       else {
         const v = findValue(content, k, s.type);
@@ -99,7 +110,8 @@ function fill(schema: Schema, content: string): unknown {
 function handleChat(reqBody: string, res: ServerResponse) {
   const r = JSON.parse(reqBody) as { model: string; format?: Schema; messages: { role: string; content: string }[] };
   const user = r.messages.find((m) => m.role === "user")?.content ?? "";
-  const content = user.replace(/<\/?untrusted_content>/g, "");
+  // A real model reads HTML fine; this rule-based double strips markup first.
+  const content = user.replace(/<\/?untrusted_content>/g, "").replace(/<[^>]+>/g, "\n");
   state.requests.push({ at: new Date().toISOString(), model: r.model, hasSchema: Boolean(r.format), content: content.slice(0, 2000) });
   const fault = state.faults.find((f) => f.times > 0);
   if (fault) {
@@ -131,10 +143,16 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
   const server: Server = createServer(async (req, res) => {
     const b = await body(req);
     if (req.url === "/api/chat" && req.method === "POST") return handleChat(b, res);
+    if (req.url === "/pricing" && req.method === "GET") return res.writeHead(200, { "content-type": "text/html" }).end(pricingPage());
+    if (req.url === "/__fake/pricing" && req.method === "POST") {
+      state.price = Number(JSON.parse(b).price);
+      return res.writeHead(200).end("{}");
+    }
     if (req.url === "/api/tags") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ models: [{ name: "fake-model" }] }));
     if (req.url === "/__fake/reset" && req.method === "POST") {
       state.requests = [];
       state.faults = [];
+      state.price = 49;
       return res.writeHead(200).end("{}");
     }
     if (req.url === "/__fake/fault" && req.method === "POST") {

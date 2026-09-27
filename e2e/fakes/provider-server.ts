@@ -498,10 +498,14 @@ const gmail: Handler = (ctx, req, res, path, url, body, account) => {
       found = s.gmailMessages.filter((x) => x.messageId?.includes(needle));
     } else {
       const wantsAttachment = q.includes("has:attachment");
-      const needle = q.replace(/has:attachment/g, "").trim().toLowerCase();
+      // Gmail operators: filename:<ext> filters attachments; date operators (newer_than/older_than/after/before)
+      // don't apply to fixed fixtures; other operators are ignored rather than treated as free text.
+      const filename = /filename:(\S+)/.exec(q)?.[1]?.toLowerCase();
+      const needle = q.replace(/has:attachment/g, "").replace(/\b[a-z_]+:\S+/gi, "").trim().toLowerCase();
       found = s.gmailMessages.filter(
         (x) =>
           (!wantsAttachment || x.attachmentId) &&
+          (!filename || JSON.stringify(x).toLowerCase().includes(`.${filename.replace(/^\./, "")}`)) &&
           (!needle ||
             x.subject.toLowerCase().includes(needle) ||
             x.from.toLowerCase().includes(needle) ||
