@@ -1,0 +1,473 @@
+{
+  "google_sheets.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.337Z",
+    "account": "alice@flowline.test"
+  },
+  "google_sheets.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.341Z",
+    "accountId": "user-alice-1",
+    "label": "alice@flowline.test"
+  },
+  "google_sheets.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.345Z",
+    "rows": 2
+  },
+  "google_sheets.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.350Z",
+    "updatedRange": "Cert!A1!A3"
+  },
+  "google_sheets.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.354Z",
+    "row": [
+      "flowline-cert-e0f87eaf817e",
+      "flowline-cert"
+    ]
+  },
+  "google_sheets.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.360Z",
+    "clearedRow": 3
+  },
+  "google_sheets.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.363Z",
+    "kind": "not_found"
+  },
+  "google_sheets.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.365Z",
+    "kind": "auth"
+  },
+  "gmail.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.367Z",
+    "account": "alice@flowline.test"
+  },
+  "gmail.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.378Z",
+    "accountId": "alice@flowline.test",
+    "label": "alice@flowline.test"
+  },
+  "gmail.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.382Z",
+    "estimate": 2
+  },
+  "gmail.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.391Z",
+    "id": "sent-1",
+    "to": "alice@flowline.test"
+  },
+  "gmail.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.395Z",
+    "id": "sent-1",
+    "subject": "flowline-cert-99d3e9dd7033"
+  },
+  "gmail.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.398Z",
+    "deleted": "sent-1",
+    "confirmed": "not_found"
+  },
+  "gmail.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.400Z",
+    "kind": "not_found"
+  },
+  "gmail.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.401Z",
+    "kind": "auth"
+  },
+  "slack.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.403Z",
+    "account": "alice @ Flowline"
+  },
+  "slack.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.405Z",
+    "accountId": "T001FLOW:U001ALICE",
+    "label": "alice @ Flowline"
+  },
+  "slack.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.407Z",
+    "channels": 2
+  },
+  "slack.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.409Z",
+    "ts": "1760000000.000001",
+    "channel": "C001GEN"
+  },
+  "slack.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.412Z",
+    "ts": "1760000000.000001"
+  },
+  "slack.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.415Z",
+    "deletedTs": "1760000000.000001"
+  },
+  "slack.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.417Z",
+    "kind": "client"
+  },
+  "slack.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.418Z",
+    "kind": "auth"
+  },
+  "hubspot.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.421Z",
+    "account": "Portal 987654"
+  },
+  "hubspot.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.422Z",
+    "accountId": "987654",
+    "label": "Portal 987654"
+  },
+  "hubspot.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.425Z",
+    "id": "601",
+    "email": "flowline-cert-ad5e68ed024d@example.com"
+  },
+  "hubspot.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.427Z",
+    "id": "601"
+  },
+  "hubspot.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.429Z",
+    "id": "601"
+  },
+  "hubspot.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.431Z",
+    "archived": "601",
+    "confirmed": "not_found"
+  },
+  "hubspot.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.433Z",
+    "kind": "not_found"
+  },
+  "hubspot.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.434Z",
+    "kind": "auth"
+  },
+  "zendesk.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.436Z",
+    "account": "Agent Smith <agent@flowline.test>"
+  },
+  "zendesk.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.438Z",
+    "accountId": "360001",
+    "label": "Agent Smith <agent@flowline.test>"
+  },
+  "zendesk.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.440Z",
+    "tickets": 2
+  },
+  "zendesk.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.442Z",
+    "id": 1001
+  },
+  "zendesk.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.444Z",
+    "id": 1001
+  },
+  "zendesk.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.447Z",
+    "deleted": 1001,
+    "confirmed": "not_found"
+  },
+  "zendesk.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.449Z",
+    "kind": "not_found"
+  },
+  "zendesk.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.450Z",
+    "kind": "auth"
+  },
+  "airtable.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.452Z",
+    "account": "alice@flowline.test"
+  },
+  "airtable.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.454Z",
+    "accountId": "usrFakeAlice",
+    "label": "alice@flowline.test"
+  },
+  "airtable.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.456Z",
+    "records": 2
+  },
+  "airtable.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.458Z",
+    "id": "rec5e5212a1b158"
+  },
+  "airtable.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.460Z",
+    "id": "rec5e5212a1b158"
+  },
+  "airtable.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.463Z",
+    "deleted": "rec5e5212a1b158"
+  },
+  "airtable.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.465Z",
+    "kind": "not_found"
+  },
+  "airtable.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.466Z",
+    "kind": "auth"
+  },
+  "snowflake.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.468Z",
+    "account": "FLOWLINE_USER@XY12345"
+  },
+  "snowflake.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.470Z",
+    "accountId": "FLOWLINE_USER@XY12345",
+    "label": "FLOWLINE_USER@XY12345"
+  },
+  "snowflake.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.472Z",
+    "columns": [
+      "CURRENT_USER()",
+      "CURRENT_ACCOUNT()"
+    ]
+  },
+  "snowflake.write": {
+    "status": "N/A",
+    "at": "2026-09-27T22:05:28.473Z",
+    "note": "Snowflake adapter is read-only by design (snowflake.query refuses writes)"
+  },
+  "snowflake.verify": {
+    "status": "N/A",
+    "at": "2026-09-27T22:05:28.473Z",
+    "note": "Nothing is written, so there is nothing to read back"
+  },
+  "snowflake.cleanup": {
+    "status": "N/A",
+    "at": "2026-09-27T22:05:28.474Z",
+    "note": "Nothing is written, so there is nothing to clean up"
+  },
+  "snowflake.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.474Z",
+    "kind": "client"
+  },
+  "snowflake.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.476Z",
+    "kind": "auth"
+  },
+  "github.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.478Z",
+    "account": "alice"
+  },
+  "github.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.480Z",
+    "accountId": "1001",
+    "label": "alice"
+  },
+  "github.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.482Z",
+    "pr": 7,
+    "title": "Add risky migration"
+  },
+  "github.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.484Z",
+    "id": 9101,
+    "url": "https://github.test/flowline/demo/issues/7#issuecomment-fake"
+  },
+  "github.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.486Z",
+    "id": 9101
+  },
+  "github.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.488Z",
+    "deleted": 9101
+  },
+  "github.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.490Z",
+    "kind": "not_found"
+  },
+  "github.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.492Z",
+    "kind": "auth"
+  },
+  "stripe.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.493Z",
+    "account": "alice@flowline.test"
+  },
+  "stripe.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.495Z",
+    "accountId": "acct_fake123",
+    "label": "alice@flowline.test"
+  },
+  "stripe.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.497Z",
+    "charges": 2
+  },
+  "stripe.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.499Z",
+    "id": "cus_fake_1"
+  },
+  "stripe.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.500Z",
+    "id": "cus_fake_1"
+  },
+  "stripe.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.503Z",
+    "deleted": "cus_fake_1",
+    "confirmed": "not_found"
+  },
+  "stripe.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.505Z",
+    "kind": "not_found"
+  },
+  "stripe.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.506Z",
+    "kind": "auth"
+  },
+  "notion.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.508Z",
+    "account": "Flowline Bot"
+  },
+  "notion.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.510Z",
+    "accountId": "bot-fake-1",
+    "label": "Flowline Bot"
+  },
+  "notion.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.511Z",
+    "children": 0
+  },
+  "notion.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.513Z",
+    "id": "page-fake-1",
+    "url": "https://www.notion.so/page-fake-1"
+  },
+  "notion.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.515Z",
+    "id": "page-fake-1"
+  },
+  "notion.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.518Z",
+    "archived": "page-fake-1"
+  },
+  "notion.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.519Z",
+    "kind": "not_found"
+  },
+  "notion.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.521Z",
+    "kind": "auth"
+  },
+  "linear.connect": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.523Z",
+    "account": "Alice A <alice@flowline.test>"
+  },
+  "linear.identity": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.524Z",
+    "accountId": "lin-user-1",
+    "label": "Alice A <alice@flowline.test>"
+  },
+  "linear.read": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.527Z",
+    "teams": [
+      "ENG"
+    ]
+  },
+  "linear.write": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.529Z",
+    "id": "lin-issue-2",
+    "identifier": "ENG-2"
+  },
+  "linear.verify": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.531Z",
+    "id": "lin-issue-2"
+  },
+  "linear.cleanup": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.533Z",
+    "deleted": "lin-issue-2"
+  },
+  "linear.errors": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.535Z",
+    "kind": "client"
+  },
+  "linear.revocation": {
+    "status": "DRYRUN_PASS",
+    "at": "2026-09-27T22:05:28.537Z",
+    "kind": "auth"
+  }
+}

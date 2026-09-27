@@ -88,6 +88,7 @@ interface State {
   githubComments: Record<string, { id: number; body: string; user: { login: string }; html_url: string; created_at: string }[]>;
   stripeCharges: Record<string, unknown>[];
   stripeRefunds: Record<string, unknown>[];
+  stripeCustomers: Record<string, unknown>[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
 }
@@ -100,6 +101,7 @@ function seed(): State {
     ["expired-token", { account: "a", status: "expired" }],
     ["sk_test_fake", { account: "a", status: "active" }],
     ["rk_test_fake", { account: "a", status: "active" }],
+    ["sk_test_revoked", { account: "a", status: "revoked" }],
   ]);
   return {
     counters: {},
@@ -194,6 +196,7 @@ function seed(): State {
       { id: "ch_test_2", object: "charge", amount: 30000, currency: "usd", status: "succeeded", created: 1759100000 },
     ],
     stripeRefunds: [],
+    stripeCustomers: [],
     notionPages: [
       {
         object: "page",
@@ -427,6 +430,20 @@ const googleSheets: Handler = (ctx, req, res, path, url, body, account) => {
       },
     });
   }
+  m = /^\/v4\/spreadsheets\/([^/]+)\/values\/(.+):clear$/.exec(path);
+  if (req.method === "POST" && m) {
+    const [, id, rawRange] = m;
+    const rows = s.sheets[id];
+    if (!rows) return json(ctx, req, res, 404, { error: { code: 404, message: "Requested entity was not found.", status: "NOT_FOUND" } });
+    const range = decodeURIComponent(rawRange);
+    const rm = /!?[A-Z]+(\d+)(?::[A-Z]+(\d+))?$/.exec(range);
+    if (rm) {
+      const from = Number(rm[1]);
+      const to = Number(rm[2] ?? rm[1]);
+      for (let i = from; i <= to; i++) if (rows[i - 1]) rows[i - 1] = rows[i - 1]!.map(() => "");
+    }
+    return json(ctx, req, res, 200, { spreadsheetId: id, clearedRange: range });
+  }
   m = /^\/v4\/spreadsheets\/([^/]+)\/values\/(.+)$/.exec(path);
   if (req.method === "GET" && m) {
     const [, id, rawRange] = m;
@@ -451,6 +468,14 @@ const gmail: Handler = (ctx, req, res, path, url, body, account) => {
     return json(ctx, req, res, 200, { size: buf.length, data: base64url(buf) });
   }
   const msgMatch = /^\/gmail\/v1\/users\/me\/messages\/([^/]+)$/.exec(path);
+  if (req.method === "DELETE" && msgMatch) {
+    const idx = s.gmailMessages.findIndex((x) => x.id === msgMatch[1]);
+    if (idx < 0) return json(ctx, req, res, 404, { error: { code: 404, message: "Requested entity was not found.", status: "NOT_FOUND" } });
+    s.gmailMessages.splice(idx, 1);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (req.method === "GET" && msgMatch) {
     const msg = s.gmailMessages.find((x) => x.id === msgMatch[1]);
     if (!msg) return json(ctx, req, res, 404, { error: { code: 404, message: "Requested entity was not found.", status: "NOT_FOUND" } });
@@ -549,9 +574,21 @@ const slack: Handler = (ctx, req, res, path, url, body) => {
   }
   if (req.method === "POST" && path === "/chat.postMessage") {
     const payload = j(body);
+    const channel = String(payload.channel ?? "");
+    // ID-shaped channel references (C…) must exist; name-like targets (e.g. e2e's C_E2E_*) pass through.
+    if (/^[A-Z0-9]+$/.test(channel) && !s.slackChannels.some((c) => c.id === channel)) {
+      return json(ctx, req, res, 200, { ok: false, error: "channel_not_found" });
+    }
     const ts = `1760000000.${String(next(s, "slackTs")).padStart(6, "0")}`;
-    s.slackMessages.push({ channel: String(payload.channel ?? ""), text: String(payload.text ?? ""), ts, metadata: payload.metadata });
+    s.slackMessages.push({ channel, text: String(payload.text ?? ""), ts, metadata: payload.metadata });
     return json(ctx, req, res, 200, { ok: true, channel: payload.channel, ts, message: { text: payload.text, type: "message" } });
+  }
+  if (req.method === "POST" && path === "/chat.delete") {
+    const payload = j(body);
+    const idx = s.slackMessages.findIndex((x) => x.channel === payload.channel && x.ts === payload.ts);
+    if (idx < 0) return json(ctx, req, res, 200, { ok: false, error: "message_not_found" });
+    s.slackMessages.splice(idx, 1);
+    return json(ctx, req, res, 200, { ok: true, channel: payload.channel, ts: payload.ts });
   }
   if (req.method === "GET" && path === "/conversations.history") {
     const channel = url.searchParams.get("channel") ?? "";
@@ -585,7 +622,7 @@ const hubspot: Handler = (ctx, req, res, path, url, body) => {
         contact.properties = { ...contact.properties, ...input.properties };
         contact.updatedAt = now;
       } else {
-        contact = { id: String(500 + next(s, "hsContact")), properties: { ...input.properties }, createdAt: now, updatedAt: now };
+        contact = { id: String(600 + next(s, "hsContact")), properties: { ...input.properties }, createdAt: now, updatedAt: now };
         s.hubspotContacts.push(contact);
       }
       return { id: contact.id, properties: contact.properties, createdAt: contact.createdAt, updatedAt: contact.updatedAt, archived: false };
@@ -593,6 +630,14 @@ const hubspot: Handler = (ctx, req, res, path, url, body) => {
     return json(ctx, req, res, 200, { status: "COMPLETE", results, startedAt: new Date().toISOString(), completedAt: new Date().toISOString() });
   }
   const m = /^\/crm\/v3\/objects\/contacts\/([^/]+)$/.exec(path);
+  if (req.method === "DELETE" && m) {
+    const idx = s.hubspotContacts.findIndex((c) => c.id === decodeURIComponent(m[1]));
+    if (idx < 0) return json(ctx, req, res, 404, { status: "error", message: "resource not found", correlationId: "fake-correlation-id" });
+    s.hubspotContacts.splice(idx, 1);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (req.method === "GET" && m) {
     const key = decodeURIComponent(m[1]);
     const byEmail = url.searchParams.get("idProperty") === "email";
@@ -629,7 +674,37 @@ const zendesk: Handler = (ctx, req, res, path, url, body) => {
     const perPage = Number(url.searchParams.get("per_page") ?? 100);
     return json(ctx, req, res, 200, { results: results.slice(0, perPage), count: results.length, next_page: null, previous_page: null });
   }
+  if (req.method === "POST" && path === "/api/v2/tickets.json") {
+    const t = (j(body).ticket as Record<string, unknown>) ?? {};
+    const id = 1000 + next(s, "zdTicket");
+    const ticket = {
+      id,
+      subject: String(t.subject ?? ""),
+      status: "new",
+      priority: (t.priority as string | null) ?? null,
+      tags: (t.tags as string[]) ?? [],
+      group_id: 42,
+      description: (t.comment as { body?: string } | undefined)?.body ?? "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    s.zendeskTickets.push(ticket);
+    return json(ctx, req, res, 201, { ticket });
+  }
   const m = /^\/api\/v2\/tickets\/(\d+)\.json$/.exec(path);
+  if (req.method === "GET" && m) {
+    const ticket = s.zendeskTickets.find((t) => t.id === Number(m![1]));
+    if (!ticket) return json(ctx, req, res, 404, { error: "RecordNotFound", description: "Not found" });
+    return json(ctx, req, res, 200, { ticket });
+  }
+  if (req.method === "DELETE" && m) {
+    const idx = s.zendeskTickets.findIndex((t) => t.id === Number(m![1]));
+    if (idx < 0) return json(ctx, req, res, 404, { error: "RecordNotFound", description: "Not found" });
+    s.zendeskTickets.splice(idx, 1);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (req.method === "PUT" && m) {
     const ticket = s.zendeskTickets.find((t) => t.id === Number(m![1]));
     if (!ticket) return json(ctx, req, res, 404, { error: "RecordNotFound", description: "Not found" });
@@ -644,6 +719,15 @@ const airtable: Handler = (ctx, req, res, path, url, body) => {
   const s = ctx.state;
   if (req.method === "GET" && path === "/v0/meta/whoami") {
     return json(ctx, req, res, 200, { id: "usrFakeAlice", email: "alice@flowline.test" });
+  }
+  const recMatch = /^\/v0\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(path);
+  if (req.method === "DELETE" && recMatch) {
+    const key = `${recMatch[1]}/${decodeURIComponent(recMatch[2])}`;
+    const records = s.airtableRecords[key] ?? [];
+    const idx = records.findIndex((r) => r.id === recMatch[3]);
+    if (idx < 0) return json(ctx, req, res, 404, { error: { type: "NOT_FOUND", message: "Not found" } });
+    const [rec] = records.splice(idx, 1);
+    return json(ctx, req, res, 200, { deleted: true, id: rec!.id });
   }
   const m = /^\/v0\/([^/]+)\/([^/]+)$/.exec(path);
   if (m) {
@@ -771,7 +855,7 @@ const github: Handler = (ctx, req, res, path, url, body, account) => {
     }
     if (req.method === "POST") {
       const comment = {
-        id: 9000 + next(s, "ghComment"),
+        id: 9100 + next(s, "ghComment"),
         body: String(j(body).body ?? ""),
         user: { login: acct.login },
         html_url: `https://github.test/${m[1]}/${m[2]}/issues/${m[3]}#issuecomment-fake`,
@@ -780,6 +864,23 @@ const github: Handler = (ctx, req, res, path, url, body, account) => {
       comments.push(comment);
       return json(ctx, req, res, 201, comment);
     }
+  }
+  m = /^\/repos\/([^/]+)\/([^/]+)\/issues\/comments\/(\d+)$/.exec(path);
+  if (req.method === "DELETE" && m) {
+    let found = false;
+    for (const [key, list] of Object.entries(s.githubComments)) {
+      if (!key.startsWith(`${m[1]}/${m[2]}/`)) continue;
+      const idx = list.findIndex((c) => c.id === Number(m![3]));
+      if (idx >= 0) {
+        list.splice(idx, 1);
+        found = true;
+        break;
+      }
+    }
+    if (!found) return json(ctx, req, res, 404, { message: "Not Found" });
+    res.writeHead(204);
+    res.end();
+    return;
   }
   return json(ctx, req, res, 404, { message: "Not Found" });
 };
@@ -800,6 +901,34 @@ const stripe: Handler = (ctx, req, res, path, url, body) => {
   if (req.method === "GET" && path === "/v1/charges") {
     const limit = Number(url.searchParams.get("limit") ?? 10);
     return json(ctx, req, res, 200, { object: "list", url: "/v1/charges", has_more: false, data: s.stripeCharges.slice(0, limit) });
+  }
+  let m = /^\/v1\/charges\/([^/]+)$/.exec(path);
+  if (req.method === "GET" && m) {
+    const charge = s.stripeCharges.find((c) => c.id === m![1]);
+    if (!charge) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such charge: '${m[1]}'` } });
+    return json(ctx, req, res, 200, charge);
+  }
+  if (req.method === "POST" && path === "/v1/customers") {
+    const form = parseForm(body);
+    const metadata: Record<string, string> = {};
+    for (const [k, v] of Object.entries(form)) {
+      const mm = /^metadata\[(.+)\]$/.exec(k);
+      if (mm) metadata[mm[1]!] = v;
+    }
+    const customer = { id: `cus_fake_${next(s, "stripeCustomer")}`, object: "customer", email: form.email ?? null, name: form.name ?? null, metadata };
+    s.stripeCustomers.push(customer);
+    return json(ctx, req, res, 200, customer);
+  }
+  m = /^\/v1\/customers\/([^/]+)$/.exec(path);
+  if (m) {
+    const idx = s.stripeCustomers.findIndex((c) => c.id === m![1]);
+    const customer = s.stripeCustomers[idx];
+    if (!customer) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such customer: '${m[1]}'` } });
+    if (req.method === "GET") return json(ctx, req, res, 200, customer);
+    if (req.method === "DELETE") {
+      s.stripeCustomers.splice(idx, 1);
+      return json(ctx, req, res, 200, { id: m[1], object: "customer", deleted: true });
+    }
   }
   if (req.method === "POST" && path === "/v1/refunds") {
     const form = parseForm(body);
@@ -862,6 +991,21 @@ const notion: Handler = (ctx, req, res, path, _url, body) => {
     s.notionPages.push(page);
     return json(ctx, req, res, 200, page);
   }
+  const pageMatch = /^\/v1\/pages\/([^/]+)$/.exec(path);
+  if (pageMatch) {
+    const page = s.notionPages.find((x) => x.id === pageMatch[1]);
+    if (!page) return json(ctx, req, res, 404, { object: "error", status: 404, code: "object_not_found", message: "Not found" });
+    if (req.method === "GET") return json(ctx, req, res, 200, page);
+    if (req.method === "PATCH") {
+      if (j(body).archived === true) page.archived = true;
+      return json(ctx, req, res, 200, page);
+    }
+  }
+  const blocksMatch = /^\/v1\/blocks\/([^/]+)\/children$/.exec(path);
+  if (req.method === "GET" && blocksMatch) {
+    const children = s.notionPages.filter((x) => (x.parent as { page_id?: string } | undefined)?.page_id === blocksMatch[1]);
+    return json(ctx, req, res, 200, { object: "list", results: children, has_more: false, next_cursor: null, type: "page_or_database" });
+  }
   return json(ctx, req, res, 404, { object: "error", status: 404, code: "object_not_found", message: "Not found" });
 };
 
@@ -875,7 +1019,10 @@ const linear: Handler = (ctx, req, res, path, _url, body) => {
     return json(ctx, req, res, 200, { data: { viewer: { id: "lin-user-1", name: "Alice A", email: "alice@flowline.test" } } });
   }
   if (query.includes("issueCreate")) {
-    const input = (variables.input ?? {}) as { title?: string; description?: string };
+    const input = (variables.input ?? {}) as { title?: string; description?: string; teamId?: string };
+    if (input.teamId && input.teamId !== "team-eng") {
+      return json(ctx, req, res, 200, { errors: [{ message: `Team not found: ${input.teamId}` }] });
+    }
     const n = next(s, "linearIssue") + 1;
     const issue = {
       id: `lin-issue-${n}`,
@@ -886,6 +1033,12 @@ const linear: Handler = (ctx, req, res, path, _url, body) => {
     };
     s.linearIssues.push(issue);
     return json(ctx, req, res, 200, { data: { issueCreate: { success: true, issue } } });
+  }
+  if (query.includes("issueDelete")) {
+    const id = String(variables.id ?? "");
+    const idx = s.linearIssues.findIndex((i) => i.id === id);
+    if (idx >= 0) s.linearIssues.splice(idx, 1);
+    return json(ctx, req, res, 200, { data: { issueDelete: { success: idx >= 0 } } });
   }
   if (query.includes("issues(")) {
     const needle = String(variables.needle ?? "");
@@ -936,7 +1089,7 @@ function stateDump(state: State, provider: string): unknown {
     case "github":
       return { comments: state.githubComments };
     case "stripe":
-      return { charges: state.stripeCharges, refunds: state.stripeRefunds.map(({ _idempotencyKey, ...r }) => ({ ...r, idempotencyKey: _idempotencyKey })) };
+      return { charges: state.stripeCharges, refunds: state.stripeRefunds.map(({ _idempotencyKey, ...r }) => ({ ...r, idempotencyKey: _idempotencyKey })), customers: state.stripeCustomers };
     case "notion":
       return { pages: state.notionPages };
     case "linear":
