@@ -1,0 +1,41 @@
+import { expect, test } from "@playwright/test";
+import { setupUser } from "./helpers";
+
+test("templates: a local template creates a flow and opens the canvas; integration templates explain why they're disabled", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await page.goto(`/w/${workspace.slug}/templates`);
+  const planned = page.getByRole("listitem").filter({ hasText: "Lead Enrichment Pipeline" }).getByRole("button", { name: "Use template" });
+  await expect(planned).toHaveAttribute("aria-disabled", "true");
+  await expect(planned).toHaveAccessibleDescription(/Phase 2/);
+
+  await page.getByRole("button", { name: "Support", exact: true }).click();
+  await expect(page.getByText("Lead Qualifier")).toHaveCount(0);
+  await page.getByRole("listitem").filter({ hasText: "Ticket Priority Router" }).getByRole("button", { name: "Use template" }).click();
+  await expect(page).toHaveURL(/\/flows\/[0-9a-f-]{36}$/);
+  await expect(page.locator(".react-flow__node")).toHaveCount(5);
+  await expect(page.getByLabel("Flow name")).toHaveValue("Ticket Priority Router");
+});
+
+test("settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await page.goto(`/w/${workspace.slug}/settings`);
+  await expect(page.getByText("(you)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Invite" })).toHaveAccessibleDescription(/Phase 3/);
+
+  await page.getByRole("button", { name: "General" }).click();
+  const save = page.getByRole("button", { name: "Save changes" });
+  await expect(save).toHaveAccessibleDescription("No changes to save");
+  await page.getByLabel("Workspace name").fill("Renamed Workspace");
+  await page.getByLabel("Schedule timezone").selectOption("Africa/Cairo");
+  await save.click();
+  await expect(page.getByRole("status").filter({ hasText: "Workspace settings saved" })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "General" }).click();
+  await expect(page.getByLabel("Workspace name")).toHaveValue("Renamed Workspace");
+  await expect(page.getByLabel("Schedule timezone")).toHaveValue("Africa/Cairo");
+  await expect(page.getByRole("complementary", { name: "Workspace navigation" })).toContainText("Renamed Workspace");
+
+  await page.getByRole("button", { name: "Billing & credits" }).click();
+  await expect(page.getByText("Billing isn't configured in this environment")).toBeVisible();
+  await expect(page.getByText(/\$\d/)).toHaveCount(0); // no sample prices or credits
+});

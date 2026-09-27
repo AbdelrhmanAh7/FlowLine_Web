@@ -167,6 +167,7 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
     const close = (e: MouseEvent | KeyboardEvent) => {
       if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
     };
+    ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", close);
     return () => {

@@ -463,7 +463,20 @@ function Editor({ data }: { data: FlowResponse }) {
   );
 
   const canvas = (
-    <div ref={canvasRef} className="relative min-h-0 flex-1" onDragOver={(e) => {
+    <div
+      ref={canvasRef}
+      className="relative min-h-0 flex-1"
+      onKeyDownCapture={(e) => {
+        // React Flow moves focused nodes with arrow keys on its own (grid-snapped), which would
+        // stack with our 12px / Shift 1px nudge. Take arrows on nodes over entirely.
+        if (!e.key.startsWith("Arrow") || !(e.target as HTMLElement).closest?.(".react-flow__node")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const step = e.shiftKey ? 1 : GRID;
+        const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key] as [number, number] | undefined;
+        if (d) nudge(d[0], d[1]);
+      }}
+      onDragOver={(e) => {
       if (e.dataTransfer.types.includes(DRAG_MIME)) {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";

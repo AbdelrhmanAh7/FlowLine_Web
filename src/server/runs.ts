@@ -19,7 +19,7 @@ interface EnqueueOptions {
 
 /** Validates the saved flow, pins a version snapshot, and queues a run for the worker. */
 export async function enqueueRun(user: CurrentUser, flowId: string, opts: EnqueueOptions = {}) {
-  const fault = consumeFault("run");
+  const fault = consumeFault(user.id, "run");
   if (fault) throw new HttpError(fault.status, "INJECTED_FAULT", "Injected run failure (test environment)");
 
   return db.transaction(async (tx) => {

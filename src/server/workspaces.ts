@@ -86,8 +86,8 @@ export async function workspaceOverview(workspaceId: string) {
       createdAt: schema.run.createdAt,
       durationMs: schema.run.durationMs,
       error: schema.run.error,
-      steps: sql<number>`(select count(*)::int from ${schema.runStep} s where s.run_id = ${schema.run.id} and s.status <> 'skipped')`,
-      stepsDone: sql<number>`(select count(*)::int from ${schema.runStep} s where s.run_id = ${schema.run.id} and s.status in ('succeeded','reused'))`,
+      steps: sql<number>`(select count(*)::int from ${schema.runStep} s where s.run_id = "run"."id" and s.status <> 'skipped')`,
+      stepsDone: sql<number>`(select count(*)::int from ${schema.runStep} s where s.run_id = "run"."id" and s.status in ('succeeded','reused'))`,
     })
     .from(schema.run)
     .innerJoin(schema.flow, eq(schema.flow.id, schema.run.flowId))

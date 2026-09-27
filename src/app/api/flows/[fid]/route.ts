@@ -8,9 +8,9 @@ import { HttpError, json, parseBody, route } from "@/server/http";
 type Ctx = { params: Promise<{ fid: string }> };
 
 export const GET = route(async (_req, { params }: Ctx) => {
-  const fault = consumeFault("load");
-  if (fault) throw new HttpError(fault.status, "INJECTED_FAULT", "Injected load failure (test environment)");
   const user = await requireUser();
+  const fault = consumeFault(user.id, "load");
+  if (fault) throw new HttpError(fault.status, "INJECTED_FAULT", "Injected load failure (test environment)");
   const { flow, role, workspace } = await requireFlow(user, (await params).fid);
   return json({ flow, role, workspace: { id: workspace.id, slug: workspace.slug, name: workspace.name }, issues: flowIssues(flow.graph) });
 });

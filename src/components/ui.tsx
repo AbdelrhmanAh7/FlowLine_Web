@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { cloneElement, forwardRef, isValidElement, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
@@ -145,21 +145,44 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 });
 
 export function Field({ label, htmlFor, hint, error, children }: { label: string; htmlFor?: string; hint?: ReactNode; error?: string | null; children: ReactNode }) {
+  const descId = htmlFor ? `${htmlFor}-desc` : undefined;
+  const hasDesc = Boolean(error || hint);
+  // Link the hint/error to the control so screen readers announce it on focus.
+  const control =
+    descId && hasDesc && isValidElement<{ "aria-describedby"?: string }>(children) ? cloneElement(children, { "aria-describedby": descId }) : children;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={htmlFor} className="text-xs font-medium uppercase tracking-[0.4px] text-med">
         {label}
       </label>
-      {children}
+      {control}
       {error ? (
-        <p className="text-sm text-danger" role="alert">
+        <p id={descId} className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-sm text-muted">{hint}</p>
+        <p id={descId} className="text-sm text-muted">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
+}
+
+/** WAI-ARIA tabs keyboard support: ←/→/Home/End move focus and activate. */
+export function onTabListKeyDown<T extends string>(e: React.KeyboardEvent, ids: readonly T[], current: T, select: (t: T) => void, isDisabled?: (t: T) => boolean) {
+  const enabled = ids.filter((t) => !isDisabled?.(t));
+  const i = enabled.indexOf(current);
+  let next: T | undefined;
+  if (e.key === "ArrowRight") next = enabled[(i + 1) % enabled.length];
+  else if (e.key === "ArrowLeft") next = enabled[(i - 1 + enabled.length) % enabled.length];
+  else if (e.key === "Home") next = enabled[0];
+  else if (e.key === "End") next = enabled[enabled.length - 1];
+  if (!next) return;
+  e.preventDefault();
+  select(next);
+  const list = e.currentTarget as HTMLElement;
+  requestAnimationFrame(() => list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus());
 }
 
 /* ───────── Status ───────── */

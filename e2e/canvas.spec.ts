@@ -78,6 +78,26 @@ test.describe("canvas interactions & keyboard map", () => {
     expect(flow.graph.nodes.find((n: { id: string }) => n.id === "normalise").data.label).toBe("Normalise lea");
   });
 
+  test("arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)", async ({ page }) => {
+    const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
+    const node = page.locator('.react-flow__node[data-id="normalise"]');
+    await node.click(); // focus stays on the node element
+    await expect(node).toBeFocused();
+    const flowPos = async () => {
+      await expect(page.getByTestId("save-status")).toHaveAttribute("data-status", "saved", { timeout: 15_000 });
+      const { flow } = await (await page.request.get(`/api/flows/${flowId}`)).json();
+      return flow.graph.nodes.find((n: { id: string }) => n.id === "normalise").position as { x: number; y: number };
+    };
+    const start = await flowPos();
+    await page.keyboard.press("ArrowRight");
+    const a = await flowPos();
+    expect([a.x - start.x, a.y - start.y]).toEqual([12, 0]);
+    await page.keyboard.press("Shift+ArrowDown");
+    const b = await flowPos();
+    expect([b.x - a.x, b.y - a.y]).toEqual([0, 1]);
+  });
+
   test("opening and selecting does not mark the flow dirty or bump its revision", async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
     await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
@@ -86,6 +106,26 @@ test.describe("canvas interactions & keyboard map", () => {
     await page.keyboard.press("Escape");
     await page.waitForTimeout(2500); // longer than the 1s autosave debounce
     await expect(page.getByTestId("save-status")).toHaveAttribute("data-status", "saved");
+    const { flow } = await (await page.request.get(`/api/flows/${flowId}`)).json();
+    expect(flow.revision).toBe(1);
+  });
+
+  test("drawer tabs follow the WAI-ARIA keyboard pattern", async ({ page }) => {
+    const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
+    await page.locator('.react-flow__node[data-id="normalise"]').click();
+    const drawer = page.getByTestId("node-drawer");
+    await drawer.getByRole("tab", { name: "Configure" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(drawer.getByRole("tab", { name: "Test" })).toHaveAttribute("aria-selected", "true");
+    await expect(drawer.getByRole("tab", { name: "Test" })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(drawer.getByRole("tab", { name: "Logs" })).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("ArrowRight");
+    await expect(drawer.getByRole("tab", { name: "Configure" })).toHaveAttribute("aria-selected", "true");
+    // Hint text is announced with the field.
+    await expect(drawer.getByLabel("Expression (JSONata)")).toHaveAccessibleDescription(/Evaluated against the upstream output/);
+    // Arrow keys inside the tablist never nudge the node.
     const { flow } = await (await page.request.get(`/api/flows/${flowId}`)).json();
     expect(flow.revision).toBe(1);
   });

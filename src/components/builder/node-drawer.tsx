@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { checkExpressionSyntax, evaluateExpression } from "@/engine/expression";
 import type { NodeType } from "@/engine/types";
 import { duration, pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
-import { Button, Field, Input, RUN_LABEL, RUN_TONE, StatusBadge, Textarea, cx } from "../ui";
+import { Button, Field, Input, RUN_LABEL, RUN_TONE, StatusBadge, Textarea, cx, onTabListKeyDown } from "../ui";
 import type { RFNode } from "./graph-utils";
 
 type Tab = "configure" | "test" | "logs";
+const TABS: readonly Tab[] = ["configure", "test", "logs"];
 
 interface Props {
   node: RFNode;
@@ -31,10 +32,6 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
   const def = NODE_DEFINITIONS[node.type as NodeType];
   const headingId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const prevNode = useRef(node.id);
-  useEffect(() => {
-    if (prevNode.current !== node.id) prevNode.current = node.id;
-  }, [node.id]);
 
   return (
     <aside
@@ -68,14 +65,15 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
         </button>
       </div>
 
-      <div role="tablist" aria-label="Node panels" className="flex gap-5 border-b border-line px-5">
-        {(["configure", "test", "logs"] as Tab[]).map((t) => (
+      <div role="tablist" aria-label="Node panels" className="flex gap-5 border-b border-line px-5" onKeyDown={(e) => onTabListKeyDown(e, TABS, tab, setTab)}>
+        {TABS.map((t) => (
           <button
             key={t}
             role="tab"
             id={`tab-${t}`}
             aria-selected={tab === t}
             aria-controls={`panel-${t}`}
+            tabIndex={tab === t ? 0 : -1}
             onClick={() => setTab(t)}
             className={cx(
               "relative h-10 text-base capitalize transition-colors duration-[var(--dur-tab)]",

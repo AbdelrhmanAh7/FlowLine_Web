@@ -32,22 +32,26 @@ export const graphSchema = z
 
 export const flowNameSchema = z.string().trim().min(1, "Name is required").max(80);
 
+// Drizzle renders columns unqualified ("id") in join-less selects, which inside a correlated
+// subquery would bind to the subquery's own table. Always qualify the outer flow id explicitly.
+const FLOW_ID = sql.raw(`"flow"."id"`);
+
 export async function listFlows(workspaceId: string) {
-  const lastRun = sql`(select r.id from ${schema.run} r where r.flow_id = ${schema.flow.id} order by r.created_at desc limit 1)`;
+  const lastRun = sql`(select r.id from ${schema.run} r where r.flow_id = ${FLOW_ID} order by r.created_at desc limit 1)`;
   return db
     .select({
       id: schema.flow.id,
       name: schema.flow.name,
       updatedAt: schema.flow.updatedAt,
       revision: schema.flow.revision,
-      nodeCount: sql<number>`jsonb_array_length(${schema.flow.graph} -> 'nodes')::int`,
-      hasTrigger: sql<boolean>`exists (select 1 from jsonb_array_elements(${schema.flow.graph} -> 'nodes') n where n ->> 'type' = 'trigger.manual')`,
+      nodeCount: sql<number>`jsonb_array_length("flow"."graph" -> 'nodes')::int`,
+      hasTrigger: sql<boolean>`exists (select 1 from jsonb_array_elements("flow"."graph" -> 'nodes') n where n ->> 'type' = 'trigger.manual')`,
       lastRunAt: sql<Date | null>`(select r.created_at from ${schema.run} r where r.id = ${lastRun})`,
       lastRunStatus: sql<string | null>`(select r.status::text from ${schema.run} r where r.id = ${lastRun})`,
-      runCount: sql<number>`(select count(*)::int from ${schema.run} r where r.flow_id = ${schema.flow.id})`,
+      runCount: sql<number>`(select count(*)::int from ${schema.run} r where r.flow_id = ${FLOW_ID})`,
       successRate: sql<number | null>`(select case when count(*) filter (where r.status in ('succeeded','failed')) = 0 then null
         else (count(*) filter (where r.status = 'succeeded'))::float / count(*) filter (where r.status in ('succeeded','failed')) end
-        from ${schema.run} r where r.flow_id = ${schema.flow.id})`,
+        from ${schema.run} r where r.flow_id = ${FLOW_ID})`,
     })
     .from(schema.flow)
     .where(and(eq(schema.flow.workspaceId, workspaceId), isNull(schema.flow.deletedAt)))
@@ -77,7 +81,7 @@ export interface SaveFlowInput {
 }
 
 export async function saveFlow(user: CurrentUser, flowId: string, input: SaveFlowInput) {
-  const fault = consumeFault("save");
+  const fault = consumeFault(user.id, "save");
   if (fault) throw new HttpError(fault.status, "INJECTED_FAULT", "Injected save failure (test environment)");
 
   return db.transaction(async (tx) => {

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
-import { createFlow, saveFlow, softDeleteFlow } from "@/server/flows";
+import { createFlow, listFlows, saveFlow, softDeleteFlow } from "@/server/flows";
 import { enqueueRun, getRunDetail, listRuns, rerunFromStep } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, recoverStaleRuns, processRun } from "../../worker/runner";
@@ -279,3 +279,31 @@ describe("listRuns filters", () => {
 function randomTag() {
   return Math.random().toString(36).slice(2, 10);
 }
+
+describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
+  it("counts runs and success rate per flow from real run rows", async () => {
+    const { user, ws, flow } = await setup();
+    const other = await createFlow(user, ws.id, { templateId: "order-totals", name: unique("Other") });
+    const ok1 = await enqueueRun(user, flow.id);
+    await claimAndProcess(ok1.id);
+    const ok2 = await enqueueRun(user, flow.id);
+    await claimAndProcess(ok2.id);
+    const broken = structuredClone(flow.graph as FlowGraph);
+    (broken.nodes.find((n) => n.id === "normalise")!.data.config as { expression: string }).expression = '$error("boom")';
+    await saveFlow(user, flow.id, { baseRevision: 1, graph: broken });
+    const bad = await enqueueRun(user, flow.id);
+    await claimAndProcess(bad.id);
+
+    const rows = await listFlows(ws.id);
+    const mine = rows.find((r) => r.id === flow.id)!;
+    expect(mine.runCount).toBe(3);
+    expect(mine.successRate).toBeCloseTo(2 / 3, 5);
+    expect(mine.lastRunStatus).toBe("failed");
+    expect(mine.nodeCount).toBe(5);
+    expect(mine.hasTrigger).toBe(true);
+    const untouched = rows.find((r) => r.id === other.id)!;
+    expect(untouched.runCount).toBe(0);
+    expect(untouched.successRate).toBeNull();
+    expect(untouched.lastRunStatus).toBeNull();
+  });
+});

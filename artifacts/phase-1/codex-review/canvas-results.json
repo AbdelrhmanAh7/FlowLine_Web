@@ -1,0 +1,82 @@
+{
+  "results": [
+    {
+      "name": "new-flow-dialog",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\nSaved\n⚠ 1 issue\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\nReact Flow\n+ Add node\n/\n⚡\n\nStart with a trigger\n\nEvery flow begins with an event. Add a manual trigger, then connect transforms, conditions and outputs.\n\n+ Add a trigger\nor browse templates\n−\n100%\n+\nFit",
+      "nodes": 0,
+      "edges": 0
+    },
+    {
+      "name": "create-blank-failure",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\nSaved\n⚠ 1 issue\n↶\nNothing to undo\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\nReact Flow\n+ Add node\n/\n⚡\n\nStart with a trigger\n\nEvery flow begins with an event. Add a manual trigger, then connect transforms, conditions and outputs.\n\n+ Add a trigger\nor browse templates\n−\n100%\n+\nFit",
+      "nodes": 0,
+      "edges": 0
+    },
+    {
+      "name": "trigger",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⚡\nManual trigger\n\ntrigger · manual · nkz5e1\n\n✕\nConfigure\nTest\nLogs\nNAME\nSAMPLE PAYLOAD (JSON)\n\nSent as the run input when you press Run.\n\nStarts the flow when you press Run. Sends the sample payload as input.\n\nDuplicate\nCtrlD\nA flow can only have one trigger\nDelete\nDel",
+      "nodes": 1,
+      "edges": 0
+    },
+    {
+      "name": "palette-open",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n⚡\nManual trigger\nThis flow already has a trigger\n⇄\nJSON transform\nReshape data with a JSONata expression. Runs in a sandbox with a time limit.\n⑂\nCondition\nRoutes data down the true or false branch. The branch not taken is skipped.\n◎\nOutput\nStores a value in the run result under a key.\n−\n100%\n+\nFit",
+      "nodes": 1,
+      "edges": 0
+    },
+    {
+      "name": "palette-click-transform",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 2 issues\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 2 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⇄\nJSON transform\n\ntransform · jsonata · nkzvs2\n\n✕\nConfigure\nTest\nLogs\n⚠ JSON transform isn't connected to anything upstream\nNAME\nEXPRESSION (JSONATA)\n\nEvaluated against the upstream output. $ is the whole input.\n\nReshape data with a JSONata expression. Runs in a sandbox with a time limit.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 2,
+      "edges": 0
+    },
+    {
+      "name": "slash-search",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 2 issues\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 2 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\nReact Flow\n+ Add node\n/\n⑂\nCondition\nRoutes data down the true or false branch. The branch not taken is skipped.\n−\n100%\n+\nFit",
+      "nodes": 2,
+      "edges": 0
+    },
+    {
+      "name": "search-condition",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 3 issues\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 3 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\n\nCondition\n\nLOGIC · IF / ELSE\n\nNot run yet\n\n!\ntrue\nfalse\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⑂\nCondition\n\nlogic · if / else · nl0l73\n\n✕\nConfigure\nTest\nLogs\n⚠ Condition isn't connected to anything upstream\nNAME\nCONDITION (JSONATA)\n\nTruthy → true branch, otherwise false. Data passes through unchanged.\n\nRoutes data down the true or false branch. The branch not taken is skipped.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 3,
+      "edges": 0
+    },
+    {
+      "name": "drag-output",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 3 issues\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 3 issues before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\n!\n\nCondition\n\nLOGIC · IF / ELSE\n\nNot run yet\n\n!\ntrue\nfalse\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\n!\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n◎\nOutput\n\noutput · result · nl1284\n\n✕\nConfigure\nTest\nLogs\n⚠ Output isn't connected to anything upstream\nNAME\nOUTPUT KEY\n\nName of this value in the run result.\n\nVALUE (JSONATA, OPTIONAL)\n\nLeave empty to store the input as-is.\n\nStores a value in the run result under a key.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 4,
+      "edges": 0
+    },
+    {
+      "name": "connected",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n⚠ 1 issue\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\nFix 1 issue before running\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\nCondition\n\nLOGIC · IF / ELSE\n\nNot run yet\n\n!\ntrue\nfalse\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⑂\nCondition\n\nlogic · if / else · nl0l73\n\n✕\nConfigure\nTest\nLogs\n⚠ Condition isn't connected to anything upstream\nNAME\nCONDITION (JSONATA)\n\nTruthy → true branch, otherwise false. Data passes through unchanged.\n\nRoutes data down the true or false branch. The branch not taken is skipped.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 4,
+      "edges": 2
+    },
+    {
+      "name": "invalid-second-input",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\nCondition\n\nLOGIC · IF / ELSE\n\nNot run yet\n\ntrue\nfalse\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\n⑂\nCondition\n\nlogic · if / else · nl0l73\n\n✕\nConfigure\nTest\nLogs\nNAME\nCONDITION (JSONATA)\n\nTruthy → true branch, otherwise false. Data passes through unchanged.\n\nRoutes data down the true or false branch. The branch not taken is skipped.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 4,
+      "edges": 3
+    },
+    {
+      "name": "nudge",
+      "url": "http://localhost:3100/w/codex-explore/flows/35dbf4db-ac08-4aa4-886b-b3b3eb5e8e87",
+      "text": "Skip to content\nCodex Explore\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCE\nCodex Explorer\n← Flows\n/\nFlow name\n● Unsaved\n↶\n↷\nNothing to redo\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nJSON transform\n\nTRANSFORM · JSONATA\n\nNot run yet\n\nCondition\n\nLOGIC · IF / ELSE\n\nNot run yet\n\ntrue\nfalse\n\nOutput\n\nOUTPUT · RESULT\n\nNot run yet\n\nReact Flow\nMoved selected node down. New position, x: 564, y: 444\n+ Add node\n/\n−\n100%\n+\nFit\n⇄\nJSON transform\n\ntransform · jsonata · nkzvs2\n\n✕\nConfigure\nTest\nLogs\nNAME\nEXPRESSION (JSONATA)\n\nEvaluated against the upstream output. $ is the whole input.\n\nReshape data with a JSONata expression. Runs in a sandbox with a time limit.\n\nDuplicate\nCtrlD\nDelete\nDel",
+      "nodes": 4,
+      "edges": 3
+    }
+  ],
+  "events": []
+}

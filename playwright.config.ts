@@ -25,10 +25,11 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   webServer: {
     command: "pnpm db:migrate:test && pnpm dev:test",
-    url: `${BASE_URL}/api/health`,
+    url: `${BASE_URL}/api/health?require=worker`,
     reuseExistingServer: true,
     timeout: 180_000,
-    stdout: "ignore",
+    // "pipe", not "ignore": on Windows an ignored stdout kills the worker on its first log line.
+    stdout: "pipe",
     stderr: "pipe",
   },
 });

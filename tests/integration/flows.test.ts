@@ -116,7 +116,7 @@ describe("saveFlow", () => {
     const { user, ws } = await setup();
     const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier" });
 
-    setFault("save", 1);
+    setFault(user.id, "save", 1);
     await expectHttpError(save(user, flow.id, { baseRevision: 1 }), 500, "INJECTED_FAULT");
 
     // Fault consumed: the retry goes through and the revision was not bumped by the failure.

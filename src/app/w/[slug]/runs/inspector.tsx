@@ -9,7 +9,7 @@ import type { NodeType } from "@/engine/types";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, EmptyState, ErrorState, Input, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, EmptyState, ErrorState, Input, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx, onTabListKeyDown } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { duration, pretty, timeAgo } from "@/lib/format";
 import { useNow, useOnline, useViewport } from "@/lib/hooks";
@@ -151,12 +151,11 @@ export function RunInspector() {
               setQ(e.target.value);
               setParam({ q: e.target.value });
             }} className="h-8 w-full sm:w-64" />
-            <div role="tablist" aria-label="Filter runs" className="flex flex-wrap gap-1">
+            <div role="group" aria-label="Filter runs by status" className="flex flex-wrap gap-1">
               {FILTERS.map((f) => (
                 <button
                   key={f.id}
-                  role="tab"
-                  aria-selected={filter === f.id}
+                  aria-pressed={filter === f.id}
                   onClick={() => setParam({ status: f.id, run: null })}
                   className={cx("h-7 rounded-md px-2.5 text-base transition-colors duration-[var(--dur-tab)]", filter === f.id ? "bg-elevated text-hi" : "text-med hover:text-hi")}
                 >
@@ -331,7 +330,12 @@ function StepPanel({
         </button>
       </div>
 
-      <div role="tablist" aria-label="Step payload" className="flex gap-4 border-b border-line">
+      <div
+        role="tablist"
+        aria-label="Step payload"
+        className="flex gap-4 border-b border-line"
+        onKeyDown={(e) => onTabListKeyDown(e, ["input", "output", "error"] as const, tab, setTab, (t) => t === "error" && !failed)}
+      >
         {(["input", "output", "error"] as const).map((t) => {
           const disabled = t === "error" && !failed;
           return (
@@ -340,6 +344,7 @@ function StepPanel({
               role="tab"
               aria-selected={tab === t}
               aria-disabled={disabled || undefined}
+              tabIndex={tab === t ? 0 : -1}
               title={disabled ? "This step didn't fail" : undefined}
               onClick={() => !disabled && setTab(t)}
               className={cx(

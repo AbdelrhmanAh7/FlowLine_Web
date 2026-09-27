@@ -29,12 +29,11 @@ export default function TemplatesPage() {
       <PageHeader title="Templates" sub="Each card previews its node chain — using one drops you into the canvas." />
       <div className="flex flex-col gap-6 p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
-          <div role="tablist" aria-label="Category" className="flex flex-wrap gap-1">
+          <div role="group" aria-label="Filter templates by category" className="flex flex-wrap gap-1">
             {CATEGORIES.map((c) => (
               <button
                 key={c}
-                role="tab"
-                aria-selected={cat === c}
+                aria-pressed={cat === c}
                 onClick={() => setCat(c)}
                 className={cx("h-7 rounded-md px-2.5 text-base transition-colors duration-[var(--dur-tab)]", cat === c ? "bg-elevated text-hi" : "text-med hover:text-hi")}
               >

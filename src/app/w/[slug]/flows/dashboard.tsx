@@ -231,11 +231,11 @@ export function Dashboard() {
 
 function Kpi({ label, value, note, tone, muted }: { label: string; value: string; note: string; tone?: "danger"; muted?: boolean }) {
   return (
-    <Card className="flex h-[86px] flex-col justify-between px-4 py-3">
+    <Card className="flex min-h-[86px] flex-col justify-between gap-1 px-4 py-3">
       <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{label}</p>
-      <p className="flex items-baseline gap-2">
+      <p className="flex flex-wrap items-baseline gap-x-2">
         <span className={`text-2xl font-semibold tabular-nums ${tone === "danger" ? "text-danger" : muted ? "text-muted" : "text-hi"}`}>{value}</span>
-        <span className={`truncate text-sm ${tone === "danger" ? "text-danger" : "text-muted"}`}>{note}</span>
+        <span className={`text-sm leading-tight ${tone === "danger" ? "text-danger" : "text-muted"}`}>{note}</span>
       </p>
     </Card>
   );

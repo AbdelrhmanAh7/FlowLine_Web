@@ -16,6 +16,9 @@ const workerId = `${hostname()}-${process.pid}-${randomUUID().slice(0, 6)}`;
 let stopping = false;
 let wake: (() => void) | null = null;
 
+// Never die because nobody is reading our logs (closed/ignored stdout).
+process.stdout.on("error", () => {});
+
 function log(...args: unknown[]) {
   console.log(new Date().toISOString(), "[worker]", ...args);
 }
