@@ -8,13 +8,17 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { ApiKeys } from "./api-keys";
+import { AuditLog } from "./audit-log";
+import { Members } from "./members";
 
-type Tab = "members" | "general" | "keys" | "billing";
+type Tab = "members" | "general" | "keys" | "billing" | "audit";
 const TABS: { id: Tab; label: string }[] = [
   { id: "members", label: "Members" },
   { id: "general", label: "General" },
   { id: "keys", label: "API keys" },
   { id: "billing", label: "Usage & limits" },
+  { id: "audit", label: "Audit log" },
 ];
 
 export default function SettingsPage() {
@@ -40,55 +44,10 @@ export default function SettingsPage() {
           {tab === "general" && <General />}
           {tab === "keys" && <ApiKeys />}
           {tab === "billing" && <Billing />}
+          {tab === "audit" && <AuditLog />}
         </div>
       </div>
     </div>
-  );
-}
-
-function Members() {
-  const { workspace, user } = useWorkspace();
-  const q = useQuery({
-    queryKey: ["members", workspace.id],
-    queryFn: () => api<{ members: { userId: string; name: string; email: string; role: string }[] }>(`/api/workspaces/${workspace.id}/members`),
-    select: (d) => d.members,
-  });
-  return (
-    <Card className="p-5">
-      <h2 className="text-lg font-semibold">Members</h2>
-      <p className="mt-1 text-base text-med">People with access to {workspace.name}.</p>
-      <div className="mt-4">
-        {q.isPending ? (
-          <div className="flex flex-col gap-2">
-            {[0, 1].map((i) => (
-              <Skeleton key={i} className="h-10" />
-            ))}
-          </div>
-        ) : q.isError ? (
-          <ErrorState title="Couldn't load members" body={(q.error as Error).message} onRetry={() => q.refetch()} />
-        ) : (
-          <ul className="divide-y divide-line">
-            {q.data.map((m) => (
-              <li key={m.userId} className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2.5">
-                <span className="font-medium">{m.name}</span>
-                <span className="data text-sm text-muted">· {m.email}</span>
-                {m.userId === user.id && <span className="text-sm text-muted">(you)</span>}
-                <span className="ml-auto rounded-md border border-line px-2 py-0.5 text-sm capitalize text-med">{m.role}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
-        <label htmlFor="invite" className="sr-only">
-          Teammate email
-        </label>
-        <Input id="invite" placeholder="teammate@company.com" disabled className="h-8 max-w-xs flex-1" />
-        <Button disabledReason="Invitations need email delivery and roles management, planned for Phase 3 (collaboration)." tooltipSide="top">
-          Invite
-        </Button>
-      </div>
-    </Card>
   );
 }
 
@@ -144,18 +103,6 @@ function General() {
           </Button>
         </div>
       </form>
-    </Card>
-  );
-}
-
-function ApiKeys() {
-  return (
-    <Card className="p-5">
-      <h2 className="text-lg font-semibold">API keys</h2>
-      <p className="mt-1 text-base text-med">No API keys exist. Programmatic access (live and test keys, revocation) is planned for a later phase; there is no public API yet.</p>
-      <div className="mt-4">
-        <Button disabledReason="The public API isn't available yet, so keys can't be created.">Create key</Button>
-      </div>
     </Card>
   );
 }

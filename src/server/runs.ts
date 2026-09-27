@@ -10,6 +10,7 @@ import type { CurrentUser } from "./access";
 import { consumeFault } from "./faults";
 import { insertVersion } from "./flows";
 import { HttpError, notFound } from "./http";
+import { planEntitlements } from "./entitlements";
 import { redact } from "./redact";
 
 export const RUN_CHANNEL = "flowline_runs";
@@ -25,7 +26,11 @@ export interface EnqueueOptions {
   fromNodeId?: string;
   /** For reruns: "original" = the source run's exact version; "latest" = current saved flow. */
   rerunRevision?: "original" | "latest";
-  triggerKind?: "manual" | "webhook" | "schedule" | "rerun";
+  triggerKind?: "manual" | "webhook" | "schedule" | "rerun" | "api" | "agent";
+  /** api/agent triggers: run the PUBLISHED version (live keys, agents) or a snapshot of the draft (test keys). */
+  usePublished?: boolean;
+  apiKeyId?: string;
+  agentRunId?: string;
   /** Dedupe key: manual click id, webhook event id, schedule fire time. */
   triggerRef?: string;
   /** Acting user for triggered runs (the publisher). */
@@ -77,9 +82,10 @@ export async function enqueueRunEx(user: CurrentUser | null, flowId: string, opt
       .from(schema.run)
       .where(and(eq(schema.run.workspaceId, flow.workspaceId), eq(schema.run.status, "queued")));
     if (queued >= ws!.maxQueuedRuns) throw new HttpError(429, "QUEUE_FULL", `This workspace already has ${queued} queued runs (limit ${ws!.maxQueuedRuns}). Try again when some finish.`);
+    await assertExecutionAllowed(tx, ws!);
 
     let version: typeof schema.flowVersion.$inferSelect;
-    if (kind === "webhook" || kind === "schedule") {
+    if (kind === "webhook" || kind === "schedule" || ((kind === "api" || kind === "agent") && opts.usePublished !== false)) {
       if (flow.pausedReason) throw new HttpError(409, "FLOW_PAUSED", "This flow is paused until its connection is repaired");
       if (!flow.publishedVersionId) throw new HttpError(409, "NOT_PUBLISHED", "Publish the flow before triggers can run it");
       const [v] = await tx.select().from(schema.flowVersion).where(eq(schema.flowVersion.id, flow.publishedVersionId));
@@ -130,6 +136,8 @@ export async function enqueueRunEx(user: CurrentUser | null, flowId: string, opt
         rerunFromNodeId: opts.fromNodeId ?? null,
         triggerKind: kind,
         triggerRef: opts.triggerRef ?? null,
+        apiKeyId: opts.apiKeyId ?? null,
+        agentRunId: opts.agentRunId ?? null,
         policy: { actingUserId, connections: connectionsOf(graph) },
         deadlineAt: new Date(Date.now() + RUN_TIMEOUT_MS),
         createdBy: user?.id ?? null,
@@ -141,10 +149,64 @@ export async function enqueueRunEx(user: CurrentUser | null, flowId: string, opt
       order.map((n, position) => ({ runId: run!.id, nodeId: n.id, nodeType: n.type, nodeLabel: n.data.label, position, status: "pending" as const })),
     );
     await tx.insert(schema.runEvent).values({ runId: run!.id, workspaceId: flow.workspaceId, type: "queued", data: { trigger: kind, version: version.version } });
+    await recordExecution(tx, run!, ws!);
     await tx.execute(sql`select pg_notify(${RUN_CHANNEL}, ${run!.id})`);
     return { run: run!, duplicate: false };
   };
   return outer ? work(outer) : db.transaction(work);
+}
+
+/**
+ * Monthly execution limit (workflow runs + agent runs, calendar month UTC). The workspace setting and the
+ * billing plan's entitlement both apply; the stricter one wins. Checked under the workspace row lock.
+ */
+export async function assertExecutionAllowed(tx: DbOrTx, ws: typeof schema.workspace.$inferSelect) {
+  const limit = await effectiveExecutionLimit(tx, ws);
+  if (limit == null) return;
+  const used = await executionsThisMonth(tx, ws.id);
+  if (used >= limit) throw new HttpError(429, "EXECUTION_LIMIT", `This workspace reached its monthly limit of ${limit} executions. Raise the limit or wait for the next month.`);
+}
+
+export async function executionsThisMonth(tx: DbOrTx, workspaceId: string) {
+  const start = monthStartUtc();
+  const [r] = await tx
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.usageEvent)
+    .where(and(eq(schema.usageEvent.workspaceId, workspaceId), eq(schema.usageEvent.kind, "execution"), sql`${schema.usageEvent.createdAt} >= ${start}`));
+  return r?.n ?? 0;
+}
+
+export function monthStartUtc(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/** Workspace limit ∧ plan entitlement (billing), whichever is stricter; null = unlimited. */
+export async function effectiveExecutionLimit(tx: DbOrTx, ws: typeof schema.workspace.$inferSelect): Promise<number | null> {
+  const limits = [ws.maxMonthlyExecutions];
+  const ent = await planEntitlements(tx, ws.id);
+  if (ent) limits.push(ent.maxMonthlyExecutions);
+  const set = limits.filter((l): l is number => l != null);
+  return set.length ? Math.min(...set) : null;
+}
+
+/** One execution event per run, unique by run id — a retry of the same run is never counted twice. */
+async function recordExecution(tx: DbOrTx, run: typeof schema.run.$inferSelect, ws: typeof schema.workspace.$inferSelect) {
+  const price = ws.prices?.execution?.perCallMicros;
+  await tx
+    .insert(schema.usageEvent)
+    .values({
+      workspaceId: run.workspaceId,
+      runId: run.id,
+      kind: "execution",
+      status: "settled",
+      idempotencyKey: `execution:${run.id}`,
+      quantity: 1,
+      costMicros: price ?? 0,
+      unpriced: price == null,
+      estimatedMicros: price ?? 0,
+      settledAt: new Date(),
+    })
+    .onConflictDoNothing();
 }
 
 /** What a re-run from `fromNodeId` will do — shown to the user before confirming. */

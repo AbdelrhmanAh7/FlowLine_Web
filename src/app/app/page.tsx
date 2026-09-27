@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function AppEntry({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
+  const { next: nextParam } = await searchParams;
+  // Invitation links survive sign-in/sign-up: finish on the invite page.
+  const invite = /^invite:([A-Za-z0-9_-]{20,100})$/.exec(nextParam ?? "");
+  if (invite) redirect(`/invite/${invite[1]}`);
   const [settings, workspaces] = await Promise.all([getUserSettings(user.id), listWorkspaces(user)]);
   const onboarded = Boolean(settings?.onboardingCompletedAt || settings?.onboardingSkipped);
   if (!onboarded || workspaces.length === 0) redirect("/onboarding");

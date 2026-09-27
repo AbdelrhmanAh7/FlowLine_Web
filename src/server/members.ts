@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Role } from "@/db/schema";
 import type { CurrentUser } from "./access";
@@ -98,6 +98,11 @@ export async function acceptInvite(user: CurrentUser, token: string) {
       .where(and(eq(schema.workspaceMember.workspaceId, inv.workspaceId), eq(schema.workspaceMember.userId, user.id)));
     if (!already) await tx.insert(schema.workspaceMember).values({ workspaceId: inv.workspaceId, userId: user.id, role: inv.role });
     await tx.update(schema.workspaceInvite).set({ acceptedAt: new Date(), acceptedBy: user.id }).where(eq(schema.workspaceInvite.id, inv.id));
+    // Joining a workspace completes onboarding for invited users (they don't need to create their own).
+    await tx
+      .insert(schema.userSettings)
+      .values({ userId: user.id, onboardingCompletedAt: new Date(), lastWorkspaceId: inv.workspaceId })
+      .onConflictDoUpdate({ target: schema.userSettings.userId, set: { lastWorkspaceId: inv.workspaceId, onboardingCompletedAt: sql`coalesce(${schema.userSettings.onboardingCompletedAt}, now())` } });
     await audit(tx, { workspaceId: inv.workspaceId, actor: userActor(user), action: "member.joined", targetType: "user", targetId: user.id, data: { role: already?.role ?? inv.role } });
     return { workspaceId: inv.workspaceId, slug: row.workspaceSlug, role: already?.role ?? inv.role };
   });

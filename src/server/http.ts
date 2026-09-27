@@ -35,10 +35,36 @@ export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T>
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * CSRF defence in depth (the session cookie is already SameSite=Lax): a state-changing request that
+ * carries cookies must come from the app's own origin. Cookie-less calls (API keys, provider webhooks)
+ * aren't affected — they have no ambient authority to abuse.
+ */
+function assertSameOrigin(req: Request) {
+  if (SAFE_METHODS.has(req.method.toUpperCase())) return;
+  if (!req.headers.get("cookie")) return;
+  const site = req.headers.get("sec-fetch-site");
+  if (site === "same-origin" || site === "none") return;
+  const origin = req.headers.get("origin");
+  const allowed = new Set<string>();
+  for (const u of [process.env.BETTER_AUTH_URL, process.env.FLOWLINE_PUBLIC_URL, req.url]) {
+    try {
+      if (u) allowed.add(new URL(u).origin);
+    } catch {
+      /* ignore malformed */
+    }
+  }
+  if (origin && allowed.has(origin)) return;
+  throw new HttpError(403, "CROSS_SITE_REQUEST", "Cross-site request refused");
+}
+
 /** Wraps a route handler with consistent JSON error responses. */
 export function route<C>(handler: Handler<C>): Handler<C> {
   return async (req, ctx) => {
     try {
+      assertSameOrigin(req);
       return await handler(req, ctx);
     } catch (err) {
       if (err instanceof HttpError) {
