@@ -1,11 +1,14 @@
 // Starts the isolated TEST stack: Next.js on :3100 (build dir .next-test) + the worker,
-// both with .env.test (flowline_test DB, FLOWLINE_ENV=test). Used by Playwright.
+// both with .env.test (flowline_test DB, FLOWLINE_ENV=test), plus the provider-boundary
+// test doubles (fake SaaS APIs on :4010, fake Ollama on :4011). Used by Playwright.
 import { spawn, spawnSync } from "node:child_process";
 
 process.loadEnvFile(".env.test");
 process.env.NEXT_DIST_DIR = ".next-test";
 
 const procs = [
+  spawn("npx tsx e2e/fakes/provider-server.ts --port 4010", { stdio: "inherit", shell: true, env: process.env }),
+  spawn("npx tsx e2e/fakes/ai-server.ts --port 4011", { stdio: "inherit", shell: true, env: process.env }),
   spawn("npx next dev -p 3100", { stdio: "inherit", shell: true, env: process.env }),
   spawn("npx tsx worker/index.ts", { stdio: "inherit", shell: true, env: process.env }),
 ];

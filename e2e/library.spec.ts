@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { setupUser } from "./helpers";
 
-test("templates: a local template creates a flow and opens the canvas; integration templates explain why they're disabled", async ({ page }) => {
+test("templates: a local template creates a flow and opens the canvas; design templates list their real requirements", async ({ page }) => {
   const { workspace } = await setupUser(page);
   await page.goto(`/w/${workspace.slug}/templates`);
-  const planned = page.getByRole("listitem").filter({ hasText: "Lead Enrichment Pipeline" }).getByRole("button", { name: "Use template" });
-  await expect(planned).toHaveAttribute("aria-disabled", "true");
-  await expect(planned).toHaveAccessibleDescription(/Phase 2/);
+  const lead = page.getByTestId("template-lead-enrichment");
+  await expect(lead.getByRole("list", { name: "Requirements" })).toContainText("Not connected");
+  await expect(lead.getByRole("list", { name: "Requirements" })).toContainText("AI available");
+  await expect(lead).not.toContainText(/d+ (uses|runs|installs)/); // no invented usage counts
 
   await page.getByRole("button", { name: "Support", exact: true }).click();
   await expect(page.getByText("Lead Qualifier")).toHaveCount(0);
@@ -35,7 +36,7 @@ test("settings: owner renames the workspace and sets a timezone; values persist;
   await expect(page.getByLabel("Schedule timezone")).toHaveValue("Africa/Cairo");
   await expect(page.getByRole("complementary", { name: "Workspace navigation" })).toContainText("Renamed Workspace");
 
-  await page.getByRole("button", { name: "Billing & credits" }).click();
-  await expect(page.getByText("Billing isn't configured in this environment")).toBeVisible();
-  await expect(page.getByText(/\$\d/)).toHaveCount(0); // no sample prices or credits
+  await page.getByRole("button", { name: "Usage & limits" }).click();
+  await expect(page.getByText("No usage yet this month.")).toBeVisible();
+  await expect(page.getByText(/\$\d/)).toHaveCount(0); // no invented prices or credits
 });

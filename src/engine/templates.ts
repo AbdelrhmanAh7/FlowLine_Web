@@ -122,13 +122,3 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
 ];
 
 export const BLANK_GRAPH: FlowGraph = { nodes: [], edges: [] };
-
-/** Design-reference templates that need Phase 2 integrations. Shown, but not usable yet. */
-export const INTEGRATION_TEMPLATES = [
-  { id: "lead-enrichment", name: "Lead Enrichment Pipeline", description: "Score and enrich inbound form leads with an LLM, route hot ones to sales.", category: "Sales", chain: ["⚡ Hook", "✦ Enrich", "✦ Score", "▦ Sheets"], needs: "Webhook trigger, LLM node, Google Sheets" },
-  { id: "support-triage", name: "Support Ticket Triage", description: "Classify Zendesk tickets by priority and team, post a digest every 15 min.", category: "Support", chain: ["🕐 15m", "⇄ Fetch", "✦ Classify", "# Slack"], needs: "Schedule trigger, Zendesk, LLM node, Slack" },
-  { id: "invoice-extractor", name: "Invoice PDF Extractor", description: "Pull totals, vendors, and due dates from attachments into your AP ledger.", category: "Finance", chain: ["✉ Gmail", "✦ Extract", "▦ Ledger", "✉ Reply"], needs: "Gmail, LLM node" },
-  { id: "price-watch", name: "Competitor Price Watch", description: "Monitor pricing pages hourly, Slack summary when anything material changes.", category: "Marketing", chain: ["🕐 1h", "⇄ Scrape", "✦ Diff", "# Alert"], needs: "Schedule trigger, HTTP fetch, LLM node, Slack" },
-  { id: "kpi-digest", name: "Weekly KPI Digest", description: "Query the warehouse Monday, LLM writes the narrative, email it to leadership.", category: "Data ops", chain: ["🕐 Mon", "▮ SQL", "✦ Summarize", "✉ Email"], needs: "Schedule trigger, SQL connector, LLM node, email" },
-  { id: "pr-router", name: "PR Review Router", description: "Summarize new pull requests, flag risky diffs, file follow-ups in Linear.", category: "Engineering", chain: ["🐙 PR", "✦ Review", "⑂ Filter", "📊 Linear"], needs: "GitHub, LLM node, Linear" },
-] as const;

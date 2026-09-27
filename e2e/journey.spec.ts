@@ -40,15 +40,17 @@ test("new user builds, saves, reopens, runs and inspects a flow", async ({ page 
 
   // Drag four nodes from the palette onto the canvas.
   const pane = page.locator(".react-flow__pane");
-  const drop = async (option: RegExp, x: number, y: number) => {
+  const drop = async (option: RegExp, search: string, x: number, y: number) => {
     await page.getByRole("button", { name: /Add node/ }).click();
-    await page.getByRole("option", { name: option }).dragTo(pane, { targetPosition: { x, y } });
+    const palette = page.getByRole("dialog", { name: "Add node" });
+    await palette.getByLabel("Search nodes").fill(search);
+    await palette.getByRole("option", { name: option }).dragTo(pane, { targetPosition: { x, y } });
     await page.keyboard.press("Escape"); // close drawer for the new node
   };
-  await drop(/Manual trigger/, 150, 480);
-  await drop(/JSON transform/, 430, 480);
-  await drop(/Condition/, 710, 480);
-  await drop(/^◎?\s*Output/, 990, 480);
+  await drop(/Manual trigger/, "manual", 400, 480);
+  await drop(/JSON transform/, "json", 640, 480);
+  await drop(/Condition/, "condition", 880, 480);
+  await drop(/^◎?\s*Output/, "output", 1120, 480);
   const ids = await nodeIds(page);
   expect(ids).toHaveLength(4);
   const [trigger, transform, condition, output] = ids as [string, string, string, string];

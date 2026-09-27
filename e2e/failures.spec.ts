@@ -20,7 +20,7 @@ test("invalid flow: run is blocked with reasons, fields show errors, API refuses
 
   await page.getByRole("button", { name: /\d+ issues?/ }).click();
   const issues = page.getByRole("dialog", { name: "Flow issues" });
-  await expect(issues).toContainText("Add an Output node");
+  await expect(issues).toContainText("Add at least one step after the trigger");
   await expect(issues).toContainText("sample payload is not valid JSON");
 
   // Ctrl+Enter must not start a run either.

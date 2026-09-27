@@ -162,6 +162,11 @@ test.describe("canvas interactions & keyboard map", () => {
     await page.getByRole("list", { name: "Runs" }).getByRole("button", { name: /50\+ employees\?/ }).click();
     await expect(panel.getByRole("heading")).toContainText("50+ employees?");
     await panel.getByRole("button", { name: /Re-run from this step/ }).click();
+    const dialog = page.getByRole("dialog", { name: /Re-run #1 from/ });
+    const preview = dialog.getByTestId("rerun-preview");
+    await expect(preview).toContainText("Will run again · 3");
+    await expect(preview).toContainText("Reused from #1 · 2");
+    await dialog.getByRole("button", { name: /^Re-run 3 steps$/ }).click();
     await expect(page.getByText(/Re-running as #2/)).toBeVisible();
     await expect(page.getByRole("button", { name: /#2/ })).toBeVisible();
     await expect.poll(async () => {
