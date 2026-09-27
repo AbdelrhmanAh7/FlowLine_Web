@@ -1,9 +1,17 @@
 import { Client } from "pg";
 import { z } from "zod";
-import { EgressError, assertHostAllowed } from "@/server/egress";
+import { isIP } from "node:net";
+import { EgressError, resolveAllowedAddress } from "@/server/egress";
 import { ProviderError, type ActionDef, type Credentials, type ProviderDef, type ProviderErrorKind } from "../types";
 
-async function connect(creds: Credentials): Promise<Client> {
+const ALLOWED_PARAMS = new Set(["sslmode"]);
+
+/**
+ * Connects to the validated IP with explicit fields. The raw connection string is never handed
+ * to pg: its query parameters (host=, port=, options=…) could otherwise redirect the socket
+ * past the egress check, and pg would resolve the name again (DNS rebinding).
+ */
+async function connect(creds: Credentials, opts: { readOnly?: boolean } = {}): Promise<Client> {
   const raw = creds.connectionString;
   if (!raw) throw new ProviderError("client", "Postgres connection string is missing");
   let url: URL;
@@ -12,23 +20,38 @@ async function connect(creds: Credentials): Promise<Client> {
   } catch {
     throw new ProviderError("client", "Postgres connection string is not a valid URL");
   }
+  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") throw new ProviderError("client", "Use a postgres:// connection string");
+  for (const k of url.searchParams.keys()) if (!ALLOWED_PARAMS.has(k)) throw new ProviderError("client", `Connection parameter "${k}" isn't supported`);
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
   const port = Number(url.port) || 5432;
+  let address: string;
   try {
-    await assertHostAllowed(url.hostname, port);
+    address = await resolveAllowedAddress(hostname, port);
   } catch (e) {
     if (e instanceof EgressError) throw new ProviderError("egress_blocked", e.message);
-    throw e;
+    throw new ProviderError("network", `Couldn't resolve ${hostname}`);
   }
   const sslmode = url.searchParams.get("sslmode");
+  const servername = isIP(hostname) ? undefined : hostname;
   const ssl =
     sslmode === "disable"
       ? false
       : sslmode === "require"
-        ? { rejectUnauthorized: false }
+        ? { rejectUnauthorized: false, servername }
         : sslmode === "verify-ca" || sslmode === "verify-full"
-          ? { rejectUnauthorized: true }
+          ? { rejectUnauthorized: true, servername }
           : undefined;
-  const client = new Client({ connectionString: raw, ssl, connectionTimeoutMillis: 10_000 });
+  const client = new Client({
+    host: address,
+    port,
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: decodeURIComponent(url.pathname.replace(/^\//, "")) || undefined,
+    ssl,
+    connectionTimeoutMillis: 10_000,
+    // Server-enforced: every transaction in a read-only session is read-only.
+    options: opts.readOnly ? "-c default_transaction_read_only=on" : undefined,
+  });
   try {
     await client.connect();
   } catch (e) {
@@ -36,6 +59,11 @@ async function connect(creds: Credentials): Promise<Client> {
     mapPgError(e); // e.g. wrong password → auth, refused/unreachable → network
   }
   return client;
+}
+
+/** Extended protocol: exactly one statement per call ("SELECT 1; COMMIT; DELETE …" is rejected). */
+function single(client: Client, sql: string, params: unknown[]) {
+  return client.query({ text: sql, values: params, queryMode: "extended" } as unknown as { text: string; values: unknown[] });
 }
 
 function mapPgError(e: unknown): never {
@@ -74,11 +102,11 @@ const query: ActionDef<z.infer<typeof queryInput>, z.infer<typeof queryOutput>> 
   sideEffect: "none",
   requiredScopes: ["read"],
   async run(ctx, input) {
-    const client = await connect(ctx.credentials);
+    const client = await connect(ctx.credentials, { readOnly: true });
     try {
       await client.query("BEGIN READ ONLY");
       await client.query("SET LOCAL statement_timeout = 10000");
-      const res = await client.query(input.sql, input.params);
+      const res = await single(client, input.sql, input.params);
       const rows = res.rows as Record<string, unknown>[];
       return {
         columns: (res.fields ?? []).map((f) => f.name),
@@ -117,7 +145,7 @@ const execute: ActionDef<z.infer<typeof executeInput>, z.infer<typeof executeOut
     try {
       await client.query("BEGIN");
       await client.query("SET LOCAL statement_timeout = 10000");
-      const res = await client.query(input.sql, input.params);
+      const res = await single(client, input.sql, input.params);
       await client.query("COMMIT");
       return { rowCount: res.rowCount ?? 0 };
     } catch (e) {

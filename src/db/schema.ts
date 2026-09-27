@@ -246,6 +246,11 @@ export const runStep = pgTable(
     /** Provider/model/tokens for AI steps; request ids for actions. Redacted. */
     meta: jsonb("meta").$type<Record<string, unknown>>(),
     log: jsonb("log").$type<string[]>(),
+    /**
+     * Unredacted {input, output} of a finished step, AES-GCM encrypted. Used only to resume or
+     * re-run (so downstream steps and approval bindings see real values); never returned by APIs.
+     */
+    dataEnc: jsonb("data_enc").$type<{ ciphertext: string; keyId: string }>(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     durationMs: integer("duration_ms"),
@@ -348,8 +353,10 @@ export const webhookEvent = pgTable(
     runId: uuid("run_id"),
     status: text("status").notNull(), // accepted | paused | rejected
     detail: text("detail"),
+    /** GitHub-scheme signature (no timestamp is signed there): unique per endpoint to refuse replays. */
+    signature: text("signature"),
   },
-  (t) => [uniqueIndex("webhook_event_unique").on(t.endpointId, t.eventId)],
+  (t) => [uniqueIndex("webhook_event_unique").on(t.endpointId, t.eventId), uniqueIndex("webhook_event_signature_unique").on(t.endpointId, t.signature)],
 );
 
 export const missedPolicyEnum = pgEnum("missed_policy", ["skip", "run_once", "run_all"]);

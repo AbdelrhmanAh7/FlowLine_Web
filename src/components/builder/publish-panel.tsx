@@ -138,7 +138,7 @@ function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { f
             <details className="text-sm text-med">
               <summary className="cursor-pointer hover:text-hi">How to sign requests</summary>
               <p className="mt-2">
-                Send <code className="data">POST</code> with headers <code className="data">x-flowline-event-id: &lt;unique id&gt;</code> and <code className="data">x-flowline-signature: t=&lt;unix seconds&gt;,v1=&lt;hex HMAC-SHA256(secret, t + &quot;.&quot; + raw body)&gt;</code>. Requests older than 5 minutes or reusing an event id with a different body are rejected; a repeated event id returns the original run.
+                Send <code className="data">POST</code> with headers <code className="data">x-flowline-event-id: &lt;unique id&gt;</code> and <code className="data">x-flowline-signature: t=&lt;unix seconds&gt;,v1=&lt;hex HMAC-SHA256(secret, t + &quot;.&quot; + event id + &quot;.&quot; + raw body)&gt;</code>. Requests older than 5 minutes or reusing an event id with a different body are rejected; a repeated event id returns the original run.
               </p>
             </details>
             {canEdit &&

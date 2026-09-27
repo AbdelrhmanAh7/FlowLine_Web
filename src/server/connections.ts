@@ -250,6 +250,14 @@ export async function startOAuth(db: Db, opts: { userId: string; workspaceId: st
   const provider = getProvider(opts.providerId);
   if (!provider?.oauth) throw notFound("Provider doesn't use OAuth");
   if (!oauthConfigured(provider)) throw new HttpError(400, "OAUTH_NOT_CONFIGURED", `${provider.name} OAuth isn't configured on this server (${provider.oauth.clientIdEnv})`);
+  if (opts.connectionId) {
+    const [conn] = await db
+      .select({ provider: schema.connection.provider })
+      .from(schema.connection)
+      .where(and(eq(schema.connection.id, opts.connectionId), eq(schema.connection.workspaceId, opts.workspaceId)));
+    if (!conn) throw notFound("Connection not found");
+    if (conn.provider !== provider.id) throw new HttpError(409, "DIFFERENT_PROVIDER", `That connection is for ${conn.provider}, not ${provider.name}`);
+  }
   const state = randomToken(24);
   let challenge: string | undefined;
   let verifierEnc: string | undefined;
@@ -327,6 +335,7 @@ export async function completeOAuth(db: Db, opts: { state: string; code: string;
   if (result.connectionId) {
     const [conn] = await db.select().from(schema.connection).where(and(eq(schema.connection.id, result.connectionId), eq(schema.connection.workspaceId, result.workspaceId)));
     if (!conn) throw notFound("Connection not found");
+    if (conn.provider !== provider.id) throw new HttpError(409, "DIFFERENT_PROVIDER", `This connection is for ${conn.provider}, not ${provider.name}. Nothing was changed.`);
     if (conn.accountId !== id.accountId) {
       throw new HttpError(409, "DIFFERENT_ACCOUNT", `You signed in as ${id.label}, but this connection is ${conn.accountLabel}. Nothing was changed.`);
     }

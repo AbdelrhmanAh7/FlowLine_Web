@@ -35,7 +35,7 @@ async function publishedWebhookFlow() {
 }
 
 function deliver(token: string, secret: string, body: string, eventId: string | null, opts: { t?: number; sig?: string } = {}) {
-  const headers: Record<string, string> = { "content-type": "application/json", "x-flowline-signature": opts.sig ?? signWebhook(secret, body, opts.t) };
+  const headers: Record<string, string> = { "content-type": "application/json", "x-flowline-signature": opts.sig ?? signWebhook(secret, body, eventId ?? "", opts.t) };
   if (eventId) headers["x-flowline-event-id"] = eventId;
   return webhookPOST(new Request(`http://localhost/api/hooks/${token}`, { method: "POST", headers, body }), { params: Promise.resolve({ token }) });
 }

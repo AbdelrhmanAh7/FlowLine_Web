@@ -5,12 +5,13 @@ import * as schema from "@/db/schema";
 import { estimateTokens, getAiProvider, validateAgainstSchema } from "@/ai/provider";
 import { executeGraph, NodeError, type HostHandler, type NodeEnv, type NodeOutcome } from "@/engine/execute";
 import { normalizeValue, VALUE_MAX_BYTES } from "@/engine/expression";
+import { NONDETERMINISTIC, UNSTABLE_INPUT_MESSAGE } from "@/engine/validate";
 import { evaluateIsolated, extractPdfTextIsolated } from "@/engine/sandbox";
 import type { FlowGraph, FlowNode } from "@/engine/types";
 import { createProviderHttp } from "@/integrations/http";
 import { getAction } from "@/integrations/registry";
 import { ProviderError, type ActionContext } from "@/integrations/types";
-import { checkGate } from "@/server/approvals";
+import { checkGate, consumeRetry } from "@/server/approvals";
 import { runCodeInSandbox } from "@/server/code-sandbox";
 import { ConnectionError, getRuntimeCredentials, markConnectionUnhealthy } from "@/server/connections";
 import { sha256Hex } from "@/server/crypto";
@@ -95,6 +96,43 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
   }
   const sideEffect = method === "GET" ? "none" : str(cfg.sideEffect) || "non_idempotent";
   const max = attemptsFor(cfg.retry as { maxAttempts?: number });
+
+  // Non-idempotent requests whose outcome is unknown (lost response, or a worker died mid-request)
+  // are never blindly re-sent: a human reviews, bound to this exact request (header names only).
+  const gate = {
+    workspaceId: ctx.run.workspaceId,
+    runId: ctx.run.id,
+    flowVersionId: ctx.run.flowVersionId,
+    nodeId: `${ctx.path}${node.id}`,
+    actionId: "http.request",
+    args: { method, url, headers: Object.keys(headers).sort(), body: body ?? null },
+    connectionId: null,
+    secrets: ctx.secrets,
+    kind: "review" as const,
+  };
+  const review = async (): Promise<NodeOutcome | null> => {
+    const g = await checkGate(ctx.db, gate);
+    if (g.status === "pending") return { kind: "pause", status: "uncertain", message: `No response from ${new URL(url).host} — the request may have been applied. Mark it done, retry, or fail.`, meta: { reviewId: g.approvalId } };
+    if (g.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", "The request's outcome was unknown and a reviewer failed the step");
+    if (g.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { resolvedBy: "review" } };
+    await consumeRetry(ctx.db, g.approvalId);
+    return null; // one reviewed retry
+  };
+  if (sideEffect === "non_idempotent") {
+    const prior = ctx.interrupted.has(node.id)
+      ? [true]
+      : await ctx.db
+          .select({ id: schema.approval.id })
+          .from(schema.approval)
+          .where(and(eq(schema.approval.runId, ctx.run.id), eq(schema.approval.nodeId, gate.nodeId), eq(schema.approval.kind, "review")))
+          .limit(1);
+    if (prior.length > 0) {
+      if (ctx.interrupted.has(node.id)) await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_uncertain", nodeId: node.id, data: { reason: "interrupted" } });
+      const r = await review();
+      if (r) return r;
+    }
+  }
+
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await safeFetch(url, { method, headers, body, timeoutMs: Number(cfg.timeoutMs) || 15000, maxBytes: 1024 * 1024, signal: env.signal });
@@ -115,7 +153,10 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
       if (env.signal.aborted) throw e;
       const pe = e instanceof ProviderError ? e : new ProviderError((e as Error).name === "TimeoutError" ? "timeout" : "response_lost", (e as Error).message);
       if (pe.outcomeUnknown && sideEffect === "non_idempotent") {
-        return { kind: "pause", status: "uncertain", message: `No response from ${new URL(url).host} — the request may have been applied. Review before retrying.`, attempts: attempt };
+        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_uncertain", nodeId: node.id, data: { kind: pe.kind } });
+        const r = await review();
+        if (r) return { ...r, attempts: attempt } as NodeOutcome;
+        throw new NodeError("OUTCOME_UNKNOWN", "The request's outcome is unknown"); // unreachable: a fresh review is always pending
       }
       if ((pe.retryable || pe.outcomeUnknown) && attempt < max) {
         env.log(`attempt ${attempt} failed (${pe.kind}); retrying`);
@@ -231,6 +272,8 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
   // Human approval: bound to this run + revision + node + action + exact args + connection, with expiry.
   const gateBase = { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, flowVersionId: ctx.run.flowVersionId, nodeId: `${ctx.path}${node.id}`, actionId: action.id, args, connectionId, secrets: ctx.secrets };
   if (cfg.requireApproval === true || action.sensitive) {
+    // Approval binds the exact arguments; values that change on every evaluation could never match.
+    if (NONDETERMINISTIC.test(str(cfg.inputMapping))) throw new NodeError("APPROVAL_UNSTABLE_INPUT", UNSTABLE_INPUT_MESSAGE);
     const gate = await checkGate(ctx.db, { ...gateBase, kind: "approval" });
     if (gate.status === "pending") return { kind: "pause", status: "waiting_approval", message: `Waiting for approval to run ${action.title}`, meta: { approvalId: gate.approvalId } };
     if (gate.status === "rejected") throw new NodeError("APPROVAL_REJECTED", `${action.title} was rejected${gate.note ? `: ${gate.note}` : ""}`);
@@ -254,6 +297,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
     }
     if (gate.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", `${action.title} outcome was unknown and a reviewer failed the step`);
     if (gate.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { ...meta, resolvedBy: "review" } };
+    await consumeRetry(ctx.db, gate.approvalId);
     return "retry";
   };
 
@@ -280,16 +324,20 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
   };
 
   // A previous worker died while this step was in flight.
+  let cleared = false;
   if (ctx.interrupted.has(node.id) && action.sideEffect === "non_idempotent") {
     const r = await resolveUnknown();
     if (r !== "retry") return r;
+    cleared = true;
   }
   // A reviewer may already have decided on an earlier uncertain attempt of this step.
-  const priorReview = await ctx.db
-    .select({ id: schema.approval.id })
-    .from(schema.approval)
-    .where(and(eq(schema.approval.runId, ctx.run.id), eq(schema.approval.nodeId, `${ctx.path}${node.id}`), eq(schema.approval.kind, "review")))
-    .limit(1);
+  const priorReview = cleared
+    ? []
+    : await ctx.db
+        .select({ id: schema.approval.id })
+        .from(schema.approval)
+        .where(and(eq(schema.approval.runId, ctx.run.id), eq(schema.approval.nodeId, `${ctx.path}${node.id}`), eq(schema.approval.kind, "review")))
+        .limit(1);
   if (priorReview.length > 0) {
     const r = await review();
     if (r !== "retry") return r;
@@ -432,14 +480,52 @@ async function loadSubflow(ctx: HandlerContext, flowId: string, version: number)
   return { graph: row.graph as FlowGraph, name: row.name };
 }
 
+/** True if running the graph could have a non-idempotent external effect (nested subflows count, conservatively). */
+function hasNonIdempotentStep(graph: FlowGraph): boolean {
+  return graph.nodes.some((n) => {
+    const c = n.data.config as unknown as Record<string, unknown>;
+    if (n.type === "integration.action") {
+      const effect = getAction(str(c.actionId))?.action.sideEffect;
+      return effect !== "idempotent" && effect !== "none";
+    }
+    if (n.type === "http.request") return (str(c.method) || "GET") !== "GET" && (str(c.sideEffect) || "non_idempotent") === "non_idempotent";
+    return n.type === "flow.subflow" || n.type === "logic.loop";
+  });
+}
+
 async function subflowNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, unknown>, input: unknown, env: NodeEnv): Promise<NodeOutcome> {
   const flowId = str(cfg.flowId);
   const version = Number(cfg.version);
   if (ctx.depth >= MAX_SUBFLOW_DEPTH) throw new NodeError("SUBFLOW_DEPTH", `Subflows can nest at most ${MAX_SUBFLOW_DEPTH} levels`);
   if (ctx.flowStack.includes(flowId)) throw new NodeError("SUBFLOW_CYCLE", "This subflow calls itself (directly or indirectly)");
   const sub = await loadSubflow(ctx, flowId, version);
+
+  // Child steps aren't checkpointed. If a worker died while this node ran, the children may have
+  // partly executed: re-running them could repeat non-idempotent effects, so a human decides.
+  if (ctx.interrupted.has(node.id) && hasNonIdempotentStep(sub.graph)) {
+    const g = await checkGate(ctx.db, {
+      workspaceId: ctx.run.workspaceId,
+      runId: ctx.run.id,
+      flowVersionId: ctx.run.flowVersionId,
+      nodeId: `${ctx.path}${node.id}`,
+      actionId: node.type,
+      args: { flowId, version },
+      connectionId: null,
+      secrets: ctx.secrets,
+      kind: "review",
+    });
+    if (g.status === "pending") {
+      await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_uncertain", nodeId: node.id, data: { reason: "interrupted" } });
+      return { kind: "pause", status: "uncertain", message: `"${sub.name}" was interrupted and may have partly run steps with external effects. Check, then mark done, retry, or fail.`, meta: { reviewId: g.approvalId } };
+    }
+    if (g.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", `"${sub.name}" was interrupted and a reviewer failed the step`);
+    if (g.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { subflow: sub.name, version, resolvedBy: "review" } };
+    await consumeRetry(ctx.db, g.approvalId);
+  }
+
   const runChild = async (childInput: unknown, index?: number) => {
-    const childCtx: HandlerContext = { ...ctx, path: `${ctx.path}${node.id}${index === undefined ? "" : `[${index}]`}/`, flowStack: [...ctx.flowStack, flowId], depth: ctx.depth + 1 };
+    // Children get their own (empty) interrupted set: parent node ids mean nothing inside the subflow.
+    const childCtx: HandlerContext = { ...ctx, interrupted: new Set(), path: `${ctx.path}${node.id}${index === undefined ? "" : `[${index}]`}/`, flowStack: [...ctx.flowStack, flowId], depth: ctx.depth + 1 };
     // Subflow expressions run in the same isolated sandbox as the parent flow.
     const res = await executeGraph(sub.graph, childInput, { handler: createHandler(childCtx), evaluate: evaluateIsolated, signal: env.signal, concurrency: 2 });
     if (res.status === "waiting_approval") throw new NodeError("SUBFLOW_NEEDS_APPROVAL", `"${sub.name}" needs a human decision — subflows can't pause; move that step into the parent flow`);

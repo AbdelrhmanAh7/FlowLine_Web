@@ -143,12 +143,19 @@ export async function triggerInfo(flowId: string) {
   };
 }
 
-/** Signature: header `x-flowline-signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`. */
-export function signWebhook(secret: string, body: string, t = Math.floor(Date.now() / 1000)) {
-  return `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${body}`).digest("hex")}`;
+/**
+ * Signature: header `x-flowline-signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>.<event id>.<raw body>")>`.
+ * The event id is signed too, so a captured request can't be replayed under a fresh id.
+ */
+export function signWebhook(secret: string, body: string, eventId: string, t = Math.floor(Date.now() / 1000)) {
+  return `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${eventId}.${body}`).digest("hex")}`;
 }
 
-/** GitHub scheme: `X-Hub-Signature-256: sha256=<hex HMAC-SHA256(secret, raw body)>` (no timestamp; dedupe via X-GitHub-Delivery). */
+/**
+ * GitHub scheme: `X-Hub-Signature-256: sha256=<hex HMAC-SHA256(secret, raw body)>`. GitHub signs neither a
+ * timestamp nor the delivery id, so the receiver also refuses a signature it has already accepted
+ * (webhook_event.signature is unique per endpoint): a captured delivery can't be replayed under a new id.
+ */
 export function verifyGithubSignature(secretEnc: string, keyId: string, header: string | null, body: string): { ok: true } | { ok: false; reason: string } {
   if (!header?.startsWith("sha256=")) return { ok: false, reason: "missing X-Hub-Signature-256" };
   const secret = decryptSecret<string>(secretEnc, keyId);
@@ -158,14 +165,14 @@ export function verifyGithubSignature(secretEnc: string, keyId: string, header: 
   return { ok: true };
 }
 
-export function verifyWebhookSignature(secretEnc: string, keyId: string, header: string | null, body: string, now = Date.now()): { ok: true; t: number } | { ok: false; reason: string } {
+export function verifyWebhookSignature(secretEnc: string, keyId: string, header: string | null, body: string, eventId: string, now = Date.now()): { ok: true; t: number } | { ok: false; reason: string } {
   if (!header) return { ok: false, reason: "missing signature" };
   const parts = Object.fromEntries(header.split(",").map((p) => p.trim().split("=", 2) as [string, string]));
   const t = Number(parts.t);
   if (!Number.isInteger(t) || !parts.v1) return { ok: false, reason: "malformed signature" };
   if (Math.abs(now / 1000 - t) > WEBHOOK_TOLERANCE_SEC) return { ok: false, reason: "signature timestamp outside tolerance" };
   const secret = decryptSecret<string>(secretEnc, keyId);
-  const expected = createHmac("sha256", secret).update(`${t}.${body}`).digest();
+  const expected = createHmac("sha256", secret).update(`${t}.${eventId}.${body}`).digest();
   let given: Buffer;
   try {
     given = Buffer.from(parts.v1, "hex");

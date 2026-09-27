@@ -217,10 +217,15 @@ function validateConfig(node: FlowNode): ValidationIssue[] {
       if (!str(cfg.actionId)) push("MISSING_ACTION", "choose an app action");
       if (!str(cfg.connectionId)) push("MISSING_CONNECTION", "choose a connection");
       checkExpr(push, "input mapping", str(cfg.inputMapping));
+      if (cfg.requireApproval === true && NONDETERMINISTIC.test(str(cfg.inputMapping))) push("APPROVAL_UNSTABLE_INPUT", UNSTABLE_INPUT_MESSAGE);
       break;
   }
   return issues;
 }
+
+/** Functions whose value changes on every evaluation — incompatible with approval of exact arguments. */
+export const NONDETERMINISTIC = /\$(now|millis|random|uuid)\s*\(/;
+export const UNSTABLE_INPUT_MESSAGE = "steps that need approval can't use $now(), $millis() or $random() in their input — compute the value in an earlier step (e.g. a JSON transform) and reference it with $steps";
 
 /** Collects `$steps.<id>` references from all expression-valued config fields. */
 export function stepReferences(node: FlowNode): string[] {

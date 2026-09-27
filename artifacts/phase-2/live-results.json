@@ -1,18 +1,18 @@
 {
   "ai.available": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:32.408Z",
+    "at": "2026-09-27T18:21:04.520Z",
     "provider": "ollama",
     "model": "qwen2.5:3b"
   },
   "ai.extract": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:32.969Z",
+    "at": "2026-09-27T18:21:08.165Z",
     "provider": "ollama",
     "model": "qwen2.5:3b",
     "usage": {
       "inputTokens": 264,
-      "outputTokens": 55
+      "outputTokens": 56
     },
     "output": {
       "vendor": "Northwind Office Supplies",
@@ -23,7 +23,7 @@
   },
   "ai.classify": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:33.068Z",
+    "at": "2026-09-27T18:21:08.264Z",
     "model": "qwen2.5:3b",
     "output": {
       "label": "billing"
@@ -35,7 +35,7 @@
   },
   "ai.injection_refused.system_notice": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:33.467Z",
+    "at": "2026-09-27T18:21:08.657Z",
     "model": "qwen2.5:3b",
     "output": {
       "vendor": "Northwind Office Supplies",
@@ -47,7 +47,7 @@
   },
   "ai.injection_refused.fake_assistant_turn": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:33.831Z",
+    "at": "2026-09-27T18:21:09.029Z",
     "model": "qwen2.5:3b",
     "output": {
       "vendor": "Northwind Office Supplies",
@@ -59,7 +59,7 @@
   },
   "ai.injection_refused.note_to_ai": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:34.197Z",
+    "at": "2026-09-27T18:21:09.399Z",
     "model": "qwen2.5:3b",
     "output": {
       "vendor": "Northwind Office Supplies",
@@ -71,70 +71,70 @@
   },
   "postgres.execute_and_query": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:34.822Z",
+    "at": "2026-09-27T18:21:09.979Z",
     "rowCount": 2
   },
   "postgres.query_read_only": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:34.855Z"
+    "at": "2026-09-27T18:21:10.009Z"
   },
   "postgres.auth_error": {
     "status": "PASS",
-    "at": "2026-09-27T18:04:34.865Z"
+    "at": "2026-09-27T18:21:10.018Z"
   },
   "google_sheets.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.687Z",
+    "at": "2026-09-27T18:21:10.756Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_GOOGLE_SHEETS)"
   },
   "gmail.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.689Z",
+    "at": "2026-09-27T18:21:10.757Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_GMAIL)"
   },
   "slack.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.689Z",
+    "at": "2026-09-27T18:21:10.758Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_SLACK)"
   },
   "hubspot.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.690Z",
+    "at": "2026-09-27T18:21:10.758Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_HUBSPOT)"
   },
   "zendesk.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.691Z",
+    "at": "2026-09-27T18:21:10.759Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_ZENDESK)"
   },
   "airtable.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.691Z",
+    "at": "2026-09-27T18:21:10.760Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_AIRTABLE)"
   },
   "snowflake.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.692Z",
+    "at": "2026-09-27T18:21:10.760Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_SNOWFLAKE)"
   },
   "github.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.692Z",
+    "at": "2026-09-27T18:21:10.761Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_GITHUB)"
   },
   "stripe.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.693Z",
+    "at": "2026-09-27T18:21:10.761Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_STRIPE)"
   },
   "notion.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.694Z",
+    "at": "2026-09-27T18:21:10.762Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_NOTION)"
   },
   "linear.identity": {
     "status": "BLOCKED",
-    "at": "2026-09-27T18:04:35.694Z",
+    "at": "2026-09-27T18:21:10.763Z",
     "reason": "No sandbox credentials (FLOWLINE_LIVE_LINEAR)"
   }
 }

@@ -100,7 +100,7 @@ describe("processRun (worker)", () => {
     expect(claimed).toBe(run.id);
     const claimedRow = await freshRun(run.id);
     expect(claimedRow.status).toBe("running");
-    expect(claimedRow.attempts).toBe(1);
+    expect(claimedRow.attempts).toBe(0); // counts lost workers, not claims
     expect(claimedRow.lockedBy).not.toBeNull();
     expect(claimedRow.startedAt).not.toBeNull();
 

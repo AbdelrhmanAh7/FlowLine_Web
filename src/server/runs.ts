@@ -326,7 +326,7 @@ export async function getRunDetail(runId: string) {
   return {
     ...redact(publicRun),
     flowName: run.flowName,
-    steps: steps.map((s) => redact(s)),
+    steps: steps.map(({ dataEnc: _enc, ...s }) => redact(s)), // the encrypted resume copy never leaves the server
     version: version?.version ?? null,
     versionReason: version?.reason ?? null,
     graph: version?.graph ?? null,

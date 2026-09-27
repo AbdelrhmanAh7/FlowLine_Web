@@ -98,13 +98,24 @@ export function checkUrl(raw: string | URL): URL {
 
 /** Resolves a host and asserts every address is public (or the host:port is allowlisted). For non-HTTP egress (databases). */
 export async function assertHostAllowed(host: string, port: number): Promise<void> {
-  if (isAllowlisted(host, port)) return;
+  await resolveAllowedAddress(host, port);
+}
+
+/**
+ * Validates host:port and returns the exact IP to connect to. Non-HTTP clients (e.g. Postgres)
+ * must connect to THIS address — resolving the name again would reopen a DNS-rebinding window.
+ */
+export async function resolveAllowedAddress(host: string, port: number): Promise<string> {
+  if (!host) throw new EgressError("EGRESS_BLOCKED", "A host name is required");
+  const listed = isAllowlisted(host, port);
   if (isIP(host)) {
-    if (!isPublicAddress(host)) throw new EgressError("EGRESS_BLOCKED", `Address ${host} is private or reserved`);
-    return;
+    if (!listed && !isPublicAddress(host)) throw new EgressError("EGRESS_BLOCKED", `Address ${host} is private or reserved`);
+    return host;
   }
   const addrs = await new Promise<LookupAddress[]>((resolve, reject) => dnsLookup(host, { all: true }, (e, a) => (e ? reject(e) : resolve(a))));
-  for (const a of addrs) if (!isPublicAddress(a.address)) throw new EgressError("EGRESS_BLOCKED", `${host} resolves to a private or reserved address`);
+  if (addrs.length === 0) throw new EgressError("EGRESS_BLOCKED", `${host} did not resolve`);
+  if (!listed) for (const a of addrs) if (!isPublicAddress(a.address)) throw new EgressError("EGRESS_BLOCKED", `${host} resolves to a private or reserved address`);
+  return addrs[0]!.address;
 }
 
 // Lookup used by the socket: rejects private resolutions unless the host:port is allowlisted.
@@ -123,6 +134,8 @@ function guardedLookup(port: number, host: string) {
     });
   };
 }
+
+const CREDENTIAL_HEADERS = /^(authorization|proxy-authorization|cookie|x-api-key|api-key|x-auth-token|private-token|x-snowflake-authorization-token-type)$/i;
 
 export interface SafeFetchOptions {
   method?: string;
@@ -153,19 +166,23 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
   let url = checkUrl(raw);
   let method = (opts.method ?? "GET").toUpperCase();
   let body = opts.body ?? null;
+  let reqHeaders = opts.headers;
 
   for (let hop = 0; ; hop++) {
     const port = defaultPort(url);
     const host = url.hostname.replace(/^\[|\]$/g, "");
     const dispatcher: Dispatcher = new Agent({ connect: { lookup: guardedLookup(port, host) as never }, connections: 1 });
     try {
-      const res = await undiciFetch(url, { method, headers: opts.headers, body: body as never, redirect: "manual", signal, dispatcher });
+      const res = await undiciFetch(url, { method, headers: reqHeaders, body: body as never, redirect: "manual", signal, dispatcher });
       if ([301, 302, 303, 307, 308].includes(res.status)) {
         const loc = res.headers.get("location");
         await res.body?.cancel();
         if (!loc) throw new EgressError("EGRESS_INVALID_URL", "Redirect without Location");
         if (hop >= maxRedirects) throw new EgressError("EGRESS_TOO_MANY_REDIRECTS", `More than ${maxRedirects} redirects`);
-        url = checkUrl(new URL(loc, url));
+        const next = checkUrl(new URL(loc, url));
+        // Credentials never follow a redirect to a different origin.
+        if (next.origin !== url.origin && reqHeaders) reqHeaders = Object.fromEntries(Object.entries(reqHeaders).filter(([k]) => !CREDENTIAL_HEADERS.test(k)));
+        url = next;
         if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === "POST")) {
           method = "GET";
           body = null;

@@ -149,3 +149,11 @@ export async function decide(db: Db, opts: { workspaceId: string; approvalId: st
     return { runId: a.runId, status: approved ? "approved" : "rejected" };
   });
 }
+
+/**
+ * A reviewer's "retry" allows exactly one more attempt. Once acted on it is retired, so a
+ * second lost response opens a new review instead of silently re-sending again.
+ */
+export async function consumeRetry(db: Db, approvalId: string) {
+  await db.update(schema.approval).set({ status: "superseded", note: "Retry used" }).where(and(eq(schema.approval.id, approvalId), eq(schema.approval.status, "approved")));
+}

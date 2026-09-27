@@ -5,6 +5,8 @@ import { ProviderError, type Credentials, type ProviderDef } from "../types";
 function base(creds: Credentials): string {
   const subdomain = creds.settings?.subdomain;
   if (!subdomain) throw new ProviderError("client", "Zendesk subdomain is missing");
+  // A bare label only: "evil.com/x?" would otherwise send the credentials to another host.
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(subdomain)) throw new ProviderError("client", "Zendesk subdomain must be just the name before .zendesk.com");
   return `https://${subdomain}.zendesk.com`;
 }
 

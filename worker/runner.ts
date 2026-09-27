@@ -4,6 +4,7 @@ import * as schema from "@/db/schema";
 import { executeGraph, type PriorStep, type ReusedStep } from "@/engine/execute";
 import { evaluateIsolated } from "@/engine/sandbox";
 import type { FlowGraph, StepResult } from "@/engine/types";
+import { decryptSecret, encryptSecret } from "@/server/crypto";
 import { logEvent } from "@/server/events";
 import { redact } from "@/server/redact";
 import { createHandler, type HandlerContext } from "./handlers";
@@ -30,7 +31,7 @@ export async function claimNextRun(db: Db, workerId: string) {
     await tx.execute(sql`select pg_advisory_xact_lock(733101)`);
     const res = await tx.execute<{ id: string }>(sql`
       update run set status = 'running', started_at = coalesce(started_at, now()), locked_by = ${workerId},
-        heartbeat_at = now(), attempts = attempts + 1
+        heartbeat_at = now()
       where id = (
         select r.id from run r join workspace w on w.id = r.workspace_id
         where r.status = 'queued'
@@ -44,7 +45,11 @@ export async function claimNextRun(db: Db, workerId: string) {
   });
 }
 
-/** Runs claimed by a worker that stopped heart-beating go back to the queue (or fail after MAX_ATTEMPTS). */
+/**
+ * Runs claimed by a worker that stopped heart-beating go back to the queue, or fail once workers
+ * have been lost MAX_ATTEMPTS times. `attempts` counts worker losses only — normal resumes after
+ * approvals or reviews don't use it up.
+ */
 export async function recoverStaleRuns(db: Db) {
   const cutoff = new Date(Date.now() - STALE_AFTER_MS);
   const stale = await db
@@ -53,7 +58,7 @@ export async function recoverStaleRuns(db: Db) {
     .where(and(eq(schema.run.status, "running"), lt(schema.run.heartbeatAt, cutoff)));
   for (const r of stale) {
     const stillStale = and(eq(schema.run.id, r.id), eq(schema.run.status, "running"), lt(schema.run.heartbeatAt, cutoff));
-    if (r.attempts >= MAX_ATTEMPTS) {
+    if (r.attempts + 1 >= MAX_ATTEMPTS) {
       await db
         .update(schema.run)
         .set({ status: "failed", lockedBy: null, finishedAt: new Date(), error: { code: "WORKER_LOST", message: `The worker stopped responding ${MAX_ATTEMPTS} times` } })
@@ -61,7 +66,7 @@ export async function recoverStaleRuns(db: Db) {
     } else {
       // Clearing locked_by revokes the old worker's lease: its guarded writes now match 0 rows.
       // Steps left "running" stay as they are: the next worker treats them as interrupted (verify/review, never blind re-send).
-      const requeued = await db.update(schema.run).set({ status: "queued", lockedBy: null }).where(stillStale).returning({ id: schema.run.id });
+      const requeued = await db.update(schema.run).set({ status: "queued", lockedBy: null, attempts: sql`${schema.run.attempts} + 1` }).where(stillStale).returning({ id: schema.run.id });
       if (requeued.length) await logEvent(db, { runId: r.id, workspaceId: r.workspaceId, type: "requeued", data: { reason: "worker heartbeat lost" } });
     }
   }
@@ -69,6 +74,18 @@ export async function recoverStaleRuns(db: Db) {
 }
 
 const TERMINAL = new Set(["succeeded", "reused", "failed", "skipped", "cancelled"]);
+
+/** A finished step's real {input, output}: the encrypted copy when present, else the (redacted) columns. */
+function stepData(s: typeof schema.runStep.$inferSelect): { input: unknown; output: unknown } {
+  if (s.dataEnc) {
+    try {
+      return decryptSecret<{ input: unknown; output: unknown }>(s.dataEnc.ciphertext, s.dataEnc.keyId);
+    } catch {
+      /* key rotated away — fall back to what is visible */
+    }
+  }
+  return { input: s.input, output: s.output };
+}
 
 export async function processRun(db: Db, runId: string, workerId: string, log: (...a: unknown[]) => void = () => {}) {
   const [run] = await db.select().from(schema.run).where(eq(schema.run.id, runId));
@@ -102,7 +119,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   const prior = new Map<string, PriorStep>();
   const interrupted = new Set<string>();
   for (const s of existing) {
-    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], input: s.input, output: s.output, error: s.error, skipReason: s.skipReason });
+    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], ...stepData(s), error: s.error, skipReason: s.skipReason });
     else if (s.status === "running") interrupted.add(s.nodeId);
   }
   await logEvent(db, { runId, workspaceId: run.workspaceId, type: prior.size || interrupted.size ? "resumed" : "claimed", data: { worker: workerId.split("-").slice(-1)[0], interrupted: [...interrupted] } });
@@ -110,7 +127,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   let reused: Map<string, ReusedStep> | undefined;
   if (run.rerunOfRunId && run.rerunFromNodeId) {
     const prev = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, run.rerunOfRunId));
-    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, { input: s.input, output: s.output }]));
+    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, stepData(s)]));
   }
 
   const hctx: HandlerContext = { db, run, workspace: workspace!, interrupted, secrets: [], path: "", flowStack: [run.flowId], depth: 0 };
@@ -180,6 +197,8 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
           status,
           input: redact(s.input ?? null, secrets) as object,
           output: redact(s.output ?? null, secrets) as object,
+          // Real values for resume/re-run, encrypted; the redacted columns above are what users see.
+          dataEnc: s.output !== undefined || s.input !== undefined ? encryptSecret({ input: s.input ?? null, output: s.output ?? null }) : null,
           error: s.error ? redact(s.error, secrets) : null,
           skipReason: s.skipReason ?? null,
           meta: s.meta ? (redact(s.meta, secrets) as Record<string, unknown>) : null,

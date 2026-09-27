@@ -6,7 +6,17 @@ const TOKEN_TYPE_HEADER = { "X-Snowflake-Authorization-Token-Type": "PROGRAMMATI
 function base(creds: Credentials): string {
   const url = creds.settings?.accountUrl;
   if (!url) throw new ProviderError("client", "Snowflake account URL is missing");
-  return url.replace(/\/+$/, "");
+  // Only a Snowflake account origin: the access token must not be sent anywhere else.
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new ProviderError("client", "Snowflake account URL is not a valid URL");
+  }
+  if (u.protocol !== "https:" || !/^[a-z0-9][a-z0-9.-]*\.snowflakecomputing\.com$/i.test(u.hostname) || u.username || u.password || (u.pathname !== "/" && u.pathname !== "")) {
+    throw new ProviderError("client", "Snowflake account URL must look like https://<account>.snowflakecomputing.com");
+  }
+  return u.origin;
 }
 
 const READONLY_KEYWORDS = new Set(["SELECT", "WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"]);
@@ -57,7 +67,7 @@ const query: ActionDef<z.infer<typeof queryInput>, z.infer<typeof queryOutput>> 
       path: "/api/v2/statements",
       baseUrl: base(ctx.credentials),
       headers: TOKEN_TYPE_HEADER,
-      json: { statement: input.statement, timeout: input.timeoutSeconds ?? 30 },
+      json: { statement: input.statement, timeout: input.timeoutSeconds ?? 30, parameters: { MULTI_STATEMENT_COUNT: "1" } }, // server-enforced single statement
     });
     const data = res.data.data ?? [];
     return {

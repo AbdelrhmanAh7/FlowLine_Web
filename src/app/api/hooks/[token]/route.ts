@@ -14,7 +14,8 @@ const reply = (status: number, body: Record<string, unknown>) => NextResponse.js
 
 /**
  * Public webhook receiver.
- * - Signature: `x-flowline-signature: t=<unix>,v1=<hmac-sha256 hex of "<t>.<raw body>">`, ±5 min.
+ * - Signature: `x-flowline-signature: t=<unix>,v1=<hmac-sha256 hex of "<t>.<event id>.<raw body>">`, ±5 min.
+ *   GitHub scheme: `X-Hub-Signature-256`; a signature already accepted is refused (replay).
  * - Dedupe: `x-flowline-event-id` is required; the same id returns the original run (200).
  *   Reusing an id with a different body is rejected (409).
  * - The event record and its run are written in ONE transaction, so an accepted
@@ -39,18 +40,21 @@ export async function POST(req: Request, { params }: Ctx) {
     .where(eq(schema.flow.id, ep.flowId));
   const trig = (pub?.graph as FlowGraph | undefined)?.nodes.find((n) => n.type === "trigger.webhook");
   const scheme = (trig?.data.config as { signatureScheme?: string } | undefined)?.signatureScheme === "github" ? "github" : "flowline";
+  const eventId = (req.headers.get(scheme === "github" ? "x-github-delivery" : "x-flowline-event-id") ?? "").trim();
+  if (!eventId || eventId.length > 200 || !/^[\x21-\x7e]+$/.test(eventId)) {
+    return reply(400, { error: `${scheme === "github" ? "X-GitHub-Delivery" : "x-flowline-event-id"} header is required (printable, ≤200 chars)` });
+  }
   let signedAt = new Date();
+  let signature: string | null = null;
   if (scheme === "github") {
     const g = verifyGithubSignature(ep.secretEnc, ep.keyId, req.headers.get("x-hub-signature-256"), raw);
     if (!g.ok) return reply(401, { error: `Invalid signature: ${g.reason}` });
+    signature = req.headers.get("x-hub-signature-256")!.toLowerCase();
   } else {
-    const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw);
+    const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw, eventId);
     if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
     signedAt = new Date(sig.t * 1000);
   }
-
-  const eventId = (req.headers.get(scheme === "github" ? "x-github-delivery" : "x-flowline-event-id") ?? "").trim();
-  if (!eventId || eventId.length > 200 || !/^[\x21-\x7e]+$/.test(eventId)) return reply(400, { error: "x-flowline-event-id header is required (printable, ≤200 chars)" });
 
   let body: unknown = raw;
   if ((req.headers.get("content-type") ?? "").includes("json") || scheme === "github") {
@@ -66,7 +70,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const result = await db.transaction(async (tx) => {
       const inserted = await tx
         .insert(schema.webhookEvent)
-        .values({ endpointId: ep.id, eventId, bodySha256: bodySha, signedAt, status: "accepted" })
+        .values({ endpointId: ep.id, eventId, bodySha256: bodySha, signedAt, signature, status: "accepted" })
         .onConflictDoNothing({ target: [schema.webhookEvent.endpointId, schema.webhookEvent.eventId] })
         .returning();
       if (inserted.length === 0) {
@@ -99,6 +103,11 @@ export async function POST(req: Request, { params }: Ctx) {
     const err = e as { status?: number; code?: string; message?: string };
     if (err.status === 429) return reply(429, { error: err.message });
     if (err.status === 409 || err.status === 422) return reply(409, { error: err.message });
+    // webhook_event_signature_unique: this exact signed delivery was already accepted under another id.
+    const cause = (e as { cause?: { code?: string; constraint?: string } }).cause ?? err;
+    if ((cause as { code?: string }).code === "23505" && String((cause as { constraint?: string }).constraint).includes("signature")) {
+      return reply(409, { error: "This signed delivery was already accepted (replay)" });
+    }
     console.error("[webhook] failed", err.message);
     return reply(500, { error: "Could not accept the event; retry with the same event id" });
   }
