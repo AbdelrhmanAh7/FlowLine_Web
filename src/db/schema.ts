@@ -106,6 +106,11 @@ export const workspace = pgTable("workspace", {
   currency: text("currency").notNull().default("USD"),
   /** Price table used by the usage ledger: { "<provider>/<model>": { inputPerMTok, outputPerMTok }, "action": perAction } in micros. */
   prices: jsonb("prices").$type<PriceTable>().notNull().default({}),
+  /** Monthly execution limit (runs + agent runs); null = unlimited. Plans may set it. */
+  maxMonthlyExecutions: integer("max_monthly_executions"),
+  /** Default AI provider/model for AI nodes and agents (must be a configured provider). Null = server default. */
+  aiProvider: text("ai_provider"),
+  aiModel: text("ai_model"),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -175,7 +180,7 @@ export const flowVersion = pgTable(
 export const runStatusEnum = pgEnum("run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);
 /** `uncertain` = an external action was sent but its outcome is unknown (lost response) and could not be verified. */
 export const stepStatusEnum = pgEnum("step_status", ["pending", "running", "succeeded", "failed", "skipped", "reused", "waiting_approval", "uncertain", "cancelled"]);
-export const triggerKindEnum = pgEnum("trigger_kind", ["manual", "webhook", "schedule", "rerun", "subflow"]);
+export const triggerKindEnum = pgEnum("trigger_kind", ["manual", "webhook", "schedule", "rerun", "subflow", "api", "agent"]);
 
 export const run = pgTable(
   "run",
@@ -198,6 +203,10 @@ export const run = pgTable(
     error: jsonb("error").$type<{ code: string; message: string; nodeId?: string } | null>(),
     rerunOfRunId: uuid("rerun_of_run_id"),
     rerunFromNodeId: text("rerun_from_node_id"),
+    /** Set when an agent's run_workflow tool started this run. */
+    agentRunId: uuid("agent_run_id"),
+    /** Set when the invocation API started this run. */
+    apiKeyId: uuid("api_key_id"),
     triggerKind: triggerKindEnum("trigger_kind").notNull().default("manual"),
     /** Webhook event id / schedule fire time — for traceability and dedupe. */
     triggerRef: text("trigger_ref"),
@@ -294,6 +303,8 @@ export const connection = pgTable(
     statusReason: text("status_reason"),
     /** Bumped on every credential change (refresh/reconnect) — detects refresh races. */
     credVersion: integer("cred_version").notNull().default(1),
+    /** "workspace" = any editor may use it; "private" = only its creator's runs may use it (never shared). */
+    visibility: text("visibility").notNull().default("workspace"),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -410,9 +421,10 @@ export const approval = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
-    runId: uuid("run_id")
-      .notNull()
-      .references(() => run.id, { onDelete: "cascade" }),
+    /** Workflow run the decision belongs to (null for agent tool approvals). */
+    runId: uuid("run_id").references(() => run.id, { onDelete: "cascade" }),
+    /** Agent run the decision belongs to (agent tool ASK); flowVersionId then holds the agent version id. */
+    agentRunId: uuid("agent_run_id"),
     flowVersionId: uuid("flow_version_id").notNull(),
     nodeId: text("node_id").notNull(),
     kind: text("kind").notNull(),
@@ -443,8 +455,15 @@ export const usageEvent = pgTable(
       .references(() => workspace.id, { onDelete: "cascade" }),
     runId: uuid("run_id"),
     nodeId: text("node_id"),
-    kind: text("kind").notNull(), // ai | action | http | run
+    kind: text("kind").notNull(), // ai | action | http | execution | agent_step
     status: text("status").notNull(), // reserved | settled | released
+    agentRunId: uuid("agent_run_id"),
+    /** False for system actions that are recorded but never charged (e.g. verification calls). */
+    billable: boolean("billable").notNull().default(true),
+    /** True when this event is a retry attempt of an earlier one. */
+    retry: boolean("retry").notNull().default(false),
+    /** Estimated cost at reservation time; costMicros is the actual cost once settled. */
+    estimatedMicros: bigint("estimated_micros", { mode: "number" }),
     idempotencyKey: text("idempotency_key").notNull().unique(),
     provider: text("provider"),
     model: text("model"),
@@ -524,3 +543,368 @@ export interface RunPolicy {
 export type Role = (typeof roleEnum.enumValues)[number];
 export type RunStatus = (typeof runStatusEnum.enumValues)[number];
 export type StepStatus = (typeof stepStatusEnum.enumValues)[number];
+
+/* ───────────── Phase 3: collaboration, audit, API keys ───────────── */
+
+/** Invitation to a workspace. Only a SHA-256 hash of the token is stored; single use, bound to an email, expiring. */
+export const workspaceInvite = pgTable(
+  "workspace_invite",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: roleEnum("role").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    invitedBy: text("invited_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedBy: text("accepted_by").references(() => user.id, { onDelete: "set null" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [index("invite_ws_idx").on(t.workspaceId, t.createdAt)],
+);
+
+/** Append-only audit trail of security- and billing-relevant changes. `data` is redacted before insert. */
+export const auditEvent = pgTable(
+  "audit_event",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id"),
+    actorApiKeyId: uuid("actor_api_key_id"),
+    actorLabel: text("actor_label").notNull(),
+    action: text("action").notNull(),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    data: jsonb("data"),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("audit_ws_idx").on(t.workspaceId, t.id)],
+);
+
+/** Workspace API key. The secret is shown once; only its SHA-256 hash and a display prefix are stored. */
+export const apiKey = pgTable(
+  "api_key",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    mode: text("mode").notNull(), // test | live
+    prefix: text("prefix").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    scopes: jsonb("scopes").$type<string[]>().notNull(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [index("api_key_ws_idx").on(t.workspaceId)],
+);
+
+/* ───────────── Phase 3: knowledge ───────────── */
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const knowledgeSource = pgTable(
+  "knowledge_source",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(), // file | text | table
+    fileId: uuid("file_id").references(() => fileObject.id, { onDelete: "set null" }),
+    mime: text("mime"),
+    size: integer("size").notNull().default(0),
+    status: text("status").notNull().default("pending"), // pending | indexing | ready | failed
+    error: text("error"),
+    chunkCount: integer("chunk_count").notNull().default(0),
+    /** Bumped on every (re)index; chunks carry the generation they belong to. */
+    generation: integer("generation").notNull().default(1),
+    /** Disabled sources are never retrieved (workspace-level revoke). */
+    enabled: boolean("enabled").notNull().default(true),
+    lockedBy: text("locked_by"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    indexedAt: timestamp("indexed_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [index("ksource_ws_idx").on(t.workspaceId, t.status)],
+);
+
+export const knowledgeChunk = pgTable(
+  "knowledge_chunk",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => knowledgeSource.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").notNull(),
+    generation: integer("generation").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    text: text("text").notNull(),
+    /** Location inside the source, e.g. { page } or { row }. */
+    locator: jsonb("locator").$type<Record<string, unknown>>(),
+    tsv: tsvector("tsv").generatedAlwaysAs(sql`to_tsvector('english', text)`),
+  },
+  (t) => [index("kchunk_source_idx").on(t.sourceId, t.generation), index("kchunk_tsv_idx").using("gin", t.tsv)],
+);
+
+/* ───────────── Phase 3: agents ───────────── */
+
+export type ToolPermission = "allow" | "ask" | "deny";
+export interface AgentToolSpec {
+  /** knowledge_search | workflow_inspect | run_workflow */
+  tool: string;
+  /** For run_workflow / workflow_inspect: the published flow it targets. */
+  flowId?: string;
+  permission: ToolPermission;
+}
+export interface AgentLimits {
+  maxSteps: number;
+  maxToolCalls: number;
+  maxCostMicros: number | null;
+  timeoutMs: number;
+}
+
+export const agent = pgTable(
+  "agent",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    currentVersionId: uuid("current_version_id"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [index("agent_ws_idx").on(t.workspaceId)],
+);
+
+/** Immutable agent definition; every save creates a new version. */
+export const agentVersion = pgTable(
+  "agent_version",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agent.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    instructions: text("instructions").notNull(),
+    provider: text("provider"),
+    model: text("model"),
+    tools: jsonb("tools").$type<AgentToolSpec[]>().notNull().default([]),
+    knowledgeSourceIds: jsonb("knowledge_source_ids").$type<string[]>().notNull().default([]),
+    limits: jsonb("limits").$type<AgentLimits>().notNull(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("agent_version_unique").on(t.agentId, t.version)],
+);
+
+export const agentConversation = pgTable(
+  "agent_conversation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agent.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("agent_conv_idx").on(t.agentId, t.createdAt)],
+);
+
+export const agentRunStatusEnum = pgEnum("agent_run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);
+
+export const agentRun = pgTable(
+  "agent_run",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agent.id, { onDelete: "cascade" }),
+    agentVersionId: uuid("agent_version_id")
+      .notNull()
+      .references(() => agentVersion.id, { onDelete: "restrict" }),
+    conversationId: uuid("conversation_id").references(() => agentConversation.id, { onDelete: "set null" }),
+    status: agentRunStatusEnum("status").notNull().default("queued"),
+    input: text("input").notNull(),
+    output: text("output"),
+    citations: jsonb("citations").$type<{ sourceId: string; sourceName: string; ordinal: number; label: string }[]>(),
+    error: jsonb("error").$type<{ code: string; message: string } | null>(),
+    stepCount: integer("step_count").notNull().default(0),
+    toolCallCount: integer("tool_call_count").notNull().default(0),
+    costMicros: bigint("cost_micros", { mode: "number" }).notNull().default(0),
+    actingUserId: text("acting_user_id").notNull(),
+    apiKeyId: uuid("api_key_id"),
+    /** Conversation/model state needed to resume after an approval pause. */
+    state: jsonb("state"),
+    lockedBy: text("locked_by"),
+    heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    cancelRequestedAt: timestamp("cancel_requested_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (t) => [index("agent_run_queue_idx").on(t.status, t.createdAt), index("agent_run_agent_idx").on(t.agentId, t.createdAt)],
+);
+
+/** One model turn or tool call of an agent run (append-only). */
+export const agentStep = pgTable(
+  "agent_step",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    agentRunId: uuid("agent_run_id")
+      .notNull()
+      .references(() => agentRun.id, { onDelete: "cascade" }),
+    index: integer("index").notNull(),
+    kind: text("kind").notNull(), // model | tool
+    tool: text("tool"),
+    args: jsonb("args"),
+    decision: text("decision"), // allow | ask | deny | approved | rejected
+    approvalId: uuid("approval_id"),
+    result: jsonb("result"),
+    error: jsonb("error").$type<{ code: string; message: string } | null>(),
+    latencyMs: integer("latency_ms"),
+    costMicros: bigint("cost_micros", { mode: "number" }),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("agent_step_unique").on(t.agentRunId, t.index)],
+);
+
+/* ───────────── Phase 3: copilot ───────────── */
+
+export const copilotProposal = pgTable(
+  "copilot_proposal",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    flowId: uuid("flow_id")
+      .notNull()
+      .references(() => flow.id, { onDelete: "cascade" }),
+    baseRevision: integer("base_revision").notNull(),
+    request: text("request").notNull(),
+    patch: jsonb("patch"),
+    proposedGraph: jsonb("proposed_graph").$type<FlowGraph>(),
+    diff: jsonb("diff"),
+    issues: jsonb("issues").$type<{ code: string; message: string }[]>().notNull().default([]),
+    status: text("status").notNull(), // invalid | proposed | approved | rejected | stale
+    provider: text("provider"),
+    model: text("model"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    savedRevision: integer("saved_revision"),
+  },
+  (t) => [index("copilot_flow_idx").on(t.flowId, t.createdAt)],
+);
+
+/* ───────────── Phase 3: billing ───────────── */
+
+/** One billing account per workspace with the payment provider (test mode unless the owner authorises live). */
+export const billingAccount = pgTable("billing_account", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspace.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  customerId: text("customer_id").notNull().unique(),
+  subscriptionId: text("subscription_id"),
+  planId: text("plan_id"),
+  /** none | trialing | active | past_due | canceled | incomplete */
+  status: text("status").notNull().default("none"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  trialEnd: timestamp("trial_end", { withTimezone: true }),
+  /** `created` time of the last applied provider event: older events are ignored (out-of-order). */
+  lastEventAt: timestamp("last_event_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Every provider webhook event received (deduplicated by provider event id). */
+export const billingEvent = pgTable("billing_event", {
+  id: text("id").primaryKey(),
+  provider: text("provider").notNull(),
+  type: text("type").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  workspaceId: uuid("workspace_id"),
+  /** applied | ignored_stale | ignored_unknown_customer | ignored_type | failed */
+  outcome: text("outcome").notNull(),
+  detail: text("detail"),
+});
+
+/** Usage reported to the payment provider for a period (idempotent per workspace + period + metric). */
+export const usageReport = pgTable(
+  "usage_report",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    metric: text("metric").notNull(),
+    quantity: bigint("quantity", { mode: "number" }).notNull(),
+    ledgerTotal: bigint("ledger_total", { mode: "number" }).notNull(),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    status: text("status").notNull(), // reported | failed
+    error: text("error"),
+    reportedAt: timestamp("reported_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("usage_report_ws_idx").on(t.workspaceId, t.periodStart)],
+);
+
+/* ───────────── Phase 3: SSO ───────────── */
+
+/** Per-workspace OIDC configuration. Not "available" until a test sign-in has succeeded (verifiedAt). */
+export const ssoConfig = pgTable("sso_config", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspace.id, { onDelete: "cascade" }),
+  issuer: text("issuer").notNull(),
+  clientId: text("client_id").notNull(),
+  clientSecretEnc: text("client_secret_enc").notNull(),
+  keyId: text("key_id").notNull(),
+  /** Email domains allowed to sign in via this IdP. */
+  domains: jsonb("domains").$type<string[]>().notNull().default([]),
+  /** Role given to a new member who first signs in via SSO. */
+  defaultRole: roleEnum("default_role").notNull().default("viewer"),
+  enabled: boolean("enabled").notNull().default(false),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Pending SSO sign-ins: single-use state + nonce + PKCE verifier (encrypted), short-lived. */
+export const ssoState = pgTable("sso_state", {
+  state: text("state").primaryKey(),
+  workspaceId: uuid("workspace_id").notNull(),
+  nonce: text("nonce").notNull(),
+  codeVerifierEnc: text("code_verifier_enc").notNull(),
+  keyId: text("key_id").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});

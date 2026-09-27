@@ -5,6 +5,7 @@ import { schema } from "@/db";
 import { createProviderHttp, resolveBase } from "@/integrations/http";
 import { getProvider } from "@/integrations/registry";
 import { ProviderError, type Credentials, type ProviderDef } from "@/integrations/types";
+import { audit } from "./audit";
 import { safeFetch } from "./egress";
 import { decryptSecret, encryptSecret, randomToken } from "./crypto";
 import { HttpError, notFound } from "./http";
@@ -165,6 +166,8 @@ export async function resumeFlowsForConnection(db: Db, connectionId: string) {
 export async function markConnectionUnhealthy(db: Db, connectionId: string, status: "expired" | "revoked" | "error", reason: string) {
   await db.update(schema.connection).set({ status, statusReason: reason.slice(0, 300), updatedAt: new Date() }).where(eq(schema.connection.id, connectionId));
   await pauseFlowsUsingConnection(db, connectionId, status);
+  const [c] = await db.select({ workspaceId: schema.connection.workspaceId, provider: schema.connection.provider }).from(schema.connection).where(eq(schema.connection.id, connectionId));
+  if (c) await audit(db, { workspaceId: c.workspaceId, actor: { kind: "system", label: "worker" }, action: "integration.expired", targetType: "connection", targetId: connectionId, data: { provider: c.provider, status } });
 }
 
 /**

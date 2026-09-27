@@ -6,6 +6,6 @@ type Ctx = { params: Promise<{ rid: string }> };
 
 export const POST = route(async (_req, { params }: Ctx) => {
   const user = await requireUser();
-  const { run } = await requireRun(user, (await params).rid, "editor");
+  const { run } = await requireRun(user, (await params).rid, "flow.run");
   return json(await cancelRun(user, run.id));
 });

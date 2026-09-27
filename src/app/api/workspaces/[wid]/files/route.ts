@@ -24,7 +24,7 @@ export const GET = route(async (_req, { params }: Ctx) => {
 /** Upload a file (multipart form field "file"): PDF, CSV, JSON or text, 5MB max. */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
-  const { workspace } = await requireWorkspace(user, (await params).wid, "editor");
+  const { workspace } = await requireWorkspace(user, (await params).wid, "flow.edit");
   if (Number(req.headers.get("content-length") ?? 0) > FILE_MAX_BYTES + 64 * 1024) throw new HttpError(413, "FILE_TOO_LARGE", "Files are limited to 5MB");
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

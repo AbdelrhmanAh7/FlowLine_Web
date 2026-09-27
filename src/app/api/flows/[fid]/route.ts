@@ -25,7 +25,7 @@ const saveBody = z.object({
 
 export const PUT = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
-  const { flow } = await requireFlow(user, (await params).fid, "editor");
+  const { flow } = await requireFlow(user, (await params).fid, "flow.edit");
   const body = await parseBody(req, saveBody);
   const saved = await saveFlow(user, flow.id, { ...body, graph: body.graph as FlowGraph | undefined });
   return json({ flow: saved.flow, version: saved.version, issues: flowIssues(saved.flow.graph) });
@@ -33,7 +33,7 @@ export const PUT = route(async (req, { params }: Ctx) => {
 
 export const DELETE = route(async (_req, { params }: Ctx) => {
   const user = await requireUser();
-  const { flow } = await requireFlow(user, (await params).fid, "editor");
+  const { flow } = await requireFlow(user, (await params).fid, "flow.delete");
   await softDeleteFlow(flow.id);
   return json({ ok: true });
 });

@@ -13,7 +13,7 @@ export const GET = route(async (_req, { params }: Ctx) => {
 
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
-  const { workspace } = await requireWorkspace(user, (await params).wid, "editor");
+  const { workspace } = await requireWorkspace(user, (await params).wid, "flow.edit");
   const input = await parseBody(req, z.object({ name: z.string().optional(), templateId: z.string().optional() }));
   return json({ flow: await createFlow(user, workspace.id, input) }, { status: 201 });
 });

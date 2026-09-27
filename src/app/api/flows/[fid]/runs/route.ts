@@ -23,7 +23,7 @@ const body = z
 
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
-  const { flow } = await requireFlow(user, (await params).fid, "editor");
+  const { flow } = await requireFlow(user, (await params).fid, "flow.run");
   const text = await req.text();
   if (text.length > VALUE_MAX_BYTES + 1024) throw new HttpError(413, "INPUT_TOO_LARGE", `Run input must be under ${Math.round(VALUE_MAX_BYTES / 1024)}KB`);
   let raw: unknown;

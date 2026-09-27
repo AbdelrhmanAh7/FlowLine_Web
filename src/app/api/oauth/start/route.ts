@@ -10,8 +10,8 @@ const body = z.object({ workspaceId: z.string(), provider: z.string().max(40), c
 export const POST = route(async (req) => {
   const user = await requireUser();
   const b = await parseBody(req, body);
-  const { workspace } = await requireWorkspace(user, b.workspaceId, "editor");
-  if (b.connectionId) await requireConnection(user, b.connectionId, "editor");
+  const { workspace } = await requireWorkspace(user, b.workspaceId, "integration.manage");
+  if (b.connectionId) await requireConnection(user, b.connectionId, "integration.manage");
   const redirectAfter = b.redirectAfter?.startsWith("/w/") ? b.redirectAfter : undefined;
   return json(await startOAuth(db, { userId: user.id, workspaceId: workspace.id, providerId: b.provider, connectionId: b.connectionId, redirectAfter }));
 });

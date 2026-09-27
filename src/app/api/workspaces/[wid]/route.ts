@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { db } from "@/db";
 import { requireUser, requireWorkspace } from "@/server/access";
+import { audit, userActor } from "@/server/audit";
 import { json, parseBody, route } from "@/server/http";
 import { updateWorkspace } from "@/server/workspaces";
 
@@ -13,7 +15,7 @@ export const GET = route(async (_req, { params }: Ctx) => {
 
 export const PATCH = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
-  const { workspace } = await requireWorkspace(user, (await params).wid, "owner");
+  const { workspace } = await requireWorkspace(user, (await params).wid, "workspace.settings");
   const patch = await parseBody(
     req,
     z.object({
@@ -25,5 +27,7 @@ export const PATCH = route(async (req, { params }: Ctx) => {
       prices: z.record(z.string(), z.object({ inputPerMTok: z.number().optional(), outputPerMTok: z.number().optional(), perCall: z.number().optional() })).optional(),
     }),
   );
-  return json({ workspace: await updateWorkspace(workspace.id, patch) });
+  const updated = await updateWorkspace(workspace.id, patch);
+  await audit(db, { workspaceId: workspace.id, actor: userActor(user), action: "settings.updated", targetType: "workspace", targetId: workspace.id, data: { changed: Object.keys(patch) } });
+  return json({ workspace: updated });
 });

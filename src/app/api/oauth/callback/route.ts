@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/server/access";
+import { audit, userActor } from "@/server/audit";
 import { completeOAuth } from "@/server/connections";
 import { HttpError } from "@/server/http";
 
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
   if (providerError || !code) return back(null, { oauth: "error", message: providerError ?? "No authorization code returned" });
   try {
     const r = await completeOAuth(db, { state, code, userId: user.id });
+    await audit(db, { workspaceId: r.workspaceId, actor: userActor(user), action: r.reconnected ? "integration.reconnected" : "integration.connected", targetType: "connection", targetId: r.connectionId, data: { via: "oauth" } });
     return back(r.workspaceId, { oauth: r.reconnected ? "reconnected" : "connected", connection: r.connectionId });
   } catch (e) {
     const message = e instanceof HttpError ? e.message : "The connection could not be completed";

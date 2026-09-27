@@ -36,6 +36,13 @@
       "when": 1790532849280,
       "tag": "0004_review_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790544442472,
+      "tag": "0005_phase3_schema",
+      "breakpoints": true
     }
   ]
 }

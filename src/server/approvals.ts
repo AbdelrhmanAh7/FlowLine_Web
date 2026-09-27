@@ -4,6 +4,7 @@ import { schema } from "@/db";
 import { canonicalJson, sha256Hex } from "./crypto";
 import { logEvent } from "./events";
 import { HttpError, notFound } from "./http";
+import { can } from "./permissions";
 import { redact } from "./redact";
 
 export const APPROVAL_TTL_MS = 24 * 3600_000;
@@ -62,7 +63,7 @@ export async function checkGate(db: Db, r: GateRequest): Promise<GateResult> {
     if (a.status === "pending") return { status: "pending", approvalId: a.id };
     if (a.status === "rejected") return { status: "rejected", approvalId: a.id, note: a.note };
     if (a.status === "approved") {
-      const stillAllowed = a.decidedBy ? await isEditor(db, r.workspaceId, a.decidedBy) : false;
+      const stillAllowed = a.decidedBy ? await canDecide(db, r.workspaceId, a.decidedBy) : false;
       if (!stillAllowed) {
         await db.update(schema.approval).set({ status: "superseded", note: "Approver no longer has editor access" }).where(eq(schema.approval.id, a.id));
         continue;
@@ -89,12 +90,13 @@ export async function checkGate(db: Db, r: GateRequest): Promise<GateResult> {
   return { status: "pending", approvalId: created!.id };
 }
 
-async function isEditor(db: Db, workspaceId: string, userId: string) {
+/** The approver must hold approval.decide in the workspace (checked again when the action executes). */
+export async function canDecide(db: Db, workspaceId: string, userId: string) {
   const [m] = await db
     .select({ role: schema.workspaceMember.role })
     .from(schema.workspaceMember)
     .where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, userId)));
-  return m?.role === "owner" || m?.role === "editor";
+  return can(m?.role, "approval.decide");
 }
 
 export async function listPendingApprovals(db: Db, workspaceId: string) {
@@ -126,7 +128,7 @@ export async function listPendingApprovals(db: Db, workspaceId: string) {
  * worker re-evaluates the gate — the decision is only honoured if still valid then.
  */
 export async function decide(db: Db, opts: { workspaceId: string; approvalId: string; userId: string; decision: "approve" | "reject" | "done" | "retry" | "fail"; note?: string }) {
-  if (!(await isEditor(db, opts.workspaceId, opts.userId))) throw new HttpError(403, "FORBIDDEN", "Only editors can decide approvals");
+  if (!(await canDecide(db, opts.workspaceId, opts.userId))) throw new HttpError(403, "FORBIDDEN", "Only workspace owners and editors can decide approvals; viewers can see them but not decide");
   return db.transaction(async (tx) => {
     const [a] = await tx.select().from(schema.approval).where(and(eq(schema.approval.id, opts.approvalId), eq(schema.approval.workspaceId, opts.workspaceId))).for("update");
     if (!a) throw notFound("Approval not found");
@@ -143,10 +145,15 @@ export async function decide(db: Db, opts: { workspaceId: string; approvalId: st
       .set({ status: approved ? "approved" : "rejected", resolution: a.kind === "review" ? opts.decision : null, decidedBy: opts.userId, decidedAt: new Date(), note: opts.note?.slice(0, 500) ?? null })
       .where(eq(schema.approval.id, a.id));
     // Wake the run: the worker re-checks the gate and continues or fails the step.
-    await tx.update(schema.run).set({ status: "queued", lockedBy: null }).where(and(eq(schema.run.id, a.runId), eq(schema.run.status, "waiting_approval")));
-    await tx.execute(sql`select pg_notify('flowline_runs', ${a.runId})`);
-    await tx.insert(schema.runEvent).values({ runId: a.runId, workspaceId: a.workspaceId, type: "approval_decided", nodeId: a.nodeId, data: { approvalId: a.id, decision: opts.decision } });
-    return { runId: a.runId, status: approved ? "approved" : "rejected" };
+    if (a.runId) {
+      await tx.update(schema.run).set({ status: "queued", lockedBy: null }).where(and(eq(schema.run.id, a.runId), eq(schema.run.status, "waiting_approval")));
+      await tx.execute(sql`select pg_notify('flowline_runs', ${a.runId})`);
+      await tx.insert(schema.runEvent).values({ runId: a.runId, workspaceId: a.workspaceId, type: "approval_decided", nodeId: a.nodeId, data: { approvalId: a.id, decision: opts.decision } });
+    } else if (a.agentRunId) {
+      await tx.update(schema.agentRun).set({ status: "queued", lockedBy: null }).where(and(eq(schema.agentRun.id, a.agentRunId), eq(schema.agentRun.status, "waiting_approval")));
+      await tx.execute(sql`select pg_notify('flowline_runs', ${a.agentRunId})`);
+    }
+    return { runId: a.runId, agentRunId: a.agentRunId, status: approved ? "approved" : "rejected" };
   });
 }
 
