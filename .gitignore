@@ -12,3 +12,4 @@ playwright-report/
 blob-report/
 /artifacts/phase-1/tmp/
 .DS_Store
+.env.staging

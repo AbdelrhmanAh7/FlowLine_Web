@@ -1,0 +1,49 @@
+# Local STAGING stack: the release image (web + worker + one-shot migrate) against its own PostgreSQL.
+#   FLOWLINE_IMAGE=flowline:<sha> docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+# Secrets come from .env.staging (gitignored, generated locally, never committed or copied into evidence).
+# Not production: no TLS, one web + one worker instance, no live payments (billing stays unconfigured unless
+# sk_test_ keys are provided), SaaS integrations need real OAuth apps/credentials to connect.
+name: flowline-staging
+x-app: &app
+  image: ${FLOWLINE_IMAGE:?set FLOWLINE_IMAGE=flowline:<sha>}
+  env_file: .env.staging
+  environment:
+    DATABASE_URL: postgres://flowline:${STAGING_DB_PASSWORD:?}@db:5432/flowline
+    BETTER_AUTH_URL: http://localhost:3200
+    FLOWLINE_PUBLIC_URL: http://localhost:3200
+    OLLAMA_BASE_URL: http://host.docker.internal:11434
+    FLOWLINE_EGRESS_ALLOWLIST: host.docker.internal:11434
+  extra_hosts: ["host.docker.internal:host-gateway"]
+  depends_on:
+    migrate: { condition: service_completed_successfully }
+  restart: unless-stopped
+services:
+  db:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_USER: flowline
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD:?}
+      POSTGRES_DB: flowline
+    ports: ["127.0.0.1:5434:5432"]
+    volumes: [staging-pg:/var/lib/postgresql/data]
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=50"]
+    mem_limit: 512m
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U flowline"], interval: 3s, retries: 30 }
+  migrate:
+    image: ${FLOWLINE_IMAGE:?}
+    environment:
+      DATABASE_URL: postgres://flowline:${STAGING_DB_PASSWORD:?}@db:5432/flowline
+    command: ["node_modules/.bin/tsx", "src/db/migrate.ts"]
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+  web:
+    <<: *app
+    ports: ["127.0.0.1:3200:3000"]
+    mem_limit: 1536m
+    healthcheck: { test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"], interval: 5s, retries: 30 }
+  worker:
+    <<: *app
+    command: ["node_modules/.bin/tsx", "worker/index.ts"]
+    mem_limit: 768m
+volumes:
+  staging-pg:
