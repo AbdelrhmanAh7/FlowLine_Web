@@ -165,14 +165,16 @@ function ScheduleForm({ node, cfg, set }: FormProps) {
   const cron = s(cfg.cron);
   const tz = s(cfg.timezone) || "UTC";
   const err = checkCron(cron, tz);
-  let preview: string[] = [];
-  if (!err) {
+  // "Now" is captured once per mount so the preview is stable across re-renders.
+  const [mountedAt] = useState(() => Date.now());
+  const preview = useMemo(() => {
+    if (err) return [];
     try {
-      preview = dueFires(cron, tz, new Date(), new Date(Date.now() + 60 * 86400_000), 3).map((d) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }).format(d));
+      return dueFires(cron, tz, new Date(mountedAt), new Date(mountedAt + 60 * 86400_000), 3).map((d) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }).format(d));
     } catch {
-      preview = [];
+      return [];
     }
-  }
+  }, [cron, tz, err, mountedAt]);
   const presets = [
     ["Every 15 min", "*/15 * * * *"],
     ["Hourly", "0 * * * *"],

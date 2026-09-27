@@ -24,7 +24,17 @@ export interface FlowRow {
   successRate: number | null;
 }
 
+interface Usage {
+  totalMicros: number;
+  budgetMicros: number | null;
+  currency: string;
+  rows: { kind: string; provider: string | null; model: string | null; events: number; inputTokens: number; outputTokens: number; costMicros: number; unpriced: number }[];
+}
+
 interface Overview {
+  pendingApprovals: number;
+  unhealthyConnections: { id: string; provider: string; label: string; status: string }[];
+  pausedFlows: number;
   flows: number;
   flowsRun24h: number;
   runs24h: number;
@@ -70,6 +80,7 @@ export function Dashboard() {
   const now = useNow();
   const [q, setQ] = useState("");
   const overview = useQuery({ queryKey: ["overview", workspace.id], queryFn: () => api<Overview>(`/api/workspaces/${workspace.id}/overview`), refetchInterval: 10_000 });
+  const usage = useQuery({ queryKey: ["usage", workspace.id], queryFn: () => api<Usage>(`/api/workspaces/${workspace.id}/usage`), refetchInterval: 30_000 });
   const flows = useQuery({ queryKey: ["flows", workspace.id], queryFn: () => api<{ flows: FlowRow[] }>(`/api/workspaces/${workspace.id}/flows`), select: (d) => d.flows });
   const create = useCreateFlow();
 
@@ -101,13 +112,13 @@ export function Dashboard() {
             <>
               <Kpi label="Flows" value={String(overview.data.flows)} note={`${overview.data.flowsRun24h} ran in 24h`} />
               <Kpi label="Runs (24h)" value={overview.data.runs24h.toLocaleString()} note={overview.data.successRate24h == null ? "no finished runs" : `${percent(overview.data.successRate24h)} success`} />
-              <Kpi label="Credits used" value="—" note="Not metered in this preview" muted />
-              <Kpi
-                label="Needs attention"
-                value={String(overview.data.failed24h)}
-                note={overview.data.failed24h ? "failed in 24h" : "nothing failing"}
-                tone={overview.data.failed24h ? "danger" : undefined}
-              />
+              <UsageKpi usage={usage.data} loading={usage.isPending} />
+              {(() => {
+                const o = overview.data;
+                const n = o.failed24h + o.pendingApprovals + o.unhealthyConnections.length;
+                const parts = [o.failed24h && `${o.failed24h} failed`, o.pendingApprovals && `${o.pendingApprovals} awaiting approval`, o.unhealthyConnections.length && `${o.unhealthyConnections.length} connection${o.unhealthyConnections.length > 1 ? "s" : ""} expired`].filter(Boolean);
+                return <Kpi label="Needs attention" value={String(n)} note={parts.length ? parts.join(" · ") : "nothing needs you"} tone={n ? "danger" : undefined} />;
+              })()}
             </>
           )}
         </section>
@@ -197,6 +208,29 @@ export function Dashboard() {
             <p className="text-base text-med">No runs yet. Open a flow and press Run — results show up here.</p>
           ) : (
             <ul className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+              {overview.data.unhealthyConnections.map((c) => (
+                <li key={c.id} className="flex min-w-0 items-center gap-2 text-base">
+                  <Dot tone="warning" />
+                  <span className="min-w-0 truncate text-med">
+                    {c.label} connection {c.status}
+                    {overview.data.pausedFlows ? ` — ${overview.data.pausedFlows} flow${overview.data.pausedFlows > 1 ? "s" : ""} paused` : ""}
+                  </span>
+                  <Link href={`/w/${workspace.slug}/integrations`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
+                    Reconnect →
+                  </Link>
+                </li>
+              ))}
+              {overview.data.pendingApprovals > 0 && (
+                <li className="flex min-w-0 items-center gap-2 text-base">
+                  <Dot tone="warning" />
+                  <span className="min-w-0 truncate text-med">
+                    {overview.data.pendingApprovals} action{overview.data.pendingApprovals > 1 ? "s" : ""} waiting for approval
+                  </span>
+                  <Link href={`/w/${workspace.slug}/runs?status=waiting`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
+                    Review →
+                  </Link>
+                </li>
+              )}
               {!overview.data.worker.online && (
                 <li className="flex items-center gap-2 text-base">
                   <Dot tone="warning" />
@@ -227,6 +261,16 @@ export function Dashboard() {
       </div>
     </div>
   );
+}
+
+function UsageKpi({ usage, loading }: { usage?: Usage; loading: boolean }) {
+  if (loading || !usage) return <Kpi label="Usage (this month)" value="…" note="loading" muted />;
+  const cost = usage.totalMicros / 1_000_000;
+  const tokens = usage.rows.reduce((n, r) => n + r.inputTokens + r.outputTokens, 0);
+  const unpriced = usage.rows.reduce((n, r) => n + r.unpriced, 0);
+  const budget = usage.budgetMicros != null ? ` / ${(usage.budgetMicros / 1_000_000).toFixed(2)}` : "";
+  const note = [tokens ? `${tokens.toLocaleString()} AI tokens` : "no AI usage", unpriced ? `${unpriced} unpriced` : null].filter(Boolean).join(" · ");
+  return <Kpi label="Usage (this month)" value={`${usage.currency} ${cost.toFixed(2)}${budget}`} note={note} />;
 }
 
 function Kpi({ label, value, note, tone, muted }: { label: string; value: string; note: string; tone?: "danger"; muted?: boolean }) {

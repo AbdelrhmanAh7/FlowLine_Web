@@ -45,12 +45,14 @@ const aliases: Record<string, string[]> = {
 function findValue(content: string, key: string, type: string | undefined): unknown {
   const names = aliases[key] ?? [key.replace(/_/g, " ")];
   for (const n of names) {
-    const re = new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b\\s*[:=#]?\\s*([^\\n,;]{1,80})`, "i");
+    const re = new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b\\s*[:=#]?\\s*([^\\n;]{1,80})`, "i");
     const m = content.match(re);
     if (!m) continue;
-    const raw = m[1]!.trim();
+    // Stop at the next "Key:" label on the same line.
+    const raw = m[1]!.replace(/\s+[A-Z][A-Za-z_]{1,20}:.*$/, "").replace(/,\s*$/, "").trim();
     if (type === "number" || type === "integer") {
-      const num = Number(raw.replace(/[^0-9.-]/g, ""));
+      const numMatch = raw.match(/-?[\d,]+(?:\.\d+)?/);
+      const num = numMatch ? Number(numMatch[0].replace(/,/g, "")) : NaN;
       if (Number.isFinite(num)) return type === "integer" ? Math.round(num) : num;
       continue;
     }

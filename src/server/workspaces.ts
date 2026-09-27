@@ -106,7 +106,22 @@ export async function workspaceOverview(workspaceId: string) {
     .where(eq(schema.run.workspaceId, workspaceId))
     .orderBy(desc(schema.run.createdAt))
     .limit(6);
+  const [{ approvals }] = await db
+    .select({ approvals: sql<number>`count(*)::int` })
+    .from(schema.approval)
+    .where(and(eq(schema.approval.workspaceId, workspaceId), eq(schema.approval.status, "pending"), sql`${schema.approval.expiresAt} > now()`));
+  const unhealthy = await db
+    .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
+    .from(schema.connection)
+    .where(and(eq(schema.connection.workspaceId, workspaceId), sql`${schema.connection.status} <> 'active'`));
+  const [{ paused }] = await db
+    .select({ paused: sql<number>`count(*)::int` })
+    .from(schema.flow)
+    .where(and(eq(schema.flow.workspaceId, workspaceId), isNull(schema.flow.deletedAt), sql`${schema.flow.pausedReason} is not null`));
   return {
+    pendingApprovals: approvals,
+    unhealthyConnections: unhealthy,
+    pausedFlows: paused,
     flows: flowCount.n,
     flowsRun24h: runs24.flowsRun,
     runs24h: runs24.total,
