@@ -13,14 +13,14 @@ export const GET = route(async (_req, { params }: Ctx) => {
   return json({ connections: await listConnections(db, workspace.id) });
 });
 
-const body = z.object({ provider: z.string().max(40), label: z.string().max(80).default(""), fields: z.record(z.string(), z.string().max(4000)) });
+const body = z.object({ provider: z.string().max(40), label: z.string().max(80).default(""), fields: z.record(z.string(), z.string().max(4000)), visibility: z.enum(["workspace", "private"]).default("workspace") });
 
 /** Connect with an API key / token / connection string. Credentials are verified with the provider, encrypted, and never returned. */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "integration.manage");
   const b = await parseBody(req, body);
-  const connection = await createConnection(db, user.id, workspace.id, b.provider, b.label, b.fields);
+  const connection = await createConnection(db, user.id, workspace.id, b.provider, b.label, b.fields, { visibility: b.visibility });
   await audit(db, { workspaceId: workspace.id, actor: userActor(user), action: "integration.connected", targetType: "connection", targetId: connection.id, data: { provider: b.provider } });
   return json({ connection }, { status: 201 });
 });

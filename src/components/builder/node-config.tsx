@@ -455,7 +455,7 @@ export function mappingSkeleton(a: CatalogAction) {
 }
 
 function ActionForm({ node, cfg, set }: FormProps) {
-  const { workspace } = useWorkspace();
+  const { workspace, user } = useWorkspace();
   const catalog = useCatalog();
   const connections = useConnections(workspace.id);
   const actionId = s(cfg.actionId);
@@ -498,7 +498,7 @@ function ActionForm({ node, cfg, set }: FormProps) {
           label="Connection"
           value={s(cfg.connectionId)}
           onChange={(v) => set({ connectionId: v })}
-          options={[{ value: "", label: conns.length ? "Choose a connection" : `No ${provider.name} connections yet` }, ...conns.map((c) => ({ value: c.id, label: `${c.label}${c.status !== "active" ? ` (${c.status})` : ""}` }))]}
+          options={[{ value: "", label: conns.length ? "Choose a connection" : `No ${provider.name} connections yet` }, ...conns.map((c) => ({ value: c.id, label: `${c.label}${c.status !== "active" ? ` (${c.status})` : ""}${c.visibility === "private" ? (c.ownerId === user.id ? " · private (yours)" : " · private to another member — can't run for you") : ""}` }))]}
           hint={
             <Link href={`/w/${workspace.slug}/integrations`} className="text-accent hover:underline">
               Manage connections →

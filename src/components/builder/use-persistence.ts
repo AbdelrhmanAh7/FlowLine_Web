@@ -229,5 +229,5 @@ export function usePersistence({ flow, userId, canEdit, name, snapshot, viewport
   else if (dirty) status = online ? "unsaved" : "offline";
   else status = "saved";
 
-  return { status, error, dirty, conflict, lastSavedAt, saveNow: doSave, retryNow, resolveConflict };
+  return { status, error, dirty, conflict, lastSavedAt, saveNow: doSave, retryNow, resolveConflict, getRevision: () => revisionRef.current };
 }

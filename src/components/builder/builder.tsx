@@ -42,6 +42,7 @@ import { NodeDrawer } from "./node-drawer";
 import { DRAG_MIME, NodePalette } from "./palette";
 import { useSearchParams } from "next/navigation";
 import { CopilotPanel } from "./copilot-panel";
+import { HistoryPanel } from "./history-panel";
 import { PausedBanner, PublishControl } from "./publish-panel";
 import { RunDock } from "./run-dock";
 import { serialize, usePersistence, type SaveStatus } from "./use-persistence";
@@ -117,6 +118,7 @@ function Editor({ data }: { data: FlowResponse }) {
   // "?copilot=1" (e.g. "Create with Copilot") opens the panel; search params are the same on server and client.
   const searchParams = useSearchParams();
   const [copilotOpen, setCopilotOpen] = useState(() => searchParams.has("copilot"));
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const paletteInput = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -667,7 +669,12 @@ function Editor({ data }: { data: FlowResponse }) {
               </Button>
             </span>
           )}
-          <Button size="sm" variant="ghost" onClick={() => setCopilotOpen((o) => !o)} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? "Read-only") : !online ? "Copilot needs a connection" : null}>
+          {!isMobile && (
+            <Button size="sm" variant="ghost" onClick={() => { setHistoryOpen((o) => !o); setCopilotOpen(false); }} aria-pressed={historyOpen}>
+              History
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => { setCopilotOpen((o) => !o); setHistoryOpen(false); }} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? "Read-only") : !online ? "Copilot needs a connection" : null}>
             ✦ Copilot
           </Button>
           {!isMobile && (
@@ -681,6 +688,16 @@ function Editor({ data }: { data: FlowResponse }) {
         </div>
       </header>
 
+      {historyOpen && !isMobile && (
+        <HistoryPanel
+          flowId={flow.id}
+          getRevision={persistence.getRevision}
+          onClose={() => setHistoryOpen(false)}
+          beforeRestore={async () => {
+            if (persistence.dirty && !(await persistence.saveNow())) throw new Error("Save your changes first");
+          }}
+        />
+      )}
       {copilotOpen && !readOnly && (
         <CopilotPanel
           flowId={flow.id}

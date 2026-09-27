@@ -14,7 +14,7 @@ interface Props {
   user: { id: string; name: string; email: string };
   workspace: WorkspaceInfo;
   role: Role;
-  workspaces: { id: string; name: string; slug: string }[];
+  workspaces: { id: string; name: string; slug: string; role?: string }[];
   children: ReactNode;
 }
 

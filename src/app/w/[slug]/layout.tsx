@@ -18,7 +18,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
       user={user}
       workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone }}
       role={row.role}
-      workspaces={workspaces.map((w) => ({ id: w.id, name: w.name, slug: w.slug }))}
+      workspaces={workspaces.map((w) => ({ id: w.id, name: w.name, slug: w.slug, role: w.role }))}
     >
       {children}
     </AppShell>

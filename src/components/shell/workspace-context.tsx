@@ -14,7 +14,7 @@ export interface WorkspaceCtx {
   workspace: WorkspaceInfo;
   role: Role;
   canEdit: boolean;
-  workspaces: { id: string; name: string; slug: string }[];
+  workspaces: { id: string; name: string; slug: string; role?: string }[];
 }
 
 export const WorkspaceContext = createContext<WorkspaceCtx | null>(null);

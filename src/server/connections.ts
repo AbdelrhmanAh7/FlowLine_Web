@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, isNull, like, or, sql } from "drizzle-orm";
+import { and, eq, isNull, like, or, sql, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { createProviderHttp, resolveBase } from "@/integrations/http";
@@ -12,7 +12,7 @@ import { HttpError, notFound } from "./http";
 
 export class ConnectionError extends Error {
   constructor(
-    public code: "CONNECTION_MISSING" | "CONNECTION_EXPIRED" | "CONNECTION_REVOKED" | "CONNECTION_SCOPE" | "CONNECTION_WORKSPACE" | "CONNECTION_PROVIDER",
+    public code: "CONNECTION_MISSING" | "CONNECTION_EXPIRED" | "CONNECTION_REVOKED" | "CONNECTION_SCOPE" | "CONNECTION_WORKSPACE" | "CONNECTION_PROVIDER" | "CONNECTION_PRIVATE",
     message: string,
   ) {
     super(message);
@@ -36,6 +36,8 @@ export function publicConnection(c: typeof schema.connection.$inferSelect) {
     status: c.status,
     statusReason: c.statusReason,
     accessExpiresAt: c.accessExpiresAt,
+    visibility: c.visibility,
+    ownerId: c.createdBy,
     createdAt: c.createdAt,
     lastUsedAt: c.lastUsedAt,
   };
@@ -86,7 +88,7 @@ export function credentialsFromFields(provider: ProviderDef, fields: Record<stri
   return creds;
 }
 
-export async function createConnection(db: Db, userId: string, workspaceId: string, providerId: string, label: string, fields: Record<string, string>) {
+export async function createConnection(db: Db, userId: string, workspaceId: string, providerId: string, label: string, fields: Record<string, string>, opts: { visibility?: "workspace" | "private" } = {}) {
   const provider = getProvider(providerId);
   if (!provider) throw notFound("Unknown provider");
   if (provider.authType === "oauth2" && !fields.token) throw new HttpError(400, "USE_OAUTH", `${provider.name} connects with OAuth`);
@@ -109,6 +111,7 @@ export async function createConnection(db: Db, userId: string, workspaceId: stri
       secretEnc: enc.ciphertext,
       keyId: enc.keyId,
       createdBy: userId,
+      visibility: opts.visibility ?? "workspace",
     })
     .returning();
   return publicConnection(row);
@@ -176,11 +179,15 @@ export async function markConnectionUnhealthy(db: Db, connectionId: string, stat
  * be active, and grant the action's scopes. Expiring OAuth tokens are refreshed
  * under a row lock so concurrent workers never race a rotating refresh token.
  */
-export async function getRuntimeCredentials(db: Db, opts: { connectionId: string; workspaceId: string; providerId: string; requiredScopes: string[] }): Promise<{ creds: Credentials; secrets: string[]; connection: typeof schema.connection.$inferSelect }> {
+export async function getRuntimeCredentials(db: Db, opts: { connectionId: string; workspaceId: string; providerId: string; requiredScopes: string[]; actingUserId?: string }): Promise<{ creds: Credentials; secrets: string[]; connection: typeof schema.connection.$inferSelect }> {
   const [conn] = await db.select().from(schema.connection).where(eq(schema.connection.id, opts.connectionId));
   if (!conn) throw new ConnectionError("CONNECTION_MISSING", "The connection used by this step no longer exists");
   if (conn.workspaceId !== opts.workspaceId) throw new ConnectionError("CONNECTION_WORKSPACE", "The connection belongs to a different workspace");
   if (conn.provider !== opts.providerId) throw new ConnectionError("CONNECTION_PROVIDER", "The connection is for a different app");
+  // A private connection is never shared: only runs acting for its creator may use it.
+  if (conn.visibility === "private" && (!opts.actingUserId || conn.createdBy !== opts.actingUserId)) {
+    throw new ConnectionError("CONNECTION_PRIVATE", `${conn.label} is a private connection of another member — use your own connection`);
+  }
   if (conn.status === "revoked") throw new ConnectionError("CONNECTION_REVOKED", `${conn.label} was revoked — reconnect it`);
   if (conn.status !== "active") throw new ConnectionError("CONNECTION_EXPIRED", `${conn.label} needs to be reconnected (${conn.statusReason ?? conn.status})`);
   if (conn.authType === "oauth2") {
@@ -386,4 +393,26 @@ export async function deleteConnection(db: Db, workspaceId: string, connectionId
   }
   await pauseFlowsUsingConnection(db, connectionId, "removed");
   await db.delete(schema.connection).where(eq(schema.connection.id, connectionId));
+}
+
+/** Only the creator may change a connection's visibility (a private credential is never made shared by someone else). */
+export async function setVisibility(db: Db, userId: string, workspaceId: string, connectionId: string, visibility: "workspace" | "private") {
+  const [c] = await db.select().from(schema.connection).where(and(eq(schema.connection.id, connectionId), eq(schema.connection.workspaceId, workspaceId)));
+  if (!c) throw notFound("Connection not found");
+  if (c.createdBy !== userId) throw new HttpError(403, "NOT_CONNECTION_OWNER", "Only the member who created this connection can change who may use it");
+  const [row] = await db.update(schema.connection).set({ visibility, updatedAt: new Date() }).where(eq(schema.connection.id, c.id)).returning();
+  return publicConnection(row!);
+}
+
+/**
+ * Connections a user may put into a flow: workspace-shared ones plus their own private ones.
+ * Used when saving/publishing so another member's private credential can't be referenced.
+ */
+export async function assertConnectionsUsable(db: Db, userId: string, workspaceId: string, connectionIds: string[]) {
+  if (connectionIds.length === 0) return;
+  const rows = await db.select({ id: schema.connection.id, visibility: schema.connection.visibility, createdBy: schema.connection.createdBy, label: schema.connection.label, workspaceId: schema.connection.workspaceId }).from(schema.connection).where(inArray(schema.connection.id, connectionIds));
+  for (const r of rows) {
+    if (r.workspaceId !== workspaceId) throw new HttpError(422, "CONNECTION_WORKSPACE", "A step uses a connection from another workspace");
+    if (r.visibility === "private" && r.createdBy !== userId) throw new HttpError(422, "CONNECTION_PRIVATE", `"${r.label}" is another member's private connection — choose your own or a shared one`);
+  }
 }

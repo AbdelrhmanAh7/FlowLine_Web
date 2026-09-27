@@ -42,6 +42,8 @@ export interface ConnectionDto {
   status: "active" | "expired" | "revoked" | "error";
   statusReason: string | null;
   flowCount: number;
+  visibility: "workspace" | "private";
+  ownerId: string | null;
   createdAt: string;
   lastUsedAt: string | null;
 }

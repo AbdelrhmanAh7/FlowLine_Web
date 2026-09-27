@@ -194,6 +194,9 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
         <p className="data truncate text-sm text-muted">
           {c.accountLabel} · {c.flowCount} flow{c.flowCount === 1 ? "" : "s"} · used {timeAgo(c.lastUsedAt)}
         </p>
+        <p className="text-sm text-med" data-testid={`visibility-${c.provider}`}>
+          {c.visibility === "private" ? "🔒 Private — only its creator's runs can use it" : "Shared with the workspace"}
+        </p>
         {c.statusReason && <p className="text-sm text-warning">{c.statusReason}</p>}
         <div className="mt-auto flex gap-2 pt-1">
           <Button size="sm" onClick={onReconnect} disabledReason={canEdit ? null : "Viewers can't change connections"}>
@@ -220,6 +223,7 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
   const toast = useToast();
   const online = useOnline();
   const [label, setLabel] = useState("");
+  const [priv, setPriv] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const oauth = provider.authType === "oauth2";
@@ -235,7 +239,7 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
         return null;
       }
       if (reconnect) return api(`/api/connections/${reconnect.id}`, { method: "PATCH", json: { fields } });
-      return api(`/api/workspaces/${workspace.id}/connections`, { method: "POST", json: { provider: provider.id, label, fields } });
+      return api(`/api/workspaces/${workspace.id}/connections`, { method: "POST", json: { provider: provider.id, label, fields, visibility: priv ? "private" : "workspace" } });
     },
     onSuccess: (r) => {
       if (r === null) return;
@@ -270,6 +274,15 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
             <Field label="Label (optional)" htmlFor="conn-label">
               <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} placeholder={`${provider.name} (test)`} />
             </Field>
+          )}
+          {!oauth && !reconnect && (
+            <label className="flex items-start gap-2 text-base">
+              <input type="checkbox" className="mt-1" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
+              <span>
+                Private — only my runs can use this connection
+                <span className="block text-sm text-muted">Teammates can see it exists but can&apos;t run steps with it or publish flows that use it.</span>
+              </span>
+            </label>
           )}
           {!oauth &&
             provider.connectFields.map((f) => (

@@ -153,3 +153,47 @@ export async function softDeleteFlow(flowId: string) {
 export function flowIssues(graph: FlowGraph) {
   return validateGraph(graph);
 }
+
+/** One immutable version, for inspection (the graph that ran). */
+export async function getVersion(flowId: string, versionId: string) {
+  const [v] = await db
+    .select()
+    .from(schema.flowVersion)
+    .where(and(eq(schema.flowVersion.id, versionId), eq(schema.flowVersion.flowId, flowId)));
+  if (!v) throw notFound("Version not found");
+  return { id: v.id, version: v.version, revision: v.revision, reason: v.reason, name: v.name, graph: v.graph, createdAt: v.createdAt };
+}
+
+/**
+ * Rollback: copies an old version's definition into the draft as a NEW revision (history is never
+ * rewritten), with optimistic concurrency. Publishing it is a separate, explicit step.
+ */
+export async function restoreVersion(user: CurrentUser, flowId: string, versionId: string, baseRevision: number) {
+  const v = await getVersion(flowId, versionId);
+  return saveFlow(user, flowId, { baseRevision, graph: v.graph as FlowGraph, name: v.name });
+}
+
+/**
+ * Shares a flow by copying it into another workspace the user can edit. Credentials are NEVER shared:
+ * every connection reference is cleared (the recipient chooses their own), and so are references to
+ * subflows in the source workspace.
+ */
+export async function shareFlowCopy(user: CurrentUser, flowId: string, targetWorkspaceId: string) {
+  const [src] = await db.select().from(schema.flow).where(and(eq(schema.flow.id, flowId), isNull(schema.flow.deletedAt)));
+  if (!src) throw notFound("Flow not found");
+  const graph = structuredClone(src.graph as FlowGraph);
+  let cleared = 0;
+  for (const n of graph.nodes) {
+    const c = n.data.config as unknown as Record<string, unknown>;
+    if (typeof c.connectionId === "string" && c.connectionId) {
+      c.connectionId = "";
+      cleared++;
+    }
+    if ((n.type === "flow.subflow" || n.type === "logic.loop") && src.workspaceId !== targetWorkspaceId) c.flowId = "";
+  }
+  const [row] = await db
+    .insert(schema.flow)
+    .values({ workspaceId: targetWorkspaceId, name: `${src.name} (shared copy)`.slice(0, 80), graph, templateId: src.templateId, createdBy: user.id, updatedBy: user.id })
+    .returning();
+  return { flow: row!, clearedConnections: cleared };
+}

@@ -7,6 +7,7 @@ import { TRIGGER_TYPES } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
 import { getAction } from "@/integrations/registry";
 import type { CurrentUser } from "./access";
+import { assertConnectionsUsable } from "./connections";
 import { decryptSecret, encryptSecret, randomToken } from "./crypto";
 import { insertVersion } from "./flows";
 import { HttpError, notFound } from "./http";
@@ -80,6 +81,9 @@ export async function publishFlow(user: CurrentUser, flowId: string) {
     const graph = flow.graph as FlowGraph;
     const issues = [...validateGraph(graph), ...(await serverIssues(tx as unknown as Db, flow.workspaceId, graph, 0, [flow.id]))];
     if (issues.length) throw new HttpError(422, "INVALID_FLOW", "Fix these issues before publishing", issues);
+    // Triggered runs act for the publisher: they must be allowed to use every connection in the flow.
+    const connIds = [...new Set(graph.nodes.map((n) => (n.data.config as { connectionId?: string }).connectionId).filter((x): x is string => Boolean(x)))];
+    await assertConnectionsUsable(tx as unknown as Db, user.id, flow.workspaceId, connIds);
     const version = await insertVersion(tx, user, flow, "publish");
     await tx.update(schema.flow).set({ publishedVersionId: version.id, publishedBy: user.id, updatedAt: new Date() }).where(eq(schema.flow.id, flow.id));
 

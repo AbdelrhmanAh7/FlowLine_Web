@@ -252,7 +252,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
 
   let rt: Awaited<ReturnType<typeof getRuntimeCredentials>>;
   try {
-    rt = await getRuntimeCredentials(ctx.db, { connectionId, workspaceId: ctx.run.workspaceId, providerId: provider.id, requiredScopes: action.requiredScopes });
+    rt = await getRuntimeCredentials(ctx.db, { connectionId, workspaceId: ctx.run.workspaceId, providerId: provider.id, requiredScopes: action.requiredScopes, actingUserId: (ctx.run.policy as { actingUserId?: string } | null)?.actingUserId });
   } catch (e) {
     if (e instanceof ConnectionError) {
       await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "connection_blocked", nodeId: node.id, data: { code: e.code } });
