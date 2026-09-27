@@ -11,6 +11,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, EmptyState, ErrorState, Input, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx, onTabListKeyDown } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { can, denyReason, type Role } from "@/lib/permissions";
 import { duration, pretty, timeAgo } from "@/lib/format";
 import { useNow, useOnline, useViewport } from "@/lib/hooks";
 import { isActive, isOpen, type ApprovalDto, type RunDetailDto, type RunListItem, type RunStepDto } from "@/lib/types";
@@ -523,7 +524,7 @@ function StepPanel({
 }
 
 function DecisionBox({ approval, runId }: { approval: ApprovalDto; runId: string }) {
-  const { canEdit } = useWorkspace();
+  const { role } = useWorkspace();
   const qc = useQueryClient();
   const toast = useToast();
   const [note, setNote] = useState("");
@@ -535,7 +536,8 @@ function DecisionBox({ approval, runId }: { approval: ApprovalDto; runId: string
     },
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't record the decision", "danger"),
   });
-  const reason = canEdit ? null : "Only editors can decide";
+  // Same rule the server enforces (approval.decide): viewers can see the request but not decide it.
+  const reason = can(role as Role, "approval.decide") ? null : denyReason(role as Role, "approval.decide");
   const review = approval.kind === "review";
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-warning/50 bg-warning/5 p-3" data-testid="decision-box">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
@@ -25,7 +25,9 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("members");
+  // ?tab=… deep-links a section; returning from checkout (?billing=…) opens Plan & billing.
+  const params = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => (params.get("billing") ? "plan" : TABS.some((t) => t.id === params.get("tab")) ? (params.get("tab") as Tab) : "members"));
   return (
     <div className="flex flex-col">
       <PageHeader title="Settings" />
