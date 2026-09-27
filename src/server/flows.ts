@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
+import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
 import { MAX_EDGES, MAX_NODES, validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "./access";
@@ -62,7 +63,7 @@ export async function listFlows(workspaceId: string) {
 }
 
 export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }) {
-  const template = input.templateId ? LOCAL_TEMPLATES.find((t) => t.id === input.templateId) : undefined;
+  const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
   const name = flowNameSchema.parse(input.name ?? template?.name ?? "Untitled flow");
   const graph: FlowGraph = structuredClone(template?.graph ?? BLANK_GRAPH);

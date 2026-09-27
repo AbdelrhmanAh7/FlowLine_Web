@@ -20,6 +20,7 @@ Identity: `GET /oauth2/v3/userinfo` on the `https://www.googleapis.com` base. `a
 | Action | Side effect | Sensitive | Required scopes | Verify | Real endpoint |
 |---|---|---|---|---|---|
 | `gmail.search_messages` | none | – | gmail.readonly | – | `GET /gmail/v1/users/me/messages?q=` |
+| `gmail.get_message` | none | – | gmail.readonly | – | `GET /gmail/v1/users/me/messages/{messageId}?format=full` (headers, snippet, attachment metadata walked from `payload.parts`) |
 | `gmail.get_attachment` | none | – | gmail.readonly | – | `GET /gmail/v1/users/me/messages/{messageId}/attachments/{attachmentId}` (base64url, 5MB cap) |
 | `gmail.send` | non_idempotent | ✅ | gmail.send | ✅ searches `rfc822msgid:{idempotencyKey}@flowline` | `POST /gmail/v1/users/me/messages/send` (base64url RFC822) |
 

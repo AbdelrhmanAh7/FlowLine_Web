@@ -294,6 +294,9 @@ export function validateGraph(graph: FlowGraph): ValidationIssue[] {
       issues.push({ code: "MERGE_NEEDS_INPUTS", message: `${n.data.label}: connect at least two branches to merge`, nodeId: n.id });
     }
     issues.push(...validateConfig(n));
+    // Templates ship with REPLACE_WITH_… placeholders; running is blocked until they're filled in.
+    const placeholders = [...new Set(JSON.stringify(n.data.config).match(/REPLACE_WITH_[A-Z0-9_]+/g) ?? [])];
+    for (const ph of placeholders) issues.push({ code: "SETUP_REQUIRED", message: `${n.data.label}: finish setup — replace ${ph}`, nodeId: n.id });
     // References must point to steps that run before this one.
     const up = ancestors({ edges: accepted }, n.id);
     for (const ref of stepReferences(n)) {

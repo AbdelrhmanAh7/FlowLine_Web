@@ -63,6 +63,70 @@ const provider: ProviderDef = {
       },
     },
     {
+      id: "gmail.get_message",
+      version: 1,
+      provider: "gmail",
+      title: "Get message",
+      description: "Fetch a full message: headers, snippet and attachment metadata.",
+      input: z.object({
+        messageId: z.string().max(128),
+      }),
+      output: z.object({
+        id: z.string(),
+        threadId: z.string(),
+        from: z.string(),
+        fromName: z.string(),
+        subject: z.string(),
+        snippet: z.string(),
+        attachments: z
+          .array(
+            z.object({
+              attachmentId: z.string(),
+              filename: z.string(),
+              mimeType: z.string(),
+              size: z.number(),
+            }),
+          )
+          .max(50),
+      }),
+      sideEffect: "none",
+      requiredScopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+      async run(ctx, input) {
+        const { data } = await ctx.http.request<GmailFullMessage>({
+          method: "GET",
+          path: `/gmail/v1/users/me/messages/${input.messageId}`,
+          query: { format: "full" },
+        });
+        const headers = data.payload?.headers ?? [];
+        const header = (name: string) => headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? "";
+        const { email: from, name: fromName } = parseFrom(header("From"));
+        const attachments: { attachmentId: string; filename: string; mimeType: string; size: number }[] = [];
+        const walk = (parts: GmailPart[] | undefined) => {
+          for (const part of parts ?? []) {
+            if (part.body?.attachmentId) {
+              attachments.push({
+                attachmentId: part.body.attachmentId,
+                filename: part.filename ?? "",
+                mimeType: part.mimeType ?? "application/octet-stream",
+                size: part.body.size ?? 0,
+              });
+            }
+            walk(part.parts);
+          }
+        };
+        walk(data.payload?.parts);
+        return {
+          id: data.id,
+          threadId: data.threadId,
+          from,
+          fromName,
+          subject: header("Subject"),
+          snippet: data.snippet ?? "",
+          attachments,
+        };
+      },
+    },
+    {
       id: "gmail.get_attachment",
       version: 1,
       provider: "gmail",
@@ -144,6 +208,29 @@ function buildRaw(to: string, subject: string, body: string, idempotencyKey: str
     `Content-Type: text/plain; charset="UTF-8"`,
   ];
   return Buffer.from([...headers, "", body].join("\r\n"), "utf8").toString("base64url");
+}
+
+interface GmailPart {
+  mimeType?: string;
+  filename?: string;
+  body?: { attachmentId?: string; size?: number };
+  parts?: GmailPart[];
+}
+
+interface GmailFullMessage {
+  id: string;
+  threadId: string;
+  snippet?: string;
+  payload?: {
+    headers?: { name: string; value: string }[];
+    parts?: GmailPart[];
+  };
+}
+
+function parseFrom(value: string): { email: string; name: string } {
+  const m = /^\s*(?:"([^"]*)"|([^<]*?))\s*<([^>]+)>\s*$/.exec(value);
+  if (m) return { email: m[3]!.trim(), name: (m[1] ?? m[2] ?? "").trim() };
+  return { email: value.trim(), name: "" };
 }
 
 export default provider;

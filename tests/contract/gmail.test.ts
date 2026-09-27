@@ -35,6 +35,56 @@ describe("gmail.search_messages", () => {
     expect(queryOf(r).get("q")).toBe("invoice");
     expect(queryOf(r).get("maxResults")).toBe("10");
   });
+
+  it("q with has:attachment returns both invoice messages, invoice first", async () => {
+    const out = await runAction<{ messages: { id: string }[] }>("gmail.search_messages", makeCtx(p, oauthCreds), {
+      q: "has:attachment invoice",
+      maxResults: 10,
+    });
+    expect(out.messages.map((m) => m.id)).toEqual(["msg-100", "msg-200"]);
+  });
+});
+
+describe("gmail.get_message", () => {
+  it("GETs the message with format=full and parses headers and attachments", async () => {
+    const out = await runAction<{
+      id: string;
+      threadId: string;
+      from: string;
+      fromName: string;
+      subject: string;
+      snippet: string;
+      attachments: { attachmentId: string; filename: string; mimeType: string; size: number }[];
+    }>("gmail.get_message", makeCtx(p, oauthCreds), { messageId: "msg-100" });
+    expect(out).toMatchObject({
+      id: "msg-100",
+      threadId: "thread-100",
+      from: "billing@acme-supplies.test",
+      fromName: "Acme Billing",
+      subject: "Invoice INV-001",
+    });
+    expect(out.snippet).toContain("invoice");
+    expect(out.attachments).toHaveLength(1);
+    expect(out.attachments[0]).toMatchObject({ attachmentId: "att-100", filename: "INV-001.pdf", mimeType: "application/pdf" });
+    expect(out.attachments[0]!.size).toBeGreaterThan(0);
+
+    const r = await fake.lastRequest("gmail");
+    expect(r.method).toBe("GET");
+    expect(r.path).toBe("/gmail/v1/users/me/messages/msg-100");
+    expect(queryOf(r).get("format")).toBe("full");
+  });
+
+  it("parses the injection message (Globex) the same way", async () => {
+    const out = await runAction<{ from: string; fromName: string; subject: string; attachments: { attachmentId: string; filename: string }[] }>(
+      "gmail.get_message",
+      makeCtx(p, oauthCreds),
+      { messageId: "msg-200" },
+    );
+    expect(out.from).toBe("ap@globex.test");
+    expect(out.fromName).toBe("Globex AP");
+    expect(out.subject).toBe("Invoice INV-002");
+    expect(out.attachments[0]).toMatchObject({ attachmentId: "att-200", filename: "INV-002.pdf" });
+  });
 });
 
 describe("gmail.get_attachment", () => {
