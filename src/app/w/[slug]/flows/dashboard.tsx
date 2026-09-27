@@ -77,8 +77,8 @@ export function useCreateFlow() {
   const router = useRouter();
   const toast = useToast();
   return useMutation({
-    mutationFn: (body: { name?: string; templateId?: string }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
-    onSuccess: ({ flow }) => router.push(`/w/${workspace.slug}/flows/${flow.id}`),
+    mutationFn: ({ copilot: _c, ...body }: { name?: string; templateId?: string; copilot?: boolean }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
+    onSuccess: ({ flow }, vars) => router.push(`/w/${workspace.slug}/flows/${flow.id}${vars.copilot ? "?copilot=1" : ""}`),
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't create the flow", "danger"),
   });
 }
@@ -103,7 +103,10 @@ export function Dashboard() {
           Search flows
         </label>
         <Input id="flow-search" placeholder="Search flows…" value={q} onChange={(e) => setQ(e.target.value)} className="h-8 w-44 sm:w-60" />
-        <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} loading={create.isPending} disabledReason={newReason}>
+        <Button onClick={() => create.mutate({ name: "Untitled flow", copilot: true })} loading={create.isPending && create.variables?.copilot} disabledReason={newReason}>
+          ✦ Create with Copilot
+        </Button>
+        <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} loading={create.isPending && !create.variables?.copilot} disabledReason={newReason}>
           + New flow
         </Button>
       </PageHeader>

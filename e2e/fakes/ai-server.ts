@@ -191,6 +191,90 @@ function handleAgentChat(r: { model: string; messages: AgentMsg[]; tools: AgentT
   return reply(`Nothing relevant was found. ${body.slice(0, 120)}`);
 }
 
+interface CopilotCtx {
+  catalog: { connections: { id: string; provider: string; status: string }[] };
+  currentWorkflow: { nodes: { id: string; type: string; label: string }[]; edges: { source: string; target: string }[] };
+}
+
+/**
+ * Deterministic stand-in for the Copilot model: turns a few request shapes into patches, including
+ * deliberately INVALID ones (invented node type / integration / parameter / credential) so the
+ * server-side validator is exercised. It is not a model.
+ */
+function handleCopilot(r: { model: string; messages: { role: string; content: string }[] }, res: ServerResponse) {
+  const sys = r.messages.find((m) => m.role === "system")?.content ?? "";
+  const request = (/this request from the workflow's owner: "([\s\S]*?)"\. Use ONLY/.exec(sys)?.[1] ?? "").toLowerCase();
+  const user = r.messages.find((m) => m.role === "user")?.content ?? "";
+  let ctx: CopilotCtx = { catalog: { connections: [] }, currentWorkflow: { nodes: [], edges: [] } };
+  try {
+    ctx = JSON.parse(/<untrusted_content>([\s\S]*)<\/untrusted_content>/.exec(user)?.[1]?.trim() ?? "{}") as CopilotCtx;
+  } catch {
+    /* keep empty */
+  }
+  const conn = (provider: string) => ctx.catalog.connections.find((c) => c.provider === provider && c.status === "active")?.id ?? "";
+  const nodes = ctx.currentWorkflow.nodes;
+  const edges = ctx.currentWorkflow.edges;
+  type Patch = { summary: string; addNodes: unknown[]; updateNodes: unknown[]; removeNodes: string[]; addEdges: unknown[]; removeEdges: unknown[] };
+  const patch: Patch = { summary: "", addNodes: [], updateNodes: [], removeNodes: [], addEdges: [], removeEdges: [] };
+  const trigger = nodes.find((n) => n.type.startsWith("trigger."));
+  const tail = [...nodes].reverse().find((n) => n.type !== "output") ?? trigger;
+
+  if (request.includes("teleport")) {
+    patch.summary = "Teleport the data";
+    patch.addNodes.push({ id: "tp", type: "magic.teleport", label: "Teleport", config: {} });
+    if (tail) patch.addEdges.push({ source: tail.id, target: "tp" });
+  } else if (request.includes("discord")) {
+    patch.summary = "Post to Discord";
+    patch.addNodes.push({ id: "dc", type: "integration.action", label: "Discord — Post", config: { actionId: "discord.post_message", connectionId: "", inputMapping: '{ "text": "hi" }' } });
+    if (tail) patch.addEdges.push({ source: tail.id, target: "dc" });
+  } else if (request.includes("bogus")) {
+    patch.summary = "Transform with a made-up parameter";
+    patch.addNodes.push({ id: "bx", type: "transform.json", label: "Shape", config: { expression: "$", turbo: true } });
+    if (tail) patch.addEdges.push({ source: tail.id, target: "bx" });
+  } else if (request.includes("hardcoded credential")) {
+    patch.summary = "Post to Slack with a made-up connection";
+    patch.addNodes.push({ id: "sl", type: "integration.action", label: "Slack — Post", config: { actionId: "slack.post_message", connectionId: "00000000-0000-4000-8000-000000000000", inputMapping: '{ "channel": "C1", "text": "hi" }' } });
+    if (tail) patch.addEdges.push({ source: tail.id, target: "sl" });
+  } else if (/\bremove (.+)$/.test(request)) {
+    const name = /\bremove (?:the )?(.+?)(?: step)?$/.exec(request)![1]!.trim();
+    const victim = nodes.find((n) => n.label.toLowerCase() === name);
+    patch.summary = `Remove ${victim?.label ?? name}`;
+    if (victim) {
+      patch.removeNodes.push(victim.id);
+      const ins = edges.filter((e) => e.target === victim.id).map((e) => e.source);
+      const outs = edges.filter((e) => e.source === victim.id).map((e) => e.target);
+      for (const s of ins) for (const t of outs) patch.addEdges.push({ source: s, target: t });
+    }
+  } else if (/add (a )?(condition|filter)/.test(request) && tail) {
+    patch.summary = `Only continue when the value is present, after "${tail.label}"`;
+    const next = edges.filter((e) => e.source === tail.id).map((e) => e.target);
+    patch.addNodes.push({ id: "gate", type: "logic.condition", label: "Has value?", config: { expression: "$exists($)" } });
+    for (const t of next) {
+      patch.removeEdges.push({ source: tail.id, target: t });
+      patch.addEdges.push({ source: "gate", target: t, sourceHandle: "true" });
+    }
+    patch.addEdges.push({ source: tail.id, target: "gate" });
+  } else if (/kpi|leadership|summar/.test(request)) {
+    patch.summary = "Every Monday: query KPIs, summarize the changes with AI, email leadership (email needs approval).";
+    patch.addNodes.push(
+      { id: "sched", type: "trigger.schedule", label: "Every Monday 09:00", config: { cron: "0 9 * * 1", timezone: "UTC", missedPolicy: "skip" } },
+      { id: "kpis", type: "integration.action", label: "Postgres — KPIs", config: { actionId: "postgres.query", connectionId: conn("postgres"), inputMapping: '{ "sql": "select week, revenue, signups from kpi order by week desc limit 2" }', requireApproval: false } },
+      { id: "sum", type: "ai.generate", label: "Summarize changes", config: { instructions: "Summarize the important week-over-week KPI changes for leadership in 3 bullets.", source: "$string($steps.kpis.rows)", maxTokens: 300, model: "" } },
+      { id: "mail", type: "integration.action", label: "Gmail — Email leadership", config: { actionId: "gmail.send", connectionId: conn("gmail"), inputMapping: '{ "to": "leadership@example.com", "subject": "Weekly KPI digest", "body": $steps.sum.text }', requireApproval: true } },
+      { id: "done", type: "output", label: "Sent", config: { key: "digest", expression: "" } },
+    );
+    patch.addEdges.push({ source: "sched", target: "kpis" }, { source: "kpis", target: "sum" }, { source: "sum", target: "mail" }, { source: "mail", target: "done" });
+  } else {
+    patch.summary = "Add a transform step";
+    patch.addNodes.push({ id: "shape", type: "transform.json", label: "Shape data", config: { expression: "$" } });
+    if (tail) patch.addEdges.push({ source: tail.id, target: "shape" });
+  }
+  const out = JSON.stringify(patch);
+  res.writeHead(200, { "content-type": "application/json" }).end(
+    JSON.stringify({ model: r.model, message: { role: "assistant", content: out }, done: true, prompt_eval_count: Math.ceil((sys.length + user.length) / 4), eval_count: Math.ceil(out.length / 4) }),
+  );
+}
+
 function handleChat(reqBody: string, res: ServerResponse) {
   const raw = JSON.parse(reqBody) as { model: string; format?: Schema; messages: { role: string; content: string }[]; tools?: AgentTool[] };
   if (Array.isArray(raw.tools)) {
@@ -204,6 +288,7 @@ function handleChat(reqBody: string, res: ServerResponse) {
     return handleAgentChat(raw as never, res);
   }
   const r = raw;
+  const sys = r.messages.find((m) => m.role === "system")?.content ?? "";
   const user = r.messages.find((m) => m.role === "user")?.content ?? "";
   // A real model reads HTML fine; this rule-based double strips markup first.
   const data = /<untrusted_content>([\s\S]*)<\/untrusted_content>/.exec(user)?.[1] ?? user;
@@ -222,6 +307,7 @@ function handleChat(reqBody: string, res: ServerResponse) {
       return;
     }
   }
+  if (sys.includes("FLOWLINE_COPILOT")) return handleCopilot(r, res);
   const out = r.format ? JSON.stringify(fill(r.format, content)) : `Summary: ${content.replace(/\s+/g, " ").trim().slice(0, 200)}`;
   const system = r.messages.find((m) => m.role === "system")?.content ?? "";
   res.writeHead(200, { "content-type": "application/json" }).end(

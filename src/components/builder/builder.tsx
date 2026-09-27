@@ -40,6 +40,8 @@ import { CanvasStatusContext, nodeTypes } from "./flow-node";
 import { edgeId, toDomain, toRF, type RFEdge, type RFNode, type Snapshot } from "./graph-utils";
 import { NodeDrawer } from "./node-drawer";
 import { DRAG_MIME, NodePalette } from "./palette";
+import { useSearchParams } from "next/navigation";
+import { CopilotPanel } from "./copilot-panel";
 import { PausedBanner, PublishControl } from "./publish-panel";
 import { RunDock } from "./run-dock";
 import { serialize, usePersistence, type SaveStatus } from "./use-persistence";
@@ -112,6 +114,9 @@ function Editor({ data }: { data: FlowResponse }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
   const [issuesOpen, setIssuesOpen] = useState(false);
+  // "?copilot=1" (e.g. "Create with Copilot") opens the panel; search params are the same on server and client.
+  const searchParams = useSearchParams();
+  const [copilotOpen, setCopilotOpen] = useState(() => searchParams.has("copilot"));
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const paletteInput = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -594,7 +599,7 @@ function Editor({ data }: { data: FlowResponse }) {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="builder">
+    <div className="relative flex h-full min-h-0 flex-col" data-testid="builder">
       <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-3 py-2 sm:px-4">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-base">
           <Link href={`/w/${workspace.slug}/flows`} className="shrink-0 text-med hover:text-hi">
@@ -662,6 +667,9 @@ function Editor({ data }: { data: FlowResponse }) {
               </Button>
             </span>
           )}
+          <Button size="sm" variant="ghost" onClick={() => setCopilotOpen((o) => !o)} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? "Read-only") : !online ? "Copilot needs a connection" : null}>
+            ✦ Copilot
+          </Button>
           {!isMobile && (
             <Button size="sm" variant="ghost" onClick={() => setDockOpen((o) => !o)} aria-pressed={dockOpen} title={`Toggle run dock (${modKey()}J)`}>
               Runs <Kbd>{modKey()}J</Kbd>
@@ -673,6 +681,16 @@ function Editor({ data }: { data: FlowResponse }) {
         </div>
       </header>
 
+      {copilotOpen && !readOnly && (
+        <CopilotPanel
+          flowId={flow.id}
+          onClose={() => setCopilotOpen(false)}
+          beforePropose={async () => {
+            if (persistence.dirty && !(await persistence.saveNow())) throw new Error("Save your changes first — Copilot works on the saved flow");
+          }}
+          onApplied={() => window.location.replace(window.location.pathname)}
+        />
+      )}
       <PausedBanner flowId={flow.id} />
       {isMobile && (
         <div role="status" className="shrink-0 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">

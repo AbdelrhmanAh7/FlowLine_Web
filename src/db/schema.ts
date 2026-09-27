@@ -813,7 +813,7 @@ export const copilotProposal = pgTable(
     patch: jsonb("patch"),
     proposedGraph: jsonb("proposed_graph").$type<FlowGraph>(),
     diff: jsonb("diff"),
-    issues: jsonb("issues").$type<{ code: string; message: string }[]>().notNull().default([]),
+    issues: jsonb("issues").$type<{ code: string; message: string; severity: "error" | "warning"; nodeId?: string }[]>().notNull().default([]),
     status: text("status").notNull(), // invalid | proposed | approved | rejected | stale
     provider: text("provider"),
     model: text("model"),
