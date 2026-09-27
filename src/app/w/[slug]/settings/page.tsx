@@ -13,8 +13,9 @@ import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
 import { BillingPlan } from "./billing-plan";
 import { Members } from "./members";
+import { Sso } from "./sso";
 
-type Tab = "members" | "general" | "keys" | "plan" | "billing" | "audit";
+type Tab = "members" | "general" | "keys" | "plan" | "billing" | "audit" | "sso";
 const TABS: { id: Tab; label: string }[] = [
   { id: "members", label: "Members" },
   { id: "general", label: "General" },
@@ -22,6 +23,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "plan", label: "Plan & billing" },
   { id: "billing", label: "Usage & limits" },
   { id: "audit", label: "Audit log" },
+  { id: "sso", label: "SSO" },
 ];
 
 export default function SettingsPage() {
@@ -56,6 +58,7 @@ export default function SettingsPage() {
           {tab === "plan" && <BillingPlan />}
           {tab === "billing" && <Billing />}
           {tab === "audit" && <AuditLog />}
+          {tab === "sso" && <Sso />}
         </div>
       </div>
     </div>

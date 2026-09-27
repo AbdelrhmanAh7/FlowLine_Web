@@ -1,0 +1,1 @@
+ALTER TABLE "sso_state" ADD COLUMN "initiator_user_id" text;
