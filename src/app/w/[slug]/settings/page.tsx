@@ -8,12 +8,14 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { BillingPlan } from "./billing-plan";
 
-type Tab = "members" | "general" | "keys" | "billing";
+type Tab = "members" | "general" | "keys" | "plan" | "billing";
 const TABS: { id: Tab; label: string }[] = [
   { id: "members", label: "Members" },
   { id: "general", label: "General" },
   { id: "keys", label: "API keys" },
+  { id: "plan", label: "Plan & billing" },
   { id: "billing", label: "Usage & limits" },
 ];
 
@@ -39,6 +41,7 @@ export default function SettingsPage() {
           {tab === "members" && <Members />}
           {tab === "general" && <General />}
           {tab === "keys" && <ApiKeys />}
+          {tab === "plan" && <BillingPlan />}
           {tab === "billing" && <Billing />}
         </div>
       </div>
@@ -314,7 +317,7 @@ function Billing() {
               <Button type="submit" variant="primary" loading={save.isPending} disabledReason={!isOwner ? "Only workspace owners can change limits" : !form ? "No changes to save" : null}>
                 Save limits
               </Button>
-              <span className="text-sm text-muted">Plans and payments: Phase 3.</span>
+              <span className="text-sm text-muted">Subscriptions and plans live under Plan &amp; billing.</span>
             </div>
           </form>
         )}

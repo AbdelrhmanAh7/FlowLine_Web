@@ -10,7 +10,9 @@ import { sql } from "drizzle-orm";
 import { Client } from "pg";
 import { db, pool } from "@/db";
 import * as schema from "@/db/schema";
+import { isBillingConfigured, reconcileUsage } from "@/billing/service";
 import { RUN_CHANNEL } from "@/server/runs";
+import { monthStart } from "@/server/usage";
 import { stopSandbox } from "@/engine/sandbox";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
@@ -35,6 +37,24 @@ async function beat() {
     .insert(schema.workerHeartbeat)
     .values({ workerId })
     .onConflictDoUpdate({ target: schema.workerHeartbeat.workerId, set: { lastSeenAt: new Date() } });
+}
+
+/** Daily billing reconciliation: report this period's ledger totals for every workspace with a billing account. */
+let lastReconcileDay = "";
+async function billingReconcileTick() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today === lastReconcileDay) return;
+  lastReconcileDay = today;
+  if (!isBillingConfigured()) return;
+  const accounts = await db.select({ workspaceId: schema.billingAccount.workspaceId }).from(schema.billingAccount);
+  for (const a of accounts) {
+    try {
+      const r = await reconcileUsage(a.workspaceId, monthStart());
+      if (r.reported.length) log("billing reconcile", a.workspaceId, r.reported.map((m) => `${m.metric}=${m.quantity}`).join(", "));
+    } catch (e) {
+      log("billing reconcile failed for", a.workspaceId, e instanceof Error ? e.message : e);
+    }
+  }
 }
 
 async function drain() {
@@ -68,6 +88,7 @@ async function main() {
   const beatTimer = setInterval(() => void beat().catch((e) => log("heartbeat failed", e.message)), 5000);
   const staleTimer = setInterval(() => void recoverStaleRuns(db).catch(() => {}), 30000);
   const scheduleTimer = setInterval(() => void schedulerTick(db).then((n) => n && log("scheduler fired", n)).catch((e) => log("scheduler error", e.message)), 10000);
+  const reconcileTimer = setInterval(() => void billingReconcileTick().catch((e) => log("billing reconcile error", e instanceof Error ? e.message : e)), 3600_000);
 
   while (!stopping) {
     try {
@@ -88,6 +109,7 @@ async function main() {
   clearInterval(beatTimer);
   clearInterval(staleTimer);
   clearInterval(scheduleTimer);
+  clearInterval(reconcileTimer);
   await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
   stopSandbox();
