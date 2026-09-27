@@ -260,6 +260,16 @@ export async function startSso(opts: {
   return { url: u.toString(), state, testSignIn };
 }
 
+/**
+ * Account-link namespace: the workspace AND the IdP identity (issuer + client id). Pointing the workspace at a
+ * different IdP never inherits old links — a subject asserted by the new IdP can't reach an account linked
+ * under the old one; the account holder has to link again while signed in.
+ */
+export function ssoProviderId(workspaceId: string, issuer: string, clientId: string) {
+  return `sso:${workspaceId}:${createHash("sha256").update(`${issuer}
+${clientId}`).digest("hex").slice(0, 24)}`;
+}
+
 /** httpOnly cookie carrying the pending state, set by /api/sso/start and required by the callback. */
 export const SSO_STATE_COOKIE = "fl_sso_state";
 
@@ -387,7 +397,7 @@ export async function completeSso(opts: {
       "SSO_TOKEN_INVALID",
       "The identity token has no subject",
     );
-  const providerId = `sso:${ws.id}`;
+  const providerId = ssoProviderId(ws.id, cfg.issuer, cfg.clientId);
   const email = claims.email;
   const [linked] = await db
     .select({ userId: schema.account.userId })

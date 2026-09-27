@@ -204,6 +204,34 @@ describe("agents: tool permissions ALLOW / ASK / DENY enforced by the backend", 
     expect((await steps(run.id)).some((s) => s.tool === "run_workflow" && s.decision === "approved")).toBe(true);
   });
 
+  it("an approval doesn't carry over to a republished workflow: the agent asks again and runs the new version once (Codex CX3-02)", async () => {
+    const { owner, ws, flow } = await setup("AgRepub");
+    const agent = await createAgent(owner, ws.id, { name: "Asker", instructions: "Run workflows.", tools: [{ tool: "run_workflow", flowId: flow.id, permission: "ask" }], limits: limits() });
+    const run = await startAgentRun({ agentId: agent.id, message: `run ${flow.name} with {"n": 5}`, actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } });
+    let r = await runAgent(run.id);
+    expect(r.status).toBe("waiting_approval");
+    const [ap] = await db.select().from(schema.approval).where(eq(schema.approval.agentRunId, run.id));
+    await decide(db, { workspaceId: ws.id, approvalId: ap!.id, userId: owner.id, decision: "approve" });
+
+    // The workflow changes behaviour and is republished before the agent resumes.
+    const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, flow.id));
+    const g = doubleGraph();
+    (g.nodes[1]!.data.config as { expression: string }).expression = '{ "v": n * 1000 }';
+    await saveFlow(owner, flow.id, { baseRevision: f!.revision, graph: g });
+    await publishFlow(owner, flow.id);
+
+    r = await runAgent(run.id);
+    expect(r.status).toBe("waiting_approval"); // asks again for the new version
+    expect(await db.select().from(schema.run).where(eq(schema.run.agentRunId, run.id))).toHaveLength(0);
+    const fresh = (await db.select().from(schema.approval).where(eq(schema.approval.agentRunId, run.id))).find((a) => a.status === "pending")!;
+    await decide(db, { workspaceId: ws.id, approvalId: fresh.id, userId: owner.id, decision: "approve" });
+    r = await runAgent(run.id);
+    expect(r.status).toBe("succeeded");
+    const children = await db.select().from(schema.run).where(eq(schema.run.agentRunId, run.id));
+    expect(children).toHaveLength(1);
+    expect(children[0]!.output).toEqual({ r: { v: 5000 } });
+  });
+
   it("ASK rejected → the tool isn't executed and the agent reports it", async () => {
     const { owner, ws, flow } = await setup("AgReject");
     const agent = await createAgent(owner, ws.id, { name: "R", instructions: "Run.", tools: [{ tool: "run_workflow", flowId: flow.id, permission: "ask" }], limits: limits() });
@@ -247,9 +275,9 @@ describe("agents: tool permissions ALLOW / ASK / DENY enforced by the backend", 
     const withConn = await createFlow(owner, ws.id, { name: `Poster ${unique("p")}` });
     await saveFlow(owner, withConn.id, { baseRevision: 1, graph: g });
     await db.update(schema.connection).set({ status: "active" }).where(eq(schema.connection.id, conn[0]!.id));
-    await publishFlow(owner, withConn.id).catch(() => {});
+    await publishFlow(owner, withConn.id);
     const [wf] = await db.select().from(schema.flow).where(eq(schema.flow.id, withConn.id));
-    if (!wf!.publishedVersionId) return; // publish-time checks refused the fake connection; covered above
+    expect(wf!.publishedVersionId).toBeTruthy(); // the revoked-credential check below must really run
     await db.update(schema.connection).set({ status: "revoked" }).where(eq(schema.connection.id, conn[0]!.id));
     const a3 = await createAgent(owner, ws.id, { name: "C", instructions: "Run.", tools: [{ tool: "run_workflow", flowId: withConn.id, permission: "allow" }], limits: limits() });
     const r3 = await runAgent((await startAgentRun({ agentId: a3.id, message: `run ${wf!.name}`, actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } })).id);
@@ -286,6 +314,15 @@ describe("agents: limits, failures and recovery", () => {
     expect(r3).toMatchObject({ status: "failed", error: { code: "AGENT_COST_LIMIT" } });
     const spent = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.agentRunId, r3.id), eq(schema.usageEvent.kind, "ai")));
     expect(spent).toHaveLength(0); // refused before calling the model
+
+    // Priced tool calls count toward the agent's own cost limit too (Codex CX3-06).
+    await db.update(schema.workspace).set({ prices: { "agent_step:*": { perCallMicros: 100 } } }).where(eq(schema.workspace.id, ws.id));
+    const a4 = await createAgent(owner, ws.id, { name: "P", instructions: "x", tools, knowledgeSourceIds: [src.id], limits: limits({ maxSteps: 20, maxToolCalls: 10, maxCostMicros: 250 }) });
+    const r4 = await runAgent((await startAgentRun({ agentId: a4.id, message: "[loop] keep going", actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } })).id);
+    expect(r4).toMatchObject({ status: "failed", error: { code: "AGENT_COST_LIMIT" } });
+    expect(r4.costMicros).toBe(200); // two tool calls fit; the third would pass 250
+    const toolSteps = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.agentRunId, r4.id), eq(schema.usageEvent.kind, "agent_step")));
+    expect(toolSteps).toHaveLength(2);
   });
 
   it("model 5xx is retried; a model timeout hits the agent's time limit", async () => {

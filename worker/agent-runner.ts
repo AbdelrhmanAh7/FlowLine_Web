@@ -8,7 +8,8 @@ import { NodeError } from "@/engine/execute";
 import type { FlowGraph } from "@/engine/types";
 import { can } from "@/lib/permissions";
 import { conversationHistory } from "@/server/agents";
-import { checkGate } from "@/server/approvals";
+import { checkGate, type GateRequest } from "@/server/approvals";
+import { HttpError } from "@/server/http";
 import type { Citation } from "@/server/knowledge";
 import { searchKnowledge } from "@/server/knowledge";
 import { redact } from "@/server/redact";
@@ -36,6 +37,42 @@ interface AgentState {
 }
 
 export class AgentLeaseLost extends Error {}
+
+/**
+ * The approval binding for an agent tool call. An approval covers exactly this call: tool, workflow, input,
+ * the connections it will use AND the published workflow version — republishing the workflow (even with the
+ * same connections) needs a new approval.
+ */
+export function agentGateRequest(o: {
+  workspaceId: string;
+  agentRunId: string;
+  agentVersionId: string;
+  index: number;
+  call: ToolCall;
+  flow?: { id: string; name: string };
+  connections: string[];
+  publishedVersionId: string | null;
+}): GateRequest {
+  return {
+    workspaceId: o.workspaceId,
+    runId: "",
+    agentRunId: o.agentRunId,
+    flowVersionId: o.agentVersionId,
+    nodeId: `tool:${o.index}`,
+    kind: "approval",
+    actionId: `agent.${o.call.name}`,
+    args: {
+      tool: o.call.name,
+      workflowId: o.flow?.id ?? null,
+      workflow: o.flow?.name ?? null,
+      publishedVersionId: o.publishedVersionId,
+      input: o.call.arguments.input ?? null,
+      query: o.call.arguments.query ?? null,
+      connections: o.connections,
+    },
+    connectionId: null,
+  };
+}
 
 export async function claimNextAgentRun(db: Db, workerId: string): Promise<string | null> {
   const res = await db.execute<{ id: string }>(sql`
@@ -150,7 +187,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
   };
 
   /** Workflow-specific checks at execution time: published, not paused, credentials still valid. */
-  const workflowReady = async (flow: typeof schema.flow.$inferSelect): Promise<{ ok: true; connections: string[] } | { ok: false; reason: string }> => {
+  const workflowReady = async (flow: typeof schema.flow.$inferSelect): Promise<{ ok: true; connections: string[]; versionId: string } | { ok: false; reason: string }> => {
     const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, flow.id));
     if (!f || f.deletedAt) return { ok: false, reason: "The workflow was deleted" };
     if (!f.publishedVersionId) return { ok: false, reason: "The workflow isn't published — agents can only run published versions" };
@@ -162,27 +199,22 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       const bad = rows.find((r) => r.status !== "active") ?? (rows.length !== conns.length ? { status: "missing" } : null);
       if (bad) return { ok: false, reason: `A credential this workflow uses is ${bad.status} — reconnect it first` };
     }
-    return { ok: true, connections: conns };
+    return { ok: true, connections: conns, versionId: f.publishedVersionId };
   };
 
-  const gateFor = (index: number, call: ToolCall, flow: typeof schema.flow.$inferSelect | undefined, connections: string[]) =>
-    checkGate(db, {
-      workspaceId: run.workspaceId,
-      runId: "",
-      agentRunId: runId,
-      flowVersionId: run.agentVersionId,
-      nodeId: `tool:${index}`,
-      kind: "approval",
-      actionId: `agent.${call.name}`,
-      args: { tool: call.name, workflowId: flow?.id ?? null, workflow: flow?.name ?? null, input: call.arguments.input ?? null, query: call.arguments.query ?? null, connections },
-      connectionId: null,
-    });
+  const gateFor = (index: number, call: ToolCall, flow: typeof schema.flow.$inferSelect | undefined, connections: string[], publishedVersionId: string | null) =>
+    checkGate(db, agentGateRequest({ workspaceId: run.workspaceId, agentRunId: runId, agentVersionId: run.agentVersionId, index, call, flow, connections, publishedVersionId }));
 
   /** Executes an allowed/approved call. Returns the tool message content (untrusted-wrapped) or "pending". */
-  const execute = async (index: number, call: ToolCall, d: Decision & { kind: "allow" | "ask" }, decisionLabel: string): Promise<string | { pending: string }> => {
+  const execute = async (index: number, call: ToolCall, d: Decision & { kind: "allow" | "ask" }, decisionLabel: string, versionId?: string): Promise<string | { pending: string }> => {
     const started = Date.now();
     const usageKey = `${runId}:step:${index}`;
     const stepPrice = priceFor(ws!.prices ?? {}, "agent_step");
+    const stepCost = stepPrice?.perCallMicros ?? 0;
+    // Tool steps count toward the agent's own hard cost limit, not only the workspace budget.
+    if (limits.maxCostMicros != null && costMicros + stepCost > limits.maxCostMicros) {
+      throw new NodeError("AGENT_COST_LIMIT", `The next tool call would exceed the agent's cost limit (spent ${costMicros} of ${limits.maxCostMicros} micro-units)`);
+    }
     try {
       await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "agent_step", idempotencyKey: usageKey, estimatedMicros: stepPrice?.perCallMicros ?? 0, unpriced: !stepPrice });
     } catch (e) {
@@ -211,15 +243,24 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       let childId = pending;
       if (!childId) {
         const input = call.arguments.input && typeof call.arguments.input === "object" ? call.arguments.input : {};
-        const { run: child } = await enqueueRunEx(actor ? { id: actor.id, email: actor.email, name: actor.name } : null, d.flow!.id, {
-          triggerKind: "agent",
-          usePublished: true,
-          input,
-          triggerRef: `${runId}:${index}`,
-          agentRunId: runId,
-          actingUserId: run.actingUserId,
-        });
-        childId = child.id;
+        try {
+          const { run: child } = await enqueueRunEx(actor ? { id: actor.id, email: actor.email, name: actor.name } : null, d.flow!.id, {
+            triggerKind: "agent",
+            usePublished: true,
+            // Exactly the version that was checked (and, for ASK, approved) — a republish in between is refused.
+            expectPublishedVersionId: versionId,
+            input,
+            triggerRef: `${runId}:${index}`,
+            agentRunId: runId,
+            actingUserId: run.actingUserId,
+          });
+          childId = child.id;
+        } catch (e) {
+          if (!(e instanceof HttpError)) throw e;
+          await settleUsage(db, usageKey, { costMicros: 0, unpriced: !stepPrice });
+          await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, error: { code: e.code, message: e.message }, latencyMs: Date.now() - started });
+          return JSON.stringify({ error: e.message });
+        }
       }
       // Wait for the workflow (bounded by the agent's deadline). A workflow that needs its own
       // approval pauses the agent too; the runner wakes it when the workflow finishes.
@@ -240,8 +281,9 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       }
       content = untrusted(JSON.stringify(redact(result))).text;
     }
-    await settleUsage(db, usageKey, { costMicros: stepPrice?.perCallMicros ?? 0, unpriced: !stepPrice });
-    await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, result, latencyMs: Date.now() - started, costMicros: stepPrice?.perCallMicros ?? 0 });
+    await settleUsage(db, usageKey, { costMicros: stepCost, unpriced: !stepPrice });
+    costMicros += stepCost;
+    await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, result, latencyMs: Date.now() - started, costMicros: stepCost });
     return content;
   };
 
@@ -262,8 +304,9 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
           content = JSON.stringify({ error: d.reason });
         } else {
           let label = "allow";
+          let versionId: string | undefined;
           if (d.kind === "ask" && !state.pending.childRunId) {
-            const ready = d.flow ? await workflowReady(d.flow) : ({ ok: true as const, connections: [] as string[] });
+            const ready = d.flow ? await workflowReady(d.flow) : ({ ok: true as const, connections: [] as string[], versionId: null });
             if (!ready.ok) {
               await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: "deny", error: { code: "TOOL_DENIED", message: ready.reason } });
               content = JSON.stringify({ error: ready.reason });
@@ -272,7 +315,8 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
               await save();
               continue;
             }
-            const g = await gateFor(index, call, d.flow, ready.connections);
+            const g = await gateFor(index, call, d.flow, ready.connections, ready.versionId);
+            versionId = ready.versionId ?? undefined;
             if (g.status === "pending") {
               await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object });
               return;
@@ -287,7 +331,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
             }
             label = "approved";
           } else if (state.pending.childRunId) label = d.kind === "ask" ? "approved" : "allow";
-          const r = await execute(index, call, d, label);
+          const r = await execute(index, call, d, label, versionId);
           if (typeof r !== "string") {
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object });
             return;
@@ -316,6 +360,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
             await save();
             continue;
           }
+          let checkedVersion: string | undefined;
           if (d.flow && nextCall.name === "run_workflow") {
             const ready = await workflowReady(d.flow);
             if (!ready.ok) {
@@ -324,8 +369,9 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
               await save();
               continue;
             }
+            checkedVersion = ready.versionId;
             if (d.kind === "ask") {
-              const g = await gateFor(index, nextCall, d.flow, ready.connections);
+              const g = await gateFor(index, nextCall, d.flow, ready.connections, ready.versionId);
               await recordStep({ index: 10_000 + index, kind: "tool", tool: nextCall.name, args: nextCall.arguments, decision: "ask", approvalId: g.approvalId });
               state.pending = { index, call: nextCall, approvalId: g.approvalId };
               await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
@@ -334,13 +380,13 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
             }
           } else if (d.kind === "ask") {
             // ASK on a read tool: same gate.
-            const g = await gateFor(index, nextCall, d.flow, []);
+            const g = await gateFor(index, nextCall, d.flow, [], null);
             await recordStep({ index: 10_000 + index, kind: "tool", tool: nextCall.name, args: nextCall.arguments, decision: "ask", approvalId: g.approvalId });
             state.pending = { index, call: nextCall, approvalId: g.approvalId };
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
             return;
           }
-          const r = await execute(index, nextCall, d as Decision & { kind: "allow" }, "allow");
+          const r = await execute(index, nextCall, d as Decision & { kind: "allow" }, "allow", checkedVersion);
           if (typeof r !== "string") {
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
             return;

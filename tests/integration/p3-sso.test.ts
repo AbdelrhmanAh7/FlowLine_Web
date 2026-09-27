@@ -204,6 +204,27 @@ describe("sso sign-in", () => {
     expect(await membership(other.ws.id, a.user.id)).toBeNull();
   });
 
+  it("links don't survive a change of IdP: a new issuer can't sign in as a user linked under the old one (Codex CX3-01)", async () => {
+    const { owner, ws } = await workspaceWithSso();
+    const email = `linked-${randomUUID().slice(0, 8)}@${DOMAIN}`;
+    await setFakeUser(email);
+    const linked = await runSignIn(ws.slug, { user: owner }); // creates + links the user under issuer #1
+    await saveSsoConfig(owner, ws.id, { issuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
+    expect((await runSignIn(ws.slug, { user: null })).user.id).toBe(linked.user.id);
+
+    // The owner re-points SSO at another IdP (same fake, different issuer identity) that asserts the same subject.
+    const otherIssuer = issuer.replace("127.0.0.1", "localhost");
+    expect(otherIssuer).not.toBe(issuer);
+    await saveSsoConfig(owner, ws.id, { issuer: otherIssuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: false });
+    await setFakeUser(`owner-verify-${randomUUID().slice(0, 8)}@${DOMAIN}`);
+    await runSignIn(ws.slug, { user: owner }); // re-verify with a fresh identity
+    await saveSsoConfig(owner, ws.id, { issuer: otherIssuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
+    await setFakeUser(email);
+    const sessionsBefore = (await db.select().from(schema.session).where(eq(schema.session.userId, linked.user.id))).length;
+    await expectHttpError(runSignIn(ws.slug, { user: null }), 409, "SSO_ACCOUNT_EXISTS");
+    expect(await db.select().from(schema.session).where(eq(schema.session.userId, linked.user.id))).toHaveLength(sessionsBefore);
+  });
+
   it("the account holder can link their existing account by starting SSO while signed in", async () => {
     const { owner, ws } = await workspaceWithSso();
     // The owner's own email is in the SSO domain: their test sign-in links (not forks) their account.

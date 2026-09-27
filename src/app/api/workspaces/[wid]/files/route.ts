@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, requireWorkspace } from "@/server/access";
-import { HttpError, json, route } from "@/server/http";
+import { capBody, HttpError, json, route } from "@/server/http";
 
 type Ctx = { params: Promise<{ wid: string }> };
 
@@ -22,10 +22,11 @@ export const GET = route(async (_req, { params }: Ctx) => {
 });
 
 /** Upload a file (multipart form field "file"): PDF, CSV, JSON or text, 5MB max. */
-export const POST = route(async (req, { params }: Ctx) => {
+export const POST = route(async (raw, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "flow.edit");
-  if (Number(req.headers.get("content-length") ?? 0) > FILE_MAX_BYTES + 64 * 1024) throw new HttpError(413, "FILE_TOO_LARGE", "Files are limited to 5MB");
+  // Enforced while streaming (chunked uploads have no Content-Length), before multipart parsing.
+  const req = await capBody(raw, FILE_MAX_BYTES + 64 * 1024, new HttpError(413, "FILE_TOO_LARGE", "Files are limited to 5MB"));
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw new HttpError(400, "VALIDATION", "Attach a file in the \"file\" field");

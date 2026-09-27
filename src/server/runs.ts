@@ -29,6 +29,8 @@ export interface EnqueueOptions {
   triggerKind?: "manual" | "webhook" | "schedule" | "rerun" | "api" | "agent";
   /** api/agent triggers: run the PUBLISHED version (live keys, agents) or a snapshot of the draft (test keys). */
   usePublished?: boolean;
+  /** With usePublished: refuse (409 WORKFLOW_REPUBLISHED) unless this is still the published version — e.g. the one an approval covered. */
+  expectPublishedVersionId?: string;
   apiKeyId?: string;
   agentRunId?: string;
   /** Dedupe key: manual click id, webhook event id, schedule fire time. */
@@ -88,6 +90,9 @@ export async function enqueueRunEx(user: CurrentUser | null, flowId: string, opt
     if (kind === "webhook" || kind === "schedule" || ((kind === "api" || kind === "agent") && opts.usePublished !== false)) {
       if (flow.pausedReason) throw new HttpError(409, "FLOW_PAUSED", "This flow is paused until its connection is repaired");
       if (!flow.publishedVersionId) throw new HttpError(409, "NOT_PUBLISHED", "Publish the flow before triggers can run it");
+      if (opts.expectPublishedVersionId && opts.expectPublishedVersionId !== flow.publishedVersionId) {
+        throw new HttpError(409, "WORKFLOW_REPUBLISHED", "The workflow was republished after it was checked/approved — it needs a new approval before it can run");
+      }
       const [v] = await tx.select().from(schema.flowVersion).where(eq(schema.flowVersion.id, flow.publishedVersionId));
       version = v!;
     } else if (kind === "rerun" && opts.rerunOf && (opts.rerunRevision ?? "original") === "original") {

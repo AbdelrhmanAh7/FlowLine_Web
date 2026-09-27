@@ -19,7 +19,7 @@ import { Agent, fetch as undiciFetch, type Dispatcher } from "undici";
 
 export class EgressError extends Error {
   constructor(
-    public code: "EGRESS_BLOCKED" | "EGRESS_INVALID_URL" | "EGRESS_TOO_LARGE" | "EGRESS_TOO_MANY_REDIRECTS",
+    public code: "EGRESS_BLOCKED" | "EGRESS_INVALID_URL" | "EGRESS_TOO_LARGE" | "EGRESS_TOO_MANY_REDIRECTS" | "EGRESS_REDIRECT_REFUSED",
     message: string,
   ) {
     super(message);
@@ -180,6 +180,10 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
         if (!loc) throw new EgressError("EGRESS_INVALID_URL", "Redirect without Location");
         if (hop >= maxRedirects) throw new EgressError("EGRESS_TOO_MANY_REDIRECTS", `More than ${maxRedirects} redirects`);
         const next = checkUrl(new URL(loc, url));
+        const keepsBody = body !== null && (res.status === 307 || res.status === 308);
+        // A body (token exchanges carry client secrets / refresh tokens in it) never follows a redirect to another
+        // origin. Stripping it would silently change the request, so the redirect is refused instead.
+        if (next.origin !== url.origin && keepsBody) throw new EgressError("EGRESS_REDIRECT_REFUSED", `Refused a ${res.status} redirect to a different origin for a request with a body`);
         // Credentials never follow a redirect to a different origin.
         if (next.origin !== url.origin && reqHeaders) reqHeaders = Object.fromEntries(Object.entries(reqHeaders).filter(([k]) => !CREDENTIAL_HEADERS.test(k)));
         url = next;

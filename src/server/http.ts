@@ -21,6 +21,30 @@ export function json<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
 }
 
+/**
+ * Reads the request body with a hard byte cap enforced WHILE streaming (Content-Length can be absent or wrong,
+ * e.g. chunked uploads), then returns an equivalent Request whose body is safe to parse (formData/json).
+ */
+export async function capBody(req: Request, maxBytes: number, tooLarge: HttpError): Promise<Request> {
+  if (Number(req.headers.get("content-length") ?? 0) > maxBytes) throw tooLarge;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (req.body) {
+    const reader = req.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw tooLarge;
+      }
+      chunks.push(value);
+    }
+  }
+  return new Request(req.url, { method: req.method, headers: req.headers, body: size ? Buffer.concat(chunks) : null });
+}
+
 export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T> {
   let body: unknown;
   try {
