@@ -29,8 +29,8 @@ Nothing has been removed to make the gate easier to pass. Rows for later phases 
 | P1-18 | Re-run from a step (upstream outputs reused) | s9, s13 | DESIGN | Re-run from the condition → upstream `reused` | PASS | e2e: canvas "re-run…"; int: runs |
 | P1-19 | Run dock (Ctrl/⌘+J) | s14, s15 | DESIGN | Ctrl+J toggles; opens on run | PASS | e2e: canvas, journey |
 | P1-20 | Integrations page shows its real configuration state (0 connected, disabled Connect with reason) | s10, prompt I | DESIGN | No fake connections | PASS | `integrations-*`; DESIGN_DECISIONS D7 |
-| P1-21 | Templates: local templates create a flow and open the canvas; integration templates disabled with reason | s11 | DESIGN | Use template → canvas | PASS | `templates-*`; onboarding step 3 (e2e: journey path uses blank; Codex used a template) |
-| P1-22 | Settings: members (real), general (name/timezone persisted), API keys/billing honest state | s12, prompt I | DESIGN | Owner saves name/timezone; others disabled with reason | PARTIAL | `settings-*`; invite/keys/billing are Phase 3 (P3-04..06). Name/timezone save is covered only by Codex/manual, with no dedicated E2E |
+| P1-21 | Templates: local templates create a flow and open the canvas; integration templates disabled with reason | s11 | DESIGN | Use template → canvas | PASS | e2e: library "templates…"; `templates-*`; Codex REPORT/RETEST |
+| P1-22 | Settings: members (real), general (name/timezone persisted), API keys/billing honest state | s12, prompt I | DESIGN | Owner saves name/timezone; others disabled with reason | PASS | e2e: library "settings…"; Codex RETEST; `settings-*`. Invite/keys/billing themselves are Phase 3 (P3-04..06) |
 | P1-23 | Design tokens: colours, radii, focus ring, Inter + JetBrains Mono | s3, s4 | DESIGN | Tokens in `globals.css @theme`; visual comparison | PASS | `src/app/globals.css`; artifacts/phase-1/visual-review |
 | P1-24 | State matrix: loading skeleton (no full-screen spinner), empty, populated, error + recovery, degraded | s13, prompt F | DESIGN | Skeleton while the flow loads; load fault → Retry; worker-offline banner | PASS | `state-loading-builder-1440`, `state-error-load-1440`, `state-empty-*`; e2e: failures "load failure…" |
 | P1-25 | Offline: local draft (per user, non-sensitive), run disabled, reconcile without silent overwrite | s13, prompt F | DESIGN | Offline edit → reconnect saves; server changed → conflict banner → explicit choice | PASS | e2e: failures "offline…", "offline conflict…"; `state-offline-builder-1440` |
@@ -48,10 +48,10 @@ Nothing has been removed to make the gate easier to pass. Rows for later phases 
 | P1-37 | Reproducible setup: Docker Postgres, migrations, separate test DB, secret-free `.env.example`, pinned versions + lockfile | prompt A4 | DESIGN | `pnpm db:up && pnpm db:migrate`; lockfile committed | PASS | README; `docker-compose.yml`; `drizzle/`; `pnpm-lock.yaml` |
 | P1-38 | Lint / typecheck / unit / integration / E2E checks | prompt A4 | DESIGN | All green on the final SHA | PASS | artifacts/phase-1/REPORT.md (counts) |
 | P1-39 | Screenshots at 1440/1024/375 + breakpoint edges; comparison with the design app area | acceptance | DESIGN | Captured; differences recorded and fixed | PASS | artifacts/phase-1/screenshots; artifacts/phase-1/visual-review/VISUAL-REVIEW.md |
-| P1-40 | Agent-driven exploratory browser test (Codex), fixes, retest | acceptance | DESIGN | Codex report → fixes → Codex retest | see REPORT | artifacts/phase-1/codex-review |
+| P1-40 | Agent-driven exploratory browser test (Codex), fixes, retest | acceptance | DESIGN | Codex report → fixes → Codex retest | PASS | artifacts/phase-1/codex-review/REPORT.md (2 findings on `edeb6a8`) → RETEST.md (18/18 PASS on `c35485e`, 0 new findings) |
 | P1-41 | Docs: SCOPE_MATRIX, DESIGN_DECISIONS, docs/implementation, rules in CLAUDE.md/AGENTS.md | prompt | DESIGN | Files present | PASS | repo root, docs/implementation |
 | P1-42 | Worker-offline degraded banner; runs queue | s13 (degraded ≠ blocked) | EXTENSION | Health endpoint → banner | PASS | `src/components/shell/app-shell.tsx`; `/api/health` |
-| P1-43 | Expression sandbox (time/depth/size limits) | security | EXTENSION | Runaway recursion stopped | PASS | unit: "stops runaway recursion" |
+| P1-43 | Expression sandbox: separate heap-capped process, hard timeout, size limits; worker lease guards; run rate/size limits | security | EXTENSION | ReDoS/huge allocation contained; lost lease writes nothing | PASS | unit: sandbox (7); int: worker lease (4); artifacts/phase-1/reviews/fable-security-review.md |
 | P1-44 | Light-mode token remap | s3 | DESIGN | — | PLANNED (P3) | DESIGN_DECISIONS D11 |
 
 ## Phase 2: automation and integrations

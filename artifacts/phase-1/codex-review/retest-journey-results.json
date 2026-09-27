@@ -1,0 +1,29 @@
+{
+  "email": "codex-retest-1790506092236@flowline-e2e.test",
+  "revision": "c35485e",
+  "stages": {
+    "journey": {
+      "flowUrl": "http://localhost:3100/w/codex-retest/flows/3ef1ae43-2d9b-4a20-a058-47a75c280ce5",
+      "inspectorUrl": "http://localhost:3100/w/codex-retest/runs?run=d5d248af-5808-493a-9f01-43b0f6e14507",
+      "stepPanel": "◎\nHot lead\nSUCCESS\n\n1ms · run #1 · output · hot\n\n✕\nInput\nOutput\nError\n{\n  \"name\": \"Ada Lovelace\",\n  \"tier\": \"hot\",\n  \"domain\": \"analytical.io\"\n}\n↻ Re-run from this step\n\nUpstream outputs are reused — only this step and its dependents re-execute, using the latest saved flow.\n\nSTEPS\n\nRUN OUTPUT\n\n{\n  \"hot_lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"tier\": \"hot\",\n    \"domain\": \"analytical.io\"\n  }\n}"
+    },
+    "cr02": {
+      "cells": [
+        "Lead Qualifier5 nodes",
+        "Manual",
+        "Failed",
+        "now",
+        "50.0%"
+      ],
+      "reloadedCells": [
+        "Lead Qualifier5 nodes",
+        "Manual",
+        "Failed",
+        "now",
+        "50.0%"
+      ],
+      "expected": "50.0% (one success, one failure)"
+    }
+  },
+  "events": []
+}
