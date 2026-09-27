@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flowline
+      POSTGRES_PASSWORD: flowline_local_only
+      POSTGRES_DB: flowline
+    ports:
+      - "5433:5432"
+    volumes:
+      - flowline-pg:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    # Keep the laptop light: small shared buffers, capped memory.
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=50"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowline"]
+      interval: 3s
+      retries: 20
+volumes:
+  flowline-pg:

@@ -1,0 +1,66 @@
+{
+  "name": "flowline",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n web,worker -c magenta,cyan \"next dev -p 3000\" \"node scripts/with-env.mjs .env tsx watch worker/index.ts\"",
+    "dev:web": "next dev -p 3000",
+    "worker": "node scripts/with-env.mjs .env tsx worker/index.ts",
+    "build": "next build",
+    "start": "concurrently -k -n web,worker \"next start -p 3000\" \"node scripts/with-env.mjs .env tsx worker/index.ts\"",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/with-env.mjs .env tsx src/db/migrate.ts",
+    "db:migrate:test": "node scripts/with-env.mjs .env.test tsx src/db/migrate.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:integration": "node scripts/with-env.mjs .env.test vitest run --project integration",
+    "test:e2e": "playwright test",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
+    "dev:test": "node scripts/with-env.mjs .env.test concurrently -k -n web,worker \"next dev -p 3100\" \"tsx worker/index.ts\""
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@tanstack/react-query": "5.104.0",
+    "@xyflow/react": "12.12.0",
+    "better-auth": "1.7.6",
+    "drizzle-orm": "0.45.3",
+    "jsonata": "2.2.2",
+    "next": "16.3.6",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.6.3",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "concurrently": "10.0.5",
+    "drizzle-kit": "0.31.11",
+    "eslint": "10.11.0",
+    "eslint-config-next": "16.3.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver",
+      "@tailwindcss/oxide"
+    ]
+  }
+}
