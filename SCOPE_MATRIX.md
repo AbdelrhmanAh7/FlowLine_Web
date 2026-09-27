@@ -128,21 +128,50 @@ Current coverage for all 11: adapter implemented · contract-tested against prov
 
 ## Phase 3: agents / knowledge / copilot, collaboration, billing, release
 
-| ID | Requirement | Source | Type | Acceptance test (planned) | Status |
-|---|---|---|---|---|---|
-| P3-01 | Agents (tool-using AI steps) | phase objective | DESIGN | Agent node completes a task with tools | PLANNED |
-| P3-02 | Knowledge bases (documents, retrieval) | phase objective | DESIGN | Retrieval grounded in uploaded docs | PLANNED |
-| P3-03 | Copilot (build/edit flows from natural language) | phase objective | DESIGN | Prompt → valid flow draft | PLANNED |
-| P3-04 | Members: invite by email, role changes, removal | s12 | DESIGN | Invite accepted; role enforced | PLANNED |
-| P3-05 | API keys (live/test, revoke, last used) | s12 | DESIGN | Key authenticates the API; revoked key rejected | PLANNED |
-| P3-06 | Billing: plans, credits, upgrade (pricing requires business approval) | s12 | DESIGN | Test-mode checkout; credits enforced | PLANNED |
-| P3-07 | Default LLM provider setting | s12 | DESIGN | Provider used by LLM nodes | PLANNED |
-| P3-08 | Email verification, password reset, account deletion | security | DESIGN | Verification email flow | PLANNED |
-| P3-09 | SSO + audit logs | s12 (Scale plan) | DESIGN | SSO login; audit entries | PLANNED |
-| P3-10 | Real-time collaboration / presence on the canvas | phase objective | DESIGN | Two editors see each other's changes | PLANNED |
-| P3-11 | Light mode (token remap) | s3 | DESIGN | Theme toggle; contrast checks | PLANNED |
-| P3-12 | Release: production build, deployment, monitoring, security review, public docs | phase objective | DESIGN | Release checklist; **all Release acceptance rows R-01…R-12 PASS** (or an owner-approved release-scope change). Production deployment needs separate owner authorisation | PLANNED |
-| P3-13 | Live OAuth (Google/GitHub) configured and verified | s6 | DESIGN | OAuth login E2E against real apps | PLANNED |
-| P3-14 | Carried from Phase 2: viewer-approval **UI** journey (a viewer can see but not decide an approval) | Codex RETEST journey 6 | DESIGN | Codex/E2E with a real viewer member (needs P3-04 roles UI) | PLANNED |
-| P3-15 | Carried from Phase 2: Docker port-proxy connectivity (CX2-01) — root cause and mitigation | Codex REPORT/RETEST | EXTENSION | Reproduce or rule out; documented mitigation; app fails fast and recovers (already verified) | PLANNED |
-| P3-16 | Carried from Phase 2: dev hydration console warning (CX2-R01) | Codex RETEST | DESIGN | Reproduced and fixed, or shown absent in a production build with evidence | PLANNED |
+Source `p3§N` = section N of the Phase 3 prompt (2026-09-28). Existing IDs P3-01…P3-16 are kept; P3-17 onwards are added from the prompt. Nothing is removed. Status is updated only against evidence tied to a tested SHA.
+
+| ID | Requirement | Source | Type | Acceptance test | Status | Evidence |
+|---|---|---|---|---|---|---|
+| P3-01 | Agents: name, description, instructions, model/provider, tools, workflows, knowledge, execution/cost/step limits, timeout, versioning, conversation + execution history; runs persisted | p3§2, objective | DESIGN | Agent CRUD + versions; a run is persisted with every tool call (tool, args, decision, result, latency, cost, error, time); step/cost/time limits stop the run | PLANNED | |
+| P3-01a | Agents never bypass workflow boundaries (tenant, connections, approvals, usage, logs, rate limits); published workflows run through the engine | p3§2, §18 | DESIGN | Agent-invoked workflow = normal pinned run; cross-workspace/unpublished refused; usage + events recorded | PLANNED | |
+| P3-17 | Tool permissions ALLOW / ASK / DENY enforced in the backend; ASK approval bound to run, revision, action, args, connection, approver, expiry | p3§3 | DESIGN | Prompt-injected tool call still denied; changed args/connection invalidate approval; expired approval refused | PLANNED | |
+| P3-02 | Knowledge: upload files/text/structured data, sources list, indexing status, failed state, delete, re-index, workspace ACL, agent access control | p3§4, objective | DESIGN | Upload → indexed → searchable; bad file → failed with reason; delete/re-index; ACL enforced | PLANNED | |
+| P3-02a | Retrieval with attribution (source id, chunk, citation, score); retrieved text is untrusted; revoked access blocks retrieval despite caches | p3§4 | DESIGN | Agent answer cites sources; injected document can't change tools/permissions; revoke → next retrieval refused | PLANNED | |
+| P3-03 | Copilot: NL → typed proposed graph/patch → validation → preview/diff → user approval → saved draft; never executes; never invents node types/tools/params/credentials/integrations; existing nodes never vanish silently | p3§5 | DESIGN | E2E: valid generation, invalid proposal, patching, rejected, approved, missing integration, missing credential | PLANNED | |
+| P3-04 | Members: secure invitation + acceptance, role assignment/change, removal revokes access (incl. mid-session) | p3§6, s12 | DESIGN | Invite token single-use/expiring/bound to email; removed member → 404 immediately | PLANNED | |
+| P3-18 | Explicit permission matrix (view/edit/run/publish/share flow, approve, manage integrations/members/API keys/billing) enforced server-side | p3§6 | DESIGN | Matrix test: every capability × role against the API | PLANNED | |
+| P3-19 | Sharing a workflow never shares the owner's private credentials | p3§6 | DESIGN | Shared/copied flow can't use a private connection | PLANNED | |
+| P3-14 | Carried: Viewer can't approve an ASK-protected action — integration test + UI E2E + agent-driven browser test | p3§6, Phase 2 retest | DESIGN | All three pass | PLANNED | |
+| P3-20 | Versioning & publishing: draft/published, version history, inspect, publish, rollback to a previous definition, historical runs keep their version; concurrent edits never silently overwritten | p3§7 | DESIGN | Rollback creates a new version; old runs show old graph; stale save → conflict | PLANNED | |
+| P3-05 | API keys: create, scopes, test/live, one-time reveal, hashed storage, last used, revoke, expiry | p3§8, s12 | DESIGN | Revoked, expired, wrong workspace, insufficient scope all refused | PLANNED | |
+| P3-21 | Authenticated invocation API for published workflows/agents: auth, workspace scope, rate limits, payload validation, version awareness, usage, execution id, status query; no anonymous execution | p3§9 | DESIGN | API run → id → status; 401/403/404/422/429 paths | PLANNED | |
+| P3-22 | Usage accounting complete: tokens, model cost, execution, tool usage, retries, agent steps, billable vs system; unique events; estimate vs actual; limits (usage, executions, hard cap) enforced | p3§10 | DESIGN | Concurrency + retry tests show no double billing; limits stop work | PLANNED | |
+| P3-06 | Billing via a payment adapter (sandbox/test mode only): configurable plans (no hard-coded deck prices), trial, subscription state, upgrade, downgrade, cancel, payment failure, usage reconciliation | p3§11, s12 | DESIGN | Adapter tests vs Stripe-compatible test double | PLANNED | |
+| P3-23 | Billing webhooks: signature verified; duplicate, out-of-order, created/updated/cancelled, payment failed, replay, unknown customer | p3§11 | DESIGN | One test per case | PLANNED | |
+| P3-09 | SSO: configurable abstraction + testable configuration (not claimed available in production unless configured and tested); audit log of members, roles, API keys, integrations, publish, approvals, billing, sensitive settings — no secrets | p3§12, s12 | DESIGN | OIDC config tested against a test double; audit entries per event type; secret scan of audit data | PLANNED | |
+| P3-24 | Product surfaces for Agents, Knowledge, Copilot in the Flowline design system; loading/empty/populated/error/degraded states; mobile monitor-first | p3§13 | DESIGN | Screenshots at 1440/1024/375; state checks | PLANNED | |
+| P3-25 | REL-LIVE-SUITE: connect, identity, read, safe write, object verification, cleanup, revocation, error mapping for the 11 SaaS providers (runs when credentials exist) | p3§14 | DESIGN | Suite implemented + dry-run against provider doubles; live rows stay BLOCKED without credentials | PLANNED | |
+| P3-16 | Carried: hydration warning — reproduce+fix+regression, or repeated clean runs documented → close as not reproduced | p3§16 | DESIGN | Evidence of repeated monitored runs | PLANNED | |
+| P3-15 | Carried: Docker/PostgreSQL connectivity — classify cause with evidence; keep fail-fast + recovery + safe message | p3§17 | EXTENSION | Investigation note with evidence | PLANNED | |
+| P3-26 | Security review: tenancy, IDOR, credential isolation, key scopes, roles, XSS, CSRF, SSRF, webhooks, uploads, worker permissions, knowledge ACL, prompt injection, unauthorized tool call, stale approval, revoked credential, limit bypass, double billing, duplicate side effects | p3§18 | DESIGN | Tests per item + independent review | PLANNED | |
+| P3-27 | Backup & restore into a clean environment, verified (users, workspaces, memberships, workflows, versions, runs, agents, knowledge metadata, billing state, encrypted credential refs); key-recovery procedure documented separately | p3§19 | DESIGN | Restore test report | PLANNED | |
+| P3-28 | Release artifact tied to SHA + image digest; rollback to known-good artifact verified (health, revision, auth, workflow load/execute, DB compatibility); no destructive down migrations | p3§20 | DESIGN | Rollback test report | PLANNED | |
+| P3-29 | Performance/load: numerical targets in TEST_PLAN.md first; limited reproducible test with recorded metrics | p3§21 | DESIGN | Load report vs targets | PLANNED | |
+| P3-30 | Cumulative E2E (Phase 1 + 2 + 3), Chromium/Firefox/WebKit for critical journeys, responsive 1440/1024/375 + edges, keyboard/accessibility | p3§22 | DESIGN | Full run reports per browser | PLANNED | |
+| P3-31 | Failure testing: model timeout, 429, 5xx, worker crash, DB outage, revoked integration, expired OAuth, invalid/duplicate webhook, queue saturation, billing provider failure, agent step/cost limit, invalid Copilot patch, indexing failure, permissions changed mid-run, approval expired, membership revoked mid-session | p3§23 | DESIGN | One test per item | PLANNED | |
+| P3-32 | Independent QA by Codex: code/test/security review + agent-driven exploratory browser testing; fixes; retest | p3§15 | DESIGN | Codex reports | PLANNED | |
+| P3-33 | Final evidence: RELEASE_REPORT.md, three verdicts (CODE COMPLETE / STAGING VERIFIED / PRODUCTION APPROVED) | p3§24–25 | DESIGN | Report | PLANNED | |
+| P3-07 | Default LLM provider setting | s12 | DESIGN | Workspace setting used by AI nodes and agents (only configured providers selectable) | PLANNED | |
+| P3-08 | Email verification, password reset, account deletion | security | DESIGN | Not listed in the Phase 3 prompt; needs email delivery — status decided with evidence | PLANNED | |
+| P3-10 | Real-time presence on the canvas | objective | DESIGN | Not listed in the Phase 3 prompt; p3§7 requires conflict detection (explicit policy) — status decided with evidence | PLANNED | |
+| P3-11 | Light mode (token remap) | s3 | DESIGN | Not listed in the Phase 3 prompt — status decided with evidence | PLANNED | |
+| P3-12 | Release: production build, staging deployment of the artifact, monitoring, public docs. **Production deployment and live payments need separate owner approval**; Production Ready needs R-01…R-11 PASS or an owner release-scope exception | p3§24, objective | DESIGN | Staging gate | PLANNED | |
+| P3-13 | Live OAuth sign-in (Google/GitHub) configured and verified | s6 | DESIGN | Needs real OAuth apps (credentials) — BLOCKED until provided | PLANNED | |
+
+### Release verdicts (p3§24)
+
+| Verdict | Meaning | Status |
+|---|---|---|
+| CODE COMPLETE | Implementation + deterministic tests for the approved scope pass | PLANNED |
+| STAGING VERIFIED | Deployed artifact passed smoke, cumulative E2E, browser QA, security checks, backup/restore, rollback, billing sandbox, available live dependencies | PLANNED |
+| PRODUCTION APPROVED | Explicit owner approval only | NO |
