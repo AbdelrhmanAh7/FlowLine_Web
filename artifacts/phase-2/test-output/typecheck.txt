@@ -1,0 +1,4 @@
+
+> flowline@0.1.0 typecheck C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+> tsc --noEmit
+

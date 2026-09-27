@@ -1,0 +1,13 @@
+
+> flowline@0.1.0 test:live C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+> node scripts/with-env.mjs .env vitest run --project live
+
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine
+
+
+ Test Files  2 passed | 1 skipped (3)
+      Tests  9 passed | 11 skipped (20)
+   Start at  23:14:03
+   Duration  13.96s (tests 91%, import 7%, transform 2%)
+

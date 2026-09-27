@@ -45,4 +45,6 @@ All times are 2026-09-27, local. Branch `phase-2`.
 | Live/sandbox suite (real Ollama + Postgres; SaaS BLOCKED without credentials). It found: real model obeyed embedded instructions 6/9 → quarantine 0/9; Postgres connect errors unmapped | live 9 PASS / 11 BLOCKED | `c2b7bd5` |
 | Fable 5.1 security review: 2 High, 4 Medium, 6 Low — all fixed; tests fail on old code | int: p2-postgres (13), p2-review-fixes (10) | `09c5a09` |
 | Codex exploratory test #1 on `d86d1d4` | 10 PASS / 3 FAIL / 1 BLOCKED; findings CX2-01…03 | — |
-| Fixed CX2-01…03 + redact() Date bug; provider-slow & activation states; p2-engine tests; Phase 2 docs | unit 80, integration + contract 269 total with unit, e2e 32 | `c7b7b54` |
+| Fixed CX2-01…03 + redact() Date bug; provider-slow & activation states; p2-engine tests; Phase 2 docs | unit 80, contract 82, integration 110, e2e 32 | `c7b7b54` |
+| Codex retest on `c7b7b54`; clear auth message on server outages | changed items 6/7, journeys 6 PASS / 1 BLOCKED (Phase 3 roles) | `bee4390` |
+| **Final gate on `bee4390`** | lint ✓, typecheck ✓, unit 80/80, contract 82/82, integration 110/110, E2E 32/32, live 9 PASS / 11 BLOCKED → **NOT PASS — BLOCKED** (SaaS sandbox credentials) | report commit follows |
