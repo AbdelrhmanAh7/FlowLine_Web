@@ -23,7 +23,8 @@
     "test:integration": "node scripts/with-env.mjs .env.test vitest run --project integration",
     "test:e2e": "playwright test",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
-    "dev:test": "node scripts/dev-test.mjs"
+    "dev:test": "node scripts/dev-test.mjs",
+    "stop:test": "node scripts/stop-test-stack.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",

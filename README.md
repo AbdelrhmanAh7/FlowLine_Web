@@ -44,6 +44,7 @@ BETTER_AUTH_SECRET=<a different random value>
 | Integration (real Postgres, `flowline_test`) | `pnpm test:integration` |
 | E2E (Playwright, starts the test stack on :3100) | `pnpm test:e2e` (first time: `npx playwright install chromium`) |
 | All but E2E | `pnpm check` |
+| Stop a leftover test stack (frees :3100) | `pnpm stop:test` |
 
 ## Layout
 
