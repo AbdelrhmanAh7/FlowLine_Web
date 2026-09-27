@@ -503,7 +503,7 @@ function Editor({ data }: { data: FlowResponse }) {
           aria-label="Flow canvas"
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#27272a" />
-          {viewportKind === "desktop" && <MiniMap pannable zoomable nodeColor="#27272a" nodeStrokeColor="#3f3f46" maskColor="rgba(9,9,11,0.7)" position="bottom-left" ariaLabel="Mini map" />}
+          {viewportKind === "desktop" && <MiniMap style={{ width: 160, height: 96 }} pannable zoomable nodeColor="#27272a" nodeStrokeColor="#3f3f46" maskColor="rgba(9,9,11,0.7)" position="bottom-left" ariaLabel="Mini map" />}
         </ReactFlow>
       </CanvasStatusContext.Provider>
 
@@ -534,7 +534,7 @@ function Editor({ data }: { data: FlowResponse }) {
         </div>
       )}
 
-      <ZoomControls />
+      <ZoomControls shifted={Boolean(drawerNode) && drawerVariant === "overlay"} />
 
       {showScrim && <button aria-label="Close drawer" className="absolute inset-0 z-20 bg-black/50" onClick={clearSelection} />}
       {drawerNode && (
@@ -674,11 +674,16 @@ function Editor({ data }: { data: FlowResponse }) {
   );
 }
 
-function ZoomControls() {
+function ZoomControls({ shifted }: { shifted: boolean }) {
   const rf = useReactFlow();
   const zoom = useStore((s) => s.transform[2]);
   return (
-    <div className="absolute right-3 bottom-3 z-20 flex items-center gap-1 rounded-lg border border-line bg-surface px-1.5 py-1 text-base text-med">
+    <div
+      className={cx(
+        "absolute bottom-3 z-20 flex items-center gap-1 rounded-lg border border-line bg-surface px-1.5 py-1 text-base text-med",
+        shifted ? "right-[calc(var(--drawer-w)+12px)]" : "right-3",
+      )}
+    >
       <button aria-label="Zoom out" onClick={() => void rf.zoomOut({ duration: 0 })} className="flex size-7 items-center justify-center rounded-md hover:bg-card hover:text-hi">
         −
       </button>

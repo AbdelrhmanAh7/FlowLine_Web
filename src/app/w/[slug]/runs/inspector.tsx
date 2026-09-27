@@ -50,7 +50,8 @@ export function RunInspector() {
   const [q, setQ] = useState(params.get("q") ?? "");
   const [debouncedQ, setDebouncedQ] = useState(q);
   const [stepId, setStepId] = useState<string | null>(params.get("step"));
-  const [tab, setTab] = useState<"input" | "output" | "error">("output");
+  // null = automatic: Error for failed steps, Output otherwise.
+  const [tab, setTab] = useState<"input" | "output" | "error" | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 250);
@@ -90,16 +91,16 @@ export function RunInspector() {
   const run = detail.data;
   const defaultStep = run ? (run.steps.find((s) => s.status === "failed") ?? run.steps.filter((s) => s.status !== "skipped" && s.status !== "pending").at(-1) ?? run.steps[0]) : undefined;
   const step = run?.steps.find((s) => s.nodeId === stepId) ?? defaultStep;
-  const effectiveTab = tab === "error" && step?.status !== "failed" ? "output" : tab;
+  const effectiveTab = tab === null ? (step?.status === "failed" ? "error" : "output") : tab === "error" && step?.status !== "failed" ? "output" : tab;
 
   const selectRun = (id: string) => {
     setStepId(null);
-    setTab("output");
+    setTab(null);
     setParam({ run: id, step: null });
   };
-  const selectStep = (s: RunStepDto) => {
+  const selectStep = (s: Pick<RunStepDto, "nodeId" | "status">) => {
     setStepId(s.nodeId);
-    setTab(s.status === "failed" ? "error" : "output");
+    setTab(null);
   };
 
   const rerun = useMutation({
@@ -217,11 +218,13 @@ export function RunInspector() {
                           {r.steps.map((s, i) => {
                             const def = NODE_DEFINITIONS[s.nodeType as NodeType];
                             const selected = run?.id === r.id && step?.nodeId === s.nodeId;
-                            const full = run?.id === r.id ? run.steps.find((x) => x.nodeId === s.nodeId) : undefined;
                             return (
                               <li key={s.nodeId} className="flex items-center gap-2">
                                 <button
-                                  onClick={() => full && selectStep(full)}
+                                  onClick={() => {
+                                    if (r.id !== activeRunId) setParam({ run: r.id });
+                                    selectStep(s);
+                                  }}
                                   aria-pressed={selected}
                                   className={cx(
                                     "min-w-28 rounded-lg border bg-app px-3 py-2 text-left hover:bg-elevated",
@@ -247,10 +250,7 @@ export function RunInspector() {
                             <span className="min-w-0 flex-1 text-danger">
                               ⚠ {failedStep.nodeLabel} — <span className="text-med">{failedStep.error?.message}</span>
                             </span>
-                            <Button size="sm" variant="danger" onClick={() => {
-                              const full = run?.steps.find((x) => x.nodeId === failedStep.nodeId);
-                              if (full) selectStep(full);
-                            }}>
+                            <Button size="sm" variant="danger" onClick={() => selectStep(failedStep)}>
                               Inspect
                             </Button>
                           </div>

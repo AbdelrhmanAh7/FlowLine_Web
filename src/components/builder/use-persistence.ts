@@ -21,7 +21,28 @@ export interface Conflict {
 const AUTOSAVE_MS = 1000;
 export const RETRY_DELAYS = [1000, 2000, 4000];
 
-export const serialize = (name: string, s: Pick<Snapshot, "nodes" | "edges">) => JSON.stringify({ name, nodes: s.nodes, edges: s.edges });
+/** Key-order-independent JSON (Postgres jsonb reorders object keys, so plain stringify would look "dirty"). */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value as object)
+        .sort()
+        .filter((k) => (value as Record<string, unknown>)[k] !== undefined)
+        .map((k) => [k, canonical((value as Record<string, unknown>)[k])]),
+    );
+  }
+  return value;
+}
+
+export const serialize = (name: string, s: Pick<Snapshot, "nodes" | "edges">) =>
+  JSON.stringify(
+    canonical({
+      name,
+      nodes: s.nodes.map((n) => ({ id: n.id, type: n.type, position: { x: Math.round(n.position.x), y: Math.round(n.position.y) }, data: n.data })),
+      edges: s.edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null })),
+    }),
+  );
 
 interface Options {
   flow: FlowDto;

@@ -161,7 +161,7 @@ export function Dashboard() {
                 {filtered.map((f) => {
                   const st = flowStatus(f);
                   return (
-                    <tr key={f.id} className="group border-b border-line last:border-0 hover:bg-elevated/40">
+                    <tr key={f.id} className="group relative border-b border-line last:border-0 hover:bg-elevated/40">
                       <td className="px-4 py-3">
                         <Link href={`/w/${workspace.slug}/flows/${f.id}`} className="font-semibold after:absolute after:inset-0 group-hover:text-hi">
                           {f.name}
@@ -207,7 +207,7 @@ export function Dashboard() {
                 <li key={r.id} className="flex min-w-0 items-center gap-2 text-base">
                   <Dot tone={RUN_TONE[r.status] ?? "muted"} />
                   <span className="min-w-0 truncate text-med">
-                    <span className="data text-hi">Run #{r.number}</span> {r.flowName} ·{" "}
+                    <span className="font-medium text-hi">Run #{r.number}</span> {r.flowName} ·{" "}
                     {r.status === "succeeded"
                       ? `completed ${r.stepsDone}/${r.steps} steps in ${duration(r.durationMs)}`
                       : r.status === "failed"
@@ -234,7 +234,7 @@ function Kpi({ label, value, note, tone, muted }: { label: string; value: string
     <Card className="flex h-[86px] flex-col justify-between px-4 py-3">
       <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{label}</p>
       <p className="flex items-baseline gap-2">
-        <span className={`data text-2xl font-semibold ${tone === "danger" ? "text-danger" : muted ? "text-muted" : "text-hi"}`}>{value}</span>
+        <span className={`text-2xl font-semibold tabular-nums ${tone === "danger" ? "text-danger" : muted ? "text-muted" : "text-hi"}`}>{value}</span>
         <span className={`truncate text-sm ${tone === "danger" ? "text-danger" : "text-muted"}`}>{note}</span>
       </p>
     </Card>
