@@ -24,6 +24,9 @@ export const PATCH = route(async (req, { params }: Ctx) => {
       monthlyBudget: z.number().nullable().optional(),
       maxConcurrentRuns: z.number().int().optional(),
       maxQueuedRuns: z.number().int().optional(),
+      maxMonthlyExecutions: z.number().int().nullable().optional(),
+      aiProvider: z.enum(["ollama", "anthropic"]).nullable().optional(),
+      aiModel: z.string().max(120).nullable().optional(),
       prices: z.record(z.string(), z.object({ inputPerMTok: z.number().optional(), outputPerMTok: z.number().optional(), perCall: z.number().optional() })).optional(),
     }),
   );

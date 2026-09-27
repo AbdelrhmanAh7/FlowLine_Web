@@ -1,6 +1,7 @@
 import Ajv from "ajv";
 import { NodeError } from "@/engine/execute";
 import { EgressError, safeFetch } from "@/server/egress";
+import { configuredProviders } from "./chat";
 import { quarantineInstructions } from "./injection";
 
 export interface AiRequest {
@@ -85,9 +86,9 @@ function netError(provider: string, e: unknown): never {
   throw new NodeError("AI_UNAVAILABLE", `${provider} is unreachable: ${(e as Error).message}`);
 }
 
-function ollama(): AiProvider {
+function ollama(configuredModel?: string): AiProvider {
   const base = (process.env.OLLAMA_BASE_URL ?? "http://localhost:11434").replace(/\/$/, "");
-  const model = process.env.FLOWLINE_AI_MODEL ?? "";
+  const model = configuredModel ?? process.env.FLOWLINE_AI_MODEL ?? "";
   return {
     id: "ollama",
     model,
@@ -136,9 +137,9 @@ function ollama(): AiProvider {
   };
 }
 
-function anthropic(): AiProvider {
+function anthropic(configuredModel?: string): AiProvider {
   const key = process.env.ANTHROPIC_API_KEY ?? "";
-  const model = process.env.FLOWLINE_AI_MODEL ?? "";
+  const model = configuredModel ?? process.env.FLOWLINE_AI_MODEL ?? "";
   return {
     id: "anthropic",
     model,
@@ -174,7 +175,18 @@ function anthropic(): AiProvider {
   };
 }
 
-export function getAiProvider(): AiProvider {
+/**
+ * The AI provider to use: the workspace default (if set and configured on this server) or the server default.
+ * Provider and model names come only from configuration.
+ */
+export function getAiProvider(workspaceDefault: { provider?: string | null; model?: string | null } = {}): AiProvider {
+  if (workspaceDefault.provider) {
+    const p = configuredProviders().find((x) => x.id === workspaceDefault.provider);
+    if (p?.available) {
+      const m = workspaceDefault.model || p.defaultModel;
+      return p.id === "anthropic" ? anthropic(m) : ollama(m);
+    }
+  }
   const id = (process.env.FLOWLINE_AI_PROVIDER ?? "ollama").toLowerCase();
   if (id === "anthropic") return anthropic();
   if (id === "ollama") return ollama();

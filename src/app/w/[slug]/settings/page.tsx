@@ -8,6 +8,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { AiDefaults } from "./ai-defaults";
 import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
 import { BillingPlan } from "./billing-plan";
@@ -43,7 +44,12 @@ export default function SettingsPage() {
         </nav>
         <div className="min-w-0 max-w-3xl flex-1">
           {tab === "members" && <Members />}
-          {tab === "general" && <General />}
+          {tab === "general" && (
+            <>
+              <General />
+              <AiDefaults />
+            </>
+          )}
           {tab === "keys" && <ApiKeys />}
           {tab === "plan" && <BillingPlan />}
           {tab === "billing" && <Billing />}
@@ -85,18 +91,13 @@ function General() {
           <Field label="Workspace name" htmlFor="ws-name">
             <Input id="ws-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
           </Field>
-          <Field label="Schedule timezone" htmlFor="ws-tz" hint="Used by scheduled triggers once they ship in Phase 2.">
+          <Field label="Schedule timezone" htmlFor="ws-tz" hint="Default time zone for new scheduled triggers.">
             <select id="ws-tz" value={tz} onChange={(e) => setTz(e.target.value)} className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none">
               {zones.map((z) => (
                 <option key={z} value={z}>
                   {z}
                 </option>
               ))}
-            </select>
-          </Field>
-          <Field label="Default LLM provider" htmlFor="llm" hint="LLM nodes and provider keys arrive in Phase 2/3. No provider is configured.">
-            <select id="llm" disabled className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-muted">
-              <option>None configured</option>
             </select>
           </Field>
         </fieldset>
@@ -125,12 +126,12 @@ function Billing() {
   const ws = useQuery({
     queryKey: ["workspace", workspace.id],
     queryFn: () =>
-      api<{ workspace: { monthlyBudgetMicros: number | null; maxConcurrentRuns: number; maxQueuedRuns: number; prices: Record<string, { inputPerMTokMicros?: number; outputPerMTokMicros?: number; perCallMicros?: number }> } }>(
+      api<{ workspace: { monthlyBudgetMicros: number | null; maxConcurrentRuns: number; maxQueuedRuns: number; maxMonthlyExecutions: number | null; prices: Record<string, { inputPerMTokMicros?: number; outputPerMTokMicros?: number; perCallMicros?: number }> } }>(
         `/api/workspaces/${workspace.id}`,
       ),
     select: (d) => d.workspace,
   });
-  const [form, setForm] = useState<{ budget: string; concurrent: string; queued: string; prices: { key: string; input: string; output: string; call: string }[] } | null>(null);
+  const [form, setForm] = useState<{ budget: string; concurrent: string; queued: string; executions: string; prices: { key: string; input: string; output: string; call: string }[] } | null>(null);
   const toStr = (m?: number) => (m != null ? String(m / 1_000_000) : "");
   const f =
     form ??
@@ -139,6 +140,7 @@ function Billing() {
           budget: ws.data.monthlyBudgetMicros == null ? "" : String(ws.data.monthlyBudgetMicros / 1_000_000),
           concurrent: String(ws.data.maxConcurrentRuns),
           queued: String(ws.data.maxQueuedRuns),
+          executions: ws.data.maxMonthlyExecutions == null ? "" : String(ws.data.maxMonthlyExecutions),
           prices: Object.entries(ws.data.prices ?? {}).map(([key, p]) => ({ key, input: toStr(p.inputPerMTokMicros), output: toStr(p.outputPerMTokMicros), call: toStr(p.perCallMicros) })),
         }
       : null);
@@ -151,6 +153,7 @@ function Billing() {
           monthlyBudget: f!.budget.trim() === "" ? null : Number(f!.budget),
           maxConcurrentRuns: Number(f!.concurrent),
           maxQueuedRuns: Number(f!.queued),
+          maxMonthlyExecutions: f!.executions.trim() === "" ? null : Number(f!.executions),
           prices: Object.fromEntries(f!.prices.filter((p) => p.key.trim()).map((p) => [p.key.trim(), { inputPerMTok: num(p.input), outputPerMTok: num(p.output), perCall: num(p.call) }])),
         },
       });
@@ -234,6 +237,9 @@ function Billing() {
                 </Field>
                 <Field label="Queued runs" htmlFor="queued" hint="Beyond this, new runs are refused">
                   <Input id="queued" type="number" min={1} max={1000} value={f.queued} onChange={(e) => setForm({ ...f, queued: e.target.value })} />
+                </Field>
+                <Field label="Executions per month" htmlFor="execs" hint="Workflow + agent runs; blank = no limit. A billing plan's limit also applies.">
+                  <Input id="execs" type="number" min={1} value={f.executions} onChange={(e) => setForm({ ...f, executions: e.target.value })} />
                 </Field>
               </div>
               <div>

@@ -196,7 +196,8 @@ export async function propose(user: CurrentUser, flowId: string, request: string
     .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
     .from(schema.connection)
     .where(eq(schema.connection.workspaceId, flow.workspaceId));
-  const provider = getAiProvider();
+  const [wsAi] = await db.select({ aiProvider: schema.workspace.aiProvider, aiModel: schema.workspace.aiModel }).from(schema.workspace).where(eq(schema.workspace.id, flow.workspaceId));
+  const provider = getAiProvider({ provider: wsAi?.aiProvider, model: wsAi?.aiModel });
   if (!provider.available) throw new HttpError(503, "AI_UNAVAILABLE", provider.reason ?? "No AI provider is configured");
   const base = flow.graph as FlowGraph;
 

@@ -179,7 +179,7 @@ const CLASSIFY_SCHEMA = (labels: string[]) => ({
 });
 
 async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, unknown>, input: unknown, env: NodeEnv): Promise<NodeOutcome> {
-  const provider = getAiProvider();
+  const provider = getAiProvider({ provider: ctx.workspace.aiProvider, model: ctx.workspace.aiModel });
   if (!provider.available) throw new NodeError("AI_UNAVAILABLE", provider.reason ?? "No AI provider configured");
   const model = str(cfg.model) || provider.model;
   const content = contentOf(await env.evaluate(str(cfg.source) || "$string($)", input));

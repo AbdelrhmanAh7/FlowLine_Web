@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CurrentUser } from "./access";
+import { configuredProviders } from "@/ai/chat";
 import { HttpError } from "./http";
 
 export function slugify(name: string) {
@@ -138,6 +139,9 @@ export interface WorkspaceLimitsPatch {
   maxConcurrentRuns?: number;
   maxQueuedRuns?: number;
   prices?: Record<string, { inputPerMTok?: number; outputPerMTok?: number; perCall?: number }>;
+  maxMonthlyExecutions?: number | null;
+  aiProvider?: "ollama" | "anthropic" | null;
+  aiModel?: string | null;
 }
 
 export async function updateWorkspace(workspaceId: string, patch: { name?: string; timezone?: string } & WorkspaceLimitsPatch) {
@@ -152,6 +156,20 @@ export async function updateWorkspace(workspaceId: string, patch: { name?: strin
       throw new HttpError(400, "VALIDATION", "Unknown time zone");
     }
     set.timezone = patch.timezone;
+  }
+  if (patch.aiProvider !== undefined) {
+    if (patch.aiProvider !== null) {
+      const p = configuredProviders().find((x) => x.id === patch.aiProvider);
+      if (!p?.available) throw new HttpError(400, "AI_PROVIDER_UNAVAILABLE", p?.reason ?? "That AI provider isn't configured on this server");
+    }
+    set.aiProvider = patch.aiProvider;
+    set.aiModel = patch.aiProvider === null ? null : patch.aiModel?.trim() || null;
+  }
+  if (patch.maxMonthlyExecutions !== undefined) {
+    if (patch.maxMonthlyExecutions !== null && (!Number.isInteger(patch.maxMonthlyExecutions) || patch.maxMonthlyExecutions < 1 || patch.maxMonthlyExecutions > 10_000_000)) {
+      throw new HttpError(400, "VALIDATION", "Monthly executions must be 1–10,000,000");
+    }
+    set.maxMonthlyExecutions = patch.maxMonthlyExecutions;
   }
   if (patch.monthlyBudget !== undefined) {
     if (patch.monthlyBudget !== null && !(patch.monthlyBudget >= 0 && patch.monthlyBudget <= 1_000_000)) throw new HttpError(400, "VALIDATION", "Budget must be between 0 and 1,000,000");
