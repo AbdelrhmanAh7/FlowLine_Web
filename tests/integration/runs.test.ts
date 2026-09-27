@@ -2,7 +2,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
-import { LOCAL_TEMPLATES } from "@/engine/templates";
 import { createFlow, saveFlow, softDeleteFlow } from "@/server/flows";
 import { enqueueRun, getRunDetail, listRuns, rerunFromStep } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
