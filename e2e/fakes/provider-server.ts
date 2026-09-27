@@ -9,7 +9,7 @@
  * Usage: `npx tsx e2e/fakes/provider-server.ts --port 4010`
  * or `const fake = await startFakeProviders()` from tests (ephemeral port).
  */
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, generateKeyPairSync, randomBytes, sign as cryptoSign, type KeyObject } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { pathToFileURL } from "node:url";
@@ -98,10 +98,23 @@ interface GmailMessage {
   attachmentData?: string; // base64
 }
 
+type OidcTamper = "bad_signature" | "wrong_aud" | "wrong_iss" | "expired" | "bad_nonce";
+
+interface OidcCode {
+  clientId: string;
+  challenge?: string;
+  nonce: string;
+  email: string;
+  emailVerified: boolean;
+}
+
 interface State {
   counters: Record<string, number>;
   tokens: Map<string, TokenInfo>;
   oauthCodes: Map<string, { provider: string; challenge?: string; account: AccountKey }>;
+  oidcCodes: Map<string, OidcCode>;
+  oidcUser: { email: string; emailVerified: boolean };
+  oidcTamper: OidcTamper | null;
   refreshTokens: Map<string, { account: AccountKey; current: boolean; denied: boolean }>;
   sheets: Record<string, string[][]>;
   gmailMessages: GmailMessage[];
@@ -143,6 +156,9 @@ function seed(): State {
     counters: stripeCounters,
     tokens,
     oauthCodes: new Map(),
+    oidcCodes: new Map(),
+    oidcUser: { email: ACCOUNTS.a.email, emailVerified: true },
+    oidcTamper: null,
     refreshTokens: new Map([["denied-refresh-token", { account: "a", current: true, denied: true }]]),
     sheets: {
       "sheet-1": [
@@ -283,6 +299,8 @@ interface Ctx {
   faults: Fault[];
   dropAfterCommit: boolean;
   heldSockets: Set<import("node:net").Socket>;
+  /** RSA keys for the fake OIDC IdP; stable across resets so JWKS never rotates mid-test. */
+  oidc: { privateKey: KeyObject; altPrivateKey: KeyObject; publicJwk: Record<string, unknown> };
 }
 
 function json(ctx: Ctx, req: IncomingMessage, res: ServerResponse, status: number, body: unknown, extraHeaders: Record<string, string> = {}) {
@@ -427,6 +445,116 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
     state.refreshTokens.delete(token);
     res.writeHead(200, { "content-type": "application/json" });
     res.end("{}");
+    return true;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------- oidc (fake SSO identity provider)
+
+function oidcIssuer(req: IncomingMessage): string {
+  return `http://${req.headers.host}/oidc`;
+}
+
+function signIdToken(ctx: Ctx, req: IncomingMessage, rec: OidcCode): string {
+  const tamper = ctx.state.oidcTamper;
+  ctx.state.oidcTamper = null; // a tamper affects exactly one id_token
+  const nowSec = Math.floor(Date.now() / 1000);
+  const issuer = oidcIssuer(req);
+  const payload: Record<string, unknown> = {
+    iss: tamper === "wrong_iss" ? "https://evil-idp.example" : issuer,
+    sub: `oidc-${rec.email}`,
+    aud: tamper === "wrong_aud" ? "not-the-configured-client" : rec.clientId,
+    exp: tamper === "expired" ? nowSec - 3600 : nowSec + 300,
+    iat: tamper === "expired" ? nowSec - 7200 : nowSec,
+    nonce: tamper === "bad_nonce" ? `tampered-${rec.nonce}` : rec.nonce,
+    email: rec.email,
+    email_verified: rec.emailVerified,
+  };
+  const header = base64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT", kid: ctx.oidc.publicJwk.kid }), "utf8"));
+  const body = base64url(Buffer.from(JSON.stringify(payload), "utf8"));
+  const key = tamper === "bad_signature" ? ctx.oidc.altPrivateKey : ctx.oidc.privateKey;
+  const sig = base64url(cryptoSign("RSA-SHA256", Buffer.from(`${header}.${body}`, "utf8"), key));
+  return `${header}.${body}.${sig}`;
+}
+
+/** Fake OIDC provider: discovery, JWKS, auto-consent authorize, token with a signed id_token. Unauthenticated by design. */
+function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: string, url: URL, rawBody: string): boolean {
+  const state = ctx.state;
+  if (req.method === "GET" && path === "/.well-known/openid-configuration") {
+    const issuer = oidcIssuer(req);
+    json(ctx, req, res, 200, {
+      issuer,
+      authorization_endpoint: `${issuer}/authorize`,
+      token_endpoint: `${issuer}/token`,
+      jwks_uri: `${issuer}/jwks`,
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code"],
+      subject_types_supported: ["public"],
+      id_token_signing_alg_values_supported: ["RS256"],
+      token_endpoint_auth_methods_supported: ["client_secret_post"],
+      code_challenge_methods_supported: ["S256"],
+    });
+    return true;
+  }
+  if (req.method === "GET" && path === "/jwks") {
+    json(ctx, req, res, 200, { keys: [ctx.oidc.publicJwk] });
+    return true;
+  }
+  if (req.method === "GET" && path === "/authorize") {
+    const redirectUri = url.searchParams.get("redirect_uri") ?? "";
+    const clientId = url.searchParams.get("client_id") ?? "";
+    if (!redirectUri || !clientId) {
+      json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri and client_id are required" });
+      return true;
+    }
+    // Auto-consent: login_hint picks the identity, otherwise the control-set fake user.
+    const user = state.oidcUser;
+    const code = `oidc-code-${randomBytes(6).toString("hex")}`;
+    state.oidcCodes.set(code, {
+      clientId,
+      challenge: url.searchParams.get("code_challenge") ?? undefined,
+      nonce: url.searchParams.get("nonce") ?? "",
+      email: url.searchParams.get("login_hint") || user.email,
+      emailVerified: user.emailVerified,
+    });
+    const target = new URL(redirectUri);
+    target.searchParams.set("code", code);
+    const st = url.searchParams.get("state");
+    if (st) target.searchParams.set("state", st);
+    res.writeHead(302, { location: target.toString() });
+    res.end();
+    return true;
+  }
+  if (req.method === "POST" && path === "/token") {
+    const form = parseForm(rawBody);
+    if (form.grant_type !== "authorization_code") {
+      json(ctx, req, res, 400, { error: "unsupported_grant_type" });
+      return true;
+    }
+    const rec = state.oidcCodes.get(form.code ?? "");
+    if (!rec) {
+      json(ctx, req, res, 400, { error: "invalid_grant", error_description: "Unknown authorization code" });
+      return true;
+    }
+    if (form.client_id !== rec.clientId || !form.client_secret) {
+      json(ctx, req, res, 401, { error: "invalid_client", error_description: "Client authentication failed" });
+      return true;
+    }
+    if (rec.challenge) {
+      const expected = base64url(createHash("sha256").update(form.code_verifier ?? "").digest());
+      if (expected !== rec.challenge) {
+        json(ctx, req, res, 400, { error: "invalid_grant", error_description: "PKCE verification failed" });
+        return true;
+      }
+    }
+    state.oidcCodes.delete(form.code ?? ""); // single use
+    json(ctx, req, res, 200, {
+      access_token: `fake-oidc-at-${randomBytes(8).toString("hex")}`,
+      token_type: "Bearer",
+      expires_in: 3600,
+      id_token: signIdToken(ctx, req, rec),
+    });
     return true;
   }
   return false;
@@ -1378,13 +1506,29 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     const result = await sendStripeWebhook(ctx, event);
     return json(ctx, req, res, 200, { ok: true, id: event.id, sent: result.sent, payload: result.payload, header: result.header }), true;
   }
+  // Sets the identity the fake OIDC IdP auto-consents as (email + verified flag) for the next authorize.
+  if (req.method === "POST" && path === "/__fake/oidc/user") {
+    const body = j(rawBody) as { email?: string; email_verified?: boolean };
+    if (!body.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return json(ctx, req, res, 400, { error: "a valid email is required" }), true;
+    ctx.state.oidcUser = { email: body.email, emailVerified: body.email_verified !== false };
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
+  // Fault injection for the next id_token (one shot): signature, audience, issuer, expiry or nonce.
+  if (req.method === "POST" && path === "/__fake/oidc/tamper") {
+    const body = j(rawBody) as { mode?: OidcTamper | null };
+    const modes: (OidcTamper | null)[] = ["bad_signature", "wrong_aud", "wrong_iss", "expired", "bad_nonce", null];
+    if (!modes.includes(body.mode ?? null)) return json(ctx, req, res, 400, { error: `mode must be one of ${modes.filter(Boolean).join(", ")} (or null)` }), true;
+    ctx.state.oidcTamper = body.mode ?? null;
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
   return false;
 }
 
-// ---------------------------------------------------------------- server
-
 export async function startFakeProviders(port = 0): Promise<{ url: string; port: number; close: () => Promise<void> }> {
-  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set() };
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const { privateKey: altPrivateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const publicJwk = { ...(publicKey.export({ format: "jwk" }) as Record<string, unknown>), kid: "fake-oidc-key-1", alg: "RS256", use: "sig" };
+  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oidc: { privateKey, altPrivateKey, publicJwk } };
 
   const server: Server = createServer((req, res) => {
     void (async () => {
@@ -1400,6 +1544,13 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       const provider = seg?.[1] ?? "";
       const handler = HANDLERS[provider];
       const path = seg?.[2] ?? "/";
+
+      // The fake OIDC IdP (SSO tests): unauthenticated by design, like the OAuth endpoints.
+      if (provider === "oidc") {
+        const rawBody = req.method === "POST" ? await readBody(req) : "";
+        if (handleOidc(ctx, req, res, path, url, rawBody)) return;
+        return json(ctx, req, res, 404, { error: "unknown oidc endpoint" });
+      }
 
       const authHeader = req.headers.authorization ?? "";
       const authScheme = authHeader.startsWith("Bearer ") ? "bearer" : authHeader.startsWith("Basic ") ? "basic" : authHeader ? "raw" : "none";

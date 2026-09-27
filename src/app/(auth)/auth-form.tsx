@@ -17,7 +17,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [ssoSlug, setSsoSlug] = useState("");
+  const [error, setError] = useState<string | null>(params.get("sso_error"));
   const [pending, setPending] = useState(false);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean }>("/api/auth-config") });
 
@@ -108,6 +109,30 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {mode === "sign-up" ? "Create account" : "Sign in"}
             </Button>
           </form>
+
+          {mode === "sign-in" && (
+            <>
+              <div className="my-6 flex items-center gap-3 text-sm text-muted">
+                <span className="h-px flex-1 bg-line" /> or with workspace SSO <span className="h-px flex-1 bg-line" />
+              </div>
+              <form
+                className="flex items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const slug = ssoSlug.trim().toLowerCase();
+                  if (!slug) return setError("Enter your workspace slug");
+                  window.location.assign(new URL(`/api/sso/start?workspace=${encodeURIComponent(slug)}`, window.location.origin).href);
+                }}
+              >
+                <div className="flex-1">
+                  <Field label="Workspace slug" htmlFor="sso-slug">
+                    <Input id="sso-slug" className="data" placeholder="acme" value={ssoSlug} onChange={(e) => setSsoSlug(e.target.value)} maxLength={60} />
+                  </Field>
+                </div>
+                <Button type="submit">Sign in with SSO</Button>
+              </form>
+            </>
+          )}
 
           <p className="mt-6 text-center text-base text-med">
             {mode === "sign-up" ? (
