@@ -3,6 +3,7 @@ import { safeErrorText } from "@/server/redact";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { sha256Hex } from "@/server/crypto";
+import { capBody, HttpError } from "@/server/http";
 import type { FlowGraph } from "@/engine/types";
 import { verifyGithubSignature, verifyWebhookSignature, WEBHOOK_MAX_BYTES } from "@/server/publish";
 import { enqueueRunEx } from "@/server/runs";
@@ -25,10 +26,14 @@ const reply = (status: number, body: Record<string, unknown>) => NextResponse.js
  */
 export async function POST(req: Request, { params }: Ctx) {
   const { token } = await params;
-  const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > WEBHOOK_MAX_BYTES) return reply(413, { error: "Payload too large (256KB max)" });
-  const raw = await req.text();
-  if (raw.length > WEBHOOK_MAX_BYTES) return reply(413, { error: "Payload too large (256KB max)" });
+  // Capped while streaming: a chunked body without Content-Length can't make this public endpoint buffer more.
+  let raw: string;
+  try {
+    raw = await (await capBody(req, WEBHOOK_MAX_BYTES, new HttpError(413, "PAYLOAD_TOO_LARGE", "Payload too large (256KB max)"))).text();
+  } catch (e) {
+    if (e instanceof HttpError) return reply(413, { error: e.message });
+    throw e;
+  }
 
   const [ep] = await db.select().from(schema.webhookEndpoint).where(eq(schema.webhookEndpoint.token, token));
   if (!ep || !ep.active) return reply(404, { error: "Unknown webhook" });
@@ -47,14 +52,20 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   let signedAt = new Date();
   let signature: string | null = null;
-  if (scheme === "github") {
-    const g = verifyGithubSignature(ep.secretEnc, ep.keyId, req.headers.get("x-hub-signature-256"), raw);
-    if (!g.ok) return reply(401, { error: `Invalid signature: ${g.reason}` });
-    signature = req.headers.get("x-hub-signature-256")!.toLowerCase();
-  } else {
-    const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw, eventId);
-    if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
-    signedAt = new Date(sig.t * 1000);
+  try {
+    if (scheme === "github") {
+      const g = verifyGithubSignature(ep.secretEnc, ep.keyId, req.headers.get("x-hub-signature-256"), raw);
+      if (!g.ok) return reply(401, { error: `Invalid signature: ${g.reason}` });
+      signature = req.headers.get("x-hub-signature-256")!.toLowerCase();
+    } else {
+      const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw, eventId);
+      if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
+      signedAt = new Date(sig.t * 1000);
+    }
+  } catch (e) {
+    // The stored secret can't be decrypted (e.g. restored with the wrong FLOWLINE_ENCRYPTION_KEY). Refuse, retryable.
+    console.error("[webhook] secret unavailable for endpoint", ep.id, safeErrorText(e));
+    return reply(503, { error: "This webhook can't verify deliveries right now — try again later" });
   }
 
   let body: unknown = raw;
