@@ -12,6 +12,7 @@ import { db, pool } from "@/db";
 import * as schema from "@/db/schema";
 import { RUN_CHANNEL } from "@/server/runs";
 import { stopSandbox } from "@/engine/sandbox";
+import { indexNextSource } from "@/server/knowledge";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
 
@@ -53,6 +54,22 @@ async function drain() {
   }
 }
 
+/** Knowledge indexing: one source at a time so large PDFs never starve workflow runs. */
+let indexing = false;
+function drainKnowledge() {
+  if (indexing || stopping) return;
+  indexing = true;
+  void (async () => {
+    try {
+      while (!stopping && (await indexNextSource(db, workerId))) log("knowledge source indexed");
+    } catch (e) {
+      log("indexing error", e instanceof Error ? e.message : e);
+    } finally {
+      indexing = false;
+    }
+  })();
+}
+
 async function main() {
   log("starting", workerId);
   await beat();
@@ -71,6 +88,7 @@ async function main() {
 
   while (!stopping) {
     try {
+      drainKnowledge();
       await drain();
     } catch (err) {
       log("drain error", err instanceof Error ? err.message : err);

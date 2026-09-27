@@ -47,6 +47,13 @@ export function AppShell({ user, workspace, role, workspaces, children }: Props)
       ],
     },
     {
+      title: "AI",
+      items: [
+        { href: `${base}/agents`, label: "Agents", icon: "✦", match: (p) => p.startsWith(`${base}/agents`) },
+        { href: `${base}/knowledge`, label: "Knowledge", icon: "❏", match: (p) => p.startsWith(`${base}/knowledge`) },
+      ],
+    },
+    {
       title: "Observe",
       items: [
         { href: `${base}/runs`, label: "Run history", icon: "◷", match: (p) => p.startsWith(`${base}/runs`) },
