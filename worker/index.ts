@@ -13,6 +13,7 @@ import * as schema from "@/db/schema";
 import { RUN_CHANNEL } from "@/server/runs";
 import { stopSandbox } from "@/engine/sandbox";
 import { indexNextSource } from "@/server/knowledge";
+import { claimNextAgentRun, processAgentRun, recoverStaleAgentRuns, wakeAgentsForFinishedRuns } from "./agent-runner";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
 
@@ -39,6 +40,20 @@ async function beat() {
 }
 
 async function drain() {
+  await wakeAgentsForFinishedRuns(db);
+  // Agent runs share the same concurrency budget as workflow runs.
+  while (!stopping && active.size < CONCURRENCY) {
+    const aid = await claimNextAgentRun(db, workerId);
+    if (!aid) break;
+    log("agent run", aid, "claimed");
+    const p = processAgentRun(db, aid, workerId, log)
+      .catch((e) => log("agent run", aid, "crashed", e instanceof Error ? e.message : e))
+      .finally(() => {
+        active.delete(p);
+        wake?.();
+      });
+    active.add(p);
+  }
   while (!stopping && active.size < CONCURRENCY) {
     const id = await claimNextRun(db, workerId);
     if (!id) return;
@@ -83,7 +98,7 @@ async function main() {
   listener.on("notification", () => wake?.());
 
   const beatTimer = setInterval(() => void beat().catch((e) => log("heartbeat failed", e.message)), 5000);
-  const staleTimer = setInterval(() => void recoverStaleRuns(db).catch(() => {}), 30000);
+  const staleTimer = setInterval(() => void Promise.all([recoverStaleRuns(db), recoverStaleAgentRuns(db)]).catch(() => {}), 30000);
   const scheduleTimer = setInterval(() => void schedulerTick(db).then((n) => n && log("scheduler fired", n)).catch((e) => log("scheduler error", e.message)), 10000);
 
   while (!stopping) {

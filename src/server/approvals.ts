@@ -13,7 +13,10 @@ export type ApprovalKind = "approval" | "review";
 
 export interface GateRequest {
   workspaceId: string;
+  /** Workflow run the gate belongs to ("" for agent tool gates). */
   runId: string;
+  /** Agent run the gate belongs to (agent tool ASK); flowVersionId then carries the agent version id. */
+  agentRunId?: string;
   flowVersionId: string;
   nodeId: string;
   kind: ApprovalKind;
@@ -27,8 +30,9 @@ export interface GateRequest {
  * Hash of everything the decision is bound to. Changing any of it — different
  * run, revision, node, action, arguments or connection — invalidates the approval.
  */
-export function bindingHash(r: Pick<GateRequest, "runId" | "flowVersionId" | "nodeId" | "actionId" | "args" | "connectionId" | "kind">) {
-  return sha256Hex(canonicalJson({ run: r.runId, version: r.flowVersionId, node: r.nodeId, action: r.actionId, args: r.args, connection: r.connectionId, kind: r.kind }));
+export function bindingHash(r: Pick<GateRequest, "runId" | "agentRunId" | "flowVersionId" | "nodeId" | "actionId" | "args" | "connectionId" | "kind">) {
+  const run = r.agentRunId ? `agent:${r.agentRunId}` : r.runId;
+  return sha256Hex(canonicalJson({ run, version: r.flowVersionId, node: r.nodeId, action: r.actionId, args: r.args, connection: r.connectionId, kind: r.kind }));
 }
 
 export type GateResult =
@@ -46,7 +50,7 @@ export async function checkGate(db: Db, r: GateRequest): Promise<GateResult> {
   const rows = await db
     .select()
     .from(schema.approval)
-    .where(and(eq(schema.approval.runId, r.runId), eq(schema.approval.nodeId, r.nodeId), eq(schema.approval.kind, r.kind)))
+    .where(and(r.agentRunId ? eq(schema.approval.agentRunId, r.agentRunId) : eq(schema.approval.runId, r.runId), eq(schema.approval.nodeId, r.nodeId), eq(schema.approval.kind, r.kind)))
     .orderBy(desc(schema.approval.requestedAt));
   const now = new Date();
   for (const a of rows) {
@@ -75,7 +79,8 @@ export async function checkGate(db: Db, r: GateRequest): Promise<GateResult> {
     .insert(schema.approval)
     .values({
       workspaceId: r.workspaceId,
-      runId: r.runId,
+      runId: r.agentRunId ? null : r.runId,
+      agentRunId: r.agentRunId ?? null,
       flowVersionId: r.flowVersionId,
       nodeId: r.nodeId,
       kind: r.kind,
@@ -86,7 +91,7 @@ export async function checkGate(db: Db, r: GateRequest): Promise<GateResult> {
       expiresAt: new Date(Date.now() + APPROVAL_TTL_MS),
     })
     .returning();
-  await logEvent(db, { runId: r.runId, workspaceId: r.workspaceId, type: "approval_requested", nodeId: r.nodeId, data: { approvalId: created!.id, kind: r.kind, action: r.actionId } });
+  if (!r.agentRunId) await logEvent(db, { runId: r.runId, workspaceId: r.workspaceId, type: "approval_requested", nodeId: r.nodeId, data: { approvalId: created!.id, kind: r.kind, action: r.actionId } });
   return { status: "pending", approvalId: created!.id };
 }
 
@@ -104,6 +109,7 @@ export async function listPendingApprovals(db: Db, workspaceId: string) {
     .select({
       id: schema.approval.id,
       runId: schema.approval.runId,
+      agentRunId: schema.approval.agentRunId,
       runNumber: schema.run.number,
       flowId: schema.run.flowId,
       flowName: schema.flow.name,
@@ -115,8 +121,8 @@ export async function listPendingApprovals(db: Db, workspaceId: string) {
       expiresAt: schema.approval.expiresAt,
     })
     .from(schema.approval)
-    .innerJoin(schema.run, eq(schema.run.id, schema.approval.runId))
-    .innerJoin(schema.flow, eq(schema.flow.id, schema.run.flowId))
+    .leftJoin(schema.run, eq(schema.run.id, schema.approval.runId))
+    .leftJoin(schema.flow, eq(schema.flow.id, schema.run.flowId))
     .where(and(eq(schema.approval.workspaceId, workspaceId), eq(schema.approval.status, "pending"), sql`${schema.approval.expiresAt} > now()`))
     .orderBy(desc(schema.approval.requestedAt))
     .limit(100);

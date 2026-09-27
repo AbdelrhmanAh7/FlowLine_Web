@@ -119,3 +119,26 @@ export async function requireApproval(user: CurrentUser, approvalId: string, min
   assertAllowed(role, minRole);
   return { approval: a, role, workspace };
 }
+
+/** Loads a (non-deleted) agent and checks membership of its workspace (404 for non-members). */
+export async function requireAgent(user: CurrentUser, agentId: string, need: Need = "agent.view") {
+  if (!isUuid(agentId)) throw notFound("Agent not found");
+  const [a] = await db.select().from(schema.agent).where(and(eq(schema.agent.id, agentId), isNull(schema.agent.deletedAt)));
+  if (!a) throw notFound("Agent not found");
+  const { role, workspace } = await requireWorkspace(user, a.workspaceId, "viewer").catch(() => {
+    throw notFound("Agent not found");
+  });
+  assertAllowed(role, need);
+  return { agent: a, role, workspace };
+}
+
+export async function requireAgentRun(user: CurrentUser, runId: string, need: Need = "agent.view") {
+  if (!isUuid(runId)) throw notFound("Agent run not found");
+  const [r] = await db.select().from(schema.agentRun).where(eq(schema.agentRun.id, runId));
+  if (!r) throw notFound("Agent run not found");
+  const { role, workspace } = await requireWorkspace(user, r.workspaceId, "viewer").catch(() => {
+    throw notFound("Agent run not found");
+  });
+  assertAllowed(role, need);
+  return { agentRun: r, role, workspace };
+}

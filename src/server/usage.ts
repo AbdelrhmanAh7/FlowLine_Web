@@ -1,5 +1,6 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
+import { planEntitlements } from "./entitlements";
 import { schema } from "@/db";
 import type { PriceEntry, PriceTable } from "@/db/schema";
 
@@ -33,8 +34,13 @@ export interface ReserveInput {
   workspaceId: string;
   runId: string | null;
   nodeId: string | null;
-  kind: "ai" | "action" | "http" | "run";
+  kind: "ai" | "action" | "http" | "run" | "agent_step";
   idempotencyKey: string;
+  agentRunId?: string;
+  /** This reservation is a retry of an earlier attempt (reported separately; each attempt is its own event). */
+  retry?: boolean;
+  /** False for system work that is recorded but never charged. */
+  billable?: boolean;
   estimatedMicros: number;
   provider?: string;
   model?: string;
@@ -56,13 +62,17 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
       .for("update");
     const [existing] = await tx.select({ id: schema.usageEvent.id }).from(schema.usageEvent).where(eq(schema.usageEvent.idempotencyKey, r.idempotencyKey));
     if (existing) return { reserved: false };
-    if (ws?.budget != null) {
+    // The stricter of the owner's monthly budget and the billing plan's usage cap applies.
+    const ent = await planEntitlements(tx, r.workspaceId);
+    const caps = [ws?.budget ?? null, ent?.monthlyUsageCapMicros ?? null].filter((c): c is number => c != null);
+    const budget = caps.length ? Math.min(...caps) : null;
+    if (budget != null) {
       const [{ spent }] = await tx
         .select({ spent: sql<number>`coalesce(sum(${schema.usageEvent.costMicros}), 0)::bigint` })
         .from(schema.usageEvent)
         .where(and(eq(schema.usageEvent.workspaceId, r.workspaceId), gte(schema.usageEvent.createdAt, monthStart()), inArray(schema.usageEvent.status, ["reserved", "settled"])));
-      if (Number(spent) + r.estimatedMicros > ws.budget) {
-        throw new BudgetExceededError(`Monthly budget reached (${fmt(Number(spent))} of ${fmt(ws.budget)} used; this step needs up to ${fmt(r.estimatedMicros)})`);
+      if (Number(spent) + r.estimatedMicros > budget) {
+        throw new BudgetExceededError(`Monthly budget reached (${fmt(Number(spent))} of ${fmt(budget)} used; this step needs up to ${fmt(r.estimatedMicros)})`);
       }
     }
     await tx
@@ -77,6 +87,10 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
         provider: r.provider ?? null,
         model: r.model ?? null,
         costMicros: r.estimatedMicros,
+        estimatedMicros: r.estimatedMicros,
+        agentRunId: r.agentRunId ?? null,
+        retry: r.retry ?? false,
+        billable: r.billable ?? true,
         unpriced: r.unpriced ?? false,
       })
       .onConflictDoNothing({ target: schema.usageEvent.idempotencyKey });

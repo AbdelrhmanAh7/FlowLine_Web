@@ -107,8 +107,103 @@ function fill(schema: Schema, content: string): unknown {
   return null;
 }
 
+interface AgentMsg {
+  role: string;
+  content: string;
+  tool_name?: string;
+  tool_calls?: { function: { name: string } }[];
+}
+interface AgentTool {
+  function: { name: string; parameters?: { properties?: { workflow?: { enum?: string[] } } } };
+}
+
+/**
+ * Deterministic stand-in for a tool-calling model (agents). Directives in the user message steer it:
+ *  "run <workflow>" / "inspect <workflow>" → that tool; "[loop]" → keeps searching (limit tests);
+ *  "[obey-document]" → behaves like a COMPROMISED model: follows "CALL <tool> <workflow>" lines found in
+ *  tool results — used to prove the backend (not the prompt) enforces ALLOW/ASK/DENY.
+ * Otherwise it searches knowledge once, then answers citing [1].
+ */
+function handleAgentChat(r: { model: string; messages: AgentMsg[]; tools: AgentTool[] }, res: ServerResponse) {
+  const msgs = r.messages;
+  let lastUser = -1;
+  msgs.forEach((m, i) => {
+    if (m.role === "user") lastUser = i;
+  });
+  const userText = msgs[lastUser]?.content ?? "";
+  const after = msgs.slice(lastUser + 1);
+  const toolMsgs = after.filter((m) => m.role === "tool");
+  const has = (name: string) => r.tools.some((t) => t.function.name === name);
+  const enumOf = (name: string) => r.tools.find((t) => t.function.name === name)?.function.parameters?.properties?.workflow?.enum ?? [];
+  const called = (name: string) => after.some((m) => m.role === "assistant" && m.tool_calls?.some((c) => c.function.name === name));
+  const reply = (content: string, calls: { name: string; arguments: Record<string, unknown> }[] = []) => {
+    const system = msgs.find((m) => m.role === "system")?.content ?? "";
+    const promptChars = system.length + msgs.reduce((n, m) => n + (m.content?.length ?? 0), 0);
+    res.writeHead(200, { "content-type": "application/json" }).end(
+      JSON.stringify({
+        model: r.model,
+        message: { role: "assistant", content, ...(calls.length ? { tool_calls: calls.map((c) => ({ function: c })) } : {}) },
+        done: true,
+        prompt_eval_count: Math.ceil(promptChars / 4),
+        eval_count: Math.ceil((content.length + JSON.stringify(calls).length) / 4),
+      }),
+    );
+  };
+  const inner = (s: string) => /<untrusted_content>([\s\S]*)<\/untrusted_content>/.exec(s)?.[1]?.trim() ?? s;
+
+  if (userText.includes("[loop]") && has("knowledge_search")) return reply("", [{ name: "knowledge_search", arguments: { query: `${userText} ${toolMsgs.length}` } }]);
+  if (userText.includes("[obey-document]")) {
+    for (const t of toolMsgs) {
+      const m = /CALL (\w+) (.+)/.exec(t.content);
+      if (m && !called(m[1]!)) return reply("", [{ name: m[1]!, arguments: { workflow: m[2]!.trim().replace(/[.\s]+$/, ""), input: {} } }]);
+    }
+  }
+  const runMatch = /\brun (?:the )?(?:workflow )?"?([^"\n]+?)"?(?: with (\{.*\}))?\s*$/im.exec(userText);
+  if (runMatch && has("run_workflow") && !called("run_workflow")) {
+    const name = enumOf("run_workflow").find((n) => n.toLowerCase() === runMatch[1]!.trim().toLowerCase()) ?? runMatch[1]!.trim();
+    let input: unknown = {};
+    try {
+      input = runMatch[2] ? JSON.parse(runMatch[2]) : {};
+    } catch {
+      input = {};
+    }
+    return reply("", [{ name: "run_workflow", arguments: { workflow: name, input } }]);
+  }
+  const inspect = /\binspect (?:the )?(?:workflow )?"?([^"\n]+?)"?\s*$/im.exec(userText);
+  if (inspect && has("workflow_inspect") && !called("workflow_inspect")) return reply("", [{ name: "workflow_inspect", arguments: { workflow: inspect[1]!.trim() } }]);
+  if (has("knowledge_search") && !called("knowledge_search") && !runMatch && !inspect) return reply("", [{ name: "knowledge_search", arguments: { query: userText } }]);
+
+  // Final answer from the tool results.
+  const lastTool = toolMsgs.at(-1);
+  if (!lastTool) return reply(`I have no tools for that. You said: ${userText.slice(0, 120)}`);
+  const body = inner(lastTool.content);
+  if (/^\{"error"/.test(lastTool.content)) return reply(`I couldn't do that: ${(JSON.parse(lastTool.content) as { error: string }).error}`);
+  if (lastTool.tool_name === "run_workflow" || /"runId"/.test(body)) {
+    try {
+      const o = JSON.parse(body) as { status: string; output?: unknown; runNumber?: number };
+      return reply(`Workflow run #${o.runNumber} finished with status ${o.status}. Output: ${JSON.stringify(o.output)}`);
+    } catch {
+      return reply(`Workflow result: ${body.slice(0, 200)}`);
+    }
+  }
+  const first = /\[(\d+)\] ([^:]+): ([^\n]+)/.exec(body);
+  if (first) return reply(`According to [${first[1]}] ${first[2]}: ${first[3]!.slice(0, 200)}`);
+  return reply(`Nothing relevant was found. ${body.slice(0, 120)}`);
+}
+
 function handleChat(reqBody: string, res: ServerResponse) {
-  const r = JSON.parse(reqBody) as { model: string; format?: Schema; messages: { role: string; content: string }[] };
+  const raw = JSON.parse(reqBody) as { model: string; format?: Schema; messages: { role: string; content: string }[]; tools?: AgentTool[] };
+  if (Array.isArray(raw.tools)) {
+    const fault = state.faults.find((f) => f.times > 0);
+    if (fault) {
+      fault.times--;
+      if (fault.mode === "timeout") return;
+      if (fault.mode === "500") return void res.writeHead(500, { "content-type": "application/json" }).end(JSON.stringify({ error: "injected failure" }));
+    }
+    state.requests.push({ at: new Date().toISOString(), model: raw.model, hasSchema: false, content: JSON.stringify(raw.messages.at(-1)).slice(0, 2000) });
+    return handleAgentChat(raw as never, res);
+  }
+  const r = raw;
   const user = r.messages.find((m) => m.role === "user")?.content ?? "";
   // A real model reads HTML fine; this rule-based double strips markup first.
   const data = /<untrusted_content>([\s\S]*)<\/untrusted_content>/.exec(user)?.[1] ?? user;

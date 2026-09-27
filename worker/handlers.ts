@@ -195,7 +195,7 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
   for (let attempt = 1; ; attempt++) {
     const key = `${ctx.run.id}:${ctx.path}${node.id}:ai:${attempt}`;
     try {
-      await reserveUsage(ctx.db, { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, nodeId: node.id, kind: "ai", idempotencyKey: key, estimatedMicros: est.cost, provider: provider.id, model, unpriced: est.unpriced });
+      await reserveUsage(ctx.db, { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, nodeId: node.id, kind: "ai", idempotencyKey: key, retry: attempt > 1, estimatedMicros: est.cost, provider: provider.id, model, unpriced: est.unpriced });
     } catch (e) {
       if (e instanceof BudgetExceededError) {
         await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "budget_blocked", nodeId: node.id, data: { message: e.message } });
@@ -348,7 +348,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
   for (let attempt = 1; ; attempt++) {
     const usageKey = `${ctx.run.id}:${ctx.path}${node.id}:action:${attempt}`;
     try {
-      await reserveUsage(ctx.db, { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, nodeId: node.id, kind: "action", idempotencyKey: usageKey, estimatedMicros: price?.perCallMicros ?? 0, provider: provider.id, unpriced: !price });
+      await reserveUsage(ctx.db, { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, nodeId: node.id, kind: "action", idempotencyKey: usageKey, retry: attempt > 1, estimatedMicros: price?.perCallMicros ?? 0, provider: provider.id, unpriced: !price });
     } catch (e) {
       if (e instanceof BudgetExceededError) throw new NodeError("BUDGET_EXCEEDED", e.message);
       throw e;
