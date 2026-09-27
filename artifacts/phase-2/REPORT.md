@@ -2,7 +2,20 @@
 
 **Tested SHA:** `bee4390` (branch `phase-2`) · **Date:** 2026-09-27 · **Gate outputs:** `artifacts/phase-2/test-output/`
 
-## Verdict: **NOT PASS — BLOCKED** (live sandbox checks for 11 SaaS integrations)
+## Revised verdict (2026-09-28): **PASS — revised Phase 2 scope; 11 external live checks deferred**
+
+**Owner decision, 2026-09-28 (quoted):** *"I explicitly accept the 11 SaaS live integration checks as out of scope for the PHASE 2 ACCEPTANCE GATE ONLY."* The owner also required that the original verdict and evidence are preserved, that the deferred checks stay **BLOCKED — missing credentials**, that the 11 integrations stay in the full product scope, and that the product isn't declared Production Ready until their live checks pass (unless a separate release-scope change is approved). The decision authorises Phase 3. It does not authorise production deployment or live payments.
+
+**Basis for the revised verdict:**
+- **The rest of the gate is satisfied:** lint, typecheck, unit 80/80, contract 82/82, integration 110/110, E2E 32/32 (nothing skipped or flaky); live Ollama ×6 and PostgreSQL ×3 PASS; all 12 Fable findings and all 3 Codex findings fixed with evidence.
+- **Baseline re-verified 2026-09-28:** the working tree was clean at `5db5e86`, and `git diff bee4390 5db5e86` touches only `artifacts/`, `docs/`, `NEXT_ACTION.md` and `SCOPE_MATRIX.md`, with no application, test or configuration code. The results for `bee4390` therefore still hold, and no check needed re-running.
+- **The 11 live checks are deferred, not passed.** Each stays **BLOCKED — missing credentials** in `live-results.json` and in the catalog, which shows "live: blocked" for those providers. They move to the release acceptance matrix (`SCOPE_MATRIX.md` → *Release acceptance*, R-01…R-11). These integrations are **implemented and contract-tested against provider doubles; they are not verified against the real providers.**
+- **Carried into Phase 3, not closed here:**
+  - The viewer-approval **UI** journey (needs the Phase 3 roles UI; the server rule is covered by `int: p2-actions`).
+  - The Docker port-proxy connectivity investigation (CX2-01).
+  - The hydration console warning (CX2-R01).
+
+## Original verdict (2026-09-27, preserved): **NOT PASS — BLOCKED** (live sandbox checks for 11 SaaS integrations)
 
 Everything that can be verified without external accounts passes. Under the phase rules (*no PASS while a mandatory test is skipped or blocked*), the gate can't be PASS: the sandbox-live checks for Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion and Linear are **BLOCKED** because no sandbox credentials were provided. They were not faked, and no real accounts, payments or deployments were used. Phase 3 has not been started.
 

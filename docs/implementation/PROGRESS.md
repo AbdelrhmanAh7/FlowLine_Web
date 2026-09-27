@@ -47,4 +47,5 @@ All times are 2026-09-27, local. Branch `phase-2`.
 | Codex exploratory test #1 on `d86d1d4` | 10 PASS / 3 FAIL / 1 BLOCKED; findings CX2-01…03 | — |
 | Fixed CX2-01…03 + redact() Date bug; provider-slow & activation states; p2-engine tests; Phase 2 docs | unit 80, contract 82, integration 110, e2e 32 | `c7b7b54` |
 | Codex retest on `c7b7b54`; clear auth message on server outages | changed items 6/7, journeys 6 PASS / 1 BLOCKED (Phase 3 roles) | `bee4390` |
-| **Final gate on `bee4390`** | lint ✓, typecheck ✓, unit 80/80, contract 82/82, integration 110/110, E2E 32/32, live 9 PASS / 11 BLOCKED → **NOT PASS — BLOCKED** (SaaS sandbox credentials) | report commit follows |
+| **Final gate on `bee4390`** | lint ✓, typecheck ✓, unit 80/80, contract 82/82, integration 110/110, E2E 32/32, live 9 PASS / 11 BLOCKED → **NOT PASS — BLOCKED** (SaaS sandbox credentials) | `5db5e86` |
+| Owner decision 2026-09-28: 11 SaaS live checks out of scope for the Phase 2 gate only; baseline re-verified (no code change since `bee4390`) | **PASS — revised Phase 2 scope; 11 external live checks deferred** (still BLOCKED; release rows R-01…R-11) | decision commit follows |

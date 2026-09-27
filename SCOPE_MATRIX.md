@@ -67,7 +67,7 @@ Rows P2-01…P2-13 are the design rows planned in Phase 1; P2-14 onwards are the
 | P2-04 | Signed webhook trigger: signature, dedupe, duplicates, ordering, failure after acceptance, replay | s5, s8, s11, prompt | DESIGN | Bad/stale signatures 401; same event id → same run; concurrent duplicates → 1 run; crash after acceptance keeps the run; replay under a new id refused | PASS | int: p2-triggers (5), p2-review-fixes M3 (2) |
 | P2-05 | Schedule trigger: time zone, DST, missed-run policy, concurrent schedulers | s7, s11, s12, prompt | DESIGN | skip / run_once / run_all; two schedulers fire once; DST spring/fall | PASS | int: p2-triggers (5); unit: engine-v2 DST (3) |
 | P2-06 | AI nodes (generate/extract/classify, schema JSON) record provider, model, tokens; no hard-coded model names or prices | s4, s8, prompt | DESIGN | Schema-valid JSON; usage settled once; model from config | PASS | int: p2-execution (AI); live: ai-ollama (real `qwen2.5:3b`) |
-| P2-07 | App actions for 12 providers; adapter / contract / sandbox-live distinguished | s8, s11, prompt | DESIGN | Contract tests vs provider doubles; live identity per provider | PARTIAL — live BLOCKED for 11 SaaS | contract (82); live: Postgres PASS; 11 SaaS BLOCKED (no sandbox credentials) |
+| P2-07 | App actions for 12 providers; adapter / contract / sandbox-live distinguished | s8, s11, prompt | DESIGN | Contract tests vs provider doubles; live identity per provider | PASS (revised Phase 2 scope, owner decision 2026-09-28) — implemented + contract-tested; live **BLOCKED — missing credentials** for 11 SaaS, deferred to R-01…R-11 | contract (82); live: Postgres PASS; 11 SaaS BLOCKED — not live-verified |
 | P2-08 | The six design templates create independent, runnable flows with required connections, no fake counts | s11, prompt | DESIGN | Each template runs end-to-end; independence; setup placeholders block runs | PASS | int: p2-templates (9); e2e: template journey; e2e: library |
 | P2-09 | Durable usage ledger, unique events, enforced spending limits | s7, s9, prompt | DESIGN | Budget refusal before the call; racing reservations never overshoot; AI billed once across a re-run | PASS | int: p2-execution (budget, race); e2e: template journey (usage) |
 | P2-10 | Node "Test" from the drawer | s8 | DESIGN | Latest input/output + isolated expression preview; side-effecting nodes are exercised via "Re-run from this step" with a preview | PASS | node-drawer Test tab; DESIGN_DECISIONS D17 |
@@ -95,6 +95,37 @@ Rows P2-01…P2-13 are the design rows planned in Phase 1; P2-14 onwards are the
 | P2-32 | Security review of critical execution code | prompt (critical) | EXTENSION | Fable 5.1 findings fixed with tests that fail on the old code | PASS | artifacts/phase-2/reviews/fable-security-review.md; int: p2-postgres, p2-review-fixes |
 | P2-33 | Phase 1 regressions re-run | prompt | DESIGN | All Phase 1 suites green | PASS | e2e (Phase 1 specs); int: runs, flows, tenancy, workspaces |
 
+## Release acceptance (full product — required before "Production Ready")
+
+**Owner decision, 2026-09-28:** the 11 SaaS live checks below are out of scope for the Phase 2 gate only. They remain **required for release**. The product must not be declared Production Ready, and these integrations must not be presented as production-verified, until every row is PASS — unless the owner approves a separate release-scope change.
+
+Current coverage for all 11: adapter implemented · contract-tested against provider doubles (`tests/contract`) · exercised in integration/E2E through doubles only. **Not verified against the real provider.**
+
+**Credentials:** each check needs a dedicated sandbox/test account from the owner, set as `FLOWLINE_LIVE_<PROVIDER>` in `.env` (JSON of the connect fields; see `.env.example`). Never real customer accounts, and never live payments.
+
+**Verification steps for each row:**
+1. `pnpm test:live` — identity check (automated today; read-only).
+2. Connect through the product UI with the real provider (OAuth consent for OAuth apps, including refresh and revoke).
+3. Run one read action and one write action against sandbox data, where the provider allows sandbox writes (automated live steps for 2–3 are still to be written — tracked as REL-LIVE-SUITE).
+4. Verify idempotency or lost-response handling for non-idempotent writes where the provider supports it.
+5. Record evidence in `artifacts/<phase>/live-results.json` tied to the SHA, then flip the adapter's `verification.live` to `verified`.
+
+| ID | Integration | Credentials needed (`FLOWLINE_LIVE_…`) | Status | Evidence |
+|---|---|---|---|---|
+| R-01 | Google Sheets | `GOOGLE_SHEETS` — OAuth access token for a test Google account (+ OAuth client for step 2) | BLOCKED — missing credentials | artifacts/phase-2/live-results.json |
+| R-02 | Gmail | `GMAIL` — OAuth access token for a test Google account | BLOCKED — missing credentials | same |
+| R-03 | Slack | `SLACK` — bot token for a test workspace | BLOCKED — missing credentials | same |
+| R-04 | HubSpot | `HUBSPOT` — private-app token for a developer test account | BLOCKED — missing credentials | same |
+| R-05 | Zendesk | `ZENDESK` — agent email, API token, sandbox subdomain | BLOCKED — missing credentials | same |
+| R-06 | Airtable | `AIRTABLE` — personal access token scoped to a test base | BLOCKED — missing credentials | same |
+| R-07 | Snowflake | `SNOWFLAKE` — trial account URL + programmatic access token (read-only role) | BLOCKED — missing credentials | same |
+| R-08 | GitHub | `GITHUB` — fine-grained token for a test repo | BLOCKED — missing credentials | same |
+| R-09 | Stripe | `STRIPE` — **test-mode** secret key (`sk_test_…`) only | BLOCKED — missing credentials | same |
+| R-10 | Notion | `NOTION` — internal integration token shared with a test page | BLOCKED — missing credentials | same |
+| R-11 | Linear | `LINEAR` — API key for a test workspace | BLOCKED — missing credentials | same |
+| R-12 | PostgreSQL | local PostgreSQL 17 (no external credentials) | PASS (identity, execute+query, read-only, auth error) | artifacts/phase-2/live-results.json on `bee4390` |
+| REL-LIVE-SUITE | Live suite covers steps 2–4 for each provider (not only identity) | — | PLANNED | — |
+
 ## Phase 3: agents / knowledge / copilot, collaboration, billing, release
 
 | ID | Requirement | Source | Type | Acceptance test (planned) | Status |
@@ -110,5 +141,8 @@ Rows P2-01…P2-13 are the design rows planned in Phase 1; P2-14 onwards are the
 | P3-09 | SSO + audit logs | s12 (Scale plan) | DESIGN | SSO login; audit entries | PLANNED |
 | P3-10 | Real-time collaboration / presence on the canvas | phase objective | DESIGN | Two editors see each other's changes | PLANNED |
 | P3-11 | Light mode (token remap) | s3 | DESIGN | Theme toggle; contrast checks | PLANNED |
-| P3-12 | Release: production build, deployment, monitoring, security review, public docs | phase objective | DESIGN | Release checklist | PLANNED |
+| P3-12 | Release: production build, deployment, monitoring, security review, public docs | phase objective | DESIGN | Release checklist; **all Release acceptance rows R-01…R-12 PASS** (or an owner-approved release-scope change). Production deployment needs separate owner authorisation | PLANNED |
 | P3-13 | Live OAuth (Google/GitHub) configured and verified | s6 | DESIGN | OAuth login E2E against real apps | PLANNED |
+| P3-14 | Carried from Phase 2: viewer-approval **UI** journey (a viewer can see but not decide an approval) | Codex RETEST journey 6 | DESIGN | Codex/E2E with a real viewer member (needs P3-04 roles UI) | PLANNED |
+| P3-15 | Carried from Phase 2: Docker port-proxy connectivity (CX2-01) — root cause and mitigation | Codex REPORT/RETEST | EXTENSION | Reproduce or rule out; documented mitigation; app fails fast and recovers (already verified) | PLANNED |
+| P3-16 | Carried from Phase 2: dev hydration console warning (CX2-R01) | Codex RETEST | DESIGN | Reproduced and fixed, or shown absent in a production build with evidence | PLANNED |
