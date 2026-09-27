@@ -18,21 +18,21 @@ describe("process-isolated expression evaluation (regression: Fable F2)", () => 
   });
   it("stops a catastrophic-backtracking regex with a hard timeout", async () => {
     const t0 = Date.now();
-    await expect(evaluateIsolated('$match($pad("a", 34, "a") & "!", /(a+)+$/)', {}, 500)).rejects.toMatchObject({ code: "EXPRESSION_TIMEOUT" });
+    await expect(evaluateIsolated('$match($pad("a", 34, "a") & "!", /(a+)+$/)', {}, undefined, 500)).rejects.toMatchObject({ code: "EXPRESSION_TIMEOUT" });
     expect(Date.now() - t0).toBeLessThan(3000);
   });
   it("refuses a huge $pad and survives a memory blow-up without crashing the host", async () => {
-    await expect(evaluateIsolated('$pad("x", 400000000)', {}, 3000)).rejects.toMatchObject({ code: "EXPRESSION_LIMIT" });
+    await expect(evaluateIsolated('$pad("x", 400000000)', {}, undefined, 3000)).rejects.toMatchObject({ code: "EXPRESSION_LIMIT" });
     // Exponential string growth via recursion hits the sandbox heap cap / timeout, not the host.
     await expect(
-      evaluateIsolated('($f := function($s, $n){ $n = 0 ? $s : $f($s & $s, $n - 1) }; $length($f("xxxxxxxx", 40)))', {}, 5000),
+      evaluateIsolated('($f := function($s, $n){ $n = 0 ? $s : $f($s & $s, $n - 1) }; $length($f("xxxxxxxx", 40)))', {}, undefined, 5000),
     ).rejects.toMatchObject({ code: expect.stringMatching(/EXPRESSION_(MEMORY|TIMEOUT|RUNTIME)/) });
     // Host still healthy afterwards.
     expect(await evaluateIsolated("1 + 1", {})).toBe(2);
   });
   it("runs a whole template through the isolated evaluator", async () => {
     const g = LOCAL_TEMPLATES[0]!.graph;
-    const res = await executeGraph(g, sampleInputFor(g), { evaluate: (s, i) => evaluateIsolated(s, i) });
+    const res = await executeGraph(g, sampleInputFor(g), { evaluate: (s, i, b) => evaluateIsolated(s, i, b) });
     expect(res.status).toBe("succeeded");
     expect(res.output).toEqual({ hot_lead: { name: "Ada Lovelace", domain: "analytical.io", tier: "hot" } });
   });

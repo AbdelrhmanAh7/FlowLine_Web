@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "run_trigger_unique" ON "run" USING btree ("flow_id","trigger_kind","trigger_ref") WHERE trigger_ref is not null;

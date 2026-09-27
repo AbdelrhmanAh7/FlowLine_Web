@@ -121,7 +121,7 @@ export async function saveFlow(user: CurrentUser, flowId: string, input: SaveFlo
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof schema.flow.$inferSelect, reason: "save" | "run" | "overwrite") {
+export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof schema.flow.$inferSelect, reason: "save" | "run" | "overwrite" | "publish") {
   const [{ next }] = await tx
     .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
     .from(schema.flowVersion)

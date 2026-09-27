@@ -12,6 +12,11 @@ import * as schema from "@/db/schema";
 import { RUN_CHANNEL } from "@/server/runs";
 import { stopSandbox } from "@/engine/sandbox";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
+import { schedulerTick } from "./scheduler";
+
+/** Runs executed concurrently by this worker process (runs mostly wait on I/O). */
+const CONCURRENCY = Math.max(1, Number(process.env.FLOWLINE_WORKER_CONCURRENCY ?? 4));
+const active = new Set<Promise<void>>();
 
 const workerId = `${hostname()}-${process.pid}-${randomUUID().slice(0, 6)}`;
 let stopping = false;
@@ -32,13 +37,18 @@ async function beat() {
 }
 
 async function drain() {
-  for (;;) {
-    if (stopping) return;
+  while (!stopping && active.size < CONCURRENCY) {
     const id = await claimNextRun(db, workerId);
     if (!id) return;
     log("run", id, "claimed");
-    await processRun(db, id, workerId, log);
-    log("run", id, "done");
+    const p = processRun(db, id, workerId, log)
+      .catch((e) => log("run", id, "crashed", e instanceof Error ? e.message : e))
+      .finally(() => {
+        active.delete(p);
+        log("run", id, "done");
+        wake?.();
+      });
+    active.add(p);
   }
 }
 
@@ -56,6 +66,7 @@ async function main() {
 
   const beatTimer = setInterval(() => void beat().catch((e) => log("heartbeat failed", e.message)), 5000);
   const staleTimer = setInterval(() => void recoverStaleRuns(db).catch(() => {}), 30000);
+  const scheduleTimer = setInterval(() => void schedulerTick(db).then((n) => n && log("scheduler fired", n)).catch((e) => log("scheduler error", e.message)), 10000);
 
   while (!stopping) {
     try {
@@ -75,6 +86,8 @@ async function main() {
 
   clearInterval(beatTimer);
   clearInterval(staleTimer);
+  clearInterval(scheduleTimer);
+  await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
   stopSandbox();
   await listener.end();

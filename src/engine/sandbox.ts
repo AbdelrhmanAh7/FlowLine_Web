@@ -22,7 +22,7 @@ function spawnChild() {
   return c;
 }
 
-function once(source: string, input: unknown, timeoutMs: number): Promise<unknown> {
+function once(source: string, input: unknown, bindings: Record<string, unknown> | undefined, timeoutMs: number, extra?: Record<string, unknown>): Promise<unknown> {
   child ??= spawnChild();
   const c = child;
   const id = nextId++;
@@ -50,7 +50,7 @@ function once(source: string, input: unknown, timeoutMs: number): Promise<unknow
     }, timeoutMs);
     c.on("message", onMessage);
     c.on("exit", onExit);
-    c.send({ id, source, input, maxDepth: EXPRESSION_MAX_DEPTH, maxBytes: VALUE_MAX_BYTES });
+    c.send({ id, source, input, bindings, maxDepth: EXPRESSION_MAX_DEPTH, maxBytes: VALUE_MAX_BYTES, ...extra });
   });
 }
 
@@ -60,13 +60,20 @@ function once(source: string, input: unknown, timeoutMs: number): Promise<unknow
  * catastrophic regex, huge allocation) can stall or crash the worker itself.
  * Evaluations are serialized through one sandbox process.
  */
-export function evaluateIsolated(source: string, input: unknown, timeoutMs = EXPRESSION_TIMEOUT_MS): Promise<unknown> {
+export function evaluateIsolated(source: string, input: unknown, bindings?: Record<string, unknown>, timeoutMs = EXPRESSION_TIMEOUT_MS): Promise<unknown> {
   if (source.length > EXPRESSION_MAX_LENGTH) {
     return Promise.reject(new ExpressionError("EXPRESSION_TOO_LONG", `Expression is longer than ${EXPRESSION_MAX_LENGTH} characters`));
   }
-  const run = queue.then(() => once(source, input, timeoutMs));
+  const run = queue.then(() => once(source, input, bindings, timeoutMs));
   queue = run.catch(() => {});
   return run;
+}
+
+/** Extracts text from an untrusted PDF inside the sandbox process (heap-capped, killed on timeout). */
+export function extractPdfTextIsolated(base64: string, timeoutMs = 20_000): Promise<{ text: string; pages: number }> {
+  const run = queue.then(() => once("", null, undefined, timeoutMs, { op: "pdf_text", base64 }));
+  queue = run.catch(() => {});
+  return run as Promise<{ text: string; pages: number }>;
 }
 
 /** Stop the sandbox process (worker shutdown / tests). */

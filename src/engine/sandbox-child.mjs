@@ -18,7 +18,7 @@ function limitedPad(str, width, char) {
   return width > 0 ? s + fill : fill + s;
 }
 
-async function evaluate({ source, input, maxDepth, maxBytes }) {
+async function evaluate({ source, input, bindings, maxDepth, maxBytes }) {
   let expr;
   try {
     expr = jsonata(source);
@@ -39,7 +39,7 @@ async function evaluate({ source, input, maxDepth, maxBytes }) {
   });
   let result;
   try {
-    result = await expr.evaluate(input);
+    result = await expr.evaluate(input, bindings ?? undefined);
   } catch (e) {
     const code = typeof e?.code === "string" && e.code.startsWith("EXPRESSION_") ? e.code : "EXPRESSION_RUNTIME";
     return { ok: false, code, message: describe(e) };
@@ -49,10 +49,21 @@ async function evaluate({ source, input, maxDepth, maxBytes }) {
   return { ok: true, json: text };
 }
 
+async function pdfText({ base64, maxBytes }) {
+  const { extractText, getDocumentProxy } = await import("unpdf");
+  const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+  const pdf = await getDocumentProxy(bytes);
+  if (pdf.numPages > 50) return { ok: false, code: "FILE_TOO_LARGE", message: "PDFs are limited to 50 pages" };
+  const { text } = await extractText(pdf, { mergePages: true });
+  const out = JSON.stringify({ text, pages: pdf.numPages });
+  if (out.length > maxBytes) return { ok: false, code: "VALUE_TOO_LARGE", message: "Extracted text is larger than 256KB" };
+  return { ok: true, json: out };
+}
+
 process.on("message", async (req) => {
   let res;
   try {
-    res = await evaluate(req);
+    res = req.op === "pdf_text" ? await pdfText(req) : await evaluate(req);
   } catch (e) {
     res = { ok: false, code: "EXPRESSION_RUNTIME", message: describe(e) };
   }

@@ -69,7 +69,7 @@ export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selecte
         failed && "animate-shake",
       )}
     >
-      {def.inputs > 0 && <Handle type="target" position={Position.Left} isConnectable={!readOnly} aria-label={`${data.label} input`} />}
+      {def.inputs !== 0 && <Handle type="target" position={Position.Left} isConnectable={!readOnly} aria-label={`${data.label} input`} />}
       <p className="flex items-center gap-2 text-base font-semibold">
         <span aria-hidden className={cx("size-2 shrink-0 rounded-full", step ? DOT[step.status] : "bg-muted")} />
         <span className="truncate">{data.label}</span>

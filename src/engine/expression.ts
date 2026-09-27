@@ -37,7 +37,7 @@ function describeJsonataError(err: unknown): string {
  * Evaluate JSONata with a wall-clock and recursion budget (JSONata's documented
  * timebox hooks), so a runaway expression cannot hang the worker.
  */
-export async function evaluateExpression(source: string, input: unknown): Promise<unknown> {
+export async function evaluateExpression(source: string, input: unknown, bindings?: Record<string, unknown>): Promise<unknown> {
   if (source.length > EXPRESSION_MAX_LENGTH) {
     throw new ExpressionError("EXPRESSION_TOO_LONG", `Expression is longer than ${EXPRESSION_MAX_LENGTH} characters`);
   }
@@ -72,7 +72,7 @@ export async function evaluateExpression(source: string, input: unknown): Promis
 
   let result: unknown;
   try {
-    result = await expr.evaluate(input as never);
+    result = await expr.evaluate(input as never, bindings);
   } catch (err) {
     const e = err as { code?: string; message?: string };
     const code = e?.code?.startsWith("EXPRESSION_") ? e.code : "EXPRESSION_RUNTIME";

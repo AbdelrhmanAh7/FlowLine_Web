@@ -8,6 +8,27 @@
       "when": 1790500584658,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790527799350,
+      "tag": "0001_phase2",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790527800583,
+      "tag": "0002_flow_version_immutable",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790528362056,
+      "tag": "0003_run_trigger_dedupe",
+      "breakpoints": true
     }
   ]
 }
