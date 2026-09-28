@@ -156,6 +156,11 @@ function Verification({ v }: { v: CatalogProvider["verification"] }) {
       >
         {v.live === "verified" ? "✓ live verified" : v.live === "blocked" ? "live: blocked" : "live: not run"}
       </span>
+      {v.betaScope === "deferred" && (
+        <span className="rounded-sm border border-line px-1.5 py-0.5 text-muted" title="Available, but not part of the private beta's live-verified set yet — use with care">
+          beta: not yet verified live
+        </span>
+      )}
     </div>
   );
 }

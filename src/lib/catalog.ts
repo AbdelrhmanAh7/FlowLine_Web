@@ -23,7 +23,7 @@ export interface CatalogProvider {
   authType: "oauth2" | "api_key" | "basic" | "connection_string";
   oauthConfigured: boolean | null;
   connectFields: { key: string; label: string; secret: boolean; placeholder?: string; help?: string }[];
-  verification: { adapter: true; contractTested: boolean; live: "verified" | "blocked" | "not_run"; liveNote?: string };
+  verification: { adapter: true; contractTested: boolean; live: "verified" | "blocked" | "not_run"; liveNote?: string; betaScope: "core" | "deferred" };
   actions: CatalogAction[];
 }
 export interface Catalog {

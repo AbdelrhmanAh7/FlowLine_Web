@@ -129,6 +129,7 @@ const provider: ProviderDef = {
   ],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

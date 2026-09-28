@@ -172,6 +172,7 @@ const provider: ProviderDef = {
   actions: [getPullRequest, listPrFiles, createIssueComment],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

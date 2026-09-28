@@ -102,6 +102,7 @@ const provider: ProviderDef = {
   actions: [listTeams, createIssue],
   verification: {
     adapter: true,
+    betaScope: "deferred",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",
