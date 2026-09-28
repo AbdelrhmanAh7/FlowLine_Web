@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { db, schema } from "@/db";
 import { POST as billingWebhook } from "@/app/api/billing/webhook/route";
 import { consumeAccountToken, issueAccountToken, tokenState } from "@/server/email/flows";
+import { acceptInvite, createInvite } from "@/server/members";
 import { createWorkspace } from "@/server/workspaces";
 import { closeDb, makeUser, unique } from "./helpers";
 
@@ -63,6 +64,25 @@ describe("Fable review fixes", () => {
     expect(results.sort()).toEqual(["done", "transfer_required"]);
     const owners = await db.select().from(schema.workspaceMember).where(eq(schema.workspaceMember.workspaceId, ws.id));
     expect(owners.filter((m) => m.role === "owner")).toHaveLength(1);
+  });
+
+  it("an invitee outside the beta email sandbox still gets a usable invite; the owner is told it wasn't emailed", async () => {
+    const owner = await makeUser("sandboxowner");
+    const invitee = await makeUser("sandboxinvitee");
+    const ws = await createWorkspace(owner, unique("Sandboxed"));
+    const before = process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS;
+    process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS = "only-this@allowed.test";
+    try {
+      const r = await createInvite(owner, ws.id, { email: invitee.email, role: "viewer" });
+      expect(r.emailed).toBe(false);
+      expect((await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, invitee.email))).length).toBe(0);
+      expect((await acceptInvite(invitee, r.url.split("/").at(-1)!)).role).toBe("viewer");
+    } finally {
+      if (before === undefined) delete process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS;
+      else process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS = before;
+    }
+    const r2 = await createInvite(owner, ws.id, { email: `other-${crypto.randomUUID()}@flowline.test`, role: "viewer" });
+    expect(r2.emailed).toBe(true);
   });
 
   it("billing webhook caps a chunked body without Content-Length at 256 KB (413, not buffered whole)", async () => {

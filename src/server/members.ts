@@ -42,8 +42,13 @@ export async function createInvite(user: CurrentUser, workspaceId: string, input
     await audit(tx, { workspaceId, actor: userActor(user), action: "member.invited", targetType: "invite", targetId: invite!.id, data: { email, role: input.role } });
     return { invite: publicInvite(invite!), url: inviteUrl(token) };
   });
-  await sendInviteEmail(email, result.url, request);
-  return result;
+  // The email is best-effort: the invite exists either way and the owner always gets the link. During the beta the
+  // email sandbox (FLOWLINE_EMAIL_ALLOWED_RECIPIENTS) or a provider outage can refuse delivery — say so, don't fail.
+  const emailed = await sendInviteEmail(email, result.url, request).then(
+    () => true,
+    () => false,
+  );
+  return { ...result, emailed };
 }
 
 function publicInvite(i: typeof schema.workspaceInvite.$inferSelect) {

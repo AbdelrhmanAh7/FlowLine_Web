@@ -1534,6 +1534,8 @@ export const en: Messages = {
       enterEmail: "Enter an email",
       createInvite: "Create invite link",
       linkTitle: "Invitation link — shown once. Send it to the invitee:",
+      inviteEmailed: "We also emailed the invitation.",
+      inviteNotEmailed: "The invitation email wasn't sent (email delivery is limited during the beta). Share this link yourself.",
       copyLink: "Copy link",
       linkCopied: "Link copied",
       done: "Done",

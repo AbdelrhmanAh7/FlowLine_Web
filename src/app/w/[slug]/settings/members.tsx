@@ -52,11 +52,11 @@ export function Members() {
   };
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
-  const [link, setLink] = useState<string | null>(null);
+  const [link, setLink] = useState<{ url: string; emailed: boolean } | null>(null);
   const invite = useMutation({
-    mutationFn: () => api<{ url: string }>(`/api/workspaces/${workspace.id}/invites`, { method: "POST", json: { email, role: inviteRole } }),
+    mutationFn: () => api<{ url: string; emailed: boolean }>(`/api/workspaces/${workspace.id}/invites`, { method: "POST", json: { email, role: inviteRole } }),
     onSuccess: (r) => {
-      setLink(r.url);
+      setLink({ url: r.url, emailed: r.emailed });
       setEmail("");
       refresh();
     },
@@ -183,11 +183,14 @@ export function Members() {
         {link && (
           <div role="status" className="mt-3 flex flex-col gap-2 rounded-md border border-accent/40 bg-accent/5 p-3">
             <p className="text-sm text-hi">{t("settings.members.linkTitle")}</p>
+            <p className={link.emailed ? "text-sm text-med" : "text-sm text-warning"} data-testid="invite-email-status">
+              {t(link.emailed ? "settings.members.inviteEmailed" : "settings.members.inviteNotEmailed")}
+            </p>
             <code dir="ltr" className="data break-all text-sm" data-testid="invite-link">
-              {link}
+              {link.url}
             </code>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => void navigator.clipboard?.writeText(link).then(() => toast(t("settings.members.linkCopied"), "success"))}>
+              <Button size="sm" onClick={() => void navigator.clipboard?.writeText(link.url).then(() => toast(t("settings.members.linkCopied"), "success"))}>
                 {t("settings.members.copyLink")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setLink(null)}>
