@@ -1,0 +1,7 @@
+# Local beta-stack dry run — monitor alert/recovery (2026-09-28T16:19:25Z, image flowline:dcb92ee)
+worker stopped at ~16:16:55Z; alert after 72s (2 consecutive failures); worker restarted; recovery announced after 52s
+[monitor] 2026-09-28T16:15:07.783Z monitor started for http://web:3000
+[monitor] 2026-09-28T16:18:07.884Z FAIL health: HTTP 503 db=ok worker=offline
+[monitor] 2026-09-28T16:18:07.884Z FAIL worker: no worker has ever reported
+[monitor] 2026-09-28T16:19:07.900Z RECOVERED health: HTTP 200 db=ok worker=ok
+[monitor] 2026-09-28T16:19:07.900Z RECOVERED worker: last heartbeat 4s ago

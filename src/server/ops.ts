@@ -25,7 +25,7 @@ export async function opsStatus(opts: { dataDir?: string; backupDir?: string } =
 
   const hb = await one<{ age: number | null }>(sql`select extract(epoch from now() - max(last_seen_at))::float as age from worker_heartbeat`);
   const hbAge = hb.age == null ? null : Math.round(n(hb.age));
-  checks.worker = hbAge == null ? { status: "fail", detail: "no worker has ever reported" } : { status: hbAge > 60 ? "fail" : hbAge > 15 ? "warn" : "ok", detail: `last heartbeat ${hbAge}s ago`, value: hbAge };
+  checks.worker = hbAge == null ? { status: "fail", detail: "no worker heartbeat (worker stopped or never started)" } : { status: hbAge > 60 ? "fail" : hbAge > 15 ? "warn" : "ok", detail: `last heartbeat ${hbAge}s ago`, value: hbAge };
 
   const q = await one<{ queued: number; oldest: number | null; running: number; waiting: number }>(sql`
     select count(*) filter (where status = 'queued')::int as queued,

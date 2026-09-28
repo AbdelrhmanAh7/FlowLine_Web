@@ -1,0 +1,68 @@
+{
+  "base": "https://localhost",
+  "insecureLocal": true,
+  "at": "2026-09-28T16:16:51.607Z",
+  "checks": [
+    {
+      "name": "TLS certificate",
+      "ok": true,
+      "detail": "TLSv1.3, issuer Caddy Local Authority - ECC Intermediate, valid to Sep 29 04:15:07 2026 GMT (local CA — not validated)"
+    },
+    {
+      "name": "HTTP redirects to HTTPS",
+      "ok": true,
+      "detail": "308 → https://localhost/api/health"
+    },
+    {
+      "name": "health: db + worker ok over HTTPS",
+      "ok": true,
+      "detail": "revision dcb92ee schema 12"
+    },
+    {
+      "name": "security headers",
+      "ok": true,
+      "detail": "strict-transport-security=set, x-content-type-options=set, x-frame-options=set, referrer-policy=set, permissions-policy=set"
+    },
+    {
+      "name": "no server banner",
+      "ok": true,
+      "detail": "server=- x-powered-by=-"
+    },
+    {
+      "name": "correlation id on API responses",
+      "ok": true,
+      "detail": "ed754339-4d2a-4843-8c4c-bda6a9afeccd"
+    },
+    {
+      "name": "internal route blocked at the proxy: /api/ops/status",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "name": "internal route blocked at the proxy: /api/test/faults",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "name": "port 5432 not reachable from outside",
+      "ok": true,
+      "detail": "PostgreSQL"
+    },
+    {
+      "name": "port 3000 not reachable from outside",
+      "ok": true,
+      "detail": "app port"
+    },
+    {
+      "name": "port 11434 not reachable from outside",
+      "ok": true,
+      "detail": "n/a on a local dry run (the developer's own Ollama); checked on the real host"
+    },
+    {
+      "name": "uninvited sign-up creates no usable account",
+      "ok": true,
+      "detail": "sign-up HTTP 200, sign-in HTTP 401"
+    }
+  ],
+  "pass": true
+}

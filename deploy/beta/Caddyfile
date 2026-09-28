@@ -12,6 +12,8 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Same id the app receives (header_up below) — every response carries it, not only API routes.
+		X-Request-Id {http.request.uuid}
 		-Server
 	}
 
