@@ -1,7 +1,7 @@
 {
   "provider": "ollama",
   "model": "qwen2.5:7b",
-  "at": "2026-09-28T01:45:32.377Z",
+  "at": "2026-09-28T02:07:03.028Z",
   "valid": 12,
   "total": 12,
   "results": [
@@ -9,7 +9,7 @@
       "case": "new: order totals",
       "run": 1,
       "ok": true,
-      "ms": 3130,
+      "ms": 7203,
       "errors": [],
       "warnings": [],
       "added": [
@@ -22,7 +22,7 @@
       "case": "new: order totals",
       "run": 2,
       "ok": true,
-      "ms": 2897,
+      "ms": 2905,
       "errors": [],
       "warnings": [],
       "added": [
@@ -35,7 +35,7 @@
       "case": "new: order totals",
       "run": 3,
       "ok": true,
-      "ms": 2900,
+      "ms": 2946,
       "errors": [],
       "warnings": [],
       "added": [
@@ -48,7 +48,7 @@
       "case": "edit: add JSON transform",
       "run": 1,
       "ok": true,
-      "ms": 1787,
+      "ms": 2551,
       "errors": [],
       "warnings": [
         "CONNECTION_DROPPED",
@@ -76,7 +76,7 @@
       "case": "edit: add JSON transform",
       "run": 3,
       "ok": true,
-      "ms": 1699,
+      "ms": 1710,
       "errors": [],
       "warnings": [
         "CONNECTION_DROPPED",
@@ -90,7 +90,7 @@
       "case": "edit: add condition",
       "run": 1,
       "ok": true,
-      "ms": 6041,
+      "ms": 6831,
       "errors": [],
       "warnings": [
         "RESOLVED_REFERENCE",
@@ -109,7 +109,7 @@
       "case": "edit: add condition",
       "run": 2,
       "ok": true,
-      "ms": 6597,
+      "ms": 5913,
       "errors": [],
       "warnings": [
         "RESOLVED_REFERENCE",
@@ -128,7 +128,7 @@
       "case": "edit: add condition",
       "run": 3,
       "ok": true,
-      "ms": 7041,
+      "ms": 5932,
       "errors": [],
       "warnings": [
         "RESOLVED_REFERENCE",
@@ -147,7 +147,7 @@
       "case": "unavailable: Salesforce",
       "run": 1,
       "ok": true,
-      "ms": 1,
+      "ms": 0,
       "errors": [
         "UNKNOWN_INTEGRATION: \"Salesforce\" isn't an available integration in Flowline. Available: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear."
       ],

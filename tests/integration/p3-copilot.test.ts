@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
-import { decideProposal, propose } from "@/server/copilot";
+import { decideNewFlowProposal, decideProposal, propose, proposeNewFlow } from "@/server/copilot";
 import { createFlow, saveFlow } from "@/server/flows";
 import { createWorkspace, updateWorkspace } from "@/server/workspaces";
 import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
@@ -154,5 +154,40 @@ describe("Copilot usage accounting", () => {
     const after = await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id));
     expect(after.filter((e) => e.status === "settled").length).toBe(events.length);
     expect(after.length).toBeLessThanOrEqual(before + 1); // at most the refused reservation record, never a settled call
+  });
+});
+
+describe("Create with Copilot (new flow)", () => {
+  const flowsIn = async (workspaceId: string) => db.select().from(schema.flow).where(eq(schema.flow.workspaceId, workspaceId));
+
+  it("creates no flow until a proposal is approved; rejected and invalid proposals leave nothing behind (Codex CX3Q-05)", async () => {
+    const user = await makeUser("cpn");
+    const ws = await createWorkspace(user, unique("CopilotNew"));
+    const before = (await flowsIn(ws.id)).length;
+
+    const bad = await proposeNewFlow(user, ws.id, "teleport the result");
+    expect(bad.status).toBe("invalid");
+    expect(bad.flowId).toBeNull();
+    const rejected = await proposeNewFlow(user, ws.id, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
+    expect(rejected.status).toBe("proposed");
+    await decideNewFlowProposal(user, ws.id, rejected.id, { decision: "reject" });
+    expect(await flowsIn(ws.id)).toHaveLength(before);
+
+    const good = await proposeNewFlow(user, ws.id, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
+    const approved = await decideNewFlowProposal(user, ws.id, good.id, { decision: "approve" });
+    expect(approved.status).toBe("approved");
+    const flows = await flowsIn(ws.id);
+    expect(flows).toHaveLength(before + 1);
+    const created = flows.find((f) => f.id === approved.flowId)!;
+    expect((created.graph as FlowGraph).nodes.length).toBe(good.diff!.added.length);
+    expect(created.publishedVersionId).toBeNull(); // a draft: never published
+    expect(await runsOf(created.id)).toHaveLength(0); // and never run
+    await expectHttpError(decideNewFlowProposal(user, ws.id, good.id, { decision: "approve" }), 409, "PROPOSAL_CLOSED"); // single use
+
+    // Another workspace can't decide it.
+    const other = await makeUser("cpo");
+    const ows = await createWorkspace(other, unique("Other"));
+    const p2 = await proposeNewFlow(user, ws.id, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
+    await expectHttpError(decideNewFlowProposal(other, ows.id, p2.id, { decision: "approve" }), 404);
   });
 });

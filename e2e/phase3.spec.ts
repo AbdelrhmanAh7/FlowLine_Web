@@ -181,16 +181,24 @@ test.describe("Copilot", () => {
   test("valid generation with a missing credential → approve → saved draft, nothing ran", { tag: "@critical" }, async ({ page }) => {
     const { workspace } = await setupUser(page);
     await page.goto(`/w/${workspace.slug}/flows`);
+    const flowCount = async () => ((await (await page.request.get(`/api/workspaces/${workspace.id}/flows`)).json()).flows as unknown[]).length;
     await page.getByRole("button", { name: "✦ Create with Copilot" }).click();
-    await expect(page).toHaveURL(/copilot=1/);
     const panel = page.getByRole("dialog", { name: "Copilot" });
-    const p = await ask(panel, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
+    // Abandoned or rejected attempts leave no empty draft behind (Codex CX3Q-05).
+    let p = await ask(panel, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
     await expect(p).toContainText("Proposal — review");
+    await panel.getByRole("button", { name: "Reject" }).click();
+    await expect(p).toContainText("rejected");
+    expect(await flowCount()).toBe(0);
+
+    p = await ask(panel, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
     await expect(p.getByRole("list", { name: "Setup needed" })).toContainText(/Connect Gmail|Connect PostgreSQL/);
     await expect(p.getByLabel("Proposed changes")).toContainText("+ Gmail — Email leadership");
-    const flowId = page.url().split("/").pop()!.split("?")[0]!;
-    await panel.getByRole("button", { name: "Approve & save draft" }).click();
+    await panel.getByRole("button", { name: "Approve & create draft" }).click();
+    await expect(page).toHaveURL(/\/flows\/[0-9a-f-]{36}$/);
     await expect(page.locator(".react-flow__node")).toHaveCount(5, { timeout: 15_000 });
+    const flowId = page.url().split("/").pop()!;
+    expect(await flowCount()).toBe(1);
     expect(((await (await page.request.get(`/api/flows/${flowId}/runs`)).json()).runs as unknown[]).length).toBe(0);
   });
 
@@ -329,4 +337,46 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await page.getByRole("button", { name: "Audit log" }).click();
   await expect(page.getByRole("list", { name: "Audit events" })).toContainText("sso.signin");
   await expect(page.getByRole("list", { name: "Audit events" })).toContainText("sso.configured");
+});
+
+test("a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once", { tag: "@cross-browser" }, async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  const { workspace } = await setupUser(page);
+  const flowId = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name: "Doubler" } })).json()).flow.id as string;
+  await saveGraph(page.request, flowId, {
+    nodes: [manual('{ "n": 1 }'), { id: "x", type: "transform.json", position: pos(1), data: { label: "Double", config: { expression: '{ "v": n * 2 }' } } }, out(2)],
+    edges: line("t", "x", "o"),
+  });
+  expect((await page.request.post(`/api/flows/${flowId}/publish`)).status()).toBe(201);
+  const agent = (await (await page.request.post(`/api/workspaces/${workspace.id}/agents`, { data: { name: "Runner", instructions: "Run the Doubler when asked.", tools: [{ tool: "run_workflow", flowId, permission: "ask" }] } })).json()).agent;
+
+  // A viewer joins.
+  const inv = await (await page.request.post(`/api/workspaces/${workspace.id}/invites`, { data: { email: uniqueEmail("vw"), role: "viewer" } })).json();
+  const v = await newUserContext(browser, inv.invite.email);
+  expect((await v.page.request.post(`/api/invites/${new URL(inv.url).pathname.split("/").pop()}`)).ok()).toBeTruthy();
+
+  await page.goto(`/w/${workspace.slug}/agents/${agent.id}`);
+  await page.getByLabel("Message the agent").fill('run Doubler with {"n": 7}');
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByTestId("agent-approval")).toBeVisible({ timeout: 30_000 });
+
+  // Navigate away; the request must still be reachable.
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await page.getByRole("link", { name: "Review →" }).click();
+  await expect(page).toHaveURL(new RegExp(`/agents/${agent.id}\\?tab=runs&run=`));
+  const approval = page.getByRole("list", { name: "Selected run" }).getByTestId("agent-approval");
+  await expect(approval).toContainText('"n": 7');
+
+  // The viewer sees it, but can't decide.
+  await v.page.goto(`/w/${workspace.slug}/agents/${agent.id}`);
+  await expect(v.page.getByTestId("agent-waiting-banner")).toBeVisible();
+  await v.page.getByTestId("agent-waiting-banner").getByRole("button", { name: "Review in Runs" }).click();
+  const vApprove = v.page.getByRole("list", { name: "Selected run" }).getByRole("button", { name: "Approve" });
+  await expect(vApprove).toHaveAttribute("aria-disabled", "true");
+  await expect(vApprove).toHaveAccessibleDescription(/Only workspace owners and editors/);
+  await v.ctx.close();
+
+  await approval.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByRole("list", { name: "Selected run" }).getByTestId("agent-turn-succeeded")).toContainText('"v":14', { timeout: 30_000 });
+  expect(((await (await page.request.get(`/api/flows/${flowId}/runs`)).json()).runs as unknown[]).length).toBe(1);
 });

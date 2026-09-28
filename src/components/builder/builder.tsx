@@ -700,7 +700,7 @@ function Editor({ data }: { data: FlowResponse }) {
       )}
       {copilotOpen && !readOnly && (
         <CopilotPanel
-          flowId={flow.id}
+          target={{ kind: "flow", flowId: flow.id }}
           onClose={() => setCopilotOpen(false)}
           beforePropose={async () => {
             if (persistence.dirty && !(await persistence.saveNow())) throw new Error("Save your changes first — Copilot works on the saved flow");

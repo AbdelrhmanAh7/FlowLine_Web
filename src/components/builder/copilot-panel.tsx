@@ -8,6 +8,7 @@ import { api, ApiError } from "@/lib/api";
 
 interface Proposal {
   id: string;
+  flowId: string | null;
   status: "invalid" | "proposed" | "approved" | "rejected" | "stale";
   summary: string;
   diff: {
@@ -26,15 +27,19 @@ interface Proposal {
  * Copilot: describe a change → a validated proposal with a diff → approve to save it as a DRAFT.
  * Nothing runs and nothing is published; removals need explicit confirmation.
  */
-export function CopilotPanel({ flowId, onClose, beforePropose, onApplied }: { flowId: string; onClose: () => void; beforePropose: () => Promise<void>; onApplied: (revision: number) => void }) {
+/** Where proposals go: an existing flow, or a NEW flow that is created only when a proposal is approved. */
+export type CopilotTarget = { kind: "flow"; flowId: string } | { kind: "new"; workspaceId: string };
+
+export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { target: CopilotTarget; onClose: () => void; beforePropose?: () => Promise<void>; onApplied: (applied: { flowId: string; revision: number }) => void }) {
+  const base = target.kind === "flow" ? `/api/flows/${target.flowId}/copilot` : `/api/workspaces/${target.workspaceId}/copilot`;
   const toast = useToast();
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [confirmRemovals, setConfirmRemovals] = useState(false);
   const ask = useMutation({
     mutationFn: async () => {
-      await beforePropose(); // Copilot works on the saved flow — save pending edits first.
-      return api<{ proposal: Proposal }>(`/api/flows/${flowId}/copilot`, { method: "POST", json: { request } });
+      await beforePropose?.(); // Copilot works on the saved flow — save pending edits first.
+      return api<{ proposal: Proposal }>(base, { method: "POST", json: { request } });
     },
     onSuccess: ({ proposal }) => {
       setProposal(proposal);
@@ -43,13 +48,13 @@ export function CopilotPanel({ flowId, onClose, beforePropose, onApplied }: { fl
     onError: (e) => toast(e instanceof ApiError ? e.message : "Copilot couldn't make a proposal", "danger"),
   });
   const decide = useMutation({
-    mutationFn: (decision: "approve" | "reject") => api<{ proposal: Proposal }>(`/api/flows/${flowId}/copilot/${proposal!.id}`, { method: "POST", json: { decision, confirmRemovals } }),
+    mutationFn: (decision: "approve" | "reject") => api<{ proposal: Proposal }>(`${base}/${proposal!.id}`, { method: "POST", json: target.kind === "flow" ? { decision, confirmRemovals } : { decision } }),
     onSuccess: ({ proposal: p }) => {
       setProposal(p);
       if (p.status === "approved") {
-        toast(`Saved as draft revision ${p.savedRevision} — nothing was run or published`, "success");
-        onApplied(p.savedRevision!);
-      } else toast("Proposal rejected — nothing changed", "info");
+        toast(target.kind === "new" ? "Flow created as a draft — nothing was run or published" : `Saved as draft revision ${p.savedRevision} — nothing was run or published`, "success");
+        onApplied({ flowId: p.flowId!, revision: p.savedRevision! });
+      } else toast(target.kind === "new" ? "Proposal rejected — no flow was created" : "Proposal rejected — nothing changed", "info");
     },
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't apply the proposal", "danger"),
   });
@@ -139,7 +144,7 @@ export function CopilotPanel({ flowId, onClose, beforePropose, onApplied }: { fl
               )}
               <div className="flex gap-2">
                 <Button variant="primary" loading={decide.isPending && decide.variables === "approve"} disabledReason={removed.length > 0 && !confirmRemovals ? "Confirm the removals first" : null} onClick={() => decide.mutate("approve")}>
-                  Approve &amp; save draft
+                  {target.kind === "new" ? "Approve & create draft" : "Approve & save draft"}
                 </Button>
                 <Button variant="ghost" loading={decide.isPending && decide.variables === "reject"} onClick={() => decide.mutate("reject")}>
                   Reject

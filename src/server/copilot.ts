@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import type { PriceTable } from "@/db/schema";
 import type { FlowGraph } from "@/engine/types";
 import type { CurrentUser } from "./access";
-import { saveFlow } from "./flows";
+import { createFlow, saveFlow } from "./flows";
 import { HttpError, notFound } from "./http";
 import { availableIntegrationNames, unavailableAppsIn } from "./copilot-apps";
 import { applyPatch, catalogFor, graphSummary, PATCH_JSON_SCHEMA, patchSchema, type CopilotPatch, type Diff, type Issue } from "./copilot-patch";
@@ -120,23 +120,30 @@ export async function generatePatch(
 }
 
 export async function propose(user: CurrentUser, flowId: string, request: string) {
+  const [flow] = await db.select().from(schema.flow).where(eq(schema.flow.id, flowId));
+  if (!flow || flow.deletedAt) throw notFound("Flow not found");
+  return proposeFor(user, flow.workspaceId, flow, request);
+}
+
+/** "Create with Copilot": a proposal for a NEW flow. Nothing is created until the proposal is approved. */
+export async function proposeNewFlow(user: CurrentUser, workspaceId: string, request: string) {
+  return proposeFor(user, workspaceId, null, request);
+}
+
+async function proposeFor(user: CurrentUser, workspaceId: string, flow: typeof schema.flow.$inferSelect | null, request: string) {
   const text = request.trim();
   if (!text) throw new HttpError(400, "VALIDATION", "Describe what the workflow should do");
   if (text.length > 2000) throw new HttpError(413, "INPUT_TOO_LARGE", "Keep the request under 2,000 characters");
   checkRunRate(`copilot:${user.id}`);
-  const [flow] = await db.select().from(schema.flow).where(eq(schema.flow.id, flowId));
-  if (!flow || flow.deletedAt) throw notFound("Flow not found");
   const conns = await db
     .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
     .from(schema.connection)
-    .where(eq(schema.connection.workspaceId, flow.workspaceId));
-  const [wsAi] = await db.select({ aiProvider: schema.workspace.aiProvider, aiModel: schema.workspace.aiModel }).from(schema.workspace).where(eq(schema.workspace.id, flow.workspaceId));
-  const provider = getAiProvider({ provider: wsAi?.aiProvider, model: wsAi?.aiModel });
+    .where(eq(schema.connection.workspaceId, workspaceId));
+  const [ws] = await db.select({ aiProvider: schema.workspace.aiProvider, aiModel: schema.workspace.aiModel, prices: schema.workspace.prices }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
+  const provider = getAiProvider({ provider: ws?.aiProvider, model: ws?.aiModel });
   if (!provider.available) throw new HttpError(503, "AI_UNAVAILABLE", provider.reason ?? "No AI provider is configured");
-  const base = flow.graph as FlowGraph;
-
-  const [wsRow] = await db.select({ prices: schema.workspace.prices }).from(schema.workspace).where(eq(schema.workspace.id, flow.workspaceId));
-  const { patch, issues, model } = await generatePatch(provider, text, base, conns, { workspaceId: flow.workspaceId, key: `copilot:${flow.id}:${crypto.randomUUID()}`, prices: wsRow?.prices ?? {} });
+  const base: FlowGraph = flow ? (flow.graph as FlowGraph) : { nodes: [], edges: [] };
+  const { patch, issues, model } = await generatePatch(provider, text, base, conns, { workspaceId, key: `copilot:${flow?.id ?? "new"}:${crypto.randomUUID()}`, prices: ws?.prices ?? {} });
   let proposedGraph: FlowGraph | null = null;
   let diff: Diff | null = null;
   if (patch) {
@@ -148,13 +155,13 @@ export async function propose(user: CurrentUser, flowId: string, request: string
   const status = issues.some((i) => i.severity === "error") || !patch ? "invalid" : "proposed";
   const [row] = await db
     .insert(schema.copilotProposal)
-    .values({ workspaceId: flow.workspaceId, flowId, baseRevision: flow.revision, request: text, patch, proposedGraph, diff, issues, status, provider: provider.id, model, createdBy: user.id })
+    .values({ workspaceId, flowId: flow?.id ?? null, baseRevision: flow?.revision ?? 0, request: text, patch, proposedGraph, diff, issues, status, provider: provider.id, model, createdBy: user.id })
     .returning();
   return publicProposal(row!);
 }
 
 export function publicProposal(p: typeof schema.copilotProposal.$inferSelect) {
-  return { id: p.id, status: p.status, request: p.request, summary: (p.patch as CopilotPatch | null)?.summary ?? "", diff: p.diff as Diff | null, issues: p.issues, proposedGraph: p.proposedGraph, baseRevision: p.baseRevision, savedRevision: p.savedRevision, createdAt: p.createdAt, provider: p.provider, model: p.model };
+  return { id: p.id, flowId: p.flowId, status: p.status, request: p.request, summary: (p.patch as CopilotPatch | null)?.summary ?? "", diff: p.diff as Diff | null, issues: p.issues, proposedGraph: p.proposedGraph, baseRevision: p.baseRevision, savedRevision: p.savedRevision, createdAt: p.createdAt, provider: p.provider, model: p.model };
 }
 
 /** Approve → saved as a draft revision (never run or published). Removals need explicit confirmation. */
@@ -177,6 +184,32 @@ export async function decideProposal(user: CurrentUser, flowId: string, proposal
       await db.update(schema.copilotProposal).set({ status: "stale", decidedAt: new Date() }).where(eq(schema.copilotProposal.id, p.id));
       throw new HttpError(409, "PROPOSAL_STALE", "The workflow changed since this proposal was made — nothing was overwritten. Ask Copilot again.");
     }
+    throw e;
+  }
+}
+
+/** Approve a new-flow proposal: creates the flow with the proposed graph as its first draft (never run or published). */
+export async function decideNewFlowProposal(user: CurrentUser, workspaceId: string, proposalId: string, d: { decision: "approve" | "reject" }) {
+  const [p] = await db
+    .select()
+    .from(schema.copilotProposal)
+    .where(and(eq(schema.copilotProposal.id, proposalId), eq(schema.copilotProposal.workspaceId, workspaceId)));
+  // Proposals for an existing flow are decided on that flow; an approved new-flow proposal now has its flow id.
+  if (!p || (p.flowId && p.status === "proposed")) throw notFound("Proposal not found");
+  if (p.status !== "proposed") throw new HttpError(409, "PROPOSAL_CLOSED", p.status === "invalid" ? "This proposal is invalid and can't be applied — revise the request" : `This proposal is already ${p.status}`);
+  if (d.decision === "reject") {
+    const [r] = await db.update(schema.copilotProposal).set({ status: "rejected", decidedAt: new Date() }).where(eq(schema.copilotProposal.id, p.id)).returning();
+    return publicProposal(r!);
+  }
+  const summary = (p.patch as CopilotPatch | null)?.summary?.trim();
+  const name = (summary || p.request).replace(/\s+/g, " ").slice(0, 60).trim() || "Untitled flow";
+  const created = await createFlow(user, workspaceId, { name });
+  try {
+    const saved = await saveFlow(user, created.id, { baseRevision: created.revision, graph: p.proposedGraph as FlowGraph });
+    const [r] = await db.update(schema.copilotProposal).set({ status: "approved", decidedAt: new Date(), flowId: created.id, savedRevision: saved.flow.revision }).where(eq(schema.copilotProposal.id, p.id)).returning();
+    return publicProposal(r!);
+  } catch (e) {
+    await db.delete(schema.flow).where(eq(schema.flow.id, created.id)); // no half-made flow is left behind
     throw e;
   }
 }

@@ -49,7 +49,7 @@ describe("Copilot patch repairs", () => {
     expect(errors(bad).map((e) => e.code)).toContain("UNKNOWN_NODE_TYPE");
   });
 
-  it("a non-branch sourceHandle is ignored; a condition edge without a branch is an error", () => {
+  it("a non-branch sourceHandle is ignored (a condition then follows its true branch, as the engine defines)", () => {
     const r = applyPatch({ nodes: [], edges: [] }, patch({
       addNodes: [
         { id: "t", type: "trigger.manual", label: "Start", config: {} },
@@ -59,7 +59,8 @@ describe("Copilot patch repairs", () => {
       addEdges: [{ source: "t", target: "c", sourceHandle: "output" }, { source: "c", target: "o", sourceHandle: "yes" }],
     }), []);
     expect(r.graph.edges.find((e) => e.source === "t")!.sourceHandle).toBeNull();
-    expect(errors(r).map((e) => e.code)).toContain("MISSING_BRANCH");
+    expect(r.graph.edges.find((e) => e.source === "c")!.sourceHandle).toBeNull();
+    expect(errors(r).filter((e) => e.code !== "SETUP_REQUIRED")).toEqual([]);
   });
 });
 

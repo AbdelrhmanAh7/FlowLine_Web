@@ -111,6 +111,15 @@ export async function workspaceOverview(workspaceId: string) {
     .select({ approvals: sql<number>`count(*)::int` })
     .from(schema.approval)
     .where(and(eq(schema.approval.workspaceId, workspaceId), eq(schema.approval.status, "pending"), sql`${schema.approval.expiresAt} > now()`));
+  // Agent requests are decided on the agent's run, not in Run history: list where each one waits (oldest first).
+  const agentApprovals = await db
+    .select({ agentId: schema.agentRun.agentId, agentRunId: schema.approval.agentRunId, agentName: schema.agent.name })
+    .from(schema.approval)
+    .innerJoin(schema.agentRun, eq(schema.agentRun.id, schema.approval.agentRunId))
+    .innerJoin(schema.agent, eq(schema.agent.id, schema.agentRun.agentId))
+    .where(and(eq(schema.approval.workspaceId, workspaceId), eq(schema.approval.status, "pending"), sql`${schema.approval.expiresAt} > now()`))
+    .orderBy(schema.approval.requestedAt)
+    .limit(20);
   const unhealthy = await db
     .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
     .from(schema.connection)
@@ -121,6 +130,7 @@ export async function workspaceOverview(workspaceId: string) {
     .where(and(eq(schema.flow.workspaceId, workspaceId), isNull(schema.flow.deletedAt), sql`${schema.flow.pausedReason} is not null`));
   return {
     pendingApprovals: approvals,
+    pendingAgentApprovals: agentApprovals,
     unhealthyConnections: unhealthy,
     pausedFlows: paused,
     flows: flowCount.n,

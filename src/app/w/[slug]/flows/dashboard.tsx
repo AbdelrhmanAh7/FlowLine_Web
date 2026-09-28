@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { CopilotPanel } from "@/components/builder/copilot-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
@@ -36,6 +37,7 @@ interface Usage {
 
 interface Overview {
   pendingApprovals: number;
+  pendingAgentApprovals: { agentId: string; agentRunId: string; agentName: string }[];
   unhealthyConnections: { id: string; provider: string; label: string; status: string }[];
   pausedFlows: number;
   flows: number;
@@ -77,8 +79,8 @@ export function useCreateFlow() {
   const router = useRouter();
   const toast = useToast();
   return useMutation({
-    mutationFn: ({ copilot: _c, ...body }: { name?: string; templateId?: string; copilot?: boolean }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
-    onSuccess: ({ flow }, vars) => router.push(`/w/${workspace.slug}/flows/${flow.id}${vars.copilot ? "?copilot=1" : ""}`),
+    mutationFn: (body: { name?: string; templateId?: string }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
+    onSuccess: ({ flow }) => router.push(`/w/${workspace.slug}/flows/${flow.id}`),
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't create the flow", "danger"),
   });
 }
@@ -92,6 +94,9 @@ export function Dashboard() {
   const usage = useQuery({ queryKey: ["usage", workspace.id], queryFn: () => api<Usage>(`/api/workspaces/${workspace.id}/usage`), refetchInterval: 30_000 });
   const flows = useQuery({ queryKey: ["flows", workspace.id], queryFn: () => api<{ flows: FlowRow[] }>(`/api/workspaces/${workspace.id}/flows`), select: (d) => d.flows });
   const create = useCreateFlow();
+  const router = useRouter();
+  // "Create with Copilot" makes no flow until a proposal is approved (no empty drafts left behind).
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
   const isMobile = useViewport() === "mobile";
@@ -105,13 +110,18 @@ export function Dashboard() {
           Search flows
         </label>
         <Input id="flow-search" placeholder="Search flows…" value={q} onChange={(e) => setQ(e.target.value)} className="h-8 w-44 sm:w-60" />
-        <Button onClick={() => create.mutate({ name: "Untitled flow", copilot: true })} loading={create.isPending && create.variables?.copilot} disabledReason={newReason}>
+        <Button onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
           ✦ Create with Copilot
         </Button>
-        <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} loading={create.isPending && !create.variables?.copilot} disabledReason={newReason}>
+        <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} loading={create.isPending} disabledReason={newReason}>
           + New flow
         </Button>
       </PageHeader>
+      {copilotOpen && !newReason && (
+        <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md">
+          <CopilotPanel target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         {/* KPIs */}
@@ -218,7 +228,7 @@ export function Dashboard() {
             </div>
           ) : overview.isError ? (
             <p className="text-base text-med">Activity is unavailable until the numbers above load.</p>
-          ) : overview.data.recent.length === 0 && overview.data.worker.online ? (
+          ) : overview.data.recent.length === 0 && overview.data.worker.online && overview.data.pendingApprovals === 0 && overview.data.unhealthyConnections.length === 0 ? (
             <p className="text-base text-med">No runs yet. Open a flow and press Run — results show up here.</p>
           ) : (
             <ul className="grid gap-x-8 gap-y-2 md:grid-cols-2">
@@ -234,17 +244,26 @@ export function Dashboard() {
                   </Link>
                 </li>
               ))}
-              {overview.data.pendingApprovals > 0 && (
+              {overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length > 0 && (
                 <li className="flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">
-                    {overview.data.pendingApprovals} action{overview.data.pendingApprovals > 1 ? "s" : ""} waiting for approval
+                    {overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length} workflow action{overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length > 1 ? "s" : ""} waiting for approval
                   </span>
                   <Link href={`/w/${workspace.slug}/runs?status=waiting`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
                     Review →
                   </Link>
                 </li>
               )}
+              {overview.data.pendingAgentApprovals.map((a) => (
+                <li key={a.agentRunId} className="flex min-w-0 items-center gap-2 text-base">
+                  <Dot tone="warning" />
+                  <span className="min-w-0 truncate text-med">Agent “{a.agentName}” is waiting for a decision</span>
+                  <Link href={`/w/${workspace.slug}/agents/${a.agentId}?tab=runs&run=${a.agentRunId}`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
+                    Review →
+                  </Link>
+                </li>
+              ))}
               {!overview.data.worker.online && (
                 <li className="flex items-center gap-2 text-base">
                   <Dot tone="warning" />

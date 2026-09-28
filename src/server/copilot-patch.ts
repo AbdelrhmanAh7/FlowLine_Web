@@ -202,10 +202,10 @@ export function applyPatch(base: FlowGraph, input: CopilotPatch, conns: { id: st
       continue;
     }
     if (edges.some((x) => x.source === e.source && x.target === e.target)) continue;
-    // Only a condition's branches have handles; anything else from the model means "no handle".
+    // Only a condition's branches have handles; anything else from the model means "no handle" (for a condition the
+    // engine then uses its first output, the true branch — the same rule as a connection drawn on the canvas).
     const isCondition = nodes.get(e.source)!.type === "logic.condition";
     const handle = isCondition && (e.sourceHandle === "true" || e.sourceHandle === "false") ? e.sourceHandle : null;
-    if (isCondition && !handle) err("MISSING_BRANCH", `An edge from the condition "${nodes.get(e.source)!.data.label}" must say which branch it follows (true or false)`, e.source);
     edges.push({ id: `cp-${Date.now().toString(36)}-${i++}`, source: e.source, target: e.target, sourceHandle: handle });
   }
   // "after": insert a new step behind an existing one; it takes over that step's outgoing connections.

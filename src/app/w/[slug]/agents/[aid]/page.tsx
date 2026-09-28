@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { use, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
@@ -54,7 +55,9 @@ const active = (s: string) => s === "queued" || s === "running";
 export default function AgentPage({ params }: { params: Promise<{ aid: string }> }) {
   const { aid } = use(params);
   const { role } = useWorkspace();
-  const [tab, setTab] = useState<"chat" | "config" | "runs">("chat");
+  // Deep links (e.g. the dashboard's "Review →"): ?tab=runs&run=<id> opens that run with its decision controls.
+  const params2 = useSearchParams();
+  const [tab, setTab] = useState<"chat" | "config" | "runs">(() => (params2.get("tab") === "runs" || params2.get("run") ? "runs" : params2.get("tab") === "config" ? "config" : "chat"));
   const q = useQuery({ queryKey: ["agent", aid], queryFn: () => api<AgentDetail>(`/api/agents/${aid}`) });
   return (
     <div className="flex flex-col">
@@ -72,11 +75,11 @@ export default function AgentPage({ params }: { params: Promise<{ aid: string }>
         ) : q.isError ? (
           <ErrorState title="Couldn't load the agent" body={(q.error as Error).message} onRetry={() => q.refetch()} />
         ) : tab === "chat" ? (
-          <Chat agentId={aid} role={role as Role} />
+          <Chat agentId={aid} role={role as Role} onReview={() => setTab("runs")} />
         ) : tab === "config" ? (
           <Config detail={q.data} role={role as Role} />
         ) : (
-          <Runs agentId={aid} />
+          <Runs agentId={aid} role={role as Role} initialRun={params2.get("run")} />
         )}
       </div>
     </div>
@@ -110,9 +113,16 @@ function Config({ detail, role }: { detail: AgentDetail; role: Role }) {
   );
 }
 
-function Chat({ agentId, role }: { agentId: string; role: Role }) {
+function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onReview: () => void }) {
   const toast = useToast();
   const online = useOnline();
+  // Requests from earlier conversations that still wait for a person: never lost when you navigate away.
+  const waiting = useQuery({
+    queryKey: ["agent-runs", agentId],
+    queryFn: () => api<{ runs: { id: string; status: AgentRunDetail["status"] }[] }>(`/api/agents/${agentId}/runs`),
+    select: (d) => d.runs.filter((r) => r.status === "waiting_approval").length,
+    refetchInterval: 10_000,
+  });
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [runIds, setRunIds] = useState<string[]>([]);
   const [msg, setMsg] = useState("");
@@ -128,6 +138,14 @@ function Chat({ agentId, role }: { agentId: string; role: Role }) {
   const reason = !can(role, "agent.run") ? denyReason(role, "agent.run") : !online ? "You're offline" : !msg.trim() ? "Type a message" : null;
   return (
     <div className="flex max-w-3xl flex-col gap-3">
+      {(waiting.data ?? 0) > 0 && (
+        <p className="flex flex-wrap items-center gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning" data-testid="agent-waiting-banner">
+          {waiting.data} request{waiting.data! > 1 ? "s" : ""} from this agent {waiting.data! > 1 ? "are" : "is"} waiting for a decision.
+          <button className="underline" onClick={onReview}>
+            Review in Runs
+          </button>
+        </p>
+      )}
       {runIds.length === 0 ? (
         <EmptyState icon="✦" title="Start a conversation" body="Ask a question or ask the agent to run one of its workflows." />
       ) : (
@@ -194,7 +212,10 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
   });
   const decideM = useMutation({
     mutationFn: (v: { id: string; decision: "approve" | "reject" }) => api(`/api/approvals/${v.id}/decide`, { method: "POST", json: { decision: v.decision } }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["agent-run", runId] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["agent-run", runId] });
+      void qc.invalidateQueries({ queryKey: ["agent-runs"] });
+    },
     onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't record the decision", "danger"),
   });
   const cancel = useMutation({
@@ -285,10 +306,11 @@ function StepList({ steps }: { steps: Step[] }) {
   );
 }
 
-function Runs({ agentId }: { agentId: string }) {
-  const q = useQuery({ queryKey: ["agent-runs", agentId], queryFn: () => api<{ runs: { id: string; status: AgentRunDetail["status"]; input: string; createdAt: string; stepCount: number }[] }>(`/api/agents/${agentId}/runs`), select: (d) => d.runs });
-  const [open, setOpen] = useState<string | null>(null);
-  const detail = useQuery({ queryKey: ["agent-run", open], queryFn: () => api<{ run: AgentRunDetail }>(`/api/agent-runs/${open}`), select: (d) => d.run, enabled: Boolean(open) });
+function Runs({ agentId, role, initialRun }: { agentId: string; role: Role; initialRun: string | null }) {
+  const q = useQuery({ queryKey: ["agent-runs", agentId], queryFn: () => api<{ runs: { id: string; status: AgentRunDetail["status"]; input: string; createdAt: string; stepCount: number }[] }>(`/api/agents/${agentId}/runs`), select: (d) => d.runs, refetchInterval: 10_000 });
+  const [picked, setOpen] = useState<string | null>(initialRun);
+  // Default to the oldest request still waiting for a decision, so it can be decided right here.
+  const open = picked ?? q.data?.filter((r) => r.status === "waiting_approval").at(-1)?.id ?? null;
   if (q.isPending) return <Skeleton className="h-40" />;
   if (q.isError) return <ErrorState title="Couldn't load runs" body={(q.error as Error).message} onRetry={() => q.refetch()} />;
   if (q.data.length === 0) return <EmptyState icon="◷" title="No runs yet" />;
@@ -305,7 +327,16 @@ function Runs({ agentId }: { agentId: string }) {
           </li>
         ))}
       </ul>
-      <div>{open && (detail.data ? <Card className="p-3"><p className="mb-2 text-base">{detail.data.output ?? detail.data.error?.message ?? "—"}</p><StepList steps={detail.data.steps} /></Card> : <Skeleton className="h-40" />)}</div>
+      <div>
+        {open ? (
+          // The same view as in Chat: answer, sources, steps — and Approve/Reject for a waiting request (disabled with the reason for roles that can't decide).
+          <ol aria-label="Selected run">
+            <Turn key={open} runId={open} role={role} />
+          </ol>
+        ) : (
+          <p className="text-base text-muted">Select a run to see its steps.</p>
+        )}
+      </div>
     </div>
   );
 }

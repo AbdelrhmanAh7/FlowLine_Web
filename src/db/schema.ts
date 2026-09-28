@@ -805,9 +805,8 @@ export const copilotProposal = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
-    flowId: uuid("flow_id")
-      .notNull()
-      .references(() => flow.id, { onDelete: "cascade" }),
+    /** Null for a "Create with Copilot" proposal: the flow is created only when the proposal is approved. */
+    flowId: uuid("flow_id").references(() => flow.id, { onDelete: "cascade" }),
     baseRevision: integer("base_revision").notNull(),
     request: text("request").notNull(),
     patch: jsonb("patch"),

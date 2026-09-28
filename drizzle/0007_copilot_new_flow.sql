@@ -1,0 +1,1 @@
+ALTER TABLE "copilot_proposal" ALTER COLUMN "flow_id" DROP NOT NULL;
