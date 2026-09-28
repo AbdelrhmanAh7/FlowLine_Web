@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import type { CurrentUser } from "./access";
+import { isUuid, type CurrentUser } from "./access";
 import { audit, userActor, type Actor } from "./audit";
 import { randomToken, sha256Hex } from "./crypto";
 import { HttpError, notFound } from "./http";
@@ -63,6 +63,7 @@ export async function listApiKeys(workspaceId: string) {
 }
 
 export async function revokeApiKey(user: CurrentUser, workspaceId: string, keyId: string) {
+  if (!isUuid(keyId)) throw notFound("API key not found");
   const [row] = await db
     .update(schema.apiKey)
     .set({ revokedAt: new Date() })

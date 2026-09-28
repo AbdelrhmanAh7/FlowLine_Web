@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Role } from "@/db/schema";
-import type { CurrentUser } from "./access";
+import { isUuid, type CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { randomToken, sha256Hex } from "./crypto";
 import { HttpError, notFound } from "./http";
@@ -54,6 +54,7 @@ export async function listInvites(workspaceId: string) {
 }
 
 export async function revokeInvite(user: CurrentUser, workspaceId: string, inviteId: string) {
+  if (!isUuid(inviteId)) throw notFound("Pending invite not found");
   const [row] = await db
     .update(schema.workspaceInvite)
     .set({ revokedAt: new Date() })
