@@ -139,14 +139,35 @@ export const ar = {
     "lead-qualifier": {
       name: "تأهيل العملاء المحتملين",
       description: "وحّد بيانات العميل المحتمل الوارد، وتحقّق من حجم شركته، وصنّفه عميلًا ساخنًا أو للمتابعة.",
+      nodes: {
+        trigger: "عميل محتمل وارد",
+        normalise: "توحيد بيانات العميل",
+        "is-hot": "50 موظفًا أو أكثر؟",
+        hot: "عميل ساخن",
+        nurture: "للمتابعة",
+      },
     },
     "ticket-priority": {
       name: "توجيه أولوية التذاكر",
       description: "قيّم تذكرة الدعم حسب الكلمات المفتاحية ووجّه العاجل منها إلى مخرج التصعيد.",
+      nodes: {
+        trigger: "تذكرة جديدة",
+        score: "تقييم الاستعجال",
+        urgent: "عاجلة؟",
+        escalate: "تصعيد",
+        queue: "القائمة العادية",
+      },
     },
     "order-totals": {
       name: "ملخص إجماليات الطلبات",
       description: "اجمع بنود الطلب، وطبّق قاعدة الخصم، وميّز الطلبات التي تتجاوز حدًّا معيّنًا.",
+      nodes: {
+        trigger: "دفعة طلبات",
+        sum: "جمع البنود",
+        big: "أكثر من 250 دولارًا؟",
+        flag: "تمييز للمراجعة",
+        ok: "موافقة تلقائية",
+      },
     },
   },
 
@@ -634,6 +655,147 @@ export const ar = {
       title: "إجراء تطبيق",
       subtitle: "تكامل",
       description: "يستدعي إجراءً في تطبيق متصل (Sheets وSlack وHubSpot…) عبر اتصال مساحة العمل.",
+    },
+  },
+  /** App categories in the integration catalog, keyed by the provider's English category. */
+  integrationCategory: {
+    Spreadsheets: "جداول البيانات",
+    Email: "البريد الإلكتروني",
+    Messaging: "المراسلة",
+    CRM: "إدارة علاقات العملاء",
+    Support: "الدعم",
+    Database: "قواعد البيانات",
+    "Data warehouse": "مستودعات البيانات",
+    "Developer tools": "أدوات المطوّرين",
+    Payments: "المدفوعات",
+    Docs: "المستندات",
+    "Project management": "إدارة المشاريع",
+  },
+  /** Integration catalog text by provider id: description, actions (by the part after the dot), connect fields (by key). */
+  integrationCatalog: {
+    google_sheets: {
+      description: "قراءة نطاقات الخلايا وإضافة الصفوف في Google Sheets.",
+      actions: {
+        read_range: { title: "قراءة نطاق", description: "يقرأ قيم الخلايا في نطاق من جدول البيانات." },
+        append_row: {
+          title: "إضافة صف",
+          description: "يضيف صفًا إلى نطاق. يُكتب مفتاح منع التكرار الخاص بالتشغيل في آخر خلية من الصف، في عمود موثّق باسم \"flowline_id\".",
+        },
+      },
+    },
+    gmail: {
+      description: "البحث في الرسائل وجلب المرفقات وإرسال البريد عبر Gmail.",
+      actions: {
+        search_messages: { title: "البحث في الرسائل", description: "يبحث في الرسائل باستخدام عبارة بحث Gmail." },
+        get_message: { title: "جلب رسالة", description: "يجلب الرسالة كاملة: الترويسات والمقتطف وبيانات المرفقات الوصفية." },
+        get_attachment: { title: "جلب مرفق", description: "ينزّل مرفق رسالة (بترميز base64url)، بحد أقصى 5 ميغابايت." },
+        send: { title: "إرسال بريد", description: "يرسل رسالة بريد نصية. يُضبط مفتاح منع التكرار الخاص بالتشغيل معرّفًا للرسالة (Message-ID)." },
+      },
+    },
+    slack: {
+      description: "نشر الرسائل وعرض القنوات في مساحة عمل Slack.",
+      actions: {
+        post_message: { title: "نشر رسالة", description: "ينشر رسالة في قناة. يُرفق مفتاح منع التكرار الخاص بالتشغيل ضمن البيانات الوصفية للرسالة." },
+        list_channels: { title: "عرض القنوات", description: "يعرض القنوات المرئية للحساب المتصل." },
+      },
+    },
+    hubspot: {
+      description: "إنشاء جهات الاتصال أو تحديثها وإنشاء الصفقات في HubSpot.",
+      actions: {
+        upsert_contact: {
+          title: "إنشاء جهة اتصال أو تحديثها",
+          description: "ينشئ جهة اتصال أو يحدّثها حسب البريد الإلكتروني. يمكن ضبط خصائص HubSpot إضافية (firstname وlastname…) عبر properties.",
+        },
+        get_contact: { title: "جلب جهة اتصال", description: "يجلب جهة اتصال حسب البريد الإلكتروني." },
+        create_deal: { title: "إنشاء صفقة", description: "ينشئ صفقة. تكرار ذلك ينشئ نسخة مكرّرة، لذا يراجع شخصٌ أي استجابة مفقودة." },
+      },
+      fields: {
+        token: { label: "رمز التطبيق الخاص" },
+      },
+    },
+    zendesk: {
+      description: "البحث في التذاكر وتحديث حقولها في Zendesk.",
+      actions: {
+        list_tickets: { title: "عرض التذاكر", description: "يبحث في التذاكر المفتوحة (التي لم تصل إلى حالة الحل)، مع عبارات بحث إضافية اختيارية." },
+        update_ticket: { title: "تحديث تذكرة", description: "يحدّث حقول التذكرة (الأولوية والوسوم والمجموعة). لا يدعم هذا الإجراء التعليقات." },
+      },
+      fields: {
+        email: { label: "بريد الوكيل" },
+        token: { label: "رمز API" },
+        subdomain: { label: "النطاق الفرعي" },
+      },
+    },
+    airtable: {
+      description: "عرض السجلات وإنشاؤها أو تحديثها في جداول Airtable.",
+      actions: {
+        list_records: { title: "عرض السجلات", description: "يعرض سجلات جدول، مع تصفية اختيارية حسب طريقة عرض أو صيغة." },
+        upsert_record: { title: "إنشاء سجل أو تحديثه", description: "ينشئ سجلًا أو يحدّثه، بالمطابقة على الحقول المحدّدة." },
+        create_record: { title: "إنشاء سجل", description: "ينشئ سجلًا جديدًا. تكرار ذلك ينشئ نسخة مكرّرة، لذا يراجع شخصٌ أي استجابة مفقودة." },
+      },
+      fields: {
+        token: { label: "رمز الوصول الشخصي" },
+      },
+    },
+    snowflake: {
+      description: "تشغيل استعلامات SQL للقراءة فقط على مستودع بيانات Snowflake",
+      actions: {
+        query: { title: "تشغيل استعلام", description: "يشغّل عبارة SQL للقراءة فقط ويعيد الصفوف" },
+      },
+      fields: {
+        accountUrl: { label: "رابط الحساب" },
+        token: { label: "رمز الوصول البرمجي" },
+      },
+    },
+    github: {
+      description: "قراءة طلبات الدمج والتعليق على المشكلات في مستودعات GitHub",
+      actions: {
+        get_pull_request: { title: "جلب طلب دمج", description: "يجلب حالة طلب الدمج وفروعه ومؤلّفه" },
+        list_pr_files: { title: "عرض ملفات طلب الدمج", description: "يعرض الملفات التي تغيّرت في طلب دمج" },
+        create_issue_comment: { title: "التعليق على مشكلة أو طلب دمج", description: "ينشر تعليقًا على مشكلة أو طلب دمج" },
+      },
+      fields: {
+        token: { label: "رمز الوصول الشخصي" },
+      },
+    },
+    stripe: {
+      description: "عرض عمليات الدفع وإنشاء المبالغ المستردة (في وضع الاختبار فقط)",
+      actions: {
+        list_charges: { title: "عرض عمليات الدفع", description: "يعرض أحدث عمليات الدفع في الحساب" },
+        create_refund: { title: "إنشاء استرداد", description: "يسترد مبلغ عملية دفع كليًا أو جزئيًا" },
+      },
+      fields: {
+        token: { label: "المفتاح السري (وضع الاختبار فقط)" },
+      },
+    },
+    notion: {
+      description: "الاستعلام من قواعد البيانات وإنشاء الصفحات في مساحة عمل Notion",
+      actions: {
+        query_database: { title: "الاستعلام من قاعدة بيانات", description: "يستعلم من قاعدة بيانات Notion مع تصفية وترتيب اختياريين" },
+        create_page: { title: "إنشاء صفحة", description: "ينشئ صفحة داخل قاعدة بيانات أو صفحة أخرى" },
+      },
+      fields: {
+        token: { label: "رمز التكامل" },
+      },
+    },
+    postgres: {
+      description: "الاستعلام وتنفيذ SQL على قاعدة بيانات PostgreSQL",
+      actions: {
+        query: { title: "تشغيل استعلام للقراءة فقط", description: "يشغّل SELECT داخل معاملة للقراءة فقط بمهلة 10 ثوانٍ" },
+        execute: { title: "تنفيذ عبارة", description: "يشغّل عبارة كتابة داخل معاملة بمهلة 10 ثوانٍ" },
+      },
+      fields: {
+        connectionString: { label: "سلسلة الاتصال" },
+      },
+    },
+    linear: {
+      description: "عرض الفرق وإنشاء المهام في Linear",
+      actions: {
+        list_teams: { title: "عرض الفرق", description: "يعرض الفرق في مساحة عمل Linear" },
+        create_issue: { title: "إنشاء مهمة", description: "ينشئ مهمة في فريق Linear" },
+      },
+      fields: {
+        token: { label: "مفتاح API" },
+      },
     },
   },
   /** App-action side effects (catalog). */
@@ -1442,6 +1604,15 @@ export const ar = {
     "lead-enrichment": {
       name: "مسار إثراء العملاء المحتملين",
       description: "قيّم العملاء المحتملين الواردين من النماذج وأثرِ بياناتهم بالذكاء الاصطناعي، وأضف الساخنين منهم إلى جدول بيانات، ونبّه فريق المبيعات في Slack.",
+      nodes: {
+        hook: "إرسال نموذج",
+        enrich: "إثراء بيانات العميل",
+        score: "تقييم العميل",
+        isHot: "عميل ساخن؟",
+        sheet: "Sheets — إضافة صف",
+        slack: "Slack — تنبيه",
+        nurture: "للمتابعة",
+      },
       requires: {
         ai: "إثراء بيانات العميل المحتمل وتقييمه",
         google_sheets: "إضافة العملاء الساخنين",
@@ -1456,6 +1627,14 @@ export const ar = {
     "support-triage": {
       name: "فرز تذاكر الدعم",
       description: "كل 15 دقيقة: اجلب تذاكر Zendesk المفتوحة، ودع الذكاء الاصطناعي يكتب ملخصًا مرتبًا حسب الأولوية، وانشره في Slack.",
+      nodes: {
+        tick: "كل 15 دقيقة",
+        fetch: "Zendesk — التذاكر المفتوحة",
+        any: "هل توجد تذاكر؟",
+        digest: "كتابة الملخص",
+        post: "Slack — نشر الملخص",
+        quiet: "لا تذاكر مفتوحة",
+      },
       requires: {
         zendesk: "قراءة التذاكر المفتوحة",
         ai: "كتابة ملخص الفرز",
@@ -1470,6 +1649,18 @@ export const ar = {
     "invoice-extractor": {
       name: "مستخرج فواتير PDF",
       description: "كل ساعة: اعثر على أحدث رسالة فاتورة، واستخرج من ملف PDF المورّد والإجماليات وتاريخ الاستحقاق، وسجّلها في جدول دفتر الحسابات، ثم أرسل الرد (بعد الموافقة).",
+      nodes: {
+        tick: "كل ساعة",
+        search: "Gmail — البحث عن الفواتير",
+        has: "هل وُجدت فاتورة؟",
+        msg: "Gmail — قراءة الرسالة",
+        att: "Gmail — تنزيل ملف PDF",
+        pdf: "قراءة ملف PDF",
+        extract: "استخراج الحقول",
+        ledger: "Sheets — صف في دفتر الحسابات",
+        reply: "Gmail — الرد",
+        none: "لا توجد فواتير",
+      },
       requires: {
         gmail: "العثور على الفواتير، وقراءة المرفق، وإرسال الرد",
         ai: "استخراج حقول الفاتورة",
@@ -1484,6 +1675,16 @@ export const ar = {
     "price-watch": {
       name: "مراقبة أسعار المنافسين",
       description: "كل ساعة: اجلب صفحة أسعار لمنافس يُسمح لك بمراقبتها، واستخرج السعر، وقارنه بالمرة السابقة، ونبّه Slack عند حدوث تغيير جوهري.",
+      nodes: {
+        tick: "كل ساعة",
+        fetch: "جلب صفحة الأسعار",
+        price: "استخراج السعر",
+        last: "آخر سعر مرصود",
+        changed: "تغيير جوهري؟",
+        save: "حفظ السعر الجديد",
+        alert: "Slack — تنبيه",
+        same: "لا تغيير",
+      },
       requires: {
         http: "جلب صفحة الأسعار العامة (مع حماية الاتصالات الصادرة)",
         ai: "استخراج السعر",
@@ -1498,6 +1699,12 @@ export const ar = {
     "kpi-digest": {
       name: "ملخص مؤشرات الأداء الأسبوعي",
       description: "كل اثنين الساعة 09:00: استعلم من مستودع بياناتك، ودع الذكاء الاصطناعي يكتب السرد، وأرسله بالبريد إلى الإدارة (بعد الموافقة).",
+      nodes: {
+        tick: "كل اثنين 09:00",
+        query: "استعلام مؤشرات الأداء",
+        story: "كتابة السرد",
+        email: "مراسلة الإدارة",
+      },
       requires: {
         postgres: "استعلام صفوف مؤشرات الأداء (أو استبدله بـ Snowflake)",
         ai: "كتابة السرد",
@@ -1513,6 +1720,17 @@ export const ar = {
     "pr-review-router": {
       name: "توجيه مراجعة طلبات الدمج",
       description: "عند فتح طلب دمج جديد في GitHub: لخّص التغييرات بالذكاء الاصطناعي، ونبّه إلى التغييرات الخطرة، وأنشئ مهمة متابعة في Linear.",
+      nodes: {
+        hook: "فتح طلب دمج (GitHub)",
+        opened: "هل فُتح؟",
+        pr: "GitHub — جلب طلب الدمج",
+        files: "GitHub — الملفات المتغيّرة",
+        review: "تقييم المخاطر",
+        isRisky: "خطِر؟",
+        issue: "Linear — مهمة متابعة",
+        fine: "خطر منخفض",
+        ignored: "ليس طلب دمج مفتوحًا",
+      },
       requires: {
         github: "قراءة طلب الدمج وملفاته",
         ai: "التلخيص وتقييم المخاطر",

@@ -43,6 +43,26 @@ describe("createFlow", () => {
     expect(flow.graph).not.toBe(template.graph);
   });
 
+  it("creates a template flow in the creator's language; English is exactly the template (CX4Q-01)", async () => {
+    const { user, ws } = await setup();
+    const template = LOCAL_TEMPLATES.find((t) => t.id === "lead-qualifier")!;
+    const english = await createFlow(user, ws.id, { templateId: "lead-qualifier" }, "en");
+    expect(english.name).toBe("Lead Qualifier");
+    expect(english.graph).toEqual(template.graph);
+
+    const arabic = await createFlow(user, ws.id, { templateId: "lead-qualifier" }, "ar");
+    expect(arabic.name).toBe("تأهيل العملاء المحتملين");
+    const nodes = (arabic.graph as FlowGraph).nodes;
+    expect(nodes.find((n) => n.id === "normalise")!.data.label).toBe("توحيد بيانات العميل");
+    expect(nodes.find((n) => n.id === "is-hot")!.data.label).toBe("50 موظفًا أو أكثر؟");
+    // Only labels change: ids, types, config and edges are the template's.
+    expect(nodes.map((n) => [n.id, n.type, n.data.config])).toEqual(template.graph.nodes.map((n) => [n.id, n.type, n.data.config]));
+    expect((arabic.graph as FlowGraph).edges).toEqual(template.graph.edges);
+    // An explicit name still wins, and the shared template is untouched.
+    expect((await createFlow(user, ws.id, { templateId: "lead-qualifier", name: "Mine" }, "ar")).name).toBe("Mine");
+    expect(template.graph.nodes[1]!.data.label).toBe("Normalise lead");
+  });
+
   it("rejects an unknown template with 400", async () => {
     const { user, ws } = await setup();
     await expectHttpError(createFlow(user, ws.id, { templateId: "no-such-template" }), 400, "UNKNOWN_TEMPLATE");

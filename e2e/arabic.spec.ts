@@ -77,6 +77,8 @@ test("Arabic by default: sign-up → onboarding → Flows, sign-in, language swi
   const slug = new URL(page.url()).pathname.split("/")[2]!;
   await expectArabic(page);
   await expect(page.locator(".react-flow")).toHaveAttribute("dir", "ltr");
+  // A flow created from a template in Arabic gets Arabic step labels (CX4Q-01); node ids stay the same.
+  await expect(page.getByTestId("node-normalise")).toContainText("توحيد بيانات العميل");
   await page.getByTestId("node-normalise").click();
   const expression = page.locator("textarea[id^='expr-']").first();
   await expect(expression).toBeVisible();
@@ -87,7 +89,8 @@ test("Arabic by default: sign-up → onboarding → Flows, sign-in, language swi
   await page.goto(`/w/${slug}/flows`);
   await expectArabic(page);
   await expect(page.getByRole("heading", { level: 1, name: "المسارات" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Lead Qualifier" })).toBeVisible();
+  // The template flow was created in Arabic, so it carries the Arabic template name (CX4Q-01).
+  await expect(page.getByRole("link", { name: "تأهيل العملاء المحتملين" })).toBeVisible();
   await expect(page.getByRole("navigation").getByRole("link", { name: "سجل التشغيل" })).toBeVisible();
   // The sidebar sits on the right in RTL.
   const aside = await page.getByRole("complementary", { name: "التنقّل في مساحة العمل" }).boundingBox();
@@ -168,6 +171,10 @@ test("Arabic builder: toolbar, palette, drawer, run dock and inspector are trans
   await expect(page.getByRole("heading", { level: 1, name: "القوالب" })).toBeVisible();
   await expect(page.getByText("تأهيل العملاء المحتملين")).toBeVisible();
   await expect(page.getByRole("group", { name: "تصفية القوالب حسب الفئة" }).getByRole("button", { name: "المبيعات" })).toBeVisible();
+  // Step labels in the node chains are Arabic too (CX4Q-01).
+  await expect(page.getByText(/توحيد بيانات العميل/).first()).toBeVisible();
+  await expect(page.getByText(/تقييم الاستعجال/).first()).toBeVisible();
+  await expect(page.getByText(/Normalise lead|Score urgency|Flag for review/)).toHaveCount(0);
 
   // Builder toolbar
   await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
@@ -320,6 +327,21 @@ test("Arabic settings, agents, knowledge and integrations: every tab and page is
   await noHorizontalScroll(page, "integrations/connect");
   await dialog.getByRole("button", { name: "إلغاء" }).click();
   await expect(dialog).toHaveCount(0);
+  // Catalog content is Arabic (CX4Q-01): the GitHub category, description and connect-field label; the credential stays LTR.
+  await page.getByLabel("البحث في التكاملات").fill("GitHub");
+  const github = page.getByRole("listitem").filter({ has: page.getByText("GitHub", { exact: true }) });
+  await expect(github.getByText("أدوات المطوّرين")).toBeVisible();
+  await expect(github.getByText("قراءة طلبات الدمج والتعليق على المشكلات في مستودعات GitHub")).toBeVisible();
+  await expect(page.getByText("Developer tools")).toHaveCount(0);
+  await github.getByRole("button", { name: "ربط", exact: true }).click();
+  const githubDialog = page.getByRole("dialog", { name: "ربط GitHub" });
+  const token = githubDialog.getByLabel("رمز الوصول الشخصي");
+  await expect(token).toBeVisible();
+  await expect(token).toHaveAttribute("dir", "ltr");
+  await expect(githubDialog.getByText(/Personal access token/i)).toHaveCount(0);
+  await githubDialog.getByRole("button", { name: "إلغاء" }).click();
+  await expect(githubDialog).toHaveCount(0);
+  await page.getByLabel("البحث في التكاملات").fill("");
 
   // At phone width the settings navigation and the integrations catalog still fit.
   await page.setViewportSize({ width: 375, height: 800 });

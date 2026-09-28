@@ -136,14 +136,35 @@ export const en: Messages = {
     "lead-qualifier": {
       name: "Lead Qualifier",
       description: "Normalise an inbound lead, check company size, and label it hot or nurture.",
+      nodes: {
+        trigger: "Inbound lead",
+        normalise: "Normalise lead",
+        "is-hot": "50+ employees?",
+        hot: "Hot lead",
+        nurture: "Nurture",
+      },
     },
     "ticket-priority": {
       name: "Ticket Priority Router",
       description: "Score a support ticket by keywords and route urgent ones to an escalation output.",
+      nodes: {
+        trigger: "New ticket",
+        score: "Score urgency",
+        urgent: "Urgent?",
+        escalate: "Escalate",
+        queue: "Standard queue",
+      },
     },
     "order-totals": {
       name: "Order Totals Digest",
       description: "Sum line items, apply a discount rule, and flag orders above a threshold.",
+      nodes: {
+        trigger: "Order batch",
+        sum: "Sum items",
+        big: "Over $250?",
+        flag: "Flag for review",
+        ok: "Auto-approve",
+      },
     },
   },
 
@@ -562,6 +583,141 @@ export const en: Messages = {
       title: "App action",
       subtitle: "INTEGRATION",
       description: "Calls an action on a connected app (Sheets, Slack, HubSpot…) using a workspace connection.",
+    },
+  },
+  /** App categories in the integration catalog, keyed by the provider's English category. */
+  integrationCategory: {
+    Spreadsheets: "Spreadsheets",
+    Email: "Email",
+    Messaging: "Messaging",
+    CRM: "CRM",
+    Support: "Support",
+    Database: "Database",
+    "Data warehouse": "Data warehouse",
+    "Developer tools": "Developer tools",
+    Payments: "Payments",
+    Docs: "Docs",
+    "Project management": "Project management",
+  },
+  /** Integration catalog text by provider id: description, actions (by the part after the dot), connect fields (by key). */
+  integrationCatalog: {
+    google_sheets: {
+      description: "Read ranges and append rows in Google Sheets.",
+      actions: {
+        read_range: { title: "Read range", description: "Read the cell values of a range in a spreadsheet." },
+        append_row: { title: "Append row", description: "Append a row to a range. The run's idempotency key is written as the last cell of the row in a column documented as \"flowline_id\"." },
+      },
+    },
+    gmail: {
+      description: "Search messages, fetch attachments and send email via Gmail.",
+      actions: {
+        search_messages: { title: "Search messages", description: "Search messages with a Gmail query string." },
+        get_message: { title: "Get message", description: "Fetch a full message: headers, snippet and attachment metadata." },
+        get_attachment: { title: "Get attachment", description: "Download a message attachment (base64url), capped at 5MB." },
+        send: { title: "Send email", description: "Send a plain-text email. The run's idempotency key is set as the Message-ID." },
+      },
+    },
+    slack: {
+      description: "Post messages and list channels in a Slack workspace.",
+      actions: {
+        post_message: { title: "Post message", description: "Post a message to a channel. The run's idempotency key is attached as message metadata." },
+        list_channels: { title: "List channels", description: "List channels visible to the connected account." },
+      },
+    },
+    hubspot: {
+      description: "Upsert contacts and create deals in HubSpot.",
+      actions: {
+        upsert_contact: { title: "Upsert contact", description: "Create or update a contact, keyed by email. Extra HubSpot properties (firstname, lastname…) can be set via properties." },
+        get_contact: { title: "Get contact", description: "Fetch a contact by email." },
+        create_deal: { title: "Create deal", description: "Create a deal. Repeating this creates a duplicate, so a lost response is reviewed by a human." },
+      },
+      fields: {
+        token: { label: "Private app token" },
+      },
+    },
+    zendesk: {
+      description: "Search tickets and update ticket fields in Zendesk.",
+      actions: {
+        list_tickets: { title: "List tickets", description: "Search open tickets (status below solved), optionally with extra search terms." },
+        update_ticket: { title: "Update ticket", description: "Update ticket fields (priority, tags, group). Comments are not supported by this action." },
+      },
+      fields: {
+        email: { label: "Agent email" },
+        token: { label: "API token" },
+        subdomain: { label: "Subdomain" },
+      },
+    },
+    airtable: {
+      description: "List, upsert and create records in Airtable tables.",
+      actions: {
+        list_records: { title: "List records", description: "List records in a table, optionally filtered by view or formula." },
+        upsert_record: { title: "Upsert record", description: "Create or update a record, matched on the given fields." },
+        create_record: { title: "Create record", description: "Create a new record. Repeating this creates a duplicate, so a lost response is reviewed by a human." },
+      },
+      fields: {
+        token: { label: "Personal access token" },
+      },
+    },
+    snowflake: {
+      description: "Run read-only SQL queries against a Snowflake warehouse",
+      actions: {
+        query: { title: "Run query", description: "Run a read-only SQL statement and return rows" },
+      },
+      fields: {
+        accountUrl: { label: "Account URL" },
+        token: { label: "Programmatic access token" },
+      },
+    },
+    github: {
+      description: "Read pull requests and comment on issues in GitHub repositories",
+      actions: {
+        get_pull_request: { title: "Get pull request", description: "Fetch a pull request's state, branches and author" },
+        list_pr_files: { title: "List pull request files", description: "List files changed in a pull request" },
+        create_issue_comment: { title: "Comment on issue or PR", description: "Post a comment on an issue or pull request" },
+      },
+      fields: {
+        token: { label: "Personal access token" },
+      },
+    },
+    stripe: {
+      description: "List charges and create refunds (test mode only)",
+      actions: {
+        list_charges: { title: "List charges", description: "List recent charges on the account" },
+        create_refund: { title: "Create refund", description: "Refund a charge, fully or partially" },
+      },
+      fields: {
+        token: { label: "Secret key (test mode only)" },
+      },
+    },
+    notion: {
+      description: "Query databases and create pages in a Notion workspace",
+      actions: {
+        query_database: { title: "Query database", description: "Query a Notion database with optional filter and sorts" },
+        create_page: { title: "Create page", description: "Create a page inside a database or another page" },
+      },
+      fields: {
+        token: { label: "Integration token" },
+      },
+    },
+    postgres: {
+      description: "Query and execute SQL against a PostgreSQL database",
+      actions: {
+        query: { title: "Run read-only query", description: "Run a SELECT inside a read-only transaction with a 10s timeout" },
+        execute: { title: "Execute statement", description: "Run a write statement in a transaction with a 10s timeout" },
+      },
+      fields: {
+        connectionString: { label: "Connection string" },
+      },
+    },
+    linear: {
+      description: "List teams and create issues in Linear",
+      actions: {
+        list_teams: { title: "List teams", description: "List teams in the Linear workspace" },
+        create_issue: { title: "Create issue", description: "Create an issue in a Linear team" },
+      },
+      fields: {
+        token: { label: "API key" },
+      },
     },
   },
   sideEffect: {
@@ -1303,6 +1459,15 @@ export const en: Messages = {
     "lead-enrichment": {
       name: "Lead Enrichment Pipeline",
       description: "Score and enrich inbound form leads with AI, add hot ones to a sheet and alert sales in Slack.",
+      nodes: {
+        hook: "Form submitted",
+        enrich: "Enrich lead",
+        score: "Score lead",
+        isHot: "Hot lead?",
+        sheet: "Sheets — Add row",
+        slack: "Slack — Notify",
+        nurture: "Nurture",
+      },
       requires: {
         ai: "Enrich and score the lead",
         google_sheets: "Append hot leads",
@@ -1317,6 +1482,14 @@ export const en: Messages = {
     "support-triage": {
       name: "Support Ticket Triage",
       description: "Every 15 minutes, pull open Zendesk tickets, have AI write a prioritized digest, and post it to Slack.",
+      nodes: {
+        tick: "Every 15 min",
+        fetch: "Zendesk — Open tickets",
+        any: "Any tickets?",
+        digest: "Write digest",
+        post: "Slack — Post digest",
+        quiet: "Nothing open",
+      },
       requires: {
         zendesk: "Read open tickets",
         ai: "Write the triage digest",
@@ -1331,6 +1504,18 @@ export const en: Messages = {
     "invoice-extractor": {
       name: "Invoice PDF Extractor",
       description: "Hourly: find the newest invoice email, extract vendor, totals and due date from the PDF, log it to your ledger sheet, and reply (after approval).",
+      nodes: {
+        tick: "Hourly",
+        search: "Gmail — Find invoices",
+        has: "Found one?",
+        msg: "Gmail — Read message",
+        att: "Gmail — Download PDF",
+        pdf: "Read PDF",
+        extract: "Extract fields",
+        ledger: "Sheets — Ledger row",
+        reply: "Gmail — Reply",
+        none: "No invoices",
+      },
       requires: {
         gmail: "Find invoices, read the attachment, send the reply",
         ai: "Extract invoice fields",
@@ -1345,6 +1530,16 @@ export const en: Messages = {
     "price-watch": {
       name: "Competitor Price Watch",
       description: "Hourly: fetch a competitor pricing page you're allowed to monitor, extract the price, compare with last time, and alert Slack on a material change.",
+      nodes: {
+        tick: "Hourly",
+        fetch: "Fetch pricing page",
+        price: "Extract price",
+        last: "Last seen price",
+        changed: "Material change?",
+        save: "Save new price",
+        alert: "Slack — Alert",
+        same: "No change",
+      },
       requires: {
         http: "Fetch the public pricing page (egress-protected)",
         ai: "Extract the price",
@@ -1359,6 +1554,12 @@ export const en: Messages = {
     "kpi-digest": {
       name: "Weekly KPI Digest",
       description: "Mondays 09:00: query your warehouse, have AI write the narrative, and email it to leadership (after approval).",
+      nodes: {
+        tick: "Mondays 09:00",
+        query: "Query KPIs",
+        story: "Write narrative",
+        email: "Email leadership",
+      },
       requires: {
         postgres: "Query KPI rows (or swap in Snowflake)",
         ai: "Write the narrative",
@@ -1374,6 +1575,17 @@ export const en: Messages = {
     "pr-review-router": {
       name: "PR Review Router",
       description: "On new GitHub pull requests: summarize the diff with AI, flag risky changes, and file a follow-up issue in Linear.",
+      nodes: {
+        hook: "PR opened (GitHub)",
+        opened: "Opened?",
+        pr: "GitHub — Get PR",
+        files: "GitHub — Changed files",
+        review: "Assess risk",
+        isRisky: "Risky?",
+        issue: "Linear — Follow-up",
+        fine: "Low risk",
+        ignored: "Not an opened PR",
+      },
       requires: {
         github: "Read the pull request and its files",
         ai: "Summarize and assess risk",
