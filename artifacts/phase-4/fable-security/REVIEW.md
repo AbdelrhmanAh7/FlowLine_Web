@@ -196,3 +196,19 @@ and consumed_at is null` (same for `verify` on verification).
   expiry, PKCE verifier encrypted at rest; `redirectAfter` restricted to `/w/` prefix and not used by the callback.
 - **SSO:** state bound to an httpOnly cookie, consumed once; subject-based linking only; email-only match refused
   (409) unless the signed-in initiator is that user.
+
+---
+
+## Resolution (implementation lead)
+
+Status of each finding after the fix commit that follows this review. Regression tests are in `tests/integration/p4-security-fixes.test.ts`, `tests/integration/p4-beta-signup.test.ts` and `e2e/beta.spec.ts`.
+
+| # | Sev | Status | Fix |
+|---|---|---|---|
+| 1 | P2 | FIXED | `deploy/beta/Caddyfile`: `header_up X-Real-IP {remote_host}` overwrites the client value, so the per-IP key is always the real peer. The web container is reachable only through Caddy (internal network). |
+| 2 | P2 | FIXED | `/api/billing/webhook` uses the streaming `capBody` (256 KB), so a chunked body without Content-Length is cut off at the limit. Tested with a 4 MB chunked stream → 413 after reading ≤ 10 chunks. |
+| 3 | P2 | FIXED (W2-A merge) | The sign-up form shows a beta-code field in invite_only mode. `POST /api/beta/check` pre-flight runs before sign-up, so an uninvited person sees the translated private-beta refusal, not "check your email". Codes are consumed only by the real sign-up. |
+| 4 | P3 | FIXED | `requestToken` waits for delivery only until the 500 ms response floor. Slow provider latency no longer lengthens the response for existing addresses. |
+| 5 | P3 | ACCEPTED (documented) | The per-address 3/h cap is what protects a victim's inbox from floods. The trade-off is that a stranger can delay that person's reset/resend for up to an hour. Revisit with a CAPTCHA or proof-of-work before public launch. |
+| 6 | P3 | FIXED | Account deletion cancels the provider subscription of every sole-member workspace it deletes. If cancellation isn't possible, nothing is deleted (`BILLING_CANCEL_FAILED`) and the link stays valid for a retry. |
+| 7 | P3 | FIXED | A successful reset consumes every open reset token of that account. |

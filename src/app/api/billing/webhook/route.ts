@@ -1,6 +1,6 @@
 import { applyWebhookEvent, webhookSignatureHeader } from "@/billing/service";
 import { WebhookVerificationError } from "@/billing/types";
-import { HttpError, json, route } from "@/server/http";
+import { capBody, HttpError, json, route } from "@/server/http";
 
 /**
  * Provider webhook endpoint — public (no session; authenticity comes from the
@@ -11,9 +11,8 @@ import { HttpError, json, route } from "@/server/http";
  * re-applying; unknown customers/types are recorded and acknowledged.
  */
 export const POST = route(async (req) => {
-  if (Number(req.headers.get("content-length") ?? 0) > 256 * 1024) throw new HttpError(413, "PAYLOAD_TOO_LARGE", "Webhook payload too large");
-  const rawBody = await req.text();
-  if (rawBody.length > 256 * 1024) throw new HttpError(413, "PAYLOAD_TOO_LARGE", "Webhook payload too large");
+  // Streamed cap: a chunked request without Content-Length is cut off at the limit instead of being buffered whole.
+  const rawBody = await (await capBody(req, 256 * 1024, new HttpError(413, "PAYLOAD_TOO_LARGE", "Webhook payload too large"))).text();
   let result;
   try {
     result = await applyWebhookEvent(rawBody, req.headers.get(webhookSignatureHeader()));

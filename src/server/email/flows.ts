@@ -1,5 +1,6 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
+import { getAdapter } from "@/billing/service";
 import { db, schema } from "@/db";
 import { randomToken, sha256Hex } from "@/server/crypto";
 import { HttpError } from "@/server/http";
@@ -78,6 +79,9 @@ export async function sendInviteEmail(to: string, link: string, request?: Reques
   await sendTemplate("invite", to, link, crypto.randomUUID(), request);
 }
 
+/** Every forgot/resend request takes at least this long, whether or not the address exists. */
+const RESPONSE_FLOOR_MS = 500;
+
 export async function requestToken(purpose: "verify" | "reset", email: string, request?: Request, opts: { callbackURL?: string | null } = {}) {
   const started = Date.now();
   await checkEmailRate(purpose, email, request);
@@ -85,7 +89,7 @@ export async function requestToken(purpose: "verify" | "reset", email: string, r
   if (user && (purpose === "reset" || !user.emailVerified)) {
     const [recent] = await db.select({ createdAt: schema.emailToken.createdAt }).from(schema.emailToken).where(and(eq(schema.emailToken.userId, user.id), eq(schema.emailToken.purpose, purpose))).orderBy(desc(schema.emailToken.createdAt)).limit(1);
     if (recent && Date.now() - recent.createdAt.getTime() < 60_000) {
-      const remaining = 500 - (Date.now() - started);
+      const remaining = RESPONSE_FLOOR_MS - (Date.now() - started);
       if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
       return;
     }
@@ -94,10 +98,13 @@ export async function requestToken(purpose: "verify" | "reset", email: string, r
     const [row] = await db.insert(schema.emailToken).values({ tokenHash: sha256Hex(token), userId: user.id, purpose, expiresAt: new Date(Date.now() + lifetime[purpose]) }).returning({ id: schema.emailToken.id });
     const callback = purpose === "verify" ? safePath(opts.callbackURL, "") : "";
     const link = publicUrl(`${purpose === "verify" ? "/verify-email" : "/reset-password"}?token=${token}${callback && callback !== "/" ? `&callbackURL=${encodeURIComponent(callback)}` : ""}`);
-    try { await sendTemplate(purpose, user.email, link, row!.id, request); }
-    catch { await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id)); }
+    // Wait for delivery only until the response floor: slow provider latency must not reveal that the address exists.
+    const delivery = sendTemplate(purpose, user.email, link, row!.id, request).catch(async () => {
+      await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id));
+    });
+    await Promise.race([delivery, new Promise((resolve) => setTimeout(resolve, Math.max(0, RESPONSE_FLOOR_MS - (Date.now() - started))))]);
   }
-  const remaining = 500 - (Date.now() - started);
+  const remaining = RESPONSE_FLOOR_MS - (Date.now() - started);
   if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
 }
 
@@ -140,6 +147,19 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
         if (soleWorkspaces.includes(membership.workspaceId)) continue;
         await tx.insert(schema.auditEvent).values({ workspaceId: membership.workspaceId, actorLabel: "Account deletion", action: "account.deleted", targetType: "user", targetId: row.userId, data: { role: membership.role } });
       }
+      // Their provider subscriptions are cancelled first; if the provider refuses, nothing is deleted and the person
+      // can retry — a deleted workspace must never keep billing.
+      if (soleWorkspaces.length) {
+        const subs = await tx.select({ subscriptionId: schema.billingAccount.subscriptionId, status: schema.billingAccount.status }).from(schema.billingAccount).where(inArray(schema.billingAccount.workspaceId, soleWorkspaces));
+        const live = subs.filter((s) => s.subscriptionId && s.status !== "canceled");
+        const adapter = live.length ? getAdapter() : null;
+        for (const s of live) {
+          if (!adapter) throw new HttpError(409, "BILLING_CANCEL_FAILED", "A workspace you own has an active subscription that couldn't be cancelled. Try again later or contact support.");
+          await adapter.cancelSubscription(s.subscriptionId!, { atPeriodEnd: false }).catch(() => {
+            throw new HttpError(502, "BILLING_CANCEL_FAILED", "A workspace you own has an active subscription that couldn't be cancelled. Try again later or contact support.");
+          });
+        }
+      }
       for (const workspaceId of soleWorkspaces) await tx.delete(schema.workspace).where(eq(schema.workspace.id, workspaceId));
       await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(eq(schema.emailToken.id, row.id));
       await tx.delete(schema.user).where(eq(schema.user.id, row.userId));
@@ -152,6 +172,8 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
+      // Any other outstanding reset link for this account stops working too.
+      await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.userId, row.userId), eq(schema.emailToken.purpose, "reset"), isNull(schema.emailToken.consumedAt)));
     } else {
       await tx.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, row.userId));
     }

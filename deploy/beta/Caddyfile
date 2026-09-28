@@ -19,6 +19,8 @@
 
 	reverse_proxy web:3000 {
 		header_up X-Request-Id {http.request.uuid}
+		# The app keys per-IP limits on X-Real-IP: always overwrite it with the real peer so a client can't spoof it.
+		header_up X-Real-IP {remote_host}
 	}
 
 	log {

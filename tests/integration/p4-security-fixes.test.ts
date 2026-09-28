@@ -1,0 +1,65 @@
+/**
+ * Phase 4 — regressions for the Fable security review (artifacts/phase-4/fable-security/REVIEW.md).
+ */
+import { eq } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
+import { db, schema } from "@/db";
+import { POST as billingWebhook } from "@/app/api/billing/webhook/route";
+import { consumeAccountToken, issueAccountToken, tokenState } from "@/server/email/flows";
+import { createWorkspace } from "@/server/workspaces";
+import { closeDb, makeUser, unique } from "./helpers";
+
+process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
+afterAll(closeDb);
+
+async function tokens(email: string, path: string) {
+  const all = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, email)).orderBy(schema.emailOutbox.createdAt);
+  return all.map((m) => new RegExp(`${path}\\?token=([A-Za-z0-9_-]+)`).exec(m.plainText)?.[1]).filter((t): t is string => !!t);
+}
+
+describe("Fable review fixes", () => {
+  it("a password reset consumes every other open reset link of that account", async () => {
+    const user = await makeUser("resetall");
+    await issueAccountToken("reset", user);
+    await issueAccountToken("reset", user);
+    const [first, second] = await tokens(user.email, "/reset-password");
+    expect(first && second && first !== second).toBe(true);
+    expect(await consumeAccountToken("reset", second!, "brand-new-password-1")).toBe("done");
+    expect(await tokenState("reset", first!)).toBe("used");
+    expect(await consumeAccountToken("reset", first!, "attacker-password-1")).toBe("used");
+  });
+
+  it("account deletion refuses (and deletes nothing) while a sole-member workspace has an uncancellable subscription", async () => {
+    const owner = await makeUser("delsub");
+    const ws = await createWorkspace(owner, unique("Billed"));
+    await db.insert(schema.billingAccount).values({ workspaceId: ws.id, provider: "paddle", customerId: `ctm_${crypto.randomUUID()}`, subscriptionId: "sub_live_thing", status: "active" });
+    await issueAccountToken("delete", owner);
+    const [token] = await tokens(owner.email, "/account/delete");
+    // No provider accepts the cancellation here (no adapter, or its provider is unreachable) → refused either way.
+    await expect(consumeAccountToken("delete", token!, undefined, owner.id)).rejects.toMatchObject({ code: "BILLING_CANCEL_FAILED" });
+    expect((await db.select().from(schema.user).where(eq(schema.user.id, owner.id))).length).toBe(1);
+    expect((await db.select().from(schema.workspace).where(eq(schema.workspace.id, ws.id))).length).toBe(1);
+    expect(await tokenState("delete", token!)).toBe("valid");
+    // A cancelled subscription no longer blocks deletion.
+    await db.update(schema.billingAccount).set({ status: "canceled" }).where(eq(schema.billingAccount.workspaceId, ws.id));
+    expect(await consumeAccountToken("delete", token!, undefined, owner.id)).toBe("done");
+    expect((await db.select().from(schema.workspace).where(eq(schema.workspace.id, ws.id))).length).toBe(0);
+  });
+
+  it("billing webhook caps a chunked body without Content-Length at 256 KB (413, not buffered whole)", async () => {
+    const chunk = new Uint8Array(64 * 1024).fill(0x61);
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= 64) return controller.close(); // 4 MB offered in total
+        sent++;
+        controller.enqueue(chunk);
+      },
+    });
+    const req = new Request("http://localhost:3100/api/billing/webhook", { method: "POST", body, duplex: "half" } as RequestInit);
+    expect(req.headers.get("content-length")).toBeNull();
+    const res = await billingWebhook(req, {} as never);
+    expect(res.status).toBe(413);
+    expect(sent).toBeLessThan(10); // stopped reading shortly after the limit
+  });
+});
