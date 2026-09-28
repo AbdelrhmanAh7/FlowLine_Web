@@ -85,6 +85,73 @@ interface FakeCheckoutSession {
   url: string;
 }
 
+/** Fake billing primitives (Paddle-shaped) used by the Paddle billing adapter tests. */
+interface FakePaddlePrice {
+  id: string;
+  trialDays: number;
+}
+
+interface FakePaddleCustomer {
+  id: string;
+  email: string;
+  name: string | null;
+  custom_data: Record<string, unknown>;
+  status: "active";
+}
+
+interface FakePaddleTransaction {
+  id: string;
+  status: string;
+  customer_id: string;
+  subscription_id: string | null;
+  items: { price_id: string; quantity: number }[];
+  origin: string;
+  checkout: { url: string | null };
+  /** Fake-internal: the success redirect passed as checkout.url at creation. */
+  success_url: string | null;
+  currency_code: string;
+  created_at: string;
+}
+
+interface FakePaddleSubscriptionItem {
+  status: string;
+  quantity: number;
+  recurring: boolean;
+  price: { id: string };
+  trial_dates: { starts_at: string; ends_at: string } | null;
+}
+
+interface FakePaddleSubscription {
+  id: string;
+  customer_id: string;
+  status: string;
+  currency_code: string;
+  collection_mode: "automatic";
+  items: FakePaddleSubscriptionItem[];
+  current_billing_period: { starts_at: string; ends_at: string } | null;
+  next_billed_at: string | null;
+  first_billed_at: string | null;
+  started_at: string;
+  paused_at: string | null;
+  canceled_at: string | null;
+  scheduled_change: { action: string; effective_at: string; resume_at: string | null } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FakePaddleAdjustment {
+  id: string;
+  action: string;
+  status: string;
+  transaction_id: string;
+  customer_id: string;
+  subscription_id: string | null;
+  reason: string;
+  items: unknown[];
+  created_at: string;
+  updated_at: string;
+}
+
 interface GmailMessage {
   id: string;
   threadId: string;
@@ -132,6 +199,12 @@ interface State {
   stripeSubscriptions: FakeSubscription[];
   stripeMeterEvents: Record<string, unknown>[];
   stripeWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
+  paddlePrices: FakePaddlePrice[];
+  paddleCustomers: FakePaddleCustomer[];
+  paddleTransactions: FakePaddleTransaction[];
+  paddleSubscriptions: FakePaddleSubscription[];
+  paddleAdjustments: FakePaddleAdjustment[];
+  paddleWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
 }
@@ -146,14 +219,29 @@ function seed(): State {
     ["sk_test_fake_billing", { account: "a", status: "active" }],
     ["rk_test_fake", { account: "a", status: "active" }],
     ["sk_test_revoked", { account: "a", status: "revoked" }],
+    ["pdl_sdbx_fake_billing", { account: "a", status: "active" }],
   ]);
-  // Stripe billing ids are stored (and deduplicated) by the app under test, so they must
+  // Stripe/Paddle billing ids are stored (and deduplicated) by the app under test, so they must
   // stay unique across fake resets within a test run: start each counter at a random offset.
-  const stripeCounters = Object.fromEntries(
-    ["stripeCustomer", "stripeCheckout", "stripeSubscription", "stripeEvent", "stripeMeter", "stripeInvoice", "stripeCheckoutEmit"].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
+  const billingCounters = Object.fromEntries(
+    [
+      "stripeCustomer",
+      "stripeCheckout",
+      "stripeSubscription",
+      "stripeEvent",
+      "stripeMeter",
+      "stripeInvoice",
+      "stripeCheckoutEmit",
+      "paddleCustomer",
+      "paddleTransaction",
+      "paddleSubscription",
+      "paddleEvent",
+      "paddleAdjustment",
+      "paddleCheckoutEmit",
+    ].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
   );
   return {
-    counters: stripeCounters,
+    counters: billingCounters,
     tokens,
     oauthCodes: new Map(),
     oidcCodes: new Map(),
@@ -253,6 +341,12 @@ function seed(): State {
     stripeSubscriptions: [],
     stripeMeterEvents: [],
     stripeWebhooks: [],
+    paddlePrices: [],
+    paddleCustomers: [],
+    paddleTransactions: [],
+    paddleSubscriptions: [],
+    paddleAdjustments: [],
+    paddleWebhooks: [],
     notionPages: [
       {
         object: "page",
@@ -374,6 +468,7 @@ function authFail(ctx: Ctx, provider: string, req: IncomingMessage, res: ServerR
   }
   if (provider === "github") return json(ctx, req, res, 401, { message: "Bad credentials" });
   if (provider === "stripe") return json(ctx, req, res, 401, { error: { type: "invalid_request_error", message: "Invalid API Key provided" } });
+  if (provider === "paddle") return json(ctx, req, res, 401, { error: { type: "request_error", code: "unauthenticated", detail: "Invalid API key" } });
   return json(ctx, req, res, 401, { message: "Unauthorized" });
 }
 
@@ -1307,6 +1402,311 @@ const stripe: Handler = async (ctx, req, res, path, url, body) => {
   return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "Unrecognized request URL" } });
 };
 
+// ---------------------------------------------------------------- fake paddle billing
+
+function paddleError(code: string, detail: string) {
+  return { error: { type: "request_error", code, detail } };
+}
+
+/** Paddle notification envelope: { event_id, event_type, occurred_at, data }. */
+function paddleEvent(state: State, type: string, data: unknown, opts: { id?: string; occurredAt?: string } = {}): Record<string, unknown> {
+  return { event_id: opts.id ?? `evt_fake_${next(state, "paddleEvent")}`, event_type: type, occurred_at: opts.occurredAt ?? new Date().toISOString(), data };
+}
+
+/** Paddle signature scheme: ts=<unix>;h1=<hex HMAC-SHA256(secret, "ts:payload")>. */
+function signPaddlePayload(secret: string, payload: string, at?: number): string {
+  const ts = at ?? Math.floor(Date.now() / 1000);
+  const h1 = createHmac("sha256", secret).update(`${ts}:${payload}`, "utf8").digest("hex");
+  return `ts=${ts};h1=${h1}`;
+}
+
+function paddleSubscriptionPayload(sub: FakePaddleSubscription): Record<string, unknown> {
+  return { ...sub };
+}
+
+/**
+ * Keeps the fake's provider state consistent with an emitted event (see the Stripe
+ * twin above). Tests crafting adversarial or stale events pass `mutate: false`.
+ */
+function applyPaddleEventToState(s: State, type: string, data: unknown) {
+  const obj = data as Record<string, unknown>;
+  if (type.startsWith("subscription.")) {
+    const id = String(obj.id ?? "");
+    let sub = s.paddleSubscriptions.find((x) => x.id === id);
+    if (!sub) {
+      const nowIso = new Date().toISOString();
+      sub = {
+        id,
+        customer_id: String(obj.customer_id ?? ""),
+        status: "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: [{ status: "active", quantity: 1, recurring: true, price: { id: "pri_unknown" }, trial_dates: null }],
+        current_billing_period: { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() },
+        next_billed_at: null,
+        first_billed_at: nowIso,
+        started_at: nowIso,
+        paused_at: null,
+        canceled_at: null,
+        scheduled_change: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      s.paddleSubscriptions.push(sub);
+    }
+    if (typeof obj.status === "string") sub.status = obj.status;
+    if (obj.items) sub.items = obj.items as FakePaddleSubscription["items"];
+    if (obj.current_billing_period !== undefined) sub.current_billing_period = obj.current_billing_period as FakePaddleSubscription["current_billing_period"];
+    if (obj.scheduled_change !== undefined) sub.scheduled_change = obj.scheduled_change as FakePaddleSubscription["scheduled_change"];
+    if (typeof obj.customer_id === "string" && obj.customer_id) sub.customer_id = obj.customer_id;
+    if (type === "subscription.canceled") {
+      sub.status = "canceled";
+      sub.canceled_at = new Date().toISOString();
+      sub.scheduled_change = null;
+      sub.current_billing_period = null;
+      sub.next_billed_at = null;
+    } else if (type === "subscription.past_due") {
+      sub.status = "past_due";
+    }
+    sub.updated_at = new Date().toISOString();
+  } else if (type === "transaction.completed") {
+    const txn = s.paddleTransactions.find((x) => x.id === String(obj.id ?? ""));
+    if (txn) {
+      txn.status = "completed";
+      if (typeof obj.subscription_id === "string") txn.subscription_id = obj.subscription_id;
+    }
+  }
+}
+
+/** Records (and, when FAKE_PADDLE_WEBHOOK_URL is set, sends) a signed webhook for the app under test. */
+async function sendPaddleWebhook(ctx: Ctx, event: Record<string, unknown>): Promise<{ sent: boolean; payload: string; header: string }> {
+  const url = process.env.FAKE_PADDLE_WEBHOOK_URL || null;
+  const secret = process.env.FAKE_PADDLE_WEBHOOK_SECRET || "pdl_ntfset_fake";
+  const payload = JSON.stringify(event);
+  const header = signPaddlePayload(secret, payload);
+  const rec = { id: String(event.event_id), type: String(event.event_type), url, sent: false, payload, header, at: new Date().toISOString() };
+  if (url) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "paddle-signature": header }, body: payload });
+      rec.sent = res.ok;
+    } catch {
+      rec.sent = false;
+    }
+  }
+  ctx.state.paddleWebhooks.push(rec);
+  return { sent: rec.sent, payload, header };
+}
+
+const paddle: Handler = async (ctx, req, res, path, _url, body) => {
+  const s = ctx.state;
+  if (req.method === "POST" && path === "/customers") {
+    const payload = j(body);
+    // Paddle requires an email to create a customer.
+    if (typeof payload.email !== "string" || !payload.email) return json(ctx, req, res, 400, paddleError("bad_request", "email is required"));
+    const customer: FakePaddleCustomer = {
+      id: `ctm_fake_${next(s, "paddleCustomer")}`,
+      email: payload.email,
+      name: (payload.name as string | null) ?? null,
+      custom_data: (payload.custom_data as Record<string, unknown>) ?? {},
+      status: "active",
+    };
+    s.paddleCustomers.push(customer);
+    return json(ctx, req, res, 201, { data: customer, meta: { request_id: `req_fake_${next(s, "paddleCustomer")}` } });
+  }
+  if (req.method === "POST" && path === "/transactions") {
+    const payload = j(body);
+    const items = (payload.items as { price_id?: string; quantity?: number }[]) ?? [];
+    const priceId = items[0]?.price_id ?? "";
+    if (!s.paddlePrices.some((p) => p.id === priceId)) return json(ctx, req, res, 400, paddleError("bad_request", `No such price: '${priceId}'`));
+    if (typeof payload.customer_id !== "string" || !s.paddleCustomers.some((c) => c.id === payload.customer_id)) {
+      return json(ctx, req, res, 400, paddleError("bad_request", "customer_id must reference an existing customer"));
+    }
+    const id = `txn_fake_${next(s, "paddleTransaction")}`;
+    const txn: FakePaddleTransaction = {
+      id,
+      status: "ready",
+      customer_id: payload.customer_id,
+      subscription_id: null,
+      items: [{ price_id: priceId, quantity: items[0]?.quantity ?? 1 }],
+      origin: "web",
+      checkout: { url: `http://${req.headers.host}/paddle/checkout/${id}` },
+      success_url: ((payload.checkout as { url?: string } | undefined)?.url as string) ?? null,
+      currency_code: "USD",
+      created_at: new Date().toISOString(),
+    };
+    s.paddleTransactions.push(txn);
+    const { success_url: _su, ...pub } = txn;
+    return json(ctx, req, res, 201, { data: pub, meta: { request_id: `req_fake_${next(s, "paddleTransaction")}` } });
+  }
+  const subMatch = /^\/subscriptions\/([^/]+)(\/(cancel|pause|resume))?$/.exec(path);
+  if (subMatch && req.method === "GET" && !subMatch[3]) {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_get" } });
+  }
+  if (subMatch && req.method === "PATCH" && !subMatch[3]) {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const payload = j(body);
+    const items = payload.items as { price_id?: string; quantity?: number }[] | undefined;
+    if (items?.[0]?.price_id) {
+      if (!s.paddlePrices.some((p) => p.id === items[0]!.price_id)) return json(ctx, req, res, 400, paddleError("bad_request", `No such price: '${items[0]!.price_id}'`));
+      sub.items = [{ ...sub.items[0]!, price: { id: items[0].price_id }, quantity: items[0].quantity ?? 1 }];
+    }
+    sub.updated_at = new Date().toISOString();
+    await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_patch" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "cancel") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const effectiveFrom = String(j(body).effective_from ?? "");
+    if (effectiveFrom === "next_billing_period") {
+      sub.scheduled_change = { action: "cancel", effective_at: sub.current_billing_period?.ends_at ?? new Date().toISOString(), resume_at: null };
+      sub.updated_at = new Date().toISOString();
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    } else if (effectiveFrom === "immediately") {
+      sub.status = "canceled";
+      sub.canceled_at = new Date().toISOString();
+      sub.scheduled_change = null;
+      sub.current_billing_period = null;
+      sub.next_billed_at = null;
+      sub.items = sub.items.map((it) => ({ ...it, status: "inactive" }));
+      sub.updated_at = new Date().toISOString();
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.canceled", paddleSubscriptionPayload(sub)));
+    } else {
+      return json(ctx, req, res, 400, paddleError("bad_request", "effective_from must be next_billing_period or immediately"));
+    }
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_cancel" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "pause") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const effectiveFrom = String(j(body).effective_from ?? "next_billing_period");
+    if (effectiveFrom === "immediately") {
+      sub.status = "paused";
+      sub.paused_at = new Date().toISOString();
+      sub.current_billing_period = null;
+      sub.items = sub.items.map((it) => ({ ...it, status: "inactive" }));
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.paused", paddleSubscriptionPayload(sub)));
+    } else {
+      sub.scheduled_change = { action: "pause", effective_at: sub.current_billing_period?.ends_at ?? new Date().toISOString(), resume_at: null };
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    }
+    sub.updated_at = new Date().toISOString();
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_pause" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "resume") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const nowIso = new Date().toISOString();
+    sub.status = "active";
+    sub.paused_at = null;
+    sub.scheduled_change = null;
+    sub.current_billing_period = { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() };
+    sub.next_billed_at = sub.current_billing_period.ends_at;
+    sub.items = sub.items.map((it) => ({ ...it, status: "active" }));
+    sub.updated_at = nowIso;
+    await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.resumed", paddleSubscriptionPayload(sub)));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_resume" } });
+  }
+  if (req.method === "POST" && path === "/adjustments") {
+    const payload = j(body);
+    const txn = s.paddleTransactions.find((x) => x.id === payload.transaction_id);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such transaction: '${payload.transaction_id}'`));
+    const nowIso = new Date().toISOString();
+    const adjustment: FakePaddleAdjustment = {
+      id: `adj_fake_${next(s, "paddleAdjustment")}`,
+      action: String(payload.action ?? "refund"),
+      // Sandbox auto-approves refunds (live holds most refunds for review).
+      status: "approved",
+      transaction_id: txn.id,
+      customer_id: txn.customer_id,
+      subscription_id: txn.subscription_id,
+      reason: String(payload.reason ?? ""),
+      items: (payload.items as unknown[]) ?? [],
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    s.paddleAdjustments.push(adjustment);
+    await sendPaddleWebhook(ctx, paddleEvent(s, "adjustment.created", { ...adjustment }));
+    return json(ctx, req, res, 201, { data: adjustment, meta: { request_id: "req_fake_adjustment" } });
+  }
+  // ---- hosted checkout pages (unauthenticated: a browser lands here) ----
+  const pageMatch = /^\/checkout\/([^/]+)$/.exec(path);
+  if (pageMatch && req.method === "GET") {
+    const txn = s.paddleTransactions.find((x) => x.id === pageMatch[1]);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", "No such transaction"));
+    const failed = txn.status === "past_due" ? `<p role="alert">Payment failed — try again.</p>` : "";
+    const html = `<!doctype html><html><head><title>Fake Paddle checkout</title></head><body>
+<h1>Fake Paddle checkout (sandbox)</h1>
+<p>Transaction ${txn.id} — ${txn.status}</p>
+${failed}
+<form method="post" action="/paddle/checkout/${txn.id}/complete"><button type="submit">Pay (test card)</button></form>
+<form method="post" action="/paddle/checkout/${txn.id}/fail"><button type="submit">Decline (test card)</button></form>
+</body></html>`;
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(html);
+    return;
+  }
+  const completeMatch = /^\/checkout\/([^/]+)\/(complete|fail)$/.exec(path);
+  if (completeMatch && req.method === "POST") {
+    const txn = s.paddleTransactions.find((x) => x.id === completeMatch[1]);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", "No such transaction"));
+    if (completeMatch[2] === "fail") {
+      // A declined payment at checkout: the transaction goes past_due and the buyer stays on the page.
+      txn.status = "past_due";
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.payment_failed", { ...txn, success_url: undefined }));
+      res.writeHead(303, { location: `/paddle/checkout/${txn.id}` });
+      res.end();
+      return;
+    }
+    if (txn.status !== "completed") {
+      txn.status = "completed";
+      const price = s.paddlePrices.find((p) => p.id === txn.items[0]!.price_id);
+      const trialDays = price?.trialDays ?? 0;
+      const now = Date.now();
+      const nowIso = new Date(now).toISOString();
+      const trialEndIso = new Date(now + trialDays * 24 * 3600 * 1000).toISOString();
+      const periodEndIso = trialDays > 0 ? trialEndIso : new Date(now + 30 * 24 * 3600 * 1000).toISOString();
+      const sub: FakePaddleSubscription = {
+        id: `sub_fake_${next(s, "paddleSubscription")}`,
+        customer_id: txn.customer_id,
+        status: trialDays > 0 ? "trialing" : "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: [
+          {
+            status: trialDays > 0 ? "trialing" : "active",
+            quantity: txn.items[0]!.quantity,
+            recurring: true,
+            price: { id: txn.items[0]!.price_id },
+            trial_dates: trialDays > 0 ? { starts_at: nowIso, ends_at: trialEndIso } : null,
+          },
+        ],
+        current_billing_period: { starts_at: nowIso, ends_at: periodEndIso },
+        next_billed_at: periodEndIso,
+        first_billed_at: trialDays > 0 ? null : nowIso,
+        started_at: nowIso,
+        paused_at: null,
+        canceled_at: null,
+        scheduled_change: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      txn.subscription_id = sub.id;
+      s.paddleSubscriptions.push(sub);
+      const { success_url: _su, ...pubTxn } = txn;
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", pubTxn));
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
+    }
+    res.writeHead(303, { location: txn.success_url || "/" });
+    res.end();
+    return;
+  }
+  return json(ctx, req, res, 404, paddleError("not_found", "Unrecognized request URL"));
+};
+
 const notion: Handler = (ctx, req, res, path, _url, body) => {
   const s = ctx.state;
   if (!req.headers["notion-version"]) {
@@ -1413,6 +1813,7 @@ const HANDLERS: Record<string, Handler> = {
   snowflake,
   github,
   stripe,
+  paddle,
   notion,
   linear,
 };
@@ -1444,6 +1845,15 @@ function stateDump(state: State, provider: string): unknown {
         subscriptions: state.stripeSubscriptions,
         meterEvents: state.stripeMeterEvents,
         webhooks: state.stripeWebhooks,
+      };
+    case "paddle":
+      return {
+        prices: state.paddlePrices,
+        customers: state.paddleCustomers,
+        transactions: state.paddleTransactions,
+        subscriptions: state.paddleSubscriptions,
+        adjustments: state.paddleAdjustments,
+        webhooks: state.paddleWebhooks,
       };
     case "notion":
       return { pages: state.notionPages };
@@ -1558,6 +1968,102 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     const result = await sendStripeWebhook(ctx, event);
     return json(ctx, req, res, 200, { ok: true, id: event.id, sent: result.sent, payload: result.payload, header: result.header }), true;
   }
+  // Registers a Paddle price the fake will sell (with its catalog trial period). Real
+  // Paddle trials live on the price, so tests register the prices their plans use.
+  if (req.method === "POST" && path === "/__fake/paddle/price") {
+    const body = j(rawBody) as { id?: string; trialDays?: number };
+    if (!body.id) return json(ctx, req, res, 400, { error: "id is required" }), true;
+    const existing = ctx.state.paddlePrices.find((p) => p.id === body.id);
+    if (existing) existing.trialDays = body.trialDays ?? 0;
+    else ctx.state.paddlePrices.push({ id: body.id, trialDays: body.trialDays ?? 0 });
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
+  // Builds a signed Paddle-style event WITHOUT sending it (see /__fake/stripe/emit).
+  // Optional: id, occurredAt (event time, RFC 3339), signAt (signature time), mutate.
+  if (req.method === "POST" && path === "/__fake/paddle/emit") {
+    const s = ctx.state;
+    const body = j(rawBody) as {
+      type?: string;
+      customer?: string;
+      subscription?: Record<string, unknown> & { price?: string };
+      transaction?: Record<string, unknown>;
+      adjustment?: Record<string, unknown>;
+      id?: string;
+      occurredAt?: string;
+      signAt?: number;
+      mutate?: boolean;
+    };
+    if (!body.type) return json(ctx, req, res, 400, { error: "type is required" }), true;
+    const nowIso = new Date().toISOString();
+    let data: unknown;
+    if (body.type.startsWith("subscription.")) {
+      const sub = body.subscription ?? {};
+      data = {
+        id: sub.id ?? `sub_fake_${next(s, "paddleSubscription")}`,
+        customer_id: body.customer ?? sub.customer_id ?? "",
+        status: sub.status ?? "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: sub.items ?? [{ status: sub.status === "trialing" ? "trialing" : "active", quantity: 1, recurring: true, price: { id: sub.price ?? "pri_unknown" }, trial_dates: sub.trial_dates ?? null }],
+        current_billing_period: sub.current_billing_period === undefined ? { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() } : sub.current_billing_period,
+        next_billed_at: sub.next_billed_at ?? null,
+        first_billed_at: sub.first_billed_at ?? nowIso,
+        started_at: sub.started_at ?? nowIso,
+        paused_at: sub.paused_at ?? null,
+        canceled_at: sub.canceled_at ?? null,
+        scheduled_change: sub.scheduled_change ?? null,
+        created_at: sub.created_at ?? nowIso,
+        updated_at: nowIso,
+      };
+    } else if (body.type.startsWith("transaction.")) {
+      const txn = body.transaction ?? {};
+      data = {
+        id: txn.id ?? `txn_fake_${next(s, "paddleTransaction")}`,
+        status: txn.status ?? (body.type === "transaction.completed" ? "completed" : "ready"),
+        customer_id: body.customer ?? txn.customer_id ?? "",
+        subscription_id: txn.subscription_id ?? null,
+        items: txn.items ?? [{ price_id: "pri_unknown", quantity: 1 }],
+        origin: txn.origin ?? "web",
+        checkout: txn.checkout ?? { url: null },
+        currency_code: "USD",
+        created_at: nowIso,
+      };
+    } else if (body.type.startsWith("adjustment.")) {
+      const adj = body.adjustment ?? {};
+      data = {
+        id: adj.id ?? `adj_fake_${next(s, "paddleAdjustment")}`,
+        action: adj.action ?? "refund",
+        status: adj.status ?? "approved",
+        transaction_id: adj.transaction_id ?? `txn_fake_${next(s, "paddleTransaction")}`,
+        customer_id: body.customer ?? adj.customer_id ?? "",
+        subscription_id: adj.subscription_id ?? null,
+        reason: adj.reason ?? "",
+        items: adj.items ?? [],
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+    } else {
+      data = { id: `gen_fake_${next(s, "paddleCheckoutEmit")}`, customer_id: body.customer ?? "" };
+    }
+    const event = paddleEvent(s, body.type, data, { id: body.id, occurredAt: body.occurredAt });
+    if (body.mutate !== false) applyPaddleEventToState(s, body.type, data);
+    const payload = JSON.stringify(event);
+    const header = signPaddlePayload(process.env.FAKE_PADDLE_WEBHOOK_SECRET || "pdl_ntfset_fake", payload, body.signAt);
+    return json(ctx, req, res, 200, { id: event.event_id, payload, header }), true;
+  }
+  // Sends a signed subscription.past_due webhook for a known fake subscription.
+  // Like the real provider, the failure moves the subscription to past_due first.
+  if (req.method === "POST" && path === "/__fake/paddle/fail-payment") {
+    const s = ctx.state;
+    const body = j(rawBody) as { subscription?: string };
+    const sub = s.paddleSubscriptions.find((x) => x.id === body.subscription);
+    if (!sub) return json(ctx, req, res, 404, { error: `No such subscription: '${body.subscription}'` }), true;
+    sub.status = "past_due";
+    sub.updated_at = new Date().toISOString();
+    const event = paddleEvent(s, "subscription.past_due", paddleSubscriptionPayload(sub));
+    const result = await sendPaddleWebhook(ctx, event);
+    return json(ctx, req, res, 200, { ok: true, id: event.event_id, sent: result.sent, payload: result.payload, header: result.header }), true;
+  }
   // Sets the identity the fake OIDC IdP auto-consents as (email + verified flag) for the next authorize.
   if (req.method === "POST" && path === "/__fake/oidc/user") {
     const body = j(rawBody) as { email?: string; email_verified?: boolean };
@@ -1657,8 +2163,8 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
         return json(ctx, req, res, 404, { error: "unknown oauth endpoint" });
       }
 
-      // Stripe's hosted checkout pages are reached by a browser without credentials.
-      const publicCheckoutPage = provider === "stripe" && path.startsWith("/checkout/");
+      // Stripe/Paddle hosted checkout pages are reached by a browser without credentials.
+      const publicCheckoutPage = (provider === "stripe" || provider === "paddle") && path.startsWith("/checkout/");
       let account: AccountKey = "a";
       if (!publicCheckoutPage) {
         const auth = authenticate(ctx.state, provider, req);

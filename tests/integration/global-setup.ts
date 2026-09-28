@@ -1,10 +1,10 @@
 import { execSync } from "node:child_process";
 import { Client } from "pg";
 
-/** Integration tests only ever touch the separate flowline_test database. */
+/** Integration tests only ever touch a separate test database: flowline_test (or flowline_test_<worktree> when agents work in parallel). */
 export default async function setup() {
   const url = process.env.DATABASE_URL ?? "";
-  if (!/\/flowline_test(\?|$)/.test(url)) {
+  if (!/\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(url)) {
     throw new Error(`Integration tests must run against flowline_test (got ${url.replace(/\/\/[^@]*@/, "//***@")}). Use pnpm test:integration.`);
   }
   execSync("npx tsx src/db/migrate.ts", { stdio: "inherit", env: process.env });
