@@ -16,3 +16,6 @@ blob-report/
 .claude/worktrees/
 deploy/beta/.env.beta
 deploy/beta/backups/
+
+# raw helper-agent transcripts (reports are kept, transcripts are not evidence)
+artifacts/**/codex-stderr*.txt
