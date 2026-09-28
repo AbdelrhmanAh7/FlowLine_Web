@@ -112,7 +112,7 @@ export function Members() {
                   <span className="font-medium">{m.name}</span>
                   <span className="data text-sm text-muted">· {m.email}</span>
                   {m.userId === user.id && <span className="text-sm text-muted">(you)</span>}
-                  <span className="ml-auto flex items-center gap-2">
+                  <span className="ms-auto flex items-center gap-2">
                     <label htmlFor={`role-${m.userId}`} className="sr-only">
                       Role of {m.email}
                     </label>
@@ -204,7 +204,7 @@ export function Members() {
                   <span className="data">{i.email}</span>
                   <span className={cx("rounded-md border border-line px-1.5 text-sm capitalize text-med")}>{i.role}</span>
                   <span className="text-sm text-muted">expires {new Date(i.expiresAt).toLocaleDateString()}</span>
-                  <Button size="sm" variant="danger-ghost" className="ml-auto" loading={revoke.isPending && revoke.variables === i.id} onClick={() => revoke.mutate(i.id)}>
+                  <Button size="sm" variant="danger-ghost" className="ms-auto" loading={revoke.isPending && revoke.variables === i.id} onClick={() => revoke.mutate(i.id)}>
                     Revoke
                   </Button>
                 </li>

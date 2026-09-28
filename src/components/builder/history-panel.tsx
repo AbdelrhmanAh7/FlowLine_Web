@@ -56,7 +56,7 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
   const targets = workspaces.filter((w) => w.id !== workspace.id && (w.role === "owner" || w.role === "editor"));
 
   return (
-    <aside role="dialog" aria-label="Version history" className="absolute top-0 right-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-l border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
+    <aside role="dialog" aria-label="Version history" className="absolute top-0 end-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">History</h2>
         <button onClick={onClose} aria-label="Close history" className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
@@ -73,12 +73,12 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
               <button
                 onClick={() => setOpen(v.id)}
                 aria-current={open === v.id ? "true" : undefined}
-                className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
+                className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-start text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
               >
                 <span className="data text-hi">v{v.version}</span>
                 <StatusBadge tone={v.reason === "publish" ? "success" : "muted"}>{v.reason}</StatusBadge>
                 {v.id === publishedVersionId && <StatusBadge tone="accent">live</StatusBadge>}
-                <span className="data ml-auto text-muted">{timeAgo(v.createdAt)}</span>
+                <span className="data ms-auto text-muted">{timeAgo(v.createdAt)}</span>
               </button>
             </li>
           ))}

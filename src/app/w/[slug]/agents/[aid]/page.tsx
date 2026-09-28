@@ -236,7 +236,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
             v{r.version} · {r.stepCount} model steps · {r.costMicros > 0 ? `cost ${(r.costMicros / 1_000_000).toFixed(4)}` : "no priced usage"}
           </span>
           {active(r.status) && (
-            <Button size="sm" variant="danger-ghost" className="ml-auto" loading={cancel.isPending} onClick={() => cancel.mutate()}>
+            <Button size="sm" variant="danger-ghost" className="ms-auto" loading={cancel.isPending} onClick={() => cancel.mutate()}>
               Cancel
             </Button>
           )}
@@ -251,7 +251,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
         {(r.citations?.length ?? 0) > 0 && (
           <div>
             <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Sources</p>
-            <ol className="mt-1 list-decimal pl-5 text-sm text-med">
+            <ol className="mt-1 list-decimal ps-5 text-sm text-med">
               {r.citations!.map((c, i) => (
                 <li key={i}>{c.label}</li>
               ))}
@@ -261,7 +261,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
         {pending.map((a) => (
           <div key={a.id} className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3" data-testid="agent-approval">
             <p className="text-sm text-hi">The agent wants to run a tool that needs a human decision ({a.actionId}). Expires {new Date(a.expiresAt).toLocaleString()}.</p>
-            <pre className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{JSON.stringify(a.argsPreview, null, 2)}</pre>
+            <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{JSON.stringify(a.argsPreview, null, 2)}</pre>
             <div className="flex gap-2">
               <Button size="sm" variant="primary" disabledReason={decideReason} loading={decideM.isPending && decideM.variables?.decision === "approve"} onClick={() => decideM.mutate({ id: a.id, decision: "approve" })}>
                 Approve
@@ -296,10 +296,10 @@ function StepList({ steps }: { steps: Step[] }) {
                 {s.inputTokens}+{s.outputTokens} tokens
               </span>
             )}
-            <span className="data ml-auto text-muted">{new Date(s.at).toLocaleTimeString()}</span>
+            <span className="data ms-auto text-muted">{new Date(s.at).toLocaleTimeString()}</span>
           </p>
           {s.error && <p className="text-danger">{s.error.message}</p>}
-          {s.kind === "tool" && s.args != null && <pre className="data mt-1 max-h-24 overflow-auto text-xs text-med">{JSON.stringify(s.args)}</pre>}
+          {s.kind === "tool" && s.args != null && <pre dir="ltr" className="data mt-1 max-h-24 overflow-auto text-xs text-med">{JSON.stringify(s.args)}</pre>}
         </li>
       ))}
     </ol>
@@ -319,7 +319,7 @@ function Runs({ agentId, role, initialRun }: { agentId: string; role: Role; init
       <ul className="flex flex-col gap-1.5" aria-label="Agent runs">
         {q.data.map((r) => (
           <li key={r.id}>
-            <button onClick={() => setOpen(r.id)} className={cx("flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left", open === r.id ? "border-accent bg-card" : "border-line hover:bg-card")}>
+            <button onClick={() => setOpen(r.id)} className={cx("flex w-full items-center gap-2 rounded-md border px-3 py-2 text-start", open === r.id ? "border-accent bg-card" : "border-line hover:bg-card")}>
               <StatusBadge tone={TONE[r.status]}>{LABEL[r.status]}</StatusBadge>
               <span className="min-w-0 flex-1 truncate text-base">{r.input}</span>
               <span className="data text-xs text-muted">{timeAgo(r.createdAt)}</span>

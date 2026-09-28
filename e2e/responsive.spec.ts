@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import { EN_STATE } from "../playwright.config";
 import { injectFault, resetFaults, setupUser } from "./helpers";
 
 const OUT = "artifacts/phase-3/screenshots";
@@ -159,7 +160,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   }
 
   // Public pages (fresh, signed-out context)
-  const anon = await browser.newContext({ baseURL: "http://localhost:3100" });
+  const anon = await browser.newContext({ baseURL: "http://localhost:3100", storageState: EN_STATE });
   const ap = await anon.newPage();
   for (const [label, w, h] of sizes) {
     await ap.setViewportSize({ width: w, height: h });
@@ -172,7 +173,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   await anon.close();
 
   // Onboarding step 2 (goal) for a new account
-  const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" } });
+  const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: EN_STATE });
   const fp = await fresh.newPage();
   await fp.request.post("/api/auth/sign-up/email", { data: { email: `onb-${Date.now()}@flowline-e2e.test`, password: "e2e-Passw0rd!", name: "Jules Kim" } });
   await fp.setViewportSize({ width: 1440, height: 900 });

@@ -42,7 +42,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
             </span>
           </span>
         )}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ms-auto flex items-center gap-3">
           {open && onCancel && (
             <Button size="sm" variant="danger-ghost" onClick={onCancel} loading={cancelling} disabledReason={canCancel === false ? "Viewers can't cancel runs" : run?.cancelRequestedAt ? "Cancelling…" : null}>
               Cancel run
@@ -50,7 +50,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
           )}
           {run && (
             <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="text-sm text-accent hover:underline">
-              Open in inspector →
+              Open in inspector <span aria-hidden className="flip-rtl">→</span>
             </Link>
           )}
           {variant === "dock" && (
@@ -62,18 +62,18 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
       </div>
       <div className="flex min-h-0 flex-1">
         {runs.length > 0 && (
-          <ul aria-label="Recent runs" className="hidden w-44 shrink-0 overflow-y-auto border-r border-line py-1 md:block">
+          <ul aria-label="Recent runs" className="hidden w-44 shrink-0 overflow-y-auto border-e border-line py-1 md:block">
             {runs.map((r) => (
               <li key={r.id}>
                 <button
                   onClick={() => onSelectRun(r.id)}
                   aria-current={run?.id === r.id ? "true" : undefined}
-                  className={cx("flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-card", run?.id === r.id && "bg-card")}
+                  className={cx("flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm hover:bg-card", run?.id === r.id && "bg-card")}
                 >
                   <StatusBadge tone={RUN_TONE[r.status] ?? "muted"}>
                     <span className="data text-hi">#{r.number}</span>
                   </StatusBadge>
-                  <span className="data ml-auto text-xs text-muted">{timeAgo(r.createdAt)}</span>
+                  <span className="data ms-auto text-xs text-muted">{timeAgo(r.createdAt)}</span>
                 </button>
               </li>
             ))}
@@ -96,7 +96,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                     <button
                       onClick={() => onSelectStep(s.nodeId)}
                       className={cx(
-                        "rounded-md border bg-card px-2.5 py-1.5 text-left hover:bg-elevated",
+                        "rounded-md border bg-card px-2.5 py-1.5 text-start hover:bg-elevated",
                         s.status === "failed" ? "border-danger/60" : s.status === "skipped" ? "border-dashed border-line-strong opacity-60" : "border-line",
                       )}
                     >
@@ -110,7 +110,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                         </StatusBadge>
                       )}
                     </button>
-                    {i < run.steps.length - 1 && <span aria-hidden className="text-muted">→</span>}
+                    {i < run.steps.length - 1 && <span aria-hidden className="flip-rtl text-muted">→</span>}
                   </li>
                 ))}
               </ol>
@@ -122,7 +122,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               {run.status === "succeeded" && (
                 <div>
                   <p className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">Run output</p>
-                  <pre className="data max-h-28 overflow-auto rounded-md border border-line bg-app p-2 text-sm">{pretty(run.output)}</pre>
+                  <pre dir="ltr" className="data max-h-28 overflow-auto rounded-md border border-line bg-app p-2 text-sm">{pretty(run.output)}</pre>
                 </div>
               )}
               {(run.status === "queued" || run.status === "running") && (
@@ -132,7 +132,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                 <p className="text-sm text-warning">
                   Waiting for a human decision.{" "}
                   <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="underline">
-                    Review in the inspector →
+                    Review in the inspector <span aria-hidden className="flip-rtl">→</span>
                   </Link>
                 </p>
               )}

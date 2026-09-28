@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { BASE_URL } from "../playwright.config";
+import { BASE_URL, EN_STATE } from "../playwright.config";
 import { PASSWORD, setupUser, uniqueEmail } from "./helpers";
 
 /**
@@ -10,7 +10,7 @@ import { PASSWORD, setupUser, uniqueEmail } from "./helpers";
 const FAKE = "http://127.0.0.1:4010";
 
 async function newUserContext(browser: Browser, email = uniqueEmail("p3")) {
-  const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL } });
+  const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
   const page = await ctx.newPage();
   const r = await page.request.post("/api/auth/sign-up/email", { data: { email, password: PASSWORD, name: "Invitee" } });
   expect(r.ok(), await r.text()).toBeTruthy();
@@ -308,7 +308,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await expect(page.getByText("Enabled", { exact: true })).toBeVisible();
 
   // A new person signs in from the sign-in page and joins with the default role.
-  const fresh = await browser.newContext({ baseURL: BASE_URL });
+  const fresh = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
   const p2 = await fresh.newPage();
   const newcomer = `sso-${randomUUID().slice(0, 8)}@${domain}`;
   await idpUser(newcomer);
@@ -322,7 +322,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   // An existing password account in the domain is NOT signed in by the IdP asserting its email.
   const victim = await newUserContext(browser, `victim-${randomUUID().slice(0, 8)}@${domain}`);
   await victim.ctx.close();
-  const p3 = await (await browser.newContext({ baseURL: BASE_URL })).newPage();
+  const p3 = await (await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE })).newPage();
   await idpUser(victim.email);
   await p3.goto("/sign-in");
   await p3.getByLabel("Workspace slug").fill(workspace.slug);

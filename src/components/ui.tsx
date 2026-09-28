@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useT } from "@/i18n/client";
 import { cloneElement, forwardRef, isValidElement, useId, useImperativeHandle, useLayoutEffect, useRef, type ButtonHTMLAttributes, type ChangeEvent, type ForwardedRef, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
@@ -76,7 +77,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         id={reasonId}
         role="tooltip"
         className={cx(
-          "pointer-events-none absolute right-0 z-50 w-max max-w-64 rounded-md border border-line bg-elevated px-2.5 py-1.5 text-sm text-hi opacity-0 shadow-[var(--shadow-popover)] transition-opacity duration-[var(--dur-tab)] group-hover:opacity-100 group-focus-within:opacity-100",
+          "pointer-events-none absolute end-0 z-50 w-max max-w-64 rounded-md border border-line bg-elevated px-2.5 py-1.5 text-sm text-hi opacity-0 shadow-[var(--shadow-popover)] transition-opacity duration-[var(--dur-tab)] group-hover:opacity-100 group-focus-within:opacity-100",
           tooltipSide === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
         )}
       >
@@ -130,11 +131,20 @@ function useKeepEarlyInput<T extends HTMLInputElement | HTMLTextAreaElement>(
   return el;
 }
 
+/**
+ * Machine text (e-mails, URLs, keys, cron, JSONata — the fields styled `data`) stays left-to-right in Arabic too.
+ * Pass `dir` explicitly to override.
+ */
+function machineDir(type: string | undefined, className: string | undefined): "ltr" | undefined {
+  return type === "email" || type === "url" || /(^|\s)data(\s|$)/.test(className ?? "") ? "ltr" : undefined;
+}
+
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ className, invalid, ...rest }, ref) {
   const el = useKeepEarlyInput(ref, rest.value, rest.onChange);
   return (
     <input
       ref={el}
+      dir={machineDir(rest.type, className)}
       aria-invalid={invalid || undefined}
       className={cx(
         "h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-hover)] focus:border-accent focus:outline-none",
@@ -154,6 +164,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   return (
     <textarea
       ref={el}
+      dir={mono ? "ltr" : undefined}
       aria-invalid={invalid || undefined}
       spellCheck={mono ? false : undefined}
       className={cx(
@@ -192,13 +203,16 @@ export function Field({ label, htmlFor, hint, error, children }: { label: string
   );
 }
 
-/** WAI-ARIA tabs keyboard support: ←/→/Home/End move focus and activate. */
+/** WAI-ARIA tabs keyboard support: ←/→/Home/End move focus and activate (arrows follow the reading direction). */
 export function onTabListKeyDown<T extends string>(e: React.KeyboardEvent, ids: readonly T[], current: T, select: (t: T) => void, isDisabled?: (t: T) => boolean) {
   const enabled = ids.filter((t) => !isDisabled?.(t));
   const i = enabled.indexOf(current);
+  const rtl = getComputedStyle(e.currentTarget as Element).direction === "rtl";
+  const forward = rtl ? "ArrowLeft" : "ArrowRight";
+  const backward = rtl ? "ArrowRight" : "ArrowLeft";
   let next: T | undefined;
-  if (e.key === "ArrowRight") next = enabled[(i + 1) % enabled.length];
-  else if (e.key === "ArrowLeft") next = enabled[(i - 1 + enabled.length) % enabled.length];
+  if (e.key === forward) next = enabled[(i + 1) % enabled.length];
+  else if (e.key === backward) next = enabled[(i - 1 + enabled.length) % enabled.length];
   else if (e.key === "Home") next = enabled[0];
   else if (e.key === "End") next = enabled[enabled.length - 1];
   if (!next) return;
@@ -296,6 +310,7 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
 }
 
 export function ErrorState({ title, body, onRetry, retrying }: { title: string; body?: ReactNode; onRetry?: () => void; retrying?: boolean }) {
+  const t = useT();
   return (
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-danger/40 bg-danger/5 p-4">
       <div>
@@ -304,7 +319,7 @@ export function ErrorState({ title, body, onRetry, retrying }: { title: string; 
       </div>
       {onRetry && (
         <Button size="sm" onClick={onRetry} loading={retrying}>
-          Retry
+          {t("ui.retry")}
         </Button>
       )}
     </div>

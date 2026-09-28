@@ -41,7 +41,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
   }, [ref]);
 
   return (
-    <div role="dialog" aria-label="Add node" className="absolute top-12 left-3 z-30 w-72 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
+    <div role="dialog" aria-label="Add node" className="absolute top-12 start-3 z-30 w-72 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
       <input
         ref={ref}
         value={q}

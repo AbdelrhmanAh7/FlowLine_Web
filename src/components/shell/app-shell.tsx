@@ -7,6 +7,8 @@ import type { Role } from "@/db/schema";
 import { signOutEverywhere } from "@/lib/auth-client";
 import { initials } from "@/lib/format";
 import { useHealth, useOnline } from "@/lib/hooks";
+import { useT } from "@/i18n/client";
+import { LanguageSwitcher } from "../language-switcher";
 import { cx } from "../ui";
 import { WorkspaceContext, type WorkspaceInfo } from "./workspace-context";
 
@@ -26,6 +28,7 @@ interface NavItem {
 }
 
 export function AppShell({ user, workspace, role, workspaces, children }: Props) {
+  const t = useT();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const base = `/w/${workspace.slug}`;
@@ -39,46 +42,46 @@ export function AppShell({ user, workspace, role, workspaces, children }: Props)
 
   const sections: { title: string; items: NavItem[] }[] = [
     {
-      title: "Build",
+      title: t("shell.sections.build"),
       items: [
-        { href: `${base}/flows`, label: "Flows", icon: "▦", match: (p) => p === `${base}/flows` },
-        { href: `${base}/canvas`, label: "Canvas", icon: "⌘", match: (p) => p.startsWith(`${base}/flows/`) || p === `${base}/canvas` },
-        { href: `${base}/templates`, label: "Templates", icon: "▤", match: (p) => p.startsWith(`${base}/templates`) },
+        { href: `${base}/flows`, label: t("shell.nav.flows"), icon: "▦", match: (p) => p === `${base}/flows` },
+        { href: `${base}/canvas`, label: t("shell.nav.canvas"), icon: "⌘", match: (p) => p.startsWith(`${base}/flows/`) || p === `${base}/canvas` },
+        { href: `${base}/templates`, label: t("shell.nav.templates"), icon: "▤", match: (p) => p.startsWith(`${base}/templates`) },
       ],
     },
     {
-      title: "AI",
+      title: t("shell.sections.ai"),
       items: [
-        { href: `${base}/agents`, label: "Agents", icon: "✦", match: (p) => p.startsWith(`${base}/agents`) },
-        { href: `${base}/knowledge`, label: "Knowledge", icon: "❏", match: (p) => p.startsWith(`${base}/knowledge`) },
+        { href: `${base}/agents`, label: t("shell.nav.agents"), icon: "✦", match: (p) => p.startsWith(`${base}/agents`) },
+        { href: `${base}/knowledge`, label: t("shell.nav.knowledge"), icon: "❏", match: (p) => p.startsWith(`${base}/knowledge`) },
       ],
     },
     {
-      title: "Observe",
+      title: t("shell.sections.observe"),
       items: [
-        { href: `${base}/runs`, label: "Run history", icon: "◷", match: (p) => p.startsWith(`${base}/runs`) },
-        { href: `${base}/integrations`, label: "Integrations", icon: "⬡", match: (p) => p.startsWith(`${base}/integrations`) },
+        { href: `${base}/runs`, label: t("shell.nav.runs"), icon: "◷", match: (p) => p.startsWith(`${base}/runs`) },
+        { href: `${base}/integrations`, label: t("shell.nav.integrations"), icon: "⬡", match: (p) => p.startsWith(`${base}/integrations`) },
       ],
     },
   ];
-  const settings: NavItem = { href: `${base}/settings`, label: "Settings", icon: "⚙", match: (p) => p.startsWith(`${base}/settings`) };
+  const settings: NavItem = { href: `${base}/settings`, label: t("shell.nav.settings"), icon: "⚙", match: (p) => p.startsWith(`${base}/settings`) };
 
   return (
     <WorkspaceContext.Provider value={{ user, workspace, role, canEdit: role !== "viewer", workspaces }}>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-on-accent">
-        Skip to content
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[200] focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-on-accent">
+        {t("shell.skipToContent")}
       </a>
       <div className="flex h-dvh overflow-hidden bg-app">
         {/* Desktop sidebar (240px) / tablet icon rail (48px) */}
-        <aside aria-label="Workspace navigation" className="hidden shrink-0 flex-col border-r border-line bg-surface md:flex md:w-[var(--rail-w)] xl:w-[var(--sidebar-w)]">
+        <aside aria-label={t("shell.workspaceNav")} className="hidden shrink-0 flex-col border-e border-line bg-surface md:flex md:w-[var(--rail-w)] xl:w-[var(--sidebar-w)]">
           <SidebarContent sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} compact />
         </aside>
 
         {/* Mobile menu sheet */}
         {menuOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            <button aria-label="Close menu" className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
-            <aside aria-label="Workspace navigation" className="relative flex h-full w-[min(280px,85vw)] animate-drawer-in flex-col border-r border-line bg-surface">
+            <button aria-label={t("shell.closeMenu")} className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
+            <aside aria-label={t("shell.workspaceNav")} className="relative flex h-full w-[min(280px,85vw)] animate-drawer-in flex-col border-e border-line bg-surface">
               <SidebarContent sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} />
             </aside>
           </div>
@@ -86,7 +89,7 @@ export function AppShell({ user, workspace, role, workspaces, children }: Props)
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 md:hidden">
-            <button aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="-ml-1 flex size-9 items-center justify-center rounded-md text-lg text-med hover:bg-card hover:text-hi">
+            <button aria-label={t("shell.openMenu")} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="-ms-1 flex size-9 items-center justify-center rounded-md text-lg text-med hover:bg-card hover:text-hi">
               ☰
             </button>
             <span className="truncate text-base font-semibold">{workspace.name}</span>
@@ -167,6 +170,7 @@ function NavLink({ item, active, compact }: { item: NavItem; active: boolean; co
 }
 
 function UserMenu({ user, compact }: { user: { name: string; email: string }; compact?: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -188,7 +192,7 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={cx("flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-base text-med hover:bg-card hover:text-hi", compact && "justify-center xl:justify-start")}
+        className={cx("flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-start text-base text-med hover:bg-card hover:text-hi", compact && "justify-center xl:justify-start")}
         title={compact ? user.name : undefined}
       >
         <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7c6cff,#38bdf8)] text-[10px] font-semibold text-on-accent">
@@ -197,14 +201,19 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
         <span className={cx("min-w-0 flex-1 truncate", compact && "hidden xl:block")}>{user.name}</span>
       </button>
       {open && (
-        <div role="menu" className="absolute bottom-full left-0 z-50 mb-1 w-56 animate-fade-in rounded-lg border border-line bg-elevated p-1 shadow-[var(--shadow-popover)]">
+        <div role="menu" className="absolute bottom-full start-0 z-50 mb-1 w-56 animate-fade-in rounded-lg border border-line bg-elevated p-1 shadow-[var(--shadow-popover)]">
           <div className="px-2.5 py-2">
             <p className="truncate text-base font-medium">{user.name}</p>
-            <p className="data truncate text-sm text-med">{user.email}</p>
+            <p className="data truncate text-sm text-med">
+              <span dir="ltr">{user.email}</span>
+            </p>
           </div>
-          <button role="menuitem" onClick={() => void signOutEverywhere()} className="flex h-8 w-full items-center rounded-md px-2.5 text-left text-base text-hi hover:bg-card">
-            Sign out
+          <button role="menuitem" onClick={() => void signOutEverywhere()} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
+            {t("shell.userMenu.signOut")}
           </button>
+          <div role="separator" className="my-1 h-px bg-line" />
+          <p className="px-2.5 pt-1 text-xs text-muted">{t("language.label")}</p>
+          <LanguageSwitcher variant="menu" onChange={() => setOpen(false)} />
         </div>
       )}
     </div>
@@ -212,30 +221,39 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
 }
 
 function StatusBanners() {
+  const t = useT();
   const online = useOnline();
   const health = useHealth();
   if (!online) {
     return (
       <div role="status" className="flex shrink-0 items-center gap-2 border-b border-info/30 bg-info/10 px-4 py-2 text-base text-info">
-        <span aria-hidden>●</span> <strong className="font-semibold">Offline mode</strong>
-        <span className="text-med">— edits are kept on this device; running is disabled until you reconnect.</span>
+        <span aria-hidden>●</span> <strong className="font-semibold">{t("shell.banners.offlineTitle")}</strong>
+        <span className="text-med">{t("shell.banners.offlineBody")}</span>
       </div>
     );
   }
   if (health.data?.worker === "offline") {
     return (
       <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-2 border-b border-warning/30 bg-warning/10 px-4 py-2 text-base text-warning">
-        <span aria-hidden>⚠</span> <strong className="font-semibold">Execution worker offline</strong>
-        <span className="text-med">— new runs will wait in the queue. Editing still works. Start it with <code className="data text-hi">pnpm worker</code>.</span>
+        <span aria-hidden>⚠</span> <strong className="font-semibold">{t("shell.banners.workerTitle")}</strong>
+        <span className="text-med">
+          {t.rich("shell.banners.workerBody", {
+            command: (
+              <code dir="ltr" className="data text-hi">
+                pnpm worker
+              </code>
+            ),
+          })}
+        </span>
       </div>
     );
   }
   if (health.isError) {
     return (
       <div role="status" className="flex shrink-0 items-center gap-2 border-b border-danger/30 bg-danger/10 px-4 py-2 text-base text-danger">
-        <span aria-hidden>⚠</span> <strong className="font-semibold">Flowline can&apos;t reach its database.</strong>
+        <span aria-hidden>⚠</span> <strong className="font-semibold">{t("shell.banners.dbTitle")}</strong>
         <button className="underline" onClick={() => void health.refetch()}>
-          Retry
+          {t("common.retry")}
         </button>
       </div>
     );

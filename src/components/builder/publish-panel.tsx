@@ -159,7 +159,7 @@ function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { f
                     <li key={e.eventId} className="flex gap-2">
                       <span className="data truncate text-med">{e.eventId}</span>
                       <span className={cx(e.status === "accepted" ? "text-success" : "text-warning")}>{e.status}</span>
-                      <span className="ml-auto text-muted">{timeAgo(e.receivedAt)}</span>
+                      <span className="ms-auto text-muted">{timeAgo(e.receivedAt)}</span>
                     </li>
                   ))}
                 </ul>
@@ -193,7 +193,7 @@ export function PausedBanner({ flowId }: { flowId: string }) {
     <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
       ⚠ This flow is paused because a connection it uses needs to be reconnected. Other flows keep running.
       <Link href={`/w/${workspace.slug}/integrations`} className="font-medium underline">
-        Reconnect in Integrations →
+        Reconnect in Integrations <span aria-hidden className="flip-rtl">→</span>
       </Link>
     </div>
   );

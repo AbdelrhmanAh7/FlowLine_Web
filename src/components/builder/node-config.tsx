@@ -501,7 +501,7 @@ function ActionForm({ node, cfg, set }: FormProps) {
           options={[{ value: "", label: conns.length ? "Choose a connection" : `No ${provider.name} connections yet` }, ...conns.map((c) => ({ value: c.id, label: `${c.label}${c.status !== "active" ? ` (${c.status})` : ""}${c.visibility === "private" ? (c.ownerId === user.id ? " · private (yours)" : " · private to another member — can't run for you") : ""}` }))]}
           hint={
             <Link href={`/w/${workspace.slug}/integrations`} className="text-accent hover:underline">
-              Manage connections →
+              Manage connections <span aria-hidden className="flip-rtl">→</span>
             </Link>
           }
         />
@@ -515,7 +515,7 @@ function ActionForm({ node, cfg, set }: FormProps) {
             value={s(cfg.inputMapping)}
             onChange={(v) => set({ inputMapping: v })}
             rows={8}
-            hint={<>Required: {required.length ? required.map((r) => <code key={r} className="data mr-1">{r}</code>) : "none"}. Use <code className="data">$steps.&lt;id&gt;</code> for upstream data.</>}
+            hint={<>Required: {required.length ? required.map((r) => <code key={r} className="data me-1">{r}</code>) : "none"}. Use <code className="data">$steps.&lt;id&gt;</code> for upstream data.</>}
           />
           <Button size="sm" className="self-start" onClick={() => set({ inputMapping: mappingSkeleton(action) })}>
             Reset to template

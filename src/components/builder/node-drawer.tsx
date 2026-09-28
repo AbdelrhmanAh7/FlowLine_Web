@@ -42,7 +42,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
       data-testid="node-drawer"
       className={cx(
         "z-30 flex flex-col border-line bg-surface",
-        variant === "sheet" ? "fixed inset-x-0 bottom-0 h-[92vh] animate-sheet-in rounded-t-xl border-t" : "absolute top-0 right-0 bottom-0 w-[var(--drawer-w)] max-w-full animate-drawer-in border-l shadow-[var(--shadow-popover)]",
+        variant === "sheet" ? "fixed inset-x-0 bottom-0 h-[92vh] animate-sheet-in rounded-t-xl border-t" : "absolute top-0 end-0 bottom-0 w-[var(--drawer-w)] max-w-full animate-drawer-in border-s shadow-[var(--shadow-popover)]",
       )}
     >
       <div
@@ -68,7 +68,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
             <span aria-hidden className="text-accent">{def.icon}</span>
             <span className="truncate">{node.data.label}</span>
             {step && (
-              <StatusBadge tone={RUN_TONE[step.status] ?? "muted"} className="ml-1 text-sm font-normal">
+              <StatusBadge tone={RUN_TONE[step.status] ?? "muted"} className="ms-1 text-sm font-normal">
                 {RUN_LABEL[step.status]}
               </StatusBadge>
             )}
@@ -79,7 +79,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
             {runNumber != null && ` · run #${runNumber}`}
           </p>
         </div>
-        <button ref={closeRef} onClick={onClose} aria-label="Close drawer (Esc)" className="-mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+        <button ref={closeRef} onClick={onClose} aria-label="Close drawer (Esc)" className="-me-1 flex size-8 shrink-0 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
           ✕
         </button>
       </div>
@@ -151,7 +151,7 @@ function Payload({ title, value, tone }: { title: string; value: unknown; tone?:
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{title}</p>
-      <pre className={cx("data max-h-64 overflow-auto rounded-md border bg-app p-3 text-sm whitespace-pre-wrap break-all", tone === "danger" ? "border-danger/40 text-danger" : "border-line text-hi")}>{pretty(value)}</pre>
+      <pre dir="ltr" className={cx("data max-h-64 overflow-auto rounded-md border bg-app p-3 text-sm whitespace-pre-wrap break-all", tone === "danger" ? "border-danger/40 text-danger" : "border-line text-hi")}>{pretty(value)}</pre>
     </div>
   );
 }

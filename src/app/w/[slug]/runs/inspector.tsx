@@ -216,7 +216,7 @@ export function RunInspector() {
                 }
               />
             ) : (
-              <EmptyState icon="◷" title="No runs yet" body="Open a flow and press Run. Every step's input, output, and errors are recorded here." action={<Link className="text-accent hover:underline" href={`/w/${workspace.slug}/flows`}>Go to flows →</Link>} />
+              <EmptyState icon="◷" title="No runs yet" body="Open a flow and press Run. Every step's input, output, and errors are recorded here." action={<Link className="text-accent hover:underline" href={`/w/${workspace.slug}/flows`}>Go to flows <span aria-hidden className="flip-rtl">→</span></Link>} />
             )
           ) : (
             <>
@@ -228,7 +228,7 @@ export function RunInspector() {
                   const attention = r.steps.find((s) => s.status === "failed" || s.status === "waiting_approval" || s.status === "uncertain");
                   return (
                     <li key={r.id} className={cx("rounded-xl border bg-card", open ? "border-line-strong" : "border-line")}>
-                      <button onClick={() => selectRun(r.id)} aria-expanded={open} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left">
+                      <button onClick={() => selectRun(r.id)} aria-expanded={open} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-start">
                         <span aria-hidden className="text-sm text-muted">{open ? "▾" : "▸"}</span>
                         <span className="data text-med">#{r.number}</span>
                         <span className="font-semibold">{r.flowName}</span>
@@ -239,7 +239,7 @@ export function RunInspector() {
                           {done}/{total} · {duration(r.durationMs)}
                         </span>
                         {r.triggerKind && r.triggerKind !== "manual" && <span className="rounded-sm border border-line px-1.5 text-xs text-med">{TRIGGER_BADGE[r.triggerKind]}</span>}
-                        <span className="data ml-auto text-sm text-muted">{timeAgo(r.createdAt, now)}</span>
+                        <span className="data ms-auto text-sm text-muted">{timeAgo(r.createdAt, now)}</span>
                       </button>
                       {open && (
                         <div className="flex flex-col gap-3 border-t border-line px-4 py-3">
@@ -256,7 +256,7 @@ export function RunInspector() {
                                     }}
                                     aria-pressed={selected}
                                     className={cx(
-                                      "min-w-28 rounded-lg border bg-app px-3 py-2 text-left hover:bg-elevated",
+                                      "min-w-28 rounded-lg border bg-app px-3 py-2 text-start hover:bg-elevated",
                                       selected
                                         ? "border-accent"
                                         : s.status === "failed"
@@ -277,7 +277,7 @@ export function RunInspector() {
                                       {s.durationMs != null && <span className="data">· {duration(s.durationMs)}</span>}
                                     </StatusBadge>
                                   </button>
-                                  {i < r.steps.length - 1 && <span aria-hidden className="text-muted">→</span>}
+                                  {i < r.steps.length - 1 && <span aria-hidden className="flip-rtl text-muted">→</span>}
                                 </li>
                               );
                             })}
@@ -477,7 +477,7 @@ function StepPanel({
             </div>
           </div>
         ) : (
-          <pre className="data max-h-80 overflow-auto rounded-lg border border-line bg-app p-3 text-sm whitespace-pre-wrap break-all">
+          <pre dir="ltr" className="data max-h-80 overflow-auto rounded-lg border border-line bg-app p-3 text-sm whitespace-pre-wrap break-all">
             {tab === "input"
               ? pretty(step.input)
               : step.status === "failed"
@@ -516,7 +516,7 @@ function StepPanel({
       {run.status === "succeeded" && (
         <div>
           <p className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">Run output</p>
-          <pre className="data max-h-40 overflow-auto rounded-lg border border-line bg-app p-3 text-sm">{pretty(run.output)}</pre>
+          <pre dir="ltr" className="data max-h-40 overflow-auto rounded-lg border border-line bg-app p-3 text-sm">{pretty(run.output)}</pre>
         </div>
       )}
     </div>
@@ -548,7 +548,7 @@ function DecisionBox({ approval, runId }: { approval: ApprovalDto; runId: string
           : "This action will run with exactly these arguments on this connection. The decision applies only to this run and revision."}{" "}
         Expires {new Date(approval.expiresAt).toLocaleString()}.
       </p>
-      <pre className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-sm">{pretty(approval.argsPreview)}</pre>
+      <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-sm">{pretty(approval.argsPreview)}</pre>
       <label htmlFor={`note-${approval.id}`} className="sr-only">
         Note
       </label>
