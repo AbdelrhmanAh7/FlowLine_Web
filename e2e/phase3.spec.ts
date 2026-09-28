@@ -263,7 +263,8 @@ test("history: restore an older version as a draft (rollback) — history is kep
   await page.getByRole("button", { name: "History" }).click();
   const panel = page.getByRole("dialog", { name: "Version history" });
   await panel.getByRole("list", { name: "Versions" }).getByRole("button").filter({ hasText: "publish" }).first().click();
-  await panel.getByRole("button", { name: "Restore as draft" }).click();
+  // Restoring reloads the builder with the restored draft: wait for that reload (slow under load), then check.
+  await Promise.all([page.waitForEvent("load", { timeout: 60_000 }), panel.getByRole("button", { name: "Restore as draft" }).click()]);
   await expect(page.locator(".react-flow__node")).toHaveCount(v.graph.nodes.length, { timeout: 15_000 });
 });
 
