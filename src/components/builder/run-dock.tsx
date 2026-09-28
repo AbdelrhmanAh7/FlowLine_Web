@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { duration, pretty, timeAgo } from "@/lib/format";
+import { useT } from "@/i18n/client";
+import { runLabel } from "@/i18n/engine-text";
+import { pretty } from "@/lib/format";
 import { modKey, useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
 import type { RunDetailDto, RunListItem, RunStepDto } from "@/lib/types";
-import { Button, RUN_LABEL, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
+import { Button, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
 
 interface Props {
   run: RunDetailDto | null | undefined;
@@ -22,39 +24,40 @@ interface Props {
 }
 
 export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSelectStep, onClose, variant, onCancel, cancelling, canCancel }: Props) {
+  const t = useT();
   const open = run && (run.status === "queued" || run.status === "running" || run.status === "waiting_approval");
   return (
     <section
-      aria-label="Run dock"
+      aria-label={t("runDock.aria")}
       data-testid="run-dock"
       className={cx("flex flex-col border-t border-line bg-surface", variant === "dock" ? "h-[var(--dock-h)] shrink-0" : "min-h-0 flex-1")}
     >
       <div className="flex h-10 shrink-0 items-center gap-3 border-b border-line px-4">
-        <h2 className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Runs</h2>
+        <h2 className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runDock.title")}</h2>
         {run && (
           <span className="flex min-w-0 items-center gap-2 text-sm">
             <span className="data text-hi">#{run.number}</span>
             <StatusBadge tone={RUN_TONE[run.status] ?? "muted"} upper>
-              {RUN_LABEL[run.status]}
+              {runLabel(t, run.status)}
             </StatusBadge>
             <span className="data hidden text-muted sm:inline">
-              {run.steps.filter((s) => s.status === "succeeded" || s.status === "reused").length}/{run.steps.filter((s) => s.status !== "skipped").length} · {duration(run.durationMs)}
+              {run.steps.filter((s) => s.status === "succeeded" || s.status === "reused").length}/{run.steps.filter((s) => s.status !== "skipped").length} · {t.duration(run.durationMs)}
             </span>
           </span>
         )}
         <div className="ms-auto flex items-center gap-3">
           {open && onCancel && (
-            <Button size="sm" variant="danger-ghost" onClick={onCancel} loading={cancelling} disabledReason={canCancel === false ? "Viewers can't cancel runs" : run?.cancelRequestedAt ? "Cancelling…" : null}>
-              Cancel run
+            <Button size="sm" variant="danger-ghost" onClick={onCancel} loading={cancelling} disabledReason={canCancel === false ? t("runDock.viewersCantCancel") : run?.cancelRequestedAt ? t("runDock.cancelling") : null}>
+              {t("runDock.cancelRun")}
             </Button>
           )}
           {run && (
             <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="text-sm text-accent hover:underline">
-              Open in inspector <span aria-hidden className="flip-rtl">→</span>
+              {t("runDock.openInspector")} <span aria-hidden className="flip-rtl">→</span>
             </Link>
           )}
           {variant === "dock" && (
-            <button onClick={onClose} aria-label={`Hide run dock (${modKey()}J)`} className="flex size-7 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+            <button onClick={onClose} aria-label={t("runDock.hide", { shortcut: `${modKey()}J` })} className="flex size-7 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
               ✕
             </button>
           )}
@@ -62,7 +65,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
       </div>
       <div className="flex min-h-0 flex-1">
         {runs.length > 0 && (
-          <ul aria-label="Recent runs" className="hidden w-44 shrink-0 overflow-y-auto border-e border-line py-1 md:block">
+          <ul aria-label={t("runDock.recent")} className="hidden w-44 shrink-0 overflow-y-auto border-e border-line py-1 md:block">
             {runs.map((r) => (
               <li key={r.id}>
                 <button
@@ -73,7 +76,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                   <StatusBadge tone={RUN_TONE[r.status] ?? "muted"}>
                     <span className="data text-hi">#{r.number}</span>
                   </StatusBadge>
-                  <span className="data ms-auto text-xs text-muted">{timeAgo(r.createdAt)}</span>
+                  <span className="data ms-auto text-xs text-muted">{t.relative(r.createdAt)}</span>
                 </button>
               </li>
             ))}
@@ -87,10 +90,10 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               ))}
             </div>
           ) : !run ? (
-            <p className="text-base text-med">No runs yet. Press Run ({modKey()}↵) to execute this flow; each step&apos;s result appears here.</p>
+            <p className="text-base text-med">{t("runDock.empty", { shortcut: `${modKey()}↵` })}</p>
           ) : (
             <div className="flex flex-col gap-3">
-              <ol className="flex flex-wrap items-center gap-2" aria-label={`Steps of run ${run.number}`}>
+              <ol className="flex flex-wrap items-center gap-2" aria-label={t("runDock.steps", { number: run.number })}>
                 {run.steps.map((s, i) => (
                   <li key={s.id} className="flex items-center gap-2">
                     <button
@@ -105,8 +108,8 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                         <RunningBadge step={s} events={run.events} />
                       ) : (
                         <StatusBadge tone={RUN_TONE[s.status] ?? "muted"} className="text-xs">
-                          {RUN_LABEL[s.status]}
-                          {s.durationMs != null && <span className="data">· {duration(s.durationMs)}</span>}
+                          {runLabel(t, s.status)}
+                          {s.durationMs != null && <span className="data">· {t.duration(s.durationMs)}</span>}
                         </StatusBadge>
                       )}
                     </button>
@@ -121,18 +124,18 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               )}
               {run.status === "succeeded" && (
                 <div>
-                  <p className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">Run output</p>
+                  <p className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runDock.output")}</p>
                   <pre dir="ltr" className="data max-h-28 overflow-auto rounded-md border border-line bg-app p-2 text-sm">{pretty(run.output)}</pre>
                 </div>
               )}
               {(run.status === "queued" || run.status === "running") && (
-                <p className="text-sm text-info">{run.cancelRequestedAt ? "Cancelling…" : run.status === "queued" ? "Queued — waiting for the worker…" : "Running…"}</p>
+                <p className="text-sm text-info">{run.cancelRequestedAt ? t("runDock.cancelling") : run.status === "queued" ? t("runDock.queued") : t("runDock.running")}</p>
               )}
               {run.status === "waiting_approval" && (
                 <p className="text-sm text-warning">
-                  Waiting for a human decision.{" "}
+                  {t("runDock.waiting")}{" "}
                   <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="underline">
-                    Review in the inspector <span aria-hidden className="flip-rtl">→</span>
+                    {t("runDock.review")} <span aria-hidden className="flip-rtl">→</span>
                   </Link>
                 </p>
               )}
@@ -145,8 +148,9 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
 }
 
 function RunningBadge({ step, events }: { step: RunStepDto; events: RunDetailDto["events"] }) {
+  const t = useT();
   const now = useNow(1000);
-  const d = runningDetail(step, events, now);
+  const d = runningDetail(step, events, now, t);
   return (
     <StatusBadge tone={d.degraded ? "warning" : "info"} className="text-xs">
       <span data-testid={`running-${step.nodeId}`}>{d.text}</span>

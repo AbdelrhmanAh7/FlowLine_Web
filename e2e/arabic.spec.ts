@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PASSWORD, uniqueEmail } from "./helpers";
+import { PASSWORD, setupUser, uniqueEmail } from "./helpers";
 
 /**
  * Arabic-first (Phase 4): with no `fl_locale` cookie the app is Arabic and right-to-left. The rest of the suite
@@ -134,4 +134,64 @@ test("no horizontal scroll in RTL at 375 / 1024 / 1440", { tag: "@cross-browser"
       await noHorizontalScroll(page, `${path} @${width}`);
     }
   }
+});
+
+test("Arabic builder: toolbar, palette, drawer, run dock and inspector are translated", { tag: "@cross-browser" }, async ({ page }) => {
+  test.setTimeout(120_000);
+  const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+
+  // Templates library in Arabic (template names by id, categories translated).
+  await page.goto(`/w/${workspace.slug}/templates`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "القوالب" })).toBeVisible();
+  await expect(page.getByText("تأهيل العملاء المحتملين")).toBeVisible();
+  await expect(page.getByRole("group", { name: "تصفية القوالب حسب الفئة" }).getByRole("button", { name: "المبيعات" })).toBeVisible();
+
+  // Builder toolbar
+  await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
+  await expectArabic(page);
+  await expect(page.getByRole("button", { name: "▶ تشغيل" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "السجل" })).toBeVisible();
+  await expect(page.getByTestId("save-status")).toContainText("محفوظ");
+  await expect(page.locator(".react-flow")).toHaveAttribute("aria-label", "لوحة تصميم المسار");
+
+  // Palette: translated titles; the trigger is disabled with a translated reason.
+  await page.getByRole("button", { name: /إضافة عقدة/ }).click();
+  const palette = page.getByRole("dialog", { name: "إضافة عقدة" });
+  await expect(palette.getByPlaceholder("ابحث في العُقد…")).toBeVisible();
+  await expect(palette.getByRole("option", { name: /تحويل JSON/ })).toBeVisible();
+  await expect(palette.getByRole("option", { name: /مُشغِّل يدوي/ })).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Escape");
+
+  // Node drawer: tabs, labels and actions in Arabic; the expression stays LTR.
+  await page.getByTestId("node-normalise").click();
+  const drawer = page.getByTestId("node-drawer");
+  await expect(drawer.getByRole("tab", { name: "الإعداد" })).toHaveAttribute("aria-selected", "true");
+  await expect(drawer.getByRole("tab", { name: "الاختبار" })).toBeVisible();
+  await expect(drawer.getByText("التعبير (JSONata)", { exact: true })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: /نسخ/ })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: /حذف/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Run it: the run dock and canvas report status in Arabic.
+  await page.getByRole("button", { name: "▶ تشغيل" }).click();
+  const dock = page.getByTestId("run-dock");
+  await expect(dock).toHaveAttribute("aria-label", "شريط التشغيل");
+  await expect(dock.getByText("ناجح").first()).toBeVisible({ timeout: 20_000 });
+  await expect(dock.getByText("مُخرجات التشغيل")).toBeVisible();
+
+  // Inspector in Arabic.
+  await dock.getByRole("link", { name: /فتح في فاحص التشغيل/ }).click();
+  await expect(page).toHaveURL(/\/runs\?run=/);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "سجل التشغيل" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "تصفية عمليات التشغيل حسب الحالة" }).getByRole("button", { name: "كل عمليات التشغيل" })).toBeVisible();
+  const panel = page.getByTestId("step-panel");
+  await expect(panel.getByRole("tab", { name: "المُخرجات" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /إعادة التشغيل من هذه الخطوة/ })).toBeVisible();
+  await panel.getByRole("button", { name: /إعادة التشغيل من هذه الخطوة/ }).click();
+  const dialog = page.getByRole("dialog", { name: /إعادة تشغيل #1 من/ });
+  await expect(dialog.getByTestId("rerun-preview")).toContainText("سيُعاد تشغيلها");
+  await dialog.getByRole("button", { name: "إلغاء", exact: true }).click();
+  await noHorizontalScroll(page, "runs (Arabic)");
 });
