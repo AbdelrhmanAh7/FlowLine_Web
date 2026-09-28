@@ -23,8 +23,14 @@
 		header_up X-Real-IP {remote_host}
 	}
 
+	# Email links (verify/reset/delete ?token=…), invitation links (/invite/<token>) and webhook URLs
+	# (/api/hooks/<token>) carry bearer secrets: redact them from the access log, and drop Referer (same URLs).
 	log {
 		output stdout
-		format json
+		format filter {
+			request>uri regexp "(token=)[^&]*|(/invite/)[^/?]*|(/api/hooks/)[^/?]*" "${1}${2}${3}REDACTED"
+			request>headers>Referer delete
+			wrap json
+		}
 	}
 }

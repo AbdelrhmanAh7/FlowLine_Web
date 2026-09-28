@@ -1,0 +1,7 @@
+Caddy 2.10 access-log redaction check (CX4-01), 2026-09-28T16:57:12Z
+Requests: /reset-password?token=SECRETAAA&callbackURL=%2Fx, /invite/SECRETBBB, /api/hooks/SECRETCCC?x=1, each with Referer https://x/verify-email?token=SECRETDDD
+Logged uris:
+"uri":"/reset-password?token=REDACTED&callbackURL=%2Fx"
+"uri":"/invite/REDACTED"
+"uri":"/api/hooks/REDACTED?x=1"
+No SECRET* value and no Referer header in any log line. deploy/beta/Caddyfile: caddy validate -> Valid configuration.

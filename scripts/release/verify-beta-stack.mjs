@@ -72,10 +72,18 @@ try {
     check(`port ${port} not reachable from outside`, !(await connectable(port)), port === 5432 ? "PostgreSQL" : port === 3000 ? "app port" : "Ollama");
   }
 
+  // Invite-only must be positively shown: the configured mode, and an explicit refusal for a stranger. (A failed
+  // sign-in alone proves nothing — unverified email, rate limits or an auth outage fail it too.)
+  const cfg = await fetch(`${BASE}/api/auth-config`).then((r) => r.json()).catch(() => ({}));
+  check("sign-up mode is invite_only", cfg.betaMode === "invite_only", `betaMode=${cfg.betaMode}`);
   const email = `stranger-${Date.now()}@flowline-verify.test`;
-  const su = await fetch(`${BASE}/api/auth/sign-up/email`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ email, password: "Verify-Stack-Pass-1", name: "Stranger" }) });
-  const si = await fetch(`${BASE}/api/auth/sign-in/email`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ email, password: "Verify-Stack-Pass-1" }) });
-  check("uninvited sign-up creates no usable account", !si.ok, `sign-up HTTP ${su.status}, sign-in HTTP ${si.status}`);
+  const pre = await fetch(`${BASE}/api/beta/check`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ email }) });
+  const preBody = await pre.json().catch(() => ({}));
+  check("uninvited email is refused by the beta check", pre.status === 200 && preBody.allowed === false, `HTTP ${pre.status} allowed=${preBody.allowed}`);
+  const bad = await fetch(`${BASE}/api/beta/check`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ email, code: "FL-NOT-A-REAL-CODE" }) });
+  const badBody = await bad.json().catch(() => ({}));
+  check("an invalid beta code is refused", bad.status === 200 && badBody.allowed === false, `HTTP ${bad.status} allowed=${badBody.allowed}`);
+  // That the sign-up hook creates no user row is proven server-side by tests/integration/p4-beta-access.test.ts.
 } catch (e) {
   check("verification completed", false, String(e.cause?.code ?? e.message).slice(0, 200));
 }

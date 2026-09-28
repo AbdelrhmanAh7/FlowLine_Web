@@ -4,6 +4,11 @@
  * tenancy (a second user gets 404). Creates throwaway users (…@flowline-smoke.test).
  *   node scripts/release/smoke.mjs [--base http://localhost:3200] [--out artifacts/phase-4/smoke] [--invite <token>]
  * On an invitation-only beta, pass --invite with a beta access code for each sign-up (see PRIVATE_BETA_RUNBOOK.md).
+ *
+ * Email verification is required, so a fresh sign-up has no session. Two ways to get verified users:
+ *   --outbox            test stack only (FLOWLINE_ENV=test): read the verification link from /api/test/outbox.
+ *   SMOKE_A_EMAIL / SMOKE_A_PASSWORD and SMOKE_B_EMAIL / SMOKE_B_PASSWORD
+ *                       pre-verified smoke accounts (scripts/beta/create-smoke-user.mts) — use these on staging/beta.
  */
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -15,6 +20,7 @@ const arg = (k, d) => {
 const BASE = arg("base", "http://localhost:3200").replace(/\/+$/, "");
 const OUT = arg("out", "artifacts/phase-4/smoke");
 const INVITE = arg("invite");
+const OUTBOX = process.argv.includes("--outbox");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -40,14 +46,41 @@ class Session {
   }
 }
 
+async function signIn(s, email, password) {
+  const r = await s.req("/api/auth/sign-in/email", { method: "POST", json: { email, password } });
+  if (!r.ok || !s.cookie) throw new Error(`sign-in ${email} → ${r.status} ${(await r.text()).slice(0, 200)}`);
+}
+
 async function user(tag) {
   const s = new Session();
-  const email = `${tag}-${randomUUID().slice(0, 8)}@flowline-smoke.test`;
-  for (let attempt = 0; ; attempt++) {
-    const r = await s.req("/api/auth/sign-up/email", { method: "POST", json: { email, password: "Smoke-Check-Pass-1", name: "Smoke", ...(INVITE ? { betaCode: INVITE } : {}) } });
-    if (r.ok) break;
-    if (r.status !== 429 || attempt > 10) throw new Error(`sign-up → ${r.status} ${(await r.text()).slice(0, 200)}`);
-    await sleep(6000);
+  const envKey = tag === "smoke-a" ? "SMOKE_A" : "SMOKE_B";
+  const preEmail = process.env[`${envKey}_EMAIL`];
+  const prePassword = process.env[`${envKey}_PASSWORD`];
+  let email;
+  if (preEmail && prePassword) {
+    email = preEmail;
+    await signIn(s, email, prePassword);
+  } else {
+    if (!OUTBOX) throw new Error(`email verification is required: pass --outbox (test stack) or set ${envKey}_EMAIL/${envKey}_PASSWORD for a pre-verified account`);
+    email = `${tag}-${randomUUID().slice(0, 8)}@flowline-smoke.test`;
+    const password = "Smoke-Check-Pass-1";
+    for (let attempt = 0; ; attempt++) {
+      const r = await s.req("/api/auth/sign-up/email", { method: "POST", json: { email, password, name: "Smoke", ...(INVITE ? { betaCode: INVITE } : {}) } });
+      if (r.ok) break;
+      if (r.status !== 429 || attempt > 10) throw new Error(`sign-up → ${r.status} ${(await r.text()).slice(0, 200)}`);
+      await sleep(6000);
+    }
+    let link = null;
+    for (let i = 0; i < 20 && !link; i++) {
+      const box = await fetch(`${BASE}/api/test/outbox?email=${encodeURIComponent(email)}`).then((r) => (r.ok ? r.json() : { messages: [] }));
+      link = box.messages.find((m) => m.purpose === "verify")?.link ?? null;
+      if (!link) await sleep(500);
+    }
+    if (!link) throw new Error("no verification email in the test outbox (is this the test stack?)");
+    const token = new URL(link).searchParams.get("token");
+    const v = await s.ok("/api/email", { method: "POST", json: { action: "verify", token } });
+    if (v.status !== "done") throw new Error(`verification → ${v.status}`);
+    await signIn(s, email, password);
   }
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Smoke ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "data", skipped: false } });

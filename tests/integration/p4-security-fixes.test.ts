@@ -46,6 +46,25 @@ describe("Fable review fixes", () => {
     expect((await db.select().from(schema.workspace).where(eq(schema.workspace.id, ws.id))).length).toBe(0);
   });
 
+  it("two co-owners deleting their accounts at the same time can't leave members in an ownerless workspace (Codex CX4-02)", async () => {
+    const a = await makeUser("coowner-a");
+    const b = await makeUser("coowner-b");
+    const c = await makeUser("coviewer");
+    const ws = await createWorkspace(a, unique("Co-owned"));
+    await db.insert(schema.workspaceMember).values([
+      { workspaceId: ws.id, userId: b.id, role: "owner" },
+      { workspaceId: ws.id, userId: c.id, role: "viewer" },
+    ]);
+    await issueAccountToken("delete", a);
+    await issueAccountToken("delete", b);
+    const [ta] = await tokens(a.email, "/account/delete");
+    const [tb] = await tokens(b.email, "/account/delete");
+    const results = await Promise.all([consumeAccountToken("delete", ta!, undefined, a.id), consumeAccountToken("delete", tb!, undefined, b.id)]);
+    expect(results.sort()).toEqual(["done", "transfer_required"]);
+    const owners = await db.select().from(schema.workspaceMember).where(eq(schema.workspaceMember.workspaceId, ws.id));
+    expect(owners.filter((m) => m.role === "owner")).toHaveLength(1);
+  });
+
   it("billing webhook caps a chunked body without Content-Length at 256 KB (413, not buffered whole)", async () => {
     const chunk = new Uint8Array(64 * 1024).fill(0x61);
     let sent = 0;

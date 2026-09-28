@@ -30,8 +30,15 @@ async function probe() {
   if (TOKEN) {
     try {
       const r = await fetch(`${BASE}/api/ops/status`, { headers: { authorization: `Bearer ${TOKEN}` }, signal: AbortSignal.timeout(15_000) });
-      const body = await r.json();
-      for (const [k, v] of Object.entries(body.checks ?? {})) results[k] = v;
+      const body = await r.json().catch(() => null);
+      // 200 = ok/warn, 503 = a check failed (still a valid payload). Anything else — a wrong/rotated token (404),
+      // a proxy error, a body without checks — means we are blind, which is itself an alert.
+      if ((r.status === 200 || r.status === 503) && body && typeof body.checks === "object" && body.checks && Object.keys(body.checks).length) {
+        for (const [k, v] of Object.entries(body.checks)) results[k] = v;
+        results.ops = { status: "ok", detail: `ops status HTTP ${r.status}` };
+      } else {
+        results.ops = { status: "fail", detail: `ops status unusable: HTTP ${r.status}${r.status === 404 ? " (wrong or rotated FLOWLINE_OPS_TOKEN?)" : ""}` };
+      }
     } catch (e) {
       results.ops = { status: "fail", detail: `ops status unreachable: ${e.message}` };
     }

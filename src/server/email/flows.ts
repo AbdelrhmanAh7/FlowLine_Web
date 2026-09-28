@@ -128,6 +128,11 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     if (row.expiresAt <= new Date()) return "expired";
     if (!row.userId || (purpose === "delete" && row.userId !== currentUserId)) return "invalid";
     if (purpose === "delete") {
+      // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
+      // before reading ownership: two co-owners deleting their accounts at once must not both pass the
+      // last-owner check and leave the remaining members in an ownerless workspace.
+      const mine = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
+      if (mine.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, mine.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
       const memberships = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
       const owned = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.userId, row.userId), eq(schema.workspaceMember.role, "owner")));
       for (const membership of owned) {

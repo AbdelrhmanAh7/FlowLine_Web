@@ -222,8 +222,9 @@ function seed(): State {
     ["sk_test_revoked", { account: "a", status: "revoked" }],
     ["pdl_sdbx_fake_billing", { account: "a", status: "active" }],
   ]);
-  // Stripe/Paddle billing ids are stored (and deduplicated) by the app under test, so they must
-  // stay unique across fake resets within a test run: start each counter at a random offset.
+  // Stripe/Paddle billing ids are stored (and deduplicated) by the app under test, and the test DB keeps them across
+  // runs — so they must stay unique across fake resets AND across runs: each counter starts at a time-based offset
+  // (ms since epoch × 1000, plus jitter). A 0–1M random start collided with earlier runs' events.
   const billingCounters = Object.fromEntries(
     [
       "stripeCustomer",
@@ -239,7 +240,7 @@ function seed(): State {
       "paddleEvent",
       "paddleAdjustment",
       "paddleCheckoutEmit",
-    ].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
+    ].map((k) => [k, Date.now() * 1000 + Math.floor(Math.random() * 1000)]),
   );
   return {
     emailMessages: [],

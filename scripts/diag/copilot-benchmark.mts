@@ -136,7 +136,8 @@ const CASES: Case[] = [
     order: (g) => before(g, T("trigger.manual"), T("output")),
     params: () => true,
     sample: { first: "Ada", last: "Lovelace", email: "ADA@EXAMPLE.COM" },
-    result: (o) => /ada lovelace/i.test(text(o)) && text(o).includes("ada@example.com") && !text(o).includes("ADA@EXAMPLE.COM".toLowerCase().toUpperCase()),
+    // Case matters here: the raw (not lowercased) output must carry the lowercased email, and never the original.
+    result: (o) => /ada lovelace/i.test(text(o)) && JSON.stringify(o ?? "").includes('"ada@example.com"') && !JSON.stringify(o ?? "").includes("ADA@EXAMPLE.COM"),
   },
   {
     id: "branch", category: "branch / condition",

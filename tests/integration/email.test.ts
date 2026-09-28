@@ -104,7 +104,9 @@ describe("email account flows", () => {
   });
 
   it("limits many different recipients from the same IP in PostgreSQL", async () => {
-    const request = new Request("http://localhost:3100/api/email", { headers: { "x-real-ip": `192.0.2.${Math.floor(Math.random() * 200) + 1}` } });
+    // A fresh address per run: the one-hour windows persist in the test DB, so a reused IP would start over its limit.
+    const hex = crypto.randomUUID().replace(/-/g, "");
+    const request = new Request("http://localhost:3100/api/email", { headers: { "x-real-ip": `2001:db8:${hex.slice(0, 4)}:${hex.slice(4, 8)}:${hex.slice(8, 12)}::1` } });
     for (let index = 0; index < 15; index++) await checkEmailRate("ip-test", `recipient-${crypto.randomUUID()}@flowline.test`, request);
     await expect(checkEmailRate("ip-test", `recipient-${crypto.randomUUID()}@flowline.test`, request)).rejects.toMatchObject({ status: 429 });
   });
