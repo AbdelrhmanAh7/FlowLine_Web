@@ -70,13 +70,20 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
   const preview = proposal?.diff?.preview;
   return (
     <aside role="dialog" aria-label="Copilot" className="absolute top-0 end-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">✦ Copilot</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold">✦ Copilot</h2>
+          {/* Honest status: proposals are validated, but their quality is still being measured. */}
+          <StatusBadge tone="warning" upper>
+            {t("copilot.beta")}
+          </StatusBadge>
+        </div>
         <button onClick={onClose} aria-label={t("copilot.close")} className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
           ✕
         </button>
       </div>
       <p className="text-sm text-med">{t("copilot.intro")}</p>
+      <p className="text-sm text-warning">{t("copilot.betaNote")}</p>
       <form
         className="flex flex-col gap-2"
         onSubmit={(e) => {

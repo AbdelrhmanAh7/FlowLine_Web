@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { useT } from "@/i18n/client";
+import { apiErrorMessage } from "@/i18n/errors";
+import { api } from "@/lib/api";
 
 interface SsoConfig {
   workspaceId: string;
@@ -35,6 +37,7 @@ function fromConfig(c: SsoConfig): SsoForm {
 }
 
 export function Sso() {
+  const t = useT();
   const { workspace, role } = useWorkspace();
   const toast = useToast();
   const qc = useQueryClient();
@@ -61,39 +64,44 @@ export function Sso() {
         },
       }),
     onSuccess: (d) => {
-      toast("SSO settings saved", "success");
+      toast(t("settings.sso.saved"), "success");
       setForm(fromConfig(d.config));
       qc.setQueryData(["sso", workspace.id], { config: d.config, canManage: query.data?.canManage ?? true });
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't save SSO settings", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("settings.sso.saveError")), "danger"),
   });
 
   if (query.isPending) return <Skeleton className="h-64" />;
-  if (query.isError) return <ErrorState title="Couldn't load SSO settings" onRetry={() => query.refetch()} />;
+  if (query.isError) return <ErrorState title={t("settings.sso.loadError")} onRetry={() => query.refetch()} />;
 
-  const ownerReason = isOwner ? null : "Only workspace owners can manage SSO";
+  const ownerReason = isOwner ? null : t("settings.sso.ownerOnly");
   const verified = Boolean(config?.verifiedAt);
-  const status = !config ? ("Not configured" as const) : config.enabled ? ("Enabled" as const) : verified ? ("Verified" as const) : ("Configured — not verified" as const);
+  const status: "none" | "enabled" | "verified" | "configured" = !config ? "none" : config.enabled ? "enabled" : verified ? "verified" : "configured";
 
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Single sign-on (SSO)</h2>
-          {status === "Enabled" ? (
-            <StatusBadge tone="success" upper>Enabled</StatusBadge>
-          ) : status === "Verified" ? (
-            <StatusBadge tone="info" upper>{`Verified ${new Date(config!.verifiedAt!).toLocaleDateString()}`}</StatusBadge>
-          ) : status === "Configured — not verified" ? (
-            <StatusBadge tone="warning" upper>Configured — not verified</StatusBadge>
+          <h2 className="text-lg font-semibold">{t("settings.sso.title")}</h2>
+          {status === "enabled" ? (
+            <StatusBadge tone="success" upper>
+              {t("settings.sso.enabled")}
+            </StatusBadge>
+          ) : status === "verified" ? (
+            <StatusBadge tone="info" upper>
+              {t("settings.sso.verified", { date: t.date(config!.verifiedAt!, { dateStyle: "medium" }) })}
+            </StatusBadge>
+          ) : status === "configured" ? (
+            <StatusBadge tone="warning" upper>
+              {t("settings.sso.configured")}
+            </StatusBadge>
           ) : (
-            <StatusBadge tone="muted" upper>Not configured</StatusBadge>
+            <StatusBadge tone="muted" upper>
+              {t("settings.sso.notConfigured")}
+            </StatusBadge>
           )}
         </div>
-        <p className="mt-1 text-base text-med">
-          OpenID Connect sign-in for this workspace. SSO only becomes available to members after a successful test sign-in — nothing here is active
-          until then.
-        </p>
+        <p className="mt-1 text-base text-med">{t("settings.sso.body")}</p>
         <form
           className="mt-4 flex flex-col gap-4"
           onSubmit={(e) => {
@@ -102,34 +110,42 @@ export function Sso() {
           }}
         >
           <fieldset disabled={!isOwner} className="flex flex-col gap-4">
-            <Field label="Issuer URL" htmlFor="sso-issuer" hint="The IdP's issuer (https). Its /.well-known/openid-configuration is fetched and checked on save.">
-              <Input id="sso-issuer" className="data" placeholder="https://idp.example.com/realms/acme" value={f.issuer} onChange={(e) => setForm({ ...f, issuer: e.target.value })} />
+            <Field label={t("settings.sso.issuer")} htmlFor="sso-issuer" hint={t("settings.sso.issuerHint")}>
+              <Input id="sso-issuer" dir="ltr" className="data" placeholder="https://idp.example.com/realms/acme" value={f.issuer} onChange={(e) => setForm({ ...f, issuer: e.target.value })} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Client ID" htmlFor="sso-client-id">
-                <Input id="sso-client-id" className="data" value={f.clientId} onChange={(e) => setForm({ ...f, clientId: e.target.value })} maxLength={200} />
+              <Field label={t("settings.sso.clientId")} htmlFor="sso-client-id">
+                <Input id="sso-client-id" dir="ltr" className="data" value={f.clientId} onChange={(e) => setForm({ ...f, clientId: e.target.value })} maxLength={200} />
               </Field>
-              <Field label="Client secret" htmlFor="sso-secret" hint={config?.hasSecret ? "Stored encrypted. Leave blank to keep the current secret." : "Stored encrypted; never shown again."}>
-                <Input id="sso-secret" type="password" autoComplete="off" placeholder={config?.hasSecret ? "•••••••• (unchanged)" : ""} value={f.clientSecret} onChange={(e) => setForm({ ...f, clientSecret: e.target.value })} />
+              <Field label={t("settings.sso.clientSecret")} htmlFor="sso-secret" hint={config?.hasSecret ? t("settings.sso.secretKeep") : t("settings.sso.secretNew")}>
+                <Input
+                  id="sso-secret"
+                  type="password"
+                  dir="ltr"
+                  autoComplete="off"
+                  placeholder={config?.hasSecret ? t("settings.sso.secretPlaceholder") : ""}
+                  value={f.clientSecret}
+                  onChange={(e) => setForm({ ...f, clientSecret: e.target.value })}
+                />
               </Field>
             </div>
-            <Field label="Allowed email domains" htmlFor="sso-domains" hint="Comma-separated. Only IdP accounts with a verified email in these domains can sign in.">
-              <Input id="sso-domains" className="data" placeholder="acme.com, acme.io" value={f.domains} onChange={(e) => setForm({ ...f, domains: e.target.value })} />
+            <Field label={t("settings.sso.domains")} htmlFor="sso-domains" hint={t("settings.sso.domainsHint")}>
+              <Input id="sso-domains" dir="ltr" className="data" placeholder="acme.com, acme.io" value={f.domains} onChange={(e) => setForm({ ...f, domains: e.target.value })} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Default role for new members" htmlFor="sso-role">
+              <Field label={t("settings.sso.defaultRole")} htmlFor="sso-role">
                 <select
                   id="sso-role"
                   value={f.defaultRole}
                   onChange={(e) => setForm({ ...f, defaultRole: e.target.value as SsoForm["defaultRole"] })}
                   className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none"
                 >
-                  <option value="viewer">Viewer</option>
-                  <option value="editor">Editor</option>
-                  <option value="owner">Owner</option>
+                  <option value="viewer">{t("roles.viewer")}</option>
+                  <option value="editor">{t("roles.editor")}</option>
+                  <option value="owner">{t("roles.owner")}</option>
                 </select>
               </Field>
-              <Field label="Enable for everyone" htmlFor="sso-enabled" hint={verified ? "Members can sign in from the sign-in page." : "Available after a successful test sign-in."}>
+              <Field label={t("settings.sso.enableLabel")} htmlFor="sso-enabled" hint={verified ? t("settings.sso.enableHintOn") : t("settings.sso.enableHintOff")}>
                 <label className="flex h-9 items-center gap-2 text-base text-hi">
                   <input
                     id="sso-enabled"
@@ -139,26 +155,26 @@ export function Sso() {
                     onChange={(e) => setForm({ ...f, enabled: e.target.checked })}
                     className="size-4 accent-[var(--color-accent)]"
                   />
-                  SSO enabled
+                  {t("settings.sso.enabledCheckbox")}
                 </label>
               </Field>
             </div>
           </fieldset>
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" loading={save.isPending} disabledReason={ownerReason}>
-              Save SSO settings
+              {t("settings.sso.save")}
             </Button>
             <Button
-              disabledReason={ownerReason ?? (!config ? "Save the configuration first" : null)}
+              disabledReason={ownerReason ?? (!config ? t("settings.sso.saveFirst") : null)}
               onClick={() => {
                 window.location.assign(new URL(`/api/sso/start?workspace=${encodeURIComponent(workspace.slug)}`, window.location.origin).href);
               }}
             >
-              Test sign-in
+              {t("settings.sso.test")}
             </Button>
           </div>
-          {config && !config.enabled && verified && <p className="text-sm text-muted">Verified {new Date(config.verifiedAt!).toLocaleString()} — turn on “SSO enabled” to let members use it.</p>}
-          {config && !verified && <p className="text-sm text-muted">Run “Test sign-in” as an owner to verify this configuration before it can be enabled. You’ll be signed in as the identity the provider returns: if its email is yours, your account is linked; SSO never takes over another existing account.</p>}
+          {config && !config.enabled && verified && <p className="text-sm text-muted">{t("settings.sso.verifiedNote", { date: t.date(config.verifiedAt!) })}</p>}
+          {config && !verified && <p className="text-sm text-muted">{t("settings.sso.testNote")}</p>}
         </form>
       </Card>
     </div>

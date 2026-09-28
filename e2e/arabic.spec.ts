@@ -247,3 +247,86 @@ test("account actions in Arabic: user menu and settings reach resend-verificatio
   await expect(page.getByRole("status").filter({ hasText: "تم حذف حسابك." })).toBeVisible();
   expect((await page.request.get("/api/me")).status()).toBe(401);
 });
+
+test("Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll", { tag: "@cross-browser" }, async ({ page }) => {
+  test.setTimeout(120_000);
+  const { workspace } = await setupUser(page);
+
+  // Settings: each tab renders its own Arabic heading; nothing scrolls sideways.
+  await page.goto(`/w/${workspace.slug}/settings`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "الإعدادات" })).toBeVisible();
+  const tabs = page.getByRole("navigation", { name: "أقسام الإعدادات" });
+  const sections: [tab: string, heading: string][] = [
+    ["الأعضاء", "الأعضاء"],
+    ["عام", "عام"],
+    ["مفاتيح API", "إنشاء مفتاح"],
+    ["الخطة والفوترة", "الخطط"],
+    ["الاستخدام والحدود", "الاستخدام هذا الشهر"],
+    ["سجل التدقيق", "سجل التدقيق"],
+    ["SSO", "تسجيل الدخول الموحّد (SSO)"],
+  ];
+  for (const [tab, heading] of sections) {
+    await tabs.getByRole("button", { name: tab, exact: true }).click();
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    await noHorizontalScroll(page, `settings/${tab}`);
+  }
+  // Details inside the tabs: translated roles, the billing test-mode badge, the SSO status.
+  await tabs.getByRole("button", { name: "الأعضاء", exact: true }).click();
+  await expect(page.getByRole("button", { name: "إنشاء رابط دعوة" })).toBeVisible();
+  await expect(page.getByLabel("البريد الإلكتروني")).toHaveAttribute("dir", "ltr");
+  await tabs.getByRole("button", { name: "الخطة والفوترة", exact: true }).click();
+  await expect(page.getByText(/وضع الاختبار/)).toBeVisible();
+  await tabs.getByRole("button", { name: "SSO", exact: true }).click();
+  await expect(page.getByText("غير مُعدّ", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "حفظ إعدادات SSO" })).toBeVisible();
+
+  // Agents: list (empty state) → new-agent form.
+  await page.goto(`/w/${workspace.slug}/agents`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "الوكلاء" })).toBeVisible();
+  await expect(page.getByText("لا يوجد وكلاء بعد")).toBeVisible();
+  await noHorizontalScroll(page, "agents");
+  await page.getByRole("link", { name: "وكيل جديد" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "وكيل جديد" })).toBeVisible();
+  await expect(page.getByLabel("التعليمات")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "الأدوات والصلاحيات" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "إنشاء الوكيل" })).toHaveAttribute("aria-disabled", "true");
+  await noHorizontalScroll(page, "agents/new");
+
+  // Knowledge
+  await page.goto(`/w/${workspace.slug}/knowledge`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "المعرفة" })).toBeVisible();
+  await expect(page.getByText("لا توجد معرفة بعد")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "اختبار الاسترجاع" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "رفع ملف" })).toBeVisible();
+  await noHorizontalScroll(page, "knowledge");
+
+  // Integrations: catalog, honest verification badges (incl. the beta scope) and the connect dialog.
+  await page.goto(`/w/${workspace.slug}/integrations`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { level: 1, name: "التكاملات" })).toBeVisible();
+  await expect(page.getByText("لا توجد اتصالات بعد")).toBeVisible();
+  await expect(page.getByText(/^الكتالوج · /)).toBeVisible();
+  await expect(page.getByText("✓ المُحوِّل مُنفَّذ").first()).toBeVisible();
+  await expect(page.getByText("النسخة التجريبية: لم يُتحقَّق منه بعد مع حساب حقيقي").first()).toBeVisible();
+  await noHorizontalScroll(page, "integrations");
+  const connect = page.getByRole("button", { name: "ربط", exact: true }).and(page.locator(":not([aria-disabled='true'])")).first();
+  await connect.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: /^ربط / })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "إلغاء" })).toBeVisible();
+  await noHorizontalScroll(page, "integrations/connect");
+  await dialog.getByRole("button", { name: "إلغاء" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // At phone width the settings navigation and the integrations catalog still fit.
+  await page.setViewportSize({ width: 375, height: 800 });
+  for (const path of ["settings?tab=keys", "settings?tab=billing", "agents/new", "knowledge", "integrations"]) {
+    await page.goto(`/w/${workspace.slug}/${path}`);
+    await expectArabic(page);
+    await expect(page.locator("h1").first()).toBeVisible();
+    await noHorizontalScroll(page, `${path} @375`);
+  }
+});

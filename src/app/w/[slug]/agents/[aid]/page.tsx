@@ -7,10 +7,13 @@ import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, EmptyState, ErrorState, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
-import { timeAgo } from "@/lib/format";
+import { useT } from "@/i18n/client";
+import { denyReasonText } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
+import { dataText } from "@/i18n/workspace-text";
+import { api } from "@/lib/api";
 import { useOnline } from "@/lib/hooks";
-import { can, denyReason, type Role } from "@/lib/permissions";
+import { can, type Role } from "@/lib/permissions";
 import { AgentForm, type AgentConfig } from "../agent-form";
 
 interface AgentDetail {
@@ -49,10 +52,10 @@ interface AgentRunDetail {
 }
 
 const TONE: Record<AgentRunDetail["status"], Tone> = { queued: "muted", running: "info", waiting_approval: "warning", succeeded: "success", failed: "danger", cancelled: "muted" };
-const LABEL: Record<AgentRunDetail["status"], string> = { queued: "Queued", running: "Running", waiting_approval: "Needs approval", succeeded: "Answered", failed: "Failed", cancelled: "Cancelled" };
 const active = (s: string) => s === "queued" || s === "running";
 
 export default function AgentPage({ params }: { params: Promise<{ aid: string }> }) {
+  const t = useT();
   const { aid } = use(params);
   const { role } = useWorkspace();
   // Deep links (e.g. the dashboard's "Review →"): ?tab=runs&run=<id> opens that run with its decision controls.
@@ -61,19 +64,22 @@ export default function AgentPage({ params }: { params: Promise<{ aid: string }>
   const q = useQuery({ queryKey: ["agent", aid], queryFn: () => api<AgentDetail>(`/api/agents/${aid}`) });
   return (
     <div className="flex flex-col">
-      <PageHeader title={q.data?.agent.name ?? "Agent"} sub={q.data ? `v${q.data.current.version} · ${q.data.agent.description || "No description"}` : undefined} />
+      <PageHeader
+        title={q.data?.agent.name ?? t("agents.detail.fallbackTitle")}
+        sub={q.data ? t("agents.detail.sub", { version: q.data.current.version, description: q.data.agent.description || t("agents.noDescription") }) : undefined}
+      />
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div role="tablist" aria-label="Agent sections" className="flex gap-1">
-          {(["chat", "config", "runs"] as const).map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cx("h-8 rounded-md px-3 text-base", tab === t ? "bg-card text-hi" : "text-med hover:text-hi")}>
-              {t === "chat" ? "Chat" : t === "config" ? "Configuration" : "Runs"}
+        <div role="tablist" aria-label={t("agents.detail.tabsAria")} className="flex gap-1">
+          {(["chat", "config", "runs"] as const).map((id) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={cx("h-8 rounded-md px-3 text-base", tab === id ? "bg-card text-hi" : "text-med hover:text-hi")}>
+              {t(`agents.detail.tabs.${id}`)}
             </button>
           ))}
         </div>
         {q.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : q.isError ? (
-          <ErrorState title="Couldn't load the agent" body={(q.error as Error).message} onRetry={() => q.refetch()} />
+          <ErrorState title={t("agents.detail.loadError")} body={(q.error as Error).message} onRetry={() => q.refetch()} />
         ) : tab === "chat" ? (
           <Chat agentId={aid} role={role as Role} onReview={() => setTab("runs")} />
         ) : tab === "config" ? (
@@ -87,15 +93,16 @@ export default function AgentPage({ params }: { params: Promise<{ aid: string }>
 }
 
 function Config({ detail, role }: { detail: AgentDetail; role: Role }) {
+  const t = useT();
   const qc = useQueryClient();
   const toast = useToast();
   const save = useMutation({
     mutationFn: (c: AgentConfig) => api(`/api/agents/${detail.agent.id}`, { method: "PUT", json: c }),
     onSuccess: () => {
-      toast("Saved as a new version — past runs keep the version they used", "success");
+      toast(t("agents.detail.saved"), "success");
       void qc.invalidateQueries({ queryKey: ["agent", detail.agent.id] });
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't save", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("agents.detail.saveError")), "danger"),
   });
   const { current, agent } = detail;
   return (
@@ -105,15 +112,18 @@ function Config({ detail, role }: { detail: AgentDetail; role: Role }) {
         initial={{ name: agent.name, description: agent.description, instructions: current.instructions, provider: current.provider, model: current.model, tools: current.tools, knowledgeSourceIds: current.knowledgeSourceIds, limits: current.limits }}
         saving={save.isPending}
         onSave={(c) => save.mutate(c)}
-        readOnlyReason={can(role, "agent.edit") ? null : denyReason(role, "agent.edit")}
-        submitLabel="Save new version"
+        readOnlyReason={can(role, "agent.edit") ? null : denyReasonText(t, role, "agent.edit")}
+        submitLabel={t("agents.detail.saveVersion")}
       />
-      <p className="mt-3 text-sm text-muted">Versions: {detail.versions.map((v) => `v${v.version}`).join(", ")}</p>
+      <p className="mt-3 text-sm text-muted">
+        {t("agents.detail.versions", { list: detail.versions.map((v) => t("agents.detail.versionTag", { version: v.version })).join(t("perm.listSep")) })}
+      </p>
     </div>
   );
 }
 
 function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onReview: () => void }) {
+  const t = useT();
   const toast = useToast();
   const online = useOnline();
   // Requests from earlier conversations that still wait for a person: never lost when you navigate away.
@@ -133,23 +143,23 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
       setRunIds((r) => [...r, run.id]);
       setMsg("");
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't send", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("agents.chat.sendError")), "danger"),
   });
-  const reason = !can(role, "agent.run") ? denyReason(role, "agent.run") : !online ? "You're offline" : !msg.trim() ? "Type a message" : null;
+  const reason = !can(role, "agent.run") ? denyReasonText(t, role, "agent.run") : !online ? t("agents.chat.offline") : !msg.trim() ? t("agents.chat.typeMessage") : null;
   return (
     <div className="flex max-w-3xl flex-col gap-3">
       {(waiting.data ?? 0) > 0 && (
         <p className="flex flex-wrap items-center gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning" data-testid="agent-waiting-banner">
-          {waiting.data} request{waiting.data! > 1 ? "s" : ""} from this agent {waiting.data! > 1 ? "are" : "is"} waiting for a decision.
+          {t.plural("agents.chat.waiting", waiting.data!)}
           <button className="underline" onClick={onReview}>
-            Review in Runs
+            {t("agents.chat.review")}
           </button>
         </p>
       )}
       {runIds.length === 0 ? (
-        <EmptyState icon="✦" title="Start a conversation" body="Ask a question or ask the agent to run one of its workflows." />
+        <EmptyState icon="✦" title={t("agents.chat.startTitle")} body={t("agents.chat.startBody")} />
       ) : (
-        <ol className="flex flex-col gap-3" aria-label="Conversation">
+        <ol className="flex flex-col gap-3" aria-label={t("agents.chat.conversationAria")}>
           {runIds.map((id) => (
             <Turn key={id} runId={id} role={role} />
           ))}
@@ -163,14 +173,14 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
         }}
       >
         <label htmlFor="agent-msg" className="sr-only">
-          Message the agent
+          {t("agents.chat.messageLabel")}
         </label>
         <Textarea
           id="agent-msg"
           rows={3}
           value={msg}
           maxLength={8000}
-          placeholder="Ask something…"
+          placeholder={t("agents.chat.placeholder")}
           onChange={(e) => setMsg(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !reason) send.mutate();
@@ -178,7 +188,7 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
         />
         <div className="flex items-center gap-2">
           <Button type="submit" variant="primary" loading={send.isPending} disabledReason={reason}>
-            Send
+            {t("agents.chat.send")}
           </Button>
           {conversationId && (
             <Button
@@ -188,7 +198,7 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
                 setRunIds([]);
               }}
             >
-              New conversation
+              {t("agents.chat.newConversation")}
             </Button>
           )}
         </div>
@@ -198,6 +208,7 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
 }
 
 function Turn({ runId, role }: { runId: string; role: Role }) {
+  const t = useT();
   const qc = useQueryClient();
   const toast = useToast();
   const [showSteps, setShowSteps] = useState(false);
@@ -216,7 +227,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
       void qc.invalidateQueries({ queryKey: ["agent-run", runId] });
       void qc.invalidateQueries({ queryKey: ["agent-runs"] });
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't record the decision", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("agents.run.decideError")), "danger"),
   });
   const cancel = useMutation({
     mutationFn: () => api(`/api/agent-runs/${runId}/cancel`, { method: "POST" }),
@@ -225,23 +236,27 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
   const r = q.data;
   if (!r) return <Skeleton className="h-20" />;
   const pending = r.approvals.filter((a) => a.status === "pending");
-  const decideReason = can(role, "approval.decide") ? null : denyReason(role, "approval.decide");
+  const decideReason = can(role, "approval.decide") ? null : denyReasonText(t, role, "approval.decide");
   return (
     <li className="flex flex-col gap-2" data-testid={`agent-turn-${r.status}`}>
       <p className="self-end rounded-lg bg-card px-3 py-2 text-base whitespace-pre-wrap">{r.input}</p>
       <Card className="flex flex-col gap-2 p-3">
         <p className="flex flex-wrap items-center gap-2 text-sm">
-          <StatusBadge tone={TONE[r.status]}>{LABEL[r.status]}</StatusBadge>
+          <StatusBadge tone={TONE[r.status]}>{t(`agents.run.status.${r.status}`)}</StatusBadge>
           <span className="data text-muted">
-            v{r.version} · {r.stepCount} model steps · {r.costMicros > 0 ? `cost ${(r.costMicros / 1_000_000).toFixed(4)}` : "no priced usage"}
+            {t("agents.run.meta", {
+              version: r.version ?? "—",
+              steps: t.plural("agents.run.modelSteps", r.stepCount),
+              cost: r.costMicros > 0 ? t("agents.run.cost", { amount: (r.costMicros / 1_000_000).toFixed(4) }) : t("agents.run.noPricedUsage"),
+            })}
           </span>
           {active(r.status) && (
             <Button size="sm" variant="danger-ghost" className="ms-auto" loading={cancel.isPending} onClick={() => cancel.mutate()}>
-              Cancel
+              {t("agents.run.cancel")}
             </Button>
           )}
         </p>
-        {active(r.status) && <p className="text-base text-info">Thinking…</p>}
+        {active(r.status) && <p className="text-base text-info">{t("agents.run.thinking")}</p>}
         {r.output && <p className="text-base whitespace-pre-wrap">{r.output}</p>}
         {r.error && (
           <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
@@ -250,7 +265,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
         )}
         {(r.citations?.length ?? 0) > 0 && (
           <div>
-            <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Sources</p>
+            <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("agents.run.sources")}</p>
             <ol className="mt-1 list-decimal ps-5 text-sm text-med">
               {r.citations!.map((c, i) => (
                 <li key={i}>{c.label}</li>
@@ -260,20 +275,29 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
         )}
         {pending.map((a) => (
           <div key={a.id} className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3" data-testid="agent-approval">
-            <p className="text-sm text-hi">The agent wants to run a tool that needs a human decision ({a.actionId}). Expires {new Date(a.expiresAt).toLocaleString()}.</p>
+            <p className="text-sm text-hi">
+              {t.rich("agents.run.approvalBody", {
+                action: (
+                  <span dir="ltr" className="data">
+                    {a.actionId}
+                  </span>
+                ),
+                date: t.date(a.expiresAt),
+              })}
+            </p>
             <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{JSON.stringify(a.argsPreview, null, 2)}</pre>
             <div className="flex gap-2">
               <Button size="sm" variant="primary" disabledReason={decideReason} loading={decideM.isPending && decideM.variables?.decision === "approve"} onClick={() => decideM.mutate({ id: a.id, decision: "approve" })}>
-                Approve
+                {t("agents.run.approve")}
               </Button>
               <Button size="sm" variant="danger" disabledReason={decideReason} loading={decideM.isPending && decideM.variables?.decision === "reject"} onClick={() => decideM.mutate({ id: a.id, decision: "reject" })}>
-                Reject
+                {t("agents.run.reject")}
               </Button>
             </div>
           </div>
         ))}
         <button className="self-start text-sm text-accent hover:underline" onClick={() => setShowSteps((v) => !v)} aria-expanded={showSteps}>
-          {showSteps ? "Hide steps" : `Show steps (${r.steps.length})`}
+          {showSteps ? t("agents.run.hideSteps") : t("agents.run.showSteps", { count: r.steps.length })}
         </button>
         {showSteps && <StepList steps={r.steps} />}
       </Card>
@@ -282,21 +306,20 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
 }
 
 function StepList({ steps }: { steps: Step[] }) {
+  const t = useT();
   return (
-    <ol className="flex flex-col gap-1.5" aria-label="Agent steps">
+    <ol className="flex flex-col gap-1.5" aria-label={t("agents.run.stepsAria")}>
       {steps.map((s) => (
         <li key={s.index} className="rounded-md border border-line bg-app p-2 text-sm">
           <p className="flex flex-wrap gap-x-2">
             <span className="data text-muted">#{s.index >= 10_000 ? s.index - 10_000 : s.index}</span>
-            <span className="font-medium">{s.kind === "model" ? "Model" : s.tool}</span>
-            {s.decision && <span className={cx(s.decision === "deny" || s.decision === "rejected" ? "text-danger" : s.decision === "ask" ? "text-warning" : "text-success")}>{s.decision}</span>}
-            {s.latencyMs != null && <span className="data text-muted">{s.latencyMs} ms</span>}
-            {s.inputTokens != null && (
-              <span className="data text-muted">
-                {s.inputTokens}+{s.outputTokens} tokens
-              </span>
+            <span className="font-medium">{s.kind === "model" ? t("agents.run.model") : s.tool}</span>
+            {s.decision && (
+              <span className={cx(s.decision === "deny" || s.decision === "rejected" ? "text-danger" : s.decision === "ask" ? "text-warning" : "text-success")}>{dataText(t, "agents.run.decision", s.decision)}</span>
             )}
-            <span className="data ms-auto text-muted">{new Date(s.at).toLocaleTimeString()}</span>
+            {s.latencyMs != null && <span className="data text-muted">{t("agents.run.latency", { ms: s.latencyMs })}</span>}
+            {s.inputTokens != null && <span className="data text-muted">{t("agents.run.tokens", { input: s.inputTokens, output: s.outputTokens ?? 0 })}</span>}
+            <span className="data ms-auto text-muted">{t.date(s.at, { timeStyle: "medium" })}</span>
           </p>
           {s.error && <p className="text-danger">{s.error.message}</p>}
           {s.kind === "tool" && s.args != null && <pre dir="ltr" className="data mt-1 max-h-24 overflow-auto text-xs text-med">{JSON.stringify(s.args)}</pre>}
@@ -307,22 +330,28 @@ function StepList({ steps }: { steps: Step[] }) {
 }
 
 function Runs({ agentId, role, initialRun }: { agentId: string; role: Role; initialRun: string | null }) {
-  const q = useQuery({ queryKey: ["agent-runs", agentId], queryFn: () => api<{ runs: { id: string; status: AgentRunDetail["status"]; input: string; createdAt: string; stepCount: number }[] }>(`/api/agents/${agentId}/runs`), select: (d) => d.runs, refetchInterval: 10_000 });
+  const t = useT();
+  const q = useQuery({
+    queryKey: ["agent-runs", agentId],
+    queryFn: () => api<{ runs: { id: string; status: AgentRunDetail["status"]; input: string; createdAt: string; stepCount: number }[] }>(`/api/agents/${agentId}/runs`),
+    select: (d) => d.runs,
+    refetchInterval: 10_000,
+  });
   const [picked, setOpen] = useState<string | null>(initialRun);
   // Default to the oldest request still waiting for a decision, so it can be decided right here.
   const open = picked ?? q.data?.filter((r) => r.status === "waiting_approval").at(-1)?.id ?? null;
   if (q.isPending) return <Skeleton className="h-40" />;
-  if (q.isError) return <ErrorState title="Couldn't load runs" body={(q.error as Error).message} onRetry={() => q.refetch()} />;
-  if (q.data.length === 0) return <EmptyState icon="◷" title="No runs yet" />;
+  if (q.isError) return <ErrorState title={t("agents.runs.loadError")} body={(q.error as Error).message} onRetry={() => q.refetch()} />;
+  if (q.data.length === 0) return <EmptyState icon="◷" title={t("agents.runs.empty")} />;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ul className="flex flex-col gap-1.5" aria-label="Agent runs">
+      <ul className="flex flex-col gap-1.5" aria-label={t("agents.runs.listAria")}>
         {q.data.map((r) => (
           <li key={r.id}>
             <button onClick={() => setOpen(r.id)} className={cx("flex w-full items-center gap-2 rounded-md border px-3 py-2 text-start", open === r.id ? "border-accent bg-card" : "border-line hover:bg-card")}>
-              <StatusBadge tone={TONE[r.status]}>{LABEL[r.status]}</StatusBadge>
+              <StatusBadge tone={TONE[r.status]}>{t(`agents.run.status.${r.status}`)}</StatusBadge>
               <span className="min-w-0 flex-1 truncate text-base">{r.input}</span>
-              <span className="data text-xs text-muted">{timeAgo(r.createdAt)}</span>
+              <span className="data text-xs text-muted">{t.relative(r.createdAt)}</span>
             </button>
           </li>
         ))}
@@ -330,11 +359,11 @@ function Runs({ agentId, role, initialRun }: { agentId: string; role: Role; init
       <div>
         {open ? (
           // The same view as in Chat: answer, sources, steps — and Approve/Reject for a waiting request (disabled with the reason for roles that can't decide).
-          <ol aria-label="Selected run">
+          <ol aria-label={t("agents.runs.selectedAria")}>
             <Turn key={open} runId={open} role={role} />
           </ol>
         ) : (
-          <p className="text-base text-muted">Select a run to see its steps.</p>
+          <p className="text-base text-muted">{t("agents.runs.selectHint")}</p>
         )}
       </div>
     </div>
