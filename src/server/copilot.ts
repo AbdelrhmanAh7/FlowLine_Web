@@ -19,6 +19,8 @@ import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage
  * reference makes the proposal invalid (or, for a missing credential, "setup required").
  */
 export const COPILOT_MARKER = "FLOWLINE_COPILOT";
+/** Bumped whenever the instructions, catalog shape or repair rules change (recorded with benchmark results). */
+export const COPILOT_PROMPT_VERSION = "p4-1";
 
 const EXAMPLE_PATCH = {"summary": "Manual start, double n, output", "addNodes": [{"id": "n1", "type": "trigger.manual", "label": "Start", "config": {"samplePayload": "{ \"n\": 2 }"}}, {"id": "n2", "type": "transform.json", "label": "Double", "config": {"expression": "{ \"v\": n * 2 }"}}, {"id": "n3", "type": "output", "label": "Result", "config": {"key": "result", "expression": ""}}], "updateNodes": [], "removeNodes": [], "addEdges": [{"source": "n1", "target": "n2", "sourceHandle": null}, {"source": "n2", "target": "n3", "sourceHandle": null}], "removeEdges": []};
 
@@ -54,7 +56,7 @@ export async function generatePatch(
   conns: { id: string; provider: string; label: string; status: string }[],
   /** Usage metering (every model call is reserved against the budget/plan cap, then settled with real tokens). */
   meter?: { workspaceId: string; key: string; prices: PriceTable },
-): Promise<{ patch: CopilotPatch | null; issues: Issue[]; model: string; attempts: number }> {
+): Promise<{ patch: CopilotPatch | null; issues: Issue[]; model: string; attempts: number; usage: { inputTokens: number; outputTokens: number } }> {
   // A request that needs an app Flowline can't connect to is refused up front — never substituted by the model.
   const missing = unavailableAppsIn(text);
   if (missing.length > 0) {
@@ -64,6 +66,7 @@ export async function generatePatch(
       issues: [{ code: "UNKNOWN_INTEGRATION", message: `${list} ${missing.length > 1 ? "aren't available integrations" : "isn't an available integration"} in Flowline. Available: ${availableIntegrationNames().join(", ")}.`, severity: "error" }],
       model: provider.model,
       attempts: 0,
+      usage: { inputTokens: 0, outputTokens: 0 },
     };
   }
   const content = JSON.stringify({ catalog: catalogFor(conns), currentWorkflow: graphSummary(base) });
@@ -71,6 +74,7 @@ export async function generatePatch(
   let patch: CopilotPatch | null = null;
   let issues: Issue[] = [];
   let feedback = "";
+  const usage = { inputTokens: 0, outputTokens: 0 };
   let attempts = 0;
   for (let round = 0; round <= REPAIR_ROUNDS; round++) {
     attempts++;
@@ -98,6 +102,8 @@ export async function generatePatch(
         signal: AbortSignal.timeout(120_000),
       });
       model = r.model;
+      usage.inputTokens += r.usage.inputTokens;
+      usage.outputTokens += r.usage.outputTokens;
       if (usageKey) {
         const cost = aiCostMicros(price, r.usage.inputTokens, r.usage.outputTokens);
         await settleUsage(db, usageKey, { costMicros: cost.cost, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, unpriced: cost.unpriced });
@@ -116,7 +122,7 @@ export async function generatePatch(
       `\nYour previous patch was rejected by Flowline's validator:\n${problems.map((p) => `- ${p.message}`).join("\n")}\n` +
       `Previous patch: ${JSON.stringify(patch ?? {})}\nReturn a corrected, complete patch.`;
   }
-  return { patch, issues, model, attempts };
+  return { patch, issues, model, attempts, usage };
 }
 
 export async function propose(user: CurrentUser, flowId: string, request: string) {
