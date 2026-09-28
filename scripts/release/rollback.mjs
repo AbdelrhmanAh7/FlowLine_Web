@@ -40,11 +40,18 @@ function deploy(image) {
   });
   return Date.now() - t;
 }
+/** Revision + schema version actually served. Builds older than a8cef39 don't report them in /api/health:
+ *  then the running web container's image label and the migrations table are read directly. */
 async function health() {
   for (let i = 0; i < 60; i++) {
     try {
       const r = await fetch(`${BASE}/api/health?require=worker`);
-      if (r.ok) return r.json();
+      if (r.ok) {
+        const h = await r.json();
+        h.revision ??= execFileSync("docker", ["inspect", "flowline-staging-web-1", "--format", '{{index .Config.Labels "org.opencontainers.image.revision"}}'], { encoding: "utf8" }).trim();
+        h.schemaVersion ??= Number(execFileSync("docker", ["exec", "flowline-staging-db-1", "psql", "-U", "flowline", "-d", "flowline", "-tAc", "select count(*) from drizzle.__drizzle_migrations"], { encoding: "utf8" }).trim());
+        return h;
+      }
     } catch {}
     await sleep(2000);
   }

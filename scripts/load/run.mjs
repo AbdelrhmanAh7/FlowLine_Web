@@ -89,7 +89,15 @@ const graph = {
 
 async function newUser(tag) {
   const s = new Session();
-  await s.ok("/api/auth/sign-up/email", { method: "POST", json: { email: `${tag}-${randomUUID().slice(0, 8)}@flowline-load.test`, password: PASSWORD, name: "Load" } });
+  // Setup only (not measured): sign-up is rate limited per IP in production builds, so back off and retry.
+  const email = `${tag}-${randomUUID().slice(0, 8)}@flowline-load.test`;
+  for (let attempt = 0; ; attempt++) {
+    const r = await s.req("/api/auth/sign-up/email", { method: "POST", json: { email, password: PASSWORD, name: "Load" } });
+    if (r.ok) break;
+    if (r.status !== 429 || attempt > 20) throw new Error(`sign-up → ${r.status} ${(await r.text()).slice(0, 200)}`);
+    report.signUpRateLimited = (report.signUpRateLimited ?? 0) + 1;
+    await sleep((Number(r.headers.get("x-retry-after") ?? r.headers.get("retry-after")) || 5) * 1000);
+  }
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Load ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "sales", skipped: false } });
   const { flow } = await s.ok(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: { name: "Load doubler" } });
