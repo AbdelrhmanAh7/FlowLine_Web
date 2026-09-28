@@ -214,3 +214,31 @@ Source `p4§N` = section N of the Phase 4 prompt (2026-09-28). The goal is a sma
 | BETA INFRA VERIFIED | PLANNED |
 | PRIVATE BETA READY | PLANNED |
 | PUBLIC PRODUCTION APPROVED | **NO** (owner authorisation only) |
+
+## AI-HUB: cloud AI provider hub (owner-approved 2026-09-29)
+
+Source `ai§N` = section N of the AI hub prompt. **Cloud-only:** local inference is removed from execution, and legacy
+configurations are kept readable and marked for migration. Plan: `docs/ai/IMPLEMENTATION_PLAN.md`. Branch `ai-hub`.
+
+| ID | Requirement | Wave | Acceptance test | Status | Evidence |
+|---|---|---|---|---|---|
+| AIH-01 | Baseline + AI path map + plan | A | Plan reviewed against code | PASS | `docs/ai/IMPLEMENTATION_PLAN.md` |
+| AIH-02 | Provider registry (definition vs connection vs route vs policy), tri-state capabilities per route | A | Unit + contract | PLANNED | |
+| AIH-03 | Workspace BYOK connections: encrypted, multiple, use/manage roles (connecting ≠ granting), configure / auth test / disclosed inference test / rotate / disconnect / last-tested | A | Integration (isolation, redaction, permissions mid-run) | PLANNED | |
+| AIH-04 | Endpoint security: per-provider host allowlist, no private/metadata/rebinding, manual redirects, no cross-origin credentials, custom endpoints owner-approved, test doubles allowlisted only in test | A | Integration (malicious endpoint/redirect/catalogue) | PLANNED | |
+| AIH-05 | Discovery: listing APIs + pagination, cache, manual + bounded background refresh, outage handling, versioned fallback catalogue with provenance, malformed snapshots rejected (keep last valid, stale), removed model → actionable error | A | Contract + integration | PLANNED | |
+| AIH-06 | Execution vertical slice: AI node → route → protocol → normalise → `ai_attempt` + usage | A | Deterministic E2E connect → discover → select → run → inspect | PLANNED | |
+| AIH-07 | Settings → AI Providers + reusable searchable ModelPicker (capability/provider/cost/context/lifecycle filters), labels for connection / verification / cost | A/B | E2E + Chrome QA | PLANNED | |
+| AIH-08 | Legacy local configs preserved, refused with `AI_LOCAL_MIGRATION_REQUIRED`, migration banner; no local runtime in compose/env; extension point documented | A | Integration + stack starts without inference services | PLANNED | |
+| AIH-09 | Protocols: OpenAI Responses + Chat Completions, Anthropic Messages, Gemini, Cohere v2; streaming, cancellation, tools, structured output where supported; unsupported params rejected | B | Contract per protocol | PLANNED | |
+| AIH-10 | Core adapters (15): OpenAI, Anthropic, Gemini, xAI, Groq, OpenRouter, Mistral, Cohere, DeepSeek, Z.ai, Moonshot, MiniMax, DashScope, OpenCode Zen, Command Code | B | Contract per adapter (request/response, discovery, errors, usage, removed model) | PLANNED | |
+| AIH-11 | Expansion adapters (Cerebras, Together, Fireworks, DeepInfra, HF Inference Providers, Cloudflare Workers AI, Vercel AI Gateway, NVIDIA hosted): implemented where the documented API fits; status explicit | B | Contract per implemented adapter | PLANNED | |
+| AIH-12 | Provider verification record (official docs, availability, eligibility, BYOK/SaaS terms, date); deferred enterprise (Bedrock/Azure/Vertex) documented | B | `docs/ai/PROVIDERS.md` | PLANNED | |
+| AIH-13 | Routing policies MANUAL / FALLBACK / FREE_ONLY / LOW_COST; privacy; no bypass of auth/safety/cancel; bounded retries with Retry-After; no stream concatenation across models; no tool replay | B | Integration | PLANNED | |
+| AIH-14 | Usage + budgets: per-attempt records, non-overlapping token fields, provider-reported / estimated / unknown cost, defensible pre-reservation, reconciliation, unknown ≠ 0, hard cap refuses unbounded work, concurrent reservations | B | Integration (races, cancellation, lost usage) | PLANNED | |
+| AIH-15 | Agents + Copilot (plan + repair) choose routes; workspace defaults; resolved route snapshot on publish/run | B | Integration + E2E | PLANNED | |
+| AIH-16 | Copilot benchmark (12 frozen cases, EN + AR), ≤3 routes + stability repeat, within an approved budget | C | `artifacts/ai-hub/benchmark/` | PLANNED | |
+| AIH-17 | Live certification on authorised connections (≥2 providers: native + gateway) | C | `artifacts/ai-hub/live/` | PLANNED | |
+| AIH-18 | Codex review (security, protocol, migration, metering) + Chrome QA; `BUGS.md`; fixes retested | C | `artifacts/ai-hub/<run-id>/` | PLANNED | |
+| AIH-19 | Cumulative Phase 1–4 regression; obsolete local-inference requirements migrated transparently | C | Full suites | PLANNED | |
+| AIH-20 | Docs: PROVIDERS, ROUTING, ADDING_A_PROVIDER, MIGRATION, AI_HUB_REPORT; env examples secret-free | C | Docs | PLANNED | |
