@@ -18,6 +18,19 @@
 - **Known limitation:** Copilot's proposal quality with the local 7B model is not verified (the safety contract is).
 - **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
+## AI provider hub — IN PROGRESS on branch `ai-hub` (worktree `FL-wt-aihub`, test DB `flowline_test_aihub`)
+
+Owner-approved cloud-only multi-provider hub (prompt 2026-09-29). Base: `phase-4` @ `1a9883f` (= code of `flowline:e42667d`).
+Plan: `docs/ai/IMPLEMENTATION_PLAN.md`; requirements AIH-01…AIH-20 in `SCOPE_MATRIX.md` (AI-HUB section).
+
+- Wave A (foundation + OpenAI chat vertical slice): Opus agent running in `FL-wt-aihub` (uncommitted until reviewed).
+- Provider verification research (official docs/terms for 26 providers): report goes to the session scratchpad, then
+  becomes `docs/ai/PROVIDERS.md`.
+- Parallel, unrelated: Kimi building the design system on `design-v2` (`FL-wt-design`).
+- Next: review + commit Wave A → Wave B (protocols + 15 core adapters + expansion + routing/budgets + agents/Copilot)
+  → Wave C (live certification BLOCKED without keys; benchmark needs an owner budget; Codex review + Chrome QA).
+- Resume: `cd ../FL-wt-aihub && git status && pnpm typecheck && pnpm test:integration`.
+
 ## Phase 4 — launch candidate & private beta: PAUSED for owner credentials (branch `phase-4`)
 
 **Current state (2026-09-28):** release code `e42667d`, image `flowline:e42667d` (`sha256:7c92ffa6…`), schema 12,
