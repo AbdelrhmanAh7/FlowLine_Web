@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { Button, Card, EmptyState, Input, SectionLabel, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
+import { templateNodeLabel } from "@/i18n/template-text";
 import type { Translator } from "@/i18n/translate";
 import type { MessageKey } from "@/i18n/types";
 import { useOnline } from "@/lib/hooks";
@@ -94,7 +95,7 @@ export default function TemplatesPage() {
                     return (
                       <li key={tpl.id}>
                         <Card className="flex h-full flex-col gap-3 p-4">
-                          <Chain items={chain.map((n) => `${NODE_DEFINITIONS[n.type].icon} ${n.data.label}`)} />
+                          <Chain items={chain.map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
                             <p className="text-lg font-semibold">{shown.name}</p>
                             <p className="mt-1 text-base text-med">{shown.description}</p>
@@ -123,7 +124,7 @@ export default function TemplatesPage() {
                     return (
                       <li key={tpl.id}>
                         <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
-                          <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${n.data.label}`)} />
+                          <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
                             <p className="text-lg font-semibold">{shown.name}</p>
                             <p className="mt-1 text-base text-med">{shown.description}</p>

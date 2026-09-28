@@ -6,6 +6,8 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { NODE_TYPES, type NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
 import { nodeText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-text";
+import { actionTitleById } from "@/i18n/integration-text";
+import type { Translator } from "@/i18n/translate";
 import { useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
 import type { RunDetailDto, RunStepDto } from "@/lib/types";
@@ -73,10 +75,15 @@ const DOT: Record<string, string> = {
   cancelled: "bg-muted",
 };
 
-/** "slack.post_message" → "SLACK · POST MESSAGE". */
-function actionSubtitle(actionId: string) {
+/**
+ * "slack.post_message" → "SLACK · POST MESSAGE" (English keeps the id-derived technical form). Other languages
+ * show the app id with the translated action title — "SLACK · نشر رسالة" — when the catalogue has one.
+ */
+function actionSubtitle(t: Translator, actionId: string) {
   const [p, a] = actionId.split(".");
-  return `${(p ?? "").replace(/_/g, " ")} · ${(a ?? "").replace(/_/g, " ")}`.toUpperCase();
+  const app = (p ?? "").replace(/_/g, " ").toUpperCase();
+  const title = t.locale === "en" ? null : actionTitleById(t, actionId);
+  return title ? `${app} · ${title}` : `${app} · ${(a ?? "").replace(/_/g, " ").toUpperCase()}`;
 }
 
 export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selected }: NodeProps<RFNode>) {
@@ -105,7 +112,7 @@ export const FlowNodeCard = memo(function FlowNodeCard({ id, type, data, selecte
         <span className="truncate">{data.label}</span>
       </p>
       <p className="data mt-0.5 truncate text-[10px] tracking-[0.4px] text-muted uppercase">
-        {type === "integration.action" && (data.config as { actionId?: string }).actionId ? actionSubtitle((data.config as { actionId: string }).actionId) : nodeText(t, type, "subtitle")}
+        {type === "integration.action" && (data.config as { actionId?: string }).actionId ? actionSubtitle(t, (data.config as { actionId: string }).actionId) : nodeText(t, type, "subtitle")}
       </p>
       <div className="mt-1.5">
         <StatusLine step={step} />

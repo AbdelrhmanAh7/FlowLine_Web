@@ -5,6 +5,9 @@ import { db, schema } from "@/db";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
+import type { Locale } from "@/i18n/config";
+import { localizeTemplate } from "@/i18n/template-text";
+import { createTranslator } from "@/i18n/translate";
 import { MAX_EDGES, MAX_NODES, validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "./access";
 import { consumeFault } from "./faults";
@@ -63,11 +66,17 @@ export async function listFlows(workspaceId: string) {
     .orderBy(desc(schema.flow.updatedAt));
 }
 
-export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }) {
+/**
+ * Creates a flow, blank or from a built-in template. `locale` is the creator's UI language: a template's name and
+ * step labels are copied in that language (they are the user's data from then on). Without it, the templates' own
+ * English is used.
+ */
+export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }, locale?: Locale) {
   const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
-  const name = flowNameSchema.parse(input.name ?? template?.name ?? "Untitled flow");
-  const graph: FlowGraph = structuredClone(template?.graph ?? BLANK_GRAPH);
+  const localized = template ? (locale ? localizeTemplate(createTranslator(locale), template) : { name: template.name, graph: structuredClone(template.graph) }) : null;
+  const name = flowNameSchema.parse(input.name ?? localized?.name ?? "Untitled flow");
+  const graph: FlowGraph = localized?.graph ?? structuredClone(BLANK_GRAPH);
   const [row] = await db
     .insert(schema.flow)
     .values({ workspaceId, name, graph, templateId: template?.id ?? null, createdBy: user.id, updatedBy: user.id })

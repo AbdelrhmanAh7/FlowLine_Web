@@ -9,6 +9,7 @@ import { useToast } from "@/components/toast";
 import { Button, Card, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
+import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
 import { dataText } from "@/i18n/workspace-text";
 import { api } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogProvider, type ConnectionDto } from "@/lib/catalog";
@@ -46,8 +47,13 @@ function Integrations() {
 
   const providers = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return (catalog.data?.providers ?? []).filter((p) => !s || `${p.name} ${p.category} ${p.actions.map((a) => a.title).join(" ")}`.toLowerCase().includes(s));
-  }, [catalog.data, q]);
+    // Search matches the shown (translated) text and the catalog's English alike.
+    return (catalog.data?.providers ?? []).filter(
+      (p) =>
+        !s ||
+        [p.name, p.category, providerCategory(t, p.category), ...p.actions.flatMap((a) => [a.title, actionTitle(t, a)])].join(" ").toLowerCase().includes(s),
+    );
+  }, [catalog.data, q, t]);
   const unhealthy = (connections.data ?? []).filter((c) => c.status !== "active");
   const byId = new Map((catalog.data?.providers ?? []).map((p) => [p.id, p]));
   const editReason = canEdit ? null : t("integrations.viewerReason");
@@ -129,18 +135,18 @@ function Integrations() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-base font-semibold">{p.name}</p>
-                        <p className="text-sm text-muted">{p.category}</p>
+                        <p className="text-sm text-muted">{providerCategory(t, p.category)}</p>
                       </div>
                       <ConnectButton provider={p} disabledReason={editReason} onOpen={() => setDialog({ provider: p })} />
                     </div>
-                    <p className="text-sm text-med">{p.description}</p>
+                    <p className="text-sm text-med">{providerDescription(t, p)}</p>
                     <Verification v={p.verification} />
                     <details className="text-sm">
                       <summary className="cursor-pointer text-med hover:text-hi">{t.plural("integrations.actions", p.actions.length)}</summary>
                       <ul className="mt-2 flex flex-col gap-1">
                         {p.actions.map((a) => (
                           <li key={a.id} className="flex flex-wrap items-center gap-x-2">
-                            <span className="text-hi">{a.title}</span>
+                            <span className="text-hi">{actionTitle(t, a)}</span>
                             <span className="text-xs text-muted">{dataText(t, "sideEffect", a.sideEffect, SIDE_EFFECT_LABEL[a.sideEffect] ?? a.sideEffect)}</span>
                             {a.sensitive && <span className="text-xs text-warning">{t("integrations.needsApproval")}</span>}
                           </li>
@@ -308,7 +314,7 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
           )}
           {!oauth &&
             provider.connectFields.map((f) => (
-              <Field key={f.key} label={f.label} htmlFor={`f-${f.key}`} hint={f.help}>
+              <Field key={f.key} label={connectFieldLabel(t, provider.id, f)} htmlFor={`f-${f.key}`} hint={connectFieldHelp(t, provider.id, f)}>
                 <Input
                   id={`f-${f.key}`}
                   type={f.secret ? "password" : "text"}

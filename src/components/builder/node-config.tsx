@@ -10,6 +10,7 @@ import { checkCron } from "@/engine/validate";
 import { useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/config";
 import { detailText } from "@/i18n/engine-text";
+import { actionDescription, actionTitle } from "@/i18n/integration-text";
 import type { MessageKey } from "@/i18n/types";
 import { api, ApiError } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogAction } from "@/lib/catalog";
@@ -507,10 +508,10 @@ function ActionForm({ node, cfg, set }: FormProps) {
             const a = provider.actions.find((x) => x.id === v);
             set({ actionId: v, requireApproval: a?.sensitive ? true : Boolean(cfg.requireApproval), inputMapping: a ? mappingSkeleton(a) : "{}" });
           }}
-          options={[{ value: "", label: t("config.action.chooseAction") }, ...provider.actions.map((a) => ({ value: a.id, label: `${a.title} · ${t.has(`sideEffect.${a.sideEffect}`) ? t(`sideEffect.${a.sideEffect}` as MessageKey) : (SIDE_EFFECT_LABEL[a.sideEffect] ?? a.sideEffect)}` }))]}
+          options={[{ value: "", label: t("config.action.chooseAction") }, ...provider.actions.map((a) => ({ value: a.id, label: `${actionTitle(t, a)} · ${t.has(`sideEffect.${a.sideEffect}`) ? t(`sideEffect.${a.sideEffect}` as MessageKey) : (SIDE_EFFECT_LABEL[a.sideEffect] ?? a.sideEffect)}` }))]}
         />
       )}
-      {action && <p className="text-sm text-muted">{action.description}</p>}
+      {action && <p className="text-sm text-muted">{actionDescription(t, action)}</p>}
       {provider && (
         <Select
           id={`conn-${node.id}`}
