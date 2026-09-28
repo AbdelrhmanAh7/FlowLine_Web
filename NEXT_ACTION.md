@@ -10,11 +10,12 @@
 ## Phase 3 — delivered on branch `phase-3` (release report: `docs/implementation/RELEASE_REPORT.md`)
 
 - **Verdicts:** CODE COMPLETE **YES** · STAGING VERIFIED **YES, with stated limits** · PRODUCTION APPROVED **NO**.
-- **Release:** code `9fd9860`, image `flowline:9fd9860` (`sha256:fa6e7569…`); local staging `http://localhost:3200`
-  (`FLOWLINE_IMAGE=flowline:9fd9860 docker compose -f docker-compose.staging.yml --env-file .env.staging up -d`).
-- **Tests on the release revision:** unit 105, contract 97, integration 262, E2E Chromium+Firefox 63/63, WebKit 14/14.
+- **Release:** code `ce08d9f`, image `flowline:ce08d9f` (`sha256:eb536049…`); local staging `http://localhost:3200`
+  (`FLOWLINE_IMAGE=flowline:ce08d9f docker compose -f docker-compose.staging.yml --env-file .env.staging up -d`).
+- **Tests on the release revision:** unit 108, contract 97, integration 263, E2E Chromium+Firefox 63/63, WebKit 14/14.
 - **Independent QA:** Codex code review (7 findings fixed), Fable security matrix (1 fixed), Codex staging browser QA
-  (5 findings fixed) + retest → `artifacts/phase-3/codex-qa-retest/`.
+  (5 findings) + 2 retests (2 more findings fixed) → `artifacts/phase-3/codex-qa*/`.
+- **Known limitation:** Copilot's proposal quality with the local 7B model is not verified (the safety contract is).
 - **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
 ## Waiting for the user (only you can do these)

@@ -2,11 +2,13 @@
 
 **Date:** 2026-09-28. **Branch:** `phase-3`.
 
-- **Release code revision:** `9fd986002fde5f859e36db46b67eea901387348b` (`9fd9860`).
-- **Release image:** `flowline:9fd9860`, image ID
-  `sha256:fa6e7569d2c0e801bb39798a39efdbac02f60443928da782ba50922aa5db983e`, with label
-  `org.opencontainers.image.revision = 9fd9860…`.
-- Later commits change only tests and docs. `git diff 9fd9860 HEAD -- . ':!e2e' ':!artifacts'` is empty apart from docs.
+- **Release code revision:** `ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd` (`ce08d9f`).
+- **Release image:** `flowline:ce08d9f`, image ID
+  `sha256:eb536049a1898e38913b4d17d2036f40a1ff893d7743878a7b697bb53506fc3e`, with label
+  `org.opencontainers.image.revision = ce08d9f…`.
+- Later commits change only docs and evidence.
+- The previous candidate `9fd9860` passed the same release checks and was superseded by the fixes for Codex's retest
+  findings (CX3R-01/02).
 - **Staging:** `http://localhost:3200`, a local Docker Compose stack (`docker-compose.staging.yml`: web, worker, migrate
   and its own PostgreSQL) running the release image, with the **real** local Ollama model `qwen2.5:7b`. It is local:
   no TLS, one web and one worker instance.
@@ -16,25 +18,28 @@
 | Verdict | Result | Basis |
 |---|---|---|
 | **CODE COMPLETE** | **YES** | Everything in the approved Phase 3 scope is implemented. All deterministic tests pass on the release revision (below). Features that aren't built (P3-08, P3-10 presence, P3-11) show their real state and never a fake control. |
-| **STAGING VERIFIED** | **YES, with the stated limits** | The release image on staging passed smoke/health, cumulative E2E on 3 browsers, agent-driven browser QA and retest (Codex), security checks, backup → clean restore, rollback across migrations, failure tests and load targets. **Limits:** billing is verified only against the Stripe-compatible test double (no Stripe `sk_test_` key was provided); SSO only against a test IdP; the 11 SaaS integrations have no live credentials (R-01…R-11 BLOCKED); Copilot quality with the local 7B model is measured, not perfect (below). |
+| **STAGING VERIFIED** | **YES, with the stated limits** | The release image on staging passed smoke/health, cumulative E2E on 3 browsers, agent-driven browser QA and two retests (Codex), security checks, backup → clean restore, rollback across migrations, failure tests and load targets. **Limits:** billing is verified only against the Stripe-compatible test double (no Stripe `sk_test_` key was provided); SSO only against a test IdP; the 11 SaaS integrations have no live credentials (R-01…R-11 BLOCKED); **Copilot's proposal quality with the local 7B model is not acceptable as a verified feature**. Its safety contract holds (validated, previewed, draft-only, never runs), but on staging only about half of the real requests produced a correct draft (below). |
 | **PRODUCTION APPROVED** | **NO** | Only you can approve it. Production deployment and live payments are not authorised. R-01…R-11 are still BLOCKED (your Phase 2 decision: the product is not Production Ready until they pass, unless you approve a release-scope change). The production blockers are listed below. |
 
 ## Test totals (release revision)
 
 | Suite | Result | Evidence |
 |---|---|---|
-| Lint / typecheck | clean / clean | `artifacts/phase-3/test-output/lint-9fd9860.txt`, `typecheck-9fd9860.txt` |
-| Unit | **105 / 105** (12 files) | `unit-9fd9860.txt` |
-| Contract (provider doubles) | **97 / 97** (15 files) | `contract-9fd9860.txt` |
-| Integration (PostgreSQL `flowline_test`) | **262 / 262** (22 files) | `integration-9fd9860.txt` |
-| E2E Chromium + Firefox (all specs on Chromium; `@critical` and `@cross-browser` on Firefox) | **63 / 63**, 0 flaky | `e2e-chromium-firefox-4880b57.json` |
-| E2E WebKit (Linux Playwright container, `@critical` + `@cross-browser`) | **14 / 14** | `e2e-webkit-4880b57.txt` |
+| Lint / typecheck | clean / clean | `artifacts/phase-3/test-output/lint-ce08d9f.txt`, `typecheck-ce08d9f.txt` |
+| Unit | **108 / 108** (12 files) | `unit-ce08d9f.txt` |
+| Contract (provider doubles) | **97 / 97** (15 files) | `contract-ce08d9f.txt` |
+| Integration (PostgreSQL `flowline_test`) | **263 / 263** (22 files) | `integration-ce08d9f.txt` |
+| E2E Chromium + Firefox (all specs on Chromium; `@critical` and `@cross-browser` on Firefox) | **63 / 63**, 0 flaky | `e2e-chromium-firefox-ce08d9f.json` |
+| E2E WebKit (Linux Playwright container, `@critical` + `@cross-browser`) | run 1: **13 / 14**; run 2: **14 / 14** | `e2e-webkit-ce08d9f-run1.txt`, `-run2.txt` |
 | Live suite (REL-LIVE-SUITE) | dry-run 85 DRYRUN_PASS / 3 N/A; live **BLOCKED** (no credentials) | `tests/live/`, R-01…R-11 |
 
-An earlier full run on `9fd9860` recorded **1 failure** out of 63: history restore on Chromium, while Codex's browser
-and Ollama were loading the machine (`e2e-chromium-firefox-9fd9860.json`). It could not be reproduced in 9 reruns
-or with 6× CPU throttling. The builder reload was still in progress when the check ran, so the test now waits for the
-reload before counting nodes (`4880b57`). The assertion itself is unchanged.
+Two one-off failures are recorded rather than hidden. Both happened while Codex's browser and the local model were
+loading the machine:
+- **Chromium, `9fd9860`:** history restore checked the canvas while the builder reload was still in progress. It
+  couldn't be reproduced in 9 reruns or with 6× CPU throttling. The test now waits for the reload before counting
+  nodes; the assertion is unchanged.
+- **WebKit run 1, `ce08d9f`:** navigating to a 404 route never finished loading within the test timeout (the dev
+  server was compiling the not-found route cold). It passed 4/4 in isolation and in the complete run 2.
 
 WebKit's Windows build crashes on this host, so WebKit runs in the official `mcr.microsoft.com/playwright:v1.63.0-noble`
 image against the same test stack (`bash e2e/tools/webkit-docker.sh`).
@@ -43,11 +48,11 @@ image against the same test stack (`bash e2e/tools/webkit-docker.sh`).
 
 | Check | Result | Evidence |
 |---|---|---|
-| Rollback N+1 → N with no down migrations | **PASS**: `9fd9860 → ee265ea` across migration 0007, and `ee265ea → 0d4e7b7` across 0006. In both, health, revision, schema version, sign-in, flow load, webhook execution, and data written by N+1 were readable by N. | `artifacts/phase-3/rollback/` |
-| Backup → restore into a new, empty PostgreSQL container | **PASS**: 40 tables with matching row counts and id digests; password sign-in, flows, versions, runs, agents, knowledge (searchable), members/invites and hashed API keys all work; the encrypted webhook secret decrypts with the recovered key (a signed delivery runs); a wrong key gets 503. | `artifacts/phase-3/backup-restore/backup-restore-9fd9860.json` |
+| Rollback N+1 → N with no down migrations | **PASS**: `ce08d9f → 9fd9860`, `9fd9860 → ee265ea` across migration 0007, and `ee265ea → 0d4e7b7` across 0006. In both, health, revision, schema version, sign-in, flow load, webhook execution, and data written by N+1 were readable by N. | `artifacts/phase-3/rollback/` |
+| Backup → restore into a new, empty PostgreSQL container | **PASS**: 40 tables with matching row counts and id digests; password sign-in, flows, versions, runs, agents, knowledge (searchable), members/invites and hashed API keys all work; the encrypted webhook secret decrypts with the recovered key (a signed delivery runs); a wrong key gets 503. | `artifacts/phase-3/backup-restore/backup-restore-ce08d9f.json` |
 | Key recovery | Documented: `FLOWLINE_ENCRYPTION_KEY` (+ `_OLD` for rotation) must be backed up separately from the DB; without it, restored credentials and webhook secrets are unusable (verified). | same file, negative check |
-| Load (targets set before the run, TEST_PLAN §3) | **All met** on one laptop: health p95 14 ms; authenticated reads p95 18 ms; 250 API runs accepted, drained in about 3.7 s, **0 duplicate executions**; rate limit exactly 30/60; peak web 217 MB, worker 155 MB, 16 DB connections. **Not a capacity or SLA claim.** | `artifacts/phase-3/load/load-9fd9860-*.json` |
-| DB outage | **PASS**: stall (`docker pause`) and stop/start both give 503 health within 3 s, clean 5xx errors, recovery without restarting web or worker, and no duplicated steps. This found and fixed a health hang (`72cff16`). | `artifacts/phase-3/failure/db-outage-9fd9860.json` |
+| Load (targets set before the run, TEST_PLAN §3) | **All met** on one laptop: health p95 14 ms; authenticated reads p95 18 ms; 250 API runs accepted, drained in about 2.8 s, **0 duplicate executions**; rate limit exactly 30/60; peak web 216 MB, worker 154 MB, 15 DB connections. **Not a capacity or SLA claim.** | `artifacts/phase-3/load/load-ce08d9f-*.json` |
+| DB outage | **PASS**: stall (`docker pause`) and stop/start both give 503 health within 3 s, clean 5xx errors, recovery without restarting web or worker, and no duplicated steps. This found and fixed a health hang (`72cff16`). | `artifacts/phase-3/failure/db-outage-ce08d9f.json` |
 
 ## Independent review and QA
 
@@ -56,7 +61,7 @@ image against the same test stack (`bash e2e/tools/webkit-docker.sh`).
 | Code, test and security review | **Codex** (independent, different vendor) | 7 findings: CX3-01 (SSO link survives an IdP change), CX3-02 (approval survives a republish), CX3-03 (secret body forwarded on a cross-origin 307), CX3-04/05 (billing reconciliation and same-second webhooks), CX3-06 (agent tool cost cap), CX3-07 (upload buffered before its cap). **All fixed with regression tests; Codex retest: all FIXED.** `artifacts/phase-3/codex-review/` |
 | Security review + capability × role matrix | **Claude Fable 5.1** subagent (independent of the implementing session, same vendor) | 73-test matrix: every capability through real routes × owner/editor/viewer/non-member, IDOR, secret projections. SR-01 (malformed id → 500) fixed. `artifacts/phase-3/security-review/` |
 | Agent-driven exploratory browser test (staging, real model) | **Codex**, using a real Chromium it drove. **Not human UAT.** | On `ee265ea`: 9 journeys PASS, 4 FAIL, 1 BLOCKED, 5 findings (CX3Q-01…05, all fixed). No hydration warnings in 158 page loads. `artifacts/phase-3/codex-qa/` |
-| Retest on the release image | **Codex** | _see the "Codex retest" section below_ |
+| Retests on staging | **Codex** | Retest 1 on `9fd9860`: CX3Q-03/04/05 PASS, CX3Q-01 PARTIAL, CX3Q-02 FAIL, 2 new findings (CX3R-01/02, fixed in `ce08d9f`). Retest 2 on `ce08d9f`: see the "Codex retests" section below. `artifacts/phase-3/codex-qa-retest/`, `codex-qa-retest2/` |
 
 Issues I found and fixed along the way:
 - The SSO account-takeover path, found in review before merge: an owner's own IdP could sign in as any existing email.
@@ -65,6 +70,7 @@ Issues I found and fixed along the way:
 - Copilot model calls bypassed usage metering and budgets.
 - Public webhook bodies weren't capped while streaming.
 - `/api/health` hung during a DB stall.
+- An agent's time limit counted hours spent waiting for a human decision (Codex CX3R-01).
 
 ## Failure testing (p3§23): one test per item
 
@@ -90,14 +96,19 @@ Issues I found and fixed along the way:
 
 ## Copilot with a real model (measured, not claimed)
 
-Validation always decides: an invalid proposal is shown with its reasons and can't be applied, and nothing ever runs.
-With the local `qwen2.5:7b`:
+What holds, and is tested: every proposal is validated against the real registries. Proposals made only of local steps
+are dry-run on their own sample input, and the result is shown before approval. A workflow that produces nothing is
+rejected. Requests that need an app Flowline lacks are refused by name. Approving only ever saves a **draft**. Nothing
+runs or publishes, and removals need confirmation.
 
-- Codex's staging requests: **0/12 → 12/12** correct after the fixes. This is the tuned set, so treat it as optimistic.
-- Six held-out requests: **7/12**. The rest are invented step types or invalid JSONata, rejected with reasons.
+What does **not** hold yet is proposal quality with the local `qwen2.5:7b`:
+- My measurement: tuned set 12/12, held-out 7/12.
+- Codex's independent staging requests, phrased differently: **3/6 approvable, and of 2 approved drafts only 1 was
+  correct** (retest 1). The preview and no-result checks were added after that to make such drafts visible before
+  approval. Retest 2 results are below.
+- A larger hosted model (e.g. via `ANTHROPIC_API_KEY`) wasn't tested.
 
-Requests that need an app Flowline doesn't integrate with are refused by name. A larger hosted model (e.g. via
-`ANTHROPIC_API_KEY`) wasn't tested. Evidence: `artifacts/phase-3/copilot-real-model/`.
+**Treat Copilot as a draft-suggestion aid, not a verified feature.**
 
 ## Carried items
 
@@ -105,6 +116,7 @@ Requests that need an app Flowline doesn't integrate with are refused by name. A
 - **P3-15 (DB drops on the dev stack):** classified as host networking.
   - `localhost` resolves to `::1`, which goes through `wslrelay.exe`. All probe failures were on that path; zero on
     `127.0.0.1` and zero inside the container.
+  - Over 4 h and 13,936 probes per path: 14 failures on `::1`, 0 on `127.0.0.1`, 0 inside the container.
   - Mitigated by using `127.0.0.1`. Fail-fast behaviour and recovery were kept and verified.
   - Details: `artifacts/phase-3/p3-15/INVESTIGATION.md`.
 - **P3-16 (hydration warning):** not reproduced.

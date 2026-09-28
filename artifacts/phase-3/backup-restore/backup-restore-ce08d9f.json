@@ -1,0 +1,197 @@
+{
+  "image": "flowline:ce08d9f",
+  "startedAt": "2026-09-28T03:16:05.733Z",
+  "sourceRevision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd",
+  "sourceSchemaVersion": 8,
+  "backup": {
+    "format": "pg_dump custom (-Fc)",
+    "bytes": 551958,
+    "ms": 315
+  },
+  "restore": {
+    "ms": 584,
+    "exitCode": 0
+  },
+  "tables": {
+    "public.user": {
+      "source": 43,
+      "restored": 43,
+      "digestMatch": true
+    },
+    "public.workspace": {
+      "source": 41,
+      "restored": 41,
+      "digestMatch": true
+    },
+    "public.workspace_member": {
+      "source": 43,
+      "restored": 43,
+      "digestMatch": true
+    },
+    "public.workspace_invite": {
+      "source": 6,
+      "restored": 6,
+      "digestMatch": true
+    },
+    "public.flow": {
+      "source": 51,
+      "restored": 51,
+      "digestMatch": true
+    },
+    "public.flow_version": {
+      "source": 50,
+      "restored": 50,
+      "digestMatch": true
+    },
+    "public.run": {
+      "source": 586,
+      "restored": 586,
+      "digestMatch": true
+    },
+    "public.run_step": {
+      "source": 1763,
+      "restored": 1763,
+      "digestMatch": true
+    },
+    "public.agent": {
+      "source": 6,
+      "restored": 6,
+      "digestMatch": true
+    },
+    "public.agent_version": {
+      "source": 8,
+      "restored": 8,
+      "digestMatch": true
+    },
+    "public.knowledge_source": {
+      "source": 5,
+      "restored": 5,
+      "digestMatch": true
+    },
+    "public.knowledge_chunk": {
+      "source": 5,
+      "restored": 5,
+      "digestMatch": true
+    },
+    "public.api_key": {
+      "source": 29,
+      "restored": 29,
+      "digestMatch": true
+    },
+    "public.webhook_endpoint": {
+      "source": 6,
+      "restored": 6,
+      "digestMatch": true
+    },
+    "public.connection": {
+      "source": 0,
+      "restored": 0,
+      "digestMatch": true
+    },
+    "public.billing_account": {
+      "source": 0,
+      "restored": 0,
+      "digestMatch": true
+    },
+    "public.audit_event": {
+      "source": 107,
+      "restored": 107,
+      "digestMatch": true
+    },
+    "drizzle.__drizzle_migrations": {
+      "source": 8,
+      "restored": 8,
+      "digestMatch": true
+    }
+  },
+  "tableCount": 40,
+  "finishedAt": "2026-09-28T03:16:20.800Z",
+  "checks": [
+    {
+      "name": "source: signed webhook accepted before backup",
+      "ok": true,
+      "detail": "HTTP 202"
+    },
+    {
+      "name": "source: pre-backup run succeeded",
+      "ok": true,
+      "detail": "succeeded"
+    },
+    {
+      "name": "backup: pg_dump completed",
+      "ok": true,
+      "detail": "551958 bytes"
+    },
+    {
+      "name": "restore target is empty before restore",
+      "ok": true,
+      "detail": "0 tables"
+    },
+    {
+      "name": "restore: pg_restore exit 0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restore: every table's row count and id digest match",
+      "ok": true,
+      "detail": "40 tables"
+    },
+    {
+      "name": "restored: health ok, same revision and schema version",
+      "ok": true,
+      "detail": "rev ce08d9f schema 8"
+    },
+    {
+      "name": "restored: password sign-in works",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "restored: workflow and published version present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restored: run history present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restored: agent present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restored: knowledge metadata + index searchable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restored: membership + pending invite present",
+      "ok": true,
+      "detail": "1 member(s), 1 invite(s)"
+    },
+    {
+      "name": "restored: API key (hashed) still authenticates",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "restored: signed webhook accepted (encrypted secret decrypts with the recovered key)",
+      "ok": true,
+      "detail": "HTTP 202"
+    },
+    {
+      "name": "restored: webhook run executed by the restored worker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "negative: with a different encryption key the restored secret is unusable (delivery refused, 503)",
+      "ok": true,
+      "detail": "HTTP 503"
+    }
+  ],
+  "pass": true
+}

@@ -1,0 +1,13 @@
+
+> flowline@0.1.0 test:contract C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+> vitest run --project contract
+
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine
+
+
+ Test Files  15 passed (15)
+      Tests  97 passed (97)
+   Start at  06:19:19
+   Duration  8.24s (import 48%, tests 47%, transform 4%, worker 1%)
+

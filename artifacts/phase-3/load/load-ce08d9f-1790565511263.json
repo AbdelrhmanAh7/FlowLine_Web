@@ -1,0 +1,280 @@
+{
+  "base": "http://localhost:3200",
+  "startedAt": "2026-09-28T03:16:53.347Z",
+  "scenarios": {
+    "L-1": {
+      "n": 50616,
+      "p50": 10,
+      "p95": 14,
+      "p99": 19,
+      "max": 1397,
+      "statuses": {
+        "200": 50616
+      }
+    },
+    "L-2": {
+      "n": 36399,
+      "p50": 14,
+      "p95": 18,
+      "p99": 22,
+      "max": 1455,
+      "statuses": {
+        "200": 36399
+      }
+    },
+    "L-3": {
+      "n": 250,
+      "p50": 68,
+      "p95": 82,
+      "p99": 118,
+      "max": 132,
+      "statuses": {
+        "202": 250
+      },
+      "wallMs": 1757
+    },
+    "L-4": {
+      "accepted": 250,
+      "runsInDb": 250,
+      "states": {
+        "succeeded": 250
+      },
+      "drainMsAfterSubmit": 1005,
+      "totalMsFromFirstSubmit": 2772,
+      "duplicateStepRows": 0,
+      "runsWithDuplicateExecutionEvents": 0,
+      "executionEvents": 250
+    },
+    "L-5": {
+      "n": 60,
+      "p50": 4,
+      "p95": 41,
+      "p99": 46,
+      "max": 46,
+      "statuses": {
+        "202": 30,
+        "429": 30
+      },
+      "wallMs": 213
+    }
+  },
+  "resources": [
+    {
+      "at": "2026-09-28T03:17:03.388Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "139MiB",
+          "cpu": "0.34%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "201.8MiB",
+          "cpu": "8.21%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "50.01MiB",
+          "cpu": "3.78%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:17:13.388Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "139.1MiB",
+          "cpu": "0.27%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "205.3MiB",
+          "cpu": "8.17%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "50.37MiB",
+          "cpu": "0.34%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:17:23.388Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "139.4MiB",
+          "cpu": "0.23%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "207MiB",
+          "cpu": "8.02%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "49.79MiB",
+          "cpu": "0.31%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:17:33.389Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "139.3MiB",
+          "cpu": "0.40%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "210.2MiB",
+          "cpu": "0.02%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "58.42MiB",
+          "cpu": "3.07%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:17:43.389Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "107.7MiB",
+          "cpu": "4.38%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "211.5MiB",
+          "cpu": "0.02%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "58.11MiB",
+          "cpu": "0.82%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:17:53.391Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "108.6MiB",
+          "cpu": "0.33%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "212MiB",
+          "cpu": "0.02%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "58.75MiB",
+          "cpu": "0.25%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:18:03.392Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "108.4MiB",
+          "cpu": "0.31%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "213.1MiB",
+          "cpu": "0.01%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "55.55MiB",
+          "cpu": "3.65%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:18:13.395Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "108.9MiB",
+          "cpu": "0.31%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "215.5MiB",
+          "cpu": "0.02%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "55.45MiB",
+          "cpu": "2.35%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:18:23.396Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "108.8MiB",
+          "cpu": "0.39%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "215.4MiB",
+          "cpu": "0.01%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "55.77MiB",
+          "cpu": "0.30%"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-28T03:18:29.134Z",
+      "containers": [
+        {
+          "name": "flowline-staging-worker-1",
+          "mem": "154.4MiB",
+          "cpu": "0.16%"
+        },
+        {
+          "name": "flowline-staging-web-1",
+          "mem": "215.8MiB",
+          "cpu": "7.82%"
+        },
+        {
+          "name": "flowline-staging-db-1",
+          "mem": "68.68MiB",
+          "cpu": "0.09%"
+        }
+      ]
+    }
+  ],
+  "revision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd",
+  "schemaVersion": 8,
+  "peakDbConnections": 15,
+  "peakMemMb": {
+    "web": 215.8,
+    "worker": 154.4,
+    "db": 68.68
+  },
+  "verdicts": {
+    "L-1": true,
+    "L-2": true,
+    "L-3": true,
+    "L-4": true,
+    "L-5": true,
+    "L-6": true
+  },
+  "finishedAt": "2026-09-28T03:18:31.262Z"
+}

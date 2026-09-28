@@ -40,7 +40,7 @@ every step. Agents can use your published workflows and knowledge, within permis
 | The 12 integrations | Implemented and contract-tested against provider test doubles. **Live verification of 11 SaaS providers is BLOCKED** until sandbox credentials are provided (PostgreSQL is live-verified). |
 | Billing | Verified against a Stripe-compatible test double only. No real Stripe test-mode run yet, and **no live payments**. |
 | SSO | Verified against a test identity provider only. Not offered in production until a real IdP is configured and tested. |
-| Copilot | Proposals are always validated. With the local `qwen2.5:7b` model: 12/12 on the tuned request set, 7/12 on held-out requests (invalid proposals are rejected with reasons). |
+| Copilot | Safety contract verified: proposals are validated, local-only ones are dry-run and previewed, approval saves a draft and nothing runs. **Proposal quality with the local `qwen2.5:7b` isn't verified.** In independent staging tests about half of the real requests gave a correct draft, so treat Copilot as a suggestion aid. |
 | Not built | Password reset / email verification (needs an email provider), live presence on the canvas, light mode |
 
 ## Requirements
@@ -126,7 +126,7 @@ FLOWLINE_BILLING_FREE_PLAN=<id of the free test plan>
 | Live (real local Ollama + PostgreSQL; SaaS need `FLOWLINE_LIVE_*` sandbox credentials, else BLOCKED) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
-Results on the release revision: unit 105, contract 97, integration 262, E2E Chromium + Firefox 63/63, WebKit 14/14.
+Results on the release revision (`ce08d9f`): unit 108, contract 97, integration 263, E2E Chromium + Firefox 63/63, WebKit 14/14.
 
 ## Security notes
 

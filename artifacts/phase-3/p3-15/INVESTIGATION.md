@@ -27,16 +27,16 @@ Node resolves `localhost` to `::1` first (`[{"address":"::1"},{"address":"127.0.
 `scripts/diag/db-path-probe.mjs` connects once per second over **both** host paths at the same moment, plus
 `pg_isready` inside the container every 10 s. Raw data: `probe.jsonl`.
 
-At the time of writing, after about 87 minutes and about 5,100 probes per path:
+Final result: **4 hours, 237 one-minute windows, 13,936 probes per path** (23:22–03:22 UTC).
 
 | Path | Failures | Nature |
 |---|---|---|
-| `::1:5433` (wslrelay) | **10** | connect timeout (3 s) while the other path answered in about 15 ms |
+| `::1:5433` (wslrelay) | **14** | connect timeout (3 s) while the other path answered in about 15 ms |
 | `127.0.0.1:5433` (Docker backend) | **0** | — |
 | inside the container (`docker exec pg_isready`) | **0** | — |
 
 Failures cluster during heavy Docker activity. For example, 23:28–23:30 UTC was the pull and start of the 2 GB
-Playwright image. See the final numbers in the release report.
+Playwright image.
 
 ## Classification
 **Host networking, not the application or the database:** the WSL localhost relay on IPv6 loopback intermittently
