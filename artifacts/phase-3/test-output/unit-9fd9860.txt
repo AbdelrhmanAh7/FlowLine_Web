@@ -1,0 +1,13 @@
+
+> flowline@0.1.0 test C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
+> vitest run --project unit
+
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine
+
+
+ Test Files  12 passed (12)
+      Tests  105 passed (105)
+   Start at  05:29:02
+   Duration  1.36s (tests 45%, import 40%, transform 14%, worker 1%)
+

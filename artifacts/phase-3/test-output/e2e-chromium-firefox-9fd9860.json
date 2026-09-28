@@ -1,0 +1,2498 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--project=chromium",
+      "--project=firefox",
+      "--reporter=line,json"
+    ],
+    "configFile": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\playwright.config.ts",
+    "rootDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FlowLine/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 2,
+    "webServer": {
+      "command": "pnpm db:migrate:test && pnpm dev:test",
+      "url": "http://localhost:3100/api/health?require=worker",
+      "reuseExistingServer": true,
+      "timeout": 180000,
+      "stdout": "pipe",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [
+    {
+      "title": "canvas.spec.ts",
+      "file": "canvas.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "canvas interactions & keyboard map",
+          "file": "canvas.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "select, duplicate, nudge, delete, undo/redo, Esc, and typing guards",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8026,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:30:43.692Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-d47bfb339e9e092e79e7",
+              "file": "canvas.spec.ts",
+              "line": 5,
+              "column": 7
+            },
+            {
+              "title": "arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3703,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:30:51.853Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-f75505637dcc754007f6",
+              "file": "canvas.spec.ts",
+              "line": 81,
+              "column": 7
+            },
+            {
+              "title": "opening and selecting does not mark the flow dirty or bump its revision",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3469,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:30:55.566Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-e9c466eb34f9663e1b1a",
+              "file": "canvas.spec.ts",
+              "line": 101,
+              "column": 7
+            },
+            {
+              "title": "drawer tabs follow the WAI-ARIA keyboard pattern",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1045,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:30:59.043Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-eab9295cfbca2214ed11",
+              "file": "canvas.spec.ts",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "invalid connections are refused with an explanation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1102,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:31:00.095Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-69b9c6a10a32ee704841",
+              "file": "canvas.spec.ts",
+              "line": 133,
+              "column": 7
+            },
+            {
+              "title": "re-run from a step reuses upstream outputs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6859,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:31:01.204Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-927888373102848cf844",
+              "file": "canvas.spec.ts",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "select, duplicate, nudge, delete, undo/redo, Esc, and typing guards",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6096,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:54.634Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65359ccff3355b68920-1824ca26ee06e086ba39",
+              "file": "canvas.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "failures.spec.ts",
+      "file": "failures.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "invalid flow: run is blocked with reasons, fields show errors, API refuses",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 7553,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:30:43.703Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-cdaa0e5747a85e0714f2",
+          "file": "failures.spec.ts",
+          "line": 8,
+          "column": 5
+        },
+        {
+          "title": "save failure: silent retries then recovery, and manual retry after repeated failures",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 13744,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:30:51.413Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-c99cfc771c64e99df2d2",
+          "file": "failures.spec.ts",
+          "line": 39,
+          "column": 5
+        },
+        {
+          "title": "load failure: the canvas shows an error with a working Retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8300,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:05.165Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-8427803765ac99ff92d6",
+          "file": "failures.spec.ts",
+          "line": 63,
+          "column": 5
+        },
+        {
+          "title": "offline: edits kept locally, run disabled, reconciled on reconnect",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1120,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:13.474Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-2c1d40aa8ac34ae4a69a",
+          "file": "failures.spec.ts",
+          "line": 74,
+          "column": 5
+        },
+        {
+          "title": "offline conflict: newer server copy is never silently overwritten",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2187,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:14.603Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ca86dc4f195df8674d02-d450b759fc5fffc3bfaf",
+          "file": "failures.spec.ts",
+          "line": 97,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "hydration.spec.ts",
+      "file": "hydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "no hydration warnings: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 15457,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:08.076Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTQ0MCwKICAgICJsb2NhbGUiOiAiZW4tVVMiLAogICAgInRpbWV6b25lSWQiOiAiQW1lcmljYS9OZXdfWW9yayIKICB9LAogICJzZWVuIjogW10KfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-9970e0c4e76d57c9b7c5",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7838,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:23.541Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTAyNCwKICAgICJsb2NhbGUiOiAiYXItRUciLAogICAgInRpbWV6b25lSWQiOiAiQWZyaWNhL0NhaXJvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-eb05f460818f65073117",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7611,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:31.389Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMzc1LAogICAgImxvY2FsZSI6ICJkZS1ERSIsCiAgICAidGltZXpvbmVJZCI6ICJBc2lhL1Rva3lvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-7c8b739499bbe60117eb",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9363,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:01.450Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTQ0MCwKICAgICJsb2NhbGUiOiAiZW4tVVMiLAogICAgInRpbWV6b25lSWQiOiAiQW1lcmljYS9OZXdfWW9yayIKICB9LAogICJzZWVuIjogW10KfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-a76531cd5e3b377a84a4",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9119,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:10.821Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTAyNCwKICAgICJsb2NhbGUiOiAiYXItRUciLAogICAgInRpbWV6b25lSWQiOiAiQWZyaWNhL0NhaXJvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-e879090cb8925b290bbf",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9165,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:19.951Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMzc1LAogICAgImxvY2FsZSI6ICJkZS1ERSIsCiAgICAidGltZXpvbmVJZCI6ICJBc2lhL1Rva3lvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-f71a59b3e7faee669442",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "title": "journey.spec.ts",
+      "file": "journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "new user builds, saves, reopens, runs and inspects a flow",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 7090,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:16.806Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf222bad70f76648f722-9cda9ba8148d48378804",
+          "file": "journey.spec.ts",
+          "line": 9,
+          "column": 5
+        },
+        {
+          "title": "new user builds, saves, reopens, runs and inspects a flow",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 11092,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:27.422Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf222bad70f76648f722-6cd8dbe2638763c790ba",
+          "file": "journey.spec.ts",
+          "line": 9,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "library.spec.ts",
+      "file": "library.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "templates: a local template creates a flow and opens the canvas; design templates list their real requirements",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1434,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:23.907Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ad0ae3d52ea8a2949ca9-831c10cb5aceae80d799",
+          "file": "library.spec.ts",
+          "line": 4,
+          "column": 5
+        },
+        {
+          "title": "settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2825,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:25.351Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ad0ae3d52ea8a2949ca9-5304e2b06b8f7cb9a848",
+          "file": "library.spec.ts",
+          "line": 20,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "phase2.spec.ts",
+      "file": "phase2.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8457,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:28.193Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-6c07607f612efe28019e",
+          "file": "phase2.spec.ts",
+          "line": 80,
+          "column": 5
+        },
+        {
+          "title": "double-clicked Run starts one run, and Cancel stops it mid-request",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 11982,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:36.658Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-ac66c3d921e936e44c6c",
+          "file": "phase2.spec.ts",
+          "line": 145,
+          "column": 5
+        },
+        {
+          "title": "approval: a gated Slack post waits, is approved in the inspector, and posts exactly once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2454,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:48.654Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-ad3a0f70116d28c32d7f",
+          "file": "phase2.spec.ts",
+          "line": 173,
+          "column": 5
+        },
+        {
+          "title": "repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4943,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:51.115Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-0337b40608ec337e4184",
+          "file": "phase2.spec.ts",
+          "line": 197,
+          "column": 5
+        },
+        {
+          "title": "mobile: Phase 2 pages fit a phone screen without horizontal scrolling",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1471,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:56.065Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-0fa81cf0820df30244ec",
+          "file": "phase2.spec.ts",
+          "line": 251,
+          "column": 5
+        },
+        {
+          "title": "approval: a gated Slack post waits, is approved in the inspector, and posts exactly once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3473,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:29.137Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-bfa6c852645d177ed199",
+          "file": "phase2.spec.ts",
+          "line": 173,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "phase3.spec.ts",
+      "file": "phase3.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9349,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:39.024Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-93c1936dbd41067e3570",
+          "file": "phase3.spec.ts",
+          "line": 43,
+          "column": 5
+        },
+        {
+          "title": "API keys: created with a one-time reveal, work against /api/v1, stop working when revoked",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5043,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:48.383Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-3f2e6fddf058016251f1",
+          "file": "phase3.spec.ts",
+          "line": 103,
+          "column": 5
+        },
+        {
+          "title": "knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8319,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:53.434Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-bbacbe290c76eb6d5b11",
+          "file": "phase3.spec.ts",
+          "line": 126,
+          "column": 5
+        },
+        {
+          "title": "billing sandbox: choose a test plan → fake checkout → verified webhook → plan in force",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4093,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:12.969Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-b005b35429d3ae717cc4",
+          "file": "phase3.spec.ts",
+          "line": 241,
+          "column": 5
+        },
+        {
+          "title": "history: restore an older version as a draft (rollback) — history is kept",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 17885,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.react-flow__node')\nExpected: \u001b[32m5\u001b[39m\nReceived: \u001b[31m2\u001b[39m\nTimeout:  15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" locator('.react-flow__node') with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.react-flow__node')\u001b[22m\n\u001b[2m    33 × locator resolved to 2 elements\u001b[22m\n\u001b[2m       - unexpected value \"2\"\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.react-flow__node')\nExpected: \u001b[32m5\u001b[39m\nReceived: \u001b[31m2\u001b[39m\nTimeout:  15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" locator('.react-flow__node') with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.react-flow__node')\u001b[22m\n\u001b[2m    33 × locator resolved to 2 elements\u001b[22m\n\u001b[2m       - unexpected value \"2\"\u001b[22m\n\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\e2e\\phase3.spec.ts:267:51",
+                    "location": {
+                      "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\e2e\\phase3.spec.ts",
+                      "column": 51,
+                      "line": 267
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 265 |\u001b[39m   \u001b[36mawait\u001b[39m panel\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"list\"\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m\"Versions\"\u001b[39m })\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m)\u001b[33m.\u001b[39mfilter({ hasText\u001b[33m:\u001b[39m \u001b[32m\"publish\"\u001b[39m })\u001b[33m.\u001b[39mfirst()\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 266 |\u001b[39m   \u001b[36mawait\u001b[39m panel\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m\"Restore as draft\"\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 267 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".react-flow__node\"\u001b[39m))\u001b[33m.\u001b[39mtoHaveCount(v\u001b[33m.\u001b[39mgraph\u001b[33m.\u001b[39mnodes\u001b[33m.\u001b[39mlength\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m15\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 268 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 269 |\u001b[39m\n \u001b[90m 270 |\u001b[39m test(\u001b[32m\"mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\e2e\\phase3.spec.ts",
+                        "column": 51,
+                        "line": 267
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.react-flow__node')\nExpected: \u001b[32m5\u001b[39m\nReceived: \u001b[31m2\u001b[39m\nTimeout:  15000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" locator('.react-flow__node') with timeout 15000ms\u001b[22m\n\u001b[2m  - waiting for locator('.react-flow__node')\u001b[22m\n\u001b[2m    33 × locator resolved to 2 elements\u001b[22m\n\u001b[2m       - unexpected value \"2\"\u001b[22m\n\n\n  265 |   await panel.getByRole(\"list\", { name: \"Versions\" }).getByRole(\"button\").filter({ hasText: \"publish\" }).first().click();\n  266 |   await panel.getByRole(\"button\", { name: \"Restore as draft\" }).click();\n> 267 |   await expect(page.locator(\".react-flow__node\")).toHaveCount(v.graph.nodes.length, { timeout: 15_000 });\n      |                                                   ^\n  268 | });\n  269 |\n  270 | test(\"mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile\", async ({ page }) => {\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\e2e\\phase3.spec.ts:267:51"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:17.071Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\test-results\\phase3-history-restore-an--8ee56--rollback-—-history-is-kept-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\test-results\\phase3-history-restore-an--8ee56--rollback-—-history-is-kept-chromium\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\test-results\\phase3-history-restore-an--8ee56--rollback-—-history-is-kept-chromium\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FlowLine\\e2e\\phase3.spec.ts",
+                    "column": 51,
+                    "line": 267
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-727ec2af02d34c62ffe8",
+          "file": "phase3.spec.ts",
+          "line": 255,
+          "column": 5
+        },
+        {
+          "title": "mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1591,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:35.657Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-5ca913228cc5f60d99cf",
+          "file": "phase3.spec.ts",
+          "line": 270,
+          "column": 5
+        },
+        {
+          "title": "SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6556,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:37.360Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-183decaeeadc78951781",
+          "file": "phase3.spec.ts",
+          "line": 282,
+          "column": 5
+        },
+        {
+          "title": "a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4551,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:43.927Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-fb23256c6ebb5cd69c7a",
+          "file": "phase3.spec.ts",
+          "line": 342,
+          "column": 5
+        },
+        {
+          "title": "members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7223,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:32.637Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-98df9d301b50d6537621",
+          "file": "phase3.spec.ts",
+          "line": 43,
+          "column": 5
+        },
+        {
+          "title": "API keys: created with a one-time reveal, work against /api/v1, stop working when revoked",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2766,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:39.873Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-f5bddab3938a6671cd90",
+          "file": "phase3.spec.ts",
+          "line": 103,
+          "column": 5
+        },
+        {
+          "title": "knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6277,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:42.647Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-abd07591411b208a2be4",
+          "file": "phase3.spec.ts",
+          "line": 126,
+          "column": 5
+        },
+        {
+          "title": "a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6405,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:52.149Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a64b8b583ae028ac2231-bd02f2dad36b44d0ee29",
+          "file": "phase3.spec.ts",
+          "line": 342,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "Copilot",
+          "file": "phase3.spec.ts",
+          "line": 169,
+          "column": 6,
+          "specs": [
+            {
+              "title": "valid generation with a missing credential → approve → saved draft, nothing ran",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4272,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:01.760Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a64b8b583ae028ac2231-3872202bed8694bd437e",
+              "file": "phase3.spec.ts",
+              "line": 181,
+              "column": 7
+            },
+            {
+              "title": "invalid proposal and missing integration are explained and can't be applied; rejection changes nothing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4031,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:06.038Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a64b8b583ae028ac2231-077ece674bd3f428b04b",
+              "file": "phase3.spec.ts",
+              "line": 205,
+              "column": 7
+            },
+            {
+              "title": "patching an existing flow keeps the user's steps; removals need explicit confirmation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2885,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:10.075Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a64b8b583ae028ac2231-425e411fa92223ddd5e0",
+              "file": "phase3.spec.ts",
+              "line": 220,
+              "column": 7
+            },
+            {
+              "title": "valid generation with a missing credential → approve → saved draft, nothing ran",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3211,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:33:48.932Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a64b8b583ae028ac2231-abb8603307e26d3cf27a",
+              "file": "phase3.spec.ts",
+              "line": 181,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "prehydration.spec.ts",
+      "file": "prehydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "text typed before hydration survives",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5072,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:31:57.549Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "02335b5c6f443e35f85e-6fe10562b80bccfd8f7f",
+          "file": "prehydration.spec.ts",
+          "line": 7,
+          "column": 5
+        },
+        {
+          "title": "sign-in forms submitted before hydration: SSO still works, credentials never reach a URL",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8217,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:02.628Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "02335b5c6f443e35f85e-060011684b46f4063de6",
+          "file": "prehydration.spec.ts",
+          "line": 20,
+          "column": 5
+        },
+        {
+          "title": "text typed before hydration survives",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5785,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:38.967Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "02335b5c6f443e35f85e-77621f41221897427e07",
+          "file": "prehydration.spec.ts",
+          "line": 7,
+          "column": 5
+        },
+        {
+          "title": "sign-in forms submitted before hydration: SSO still works, credentials never reach a URL",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 12471,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:44.762Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "02335b5c6f443e35f85e-6974ac70e875ee56302b",
+          "file": "prehydration.spec.ts",
+          "line": 20,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "responsive.spec.ts",
+      "file": "responsive.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2234,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:16.277Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-4d78f1a04c936563e015",
+          "file": "responsive.spec.ts",
+          "line": 58,
+          "column": 5
+        },
+        {
+          "title": "mobile is monitor-only: editing disabled with a persistent banner, running still works",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2080,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:18.518Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-4a56524ca2636a3b8497",
+          "file": "responsive.spec.ts",
+          "line": 91,
+          "column": 5
+        },
+        {
+          "title": "capture screens & states at 1440 / 1024 / 375",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 240000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 33663,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:20.605Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-527920bac718ddd08926",
+          "file": "responsive.spec.ts",
+          "line": 123,
+          "column": 5
+        },
+        {
+          "title": "capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 300000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 32187,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:54.277Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e0223b006feb3d306446-e7ea4d034d26aef39832",
+          "file": "responsive.spec.ts",
+          "line": 229,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "breakpoints",
+          "file": "responsive.spec.ts",
+          "line": 32,
+          "column": 6,
+          "specs": [
+            {
+              "title": "shell at 1440px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 982,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:10.861Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-8bdc5dafb3c2d31e7d0a",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1280px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 862,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:11.852Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-3acb78e7570cd623b10c",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1279px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 736,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:12.724Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-3e0f446c612fc89d2bd9",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 1024px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 746,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:13.470Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-bcd43ba04e2d07291de8",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 768px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 716,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:14.223Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-ad8f54d0558a172e2a2e",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 767px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 675,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:14.947Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-9c2c92556ce8450fe2b4",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            },
+            {
+              "title": "shell at 375px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 637,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-28T02:32:15.631Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e0223b006feb3d306446-cc9fcac75b3062cb1a1d",
+              "file": "responsive.spec.ts",
+              "line": 42,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tenancy.spec.ts",
+      "file": "tenancy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "two users in separate workspaces cannot see each other's flows or runs",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3175,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:48.500Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-e3ec70ec187c70695820",
+          "file": "tenancy.spec.ts",
+          "line": 4,
+          "column": 5
+        },
+        {
+          "title": "unauthenticated API access is rejected and app routes redirect to sign-in",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 767,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:51.691Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-87930d5b09808074dfb2",
+          "file": "tenancy.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "sign-out clears local drafts",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1500,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:32:52.476Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-6c53e32f3727009ec0a8",
+          "file": "tenancy.spec.ts",
+          "line": 51,
+          "column": 5
+        },
+        {
+          "title": "two users in separate workspaces cannot see each other's flows or runs",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "firefox",
+              "projectName": "firefox",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4166,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-28T02:33:57.245Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "2e30ab9de1b1ba27182f-c4ce64ceccc30faac481",
+          "file": "tenancy.spec.ts",
+          "line": 4,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-28T02:30:39.879Z",
+    "duration": 202386.20200000002,
+    "expected": 62,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

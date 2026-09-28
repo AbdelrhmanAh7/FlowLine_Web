@@ -1,0 +1,76 @@
+{
+  "from": {
+    "image": "flowline:ee265ea",
+    "id": "sha256:6acc69abcd118a2b820b243a5df84b613dfa6d26d45cc8c6c5a3357f488760c2",
+    "revision": "ee265eafe43246d48c3665dd3614fa0ed37c1914"
+  },
+  "to": {
+    "image": "flowline:9fd9860",
+    "id": "sha256:fa6e7569d2c0e801bb39798a39efdbac02f60443928da782ba50922aa5db983e",
+    "revision": "9fd986002fde5f859e36db46b67eea901387348b"
+  },
+  "startedAt": "2026-09-28T02:24:51.135Z",
+  "deployFromMs": 2660,
+  "deployToMs": 7840,
+  "rollbackDeployMs": 8198,
+  "rollbackToHealthyMs": 10215,
+  "finishedAt": "2026-09-28T02:25:27.637Z",
+  "checks": [
+    {
+      "name": "N (known good) deployed",
+      "ok": true,
+      "detail": "rev ee265ea schema 7"
+    },
+    {
+      "name": "N: webhook run executes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "N+1 deployed (migrations applied, expand-only)",
+      "ok": true,
+      "detail": "rev 9fd9860 schema 8"
+    },
+    {
+      "name": "N+1: existing session, flow and webhook still work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: N serves again, DB keeps the newer schema (no down migration)",
+      "ok": true,
+      "detail": "rev ee265ea schema 8"
+    },
+    {
+      "name": "rollback: password sign-in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "rollback: workflow loads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: data written by N+1 is readable by N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: webhook run executes on N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: run history from N and N+1 intact",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "roll forward: N+1 serves again",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pass": true
+}

@@ -7,33 +7,24 @@
 - **Deferred checks stay BLOCKED — missing credentials.** They are release requirements R-01…R-11 in `SCOPE_MATRIX.md` → *Release acceptance* (credentials and verification steps listed there). Those integrations are implemented and contract-tested but **not** live-verified. Don't call the product Production Ready until they pass, unless the owner approves a release-scope change.
 - **Not authorised:** production deployment and live payments.
 
-## Phase 3 — in progress on branch `phase-3` (prompt received 2026-09-28)
+## Phase 3 — delivered on branch `phase-3` (release report: `docs/implementation/RELEASE_REPORT.md`)
 
-State at `03a99d7` (update this block as work lands):
-- Built and tested: agents (ALLOW/ASK/DENY in the backend), knowledge, Copilot, members/roles/invites, sharing,
-  versioning/rollback, API keys + `/api/v1`, usage accounting, billing (Stripe-compatible adapter, test mode only,
-  verified against the test double), OIDC SSO (verified against a test IdP only), audit log, REL-LIVE-SUITE
-  (live rows stay BLOCKED without credentials).
-- Gates at `ee265ea`: lint/typecheck clean; unit 98, contract 97, integration 260/260; E2E Chromium+Firefox 60/60,
-  WebKit (Linux container, `bash e2e/tools/webkit-docker.sh`) 13/13.
-- Independent review: Codex code/security review (7 findings, all fixed with regression tests),
-  Fable 5.1 security review + capability × role matrix (1 low finding, fixed).
-- Release evidence on candidate `ee265ea` (`artifacts/phase-3/`): rollback (incl. across a migration), backup →
-  clean restore, load L-1…L-6 all met, DB outage test (found + fixed a health hang in `72cff16`).
-- P3-15 classified (WSL relay on ::1; dev/test now use 127.0.0.1). P3-16: clean in all monitored runs so far.
-- **Running:** Codex agent-driven exploratory browser test of staging (`http://localhost:3200`, image
-  `flowline:ee265ea`) + retest of CX3 findings, in worktree `../FL-wt-codex` →
-  `artifacts/phase-3/codex-qa/REPORT.md`.
+- **Verdicts:** CODE COMPLETE **YES** · STAGING VERIFIED **YES, with stated limits** · PRODUCTION APPROVED **NO**.
+- **Release:** code `9fd9860`, image `flowline:9fd9860` (`sha256:fa6e7569…`); local staging `http://localhost:3200`
+  (`FLOWLINE_IMAGE=flowline:9fd9860 docker compose -f docker-compose.staging.yml --env-file .env.staging up -d`).
+- **Tests on the release revision:** unit 105, contract 97, integration 262, E2E Chromium+Firefox 63/63, WebKit 14/14.
+- **Independent QA:** Codex code review (7 findings fixed), Fable security matrix (1 fixed), Codex staging browser QA
+  (5 findings fixed) + retest → `artifacts/phase-3/codex-qa-retest/`.
+- **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
-Next: fix Codex QA findings → Codex retest → build the final image → rerun `scripts/release/{rollback,backup-restore,db-outage}.mjs`
-and `scripts/load/run.mjs` on it → SCOPE_MATRIX statuses → `docs/implementation/RELEASE_REPORT.md` → three verdicts.
+## Waiting for the user (only you can do these)
 
-## Waiting for the user
-
-- Nothing is blocking the build. Production deployment and live payments are **not** authorised and won't be done.
-- **Optional, any time:** sandbox credentials `FLOWLINE_LIVE_*` for R-01…R-11 (see `.env.example`), a Stripe
-  `sk_test_` key for a real test-mode billing check, real OAuth apps for Google/GitHub sign-in, an email provider for
-  password reset/verification.
+1. **Production approval** — not given; nothing was deployed to production and no live payments were enabled.
+2. **Credentials to close the BLOCKED rows** (dedicated sandbox/test accounts only; put them in `.env`, never in chat):
+   `FLOWLINE_LIVE_*` for R-01…R-11 then `pnpm test:live:saas`; a Stripe `sk_test_` key + plans/webhook secret for real
+   test-mode billing; Google/GitHub OAuth apps (P3-13); an OIDC IdP if SSO should be offered.
+3. **Product decisions:** an email provider for password reset / verification / account deletion (P3-08); whether
+   presence (P3-10) and light mode (P3-11) are wanted; or an explicit release-scope change for R-01…R-11.
 
 ## Resume or verify locally
 

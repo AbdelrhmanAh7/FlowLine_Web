@@ -10,13 +10,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Flowline — project rules (all agents)
 
-- **Scope:** phases are gated. Phase 1 = interface and foundation (see `SCOPE_MATRIX.md`, `docs/implementation/`). Don't start Phase 2/3 work without its own prompt.
+- **Scope:** all three phases have been delivered (status and evidence in `SCOPE_MATRIX.md`, `docs/implementation/RELEASE_REPORT.md`). New work needs its own prompt. **Production deployment, live payments and release-scope changes need explicit owner approval.** Unverified integrations must never be presented as production-verified.
 - **Design source:** `design-reference/` (slide renders + `DESIGN-REFERENCE.md`). Tokens live only in `src/app/globals.css` `@theme`. No generic dashboard styling, no hover lifts, and motion ≤300ms with `prefers-reduced-motion` honoured.
 - **Honesty in UI:** no fake success, metrics, pricing, connections, or model names. Anything not built must show its real state, or a disabled control with a reason (`Button disabledReason`).
 - **Data:** flows, versions, runs and steps live in Postgres. Every server access goes through `src/server/access.ts` (non-members get 404). Schema changes need a drizzle migration (`pnpm db:generate`).
 - **Engine:** `src/engine` is shared by web and worker. Connection rules exist once (`checkConnection`).
 - **Test-only code** (fault injection, relaxed rate limits) must stay behind `FLOWLINE_ENV=test`. Tests use `flowline_test` and port 3100, never the dev DB.
-- **Gates before commit:** `pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration`, plus `pnpm test:e2e` for UI changes. Never delete an assertion or change a baseline to hide a bug; skipped or flaky tests are failures.
+- **Gates before commit:** `pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && pnpm test:integration`, plus `pnpm test:e2e` for UI changes (Chromium + Firefox; WebKit via `bash e2e/tools/webkit-docker.sh` with the test stack running). Integration tests refuse to run while a test-stack worker is up (`pnpm stop:test`). Never delete an assertion or change a baseline to hide a bug; skipped or flaky tests are failures.
 - **Helper agents** (Kimi, Codex, OpenCode/Command Code on free models, local Ollama): at most 3 at once (prefer 1–2, the laptop is resource-limited). Helpers don't commit, and there is never more than one agent per browser session. Use Ollama local models one at a time (`qwen3-vl:8b`, `qwen2.5:7b`).
 - **Keyboard:** shortcuts must not fire while typing (`isTypingTarget`). Ctrl stands in for ⌘ on Windows/Linux.
 - **Evidence:** test reports, screenshots and reviews go under `artifacts/phase-N/`, tied to the tested SHA. No secrets or customer data in evidence.
