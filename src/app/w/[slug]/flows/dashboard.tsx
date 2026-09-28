@@ -10,7 +10,7 @@ import { useToast } from "@/components/toast";
 import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, type Tone } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { duration, percent, timeAgo } from "@/lib/format";
-import { useNow, useOnline } from "@/lib/hooks";
+import { useNow, useOnline, useViewport } from "@/lib/hooks";
 
 export interface FlowRow {
   id: string;
@@ -94,7 +94,9 @@ export function Dashboard() {
   const create = useCreateFlow();
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
-  const newReason = !canEdit ? "Viewers can't create flows" : !online ? "You're offline — reconnect to create flows" : null;
+  const isMobile = useViewport() === "mobile";
+  // Mobile is monitor-first: a new flow couldn't be edited (or built with Copilot) here anyway.
+  const newReason = !canEdit ? "Viewers can't create flows" : !online ? "You're offline — reconnect to create flows" : isMobile ? "Creating and editing flows is disabled on mobile — use a tablet or desktop" : null;
 
   return (
     <div className="flex flex-col">

@@ -1,0 +1,30 @@
+{
+  "revision": "ee265eafe43246d48c3665dd3614fa0ed37c1914",
+  "metric": "document.documentElement.scrollWidth - innerWidth (pixels)",
+  "widths": {
+    "375": {
+      "flows": 0,
+      "flow_canvas": 0,
+      "agents": 0,
+      "knowledge": 0,
+      "settings": 0,
+      "agent_detail": 0
+    },
+    "1024": {
+      "flows": 0,
+      "flow_canvas": 0,
+      "runs": 0,
+      "agents": 0,
+      "knowledge": 0,
+      "settings": 0
+    },
+    "1440": {
+      "flows": 0,
+      "flow_canvas": 0,
+      "runs": 0,
+      "agents": 0,
+      "knowledge": 0,
+      "settings": 0
+    }
+  }
+}

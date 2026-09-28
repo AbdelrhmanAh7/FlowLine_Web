@@ -5,7 +5,7 @@ import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { decideProposal, propose } from "@/server/copilot";
 import { createFlow, saveFlow } from "@/server/flows";
-import { createWorkspace } from "@/server/workspaces";
+import { createWorkspace, updateWorkspace } from "@/server/workspaces";
 import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
 let ai: Awaited<ReturnType<typeof startFakeAi>>;
@@ -132,5 +132,27 @@ describe("Copilot proposals", () => {
     const p = await propose(user, flow.id, "add a condition");
     expect(p.status).toBe("invalid");
     expect(p.issues[0]!.code).toMatch(/AI_ERROR|INVALID_PATCH/);
+  });
+});
+
+describe("Copilot usage accounting", () => {
+  it("every model call is metered with its tokens; an exhausted budget refuses before calling the model", async () => {
+    const { ws, flow, user } = await setup();
+    const p = await propose(user, flow.id, "Every Monday get the latest KPI data, summarize the important changes, and email leadership.");
+    expect(p.status).toBe("proposed");
+    const events = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).filter((e) => e.idempotencyKey.startsWith(`copilot:${flow.id}:`));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ kind: "ai", status: "settled", provider: "ollama" });
+    expect(events[0]!.inputTokens).toBeGreaterThan(0);
+
+    // A tiny budget and a real price: the next proposal is refused up front, with no model call recorded.
+    await updateWorkspace(ws.id, { monthlyBudget: 0.000001, prices: { "ai:ollama/fake-model": { inputPerMTok: 100, outputPerMTok: 100 } } });
+    const before = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).length;
+    const refused = await propose(user, flow.id, "add a condition");
+    expect(refused.status).toBe("invalid");
+    expect(refused.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "BUDGET_EXCEEDED" })]));
+    const after = await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id));
+    expect(after.filter((e) => e.status === "settled").length).toBe(events.length);
+    expect(after.length).toBeLessThanOrEqual(before + 1); // at most the refused reservation record, never a settled call
   });
 });

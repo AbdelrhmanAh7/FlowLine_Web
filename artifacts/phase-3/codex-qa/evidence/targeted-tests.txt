@@ -1,0 +1,8 @@
+Revision: ee265eafe43246d48c3665dd3614fa0ed37c1914
+Before integration run: no local Flowline worker process targeting flowline_test was present.
+
+pnpm test -- tests/unit/codex-poc-egress-redirect.test.ts tests/unit/http-capbody.test.ts
+Result: 2 files passed, 4 tests passed, exit 0.
+
+node scripts/with-env.mjs .env.test pnpm exec vitest run --project integration tests/integration/p3-sso.test.ts tests/integration/codex-poc-agent-approval-republish.test.ts tests/integration/p3-agents.test.ts tests/integration/p3-billing.test.ts
+Result: 4 files passed, 49 tests passed, exit 0. Test DB: flowline_test on localhost:5433.

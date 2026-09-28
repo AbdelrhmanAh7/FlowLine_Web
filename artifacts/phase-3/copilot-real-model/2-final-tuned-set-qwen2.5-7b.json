@@ -1,0 +1,177 @@
+{
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "at": "2026-09-28T01:45:32.377Z",
+  "valid": 12,
+  "total": 12,
+  "results": [
+    {
+      "case": "new: order totals",
+      "run": 1,
+      "ok": true,
+      "ms": 3130,
+      "errors": [],
+      "warnings": [],
+      "added": [
+        "trigger.manual",
+        "transform.json",
+        "output"
+      ]
+    },
+    {
+      "case": "new: order totals",
+      "run": 2,
+      "ok": true,
+      "ms": 2897,
+      "errors": [],
+      "warnings": [],
+      "added": [
+        "trigger.manual",
+        "transform.json",
+        "output"
+      ]
+    },
+    {
+      "case": "new: order totals",
+      "run": 3,
+      "ok": true,
+      "ms": 2900,
+      "errors": [],
+      "warnings": [],
+      "added": [
+        "trigger.manual",
+        "transform.json",
+        "output"
+      ]
+    },
+    {
+      "case": "edit: add JSON transform",
+      "run": 1,
+      "ok": true,
+      "ms": 1787,
+      "errors": [],
+      "warnings": [
+        "CONNECTION_DROPPED",
+        "PLACED_BEFORE_OUTPUT"
+      ],
+      "added": [
+        "transform.json"
+      ]
+    },
+    {
+      "case": "edit: add JSON transform",
+      "run": 2,
+      "ok": true,
+      "ms": 1708,
+      "errors": [],
+      "warnings": [
+        "CONNECTION_DROPPED",
+        "PLACED_BEFORE_OUTPUT"
+      ],
+      "added": [
+        "transform.json"
+      ]
+    },
+    {
+      "case": "edit: add JSON transform",
+      "run": 3,
+      "ok": true,
+      "ms": 1699,
+      "errors": [],
+      "warnings": [
+        "CONNECTION_DROPPED",
+        "PLACED_BEFORE_OUTPUT"
+      ],
+      "added": [
+        "transform.json"
+      ]
+    },
+    {
+      "case": "edit: add condition",
+      "run": 1,
+      "ok": true,
+      "ms": 6041,
+      "errors": [],
+      "warnings": [
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE"
+      ],
+      "added": [
+        "logic.condition"
+      ]
+    },
+    {
+      "case": "edit: add condition",
+      "run": 2,
+      "ok": true,
+      "ms": 6597,
+      "errors": [],
+      "warnings": [
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE"
+      ],
+      "added": [
+        "logic.condition"
+      ]
+    },
+    {
+      "case": "edit: add condition",
+      "run": 3,
+      "ok": true,
+      "ms": 7041,
+      "errors": [],
+      "warnings": [
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE",
+        "RESOLVED_REFERENCE"
+      ],
+      "added": [
+        "logic.condition"
+      ]
+    },
+    {
+      "case": "unavailable: Salesforce",
+      "run": 1,
+      "ok": true,
+      "ms": 1,
+      "errors": [
+        "UNKNOWN_INTEGRATION: \"Salesforce\" isn't an available integration in Flowline. Available: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear."
+      ],
+      "warnings": []
+    },
+    {
+      "case": "unavailable: Salesforce",
+      "run": 2,
+      "ok": true,
+      "ms": 0,
+      "errors": [
+        "UNKNOWN_INTEGRATION: \"Salesforce\" isn't an available integration in Flowline. Available: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear."
+      ],
+      "warnings": []
+    },
+    {
+      "case": "unavailable: Salesforce",
+      "run": 3,
+      "ok": true,
+      "ms": 0,
+      "errors": [
+        "UNKNOWN_INTEGRATION: \"Salesforce\" isn't an available integration in Flowline. Available: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear."
+      ],
+      "warnings": []
+    }
+  ]
+}

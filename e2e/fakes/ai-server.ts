@@ -203,7 +203,7 @@ interface CopilotCtx {
  */
 function handleCopilot(r: { model: string; messages: { role: string; content: string }[] }, res: ServerResponse) {
   const sys = r.messages.find((m) => m.role === "system")?.content ?? "";
-  const request = (/this request from the workflow's owner: "([\s\S]*?)"\. Use ONLY/.exec(sys)?.[1] ?? "").toLowerCase();
+  const request = (/this request from the workflow's owner: "([\s\S]*?)"\.(?:\s|$)/.exec(sys)?.[1] ?? "").toLowerCase();
   const user = r.messages.find((m) => m.role === "user")?.content ?? "";
   let ctx: CopilotCtx = { catalog: { connections: [] }, currentWorkflow: { nodes: [], edges: [] } };
   try {
