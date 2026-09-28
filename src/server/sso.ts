@@ -8,6 +8,7 @@ import { requireWorkspace } from "./access";
 import { audit, userActor } from "./audit";
 import { decryptSecret, encryptSecret, randomToken } from "./crypto";
 import { EgressError, safeFetch } from "./egress";
+import { allowSignUp, BETA_REFUSAL } from "./beta";
 import { HttpError } from "./http";
 import {
   assertIssuerUrl,
@@ -437,7 +438,9 @@ export async function completeSso(opts: {
           accountId: claims.sub,
         });
       user = existing;
-    } else
+    } else {
+      // Private beta: SSO can't create accounts that email/social sign-up couldn't (P4-12).
+      if (!(await allowSignUp(email)).ok) throw new HttpError(403, "BETA_INVITE_REQUIRED", BETA_REFUSAL);
       user = await db.transaction(async (tx) => {
         const [created] = await tx
           .insert(schema.user)
@@ -465,6 +468,7 @@ export async function completeSso(opts: {
           });
         return created;
       });
+    }
     newUser = !existing;
   }
   if (!user)

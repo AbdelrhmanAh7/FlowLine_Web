@@ -14,3 +14,5 @@ blob-report/
 .DS_Store
 .env.staging
 .claude/worktrees/
+deploy/beta/.env.beta
+deploy/beta/backups/

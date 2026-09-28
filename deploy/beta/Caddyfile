@@ -1,0 +1,26 @@
+# Automatic HTTPS (Let's Encrypt) for the beta domain. Only this proxy is public.
+{$BETA_DOMAIN} {
+	encode zstd gzip
+
+	# Internal-only endpoints are never exposed through the proxy.
+	@internal path /api/test/* /api/debug/* /_next/webpack-hmr*
+	respond @internal 404
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	reverse_proxy web:3000 {
+		header_up X-Request-Id {http.request.uuid}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

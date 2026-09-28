@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { redactString, safeErrorText } from "@/server/redact";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
+import { allowSignUp, BETA_REFUSAL } from "@/server/beta";
 
 export const oauthConfig = {
   google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
@@ -41,6 +43,18 @@ export const auth = betterAuth({
     customRules: { "/sign-in/email": { window: 60, max: 10 }, "/sign-up/email": { window: 60, max: 10 } },
   },
   advanced: { database: { generateId: () => crypto.randomUUID() } },
+  // Private beta (P4-12): every new account — email or Google/GitHub — must be invited, hold a beta code, or be an admin.
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user, ctx) => {
+          const body = (ctx as { body?: { betaCode?: unknown } } | null | undefined)?.body;
+          const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null);
+          if (!decision.ok) throw new APIError("FORBIDDEN", { message: BETA_REFUSAL, code: "BETA_INVITE_REQUIRED" });
+        },
+      },
+    },
+  },
   // Better Auth logs failed DB queries verbatim (bound params include session tokens): scrub before logging.
   logger: {
     log: (level, message, ...args) => {

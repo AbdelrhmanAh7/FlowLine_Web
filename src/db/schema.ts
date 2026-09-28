@@ -909,3 +909,15 @@ export const ssoState = pgTable("sso_state", {
   initiatorUserId: text("initiator_user_id"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
+
+/** Private beta: single- or multi-use access codes for sign-up (stored hashed; the code is shown once when created). */
+export const betaAccessCode = pgTable("beta_access_code", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  codeHash: text("code_hash").notNull().unique(),
+  label: text("label").notNull(),
+  maxUses: integer("max_uses").notNull().default(1),
+  usedCount: integer("used_count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
