@@ -246,3 +246,14 @@ configurations are kept readable and marked for migration. Plan: `docs/ai/IMPLEM
 | AIH-22 | **Credential isolation:** manage ≠ use, enforced server-side; connectionId-only references; server-side resolution for scheduled work; two-workspace isolation | A | Integration + E2E (fake provider records the key hash per request) | PLANNED | |
 | AIH-23 | **No env or global fallback:** no tenant path reads provider env vars; a missing or revoked connection fails clearly; platform-funded AI disabled; legacy env keys not imported | A | Integration (a bogus global key is never sent) + startup with no AI env | PLANNED | |
 | AIH-24 | **Secret leakage:** the key is absent from responses, HTML, browser storage, drafts, URLs, telemetry, logs, run meta and evidence | A/C | Canary-key scan in E2E + Codex audit | PLANNED | |
+
+### Credentials in the UI (owner decision 2026-09-29; design `docs/security/CREDENTIALS_DESIGN.md`)
+
+| ID | Requirement | Acceptance test | Status | Evidence |
+|---|---|---|---|---|
+| SEC-01 | Crypto v2 envelope + AAD + key rings; migrate existing ciphertext with no downgrade | AAD swap / v1-downgrade tests | PLANNED | |
+| SEC-02 | Platform admin principal, bootstrap challenge, MFA + step-up, 404 for non-admins | Integration + E2E | PLANNED | |
+| SEC-03 | Platform credentials in the UI (OAuth apps, email, Paddle, sign-in), write-only, rotation with no restart, one explicit import from env, no runtime env fallback | Integration + E2E + canary scan | PLANNED | |
+| SEC-04 | OAuth hardening: app-identity binding, state binding, callback re-checks, refresh fencing, `invalid_client` ≠ token expiry, bounded errors, Caddy redaction, social-token encryption | Integration | PLANNED | |
+| SEC-05 | Per-workspace OAuth app override (owner-only), consent provenance, switch/delete impact | Integration + E2E | PLANNED | |
+| SEC-06 | Platform audit log (≥730 d, transactional, typed) + admin notifications | Integration | PLANNED | |
