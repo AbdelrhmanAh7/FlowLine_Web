@@ -140,7 +140,7 @@ async function proposeFor(user: CurrentUser, workspaceId: string, flow: typeof s
   const text = request.trim();
   if (!text) throw new HttpError(400, "VALIDATION", "Describe what the workflow should do");
   if (text.length > 2000) throw new HttpError(413, "INPUT_TOO_LARGE", "Keep the request under 2,000 characters");
-  checkRunRate(`copilot:${user.id}`);
+  await checkRunRate(`copilot:${user.id}`);
   const conns = await db
     .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
     .from(schema.connection)

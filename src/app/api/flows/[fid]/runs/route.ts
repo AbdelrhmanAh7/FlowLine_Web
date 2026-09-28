@@ -33,12 +33,12 @@ export const POST = route(async (req, { params }: Ctx) => {
     throw new HttpError(400, "BAD_JSON", "Request body must be JSON");
   }
   const parsed = body.parse(raw);
-  if (!parsed?.clientRequestId) checkRunRate(user.id);
+  if (!parsed?.clientRequestId) await checkRunRate(user.id);
   const { run, duplicate } = await enqueueRunEx(user, flow.id, {
     input: parsed?.input,
     triggerKind: "manual",
     triggerRef: parsed?.clientRequestId ? `click:${parsed.clientRequestId}` : undefined,
   });
-  if (!duplicate && parsed?.clientRequestId) checkRunRate(user.id);
+  if (!duplicate && parsed?.clientRequestId) await checkRunRate(user.id);
   return json({ run, duplicate }, { status: duplicate ? 200 : 202 });
 });

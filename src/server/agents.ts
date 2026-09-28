@@ -155,7 +155,7 @@ export async function startAgentRun(opts: { agentId: string; message: string; co
   const message = opts.message.trim();
   if (!message) throw new HttpError(400, "VALIDATION", "Send a message for the agent");
   if (message.length > 8000) throw new HttpError(413, "INPUT_TOO_LARGE", "Messages are limited to 8,000 characters");
-  checkRunRate(opts.apiKeyId ? `apikey:${opts.apiKeyId}` : opts.actingUser.id);
+  await checkRunRate(opts.apiKeyId ? `apikey:${opts.apiKeyId}` : opts.actingUser.id);
   return db.transaction(async (tx) => {
     const [a] = await tx.select().from(schema.agent).where(and(eq(schema.agent.id, opts.agentId), isNull(schema.agent.deletedAt)));
     if (!a || !a.currentVersionId) throw notFound("Agent not found");

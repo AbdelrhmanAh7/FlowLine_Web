@@ -966,3 +966,10 @@ export const productEvent = pgTable(
   },
   (t) => [index("product_event_name_at_idx").on(t.name, t.at), index("product_event_ws_idx").on(t.workspaceId, t.at)],
 );
+
+/** Shared sliding-window rate limiting (P4-13): one row per hit, keys hashed; old hits are removed on each check. */
+export const rateLimitHit = pgTable("rate_limit_hit", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: text("key").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("rate_limit_hit_key_at_idx").on(t.key, t.at)]);

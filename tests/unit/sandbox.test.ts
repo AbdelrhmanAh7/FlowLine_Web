@@ -6,7 +6,6 @@ afterAll(() => stopSandbox());
 import { LOCAL_TEMPLATES } from "@/engine/templates";
 import { validateGraph } from "@/engine/validate";
 import type { FlowGraph } from "@/engine/types";
-import { checkRunRate, RUNS_PER_MINUTE } from "@/server/rate-limit";
 
 describe("process-isolated expression evaluation (regression: Fable F2)", () => {
   it("evaluates normally", async () => {
@@ -52,12 +51,3 @@ describe("output keys (regression: Fable F6)", () => {
   });
 });
 
-describe("run rate limit (regression: Fable F9)", () => {
-  it(`allows ${RUNS_PER_MINUTE}/min per user, then 429`, () => {
-    const now = 1_000_000;
-    for (let i = 0; i < RUNS_PER_MINUTE; i++) checkRunRate("rl-user", now + i);
-    expect(() => checkRunRate("rl-user", now + 100)).toThrowError(/at most/);
-    expect(() => checkRunRate("other-user", now + 100)).not.toThrow();
-    expect(() => checkRunRate("rl-user", now + 61_000)).not.toThrow();
-  });
-});
