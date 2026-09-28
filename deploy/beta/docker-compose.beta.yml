@@ -59,11 +59,24 @@ services:
 
   web:
     <<: *app
+    volumes: ["./backups:/backups:ro"]
     healthcheck: { test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"], interval: 10s, retries: 30 }
 
   worker:
     <<: *app
     command: ["node_modules/.bin/tsx", "worker/index.ts"]
+
+  # Polls health + /api/ops/status on the internal network; alerts to FLOWLINE_ALERT_WEBHOOK_URL (runbook §Monitoring).
+  monitor:
+    image: ${FLOWLINE_IMAGE:?}
+    env_file: .env.beta
+    environment:
+      OPS_BASE: http://web:3000
+    command: ["node", "scripts/ops/monitor.mjs"]
+    networks: [internal]
+    restart: unless-stopped
+    depends_on: { web: { condition: service_healthy } }
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
 
   # Nightly logical backup with retention; copies can also be pushed off-host (see the runbook).
   backup:

@@ -3,7 +3,7 @@
 	encode zstd gzip
 
 	# Internal-only endpoints are never exposed through the proxy.
-	@internal path /api/test/* /api/debug/* /_next/webpack-hmr*
+	@internal path /api/test/* /api/debug/* /api/ops/* /_next/webpack-hmr*
 	respond @internal 404
 
 	header {
