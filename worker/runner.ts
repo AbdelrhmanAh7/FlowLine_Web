@@ -1,4 +1,5 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { track } from "@/server/telemetry";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import { executeGraph, type PriorStep, type ReusedStep } from "@/engine/execute";
@@ -98,6 +99,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   const fail = async (code: string, message: string) => {
     await db.update(schema.run).set({ status: "failed", finishedAt: new Date(), error: { code, message }, lockedBy: null }).where(leased);
     await logEvent(db, { runId, workspaceId: run.workspaceId, type: "finished", data: { status: "failed", code } });
+    track("run_finished", { workspaceId: run.workspaceId }, { status: "failed", code, trigger: run.triggerKind });
   };
 
   // Permission policy re-check at execution time: the acting user must still be able to run this flow.
@@ -239,6 +241,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
         .where(and(eq(schema.runStep.runId, runId), inArray(schema.runStep.status, ["pending", "waiting_approval"])));
     }
     await logEvent(db, { runId, workspaceId: run.workspaceId, type: status === "cancelled" ? "cancelled" : "finished", data: { status, code: error?.code } });
+    track("run_finished", { workspaceId: run.workspaceId }, { status, code: error?.code ?? null, trigger: run.triggerKind });
   } catch (err) {
     if (err instanceof LeaseLostError) {
       log("lease lost; another worker owns", runId);

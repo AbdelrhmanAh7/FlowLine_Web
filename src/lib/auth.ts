@@ -4,7 +4,8 @@ import { redactString, safeErrorText } from "@/server/redact";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
-import { allowSignUp, BETA_REFUSAL } from "@/server/beta";
+import { allowSignUp, BETA_REFUSAL, betaMode } from "@/server/beta";
+import { track } from "@/server/telemetry";
 
 export const oauthConfig = {
   google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
@@ -51,6 +52,9 @@ export const auth = betterAuth({
           const body = (ctx as { body?: { betaCode?: unknown } } | null | undefined)?.body;
           const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null);
           if (!decision.ok) throw new APIError("FORBIDDEN", { message: BETA_REFUSAL, code: "BETA_INVITE_REQUIRED" });
+        },
+        after: async (user) => {
+          track("signup_completed", { userId: user.id }, { via: betaMode() });
         },
       },
     },

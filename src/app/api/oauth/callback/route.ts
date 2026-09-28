@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { track } from "@/server/telemetry";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/server/access";
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
   try {
     const r = await completeOAuth(db, { state, code, userId: user.id });
     await audit(db, { workspaceId: r.workspaceId, actor: userActor(user), action: r.reconnected ? "integration.reconnected" : "integration.connected", targetType: "connection", targetId: r.connectionId, data: { via: "oauth" } });
+    track("integration_connected", { workspaceId: r.workspaceId, userId: user.id }, { via: "oauth", status: r.reconnected ? "reconnected" : "connected" });
     return back(r.workspaceId, { oauth: r.reconnected ? "reconnected" : "connected", connection: r.connectionId });
   } catch (e) {
     const message = e instanceof HttpError ? e.message : "The connection could not be completed";

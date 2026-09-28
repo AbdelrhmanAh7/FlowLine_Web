@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { track } from "@/server/telemetry";
 import { db, schema } from "@/db";
 import { requireUser } from "@/server/access";
 import { json, parseBody, route } from "@/server/http";
@@ -20,5 +21,6 @@ export const POST = route(async (req) => {
       target: schema.userSettings.userId,
       set: { onboardingGoal: goal ?? null, onboardingSkipped: skipped, onboardingCompletedAt: completedAt },
     });
+  track("onboarding_completed", { userId: user.id }, { goal: goal ?? null, status: skipped ? "skipped" : "completed" });
   return json({ ok: true });
 });

@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { track } from "./telemetry";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
@@ -71,6 +72,8 @@ export async function createFlow(user: CurrentUser, workspaceId: string, input: 
     .insert(schema.flow)
     .values({ workspaceId, name, graph, templateId: template?.id ?? null, createdBy: user.id, updatedBy: user.id })
     .returning();
+  track("workflow_created", { workspaceId, userId: user.id }, { templateId: template?.id ?? null });
+  if (template) track("template_used", { workspaceId, userId: user.id }, { templateId: template.id });
   return row;
 }
 

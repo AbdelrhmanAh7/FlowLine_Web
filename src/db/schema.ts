@@ -921,3 +921,21 @@ export const betaAccessCode = pgTable("beta_access_code", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * First-user product telemetry (P4-15). Event names, ids, counts, types and error codes ONLY — never payloads, prompts,
+ * document text, emails, tokens or keys. The correlation id ties an event to the request/log line that produced it.
+ */
+export const productEvent = pgTable(
+  "product_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    name: text("name").notNull(),
+    workspaceId: uuid("workspace_id"),
+    userId: text("user_id"),
+    props: jsonb("props").$type<Record<string, string | number | boolean | null>>().notNull().default({}),
+    correlationId: text("correlation_id"),
+  },
+  (t) => [index("product_event_name_at_idx").on(t.name, t.at), index("product_event_ws_idx").on(t.workspaceId, t.at)],
+);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { track } from "@/server/telemetry";
 import { isUuid, requireUser, requireWorkspace } from "@/server/access";
 import { decideNewFlowProposal } from "@/server/copilot";
 import { json, notFound, parseBody, route } from "@/server/http";
@@ -12,5 +13,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   if (!isUuid(p.pid)) throw notFound("Proposal not found");
   const { workspace } = await requireWorkspace(user, p.wid, "flow.edit");
   const b = await parseBody(req, z.object({ decision: z.enum(["approve", "reject"]) }));
-  return json({ proposal: await decideNewFlowProposal(user, workspace.id, p.pid, b) });
+  const proposal = await decideNewFlowProposal(user, workspace.id, p.pid, b);
+  track("copilot_decided", { workspaceId: workspace.id, userId: user.id }, { decision: b.decision, kind: "new" });
+  return json({ proposal });
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { track } from "@/server/telemetry";
 import { db } from "@/db";
 import { requireUser, requireWorkspace } from "@/server/access";
 import { createConnection, listConnections } from "@/server/connections";
@@ -22,5 +23,6 @@ export const POST = route(async (req, { params }: Ctx) => {
   const b = await parseBody(req, body);
   const connection = await createConnection(db, user.id, workspace.id, b.provider, b.label, b.fields, { visibility: b.visibility });
   await audit(db, { workspaceId: workspace.id, actor: userActor(user), action: "integration.connected", targetType: "connection", targetId: connection.id, data: { provider: b.provider } });
+  track("integration_connected", { workspaceId: workspace.id, userId: user.id }, { provider: b.provider, via: "credentials" });
   return json({ connection }, { status: 201 });
 });
