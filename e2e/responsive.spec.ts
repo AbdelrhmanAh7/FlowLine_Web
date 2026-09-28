@@ -225,3 +225,59 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   await shot(page, "state-empty-runs-1440");
 
 });
+
+test("capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375", async ({ page }) => {
+  test.setTimeout(300_000);
+  const u = await setupUser(page, { template: "lead-qualifier", workspace: "Acme Workspace" });
+  const sizes = [
+    ["1440", 1440, 900],
+    ["1024", 1024, 768],
+    ["375", 375, 812],
+  ] as const;
+  // Empty states first.
+  for (const [label, w, h] of sizes) {
+    await page.setViewportSize({ width: w, height: h });
+    for (const p of ["agents", "knowledge"]) {
+      await page.goto(`/w/${u.workspace.slug}/${p}`);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await noHorizontalScroll(page);
+      await shot(page, `${p}-empty-${label}`);
+    }
+  }
+  // Populated: a knowledge source, an agent with a cited answer, an invite, an API key.
+  await page.request.post(`/api/workspaces/${u.workspace.id}/knowledge`, { data: { name: "Refund policy", text: "Refunds are available within 30 days of purchase." } });
+  await expect.poll(async () => (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0]?.status, { timeout: 20_000 }).toBe("ready");
+  const src = (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0];
+  const agent = (await (await page.request.post(`/api/workspaces/${u.workspace.id}/agents`, { data: { name: "Support bot", instructions: "Answer from knowledge.", knowledgeSourceIds: [src.id], tools: [{ tool: "knowledge_search", permission: "allow" }] } })).json()).agent;
+  await page.request.post(`/api/workspaces/${u.workspace.id}/invites`, { data: { email: "teammate@acme.example", role: "editor" } });
+  await page.request.post(`/api/workspaces/${u.workspace.id}/api-keys`, { data: { name: "CRM sync", mode: "live", scopes: ["runs:write", "runs:read"] } });
+  for (const [label, w, h] of sizes) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(`/w/${u.workspace.slug}/knowledge`);
+    await expect(page.getByTestId("source-Refund policy")).toContainText("ready");
+    await noHorizontalScroll(page);
+    await shot(page, `knowledge-populated-${label}`);
+    await page.goto(`/w/${u.workspace.slug}/agents/${agent.id}`);
+    await page.getByLabel("Message the agent").fill("How many days do refunds take?");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByTestId("agent-turn-succeeded").first()).toContainText("30 days", { timeout: 30_000 });
+    await noHorizontalScroll(page);
+    await shot(page, `agent-chat-${label}`);
+    for (const tab of ["members", "keys", "plan", "audit", "sso"]) {
+      await page.goto(`/w/${u.workspace.slug}/settings?tab=${tab}`);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await noHorizontalScroll(page);
+      await shot(page, `settings-${tab}-${label}`);
+    }
+  }
+  // Copilot proposal diff (desktop only — Copilot is disabled on mobile, captured above via the builder).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/w/${u.workspace.slug}/flows/${u.flowId}`);
+  await page.getByRole("button", { name: "✦ Copilot" }).click();
+  const panel = page.getByRole("dialog", { name: "Copilot" });
+  await panel.getByLabel("What should this workflow do?").fill("add a condition");
+  await panel.getByRole("button", { name: "Propose" }).click();
+  await expect(panel.getByTestId("copilot-proposal").getByLabel("Proposed changes")).toContainText("+ Has value?");
+  await shot(page, "copilot-proposal-1440");
+});
