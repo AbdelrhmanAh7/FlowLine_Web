@@ -18,6 +18,33 @@
 - **Known limitation:** Copilot's proposal quality with the local 7B model is not verified (the safety contract is).
 - **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
+## Phase 4 — launch candidate & private beta: IN PROGRESS on branch `phase-4`
+
+Owner decisions during Phase 4: **Arabic-first** product (Arabic default + RTL, English secondary); implementation by
+a swarm of **Opus 5.5** subagents in separate worktrees (removed after merge); reviews by **Codex gpt-6-astra** and
+**Fable 5.1**; goal is production readiness (production deploy / live payments still need explicit owner approval).
+
+Done (merged on `phase-4`, gates green: unit 126, contract 103, integration 286):
+- Entry gate (smoke 8/8 on ce08d9f), Phase 4 scope section in SCOPE_MATRIX.
+- Arabic-first i18n foundation (shell, landing, auth, onboarding, invite, Flows dashboard; RTL app-wide).
+- Email delivery + account flows (Codex): verification, reset, invitation email, account deletion, notices.
+- Invitation-only beta access (invites / hashed beta codes / admin allowlist; email, social and SSO sign-up).
+- Telemetry + correlation ids + funnel report; retention job; shared PostgreSQL rate limiting.
+- Ops status + monitor (alert/recovery verified); beta stack (Caddy TLS, internal-only services, backups) verified
+  locally with `scripts/release/verify-beta-stack.mjs`; runbook + privacy/safety drafts.
+- Copilot benchmark harness (12 fixed requests, 6 dimensions): local qwen2.5:7b 5/12.
+- Integration beta scope labels (core: Sheets, Gmail, Slack, GitHub, PostgreSQL; others deferred).
+
+Running (worktrees): `FL-wt-paddle` (Kimi — Paddle sandbox billing), `FL-wt-w2a` (Opus — E2E under required email
+verification, beta sign-up UX, email pages into i18n), `FL-wt-w2b1` (Opus — Arabic builder/runs/templates + CX3S-01).
+
+Next: merge those → Opus wave 2b (Arabic settings/agents/knowledge/integrations) → Fable + Codex-astra security
+reviews (email, beta gate, billing) → full E2E 3 browsers → beta image + release checks → user guide (Arabic) +
+limitations + PHASE4_BETA_REPORT → Chrome QA (Codex, real Chrome) → verdicts.
+
+BLOCKED on owner inputs: hosted AI key (Copilot benchmark), Resend/Postmark, Paddle sandbox, Google/Slack/GitHub test
+accounts + OAuth apps, domain/DNS + VPS for `beta.<domain>`.
+
 ## Waiting for the user (only you can do these)
 
 1. **Production approval** — not given; nothing was deployed to production and no live payments were enabled.
