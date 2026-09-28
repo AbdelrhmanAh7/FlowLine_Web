@@ -1,0 +1,9 @@
+{
+  "baseURL": "http://localhost:3200",
+  "stamp": "202609280320",
+  "pageLoads": 25,
+  "emails": {
+    "owner": "codex-owner-202609280320@flowline-qa.test"
+  },
+  "events": []
+}

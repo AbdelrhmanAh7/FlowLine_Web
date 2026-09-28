@@ -139,12 +139,25 @@ What does **not** hold yet is proposal quality with the local `qwen2.5:7b`:
 
 ## Known limitations (not blockers)
 
+- CX3S-01: the Copilot preview's "succeeded" label means "executed", not "correct" (wording fix pending).
 - `integration.use` is a capability no route enforces (SR-04): private connections are enforced by ownership. Clean up
   or wire it later.
 - The release image keeps dev dependencies (≈1.57 GB) because the worker runs through `tsx`.
 - The run rate limit is in process memory (fine for one web instance).
 - Presence on the canvas (P3-10) and light mode (P3-11) aren't built.
 
-## Codex retest (release image)
+## Codex retests (agent-driven exploratory browser testing, not human UAT)
 
-_Pending: filled in when `artifacts/phase-3/codex-qa-retest/RETEST.md` is complete._
+| Finding | Retest 1 (`9fd9860`) | Retest 2 (`ce08d9f`, release) |
+|---|---|---|
+| CX3Q-01 pending agent approval unreachable after navigating away | PARTIAL (navigation fixed; CX3R-01 found) | **PASS** |
+| CX3Q-02 real-model Copilot proposals | FAIL (3/6 approvable) | **PARTIAL:** the safety checks work (no-output workflow rejected, previews shown, empty or failed previews flagged), but **0/3 approved drafts returned the requested result**. This is a model-quality limitation (see above). |
+| CX3Q-03 unavailable app substituted | PASS | **PASS** |
+| CX3Q-04 creation enabled on mobile | PASS | **PASS** |
+| CX3Q-05 empty Copilot drafts | PASS | **PASS** |
+| CX3R-01 agent time limit consumed while waiting for a human | new (major) | **PASS**: approved after 202 s, the agent continued and the workflow ran once |
+| CX3R-02 approvable-but-wrong drafts | new (major) | **PARTIAL**: now visible before approval (preview + no-result rule); quality not fixed |
+| CX3S-01 preview says "succeeded" even when the output is plainly wrong | — | new (**minor, open**). Fix: label it "ran without errors — check the output matches your request". Not changed in the release, to avoid rebuilding at the end. |
+
+Evidence: `artifacts/phase-3/codex-qa-retest/RETEST.md`, `artifacts/phase-3/codex-qa-retest2/RETEST2.md`. The
+browser logs recorded no console errors, no 5xx responses and no hydration warnings.

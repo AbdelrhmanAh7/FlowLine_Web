@@ -1,0 +1,46 @@
+{
+  "target": "http://localhost:3200",
+  "revision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd",
+  "schemaVersion": 8,
+  "browser": "Chromium 153.0.8010.12",
+  "accountEmail": "codex-owner-202609280320@flowline-qa.test",
+  "ask": {
+    "pendingObservedAtUtc": "2026-09-28T03:26:29.683Z",
+    "approvalStartedAtUtc": "2026-09-28T03:29:51.799Z",
+    "elapsedSeconds": 202.116,
+    "agentResult": "answered",
+    "workflow": "Lead Qualifier",
+    "childRunNumber": 3,
+    "childRunsForWorkflow": 1,
+    "childRunStatus": "success"
+  },
+  "copilot": {
+    "requestedFourApprovable": 3,
+    "requestedFourTotal": 4,
+    "allSevenApprovable": 5,
+    "allSevenTotal": 7,
+    "approvedAndRun": 3,
+    "approvedAndCorrect": 0,
+    "cases": [
+      { "name": "support intake repeat", "approvable": true, "preview": "succeeded; wrong nested output visible", "approvedRun": "success; wrong nested output" },
+      { "name": "lead cleanup repeat", "approvable": true, "preview": "failed with non-function warning", "approvedRun": "failed with same non-function error" },
+      { "name": "order total new", "approvable": false, "preview": "none; invalid JSONata syntax" },
+      { "name": "incident handoff new", "approvable": true, "preview": "succeeded; incident nested twice", "approvedRun": "success; same wrong nested output" },
+      { "name": "no-output guard probe", "approvable": false, "preview": "none; explicit no-output/no-action error" },
+      { "name": "Slack external preview probe", "approvable": true, "preview": "skipped with external-step reason", "approvedRun": "rejected" },
+      { "name": "null result guard probe", "approvable": true, "preview": "succeeded with phone:null and no-data warning", "approvedRun": "rejected" }
+    ],
+    "flowsBeforeCopilotApprovals": 1,
+    "flowsAfterThreeApprovalsAndOtherInvalidOrRejectedProposals": 4
+  },
+  "regression": {
+    "dashboardReviewToSelectedRun": true,
+    "mobileWidthPx": 375,
+    "mobileCreationButtonsAriaDisabled": true,
+    "mobileVisibleReason": true,
+    "mobileDocumentScrollWidthPx": 375,
+    "unsupportedSalesforceRefused": true,
+    "emptyCopilotDraftsCreated": 0
+  },
+  "browserErrors": 0
+}
