@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { configuredProviders } from "@/ai/chat";
 import { db, schema, type Db } from "@/db";
 import type { AgentLimits, AgentToolSpec } from "@/db/schema";
 import type { CurrentUser } from "./access";
@@ -48,8 +47,9 @@ export type AgentInput = z.infer<typeof agentInput>;
 /** Everything an agent version references must exist in the SAME workspace (no cross-tenant tools). */
 async function validateRefs(dbx: Db, workspaceId: string, input: AgentInput) {
   if (input.provider) {
-    const p = configuredProviders().find((x) => x.id === input.provider);
-    if (!p?.available) throw new HttpError(422, "AI_PROVIDER_UNAVAILABLE", p?.reason ?? `AI provider "${input.provider}" isn't configured`);
+    // Pre-hub server providers can't be pinned any more: agents use the workspace AI connection (per-agent routes: Wave B).
+    if (input.provider === "ollama") throw new HttpError(422, "AI_LOCAL_MIGRATION_REQUIRED", "Local AI (Ollama) is no longer supported. Leave the provider empty to use the workspace's AI connection.");
+    throw new HttpError(422, "AI_PROVIDER_UNAVAILABLE", "Server-configured AI providers were replaced by AI connections. Leave the provider empty to use the workspace's AI connection.");
   }
   for (const t of input.tools) {
     if ((t.tool === "run_workflow" || t.tool === "workflow_inspect") && !t.flowId) throw new HttpError(422, "VALIDATION", `${t.tool} needs a workflow`);

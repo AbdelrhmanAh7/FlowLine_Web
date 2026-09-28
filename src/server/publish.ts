@@ -6,6 +6,7 @@ import type { FlowGraph, ValidationIssue } from "@/engine/types";
 import { TRIGGER_TYPES } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
 import { getAction } from "@/integrations/registry";
+import { aiRoutesIn, assertRoutesUsable, pinDefaultRoutes } from "@/ai/hub/selection";
 import type { CurrentUser } from "./access";
 import { assertConnectionsUsable } from "./connections";
 import { decryptSecret, encryptSecret, randomToken } from "./crypto";
@@ -84,7 +85,12 @@ export async function publishFlow(user: CurrentUser, flowId: string) {
     // Triggered runs act for the publisher: they must be allowed to use every connection in the flow.
     const connIds = [...new Set(graph.nodes.map((n) => (n.data.config as { connectionId?: string }).connectionId).filter((x): x is string => Boolean(x)))];
     await assertConnectionsUsable(tx as unknown as Db, user.id, flow.workspaceId, connIds);
-    const version = await insertVersion(tx, user, flow, "publish");
+    // AI: the published version snapshots the resolved route (workspace default pinned on steps without their own),
+    // and the publisher — whom triggered runs act for — must be allowed to use every AI connection it names.
+    const [ws] = await tx.select({ route: schema.workspace.aiDefaultRoute }).from(schema.workspace).where(eq(schema.workspace.id, flow.workspaceId));
+    const pinned = pinDefaultRoutes(graph, ws?.route);
+    await assertRoutesUsable(tx as unknown as Db, user.id, flow.workspaceId, aiRoutesIn(pinned));
+    const version = await insertVersion(tx, user, { ...flow, graph: pinned }, "publish");
     await tx.update(schema.flow).set({ publishedVersionId: version.id, publishedBy: user.id, updatedAt: new Date() }).where(eq(schema.flow.id, flow.id));
 
     const trigger = graph.nodes.find((n) => TRIGGER_TYPES.includes(n.type))!;

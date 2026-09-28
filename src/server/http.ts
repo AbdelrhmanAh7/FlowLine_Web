@@ -22,6 +22,13 @@ export function json<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
 }
 
+/** JSON for endpoints that handle secrets (AI connections): never cached by browsers or proxies. */
+export function jsonNoStore<T>(data: T, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("cache-control", "no-store");
+  return NextResponse.json(data, { ...init, headers });
+}
+
 /**
  * Reads the request body with a hard byte cap enforced WHILE streaming (Content-Length can be absent or wrong,
  * e.g. chunked uploads), then returns an equivalent Request whose body is safe to parse (formData/json).

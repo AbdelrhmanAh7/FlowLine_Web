@@ -39,7 +39,12 @@ export type AuditAction =
   | "sso.signin"
   | "knowledge.deleted"
   | "knowledge.disabled"
-  | "agent.version_created";
+  | "agent.version_created"
+  | "ai.connected"
+  | "ai.key_replaced"
+  | "ai.disconnected"
+  | "ai.use_roles_changed"
+  | "ai.default_route_changed";
 
 export async function audit(db: DbOrTx, e: { workspaceId: string; actor: Actor; action: AuditAction; targetType?: string; targetId?: string; data?: unknown }) {
   await db.insert(schema.auditEvent).values({

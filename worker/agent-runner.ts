@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { chat, resolveModel, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
+import { chat, resolveAgentRoute, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
 import { estimateTokens } from "@/ai/provider";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
@@ -126,12 +126,14 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     .where(and(eq(schema.workspaceMember.workspaceId, run.workspaceId), eq(schema.workspaceMember.userId, run.actingUserId)));
   if (!can(m?.role, "agent.run")) return fail("PERMISSION_REVOKED", "The user this agent run acts for no longer has access to run agents in this workspace");
 
-  let model: { provider: string; model: string };
+  // AI route: the workspace's authorised AI connection (never an environment key; legacy pins are refused).
+  let route: Awaited<ReturnType<typeof resolveAgentRoute>>;
   try {
-    model = resolveModel({ provider: version!.provider, model: version!.model }, { provider: ws!.aiProvider, model: ws!.aiModel });
+    route = await resolveAgentRoute(db, ws!, { provider: version!.provider, model: version!.model });
   } catch (e) {
-    return fail("AI_UNAVAILABLE", (e as Error).message);
+    return fail((e as NodeError).code ?? "AI_UNAVAILABLE", (e as Error).message);
   }
+  const model = { provider: route.provider, model: route.modelId };
 
   // Tools this version exposes (DENY tools are not offered — and still refused if the model calls them).
   const specs = version!.tools;
@@ -431,7 +433,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
         }
         const started = Date.now();
         try {
-          result = await chat({ ...model, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal });
+          result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: key, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal });
           // Provider call ids are only unique within one turn (Ollama numbers them call_0, call_1…);
           // make them unique for the whole run so every proposed call is decided exactly once.
           result.toolCalls = result.toolCalls.map((c, i) => ({ ...c, id: `t${index}_${i}` }));

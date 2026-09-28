@@ -115,3 +115,22 @@ export async function connect(page: Page, fromNodeId: string, toNodeId: string, 
 export async function nodeIds(page: Page) {
   return page.locator(".react-flow__node").evaluateAll((els) => els.map((e) => e.getAttribute("data-id")!));
 }
+
+export const FAKE_AI_MODEL = "fake-gpt-mini";
+
+/**
+ * Connects the OpenAI-compatible TEST DOUBLE (e2e/fakes/ai-server.ts, reached only because the test stack runs with
+ * FLOWLINE_ENV=test) as this workspace's AI connection, through the same public API the settings page uses, and
+ * makes it the default. For specs whose subject is NOT AI onboarding — the onboarding itself (key typed into the UI)
+ * is covered by ai-hub.spec.ts. The double has no prices, so the owner allows unknown-cost calls explicitly.
+ */
+export async function connectAiApi(req: APIRequestContext, workspaceId: string, opts: { useRoles?: string[] } = {}) {
+  const key = `sk-fake-e2e-${randomUUID().replace(/-/g, "")}`;
+  const res = await req.post(`/api/workspaces/${workspaceId}/ai/connections`, { data: { provider: "openai", label: "Test double (OpenAI-compatible)", apiKey: key } });
+  expect(res.status(), await res.text()).toBe(201);
+  const { connection } = (await res.json()) as { connection: { id: string } };
+  expect((await req.put(`/api/workspaces/${workspaceId}/ai/default-route`, { data: { route: { connectionId: connection.id, modelId: FAKE_AI_MODEL } } })).ok()).toBeTruthy();
+  expect((await req.put(`/api/workspaces/${workspaceId}/ai/policy`, { data: { allowUnknownCost: true } })).ok()).toBeTruthy();
+  if (opts.useRoles) expect((await req.patch(`/api/workspaces/${workspaceId}/ai/connections/${connection.id}`, { data: { useRoles: opts.useRoles } })).ok()).toBeTruthy();
+  return connection;
+}

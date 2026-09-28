@@ -68,6 +68,11 @@ import { GET as workspaceGET, PATCH as workspacePATCH } from "@/app/api/workspac
 import { GET as wsRunsGET } from "@/app/api/workspaces/[wid]/runs/route";
 import { GET as ssoGET, PUT as ssoPUT } from "@/app/api/workspaces/[wid]/sso/route";
 import { GET as usageGET } from "@/app/api/workspaces/[wid]/usage/route";
+import { DELETE as aiConnDELETE } from "@/app/api/workspaces/[wid]/ai/connections/[cid]/route";
+import { POST as aiConnsPOST } from "@/app/api/workspaces/[wid]/ai/connections/route";
+import { PUT as aiDefaultPUT } from "@/app/api/workspaces/[wid]/ai/default-route/route";
+import { GET as aiModelsGET } from "@/app/api/workspaces/[wid]/ai/models/route";
+import { connectAi, fakeKey, useAiDouble } from "./ai-helpers";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { auth } from "@/lib/auth";
@@ -198,6 +203,8 @@ async function tenant(name: string): Promise<Tenant> {
   await addMember(ws.id, editorUser.id, "editor");
   await addMember(ws.id, viewerUser.id, "viewer");
   await db.update(schema.workspace).set({ maxQueuedRuns: 500, maxMonthlyExecutions: null }).where(eq(schema.workspace.id, ws.id));
+  // Copilot (flow.edit probe) runs on the workspace AI connection; editors may use it here.
+  await connectAi(ownerUser, ws.id, { useRoles: ["owner", "editor"] });
   return {
     owner: await signIn(`${name} owner`, ownerUser),
     editor: await signIn(`${name} editor`, editorUser),
@@ -1041,6 +1048,46 @@ const TABLE: Record<Capability, Probe[]> = {
       }),
     },
   ],
+  "ai.manage": [
+    {
+      route: "POST /api/workspaces/[wid]/ai/connections",
+      call: async () => ({
+        method: "POST",
+        handler: aiConnsPOST,
+        path: "/api/workspaces/x/ai/connections",
+        params: { wid: A.ws.id },
+        body: { provider: "openai", label: unique("AI"), apiKey: fakeKey("matrix") },
+      }),
+    },
+    {
+      route: "PUT /api/workspaces/[wid]/ai/default-route",
+      call: async () => ({
+        method: "PUT",
+        handler: aiDefaultPUT,
+        path: "/api/workspaces/x/ai/default-route",
+        params: { wid: A.ws.id },
+        body: { route: null },
+      }),
+    },
+    {
+      route: "DELETE /api/workspaces/[wid]/ai/connections/[cid]",
+      call: async () => {
+        const { connection } = await connectAi(A.owner.user, A.ws.id, { model: null });
+        return { method: "DELETE", handler: aiConnDELETE, path: "/api/workspaces/x/ai/connections/y", params: { wid: A.ws.id, cid: connection.id } };
+      },
+    },
+  ],
+  "ai.use": [
+    {
+      route: "GET /api/workspaces/[wid]/ai/models",
+      call: async () => ({
+        method: "GET",
+        handler: aiModelsGET,
+        path: "/api/workspaces/x/ai/models",
+        params: { wid: A.ws.id },
+      }),
+    },
+  ],
   "sso.manage": [
     {
       route: "PUT /api/workspaces/[wid]/sso",
@@ -1077,10 +1124,8 @@ beforeAll(async () => {
   fakeProviders = await startFakeProviders(0);
   issuer = `${fakeProviders.url}/oidc`;
   process.env.FLOWLINE_ENV = "test";
-  process.env.OLLAMA_BASE_URL = fakeAi.url;
-  process.env.FLOWLINE_AI_PROVIDER = "ollama";
-  process.env.FLOWLINE_AI_MODEL = "fake-model";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `127.0.0.1:${fakeAi.port},127.0.0.1:${fakeProviders.port},localhost:${fakeProviders.port}`;
+  useAiDouble(fakeAi.url);
   A = await tenant("MxA");
   B = await tenant("MxB");
   nobody = await signIn("nobody", await makeUser("nobody"));

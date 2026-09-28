@@ -267,6 +267,7 @@ test("Arabic settings, agents, knowledge and integrations: every tab and page is
   const sections: [tab: string, heading: string][] = [
     ["الأعضاء", "الأعضاء"],
     ["عام", "عام"],
+    ["مزوّدو الذكاء الاصطناعي", "مزوّدو الذكاء الاصطناعي"],
     ["مفاتيح API", "إنشاء مفتاح"],
     ["الخطة والفوترة", "الخطط"],
     ["الاستخدام والحدود", "الاستخدام هذا الشهر"],

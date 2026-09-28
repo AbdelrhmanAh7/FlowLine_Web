@@ -14,6 +14,8 @@ import { actionDescription, actionTitle } from "@/i18n/integration-text";
 import type { MessageKey } from "@/i18n/types";
 import { api, ApiError } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogAction } from "@/lib/catalog";
+import { useAiOverview, usePickerModels, type AiRouteRef } from "@/lib/ai";
+import { ModelPicker } from "../ai/model-picker";
 import { useWorkspace } from "../shell/workspace-context";
 import { Button, Field, Input, Textarea, cx } from "../ui";
 import type { RFNode } from "./graph-utils";
@@ -408,18 +410,31 @@ function HttpForm({ node, cfg, set }: FormProps) {
   );
 }
 
-function AiForm({ node, cfg, set }: FormProps) {
+function isRoute(v: unknown): v is AiRouteRef {
+  return Boolean(v && typeof v === "object" && typeof (v as AiRouteRef).connectionId === "string" && typeof (v as AiRouteRef).modelId === "string");
+}
+
+function AiForm({ node, cfg, set, readOnly }: FormProps) {
   const t = useT();
-  const catalog = useCatalog();
-  const ai = catalog.data?.runtime.ai;
+  const { workspace } = useWorkspace();
+  const overview = useAiOverview(workspace.id);
+  const canUse = overview.data?.canUse ?? false;
+  const models = usePickerModels(workspace.id, canUse);
+  const status = overview.data?.status;
+  const route = isRoute(cfg.route) ? cfg.route : null;
+  const legacyModel = !route && s(cfg.model) ? s(cfg.model) : null;
+  const def = status?.defaultRoute;
   return (
     <>
-      {ai && !ai.available && <Notice tone="warning">{t("config.ai.unavailable", { reason: ai.reason ?? "" })}</Notice>}
-      {ai?.available && (
-        <p className="text-sm text-muted">
-          {t.rich("config.ai.provider", { provider: <span className="data text-med">{ai.provider}</span>, model: <span className="data text-med">{ai.model}</span> })}
-        </p>
+      {status && !status.canUseAny && (
+        <Notice tone="warning">
+          {status.usableConnections === 0 && (overview.data?.connections.length ?? 0) > 0 ? t("aiHub.node.notAllowed") : t("aiHub.node.noConnections")}{" "}
+          <Link className="underline" href={`/w/${workspace.slug}/settings?tab=ai`}>
+            {t("aiHub.node.openSettings")}
+          </Link>
+        </Notice>
       )}
+      {legacyModel && <Notice tone="warning">{t("aiHub.node.legacyModel", { model: legacyModel })}</Notice>}
       <Field label={t("config.ai.instructions")} htmlFor={`ins-${node.id}`} hint={t("config.ai.instructionsHint")}>
         <Textarea id={`ins-${node.id}`} rows={4} value={s(cfg.instructions)} onChange={(e) => set({ instructions: e.target.value })} maxLength={4000} />
       </Field>
@@ -430,16 +445,23 @@ function AiForm({ node, cfg, set }: FormProps) {
           <Input id={`labels-${node.id}`} className="data" value={s(cfg.labels)} onChange={(e) => set({ labels: e.target.value })} />
         </Field>
       )}
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t("config.ai.model")} htmlFor={`model-${node.id}`} hint={t("config.ai.modelHint")}>
-          <Input id={`model-${node.id}`} className="data" value={s(cfg.model)} onChange={(e) => set({ model: e.target.value })} maxLength={80} />
+      <Field label={t("config.ai.route")} htmlFor={`route-${node.id}`} hint={t("config.ai.routeHint")}>
+        <ModelPicker
+          id={`route-${node.id}`}
+          models={models.data ?? []}
+          loading={overview.isPending || (canUse && models.isPending)}
+          value={route}
+          disabled={readOnly || !canUse}
+          allowDefault
+          defaultLabel={def ? t("aiHub.node.useDefault", { model: def.modelId, connection: def.connectionLabel }) : t("aiHub.node.useDefaultNone")}
+          onChange={(v) => set(v ? { route: v, model: "" } : { route: null })}
+        />
+      </Field>
+      {node.type !== "ai.classify" && (
+        <Field label={t("config.ai.maxTokens")} htmlFor={`mt-${node.id}`}>
+          <Input id={`mt-${node.id}`} type="number" className="data" min={16} max={4000} value={String(cfg.maxTokens ?? 400)} onChange={(e) => set({ maxTokens: Number(e.target.value) })} />
         </Field>
-        {node.type !== "ai.classify" && (
-          <Field label={t("config.ai.maxTokens")} htmlFor={`mt-${node.id}`}>
-            <Input id={`mt-${node.id}`} type="number" className="data" min={16} max={4000} value={String(cfg.maxTokens ?? 400)} onChange={(e) => set({ maxTokens: Number(e.target.value) })} />
-          </Field>
-        )}
-      </div>
+      )}
     </>
   );
 }

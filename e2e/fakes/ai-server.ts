@@ -1,11 +1,14 @@
 /**
- * Deterministic TEST DOUBLE for the AI provider boundary (Ollama-compatible /api/chat).
+ * Deterministic TEST DOUBLE for the AI provider boundary: an OpenAI-compatible API (/<provider>/v1/models,
+ * /<provider>/v1/chat/completions — see below) over rule-based answers. The legacy Ollama-shaped /api/chat is kept
+ * only as the internal format of those rules (Flowline no longer calls it: local inference is not supported).
  * Used only by the deterministic suites (FLOWLINE_ENV=test). It is NOT a model:
  * it extracts "Key: value" pairs from the untrusted content by simple rules so tests
  * can assert exact outputs. Fault injection: POST /__fake/fault {mode:"500"|"timeout"|"bad_json", times}.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import { createHash } from "node:crypto";
 
 interface Schema {
   type?: string;
@@ -321,9 +324,216 @@ function handleChat(reqBody: string, res: ServerResponse) {
   );
 }
 
+
+/* ───────────── OpenAI-compatible surface (AI hub test double) ─────────────
+ * Mounted at /<providerId>/v1/* (the hub rewrites a provider's documented base URL to
+ * <FLOWLINE_AI_TEST_OVERRIDE>/<providerId><path> ONLY when FLOWLINE_ENV=test). It speaks the documented shapes of
+ * GET /models (paginated here: 2 per page with has_more/last_id, `after` cursor) and POST /chat/completions
+ * (tools, response_format json_schema, usage with prompt_tokens_details.cached_tokens and
+ * completion_tokens_details.reasoning_tokens). It is a TEST DOUBLE, not a model: answers come from the same rules
+ * as the rest of this file. Keys: any "sk-fake-…" is accepted except ones containing "revoked" (401 that echoes a
+ * partially masked key, like real providers do). Every request records a SHA-256 of the key used — never the key.
+ */
+const OPENAI_MODELS = ["fake-gpt-mini", "fake-gpt-large", "fake-gpt-tools", "fake-reasoner", "fake-cache"];
+type OpenAiFault = { mode: "401" | "403" | "429" | "500" | "timeout" | "removed_model" | "redirect_private" | "redirect_cross_origin" | "insufficient_quota" | "bad_json" | "slow"; times: number; retryAfterSec?: number; delayMs?: number; path?: "chat" | "models" };
+const openai = {
+  requests: [] as { at: string; method: string; path: string; keySha256: string | null; model?: string; hasTools?: boolean; responseFormat?: string | null; auth: string }[],
+  faults: [] as OpenAiFault[],
+  catalogue: "normal" as "normal" | "malformed" | "outage",
+  removed: new Set<string>(),
+  added: new Set<string>(),
+  stolen: 0,
+};
+
+function resetOpenAi() {
+  openai.requests = [];
+  openai.faults = [];
+  openai.catalogue = "normal";
+  openai.removed = new Set();
+  openai.added = new Set();
+  openai.stolen = 0;
+}
+
+function sha256(s: string) {
+  return createHash("sha256").update(s).digest("hex");
+}
+
+function oaError(res: ServerResponse, status: number, message: string, extra: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
+  res.writeHead(status, { "content-type": "application/json", ...headers }).end(JSON.stringify({ error: { message, type: status >= 500 ? "server_error" : "invalid_request_error", param: null, code: null, ...extra } }));
+}
+
+function takeOpenAiFault(path: "chat" | "models") {
+  const f = openai.faults.find((x) => x.times > 0 && (x.path ?? "chat") === path);
+  if (f) f.times--;
+  return f;
+}
+
+/** Captures what the Ollama-shaped handlers above write, so they can be re-emitted in the OpenAI shape. */
+function capture(onEnd: (status: number, body: string) => void): ServerResponse {
+  const r = {
+    statusCode: 200,
+    writeHead(s: number) {
+      r.statusCode = s;
+      return r;
+    },
+    end(b?: string) {
+      onEnd(r.statusCode, b ?? "");
+      return r;
+    },
+  };
+  return r as unknown as ServerResponse;
+}
+
+function listedModels() {
+  return [...OPENAI_MODELS.filter((m) => !openai.removed.has(m)), ...openai.added].filter((m) => !openai.removed.has(m));
+}
+
+function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBody: string, port: number, delayed = false): boolean {
+  const m = /^\/([a-z0-9-]+)\/v1(\/.*)$/.exec(url.pathname);
+  if (!m) return false;
+  const sub = m[2]!;
+  const auth = req.headers.authorization ?? "";
+  const key = /^Bearer (.+)$/.exec(auth)?.[1] ?? null;
+  const rec: (typeof openai.requests)[number] = { at: new Date().toISOString(), method: req.method ?? "GET", path: `/${m[1]}/v1${sub}`, keySha256: key ? sha256(key) : null, auth: key ? "bearer" : auth ? "other" : "none" };
+  if (sub === "/steal") {
+    openai.stolen++;
+    res.writeHead(200).end("{}");
+    return true;
+  }
+  if (!delayed) openai.requests.push(rec);
+  if (!key || !key.startsWith("sk-fake-") || key.includes("revoked")) {
+    const masked = key ? `${key.slice(0, 10)}${"*".repeat(Math.max(0, key.length - 13))}${key.slice(-3)}` : "";
+    oaError(res, 401, key ? `Incorrect API key provided: ${masked}. You can find your API key at https://platform.openai.com/account/api-keys.` : "You didn't provide an API key.", { code: "invalid_api_key" });
+    return true;
+  }
+  const fault = delayed ? undefined : takeOpenAiFault(sub === "/models" ? "models" : "chat");
+  if (fault) {
+    if (fault.mode === "timeout") return true; // never answer
+    if (fault.mode === "401") return oaError(res, 401, `Incorrect API key provided: ${key.slice(0, 10)}***.`, { code: "invalid_api_key" }), true;
+    if (fault.mode === "403") return oaError(res, 403, "You are not allowed to sample from this model", { code: "model_access_denied" }), true;
+    if (fault.mode === "429") return oaError(res, 429, "Rate limit reached", { code: "rate_limit_exceeded" }, fault.retryAfterSec != null ? { "retry-after": String(fault.retryAfterSec) } : {}), true;
+    if (fault.mode === "insufficient_quota") return oaError(res, 429, "You exceeded your current quota", { code: "insufficient_quota", type: "insufficient_quota" }), true;
+    if (fault.mode === "500") return oaError(res, 500, "The server had an error while processing your request."), true;
+    if (fault.mode === "removed_model") return oaError(res, 404, "The model does not exist or you do not have access to it.", { code: "model_not_found" }), true;
+    if (fault.mode === "redirect_private") return res.writeHead(307, { location: "http://169.254.169.254/latest/meta-data/iam/security-credentials/" }).end(), true;
+    if (fault.mode === "redirect_cross_origin") return res.writeHead(307, { location: `http://localhost:${port}/${m[1]}/v1/steal` }).end(), true;
+    if (fault.mode === "bad_json") return res.writeHead(200, { "content-type": "application/json" }).end("{not json"), true;
+  }
+  // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
+  if (fault?.mode === "slow") {
+    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), fault.delayMs ?? 1000);
+    return true;
+  }
+
+  if (req.method === "GET" && sub === "/models") {
+    if (openai.catalogue === "outage") return oaError(res, 503, "Service unavailable"), true;
+    if (openai.catalogue === "malformed") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ object: "list", data: [{ id: "fake-gpt-mini" }, { name: "no id here" }, { id: "../../etc/passwd" }] })), true;
+    const all = listedModels();
+    const after = url.searchParams.get("after");
+    const start = after ? all.indexOf(after) + 1 : 0;
+    const page = all.slice(start, start + 2);
+    const hasMore = start + 2 < all.length;
+    res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ object: "list", data: page.map((id) => ({ id, object: "model", created: 1_700_000_000, owned_by: "fake-org" })), has_more: hasMore, ...(hasMore ? { last_id: page.at(-1) } : {}) }));
+    return true;
+  }
+
+  if (req.method === "POST" && sub === "/chat/completions") {
+    let body: { model: string; messages: { role: string; content: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[]; tool_call_id?: string }[]; tools?: AgentTool[]; response_format?: { type: string; json_schema?: { schema?: Schema } }; max_completion_tokens?: number; max_tokens?: number };
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return oaError(res, 400, "We could not parse the JSON body of your request."), true;
+    }
+    rec.model = body.model;
+    rec.hasTools = Array.isArray(body.tools) && body.tools.length > 0;
+    rec.responseFormat = body.response_format?.type ?? null;
+    if (!listedModels().includes(body.model)) return oaError(res, 404, `The model \`${body.model}\` does not exist or you do not have access to it.`, { code: "model_not_found" }), true;
+    if (body.max_completion_tokens == null) return oaError(res, 400, "Missing required parameter: 'max_completion_tokens'."), true;
+    // Translate to the Ollama-shaped request the deterministic handlers above understand.
+    const names = new Map<string, string>();
+    for (const msg of body.messages) for (const c of msg.tool_calls ?? []) names.set(c.id, c.function.name);
+    const system = body.messages.find((x) => x.role === "system")?.content ?? "";
+    const prompted = /matching this JSON schema: (\{[\s\S]*\})\s*$/.exec(system)?.[1];
+    let format: Schema | undefined = body.response_format?.json_schema?.schema;
+    if (!format && prompted) {
+      try {
+        format = JSON.parse(prompted) as Schema;
+      } catch {
+        format = undefined;
+      }
+    }
+    const inner = {
+      model: body.model,
+      ...(format ? { format } : {}),
+      ...(body.tools || system.includes("You are an agent inside Flowline") ? { tools: body.tools ?? [] } : {}),
+      messages: body.messages.map((x) => ({
+        role: x.role,
+        content: x.content ?? "",
+        ...(x.role === "tool" && x.tool_call_id ? { tool_name: names.get(x.tool_call_id) } : {}),
+        ...(x.tool_calls ? { tool_calls: x.tool_calls.map((c) => ({ function: { name: c.function.name } })) } : {}),
+      })),
+    };
+    const shim = capture((status, out) => {
+      if (status >= 400) return oaError(res, status, "The server had an error while processing your request.");
+      const o = JSON.parse(out) as { model: string; message: { content: string; tool_calls?: { function: { name: string; arguments: unknown } }[] }; prompt_eval_count: number; eval_count: number };
+      const reasoning = body.model === "fake-reasoner" ? 7 : 0;
+      const cached = body.model === "fake-cache" ? Math.floor(o.prompt_eval_count / 2) : 0;
+      const calls = o.message.tool_calls ?? [];
+      res.writeHead(200, { "content-type": "application/json" }).end(
+        JSON.stringify({
+          id: `chatcmpl-fake-${openai.requests.length}`,
+          object: "chat.completion",
+          created: Math.floor(Date.now() / 1000),
+          model: body.model,
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: calls.length ? null : o.message.content,
+                // Some OpenAI-compatible servers return reasoning text; Flowline must never persist it.
+                ...(reasoning ? { reasoning_content: "HIDDEN-CHAIN-OF-THOUGHT-CANARY" } : {}),
+                ...(calls.length ? { tool_calls: calls.map((c, i) => ({ id: `call_${i}`, type: "function", function: { name: c.function.name, arguments: JSON.stringify(c.function.arguments ?? {}) } })) } : {}),
+              },
+              finish_reason: calls.length ? "tool_calls" : "stop",
+            },
+          ],
+          usage: {
+            prompt_tokens: o.prompt_eval_count,
+            completion_tokens: o.eval_count + reasoning,
+            total_tokens: o.prompt_eval_count + o.eval_count + reasoning,
+            prompt_tokens_details: { cached_tokens: cached },
+            completion_tokens_details: { reasoning_tokens: reasoning },
+          },
+        }),
+      );
+    });
+    handleChat(JSON.stringify(inner), shim);
+    return true;
+  }
+  oaError(res, 404, `Unknown path ${sub}`);
+  return true;
+}
+
 export async function startFakeAi(port = 0): Promise<{ url: string; port: number; close(): Promise<void> }> {
+  let boundPort = port;
   const server: Server = createServer(async (req, res) => {
     const b = await body(req);
+    const url = new URL(req.url ?? "/", "http://fake.local");
+    if (req.url === "/__fake/openai/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ requests: openai.requests, stolen: openai.stolen }));
+    if (req.url === "/__fake/openai/fault" && req.method === "POST") {
+      openai.faults.push(JSON.parse(b) as OpenAiFault);
+      return res.writeHead(200).end("{}");
+    }
+    if (req.url === "/__fake/openai/catalogue" && req.method === "POST") {
+      const c = JSON.parse(b) as { mode?: "normal" | "malformed" | "outage"; remove?: string; add?: string; restore?: string };
+      if (c.mode) openai.catalogue = c.mode;
+      if (c.remove) openai.removed.add(c.remove);
+      if (c.restore) openai.removed.delete(c.restore);
+      if (c.add) openai.added.add(c.add);
+      return res.writeHead(200).end("{}");
+    }
+    if (handleOpenAi(req, res, url, b, boundPort)) return;
     if (req.url === "/api/chat" && req.method === "POST") return handleChat(b, res);
     if (req.url === "/pricing" && req.method === "GET") return res.writeHead(200, { "content-type": "text/html" }).end(pricingPage());
     if (req.url === "/__fake/pricing" && req.method === "POST") {
@@ -335,6 +545,7 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
       state.requests = [];
       state.faults = [];
       state.price = 49;
+      resetOpenAi();
       return res.writeHead(200).end("{}");
     }
     if (req.url === "/__fake/fault" && req.method === "POST") {
@@ -346,6 +557,7 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
   });
   await new Promise<void>((r) => server.listen(port, "127.0.0.1", r));
   const p = (server.address() as AddressInfo).port;
+  boundPort = p;
   return { url: `http://127.0.0.1:${p}`, port: p, close: () => new Promise((r) => server.close(() => r())) };
 }
 

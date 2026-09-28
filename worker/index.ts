@@ -19,6 +19,7 @@ import { claimNextAgentRun, processAgentRun, recoverStaleAgentRuns, wakeAgentsFo
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
 import { pruneOnce } from "@/server/retention";
+import { backgroundRefresh } from "@/ai/hub/discovery";
 
 /** Runs executed concurrently by this worker process (runs mostly wait on I/O). */
 const CONCURRENCY = Math.max(1, Number(process.env.FLOWLINE_WORKER_CONCURRENCY ?? 4));
@@ -127,6 +128,11 @@ async function main() {
       .then((r) => r && Object.values(r).some((n) => n > 0) && log("retention pruned", JSON.stringify(r)))
       .catch((e) => log("retention error", e instanceof Error ? e.message : e));
   const retentionTimer = setInterval(retentionTick, 3600_000);
+  // AI model catalogues: bounded background refresh (at most 5 connections per hour, each at most once a day).
+  const catalogueTimer = setInterval(
+    () => void backgroundRefresh(db, { max: 5 }).then((r) => r.checked && log("ai catalogues refreshed", r.refreshed, "of", r.checked)).catch((e) => log("ai catalogue refresh error", e instanceof Error ? e.message : e)),
+    3600_000,
+  );
 
   while (!stopping) {
     try {
@@ -150,6 +156,7 @@ async function main() {
   clearInterval(scheduleTimer);
   clearInterval(reconcileTimer);
   clearInterval(retentionTimer);
+  clearInterval(catalogueTimer);
   await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
   stopSandbox();

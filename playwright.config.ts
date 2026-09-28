@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Fake-provider URLs (and the rest of the test-stack settings) come from .env.test, like the stack itself.
+try {
+  process.loadEnvFile(".env.test");
+} catch {
+  /* no .env.test: defaults apply */
+}
+
 const PORT = 3100;
 export const BASE_URL = `http://localhost:${PORT}`;
 

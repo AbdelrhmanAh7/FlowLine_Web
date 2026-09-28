@@ -1,3 +1,7 @@
+HISTORICAL — retired with the cloud-only AI hub (2026-09-29). Local inference is no longer executed, so this
+live suite can't run; it is kept verbatim as the record of the Phase 2 Ollama checks (results remain in
+artifacts/phase-2/). It used the pre-hub getAiProvider() that read FLOWLINE_AI_* env vars.
+-----
 import { describe, expect, it } from "vitest";
 import { getAiProvider, validateAgainstSchema } from "@/ai/provider";
 import { live, record } from "./record";

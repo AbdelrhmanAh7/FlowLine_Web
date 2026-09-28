@@ -135,9 +135,16 @@ export const workspace = pgTable("workspace", {
   prices: jsonb("prices").$type<PriceTable>().notNull().default({}),
   /** Monthly execution limit (runs + agent runs); null = unlimited. Plans may set it. */
   maxMonthlyExecutions: integer("max_monthly_executions"),
-  /** Default AI provider/model for AI nodes and agents (must be a configured provider). Null = server default. */
+  /**
+   * LEGACY (pre AI hub): server-configured provider/model. Kept readable; never used for execution. A legacy
+   * "ollama" value is refused with AI_LOCAL_MIGRATION_REQUIRED (it is never converted silently).
+   */
   aiProvider: text("ai_provider"),
   aiModel: text("ai_model"),
+  /** AI hub: workspace default route (a workspace AI connection + model id). Null = no default. */
+  aiDefaultRoute: jsonb("ai_default_route").$type<AiRouteRef | null>(),
+  /** AI execution policy (Wave A: MANUAL only). */
+  aiPolicy: jsonb("ai_policy").$type<AiPolicy>().notNull().default({ mode: "MANUAL", allowUnknownCost: false }),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -973,3 +980,178 @@ export const rateLimitHit = pgTable("rate_limit_hit", {
   key: text("key").notNull(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("rate_limit_hit_key_at_idx").on(t.key, t.at)]);
+
+/* ───────────── AI provider hub (cloud-only, workspace BYOK) ───────────── */
+
+/** A route reference: which workspace AI connection and which model id on it. Never carries secrets. */
+export interface AiRouteRef {
+  connectionId: string;
+  modelId: string;
+}
+
+export interface AiPolicy {
+  mode: "MANUAL";
+  /** Allow calls whose price is unknown even when a hard budget cap applies (the owner accepts the risk). */
+  allowUnknownCost: boolean;
+}
+
+/** Tri-state capability (route level): never assume support that isn't documented or observed. */
+export type CapabilityState = "SUPPORTED" | "UNSUPPORTED" | "UNKNOWN";
+
+export interface AiModelCapabilities {
+  tools: CapabilityState;
+  structuredOutput: CapabilityState;
+  vision: CapabilityState;
+  streaming: CapabilityState;
+  reasoning: CapabilityState;
+}
+
+/** Prices in micro-units (of the workspace currency) per million tokens. A missing field means UNKNOWN (never 0). */
+export interface AiModelPricing {
+  inputPerMTokMicros?: number;
+  outputPerMTokMicros?: number;
+  cacheReadPerMTokMicros?: number;
+  cacheWritePerMTokMicros?: number;
+}
+
+/**
+ * Workspace BYOK AI connection. The API key is AES-256-GCM encrypted (same crypto as SaaS connections) and never
+ * returned. Connecting does NOT grant members: `use_roles` defaults to ["owner"].
+ * status: CONNECTED | DEGRADED (last test/call failed) | REVOKED (disconnected; secret wiped).
+ * verification: IMPLEMENTED | CONTRACT_VERIFIED | LIVE_VERIFIED (never claimed without evidence).
+ */
+export const aiConnection = pgTable(
+  "ai_connection",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    label: text("label").notNull(),
+    /** Null once disconnected (REVOKED). */
+    secretEnc: text("secret_enc"),
+    keyId: text("key_id"),
+    /** Non-secret masked indicator captured at save time ("••••" + last 4 chars). The key itself is never returned. */
+    keyHint: text("key_hint"),
+    /** Non-secret settings (e.g. an owner-approved custom base URL). */
+    settings: jsonb("settings").$type<Record<string, string>>().notNull().default({}),
+    useRoles: jsonb("use_roles").$type<string[]>().notNull().default(["owner"]),
+    status: text("status").notNull().default("CONNECTED"),
+    verification: text("verification").notNull().default("IMPLEMENTED"),
+    lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+    lastError: jsonb("last_error").$type<{ code: string; message: string; at: string } | null>(),
+    credVersion: integer("cred_version").notNull().default(1),
+    catalogRefreshedAt: timestamp("catalog_refreshed_at", { withTimezone: true }),
+    /** True when the last catalogue refresh failed or was malformed: the last valid snapshot is kept. */
+    catalogStale: boolean("catalog_stale").notNull().default(false),
+    catalogError: text("catalog_error"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [index("ai_connection_ws_idx").on(t.workspaceId, t.provider)],
+);
+
+/**
+ * Public catalogue snapshot per provider (curated, versioned, with provenance). Credential-specific listings never
+ * land here (they could reveal one tenant's fine-tuned model names to another): see ai_connection_model.
+ */
+export const aiModel = pgTable(
+  "ai_model",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    displayName: text("display_name"),
+    author: text("author"),
+    /** For gateways: the upstream provider actually serving the model. */
+    servingProvider: text("serving_provider"),
+    protocol: text("protocol").notNull(),
+    capabilities: jsonb("capabilities").$type<AiModelCapabilities>().notNull(),
+    contextWindow: integer("context_window"),
+    maxOutputTokens: integer("max_output_tokens"),
+    modalities: jsonb("modalities").$type<string[]>().notNull().default([]),
+    lifecycle: text("lifecycle").notNull().default("unknown"),
+    pricing: jsonb("pricing").$type<AiModelPricing | null>(),
+    priceSource: text("price_source"),
+    priceVerifiedAt: timestamp("price_verified_at", { withTimezone: true }),
+    freeTierNote: text("free_tier_note"),
+    privacyNote: text("privacy_note"),
+    source: text("source").notNull(),
+    snapshotVersion: integer("snapshot_version").notNull().default(1),
+    stale: boolean("stale").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("ai_model_unique").on(t.provider, t.modelId)],
+);
+
+/** Credential-specific access: what this connection's listing returned, and whether an inference succeeded. */
+export const aiConnectionModel = pgTable(
+  "ai_connection_model",
+  {
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => aiConnection.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    modelId: text("model_id").notNull(),
+    ownedBy: text("owned_by"),
+    listed: boolean("listed").notNull().default(true),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set when the provider stopped listing it or answered "model not found". */
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    accessConfirmedAt: timestamp("access_confirmed_at", { withTimezone: true }),
+    lastError: jsonb("last_error").$type<{ code: string; message: string; at: string } | null>(),
+  },
+  (t) => [primaryKey({ columns: [t.connectionId, t.modelId] }), index("ai_connection_model_ws_idx").on(t.workspaceId)],
+);
+
+/**
+ * One row per provider attempt (retries are separate rows). Token fields are NON-OVERLAPPING:
+ * input = uncached input, cache_read / cache_write = cached input, output = visible output, reasoning = hidden
+ * reasoning output (count only; reasoning text is never stored). Linked to the budget ledger (usage_event) by
+ * `usage_key`. cost_micros is NULL when the price is unknown (cost_source = "unknown"), never 0.
+ */
+export const aiAttempt = pgTable(
+  "ai_attempt",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    requestId: text("request_id").notNull(),
+    runId: uuid("run_id"),
+    agentRunId: uuid("agent_run_id"),
+    nodeId: text("node_id"),
+    /** node | agent | copilot | connection_test */
+    purpose: text("purpose").notNull(),
+    provider: text("provider").notNull(),
+    connectionId: uuid("connection_id").references(() => aiConnection.id, { onDelete: "set null" }),
+    modelId: text("model_id").notNull(),
+    protocol: text("protocol").notNull(),
+    policy: text("policy").notNull().default("MANUAL"),
+    attempt: integer("attempt").notNull(),
+    /** success | error | refused | timeout */
+    outcome: text("outcome").notNull(),
+    errorCode: text("error_code"),
+    httpStatus: integer("http_status"),
+    latencyMs: integer("latency_ms"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    cacheReadTokens: integer("cache_read_tokens"),
+    cacheWriteTokens: integer("cache_write_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    priceSnapshot: jsonb("price_snapshot").$type<(AiModelPricing & { source: string }) | null>(),
+    /** provider_reported | estimated | unknown */
+    costSource: text("cost_source").notNull(),
+    costMicros: bigint("cost_micros", { mode: "number" }),
+    usageKey: text("usage_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId)],
+);

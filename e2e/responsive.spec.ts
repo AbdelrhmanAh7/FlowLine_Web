@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { EN_STATE } from "../playwright.config";
-import { injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
+import { connectAiApi, injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 const OUT = "artifacts/phase-3/screenshots";
 mkdirSync(OUT, { recursive: true });
@@ -245,7 +245,9 @@ test("capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375", async 
       await shot(page, `${p}-empty-${label}`);
     }
   }
-  // Populated: a knowledge source, an agent with a cited answer, an invite, an API key.
+  // Populated: a knowledge source, an agent with a cited answer, an invite, an API key. The agent needs an AI
+  // connection (cloud-only hub: no server-env model) — connected through the public API, as the UI does.
+  await connectAiApi(page.request, u.workspace.id);
   await page.request.post(`/api/workspaces/${u.workspace.id}/knowledge`, { data: { name: "Refund policy", text: "Refunds are available within 30 days of purchase." } });
   await expect.poll(async () => (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0]?.status, { timeout: 20_000 }).toBe("ready");
   const src = (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0];

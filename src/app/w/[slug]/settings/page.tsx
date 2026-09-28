@@ -12,15 +12,15 @@ import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
 import { TIME_ZONES } from "@/lib/timezones";
-import { AiDefaults } from "./ai-defaults";
+import { AiProviders } from "./ai-providers";
 import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
 import { BillingPlan } from "./billing-plan";
 import { Members } from "./members";
 import { Sso } from "./sso";
 
-type Tab = "members" | "general" | "keys" | "plan" | "billing" | "audit" | "sso";
-const TABS: Tab[] = ["members", "general", "keys", "plan", "billing", "audit", "sso"];
+type Tab = "members" | "general" | "ai" | "keys" | "plan" | "billing" | "audit" | "sso";
+const TABS: Tab[] = ["members", "general", "ai", "keys", "plan", "billing", "audit", "sso"];
 
 export default function SettingsPage() {
   const t = useT();
@@ -48,10 +48,10 @@ export default function SettingsPage() {
           {tab === "general" && (
             <>
               <General />
-              <AiDefaults />
               <AccountCard />
             </>
           )}
+          {tab === "ai" && <AiProviders />}
           {tab === "keys" && <ApiKeys />}
           {tab === "plan" && <BillingPlan />}
           {tab === "billing" && <Billing />}

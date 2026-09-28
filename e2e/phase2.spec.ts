@@ -1,13 +1,13 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { expectSaved, setupUser } from "./helpers";
+import { connectAiApi, expectSaved, setupUser } from "./helpers";
 
 /**
  * Phase 2 journeys through the real UI. Only the provider boundary is doubled:
- * SaaS APIs → e2e/fakes/provider-server.ts (:4010), AI → e2e/fakes/ai-server.ts (:4011).
+ * SaaS APIs → e2e/fakes/provider-server.ts (:4010), AI → e2e/fakes/ai-server.ts (:4011, OpenAI-compatible double).
  * Every test uses unique spreadsheet/channel ids so parallel workers never share fake state.
  */
-const FAKE = "http://127.0.0.1:4010";
+const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
 
 async function fault(req: APIRequestContext, provider: string, pathPattern: string, mode: "500" | "429" | "timeout", times: number) {
   const r = await req.post(`${FAKE}/__fake/fault`, { data: { provider, pathPattern, mode, times } });
@@ -80,6 +80,7 @@ async function createConn(req: APIRequestContext, wid: string, provider: string)
 test("template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates", async ({ page }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // the template's AI steps run on the workspace AI connection
   const sheetId = `sheet-e2e-${randomUUID().slice(0, 8)}`;
   const channel = `C_E2E_${randomUUID().slice(0, 8)}`;
 

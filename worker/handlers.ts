@@ -2,7 +2,9 @@ import Papa from "papaparse";
 import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
-import { estimateTokens, getAiProvider, validateAgainstSchema } from "@/ai/provider";
+import { executeAi } from "@/ai/hub/execute";
+import { isRouteRef, resolveRoute } from "@/ai/hub/routing";
+import { frame, parseJson, validateAgainstSchema } from "@/ai/provider";
 import { executeGraph, NodeError, type HostHandler, type NodeEnv, type NodeOutcome } from "@/engine/execute";
 import { normalizeValue, VALUE_MAX_BYTES } from "@/engine/expression";
 import { NONDETERMINISTIC, UNSTABLE_INPUT_MESSAGE } from "@/engine/validate";
@@ -18,7 +20,7 @@ import { sha256Hex } from "@/server/crypto";
 import { EgressError, safeFetch } from "@/server/egress";
 import { logEvent } from "@/server/events";
 import { redact } from "@/server/redact";
-import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
+import { BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
 import { attemptsFor, backoffMs, sleep } from "./retry";
 
 export const MAX_SUBFLOW_DEPTH = 3;
@@ -179,9 +181,6 @@ const CLASSIFY_SCHEMA = (labels: string[]) => ({
 });
 
 async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, unknown>, input: unknown, env: NodeEnv): Promise<NodeOutcome> {
-  const provider = getAiProvider({ provider: ctx.workspace.aiProvider, model: ctx.workspace.aiModel });
-  if (!provider.available) throw new NodeError("AI_UNAVAILABLE", provider.reason ?? "No AI provider configured");
-  const model = str(cfg.model) || provider.model;
   const content = contentOf(await env.evaluate(str(cfg.source) || "$string($)", input));
   const maxTokens = Math.min(Math.max(16, Number(cfg.maxTokens) || 400), 4000);
   let schema: Record<string, unknown> | undefined;
@@ -189,53 +188,76 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
   const labels = str(cfg.labels).split(",").map((l) => l.trim()).filter(Boolean);
   if (node.type === "ai.classify") schema = CLASSIFY_SCHEMA(labels);
 
-  const price = priceFor(ctx.workspace.prices ?? {}, `ai:${provider.id}/${model}`);
-  const est = aiCostMicros(price, estimateTokens(str(cfg.instructions) + content), maxTokens);
-  const max = 3;
-  for (let attempt = 1; ; attempt++) {
-    const key = `${ctx.run.id}:${ctx.path}${node.id}:ai:${attempt}`;
+  // Route: the step's pinned route (connection + model) → the workspace default. Resolved server-side from the
+  // workspace's own AI connections; never an environment key, never another connection as a fallback.
+  const actor = ctx.run.policy?.actingUserId ?? ctx.run.createdBy;
+  if (!actor) throw new NodeError("AI_ROUTE_FORBIDDEN", "This run has no acting user, so no AI connection can be used for it");
+  const pin = isRouteRef(cfg.route) ? cfg.route : null;
+  const route = await resolveRoute(ctx.db, ctx.workspace, { pin, legacyModel: pin ? null : str(cfg.model) || null });
+  const { system, user, quarantined } = frame({ instructions: str(cfg.instructions), content, schema });
+
+  for (let round = 1; round <= 2; round++) {
+    let r: Awaited<ReturnType<typeof executeAi>>;
     try {
-      await reserveUsage(ctx.db, { workspaceId: ctx.run.workspaceId, runId: ctx.run.id, nodeId: node.id, kind: "ai", idempotencyKey: key, retry: attempt > 1, estimatedMicros: est.cost, provider: provider.id, model, unpriced: est.unpriced });
+      r = await executeAi(ctx.db, {
+        workspace: ctx.workspace,
+        actorUserId: actor,
+        route,
+        request: { system, messages: [{ role: "user", content: user }], maxTokens, schema, temperature: 0 },
+        purpose: "node",
+        metering: "hub",
+        requestId: `${ctx.run.id}:${ctx.path}${node.id}:ai:r${round}`,
+        runId: ctx.run.id,
+        nodeId: node.id,
+        signal: env.signal,
+        onRetry: async ({ attempt, code }) => {
+          env.log(`attempt ${attempt} failed (${code}); retrying`);
+          await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_retry", nodeId: node.id, data: { attempt, error: code } });
+        },
+      });
     } catch (e) {
-      if (e instanceof BudgetExceededError) {
-        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "budget_blocked", nodeId: node.id, data: { message: e.message } });
-        throw new NodeError("BUDGET_EXCEEDED", e.message);
+      if ((e as NodeError).code === "BUDGET_EXCEEDED" || (e as NodeError).code === "AI_COST_UNKNOWN") {
+        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "budget_blocked", nodeId: node.id, data: { message: (e as Error).message } });
       }
       throw e;
     }
-    try {
-      const r = await provider.generate({ instructions: str(cfg.instructions), content, maxTokens, schema, model, signal: env.signal });
-      const cost = aiCostMicros(price, r.usage.inputTokens, r.usage.outputTokens);
-      await settleUsage(ctx.db, key, { costMicros: cost.cost, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, unpriced: cost.unpriced });
-      const meta = { provider: r.provider, model: r.model, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, costMicros: cost.cost, unpriced: cost.unpriced, quarantinedLines: r.quarantined.length };
-      if (r.quarantined.length && attempt === 1) {
-        env.log(`security: removed ${r.quarantined.length} line(s) from the content that tried to instruct the AI`);
-        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "ai_instructions_quarantined", nodeId: node.id, data: { lines: r.quarantined.length } });
-      }
-      if (!schema) return { kind: "ok", output: { text: r.text }, meta, attempts: attempt };
-      const problem = validateAgainstSchema(schema, r.json);
-      if (problem) {
-        if (attempt < 2) {
-          env.log(`output didn't match the schema (${problem}); asking again`);
-          continue;
-        }
-        throw new NodeError("AI_SCHEMA_MISMATCH", `Model output doesn't match the schema: ${problem}`);
-      }
-      return { kind: "ok", output: normalizeValue(r.json), meta, attempts: attempt };
-    } catch (e) {
-      if (e instanceof NodeError && e.code === "AI_SCHEMA_MISMATCH") throw e;
-      const retryable = Boolean((e as { retryable?: boolean }).retryable) || (e as NodeError).code === "AI_TIMEOUT" || (e as NodeError).code === "AI_UNAVAILABLE";
-      // A request that never produced a response is charged nothing.
-      await releaseUsage(ctx.db, key);
-      if (env.signal.aborted) throw e;
-      if (retryable && attempt < max) {
-        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_retry", nodeId: node.id, data: { attempt, error: (e as Error).message } });
-        await sleep(backoffMs(attempt), env.signal);
+    const u = r.result.usage;
+    // Route snapshot + usage (no secrets, no reasoning text). Token totals keep their pre-hub meaning (all input /
+    // all output); the non-overlapping breakdown is in ai_attempt and the *Tokens detail fields below.
+    const meta = {
+      provider: route.provider,
+      model: r.result.model,
+      connection: route.connectionLabel,
+      connectionId: route.connectionId,
+      routeSource: route.source,
+      protocol: route.protocol,
+      inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0),
+      outputTokens: u.outputTokens + (u.reasoningTokens ?? 0),
+      ...(u.cacheReadTokens != null ? { cacheReadTokens: u.cacheReadTokens } : {}),
+      ...(u.reasoningTokens != null ? { reasoningTokens: u.reasoningTokens } : {}),
+      costMicros: r.costMicros,
+      costSource: r.costSource,
+      unpriced: r.costMicros == null,
+      structuredOutput: r.structuredOutput,
+      quarantinedLines: quarantined.length,
+    };
+    if (quarantined.length && round === 1) {
+      env.log(`security: removed ${quarantined.length} line(s) from the content that tried to instruct the AI`);
+      await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "ai_instructions_quarantined", nodeId: node.id, data: { lines: quarantined.length } });
+    }
+    if (!schema) return { kind: "ok", output: { text: r.result.text }, meta, attempts: round };
+    const json = parseJson(r.result.text);
+    const problem = validateAgainstSchema(schema, json);
+    if (problem) {
+      if (round < 2) {
+        env.log(`output didn't match the schema (${problem}); asking again`);
         continue;
       }
-      throw e;
+      throw new NodeError("AI_SCHEMA_MISMATCH", `Model output doesn't match the schema: ${problem}`);
     }
+    return { kind: "ok", output: normalizeValue(json), meta, attempts: round };
   }
+  throw new NodeError("AI_SCHEMA_MISMATCH", "Model output doesn't match the schema");
 }
 
 /* ───────────── Integration actions ───────────── */

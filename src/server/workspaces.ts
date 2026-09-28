@@ -2,7 +2,6 @@ import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { isTimeZone } from "@/lib/timezones";
 import { db, schema } from "@/db";
 import type { CurrentUser } from "./access";
-import { configuredProviders } from "@/ai/chat";
 import { HttpError } from "./http";
 
 export function slugify(name: string) {
@@ -169,10 +168,10 @@ export async function updateWorkspace(workspaceId: string, patch: { name?: strin
     set.timezone = patch.timezone;
   }
   if (patch.aiProvider !== undefined) {
-    if (patch.aiProvider !== null) {
-      const p = configuredProviders().find((x) => x.id === patch.aiProvider);
-      if (!p?.available) throw new HttpError(400, "AI_PROVIDER_UNAVAILABLE", p?.reason ?? "That AI provider isn't configured on this server");
-    }
+    // Legacy pre-hub columns: they can only be CLEARED. Server-configured providers no longer exist (AI runs on
+    // workspace connections: Settings → AI Providers), and a local runtime is never accepted.
+    if (patch.aiProvider === "ollama") throw new HttpError(400, "AI_LOCAL_MIGRATION_REQUIRED", "Local AI (Ollama) is no longer supported. Connect a cloud provider in Settings → AI Providers.");
+    if (patch.aiProvider !== null) throw new HttpError(400, "AI_PROVIDER_UNAVAILABLE", "Server-configured AI providers were replaced by AI connections. Connect a provider in Settings → AI Providers.");
     set.aiProvider = patch.aiProvider;
     set.aiModel = patch.aiProvider === null ? null : patch.aiModel?.trim() || null;
   }

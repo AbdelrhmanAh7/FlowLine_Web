@@ -50,7 +50,7 @@ const REPAIR_ROUNDS = 2;
  * REPAIR_ROUNDS times. Returns the last patch and its parse issues. Exported so real-model behaviour can be measured.
  */
 export async function generatePatch(
-  provider: ReturnType<typeof getAiProvider>,
+  provider: Awaited<ReturnType<typeof getAiProvider>>,
   text: string,
   base: FlowGraph,
   conns: { id: string; provider: string; label: string; status: string }[],
@@ -145,11 +145,14 @@ async function proposeFor(user: CurrentUser, workspaceId: string, flow: typeof s
     .select({ id: schema.connection.id, provider: schema.connection.provider, label: schema.connection.label, status: schema.connection.status })
     .from(schema.connection)
     .where(eq(schema.connection.workspaceId, workspaceId));
-  const [ws] = await db.select({ aiProvider: schema.workspace.aiProvider, aiModel: schema.workspace.aiModel, prices: schema.workspace.prices }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
-  const provider = getAiProvider({ provider: ws?.aiProvider, model: ws?.aiModel });
-  if (!provider.available) throw new HttpError(503, "AI_UNAVAILABLE", provider.reason ?? "No AI provider is configured");
+  const [ws] = await db.select().from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
+  if (!ws) throw notFound("Workspace not found");
+  // The workspace's authorised AI connection (default route), acting for this user. Never an environment key.
+  const requestId = `copilot:${flow?.id ?? "new"}:${crypto.randomUUID()}`;
+  const provider = await getAiProvider(db, ws, user.id, { requestId });
+  if (!provider.available) throw new HttpError(503, provider.code ?? "AI_NOT_CONFIGURED", provider.reason ?? "No AI model is set up");
   const base: FlowGraph = flow ? (flow.graph as FlowGraph) : { nodes: [], edges: [] };
-  const { patch, issues, model } = await generatePatch(provider, text, base, conns, { workspaceId, key: `copilot:${flow?.id ?? "new"}:${crypto.randomUUID()}`, prices: ws?.prices ?? {} });
+  const { patch, issues, model } = await generatePatch(provider, text, base, conns, { workspaceId, key: requestId, prices: ws.prices ?? {} });
   let proposedGraph: FlowGraph | null = null;
   let diff: Diff | null = null;
   if (patch) {

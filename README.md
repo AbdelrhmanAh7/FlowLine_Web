@@ -16,7 +16,8 @@ every step. Agents can use your published workflows and knowledge, within permis
   PostgreSQL and Linear. They come with OAuth or API-key connections, encrypted credentials, private connections, and
   repair and revocation handling.
 - **AI:**
-  - AI nodes (Ollama or Anthropic).
+  - AI nodes on cloud AI providers the workspace connects itself (Settings → AI Providers: your own API keys,
+    encrypted, never shown again). Cloud-only: local inference (Ollama) is not supported. See `docs/ai/CONNECTING.md`.
   - **Agents** with tool permissions ALLOW/ASK/DENY enforced in the backend. ASK pauses for a human decision tied to
     the exact call and workflow version.
   - **Knowledge:** text, Markdown, CSV, JSON and PDF, with retrieval and citations.
@@ -47,7 +48,7 @@ every step. Agents can use your published workflows and knowledge, within permis
 
 - Node.js ≥ 22 (developed on 25.6) and pnpm 10 (`npm i -g pnpm@10`; Node 25 no longer ships corepack)
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
-- Optional: [Ollama](https://ollama.com) for local AI (for example `ollama pull qwen2.5:7b`)
+- No AI provider configuration: AI keys are added per workspace in the app (Settings → AI Providers), never in `.env`.
 
 ## Quick start (development)
 
@@ -69,7 +70,7 @@ Use `127.0.0.1` rather than `localhost` in `DATABASE_URL` on Windows + WSL2 + Do
 
 ```bash
 docker build --build-arg GIT_SHA=$(git rev-parse HEAD) -t flowline:<sha> .
-# .env.staging (never committed): STAGING_DB_PASSWORD, BETTER_AUTH_SECRET, FLOWLINE_ENCRYPTION_KEY, FLOWLINE_AI_* …
+# .env.staging (never committed): STAGING_DB_PASSWORD, BETTER_AUTH_SECRET, FLOWLINE_ENCRYPTION_KEY … (no AI provider keys: workspaces add their own in the app)
 FLOWLINE_IMAGE=flowline:<sha> docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
 curl http://localhost:3200/api/health      # revision, schemaVersion, db, worker
 ```
@@ -87,7 +88,8 @@ The release scripts run against staging:
 ## Tests
 
 `.env.test` points at the separate `flowline_test` database, enables test-only features (`FLOWLINE_ENV=test`), and
-routes providers to local test doubles (fake SaaS APIs, Stripe, OAuth and OIDC on `:4010`; a fake Ollama on `:4011`).
+routes providers to local test doubles (fake SaaS APIs, Stripe, OAuth and OIDC on `:4010`; an OpenAI-compatible AI provider double on `:4011`, used only
+when `FLOWLINE_ENV=test` — tests still add the key through the app, like a customer).
 Start from `.env.example` and set:
 
 ```
@@ -99,9 +101,7 @@ BETTER_AUTH_SECRET=<a different random value>
 FLOWLINE_ENCRYPTION_KEY=<base64 of 32 random bytes>
 FLOWLINE_EGRESS_ALLOWLIST=127.0.0.1:4010,127.0.0.1:4011
 FLOWLINE_PROVIDER_OVERRIDE=http://127.0.0.1:4010
-FLOWLINE_AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:4011
-FLOWLINE_AI_MODEL=fake-model
+FLOWLINE_AI_TEST_OVERRIDE=http://127.0.0.1:4011
 # fake OAuth apps + test-mode billing against the fake Stripe (test values only):
 GOOGLE_OAUTH_CLIENT_ID=fake-google-client
 GOOGLE_OAUTH_CLIENT_SECRET=fake-google-secret
@@ -123,7 +123,7 @@ FLOWLINE_BILLING_FREE_PLAN=<id of the free test plan>
 | Integration (real PostgreSQL, real worker code) | `pnpm test:integration` (refuses to run while a test-stack worker is up: `pnpm stop:test`) |
 | E2E, Chromium + Firefox (starts the test stack on :3100) | `pnpm test:e2e` (first time: `npx playwright install chromium firefox`) |
 | E2E, WebKit (Linux Playwright container; needs `pnpm dev:test` running) | `bash e2e/tools/webkit-docker.sh` |
-| Live (real local Ollama + PostgreSQL; SaaS need `FLOWLINE_LIVE_*` sandbox credentials, else BLOCKED) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
+| Live (real PostgreSQL; SaaS need `FLOWLINE_LIVE_*` sandbox credentials, else BLOCKED) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
 Results on the release revision (`ce08d9f`): unit 108, contract 97, integration 263, E2E Chromium + Firefox 63/63, WebKit 14/14.

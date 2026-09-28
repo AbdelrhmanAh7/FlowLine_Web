@@ -30,7 +30,7 @@ export interface Catalog {
   count: number;
   actionCount: number;
   providers: CatalogProvider[];
-  runtime: { ai: { provider: string; model: string; available: boolean; reason: string | null }; codeSandbox: { available: boolean; reason: string | null } };
+  runtime: { codeSandbox: { available: boolean; reason: string | null } };
 }
 export interface ConnectionDto {
   id: string;

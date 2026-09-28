@@ -1,13 +1,13 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { BASE_URL, EN_STATE } from "../playwright.config";
-import { setupUser, signUpVerified, uniqueEmail } from "./helpers";
+import { connectAiApi, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 /**
  * Phase 3 journeys through the real UI. Provider boundary only is doubled (fake SaaS :4010, fake AI :4011
  * incl. its Copilot/agent modes, fake Stripe checkout). Every test uses its own users and workspaces.
  */
-const FAKE = "http://127.0.0.1:4010";
+const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
 
 async function newUserContext(browser: Browser, email = uniqueEmail("p3")) {
   const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
@@ -125,6 +125,7 @@ test("API keys: created with a one-time reveal, work against /api/v1, stop worki
 test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once", { tag: "@critical" }, async ({ page }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
   // A published workflow the agent may run.
   const flowId = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name: "Doubler" } })).json()).flow.id as string;
   await saveGraph(page.request, flowId, {
@@ -179,6 +180,7 @@ test.describe("Copilot", () => {
 
   test("valid generation with a missing credential → approve → saved draft, nothing ran", { tag: "@critical" }, async ({ page }) => {
     const { workspace } = await setupUser(page);
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     await page.goto(`/w/${workspace.slug}/flows`);
     const flowCount = async () => ((await (await page.request.get(`/api/workspaces/${workspace.id}/flows`)).json()).flows as unknown[]).length;
     await page.getByRole("button", { name: "✦ Create with Copilot" }).click();
@@ -203,6 +205,7 @@ test.describe("Copilot", () => {
 
   test("invalid proposal and missing integration are explained and can't be applied; rejection changes nothing", async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     const panel = await openCopilot(page, workspace.slug, flowId!);
     let p = await ask(panel, "teleport the result");
     await expect(p.getByRole("alert")).toContainText("isn't a Flowline node type");
@@ -218,6 +221,7 @@ test.describe("Copilot", () => {
 
   test("patching an existing flow keeps the user's steps; removals need explicit confirmation", async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     const panel = await openCopilot(page, workspace.slug, flowId!);
     const nodesBefore = await page.locator(".react-flow__node").count();
     let p = await ask(panel, "add a condition");
@@ -342,6 +346,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
 test("a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once", { tag: "@cross-browser" }, async ({ page, browser }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
   const flowId = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name: "Doubler" } })).json()).flow.id as string;
   await saveGraph(page.request, flowId, {
     nodes: [manual('{ "n": 1 }'), { id: "x", type: "transform.json", position: pos(1), data: { label: "Double", config: { expression: '{ "v": n * 2 }' } } }, out(2)],

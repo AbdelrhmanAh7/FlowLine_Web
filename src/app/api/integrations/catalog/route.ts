@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { getAiProvider } from "@/ai/provider";
 import { listProviders } from "@/integrations/registry";
 import { requireUser } from "@/server/access";
 import { codeSandboxAvailable } from "@/server/code-sandbox";
@@ -41,14 +40,12 @@ export const GET = route(async () => {
       inputSchema: schemaOf(a.input),
     })),
   }));
-  const ai = getAiProvider();
   const code = await codeSandboxAvailable();
   return json({
     count: providers.length,
     actionCount: providers.reduce((n, p) => n + p.actions.length, 0),
     providers,
     runtime: {
-      ai: { provider: ai.id, model: ai.model, available: ai.available, reason: ai.reason ?? null },
       codeSandbox: { available: code.ok, reason: code.reason ?? null },
     },
   });

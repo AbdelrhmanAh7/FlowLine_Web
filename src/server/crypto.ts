@@ -49,6 +49,55 @@ export function decryptSecret<T>(ciphertext: string, keyId: string): T {
   return JSON.parse(plain) as T;
 }
 
+/**
+ * v2: AES-256-GCM with the secret's CONTEXT bound as additional authenticated data, so a ciphertext copied to another
+ * row, workspace, table, provider or purpose no longer decrypts (row-swap protection).
+ * AAD = `flowline:v2:<table>:<rowId>:<workspaceId>:<provider>:<purpose>`. Format: `v2.<iv>.<tag>.<data>` (base64).
+ * v1 (above) stays for existing rows; callers that require v2 refuse v1 blobs.
+ */
+export interface SecretContext {
+  table: string;
+  rowId: string;
+  workspaceId: string;
+  provider: string;
+  purpose: string;
+}
+
+const V2_MAX_CIPHERTEXT = 64 * 1024;
+const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+function aadFor(ctx: SecretContext) {
+  for (const [k, v] of Object.entries(ctx)) if (typeof v !== "string" || !v || v.includes(":")) throw new Error(`Invalid secret context field ${k}`);
+  return Buffer.from(`flowline:v2:${ctx.table}:${ctx.rowId}:${ctx.workspaceId}:${ctx.provider}:${ctx.purpose}`, "utf8");
+}
+
+export function encryptSecretV2(value: unknown, ctx: SecretContext): { ciphertext: string; keyId: string } {
+  const { current } = keys();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", current.bytes, iv);
+  cipher.setAAD(aadFor(ctx));
+  const enc = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
+  return { ciphertext: `v2.${iv.toString("base64")}.${cipher.getAuthTag().toString("base64")}.${enc.toString("base64")}`, keyId: current.id };
+}
+
+export function decryptSecretV2<T>(ciphertext: string, keyId: string, ctx: SecretContext): T {
+  if (typeof ciphertext !== "string" || ciphertext.length > V2_MAX_CIPHERTEXT) throw new Error("Unrecognized ciphertext format");
+  const parts = ciphertext.split(".");
+  if (parts.length !== 4 || parts[0] !== "v2") throw new Error("Unrecognized ciphertext format");
+  const [, ivB, tagB, dataB] = parts as [string, string, string, string];
+  if (![ivB, tagB, dataB].every((p) => B64.test(p))) throw new Error("Unrecognized ciphertext format");
+  const iv = Buffer.from(ivB, "base64");
+  const tag = Buffer.from(tagB, "base64");
+  if (iv.length !== 12 || tag.length !== 16) throw new Error("Unrecognized ciphertext format");
+  const key = keys().all.get(keyId);
+  if (!key) throw new Error(`Encryption key ${keyId} is not available`);
+  const decipher = createDecipheriv("aes-256-gcm", key.bytes, iv, { authTagLength: 16 });
+  decipher.setAAD(aadFor(ctx));
+  decipher.setAuthTag(tag);
+  const plain = Buffer.concat([decipher.update(Buffer.from(dataB, "base64")), decipher.final()]).toString("utf8");
+  return JSON.parse(plain) as T;
+}
+
 export function sha256Hex(data: string | Buffer) {
   return createHash("sha256").update(data).digest("hex");
 }

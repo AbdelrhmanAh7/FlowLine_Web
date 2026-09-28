@@ -403,12 +403,12 @@ function StepPanel({
       {Object.keys(meta).length > 0 && (
         <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 rounded-lg border border-line bg-card px-3 py-2 text-sm" aria-label={t("runs.panel.details")}>
           {Object.entries(meta)
-            .filter(([k]) => !["approvalId", "reviewId"].includes(k))
+            .filter(([k, v]) => !["approvalId", "reviewId"].includes(k) && (v !== null || k === "costMicros"))
             .map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-muted">{k}</dt>
                 <dd className="data truncate text-hi" title={String(v)}>
-                  {k === "costMicros" ? (Number(v) / 1_000_000).toFixed(6) : String(v)}
+                  {k === "costMicros" ? (v == null ? t("runs.panel.costUnknown") : (Number(v) / 1_000_000).toFixed(6)) : String(v)}
                 </dd>
               </div>
             ))}

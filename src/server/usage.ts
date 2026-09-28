@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { planEntitlements } from "./entitlements";
 import { schema } from "@/db";
-import type { PriceEntry, PriceTable } from "@/db/schema";
+import type { PriceEntry } from "@/db/schema";
 
 export class BudgetExceededError extends Error {
   code = "BUDGET_EXCEEDED";
@@ -15,14 +15,7 @@ export function monthStart(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
-/** Price lookup: exact key, then provider wildcard. Keys: "ai:<provider>/<model>", "action:<actionId>", "http", "run". No defaults are invented. */
-export function priceFor(prices: PriceTable, key: string): PriceEntry | undefined {
-  if (prices[key]) return prices[key];
-  const [kind, rest] = key.split(":");
-  const provider = rest?.split("/")[0];
-  if (provider && prices[`${kind}:${provider}/*`]) return prices[`${kind}:${provider}/*`];
-  return prices[`${kind}:*`];
-}
+export { priceFor } from "./prices";
 
 export function aiCostMicros(p: PriceEntry | undefined, inputTokens: number, outputTokens: number) {
   if (!p) return { cost: 0, unpriced: true };

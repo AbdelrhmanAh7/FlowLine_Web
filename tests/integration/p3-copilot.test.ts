@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
+import { connectAi, useAiDouble } from "./ai-helpers";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { decideNewFlowProposal, decideProposal, propose, proposeNewFlow } from "@/server/copilot";
@@ -12,10 +13,8 @@ let ai: Awaited<ReturnType<typeof startFakeAi>>;
 const prevEnv = { ...process.env };
 beforeAll(async () => {
   ai = await startFakeAi(0);
-  process.env.OLLAMA_BASE_URL = ai.url;
-  process.env.FLOWLINE_AI_PROVIDER = "ollama";
-  process.env.FLOWLINE_AI_MODEL = "fake-model";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `127.0.0.1:${ai.port}`;
+  useAiDouble(ai.url);
 });
 afterAll(async () => {
   Object.assign(process.env, prevEnv);
@@ -38,6 +37,7 @@ const existing = (): FlowGraph => ({
 async function setup(graph?: FlowGraph) {
   const user = await makeUser("cp");
   const ws = await createWorkspace(user, unique("Copilot"));
+  await connectAi(user, ws.id); // Copilot uses the workspace default AI connection
   const flow = await createFlow(user, ws.id, { name: unique("Flow") });
   if (graph) await saveFlow(user, flow.id, { baseRevision: 1, graph });
   return { user, ws, flow };
@@ -142,11 +142,11 @@ describe("Copilot usage accounting", () => {
     expect(p.status).toBe("proposed");
     const events = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).filter((e) => e.idempotencyKey.startsWith(`copilot:${flow.id}:`));
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ kind: "ai", status: "settled", provider: "ollama" });
+    expect(events[0]).toMatchObject({ kind: "ai", status: "settled", provider: "openai", model: "fake-gpt-mini" });
     expect(events[0]!.inputTokens).toBeGreaterThan(0);
 
     // A tiny budget and a real price: the next proposal is refused up front, with no model call recorded.
-    await updateWorkspace(ws.id, { monthlyBudget: 0.000001, prices: { "ai:ollama/fake-model": { inputPerMTok: 100, outputPerMTok: 100 } } });
+    await updateWorkspace(ws.id, { monthlyBudget: 0.000001, prices: { "ai:openai/fake-gpt-mini": { inputPerMTok: 100, outputPerMTok: 100 } } });
     const before = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).length;
     const refused = await propose(user, flow.id, "add a condition");
     expect(refused.status).toBe("invalid");
@@ -163,6 +163,7 @@ describe("Create with Copilot (new flow)", () => {
   it("creates no flow until a proposal is approved; rejected and invalid proposals leave nothing behind (Codex CX3Q-05)", async () => {
     const user = await makeUser("cpn");
     const ws = await createWorkspace(user, unique("CopilotNew"));
+  await connectAi(user, ws.id);
     const before = (await flowsIn(ws.id)).length;
 
     const bad = await proposeNewFlow(user, ws.id, "teleport the result");

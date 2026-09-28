@@ -30,6 +30,10 @@ export const CAPABILITIES = {
   "audit.view": ["owner"],
   "workspace.settings": ["owner"],
   "sso.manage": ["owner"],
+  /** AI hub: connect / rotate / disconnect AI provider connections, set defaults, policies and who may use them. */
+  "ai.manage": ["owner"],
+  /** AI hub: choose an AI route — and only on connections whose use_roles include the member's role. */
+  "ai.use": ["owner", "editor"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Capability = keyof typeof CAPABILITIES;
