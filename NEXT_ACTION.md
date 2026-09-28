@@ -24,23 +24,28 @@ Owner decisions during Phase 4: **Arabic-first** product (Arabic default + RTL, 
 a swarm of **Opus 5.5** subagents in separate worktrees (removed after merge); reviews by **Codex gpt-6-astra** and
 **Fable 5.1**; goal is production readiness (production deploy / live payments still need explicit owner approval).
 
-Done (merged on `phase-4`, gates green: unit 126, contract 103, integration 286):
+Done (merged on `phase-4` @ adf3248, gates green: unit 135, contract 123, integration 320):
 - Entry gate (smoke 8/8 on ce08d9f), Phase 4 scope section in SCOPE_MATRIX.
-- Arabic-first i18n foundation (shell, landing, auth, onboarding, invite, Flows dashboard; RTL app-wide).
-- Email delivery + account flows (Codex): verification, reset, invitation email, account deletion, notices.
-- Invitation-only beta access (invites / hashed beta codes / admin allowlist; email, social and SSO sign-up).
+- Arabic-first i18n: shell, landing, auth, onboarding, invite, Flows dashboard, builder/canvas, run history +
+  inspector, templates, email/account pages (RTL app-wide).
+- Email delivery + account flows: verification (required), reset, invitation email, account deletion, notices.
+  E2E runs under required verification via the test-only outbox route.
+- Invitation-only beta access (invites / hashed beta codes / admin allowlist) with sign-up UX: beta-code field,
+  pre-check with a real refusal, check-inbox state; invitation carried through verification.
+- Paddle sandbox billing behind the provider abstraction (Stripe stays a workflow integration).
 - Telemetry + correlation ids + funnel report; retention job; shared PostgreSQL rate limiting.
-- Ops status + monitor (alert/recovery verified); beta stack (Caddy TLS, internal-only services, backups) verified
-  locally with `scripts/release/verify-beta-stack.mjs`; runbook + privacy/safety drafts.
-- Copilot benchmark harness (12 fixed requests, 6 dimensions): local qwen2.5:7b 5/12.
-- Integration beta scope labels (core: Sheets, Gmail, Slack, GitHub, PostgreSQL; others deferred).
+- Ops status + monitor (alert/recovery verified); beta stack verified locally; runbook, user guide (Arabic first),
+  limitations, privacy/safety drafts.
+- Beta UX: BETA badge; user menu has Report an issue / Contact support (FLOWLINE_SUPPORT_EMAIL,
+  FLOWLINE_FEEDBACK_URL; disabled with a reason when unset) and Account (resend verification, delete).
+- Fable 5.1 security review: 0 P0/P1; 6 of 7 fixed, 1 P3 accepted (artifacts/phase-4/fable-security/REVIEW.md).
+- Copilot benchmark harness (12 fixed requests): local qwen2.5:7b 5/12.
 
-Running (worktrees): `FL-wt-paddle` (Kimi — Paddle sandbox billing), `FL-wt-w2a` (Opus — E2E under required email
-verification, beta sign-up UX, email pages into i18n), `FL-wt-w2b1` (Opus — Arabic builder/runs/templates + CX3S-01).
+Running: `FL-wt-w2b2` (Opus: Arabic settings/agents/knowledge/integrations + Copilot EXPERIMENTAL badge);
+full E2E Chromium+Firefox on adf3248; Codex gpt-6-astra review of ce08d9f..adf3248.
 
-Next: merge those → Opus wave 2b (Arabic settings/agents/knowledge/integrations) → Fable + Codex-astra security
-reviews (email, beta gate, billing) → full E2E 3 browsers → beta image + release checks → user guide (Arabic) +
-limitations + PHASE4_BETA_REPORT → Chrome QA (Codex, real Chrome) → verdicts.
+Next: merge W2-B2 → E2E 3 browsers → beta image + release checks (smoke, rollback, backup-restore, beta load) →
+Chrome QA (Codex, real Chrome) → PHASE4_BETA_REPORT + SCOPE_MATRIX statuses → verdicts → push.
 
 BLOCKED on owner inputs: hosted AI key (Copilot benchmark), Resend/Postmark, Paddle sandbox, Google/Slack/GitHub test
 accounts + OAuth apps, domain/DNS + VPS for `beta.<domain>`.
