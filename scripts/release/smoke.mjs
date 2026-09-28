@@ -7,11 +7,14 @@
  *
  * Email verification is required, so a fresh sign-up has no session. Two ways to get verified users:
  *   --outbox            test stack only (FLOWLINE_ENV=test): read the verification link from /api/test/outbox.
+ *   --env .env.staging  local staging (FLOWLINE_EMAIL_PROVIDER=outbox): read it from the staging DB's email_outbox.
  *   SMOKE_A_EMAIL / SMOKE_A_PASSWORD and SMOKE_B_EMAIL / SMOKE_B_PASSWORD
- *                       pre-verified smoke accounts (scripts/beta/create-smoke-user.mts) — use these on staging/beta.
+ *                       pre-verified smoke accounts (create them once through the UI) — use these on the real beta.
  */
 import { randomUUID } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { parseEnvFile } from "./lib/email-token.mjs";
+import { verifiedUser } from "./lib/verified-user.mjs";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -21,6 +24,9 @@ const BASE = arg("base", "http://localhost:3200").replace(/\/+$/, "");
 const OUT = arg("out", "artifacts/phase-4/smoke");
 const INVITE = arg("invite");
 const OUTBOX = process.argv.includes("--outbox");
+// --env <file>: read STAGING_DB_PASSWORD to take verification links from the staging DB's email_outbox (127.0.0.1:5434).
+const ENV_FILE = arg("env");
+const DB_URL = ENV_FILE ? `postgres://flowline:${parseEnvFile(readFileSync(ENV_FILE, "utf8")).STAGING_DB_PASSWORD}@127.0.0.1:${arg("db-port", "5434")}/flowline` : null;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -61,26 +67,12 @@ async function user(tag) {
     email = preEmail;
     await signIn(s, email, prePassword);
   } else {
-    if (!OUTBOX) throw new Error(`email verification is required: pass --outbox (test stack) or set ${envKey}_EMAIL/${envKey}_PASSWORD for a pre-verified account`);
+    // Fresh verified user through the real verification endpoint (shared helper): token from the test outbox
+    // (--outbox) or from the staging DB's email_outbox (--env .env.staging).
     email = `${tag}-${randomUUID().slice(0, 8)}@flowline-smoke.test`;
-    const password = "Smoke-Check-Pass-1";
-    for (let attempt = 0; ; attempt++) {
-      const r = await s.req("/api/auth/sign-up/email", { method: "POST", json: { email, password, name: "Smoke", ...(INVITE ? { betaCode: INVITE } : {}) } });
-      if (r.ok) break;
-      if (r.status !== 429 || attempt > 10) throw new Error(`sign-up → ${r.status} ${(await r.text()).slice(0, 200)}`);
-      await sleep(6000);
-    }
-    let link = null;
-    for (let i = 0; i < 20 && !link; i++) {
-      const box = await fetch(`${BASE}/api/test/outbox?email=${encodeURIComponent(email)}`).then((r) => (r.ok ? r.json() : { messages: [] }));
-      link = box.messages.find((m) => m.purpose === "verify")?.link ?? null;
-      if (!link) await sleep(500);
-    }
-    if (!link) throw new Error("no verification email in the test outbox (is this the test stack?)");
-    const token = new URL(link).searchParams.get("token");
-    const v = await s.ok("/api/email", { method: "POST", json: { action: "verify", token } });
-    if (v.status !== "done") throw new Error(`verification → ${v.status}`);
-    await signIn(s, email, password);
+    const tokenSource = OUTBOX ? { outbox: true } : DB_URL ? { dbUrl: DB_URL } : null;
+    if (!tokenSource) throw new Error(`email verification is required: pass --outbox (test stack), --env <file> (staging DB outbox) or set ${envKey}_EMAIL/${envKey}_PASSWORD for a pre-verified account`);
+    await verifiedUser({ base: BASE, session: s, email, password: "Smoke-Check-Pass-1", name: "Smoke", betaCode: INVITE, tokenSource });
   }
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Smoke ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "data", skipped: false } });
