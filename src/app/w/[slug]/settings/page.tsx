@@ -11,6 +11,7 @@ import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/componen
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
+import { TIME_ZONES } from "@/lib/timezones";
 import { AiDefaults } from "./ai-defaults";
 import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
@@ -91,7 +92,7 @@ function General() {
   const toast = useToast();
   const [name, setName] = useState(workspace.name);
   const [tz, setTz] = useState(workspace.timezone);
-  const zones = typeof Intl.supportedValuesOf === "function" ? ["UTC", ...Intl.supportedValuesOf("timeZone").filter((z) => z !== "UTC")] : ["UTC"];
+  const zones = TIME_ZONES.includes(tz) ? TIME_ZONES : [tz, ...TIME_ZONES];
   const isOwner = role === "owner";
   const save = useMutation({
     mutationFn: () => api(`/api/workspaces/${workspace.id}`, { method: "PATCH", json: { name, timezone: tz } }),

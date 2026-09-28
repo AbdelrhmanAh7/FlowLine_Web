@@ -1,5 +1,6 @@
 "use client";
 
+import { TIME_ZONES } from "@/lib/timezones";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
@@ -179,7 +180,6 @@ export function NodeConfigForm(props: FormProps) {
 
 function ScheduleForm({ node, cfg, set }: FormProps) {
   const t = useT();
-  const zones = useMemo(() => (typeof Intl.supportedValuesOf === "function" ? ["UTC", ...Intl.supportedValuesOf("timeZone").filter((z) => z !== "UTC")] : ["UTC"]), []);
   const cron = s(cfg.cron);
   const tz = s(cfg.timezone) || "UTC";
   const cronError = checkCron(cron, tz);
@@ -196,6 +196,7 @@ function ScheduleForm({ node, cfg, set }: FormProps) {
       return [];
     }
   }, [cron, tz, err, mountedAt, t.locale]);
+  const zones = TIME_ZONES.includes(tz) ? TIME_ZONES : [tz, ...TIME_ZONES];
   const presets: [MessageKey, string][] = [
     ["config.schedule.every15", "*/15 * * * *"],
     ["config.schedule.hourly", "0 * * * *"],

@@ -22,7 +22,9 @@ export class EmailDeliveryError extends Error {
 function config() {
   const provider = process.env.FLOWLINE_EMAIL_PROVIDER ?? (process.env.FLOWLINE_ENV === "test" ? "outbox" : undefined);
   if (!provider || !["resend", "postmark", "outbox"].includes(provider)) throw new EmailDeliveryError("Email provider is not configured.");
-  if (provider === "outbox" && process.env.FLOWLINE_ENV !== "test" && process.env.NODE_ENV === "production") {
+  // The DB outbox (no real delivery) is for the test stack and the local staging stack, whose release checks read
+  // verification links from it. Any other production build must use a real provider.
+  if (provider === "outbox" && !["test", "staging"].includes(process.env.FLOWLINE_ENV ?? "") && process.env.NODE_ENV === "production") {
     throw new EmailDeliveryError("Outbox cannot be used in production.");
   }
   const from = process.env.FLOWLINE_EMAIL_FROM;

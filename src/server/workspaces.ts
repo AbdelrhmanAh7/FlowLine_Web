@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { isTimeZone } from "@/lib/timezones";
 import { db, schema } from "@/db";
 import type { CurrentUser } from "./access";
 import { configuredProviders } from "@/ai/chat";
@@ -162,7 +163,7 @@ export async function updateWorkspace(workspaceId: string, patch: { name?: strin
     set.name = clean;
   }
   if (patch.timezone !== undefined) {
-    if (!Intl.supportedValuesOf("timeZone").includes(patch.timezone) && patch.timezone !== "UTC") {
+    if (!isTimeZone(patch.timezone)) {
       throw new HttpError(400, "VALIDATION", "Unknown time zone");
     }
     set.timezone = patch.timezone;
