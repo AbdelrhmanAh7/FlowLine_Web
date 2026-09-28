@@ -1528,7 +1528,7 @@ export const en: Messages = {
       inviteRevoked: "Invitation revoked",
       inviteError: "Couldn't create the invitation",
       inviteTitle: "Invite a teammate",
-      inviteBody: "Email delivery isn't configured in this environment, so Flowline creates a secure, single-use link (valid 7 days, only for that email) for you to share.",
+      inviteBody: "Flowline emails the invitation and also shows the secure, single-use link (valid 7 days, only for that email), so you can share it yourself if the email doesn't arrive.",
       email: "Email",
       role: "Role",
       enterEmail: "Enter an email",
