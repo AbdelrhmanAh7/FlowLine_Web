@@ -33,7 +33,7 @@ The worker (`pnpm worker`, started by `pnpm dev`) executes runs. If it isn't run
 test doubles (fake SaaS APIs on :4010 and a fake Ollama on :4011, started with the test stack):
 
 ```
-DATABASE_URL=postgres://flowline:flowline_local_only@localhost:5433/flowline_test
+DATABASE_URL=postgres://flowline:flowline_local_only@127.0.0.1:5433/flowline_test
 BETTER_AUTH_URL=http://localhost:3100
 FLOWLINE_ENV=test
 BETTER_AUTH_SECRET=<a different random value>
