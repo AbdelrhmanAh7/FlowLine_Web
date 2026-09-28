@@ -1,0 +1,108 @@
+{
+  "image": "flowline:e42667d",
+  "startedAt": "2026-09-28T18:52:20.346Z",
+  "scenarios": {
+    "A-stall (docker pause)": {
+      "healthDuringOutage": {
+        "status": 503,
+        "ms": 3005,
+        "body": "{\"db\":\"down\",\"worker\":\"unknown\"}"
+      },
+      "apiDuringOutage": {
+        "status": 500,
+        "ms": 5012,
+        "body": "{\"error\":{\"code\":\"INTERNAL\",\"message\":\"Something went wrong on our side\",\"requestId\":\"3cac1b73-3a8a-4811-865b-28aa3e000a53\"}}"
+      },
+      "recoveryMs": 9170,
+      "runsSoFar": 2
+    },
+    "B-hard outage (stop/start)": {
+      "healthDuringOutage": {
+        "status": 503,
+        "ms": 3005,
+        "body": "{\"db\":\"down\",\"worker\":\"unknown\"}"
+      },
+      "apiDuringOutage": {
+        "status": 500,
+        "ms": 4421,
+        "body": "{\"error\":{\"code\":\"INTERNAL\",\"message\":\"Something went wrong on our side\",\"requestId\":\"0e97adaf-114d-4f9e-a587-56d418bd910a\"}}"
+      },
+      "recoveryMs": 9770,
+      "runsSoFar": 4
+    }
+  },
+  "seedUser": {
+    "email": "outage-1d9d1aee@flowline-outage.test",
+    "verification": "verified",
+    "via": "db-outbox"
+  },
+  "finishedAt": "2026-09-28T18:52:56.274Z",
+  "checks": [
+    {
+      "name": "stack up",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-stall (docker pause): health reports the DB down quickly (503 ≤ 10 s)",
+      "ok": true,
+      "detail": "503 in 3005 ms"
+    },
+    {
+      "name": "A-stall (docker pause): an API call fails fast with a clean 5xx (≤ 35 s, no stack trace or connection string)",
+      "ok": true,
+      "detail": "500 in 5012 ms"
+    },
+    {
+      "name": "A-stall (docker pause): public pages still render",
+      "ok": true,
+      "detail": "200 in 68 ms"
+    },
+    {
+      "name": "A-stall (docker pause): recovers without restarting web or worker",
+      "ok": true,
+      "detail": "healthy 9 s after the outage began"
+    },
+    {
+      "name": "A-stall (docker pause): the run started before the outage and one after both succeed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-stall (docker pause): no duplicated steps for the interrupted run",
+      "ok": true,
+      "detail": "{\"t\":1,\"x\":1,\"o\":1}"
+    },
+    {
+      "name": "B-hard outage (stop/start): health reports the DB down quickly (503 ≤ 10 s)",
+      "ok": true,
+      "detail": "503 in 3005 ms"
+    },
+    {
+      "name": "B-hard outage (stop/start): an API call fails fast with a clean 5xx (≤ 35 s, no stack trace or connection string)",
+      "ok": true,
+      "detail": "500 in 4421 ms"
+    },
+    {
+      "name": "B-hard outage (stop/start): public pages still render",
+      "ok": true,
+      "detail": "200 in 13 ms"
+    },
+    {
+      "name": "B-hard outage (stop/start): recovers without restarting web or worker",
+      "ok": true,
+      "detail": "healthy 10 s after the outage began"
+    },
+    {
+      "name": "B-hard outage (stop/start): the run started before the outage and one after both succeed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "B-hard outage (stop/start): no duplicated steps for the interrupted run",
+      "ok": true,
+      "detail": "{\"t\":1,\"x\":1,\"o\":1}"
+    }
+  ],
+  "pass": true
+}

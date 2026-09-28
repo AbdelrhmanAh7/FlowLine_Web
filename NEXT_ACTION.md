@@ -18,37 +18,33 @@
 - **Known limitation:** Copilot's proposal quality with the local 7B model is not verified (the safety contract is).
 - **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
-## Phase 4 — launch candidate & private beta: IN PROGRESS on branch `phase-4`
+## Phase 4 — launch candidate & private beta: PAUSED for owner credentials (branch `phase-4`)
 
-Owner decisions during Phase 4: **Arabic-first** product (Arabic default + RTL, English secondary); implementation by
-a swarm of **Opus 5.5** subagents in separate worktrees (removed after merge); reviews by **Codex gpt-6-astra** and
-**Fable 5.1**; goal is production readiness (production deploy / live payments still need explicit owner approval).
+**Current state (2026-09-28):** release code `e42667d`, image `flowline:e42667d` (`sha256:7c92ffa6…`), schema 12,
+running on local staging `http://localhost:3200` in invite-only mode. Report: `docs/implementation/PHASE4_BETA_REPORT.md`;
+release record: `artifacts/phase-4/release/RELEASE.md`.
 
-Done (merged on `phase-4` @ adf3248, gates green: unit 135, contract 123, integration 320):
-- Entry gate (smoke 8/8 on ce08d9f), Phase 4 scope section in SCOPE_MATRIX.
-- Arabic-first i18n: shell, landing, auth, onboarding, invite, Flows dashboard, builder/canvas, run history +
-  inspector, templates, email/account pages (RTL app-wide).
-- Email delivery + account flows: verification (required), reset, invitation email, account deletion, notices.
-  E2E runs under required verification via the test-only outbox route.
-- Invitation-only beta access (invites / hashed beta codes / admin allowlist) with sign-up UX: beta-code field,
-  pre-check with a real refusal, check-inbox state; invitation carried through verification.
-- Paddle sandbox billing behind the provider abstraction (Stripe stays a workflow integration).
-- Telemetry + correlation ids + funnel report; retention job; shared PostgreSQL rate limiting.
-- Ops status + monitor (alert/recovery verified); beta stack verified locally; runbook, user guide (Arabic first),
-  limitations, privacy/safety drafts.
-- Beta UX: BETA badge; user menu has Report an issue / Contact support (FLOWLINE_SUPPORT_EMAIL,
-  FLOWLINE_FEEDBACK_URL; disabled with a reason when unset) and Account (resend verification, delete).
-- Fable 5.1 security review: 0 P0/P1; 6 of 7 fixed, 1 P3 accepted (artifacts/phase-4/fable-security/REVIEW.md).
-- Copilot benchmark harness (12 fixed requests): local qwen2.5:7b 5/12.
+- **Gates on `e42667d`:** lint and typecheck clean; unit 182; contract 124; integration 331; E2E Chromium+Firefox
+  81/81 (one earlier full run 80/81 — the API-keys stall under load, open test-infra issue); WebKit 23/23.
+- **Release checks on the image:** smoke 8/8, rollback 11/11, backup/restore 17/17, DB outage 12/12, beta load 5/5.
+- **Reviews:**
+  - Fable security: 6 of 7 fixed, 1 P3 accepted.
+  - Codex code review: 7/7 fixed.
+  - Codex Chrome QA: 0 P0/P1, 2 P2 — both fixed.
+- **Verdicts so far:** CODE COMPLETE PASS · BETA INFRA VERIFIED BLOCKED · PRIVATE BETA READY NO · PUBLIC PRODUCTION NO.
 
-Running: `FL-wt-w2b2` (Opus: Arabic settings/agents/knowledge/integrations + Copilot EXPERIMENTAL badge);
-full E2E Chromium+Firefox on adf3248; Codex gpt-6-astra review of ce08d9f..adf3248.
+**Paused by the owner** ("stop codex until I get them"): the Codex Chrome retest of CX4Q-01/02 was stopped before it
+started testing. Nothing is failing.
 
-Next: merge W2-B2 → E2E 3 browsers → beta image + release checks (smoke, rollback, backup-restore, beta load) →
-Chrome QA (Codex, real Chrome) → PHASE4_BETA_REPORT + SCOPE_MATRIX statuses → verdicts → push.
-
-BLOCKED on owner inputs: hosted AI key (Copilot benchmark), Resend/Postmark, Paddle sandbox, Google/Slack/GitHub test
-accounts + OAuth apps, domain/DNS + VPS for `beta.<domain>`.
+**Next, when the owner has added credentials to `.env` (never in chat):**
+1. Wire them into staging (`.env.staging`) and restart: `FLOWLINE_IMAGE=flowline:e42667d docker compose -f docker-compose.staging.yml --env-file .env.staging up -d`.
+2. Live certification: `pnpm test:live:saas` → `artifacts/phase-4/live-certification/` (Sheets, Gmail, Slack, GitHub).
+3. Paddle sandbox journey 8, the real email provider, and the hosted Copilot benchmark:
+   `FLOWLINE_AI_PROVIDER=anthropic node scripts/with-env.mjs .env npx tsx scripts/diag/copilot-benchmark.mts`.
+4. Domain + VPS → deploy `deploy/beta/`, then `node scripts/release/verify-beta-stack.mjs --base https://beta.<domain>`.
+5. Codex Chrome retest + journeys 2–5, 8 (`artifacts/phase-4/codex-qa/RETEST-BRIEF.md`; launch `codex exec … < /dev/null`
+   — without closing stdin it waits forever).
+6. Update the verdicts, commit, and push to GitHub (owner asked to push only when all work is finished).
 
 ## Waiting for the user (only you can do these)
 
