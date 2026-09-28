@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { randomToken, sha256Hex } from "@/server/crypto";
 import { HttpError } from "@/server/http";
 import { sendEmail } from "./index";
+import { safePath } from "./redirect";
 import { renderEmail, requestLocale, type TemplateKind } from "./templates";
 
 type Purpose = "verify" | "reset" | "delete";
@@ -14,13 +15,22 @@ export function publicUrl(path: string) {
   return new URL(path, origin).toString();
 }
 
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
 function clientIp(request?: Request) {
-  return request?.headers.get("x-real-ip") ?? request?.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  const ip = request?.headers.get("x-real-ip") ?? request?.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  // TEST STACK ONLY: every E2E browser is the same loopback client, so the per-IP dimension would cap the whole suite
+  // at 15 sign-ups an hour. Per-email limits still apply, and explicit client IPs (integration tests) are still limited.
+  if (process.env.FLOWLINE_ENV === "test" && ip && LOOPBACK.has(ip)) return undefined;
+  return ip;
 }
 
-/** Atomic shared PostgreSQL limit. Keys are hashed so email addresses and IPs are not kept here. */
-export async function checkEmailRate(kind: string, email: string, request?: Request) {
-  for (const [dimension, value, max] of [["email", email.toLowerCase(), 3], ["ip", clientIp(request), 15]] as const) {
+/**
+ * Atomic shared PostgreSQL limit (one-hour windows) per email and per client IP. Keys are hashed so email addresses
+ * and IPs are not kept here. Throws a 429 HttpError with `code` once either dimension is over its maximum.
+ */
+export async function checkSharedRate(kind: string, email: string, request: Request | undefined, limits: { email: number; ip: number }, error: { code: string; message: string }) {
+  for (const [dimension, value, max] of [["email", email.toLowerCase(), limits.email], ["ip", clientIp(request), limits.ip]] as const) {
     if (dimension === "ip" && !value) continue;
     const key = sha256Hex(`${kind}:${dimension}:${value}`);
     const rows = await db.execute<{ count: number }>(sql`
@@ -29,8 +39,12 @@ export async function checkEmailRate(kind: string, email: string, request?: Requ
         count = case when email_rate_limit.window_started_at < now() - interval '1 hour' then 1 else email_rate_limit.count + 1 end,
         window_started_at = case when email_rate_limit.window_started_at < now() - interval '1 hour' then now() else email_rate_limit.window_started_at end
       returning count`);
-    if (Number(rows.rows[0]?.count ?? 0) > max) throw new HttpError(429, "EMAIL_RATE_LIMIT", "Too many email requests. Try again later.");
+    if (Number(rows.rows[0]?.count ?? 0) > max) throw new HttpError(429, error.code, error.message);
   }
+}
+
+export async function checkEmailRate(kind: string, email: string, request?: Request) {
+  await checkSharedRate(kind, email, request, { email: 3, ip: 15 }, { code: "EMAIL_RATE_LIMIT", message: "Too many email requests. Try again later." });
 }
 
 async function sendTemplate(kind: TemplateKind, to: string, link: string, key: string, request?: Request) {
@@ -38,12 +52,17 @@ async function sendTemplate(kind: TemplateKind, to: string, link: string, key: s
   await sendEmail({ to, ...rendered, tags: { purpose: kind }, idempotencyKey: key });
 }
 
-export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request) {
+/**
+ * `callbackURL` (verification only): a same-origin path the verify page links to once the email is confirmed — e.g.
+ * `/sign-in?next=invite:…` so an invited person lands back on their invitation after signing in.
+ */
+export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
   await checkEmailRate(purpose, user.email, request);
   const token = randomToken(32);
   const [row] = await db.insert(schema.emailToken).values({ tokenHash: sha256Hex(token), userId: user.id, purpose, expiresAt: new Date(Date.now() + lifetime[purpose]) }).returning({ id: schema.emailToken.id });
   const path = purpose === "verify" ? "/verify-email" : purpose === "reset" ? "/reset-password" : "/account/delete";
-  const link = publicUrl(`${path}?token=${encodeURIComponent(token)}`);
+  const callback = purpose === "verify" ? safePath(opts.callbackURL, "") : "";
+  const link = publicUrl(`${path}?token=${encodeURIComponent(token)}${callback && callback !== "/" ? `&callbackURL=${encodeURIComponent(callback)}` : ""}`);
   try { await sendTemplate(purpose, user.email, link, row!.id, request); }
   catch (error) {
     await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id));
@@ -59,7 +78,7 @@ export async function sendInviteEmail(to: string, link: string, request?: Reques
   await sendTemplate("invite", to, link, crypto.randomUUID(), request);
 }
 
-export async function requestToken(purpose: "verify" | "reset", email: string, request?: Request) {
+export async function requestToken(purpose: "verify" | "reset", email: string, request?: Request, opts: { callbackURL?: string | null } = {}) {
   const started = Date.now();
   await checkEmailRate(purpose, email, request);
   const [user] = await db.select({ id: schema.user.id, email: schema.user.email, emailVerified: schema.user.emailVerified }).from(schema.user).where(sql`lower(${schema.user.email}) = ${email.trim().toLowerCase()}`);
@@ -73,7 +92,8 @@ export async function requestToken(purpose: "verify" | "reset", email: string, r
     // The request itself was already rate limited; do not count delivery a second time.
     const token = randomToken(32);
     const [row] = await db.insert(schema.emailToken).values({ tokenHash: sha256Hex(token), userId: user.id, purpose, expiresAt: new Date(Date.now() + lifetime[purpose]) }).returning({ id: schema.emailToken.id });
-    const link = publicUrl(`${purpose === "verify" ? "/verify-email" : "/reset-password"}?token=${token}`);
+    const callback = purpose === "verify" ? safePath(opts.callbackURL, "") : "";
+    const link = publicUrl(`${purpose === "verify" ? "/verify-email" : "/reset-password"}?token=${token}${callback && callback !== "/" ? `&callbackURL=${encodeURIComponent(callback)}` : ""}`);
     try { await sendTemplate(purpose, user.email, link, row!.id, request); }
     catch { await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id)); }
   }

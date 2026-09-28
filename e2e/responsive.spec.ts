@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { EN_STATE } from "../playwright.config";
-import { injectFault, resetFaults, setupUser } from "./helpers";
+import { injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 const OUT = "artifacts/phase-3/screenshots";
 mkdirSync(OUT, { recursive: true });
@@ -175,7 +175,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   // Onboarding step 2 (goal) for a new account
   const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: EN_STATE });
   const fp = await fresh.newPage();
-  await fp.request.post("/api/auth/sign-up/email", { data: { email: `onb-${Date.now()}@flowline-e2e.test`, password: "e2e-Passw0rd!", name: "Jules Kim" } });
+  await signUpVerified(fp.request, uniqueEmail("onb"), "Jules Kim");
   await fp.setViewportSize({ width: 1440, height: 900 });
   await fp.goto("/onboarding");
   await fp.getByRole("button", { name: "Continue" }).click();

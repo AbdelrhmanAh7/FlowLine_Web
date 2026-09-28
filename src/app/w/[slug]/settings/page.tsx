@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
+import { useT } from "@/i18n/client";
 import { api, ApiError } from "@/lib/api";
 import { AiDefaults } from "./ai-defaults";
 import { ApiKeys } from "./api-keys";
@@ -53,7 +54,7 @@ export default function SettingsPage() {
             <>
               <General />
               <AiDefaults />
-              <Card className="mt-5 flex flex-col gap-3 p-5"><Link className="text-accent hover:underline" href="/resend-verification">إعادة إرسال تأكيد البريد / Resend verification</Link><Link className="text-danger hover:underline" href="/account/delete">حذف الحساب / Delete account</Link></Card>
+              <AccountCard />
             </>
           )}
           {tab === "keys" && <ApiKeys />}
@@ -64,6 +65,28 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Account-level actions (translated; RTL-safe with logical spacing). Also reachable from the user menu. */
+function AccountCard() {
+  const t = useT();
+  const { user } = useWorkspace();
+  return (
+    <Card className="mt-5 flex flex-col gap-3 p-5" aria-labelledby="account-card-title">
+      <h2 id="account-card-title" className="text-lg font-semibold">
+        {t("account.settings.title")}
+      </h2>
+      <p className="text-base text-med">{t.rich("account.settings.body", { email: <span dir="ltr" className="data">{user.email}</span> })}</p>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Link className="text-accent hover:underline" href="/resend-verification">
+          {t("account.settings.resendVerification")}
+        </Link>
+        <Link className="text-danger hover:underline" href="/account/delete">
+          {t("account.settings.deleteAccount")}
+        </Link>
+      </div>
+    </Card>
   );
 }
 

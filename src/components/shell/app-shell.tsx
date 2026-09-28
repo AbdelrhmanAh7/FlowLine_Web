@@ -208,6 +208,14 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
               <span dir="ltr">{user.email}</span>
             </p>
           </div>
+          <p className="px-2.5 pt-1 text-xs text-muted">{t("shell.userMenu.account")}</p>
+          <Link role="menuitem" href="/resend-verification" onClick={() => setOpen(false)} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
+            {t("shell.userMenu.resendVerification")}
+          </Link>
+          <Link role="menuitem" href="/account/delete" onClick={() => setOpen(false)} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-danger hover:bg-card">
+            {t("shell.userMenu.deleteAccount")}
+          </Link>
+          <div role="separator" className="my-1 h-px bg-line" />
           <button role="menuitem" onClick={() => void signOutEverywhere()} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
             {t("shell.userMenu.signOut")}
           </button>

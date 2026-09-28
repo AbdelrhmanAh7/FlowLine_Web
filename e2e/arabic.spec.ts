@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PASSWORD, uniqueEmail } from "./helpers";
+import { latestEmail, PASSWORD, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 /**
  * Arabic-first (Phase 4): with no `fl_locale` cookie the app is Arabic and right-to-left. The rest of the suite
@@ -37,6 +37,28 @@ test("Arabic by default: sign-up → onboarding → Flows, sign-in, language swi
   expect(await direction(page, "#email")).toBe("ltr");
   await page.getByLabel("كلمة المرور").fill(PASSWORD);
   await page.getByRole("button", { name: "إنشاء الحساب" }).click();
+
+  // "Check your inbox" in Arabic; the address stays left-to-right inside the RTL sentence.
+  await expect(page.getByRole("heading", { name: "تحقّق من بريدك الوارد" })).toBeVisible();
+  const sentTo = page.locator("strong", { hasText: email });
+  await expect(sentTo).toBeVisible();
+  expect(await sentTo.evaluate((el) => getComputedStyle(el).direction)).toBe("ltr");
+  await expect(page.getByRole("button", { name: "إرسال رابط جديد" })).toBeVisible();
+
+  // The verification email is Arabic too (the language the person signed up in).
+  const mail = await latestEmail(page.request, email, "verify");
+  expect(mail.subject).toMatch(/[؀-ۿ]/);
+
+  // Verify (Arabic page), then sign in → onboarding
+  await page.goto(mail.link!);
+  await expectArabic(page);
+  await page.getByRole("button", { name: "تأكيد البريد" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "تم تأكيد بريدك. يمكنك تسجيل الدخول الآن." })).toBeVisible();
+  await page.getByRole("link", { name: "المتابعة إلى تسجيل الدخول" }).click();
+  await expect(page.getByRole("heading", { name: "مرحبًا بعودتك" })).toBeVisible();
+  await page.getByLabel("البريد الإلكتروني").fill(email);
+  await page.getByLabel("كلمة المرور").fill(PASSWORD);
+  await page.getByRole("button", { name: "تسجيل الدخول", exact: true }).click();
 
   // Onboarding
   await expect(page.getByRole("heading", { name: "سمِّ مساحة عملك" })).toBeVisible();
@@ -120,7 +142,7 @@ test("no horizontal scroll in RTL at 375 / 1024 / 1440", { tag: "@cross-browser"
   test.setTimeout(120_000);
   // A signed-in Arabic user with a flow, so the dashboard has a populated table.
   const email = uniqueEmail("arabic-rtl");
-  expect((await page.request.post("/api/auth/sign-up/email", { data: { email, password: PASSWORD, name: "RTL" } })).ok()).toBeTruthy();
+  await signUpVerified(page.request, email, "RTL");
   const { workspace } = await (await page.request.post("/api/workspaces", { data: { name: "RTL Scroll" } })).json();
   expect((await page.request.post("/api/onboarding", { data: { goal: "sales", skipped: false } })).ok()).toBeTruthy();
   const { flow } = await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { templateId: "lead-qualifier" } })).json();
@@ -134,4 +156,34 @@ test("no horizontal scroll in RTL at 375 / 1024 / 1440", { tag: "@cross-browser"
       await noHorizontalScroll(page, `${path} @${width}`);
     }
   }
+});
+
+test("account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion", { tag: "@cross-browser" }, async ({ page }) => {
+  test.setTimeout(90_000);
+  const { workspace, email } = await setupUser(page);
+
+  // Settings → the translated account card (RTL page, the address stays LTR).
+  await page.goto(`/w/${workspace.slug}/settings?tab=general`);
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { name: "حسابك" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "إعادة إرسال رسالة التأكيد" })).toBeVisible();
+  await page.getByRole("link", { name: "إعادة إرسال رسالة التأكيد" }).click();
+  await expect(page.getByRole("heading", { name: "إعادة إرسال التأكيد" })).toBeVisible();
+  await expectArabic(page);
+
+  // User menu → Delete account → emailed confirmation link → deleted.
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await page.getByRole("button", { name: "E2E User" }).click();
+  await expect(page.getByRole("menuitem", { name: "إعادة إرسال رسالة التأكيد" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "حذف الحساب" }).click();
+  await expect(page.getByRole("heading", { name: "حذف الحساب" })).toBeVisible();
+  await expectArabic(page);
+  await page.getByRole("button", { name: "إرسال رابط التأكيد" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "تم إرسال رابط التأكيد إلى بريدك." })).toBeVisible();
+  const mail = await latestEmail(page.request, email, "delete");
+  await page.goto(mail.link!);
+  await expect(page.getByRole("heading", { name: "تأكيد حذف الحساب" })).toBeVisible();
+  await page.getByRole("button", { name: "حذف الحساب" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "تم حذف حسابك." })).toBeVisible();
+  expect((await page.request.get("/api/me")).status()).toBe(401);
 });

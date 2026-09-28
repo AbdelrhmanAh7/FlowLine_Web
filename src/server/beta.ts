@@ -11,7 +11,20 @@ import { db, schema } from "@/db";
  * Existing users can always sign in. Any other mode (default "open") keeps sign-up open (dev/test/local staging).
  */
 export type BetaMode = "open" | "invite_only";
-export function betaMode(): BetaMode {
+
+/**
+ * TEST ENVIRONMENT ONLY: the isolated E2E stack runs one server for many parallel tests, so a test switches the
+ * beta mode for its own browser context with this cookie (set via /api/test/beta) instead of flipping the server env.
+ * Outside FLOWLINE_ENV=test the cookie is ignored.
+ */
+export const TEST_BETA_COOKIE = "fl_test_beta_mode";
+
+/** The beta mode for this request. `headers` only matters on the test stack (see TEST_BETA_COOKIE). */
+export function betaMode(headers?: Headers | null): BetaMode {
+  if (process.env.FLOWLINE_ENV === "test" && headers) {
+    const m = /(?:^|;\s*)fl_test_beta_mode=(open|invite_only)(?:;|$)/.exec(headers.get("cookie") ?? "");
+    if (m) return m[1] as BetaMode;
+  }
   return process.env.FLOWLINE_BETA_MODE === "invite_only" ? "invite_only" : "open";
 }
 
@@ -34,9 +47,18 @@ export async function createBetaCode(opts: { label: string; maxUses?: number; ex
   return { code, id: row!.id };
 }
 
-/** Decides whether a new account may be created for this email. Consumes a code use when a code is what allows it. */
-export async function allowSignUp(email: string, code?: string | null): Promise<{ ok: true; via: "open" | "admin" | "invite" | "code" } | { ok: false }> {
-  if (betaMode() === "open") return { ok: true, via: "open" };
+type Decision = { ok: true; via: "open" | "admin" | "invite" | "code" } | { ok: false };
+
+const usableCode = (code: string) =>
+  and(
+    eq(schema.betaAccessCode.codeHash, hash(code)),
+    isNull(schema.betaAccessCode.revokedAt),
+    lt(schema.betaAccessCode.usedCount, schema.betaAccessCode.maxUses),
+    or(isNull(schema.betaAccessCode.expiresAt), gt(schema.betaAccessCode.expiresAt, new Date())),
+  );
+
+async function decide(email: string, code: string | null | undefined, mode: BetaMode, consume: boolean): Promise<Decision> {
+  if (mode === "open") return { ok: true, via: "open" };
   const e = email.trim().toLowerCase();
   if (admins().includes(e)) return { ok: true, via: "admin" };
   const [invite] = await db
@@ -46,19 +68,27 @@ export async function allowSignUp(email: string, code?: string | null): Promise<
     .limit(1);
   if (invite) return { ok: true, via: "invite" };
   if (code && code.trim()) {
-    const used = await db
-      .update(schema.betaAccessCode)
-      .set({ usedCount: sql`${schema.betaAccessCode.usedCount} + 1` })
-      .where(
-        and(
-          eq(schema.betaAccessCode.codeHash, hash(code)),
-          isNull(schema.betaAccessCode.revokedAt),
-          lt(schema.betaAccessCode.usedCount, schema.betaAccessCode.maxUses),
-          or(isNull(schema.betaAccessCode.expiresAt), gt(schema.betaAccessCode.expiresAt, new Date())),
-        ),
-      )
-      .returning({ id: schema.betaAccessCode.id });
-    if (used.length > 0) return { ok: true, via: "code" };
+    const rows = consume
+      ? await db
+          .update(schema.betaAccessCode)
+          .set({ usedCount: sql`${schema.betaAccessCode.usedCount} + 1` })
+          .where(usableCode(code))
+          .returning({ id: schema.betaAccessCode.id })
+      : await db.select({ id: schema.betaAccessCode.id }).from(schema.betaAccessCode).where(usableCode(code)).limit(1);
+    if (rows.length > 0) return { ok: true, via: "code" };
   }
   return { ok: false };
+}
+
+/** Decides whether a new account may be created for this email. Consumes a code use when a code is what allows it. */
+export async function allowSignUp(email: string, code?: string | null, mode: BetaMode = betaMode()): Promise<Decision> {
+  return decide(email, code, mode, true);
+}
+
+/**
+ * The sign-up form's pre-check: the same decision as allowSignUp, but a code is only looked at, never consumed
+ * (the use is taken atomically by the sign-up itself).
+ */
+export async function previewSignUp(email: string, code?: string | null, mode: BetaMode = betaMode()): Promise<Decision> {
+  return decide(email, code, mode, false);
 }

@@ -1,7 +1,16 @@
-import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getT } from "@/i18n/server";
 import { EmailFlow } from "../email-flow";
-export default async function Page() {
-  const locale = (await cookies()).get("fl_locale")?.value === "en" ? "en" : "ar";
-  return <Suspense><EmailFlow mode="resend" locale={locale} /></Suspense>;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("meta.resendVerification") };
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <EmailFlow mode="resend" />
+    </Suspense>
+  );
 }

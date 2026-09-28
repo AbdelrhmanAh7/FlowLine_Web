@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { connect, expectSaved, nodeIds, PASSWORD, uniqueEmail } from "./helpers";
+import { connect, expectSaved, nodeIds, PASSWORD, uniqueEmail, verificationLink } from "./helpers";
 
 /**
  * The Phase 1 acceptance journey, entirely through the UI as a brand-new user:
- * landing → sign up → onboarding → build a flow on the canvas (drag, connect,
+ * landing → sign up → verify email → sign in → onboarding → build a flow on the canvas (drag, connect,
  * configure) → autosave → reload → run → inspect → verify persisted backend state.
  */
 test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@critical" }, async ({ page }) => {
@@ -22,6 +22,23 @@ test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@criti
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
+
+  // No session yet: sign-up asks the person to confirm their email first (with a way to get a new link).
+  await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+  await expect(page.getByText(`We sent a verification link to ${email}`)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send a new link" })).toBeVisible();
+  expect((await page.request.get("/api/me")).status()).toBe(401);
+
+  // Open the emailed link (read from the test stack's outbox), confirm, then sign in.
+  await page.goto(await verificationLink(page.request, email));
+  await expect(page.getByRole("heading", { name: "Verify email" })).toBeVisible();
+  await page.getByRole("button", { name: "Verify email" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Your email is verified. You can sign in now." })).toBeVisible();
+  await page.getByRole("link", { name: "Continue to sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   // Onboarding: workspace → goal → first flow
   await expect(page.getByRole("heading", { name: "Name your workspace" })).toBeVisible();
