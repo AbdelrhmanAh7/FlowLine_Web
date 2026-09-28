@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const base = (process.env.FLOWLINE_PUBLIC_URL ?? url.origin).replace(/\/+$/, "");
   const fail = (message: string) => NextResponse.redirect(`${base}/sign-in?sso_error=${encodeURIComponent(message)}`);
-  const slug = url.searchParams.get("workspace") ?? "";
+  const slug = (url.searchParams.get("workspace") ?? "").trim().toLowerCase();
   if (!slug) return fail("SSO isn't set up for that workspace");
   const user = await getCurrentUser().catch(() => null);
   try {

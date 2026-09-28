@@ -80,7 +80,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <span className="h-px flex-1 bg-line" /> or with email <span className="h-px flex-1 bg-line" />
           </div>
 
-          <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+          {/* Before hydration a submit falls back to a POST with unnamed fields: nothing typed ever lands in a URL. */}
+          <form method="post" onSubmit={submit} noValidate className="flex flex-col gap-4">
             {mode === "sign-up" && (
               <Field label="Name" htmlFor="name">
                 <Input id="name" autoComplete="name" placeholder="Jules Kim" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
@@ -115,7 +116,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
               <div className="my-6 flex items-center gap-3 text-sm text-muted">
                 <span className="h-px flex-1 bg-line" /> or with workspace SSO <span className="h-px flex-1 bg-line" />
               </div>
+              {/* Works before hydration too: a plain GET to the SSO start endpoint. */}
               <form
+                action="/api/sso/start"
+                method="get"
                 className="flex items-end gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -126,7 +130,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               >
                 <div className="flex-1">
                   <Field label="Workspace slug" htmlFor="sso-slug">
-                    <Input id="sso-slug" className="data" placeholder="acme" value={ssoSlug} onChange={(e) => setSsoSlug(e.target.value)} maxLength={60} />
+                    <Input id="sso-slug" name="workspace" className="data" placeholder="acme" value={ssoSlug} onChange={(e) => setSsoSlug(e.target.value)} maxLength={60} />
                   </Field>
                 </div>
                 <Button type="submit">Sign in with SSO</Button>

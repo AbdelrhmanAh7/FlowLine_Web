@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cloneElement, forwardRef, isValidElement, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { cloneElement, forwardRef, isValidElement, useId, useImperativeHandle, useLayoutEffect, useRef, type ButtonHTMLAttributes, type ChangeEvent, type ForwardedRef, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
@@ -109,10 +109,32 @@ export function Spinner({ className }: { className?: string }) {
 
 /* ───────── Form fields ───────── */
 
+/**
+ * Text typed into a server-rendered field before React hydrates it would otherwise be discarded: the controlled
+ * value ("" in state) wins on the next render. On mount, hand any such early text to onChange so state adopts it.
+ */
+function useKeepEarlyInput<T extends HTMLInputElement | HTMLTextAreaElement>(
+  forwarded: ForwardedRef<T>,
+  value: unknown,
+  onChange: ((e: ChangeEvent<T>) => void) | undefined,
+) {
+  const el = useRef<T>(null);
+  useImperativeHandle(forwarded, () => el.current as T);
+  useLayoutEffect(() => {
+    const node = el.current;
+    if (!node || !onChange || typeof value !== "string" || node.value === value || node.value === "" || value !== "") return;
+    onChange({ target: node, currentTarget: node } as unknown as ChangeEvent<T>);
+    // Mount only: this is about text entered before hydration, not later updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return el;
+}
+
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ className, invalid, ...rest }, ref) {
+  const el = useKeepEarlyInput(ref, rest.value, rest.onChange);
   return (
     <input
-      ref={ref}
+      ref={el}
       aria-invalid={invalid || undefined}
       className={cx(
         "h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-hover)] focus:border-accent focus:outline-none",
@@ -128,9 +150,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   { className, invalid, mono, ...rest },
   ref,
 ) {
+  const el = useKeepEarlyInput(ref, rest.value, rest.onChange);
   return (
     <textarea
-      ref={ref}
+      ref={el}
       aria-invalid={invalid || undefined}
       spellCheck={mono ? false : undefined}
       className={cx(
