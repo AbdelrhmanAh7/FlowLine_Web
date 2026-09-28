@@ -33,6 +33,7 @@ const RUN_TOAST: Record<string, [string, "success" | "danger" | "warning" | "inf
   cancelled: ["was cancelled", "info"],
   waiting_approval: ["is waiting for a human decision", "warning"],
 };
+import { useDir } from "@/i18n/client";
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
 import { Button, ErrorState, Kbd, Skeleton, cx } from "../ui";
@@ -69,7 +70,7 @@ export function Builder({ flowId }: { flowId: string }) {
             <ErrorState title="Couldn't load this flow" body={`${err.message}. Auto-retried 3× with backoff 1s/2s/4s.`} onRetry={() => q.refetch()} retrying={q.isFetching} />
           )}
           <Link href={`/w/${workspace.slug}/flows`} className="mt-4 inline-block text-base text-accent hover:underline">
-            ← Back to flows
+            <span aria-hidden className="flip-rtl">←</span> Back to flows
           </Link>
         </div>
       </div>
@@ -84,6 +85,8 @@ export function Builder({ flowId }: { flowId: string }) {
 
 function Editor({ data }: { data: FlowResponse }) {
   const { user, workspace } = useWorkspace();
+  // The graph keeps LTR coordinates in every language; only the chrome around it mirrors.
+  const rtl = useDir() === "rtl";
   const flow = data.flow;
   const toast = useToast();
   const qc = useQueryClient();
@@ -545,15 +548,17 @@ function Editor({ data }: { data: FlowResponse }) {
           elementsSelectable
           zoomOnDoubleClick={false}
           aria-label="Flow canvas"
+          dir="ltr"
+          attributionPosition={rtl ? "bottom-left" : "bottom-right"}
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#27272a" />
-          {viewportKind === "desktop" && <MiniMap style={{ width: 160, height: 96 }} pannable zoomable nodeColor="#27272a" nodeStrokeColor="#3f3f46" maskColor="rgba(9,9,11,0.7)" position="bottom-left" ariaLabel="Mini map" />}
+          {viewportKind === "desktop" && <MiniMap style={{ width: 160, height: 96 }} pannable zoomable nodeColor="#27272a" nodeStrokeColor="#3f3f46" maskColor="rgba(9,9,11,0.7)" position={rtl ? "bottom-right" : "bottom-left"} ariaLabel="Mini map" />}
         </ReactFlow>
       </CanvasStatusContext.Provider>
 
       {/* Toolbar */}
       {!readOnly && (
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+        <div className="absolute top-3 start-3 z-20 flex items-center gap-2">
           <Button size="sm" onClick={() => (paletteOpen ? setPaletteOpen(false) : openPalette())} aria-expanded={paletteOpen} aria-haspopup="dialog">
             + Add node <Kbd>/</Kbd>
           </Button>
@@ -605,7 +610,7 @@ function Editor({ data }: { data: FlowResponse }) {
       <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-3 py-2 sm:px-4">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-base">
           <Link href={`/w/${workspace.slug}/flows`} className="shrink-0 text-med hover:text-hi">
-            ← Flows
+            <span aria-hidden className="flip-rtl">←</span> Flows
           </Link>
           <span className="text-muted">/</span>
           <label htmlFor="flow-name" className="sr-only">
@@ -631,19 +636,19 @@ function Editor({ data }: { data: FlowResponse }) {
             <PublishControl flowId={flow.id} canEdit={canEditRole} dirty={persistence.dirty} saveNow={() => persistence.saveNow()} issueCount={issues.length} online={online} />
           </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {issues.length > 0 && (
             <div className="relative">
               <Button size="sm" variant="ghost" className="text-warning" onClick={() => setIssuesOpen((o) => !o)} aria-expanded={issuesOpen}>
                 ⚠ {issues.length} issue{issues.length > 1 ? "s" : ""}
               </Button>
               {issuesOpen && (
-                <div role="dialog" aria-label="Flow issues" className="absolute top-full right-0 z-40 mt-1 w-80 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
+                <div role="dialog" aria-label="Flow issues" className="absolute top-full end-0 z-40 mt-1 w-80 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
                   <ul className="flex flex-col gap-0.5">
                     {issues.map((i, k) => (
                       <li key={k}>
                         <button
-                          className="w-full rounded-md px-2 py-1.5 text-left text-sm text-hi hover:bg-card disabled:cursor-default"
+                          className="w-full rounded-md px-2 py-1.5 text-start text-sm text-hi hover:bg-card disabled:cursor-default"
                           disabled={!i.nodeId}
                           onClick={() => {
                             if (i.nodeId) selectNode(i.nodeId);
@@ -724,7 +729,7 @@ function Editor({ data }: { data: FlowResponse }) {
           <span className="text-danger">
             ⚠ This flow changed elsewhere{persistence.conflict.localSavedAt ? " while you were offline" : ""}. Your edits are kept on this device and have not been saved.
           </span>
-          <span className="ml-auto flex gap-2">
+          <span className="ms-auto flex gap-2">
             <Button size="sm" onClick={() => void persistence.resolveConflict("server")}>
               Use saved version
             </Button>
@@ -759,7 +764,7 @@ function ZoomControls({ shifted }: { shifted: boolean }) {
     <div
       className={cx(
         "absolute bottom-3 z-20 flex items-center gap-1 rounded-lg border border-line bg-surface px-1.5 py-1 text-base text-med",
-        shifted ? "right-[calc(var(--drawer-w)+12px)]" : "right-3",
+        shifted ? "end-[calc(var(--drawer-w)+12px)]" : "end-3",
       )}
     >
       <button aria-label="Zoom out" onClick={() => void rf.zoomOut({ duration: 0 })} className="flex size-7 items-center justify-center rounded-md hover:bg-card hover:text-hi">
@@ -809,7 +814,7 @@ function BuilderHeaderShell({ slug, title }: { slug: string; title: string }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-4 text-base">
       <Link href={`/w/${slug}/flows`} className="text-med hover:text-hi">
-        ← Flows
+        <span aria-hidden className="flip-rtl">←</span> Flows
       </Link>
       <span className="text-muted">/</span>
       <span className="font-semibold">{title}</span>
@@ -822,14 +827,14 @@ function BuilderSkeleton({ slug }: { slug: string }) {
     <div className="flex h-full flex-col" aria-busy="true" aria-label="Loading flow">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-4">
         <Link href={`/w/${slug}/flows`} className="text-base text-med hover:text-hi">
-          ← Flows
+          <span aria-hidden className="flip-rtl">←</span> Flows
         </Link>
         <span className="text-muted">/</span>
         <Skeleton className="h-5 w-48" />
-        <Skeleton className="ml-auto h-8 w-20" />
+        <Skeleton className="ms-auto h-8 w-20" />
       </header>
       <div className="relative flex-1 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:24px_24px]">
-        <div className="absolute top-1/3 left-[10%] flex gap-16">
+        <div className="absolute top-1/3 start-[10%] flex gap-16">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-[84px] w-[200px] rounded-lg" />
           ))}

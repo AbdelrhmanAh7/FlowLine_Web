@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { EN_STATE } from "../playwright.config";
 import { setupUser } from "./helpers";
 
 test("two users in separate workspaces cannot see each other's flows or runs", { tag: "@critical" }, async ({ browser }) => {
-  const opts = { baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" } };
+  const opts = { baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: EN_STATE };
   const ctxA = await browser.newContext(opts);
   const ctxB = await browser.newContext(opts);
   const a = await ctxA.newPage();

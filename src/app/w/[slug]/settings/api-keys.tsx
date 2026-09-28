@@ -97,7 +97,7 @@ export function ApiKeys() {
                   <span className="text-sm text-muted">last used {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : "never"}</span>
                   {k.status === "active" &&
                     (confirm === k.id ? (
-                      <span className="ml-auto flex gap-2">
+                      <span className="ms-auto flex gap-2">
                         <Button size="sm" variant="danger" loading={revoke.isPending} onClick={() => revoke.mutate(k.id)}>
                           Confirm revoke
                         </Button>
@@ -106,7 +106,7 @@ export function ApiKeys() {
                         </Button>
                       </span>
                     ) : (
-                      <Button size="sm" variant="danger-ghost" className="ml-auto" onClick={() => setConfirm(k.id)}>
+                      <Button size="sm" variant="danger-ghost" className="ms-auto" onClick={() => setConfirm(k.id)}>
                         Revoke
                       </Button>
                     ))}
@@ -168,7 +168,7 @@ export function ApiKeys() {
             <code className="data break-all text-sm" data-testid="revealed-key">
               {revealed}
             </code>
-            <pre className="data overflow-x-auto rounded-md border border-line bg-app p-2 text-xs text-med">{`curl -X POST ${base}/api/v1/flows/<flow-id>/runs \\\n  -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \\\n  -d '{"input": {}}'`}</pre>
+            <pre dir="ltr" className="data overflow-x-auto rounded-md border border-line bg-app p-2 text-xs text-med">{`curl -X POST ${base}/api/v1/flows/<flow-id>/runs \\\n  -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \\\n  -d '{"input": {}}'`}</pre>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => void navigator.clipboard?.writeText(revealed).then(() => toast("Key copied", "success"))}>
                 Copy key

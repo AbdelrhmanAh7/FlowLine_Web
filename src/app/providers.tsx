@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { ToastProvider } from "@/components/toast";
+import type { Locale } from "@/i18n/config";
+import { I18nProvider } from "@/i18n/client";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ locale, children }: { locale: Locale; children: React.ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -25,8 +27,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
   return (
-    <QueryClientProvider client={client}>
-      <ToastProvider>{children}</ToastProvider>
-    </QueryClientProvider>
+    <I18nProvider locale={locale}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }

@@ -63,7 +63,7 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
   const warnings = proposal?.issues.filter((i) => i.severity === "warning") ?? [];
   const removed = proposal?.diff?.removed ?? [];
   return (
-    <aside role="dialog" aria-label="Copilot" className="absolute top-0 right-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-l border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
+    <aside role="dialog" aria-label="Copilot" className="absolute top-0 end-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">✦ Copilot</h2>
         <button onClick={onClose} aria-label="Close Copilot" className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
@@ -140,7 +140,7 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
                   <p className="text-med">
                     Preview on the sample input (local steps only): <span className="data">{proposal.diff.preview.status}</span>
                   </p>
-                  <pre className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{proposal.diff.preview.error ? proposal.diff.preview.error.message : JSON.stringify(proposal.diff.preview.output, null, 2)}</pre>
+                  <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{proposal.diff.preview.error ? proposal.diff.preview.error.message : JSON.stringify(proposal.diff.preview.output, null, 2)}</pre>
                 </>
               ) : (
                 <p className="text-muted">{proposal.diff.preview.reason}</p>

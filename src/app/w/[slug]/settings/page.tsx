@@ -40,7 +40,7 @@ export default function SettingsPage() {
               key={t.id}
               aria-current={tab === t.id ? "page" : undefined}
               onClick={() => setTab(t.id)}
-              className={cx("h-8 shrink-0 rounded-md px-3 text-left text-base transition-colors duration-[var(--dur-hover)]", tab === t.id ? "bg-card text-hi" : "text-med hover:bg-card hover:text-hi")}
+              className={cx("h-8 shrink-0 rounded-md px-3 text-start text-base transition-colors duration-[var(--dur-hover)]", tab === t.id ? "bg-card text-hi" : "text-med hover:bg-card hover:text-hi")}
             >
               {t.label}
             </button>
@@ -187,14 +187,14 @@ function Billing() {
         ) : usage.data.rows.length === 0 ? (
           <p className="mt-4 text-base text-muted">No usage yet this month.</p>
         ) : (
-          <table className="mt-4 w-full text-left text-sm">
+          <table className="mt-4 w-full text-start text-sm">
             <thead className="text-xs tracking-[0.4px] text-muted uppercase">
               <tr>
                 <th className="py-1 font-medium">Kind</th>
                 <th className="py-1 font-medium">Provider / model</th>
-                <th className="py-1 text-right font-medium">Events</th>
-                <th className="py-1 text-right font-medium">Tokens</th>
-                <th className="py-1 text-right font-medium">Cost</th>
+                <th className="py-1 text-end font-medium">Events</th>
+                <th className="py-1 text-end font-medium">Tokens</th>
+                <th className="py-1 text-end font-medium">Cost</th>
               </tr>
             </thead>
             <tbody className="data">
@@ -202,9 +202,9 @@ function Billing() {
                 <tr key={i} className="border-t border-line">
                   <td className="py-1.5">{r.kind}</td>
                   <td className="py-1.5">{[r.provider, r.model].filter(Boolean).join(" / ") || "—"}</td>
-                  <td className="py-1.5 text-right">{r.events}</td>
-                  <td className="py-1.5 text-right">{(r.inputTokens + r.outputTokens).toLocaleString()}</td>
-                  <td className="py-1.5 text-right">
+                  <td className="py-1.5 text-end">{r.events}</td>
+                  <td className="py-1.5 text-end">{(r.inputTokens + r.outputTokens).toLocaleString()}</td>
+                  <td className="py-1.5 text-end">
                     {r.unpriced ? (
                       <span className="text-warning" title="No price configured">
                         unpriced

@@ -48,7 +48,7 @@ export default function TemplatesPage() {
           <label htmlFor="tpl-search" className="sr-only">
             Search templates
           </label>
-          <Input id="tpl-search" placeholder="⌕ Search templates…" value={q} onChange={(e) => setQ(e.target.value)} className="ml-auto h-8 w-full sm:w-64" />
+          <Input id="tpl-search" placeholder="⌕ Search templates…" value={q} onChange={(e) => setQ(e.target.value)} className="ms-auto h-8 w-full sm:w-64" />
         </div>
 
         {local.length === 0 && planned.length === 0 ? (
@@ -112,7 +112,7 @@ export default function TemplatesPage() {
                         <Requirements t={t} status={(p) => reqStatus(p, catalog.data, connections.data)} />
                         <details className="text-sm text-med">
                           <summary className="cursor-pointer text-hi">Setup ({t.setup.length} steps)</summary>
-                          <ol className="mt-2 list-decimal space-y-1 pl-5">
+                          <ol className="mt-2 list-decimal space-y-1 ps-5">
                             {t.setup.map((s) => (
                               <li key={s}>{s}</li>
                             ))}
@@ -145,7 +145,7 @@ function Chain({ items }: { items: string[] }) {
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-1.5">
           <span className="max-w-32 truncate rounded-md border border-line bg-card px-2 py-1 text-sm">{it}</span>
-          {i < items.length - 1 && <span aria-hidden className="text-muted">→</span>}
+          {i < items.length - 1 && <span aria-hidden className="flip-rtl text-muted">→</span>}
         </span>
       ))}
     </div>

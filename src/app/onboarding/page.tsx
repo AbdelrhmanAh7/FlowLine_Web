@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
+import { getT } from "@/i18n/server";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/access";
 import { getUserSettings, listWorkspaces } from "@/server/workspaces";
 import { OnboardingWizard } from "./wizard";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Get started" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("meta.onboarding") };
+}
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const user = await getCurrentUser();
