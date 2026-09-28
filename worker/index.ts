@@ -18,6 +18,7 @@ import { indexNextSource } from "@/server/knowledge";
 import { claimNextAgentRun, processAgentRun, recoverStaleAgentRuns, wakeAgentsForFinishedRuns } from "./agent-runner";
 import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
+import { pruneOnce } from "@/server/retention";
 
 /** Runs executed concurrently by this worker process (runs mostly wait on I/O). */
 const CONCURRENCY = Math.max(1, Number(process.env.FLOWLINE_WORKER_CONCURRENCY ?? 4));
@@ -121,6 +122,11 @@ async function main() {
   const staleTimer = setInterval(() => void Promise.all([recoverStaleRuns(db), recoverStaleAgentRuns(db)]).catch(() => {}), 30000);
   const scheduleTimer = setInterval(() => void schedulerTick(db).then((n) => n && log("scheduler fired", n)).catch((e) => log("scheduler error", e.message)), 10000);
   const reconcileTimer = setInterval(() => void billingReconcileTick().catch((e) => log("billing reconcile error", e instanceof Error ? e.message : e)), 3600_000);
+  const retentionTick = () =>
+    void pruneOnce(db)
+      .then((r) => r && Object.values(r).some((n) => n > 0) && log("retention pruned", JSON.stringify(r)))
+      .catch((e) => log("retention error", e instanceof Error ? e.message : e));
+  const retentionTimer = setInterval(retentionTick, 3600_000);
 
   while (!stopping) {
     try {
@@ -143,6 +149,7 @@ async function main() {
   clearInterval(staleTimer);
   clearInterval(scheduleTimer);
   clearInterval(reconcileTimer);
+  clearInterval(retentionTimer);
   await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
   stopSandbox();

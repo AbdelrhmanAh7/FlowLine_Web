@@ -40,15 +40,15 @@ used for analytics or model training by Flowline.
 | Data | Beta retention |
 |---|---|
 | Account and workspace data | until the account/workspace is deleted |
-| Run history (steps, inputs/outputs) | 90 days, then prune (a scheduled job is **to do**; for now it's kept until deletion) |
-| Webhook deliveries | 30 days (to do; for now kept) |
-| Audit log | 1 year |
-| Product telemetry | 180 days |
-| Sessions | until expiry (7 days) or sign-out |
+| Run history (steps, events, approvals), agent runs | 90 days after they finish (`FLOWLINE_RETENTION_RUN_DAYS`); queued/running/waiting runs are never pruned |
+| Webhook deliveries | 30 days (`FLOWLINE_RETENTION_WEBHOOK_DAYS`) |
+| Audit log | 1 year (`FLOWLINE_RETENTION_AUDIT_DAYS`) |
+| Product telemetry | 180 days (`FLOWLINE_RETENTION_TELEMETRY_DAYS`) |
+| Sessions, verification tokens, OAuth/SSO states | deleted once expired |
 | Database backups | `BACKUP_RETENTION_DAYS` (default 14 days) on the beta host |
 | Container logs | 5 × 20 MB per service (rotated) |
 
-Items marked "to do" are listed in `BETA_LIMITATIONS.md` and aren't claimed as implemented.
+Pruning runs hourly in the worker (`src/server/retention.ts`; one worker at a time via an advisory lock). The usage ledger and billing records are deliberately **not** pruned (billing history).
 
 ## 3. What telemetry never contains
 Only allow-listed scalar properties are stored (`status`, `code`, `provider`, `via`, `templateId`, `trigger`,
