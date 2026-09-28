@@ -14,6 +14,10 @@
  * 5. Negative: the restored DB with a DIFFERENT encryption key refuses that delivery (key recovery matters).
  * The dump contains test data and encrypted secrets: it stays in the OS temp dir and is deleted afterwards.
  * Evidence (counts, digests, checks — no secrets) goes to --out.
+ *
+ * Email verification (Phase 4): the seeded user is verified through the real endpoint (scripts/release/lib/verified-user.mjs),
+ * with the token read from the staging DB's email_outbox table — staging must run FLOWLINE_EMAIL_PROVIDER=outbox.
+ *   [--invite <code>]   beta access code when staging runs FLOWLINE_BETA_MODE=invite_only
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
@@ -21,6 +25,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
+import { parseEnvFile } from "./lib/email-token.mjs";
+import { verifiedUser } from "./lib/verified-user.mjs";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -32,12 +38,8 @@ const OUT = arg("out", "artifacts/phase-3/backup-restore");
 const SRC = "http://localhost:3200";
 const DST = "http://localhost:3201";
 const ENV_FILE = ".env.staging";
-const env = Object.fromEntries(
-  readFileSync(ENV_FILE, "utf8")
-    .split(/\r?\n/)
-    .filter((l) => /^[A-Z_]+=/.test(l))
-    .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
-);
+const env = parseEnvFile(readFileSync(ENV_FILE, "utf8"));
+const INVITE = arg("invite");
 const SRC_DB = `postgres://flowline:${env.STAGING_DB_PASSWORD}@127.0.0.1:5434/flowline`;
 const RESTORE_PW = randomBytes(12).toString("hex");
 const DST_DB = `postgres://flowline:${RESTORE_PW}@127.0.0.1:5435/flowline`;
@@ -118,7 +120,7 @@ try {
   report.sourceSchemaVersion = src.schemaVersion;
   const email = `restore-${randomUUID().slice(0, 8)}@flowline-restore.test`;
   const s = new Session(SRC);
-  await s.ok("/api/auth/sign-up/email", { method: "POST", json: { email, password: PASSWORD, name: "Restore Check" } });
+  report.seedUser = await verifiedUser({ base: SRC, session: s, email, password: PASSWORD, name: "Restore Check", betaCode: INVITE, tokenSource: { dbUrl: SRC_DB } });
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Restore ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "data", skipped: false } });
   await s.ok(`/api/workspaces/${workspace.id}/invites`, { method: "POST", json: { email: `invitee-${randomUUID().slice(0, 6)}@flowline-restore.test`, role: "editor" } });
