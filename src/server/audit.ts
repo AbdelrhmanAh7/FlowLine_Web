@@ -33,6 +33,7 @@ export type AuditAction =
   | "billing.cancelled"
   | "billing.subscription_updated"
   | "billing.payment_failed"
+  | "billing.refunded"
   | "settings.updated"
   | "sso.configured"
   | "sso.signin"

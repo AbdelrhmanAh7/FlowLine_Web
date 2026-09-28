@@ -862,7 +862,7 @@ export const billingAccount = pgTable("billing_account", {
   customerId: text("customer_id").notNull().unique(),
   subscriptionId: text("subscription_id"),
   planId: text("plan_id"),
-  /** none | trialing | active | past_due | canceled | incomplete */
+  /** none | trialing | active | past_due | paused | canceled | incomplete */
   status: text("status").notNull().default("none"),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),

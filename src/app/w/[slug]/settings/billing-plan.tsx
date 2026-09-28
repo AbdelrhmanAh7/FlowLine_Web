@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { billingCopy, localeFromCookieHeader, pick, type Locale } from "./copy";
 
 interface PlanEntitlements {
   maxMonthlyExecutions: number | null;
@@ -21,7 +23,8 @@ interface BillingPlanView {
 }
 interface BillingState {
   configured: boolean;
-  testMode: boolean;
+  provider: string | null;
+  providerMode: "test" | "sandbox" | "live" | null;
   plans: BillingPlanView[];
   freePlanId: string | null;
   account: {
@@ -43,6 +46,7 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "muted" | "
   active: "success",
   trialing: "info",
   past_due: "danger",
+  paused: "muted",
   canceled: "muted",
   incomplete: "warning",
   none: "muted",
@@ -65,6 +69,7 @@ export function BillingPlan() {
   const isOwner = role === "owner";
   const canView = role === "owner" || role === "editor";
   const manageReason = (extra: string | null) => (!isOwner ? "Only workspace owners can manage billing" : extra);
+  const [locale] = useState<Locale>(() => localeFromCookieHeader(typeof document === "undefined" ? null : document.cookie));
 
   const q = useQuery({
     queryKey: ["billing", workspace.id],
@@ -126,15 +131,19 @@ export function BillingPlan() {
   const currentPlan = d.plans.find((p) => p.id === d.planInForce);
   const planIndex = (id: string | null) => d.plans.findIndex((p) => p.id === id);
   const busy = checkout.isPending || change.isPending || cancelM.isPending;
+  const providerName = d.provider ? d.provider[0]!.toUpperCase() + d.provider.slice(1) : null;
+  const modeLabel = d.providerMode === "test" ? "Test mode" : d.providerMode === "sandbox" ? pick(billingCopy.sandboxBadge, locale) : d.providerMode;
+  const modeTitle =
+    d.providerMode === "test" ? "Payments run against a test-mode provider key; no real charges" : d.providerMode === "sandbox" ? pick(billingCopy.sandboxTitle, locale) : undefined;
 
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold">Plan &amp; billing</h2>
-          {d.testMode && (
-            <span className="rounded-md border border-line px-2 py-0.5 text-xs font-medium tracking-[0.4px] text-warning uppercase" title="Payments run against a test-mode provider key; no real charges">
-              Test mode
+          {d.providerMode && (
+            <span className="rounded-md border border-line px-2 py-0.5 text-xs font-medium tracking-[0.4px] text-warning uppercase" title={modeTitle}>
+              {providerName ? `${providerName} · ${modeLabel}` : modeLabel}
             </span>
           )}
         </div>

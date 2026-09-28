@@ -13,9 +13,10 @@ import type { CurrentUser } from "@/server/access";
 import { audit, userActor, type Actor } from "@/server/audit";
 import { HttpError } from "@/server/http";
 import { monthStart } from "@/server/usage";
+import { PaddlePaymentAdapter } from "./paddle";
 import { loadBillingPlans, planById, planByProviderPrice, type BillingPlansConfig } from "./plans";
 import { StripePaymentAdapter } from "./stripe";
-import { BillingProviderError, type NormalizedSubscription, type PaymentAdapter, type PlanEntitlements } from "./types";
+import { BillingProviderError, type BillingEventAction, type NormalizedSubscription, type PaymentAdapter, type PlanEntitlements } from "./types";
 
 /** Meter event names reported to the provider during reconciliation. */
 const METER_EVENTS = { executions: "flowline.executions", cost_micros: "flowline.cost_micros" } as const;
@@ -23,12 +24,32 @@ type Metric = keyof typeof METER_EVENTS;
 
 let cachedAdapter: PaymentAdapter | null | undefined;
 
-/** The configured payment adapter, or null when no key is set. Never a live-mode adapter. */
+/**
+ * The configured payment adapter, or null when no key is set. Never a live-mode adapter.
+ * The provider is installation-level configuration: FLOWLINE_BILLING_PROVIDER
+ * ("stripe", the default, or "paddle"), with the matching key/secret env vars.
+ */
 export function getAdapter(): PaymentAdapter | null {
   if (cachedAdapter !== undefined) return cachedAdapter;
-  const key = process.env.FLOWLINE_BILLING_STRIPE_KEY;
-  cachedAdapter = key ? new StripePaymentAdapter(key, process.env.FLOWLINE_BILLING_WEBHOOK_SECRET) : null;
+  const provider = (process.env.FLOWLINE_BILLING_PROVIDER ?? "stripe").toLowerCase();
+  if (provider === "stripe") {
+    const key = process.env.FLOWLINE_BILLING_STRIPE_KEY;
+    cachedAdapter = key ? new StripePaymentAdapter(key, process.env.FLOWLINE_BILLING_WEBHOOK_SECRET) : null;
+  } else if (provider === "paddle") {
+    const key = process.env.FLOWLINE_BILLING_PADDLE_KEY;
+    const env = process.env.FLOWLINE_BILLING_PADDLE_ENV === "live" ? "live" : "sandbox";
+    cachedAdapter = key
+      ? new PaddlePaymentAdapter(key, process.env.FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET, { env, allowLive: process.env.FLOWLINE_BILLING_ALLOW_LIVE === "true" })
+      : null;
+  } else {
+    throw new Error(`Unknown FLOWLINE_BILLING_PROVIDER "${provider}" (expected "stripe" or "paddle")`);
+  }
   return cachedAdapter;
+}
+
+/** The webhook signature header of the configured provider (for the webhook route). */
+export function webhookSignatureHeader(): string {
+  return getAdapter()?.webhookSignatureHeader ?? "stripe-signature";
 }
 
 export function isBillingConfigured(): boolean {
@@ -92,6 +113,7 @@ export async function getEntitlements(dbOrTx: Db, workspaceId: string): Promise<
 /** Full billing picture for the settings UI. */
 export async function getBillingState(workspaceId: string) {
   const cfg = loadBillingPlans();
+  const adapter = getAdapter();
   const account = await getAccount(workspaceId);
   const periodStart = monthStart();
   const usage = await ledgerTotals(db, workspaceId, periodStart);
@@ -99,7 +121,9 @@ export async function getBillingState(workspaceId: string) {
   const planInForce = account && (account.status === "active" || account.status === "trialing") ? account.planId : cfg?.freePlanId;
   return {
     configured: isBillingConfigured(),
-    testMode: true as const,
+    /** Which provider and environment payments run against — the UI shows these verbatim. */
+    provider: adapter?.provider ?? null,
+    providerMode: adapter?.mode ?? null,
     plans: cfg?.plans ?? [],
     freePlanId: cfg?.freePlanId ?? null,
     account: account
@@ -141,7 +165,7 @@ export async function startCheckout(user: CurrentUser, workspaceId: string, plan
     throw new HttpError(400, "ALREADY_SUBSCRIBED", "This workspace already has a subscription — change the plan instead");
   }
   if (!account) {
-    const customer = await adapter.createCustomer({ id: ws.id, name: ws.name, slug: ws.slug }).catch((e) => {
+    const customer = await adapter.createCustomer({ id: ws.id, name: ws.name, slug: ws.slug, email: user.email }).catch((e) => {
       throw billingHttpError(e);
     });
     await db
@@ -202,18 +226,12 @@ export async function cancel(user: CurrentUser, workspaceId: string, atPeriodEnd
   await audit(db, { workspaceId, actor: userActor(user), action: "billing.cancelled", targetType: "subscription", targetId: account.subscriptionId, data: { atPeriodEnd } });
 }
 
-const WEBHOOK_ACTOR: Actor = { kind: "system", label: "stripe webhook" };
+const WEBHOOK_ACTOR: Actor = { kind: "system", label: "billing webhook" };
 
 export type WebhookOutcome = "applied" | "applied_canonical" | "ignored_stale" | "ignored_unknown_customer" | "ignored_type" | "failed";
 
-/** Events that set the local subscription state; a same-second tie is resolved against the provider. */
-const SUBSCRIPTION_STATE_EVENTS = new Set([
-  "customer.subscription.created",
-  "customer.subscription.updated",
-  "customer.subscription.deleted",
-  "invoice.payment_failed",
-  "invoice.paid",
-]);
+/** Actions that set the local subscription state; a same-instant tie is resolved against the provider. */
+const SUBSCRIPTION_STATE_ACTIONS: ReadonlySet<BillingEventAction> = new Set(["subscription_upsert", "subscription_deleted", "payment_failed", "payment_succeeded"]);
 
 /**
  * Verifies and applies one provider webhook event in a single transaction.
@@ -256,12 +274,13 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
 
     const appliedBase = { lastEventAt: event.created, updatedAt: new Date() };
 
-    // Provider timestamps have 1-second resolution, so a different event with the same
-    // `created` second has an ambiguous order. Policy: the provider's state is canonical —
-    // fetch it and apply that instead of the event payload. If the provider can't be
-    // reached, don't guess: leave state unchanged and fail the event so a redelivery
-    // (reprocessed via the failed-event carve-out above) or a reconcile can fix it.
-    if (account.lastEventAt && event.created.getTime() === account.lastEventAt.getTime() && SUBSCRIPTION_STATE_EVENTS.has(event.type)) {
+    // Provider timestamps can tie (Stripe has 1-second resolution). A different event
+    // with the same `created` instant has an ambiguous order. Policy: the provider's
+    // state is canonical — fetch it and apply that instead of the event payload. If the
+    // provider can't be reached, don't guess: leave state unchanged and fail the event
+    // so a redelivery (reprocessed via the failed-event carve-out above) or a reconcile
+    // can fix it.
+    if (account.lastEventAt && event.created.getTime() === account.lastEventAt.getTime() && SUBSCRIPTION_STATE_ACTIONS.has(event.action)) {
       const subscriptionId = event.subscription?.id ?? account.subscriptionId;
       if (subscriptionId) {
         let canonical: NormalizedSubscription;
@@ -288,7 +307,7 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
           workspaceId: account.workspaceId,
           actor: WEBHOOK_ACTOR,
           // Keep the event's own audit meaning (a payment failure stays a payment failure); only the state is canonical.
-          action: event.type === "invoice.payment_failed" ? "billing.payment_failed" : "billing.subscription_updated",
+          action: event.action === "payment_failed" ? "billing.payment_failed" : "billing.subscription_updated",
           targetType: "subscription",
           targetId: canonical.id,
           data: { type: event.type, status: canonical.status, planId: plan?.id ?? null, canonical: true },
@@ -297,9 +316,9 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
       }
     }
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        if (!event.checkoutSession?.subscriptionId) return finish("failed", account.workspaceId, "checkout session without a subscription");
+    switch (event.action) {
+      case "checkout_completed": {
+        if (!event.checkoutSession?.subscriptionId) return finish("failed", account.workspaceId, "completed checkout without a subscription");
         await tx.update(schema.billingAccount).set({ ...appliedBase, subscriptionId: event.checkoutSession.subscriptionId }).where(eq(schema.billingAccount.workspaceId, account.workspaceId));
         await audit(tx, {
           workspaceId: account.workspaceId,
@@ -311,8 +330,7 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
         });
         return finish("applied", account.workspaceId);
       }
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
+      case "subscription_upsert": {
         const sub = event.subscription;
         if (!sub) return finish("failed", account.workspaceId, "subscription event without a subscription object");
         const plan = cfg ? planByProviderPrice(cfg, sub.priceId) : undefined;
@@ -338,7 +356,7 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
         });
         return finish("applied", account.workspaceId);
       }
-      case "customer.subscription.deleted": {
+      case "subscription_deleted": {
         await tx
           .update(schema.billingAccount)
           .set({ ...appliedBase, status: "canceled", cancelAtPeriodEnd: false })
@@ -353,12 +371,12 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
         });
         return finish("applied", account.workspaceId);
       }
-      case "invoice.payment_failed": {
+      case "payment_failed": {
         await tx.update(schema.billingAccount).set({ ...appliedBase, status: "past_due" }).where(eq(schema.billingAccount.workspaceId, account.workspaceId));
         await audit(tx, { workspaceId: account.workspaceId, actor: WEBHOOK_ACTOR, action: "billing.payment_failed", targetType: "subscription", targetId: account.subscriptionId ?? undefined, data: { type: event.type } });
         return finish("applied", account.workspaceId);
       }
-      case "invoice.paid": {
+      case "payment_succeeded": {
         await tx.update(schema.billingAccount).set({ ...appliedBase, status: "active" }).where(eq(schema.billingAccount.workspaceId, account.workspaceId));
         await audit(tx, {
           workspaceId: account.workspaceId,
@@ -367,6 +385,18 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
           targetType: "subscription",
           targetId: account.subscriptionId ?? undefined,
           data: { type: event.type, status: "active" },
+        });
+        return finish("applied", account.workspaceId);
+      }
+      case "refund": {
+        // A refund/credit changes no subscription state; it is recorded for audit only.
+        await audit(tx, {
+          workspaceId: account.workspaceId,
+          actor: WEBHOOK_ACTOR,
+          action: "billing.refunded",
+          targetType: "subscription",
+          targetId: event.refund?.subscriptionId ?? account.subscriptionId ?? undefined,
+          data: { type: event.type, refundId: event.refund?.id ?? null, transactionId: event.refund?.transactionId ?? null, refundStatus: event.refund?.status ?? null },
         });
         return finish("applied", account.workspaceId);
       }
@@ -397,6 +427,15 @@ export async function reconcileUsage(workspaceId: string, periodStart: Date = mo
   const result: ReconcileResult = { configured: isBillingConfigured(), periodStart, reported: [], skipped: [] };
   if (!result.configured) return result;
   const adapter = requireAdapter();
+
+  // The provider has no usage-metering API (Paddle): usage stays in the local ledger.
+  // Nothing is sent and nothing is marked "reported" — that would be fake reporting.
+  if (!adapter.supportsUsageReporting) {
+    for (const metric of Object.keys(METER_EVENTS) as Metric[]) {
+      result.skipped.push({ metric, quantity: 0, reason: `${adapter.provider} has no usage-metering API; usage is recorded in the local ledger only` });
+    }
+    return result;
+  }
 
   // One transaction PER METRIC (each under the account row lock): a provider failure on one metric never rolls
   // back the local record of another metric the provider already accepted.
