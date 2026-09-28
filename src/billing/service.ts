@@ -15,7 +15,7 @@ import { HttpError } from "@/server/http";
 import { monthStart } from "@/server/usage";
 import { loadBillingPlans, planById, planByProviderPrice, type BillingPlansConfig } from "./plans";
 import { StripePaymentAdapter } from "./stripe";
-import { BillingProviderError, type PaymentAdapter, type PlanEntitlements } from "./types";
+import { BillingProviderError, type NormalizedSubscription, type PaymentAdapter, type PlanEntitlements } from "./types";
 
 /** Meter event names reported to the provider during reconciliation. */
 const METER_EVENTS = { executions: "flowline.executions", cost_micros: "flowline.cost_micros" } as const;
@@ -61,8 +61,11 @@ async function getAccount(workspaceId: string) {
   return account ?? null;
 }
 
+/** A database handle or a transaction on one. */
+type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
+
 /** Usage totals from the ledger since periodStart: settled, billable events only (never estimates). */
-async function ledgerTotals(dbOrTx: Db, workspaceId: string, periodStart: Date) {
+async function ledgerTotals(dbOrTx: DbOrTx, workspaceId: string, periodStart: Date) {
   const [row] = await dbOrTx
     .select({
       costMicros: sql<number>`coalesce(sum(${schema.usageEvent.costMicros}), 0)::bigint`,
@@ -201,11 +204,21 @@ export async function cancel(user: CurrentUser, workspaceId: string, atPeriodEnd
 
 const WEBHOOK_ACTOR: Actor = { kind: "system", label: "stripe webhook" };
 
-export type WebhookOutcome = "applied" | "ignored_stale" | "ignored_unknown_customer" | "ignored_type" | "failed";
+export type WebhookOutcome = "applied" | "applied_canonical" | "ignored_stale" | "ignored_unknown_customer" | "ignored_type" | "failed";
+
+/** Events that set the local subscription state; a same-second tie is resolved against the provider. */
+const SUBSCRIPTION_STATE_EVENTS = new Set([
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.payment_failed",
+  "invoice.paid",
+]);
 
 /**
  * Verifies and applies one provider webhook event in a single transaction.
- * Duplicate event ids (PK conflict) are acknowledged without re-applying.
+ * Duplicate event ids (PK conflict) are acknowledged without re-applying — except
+ * events whose previous processing failed, which a redelivery reprocesses.
  */
 export async function applyWebhookEvent(rawBody: string, signatureHeader: string | null): Promise<{ duplicate: boolean; outcome?: WebhookOutcome }> {
   const adapter = requireAdapter();
@@ -218,7 +231,14 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
       .values({ id: event.id, provider: event.provider, type: event.type, createdAt: event.created, outcome: "applied" })
       .onConflictDoNothing()
       .returning({ id: schema.billingEvent.id });
-    if (inserted.length === 0) return { duplicate: true };
+    if (inserted.length === 0) {
+      // A redelivery of an event that previously failed (e.g. the provider was
+      // unreachable for a same-second canonical fetch) is reprocessed, not acked.
+      const [existing] = await tx.select({ outcome: schema.billingEvent.outcome }).from(schema.billingEvent).where(eq(schema.billingEvent.id, event.id));
+      if (existing?.outcome !== "failed") return { duplicate: true };
+      await tx.delete(schema.billingEvent).where(eq(schema.billingEvent.id, event.id));
+      await tx.insert(schema.billingEvent).values({ id: event.id, provider: event.provider, type: event.type, createdAt: event.created, outcome: "applied" });
+    }
 
     const finish = async (outcome: WebhookOutcome, workspaceId: string | null, detail?: string) => {
       await tx.update(schema.billingEvent).set({ outcome, workspaceId, detail: detail ?? null }).where(eq(schema.billingEvent.id, event.id));
@@ -235,6 +255,48 @@ export async function applyWebhookEvent(rawBody: string, signatureHeader: string
     }
 
     const appliedBase = { lastEventAt: event.created, updatedAt: new Date() };
+
+    // Provider timestamps have 1-second resolution, so a different event with the same
+    // `created` second has an ambiguous order. Policy: the provider's state is canonical —
+    // fetch it and apply that instead of the event payload. If the provider can't be
+    // reached, don't guess: leave state unchanged and fail the event so a redelivery
+    // (reprocessed via the failed-event carve-out above) or a reconcile can fix it.
+    if (account.lastEventAt && event.created.getTime() === account.lastEventAt.getTime() && SUBSCRIPTION_STATE_EVENTS.has(event.type)) {
+      const subscriptionId = event.subscription?.id ?? account.subscriptionId;
+      if (subscriptionId) {
+        let canonical: NormalizedSubscription;
+        try {
+          canonical = await adapter.retrieveSubscription(subscriptionId);
+        } catch (e) {
+          const reason = e instanceof Error ? e.message : String(e);
+          return finish("failed", account.workspaceId, `ambiguous same-second ordering and the canonical fetch failed: ${reason}`);
+        }
+        const plan = cfg ? planByProviderPrice(cfg, canonical.priceId) : undefined;
+        await tx
+          .update(schema.billingAccount)
+          .set({
+            ...appliedBase,
+            subscriptionId: canonical.id,
+            status: canonical.status,
+            planId: plan?.id ?? null,
+            currentPeriodEnd: canonical.currentPeriodEnd,
+            cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
+            trialEnd: canonical.trialEnd,
+          })
+          .where(eq(schema.billingAccount.workspaceId, account.workspaceId));
+        await audit(tx, {
+          workspaceId: account.workspaceId,
+          actor: WEBHOOK_ACTOR,
+          // Keep the event's own audit meaning (a payment failure stays a payment failure); only the state is canonical.
+          action: event.type === "invoice.payment_failed" ? "billing.payment_failed" : "billing.subscription_updated",
+          targetType: "subscription",
+          targetId: canonical.id,
+          data: { type: event.type, status: canonical.status, planId: plan?.id ?? null, canonical: true },
+        });
+        return finish("applied_canonical", account.workspaceId, `same created second as the last applied event; applied provider state (${canonical.status}) instead of the payload`);
+      }
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         if (!event.checkoutSession?.subscriptionId) return finish("failed", account.workspaceId, "checkout session without a subscription");
@@ -318,40 +380,65 @@ export interface ReconcileResult {
   configured: boolean;
   periodStart: Date;
   reported: { metric: Metric; quantity: number }[];
-  skipped: { metric: Metric; quantity: number }[];
+  skipped: { metric: Metric; quantity: number; reason: string }[];
 }
 
 /**
- * Reports ledger totals to the provider, idempotently: one usage_report row per
- * workspace + period + metric keyed by a unique idempotency key, so re-running
- * reports nothing new. A provider failure leaves no row, so a retry can succeed later.
+ * Reports ledger totals to the provider as monotonic deltas: each run reports only the
+ * usage accrued since the previously reported rows for the same workspace + period +
+ * metric. The idempotency key embeds the current ledger total
+ * (usage:<ws>:<period>:<metric>:<ledgerTotal>), so a retry after a crash replays the
+ * same identifier and is idempotent at the provider. A row lock on billing_account
+ * serialises concurrent reconciles for a workspace (the unique key stays as a
+ * backstop), and a provider failure rolls the transaction back, leaving no row, so a
+ * retry can succeed later.
  */
 export async function reconcileUsage(workspaceId: string, periodStart: Date = monthStart()): Promise<ReconcileResult> {
   const result: ReconcileResult = { configured: isBillingConfigured(), periodStart, reported: [], skipped: [] };
   if (!result.configured) return result;
   const adapter = requireAdapter();
-  const account = await getAccount(workspaceId);
-  if (!account) return result;
 
-  const totals = await ledgerTotals(db, workspaceId, periodStart);
-  const values: Record<Metric, number> = { executions: totals.executions, cost_micros: totals.costMicros };
-
+  // One transaction PER METRIC (each under the account row lock): a provider failure on one metric never rolls
+  // back the local record of another metric the provider already accepted.
   for (const metric of Object.keys(METER_EVENTS) as Metric[]) {
-    const idempotencyKey = `usage:${workspaceId}:${periodStart.toISOString()}:${metric}`;
-    const [existing] = await db.select().from(schema.usageReport).where(eq(schema.usageReport.idempotencyKey, idempotencyKey));
-    if (existing?.status === "reported") {
-      result.skipped.push({ metric, quantity: existing.quantity });
-      continue;
-    }
-    const value = values[metric];
-    await adapter.reportUsage({ customerId: account.customerId, eventName: METER_EVENTS[metric], value, identifier: idempotencyKey }).catch((e) => {
-      throw billingHttpError(e);
+    const done = await db.transaction(async (tx) => {
+      const [account] = await tx.select().from(schema.billingAccount).where(eq(schema.billingAccount.workspaceId, workspaceId)).for("update");
+      if (!account) return false;
+      const totals = await ledgerTotals(tx, workspaceId, periodStart);
+      const ledgerTotal = metric === "executions" ? totals.executions : totals.costMicros;
+      const [reportedRow] = await tx
+        .select({ total: sql<number>`coalesce(sum(${schema.usageReport.quantity}), 0)::bigint` })
+        .from(schema.usageReport)
+        .where(
+          and(
+            eq(schema.usageReport.workspaceId, workspaceId),
+            eq(schema.usageReport.periodStart, periodStart),
+            eq(schema.usageReport.metric, metric),
+            eq(schema.usageReport.status, "reported"),
+          ),
+        );
+      const reportedSoFar = Number(reportedRow?.total ?? 0);
+      const delta = ledgerTotal - reportedSoFar;
+      if (delta <= 0) {
+        result.skipped.push({
+          metric,
+          quantity: reportedSoFar,
+          reason: delta === 0 ? "no new usage since the last report" : `ledger total ${ledgerTotal} is below the reported total ${reportedSoFar} — nothing to report`,
+        });
+        return true;
+      }
+      const idempotencyKey = `usage:${workspaceId}:${periodStart.toISOString()}:${metric}:${ledgerTotal}`;
+      await adapter.reportUsage({ customerId: account.customerId, eventName: METER_EVENTS[metric], value: delta, identifier: idempotencyKey }).catch((e) => {
+        throw billingHttpError(e);
+      });
+      await tx
+        .insert(schema.usageReport)
+        .values({ workspaceId, periodStart, metric, quantity: delta, ledgerTotal, idempotencyKey, status: "reported" })
+        .onConflictDoNothing({ target: schema.usageReport.idempotencyKey });
+      result.reported.push({ metric, quantity: delta });
+      return true;
     });
-    await db
-      .insert(schema.usageReport)
-      .values({ workspaceId, periodStart, metric, quantity: value, ledgerTotal: value, idempotencyKey, status: "reported" })
-      .onConflictDoNothing({ target: schema.usageReport.idempotencyKey });
-    result.reported.push({ metric, quantity: value });
+    if (!done) return result;
   }
   return result;
 }

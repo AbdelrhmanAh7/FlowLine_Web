@@ -116,6 +116,28 @@ describe("subscription changes", () => {
     expect(s.webhooks.at(-1)!.type).toBe("customer.subscription.deleted");
   });
 
+  it("retrieves the canonical subscription state", async () => {
+    const { a, sub } = await subscribed();
+    const got = await a.retrieveSubscription(sub.id);
+    expect(got.id).toBe(sub.id);
+    expect(got.status).toBe("active");
+    expect(got.priceId).toBe("price_test_starter");
+    expect(got.cancelAtPeriodEnd).toBe(false);
+    expect(got.currentPeriodEnd).toBeInstanceOf(Date);
+    expect(got.trialEnd).toBeNull();
+  });
+
+  it("retrieveSubscription reflects provider-side changes and surfaces a missing subscription as a client error", async () => {
+    const { a, sub } = await subscribed();
+    await a.cancelSubscription(sub.id, { atPeriodEnd: false });
+    const got = await a.retrieveSubscription(sub.id);
+    expect(got.status).toBe("canceled");
+
+    const err = await a.retrieveSubscription("sub_nope").catch((e) => e);
+    expect(err).toBeInstanceOf(BillingProviderError);
+    expect((err as BillingProviderError).kind).toBe("client");
+  });
+
   it("surfaces provider 5xx as an unavailable BillingProviderError", async () => {
     const { a, sub } = await subscribed();
     await fake.fault({ provider: "stripe", pathPattern: "/v1/subscriptions/", mode: "500" });

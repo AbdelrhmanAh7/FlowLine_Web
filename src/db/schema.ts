@@ -854,12 +854,12 @@ export const billingEvent = pgTable("billing_event", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
   workspaceId: uuid("workspace_id"),
-  /** applied | ignored_stale | ignored_unknown_customer | ignored_type | failed */
+  /** applied | applied_canonical | ignored_stale | ignored_unknown_customer | ignored_type | failed */
   outcome: text("outcome").notNull(),
   detail: text("detail"),
 });
 
-/** Usage reported to the payment provider for a period (idempotent per workspace + period + metric). */
+/** Usage reported to the payment provider for a period: one row per reported delta (idempotent per idempotency key, which embeds the ledger total). */
 export const usageReport = pgTable(
   "usage_report",
   {
