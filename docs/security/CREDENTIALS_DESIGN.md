@@ -174,10 +174,14 @@ On branch `ai-hub`, after Wave A lands; it shares crypto v2.
 - **Callback** after membership removal is refused.
 - **Refresh vs revoke race** never resurrects `active`.
 
-## 5. Owner decisions needed
+## 5. Owner decisions (2026-09-29)
 
-1. **Require TOTP for platform admins from day one.** Recommended: yes.
-2. **Rotating the Google/GitHub sign-in apps without a restart** (revision-keyed auth factory, a larger change).
-   Alternative: an audited, documented restart.
-3. **Keep in env for now:** the email recipient sandbox allowlist and the billing plans JSON. Reviewers suggest they
-   can move later.
+1. **TOTP is required for platform admins from day one.** The panel stays locked until an authenticator is enrolled,
+   and step-up uses TOTP.
+2. **Sign-in app rotation is live, with no restart.** better-auth becomes a revision-keyed auth factory with a
+   request-local snapshot and callback dispatch bound to the initiating revision (MUST, fully tested).
+3. **The email recipient allowlist and the billing plans list move to the admin panel now.** They are validated
+   platform settings (not secrets), versioned and audited, and take effect with no restart.
+   - Live-payment enablement (`FLOWLINE_BILLING_ALLOW_LIVE`) **stays in operator env**, as a safety switch that isn't
+     one click away.
+   - Paddle's sandbox/live mode stays guarded as before.
