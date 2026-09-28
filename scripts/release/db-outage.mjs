@@ -7,10 +7,18 @@
  *    health turns 503 fast, API calls fail fast with a clean error (no hang, no stack traces), and after unpause the
  *    SAME processes recover with no restart; a run started before the stall and one started after both finish once.
  * B. Hard outage (DB container stopped, then started): same checks.
+ *
+ * Email verification (Phase 4): the test user is verified through the real endpoint (scripts/release/lib/verified-user.mjs).
+ * The throwaway stack takes its email settings (FLOWLINE_EMAIL_PROVIDER / _FROM / _ALLOWED_RECIPIENTS and FLOWLINE_ENV)
+ * from the env file, and its PostgreSQL is published on 127.0.0.1:5436 so the token can be read from email_outbox —
+ * i.e. the env file must select FLOWLINE_EMAIL_PROVIDER=outbox and the image must accept it.
+ *   [--env .env.staging]   env file (secrets + email settings; never printed)
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { parseEnvFile } from "./lib/email-token.mjs";
+import { verifiedUser } from "./lib/verified-user.mjs";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -22,12 +30,11 @@ const OUT = arg("out", "artifacts/phase-3/failure");
 const BASE = "http://localhost:3202";
 const PW = randomBytes(12).toString("hex");
 const NAMES = { db: "flowline-outage-db", web: "flowline-outage-web", worker: "flowline-outage-worker", net: "flowline-outage-net" };
-const env = Object.fromEntries(
-  readFileSync(".env.staging", "utf8")
-    .split(/\r?\n/)
-    .filter((l) => /^[A-Z_]+=/.test(l))
-    .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
-);
+const env = parseEnvFile(readFileSync(arg("env", ".env.staging"), "utf8"));
+const DB_PORT = 5436;
+const DB_URL = `postgres://flowline:${PW}@127.0.0.1:${DB_PORT}/flowline`;
+/** Email settings passed through to the throwaway stack (so verification mail lands in its email_outbox). */
+const EMAIL_ENV = ["FLOWLINE_ENV", "FLOWLINE_EMAIL_PROVIDER", "FLOWLINE_EMAIL_FROM", "FLOWLINE_EMAIL_ALLOWED_RECIPIENTS"].filter((k) => env[k] && !(k === "FLOWLINE_ENV" && env[k] === "test")).flatMap((k) => ["-e", `${k}=${env[k]}`]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const docker = (...a) => execFileSync("docker", a, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const checks = [];
@@ -81,7 +88,7 @@ const report = { image: IMAGE, startedAt: new Date().toISOString(), scenarios: {
 try {
   cleanup();
   docker("network", "create", NAMES.net);
-  docker("run", "-d", "--name", NAMES.db, "--network", NAMES.net, "-e", "POSTGRES_USER=flowline", "-e", `POSTGRES_PASSWORD=${PW}`, "-e", "POSTGRES_DB=flowline", "--memory", "512m", "postgres:17.6-alpine");
+  docker("run", "-d", "--name", NAMES.db, "--network", NAMES.net, "-e", "POSTGRES_USER=flowline", "-e", `POSTGRES_PASSWORD=${PW}`, "-e", "POSTGRES_DB=flowline", "-p", `127.0.0.1:${DB_PORT}:5432`, "--memory", "512m", "postgres:17.6-alpine");
   await waitFor(async () => spawnSync("docker", ["exec", NAMES.db, "pg_isready", "-U", "flowline", "-h", "127.0.0.1"], { stdio: "ignore" }).status === 0);
   await sleep(2000);
   const appEnv = [
@@ -89,6 +96,7 @@ try {
     "-e", `DATABASE_URL=postgres://flowline:${PW}@${NAMES.db}:5432/flowline`,
     "-e", `BETTER_AUTH_SECRET=${env.BETTER_AUTH_SECRET}`, "-e", `FLOWLINE_ENCRYPTION_KEY=${env.FLOWLINE_ENCRYPTION_KEY}`,
     "-e", `BETTER_AUTH_URL=${BASE}`, "-e", `FLOWLINE_PUBLIC_URL=${BASE}`,
+    ...EMAIL_ENV,
   ];
   execFileSync("docker", ["run", "--rm", ...appEnv, IMAGE, "node_modules/.bin/tsx", "src/db/migrate.ts"], { stdio: "ignore" });
   docker("run", "-d", "--name", NAMES.web, ...appEnv, "-p", "127.0.0.1:3202:3000", "--memory", "1536m", IMAGE);
@@ -99,7 +107,7 @@ try {
 
   const s = new Session();
   const email = `outage-${randomUUID().slice(0, 8)}@flowline-outage.test`;
-  await s.ok("/api/auth/sign-up/email", { method: "POST", json: { email, password: "Outage-Check-Pass-1", name: "Outage" } });
+  report.seedUser = await verifiedUser({ base: BASE, session: s, email, password: "Outage-Check-Pass-1", name: "Outage", tokenSource: { dbUrl: DB_URL } });
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: "Outage" } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "data", skipped: false } });
   const { flow } = await s.ok(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: { name: "Outage flow" } });

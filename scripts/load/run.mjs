@@ -5,11 +5,17 @@
  * Creates its own users/workspaces (…@flowline-load.test). Reads DB counts directly (staging DB on 127.0.0.1:5434)
  * for the drain/duplicate checks; the DB password is read from the env file and never printed.
  * Targets are fixed in TEST_PLAN.md; this script only measures and reports pass/miss against them.
+ *
+ * Email verification (Phase 4): every user is verified through the real endpoint (scripts/release/lib/verified-user.mjs);
+ * the token comes from the staging DB's email_outbox table, so staging must run FLOWLINE_EMAIL_PROVIDER=outbox.
+ *   [--invite <code>]   beta access code (multi-use) when staging runs FLOWLINE_BETA_MODE=invite_only
  */
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import pg from "pg";
+import { parseEnvFile } from "../release/lib/email-token.mjs";
+import { verifiedUser } from "../release/lib/verified-user.mjs";
+import { dockerStats, sleep, summary, timed } from "./lib/common.mjs";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -17,39 +23,12 @@ const arg = (k, d) => {
 };
 const BASE = arg("base", "http://localhost:3200");
 const OUT = arg("out", "artifacts/phase-3/load");
-const envFile = Object.fromEntries(
-  readFileSync(arg("env", ".env.staging"), "utf8")
-    .split(/\r?\n/)
-    .filter((l) => /^[A-Z_]+=/.test(l))
-    .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
-);
+const envFile = parseEnvFile(readFileSync(arg("env", ".env.staging"), "utf8"));
+const INVITE = arg("invite");
 const DB_URL = `postgres://flowline:${envFile.STAGING_DB_PASSWORD}@127.0.0.1:5434/flowline`;
 const PASSWORD = "Load-Test-Pass-1";
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ───────────────────────────── helpers
-function pct(xs, p) {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  return Math.round(s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)]);
-}
-function summary(lat, statuses) {
-  const counts = {};
-  for (const s of statuses) counts[s] = (counts[s] ?? 0) + 1;
-  return { n: lat.length, p50: pct(lat, 50), p95: pct(lat, 95), p99: pct(lat, 99), max: Math.round(Math.max(...lat)), statuses: counts };
-}
-async function timed(fn) {
-  const t = performance.now();
-  let status = 0;
-  try {
-    const r = await fn();
-    status = r.status;
-    await r.arrayBuffer();
-  } catch {
-    status = -1;
-  }
-  return { ms: performance.now() - t, status };
-}
 
 class Session {
   constructor() {
@@ -89,15 +68,12 @@ const graph = {
 
 async function newUser(tag) {
   const s = new Session();
-  // Setup only (not measured): sign-up is rate limited per IP in production builds, so back off and retry.
+  // Setup only (not measured): sign-up / sign-in are rate limited per IP in production builds; the helper backs off.
   const email = `${tag}-${randomUUID().slice(0, 8)}@flowline-load.test`;
-  for (let attempt = 0; ; attempt++) {
-    const r = await s.req("/api/auth/sign-up/email", { method: "POST", json: { email, password: PASSWORD, name: "Load" } });
-    if (r.ok) break;
-    if (r.status !== 429 || attempt > 20) throw new Error(`sign-up → ${r.status} ${(await r.text()).slice(0, 200)}`);
-    report.signUpRateLimited = (report.signUpRateLimited ?? 0) + 1;
-    await sleep((Number(r.headers.get("x-retry-after") ?? r.headers.get("retry-after")) || 5) * 1000);
-  }
+  await verifiedUser({
+    base: BASE, session: s, email, password: PASSWORD, name: "Load", betaCode: INVITE, tokenSource: { dbUrl: DB_URL },
+    onRateLimited: () => { report.signUpRateLimited = (report.signUpRateLimited ?? 0) + 1; },
+  });
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Load ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "sales", skipped: false } });
   const { flow } = await s.ok(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: { name: "Load doubler" } });
@@ -122,21 +98,6 @@ async function closedLoop(concurrency, durationMs, fn) {
   return summary(lat, st);
 }
 
-function dockerStats() {
-  try {
-    const out = execFileSync("docker", ["stats", "--no-stream", "--format", "{{.Name}}\t{{.MemUsage}}\t{{.CPUPerc}}"], { encoding: "utf8" });
-    return out
-      .trim()
-      .split("\n")
-      .filter((l) => l.startsWith("flowline-staging"))
-      .map((l) => {
-        const [name, mem, cpu] = l.split("\t");
-        return { name, mem: mem.split(" / ")[0], cpu };
-      });
-  } catch (e) {
-    return [{ error: String(e.message).slice(0, 120) }];
-  }
-}
 
 // ───────────────────────────── run
 const report = { base: BASE, startedAt: new Date().toISOString(), scenarios: {}, resources: [] };
