@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
 import type { FlowGraph } from "@/engine/types";
 import { unavailableAppsIn } from "@/server/copilot-apps";
-import { applyPatch, type CopilotPatch } from "@/server/copilot-patch";
+import { applyPatch, previewGraph, type CopilotPatch } from "@/server/copilot-patch";
 
 /** Deterministic repairs behind CX3Q-02/03 (real-model Copilot output); the validator still has the final word. */
 const lead = () => structuredClone(LOCAL_TEMPLATES.find((t) => t.id === "lead-qualifier")!.graph) as FlowGraph;
@@ -71,5 +71,46 @@ describe("unavailable apps", () => {
     expect(unavailableAppsIn("add a row in Google Sheets and ping Slack")).toEqual([]);
     expect(unavailableAppsIn("put it in a box or drop it")).toEqual(["Box"]); // documented: common words that are also app names match
     expect(unavailableAppsIn("the boxes are sorted")).toEqual([]);
+  });
+});
+
+describe("proposal checks for approvable-but-wrong results (Codex CX3R-02)", () => {
+  const manualTo = (nodes: CopilotPatch["addNodes"], edges: [string, string][]) =>
+    applyPatch({ nodes: [], edges: [] }, patch({ addNodes: [{ id: "t", type: "trigger.manual", label: "Start", config: { samplePayload: '{ "email": "Ada@Example.COM", "company": "Acme" }' } }, ...nodes], addEdges: edges.map(([source, target]) => ({ source, target })) }), []);
+
+  it("a workflow with no Output step and no action is invalid (a transform merely labelled Output)", () => {
+    const r = manualTo([{ id: "o", type: "transform.json", label: "Output", config: { expression: "$" } }], [["t", "o"]]);
+    expect(errors(r).map((e) => e.code)).toContain("NO_RESULT");
+  });
+
+  it("the dry-run preview shows what the draft returns and warns when it's empty", async () => {
+    const wrong = manualTo(
+      [
+        { id: "x", type: "transform.json", label: "Normalize", config: { expression: '{ "normalizedLead": lead.email }' } },
+        { id: "o", type: "output", label: "Out", config: { key: "result", expression: "" } },
+      ],
+      [["t", "x"], ["x", "o"]],
+    );
+    const bad = await previewGraph(wrong.graph);
+    expect(bad.preview.ran).toBe(true);
+    expect(bad.issues.map((i) => i.code)).toContain("PREVIEW_EMPTY");
+
+    const right = manualTo(
+      [
+        { id: "x", type: "transform.json", label: "Normalize", config: { expression: '{ "normalizedLead": { "email": $lowercase(email), "company": company } }' } },
+        { id: "o", type: "output", label: "Out", config: { key: "result", expression: "" } },
+      ],
+      [["t", "x"], ["x", "o"]],
+    );
+    const good = await previewGraph(right.graph);
+    expect(good.issues).toEqual([]);
+    expect(good.preview.output).toEqual({ result: { normalizedLead: { email: "ada@example.com", company: "Acme" } } });
+  });
+
+  it("steps that reach outside Flowline or use pattern matching aren't previewed, and say why", async () => {
+    const ext = applyPatch(lead(), patch({ addNodes: [{ id: "post", type: "slack.post_message", label: "Tell sales", config: { channel: "#sales", text: "x" }, after: "is-hot" }] }), []);
+    expect((await previewGraph(ext.graph)).preview).toMatchObject({ ran: false, reason: expect.stringContaining("runs outside Flowline") });
+    const rx = manualTo([{ id: "o", type: "output", label: "Out", config: { key: "r", expression: '$match(email, /a+$/)' } }], [["t", "o"]]);
+    expect((await previewGraph(rx.graph)).preview).toMatchObject({ ran: false, reason: expect.stringContaining("pattern matching") });
   });
 });

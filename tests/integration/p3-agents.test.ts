@@ -232,6 +232,24 @@ describe("agents: tool permissions ALLOW / ASK / DENY enforced by the backend", 
     expect(children[0]!.output).toEqual({ r: { v: 5000 } });
   });
 
+  it("time spent waiting for a human decision doesn't count toward the agent's time limit (Codex CX3R-01)", async () => {
+    const { owner, ws, flow } = await setup("AgWait");
+    const agent = await createAgent(owner, ws.id, { name: "Patient", instructions: "Run workflows.", tools: [{ tool: "run_workflow", flowId: flow.id, permission: "ask" }], limits: limits({ timeoutMs: 5_000 }) });
+    const run = await startAgentRun({ agentId: agent.id, message: `run ${flow.name} with {"n": 3}`, actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } });
+    let r = await runAgent(run.id);
+    expect(r.status).toBe("waiting_approval");
+    // The request waits 10 minutes for a person (far beyond the 5 s working limit).
+    await db.update(schema.agentRun).set({ startedAt: new Date(Date.now() - 10 * 60_000) }).where(eq(schema.agentRun.id, run.id));
+    const [ap] = await db.select().from(schema.approval).where(eq(schema.approval.agentRunId, run.id));
+    await decide(db, { workspaceId: ws.id, approvalId: ap!.id, userId: owner.id, decision: "approve" });
+    r = await runAgent(run.id);
+    expect(r.status, JSON.stringify(r.error)).toBe("succeeded");
+    const children = await db.select().from(schema.run).where(eq(schema.run.agentRunId, run.id));
+    expect(children).toHaveLength(1);
+    expect(children[0]!.output).toEqual({ r: { v: 6 } });
+    expect((r.state as { activeMs?: number }).activeMs).toBeLessThan(5_000); // only working time was counted
+  });
+
   it("ASK rejected → the tool isn't executed and the agent reports it", async () => {
     const { owner, ws, flow } = await setup("AgReject");
     const agent = await createAgent(owner, ws.id, { name: "R", instructions: "Run.", tools: [{ tool: "run_workflow", flowId: flow.id, permission: "ask" }], limits: limits() });

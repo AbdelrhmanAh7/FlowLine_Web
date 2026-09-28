@@ -7,7 +7,7 @@ import type { CurrentUser } from "./access";
 import { createFlow, saveFlow } from "./flows";
 import { HttpError, notFound } from "./http";
 import { availableIntegrationNames, unavailableAppsIn } from "./copilot-apps";
-import { applyPatch, catalogFor, graphSummary, PATCH_JSON_SCHEMA, patchSchema, type CopilotPatch, type Diff, type Issue } from "./copilot-patch";
+import { applyPatch, catalogFor, graphSummary, PATCH_JSON_SCHEMA, patchSchema, previewGraph, type CopilotPatch, type Diff, type Issue } from "./copilot-patch";
 import { checkRunRate } from "./rate-limit";
 import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "./usage";
 
@@ -151,6 +151,11 @@ async function proposeFor(user: CurrentUser, workspaceId: string, flow: typeof s
     issues.push(...applied.issues);
     proposedGraph = applied.graph;
     diff = applied.diff;
+    if (!issues.some((i) => i.severity === "error")) {
+      const pv = await previewGraph(applied.graph).catch((e: Error) => ({ preview: { ran: false, reason: `Not previewed: ${e.message}` }, issues: [] as Issue[] }));
+      diff = { ...diff, preview: pv.preview };
+      issues.push(...pv.issues);
+    }
   }
   const status = issues.some((i) => i.severity === "error") || !patch ? "invalid" : "proposed";
   const [row] = await db

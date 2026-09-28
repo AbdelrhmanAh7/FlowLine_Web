@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { NODE_TYPES, type FlowEdge, type FlowGraph, type FlowNode, type NodeType } from "@/engine/types";
+import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
 import { getAction, listProviders } from "@/integrations/registry";
 
@@ -51,6 +52,16 @@ export interface Diff {
   removed: { id: string; type: string; label: string }[];
   edgesAdded: number;
   edgesRemoved: number;
+  /** Dry run of the proposed graph on its own sample input (local steps only) — shown before approval. */
+  preview?: Preview;
+}
+
+export interface Preview {
+  ran: boolean;
+  reason?: string;
+  status?: string;
+  output?: unknown;
+  error?: { code: string; message: string; nodeId?: string } | null;
 }
 
 export function catalogFor(connections: { id: string; provider: string; label: string; status: string }[]) {
@@ -234,6 +245,10 @@ export function applyPatch(base: FlowGraph, input: CopilotPatch, conns: { id: st
     for (const n of next) edges.push({ id: `cp-${Date.now().toString(36)}-${i++}`, source: a.id, target: n.target, sourceHandle: isCondition ? "true" : null });
   }
   const graph: FlowGraph = { nodes: [...nodes.values()], edges };
+  // A workflow with no Output step and no action does nothing anyone can see (e.g. a transform merely labelled "Output").
+  if (graph.nodes.length > 0 && !graph.nodes.some((n) => n.type === "output" || NODE_DEFINITIONS[n.type]?.sideEffect !== "none")) {
+    err("NO_RESULT", "This workflow doesn't produce anything: it has no Output step and no action. Add an Output step to return results.");
+  }
   for (const v of validateGraph(graph)) {
     // Missing setup is expected for a draft; structure problems make the proposal invalid.
     if (["SETUP_REQUIRED", "MISSING_CONNECTION", "NO_STEPS"].includes(v.code)) warn(v.code, v.message, v.nodeId);
@@ -249,4 +264,36 @@ export function applyPatch(base: FlowGraph, input: CopilotPatch, conns: { id: st
     edgesRemoved: base.edges.filter((b) => !edges.some((e) => e.source === b.source && e.target === b.target)).length,
   };
   return { graph, issues, diff };
+}
+
+/* ───────── Dry-run preview ───────── */
+
+/** Steps that are pure and local: a preview runs them without touching anything outside the engine. */
+const PREVIEW_TYPES = new Set(["trigger.manual", "trigger.webhook", "trigger.schedule", "transform.json", "logic.condition", "output", "data.filter", "data.map", "data.merge", "data.csv"]);
+/** Pattern matching can't be interrupted in-process (catastrophic backtracking): such proposals aren't previewed here. */
+const REGEX_RISK = /\$(match|replace|split|contains)\s*\(|\/[^/\n]+\/[imx]*\s*[),]/;
+
+const emptyish = (v: unknown): boolean =>
+  v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0) || (typeof v === "object" && !Array.isArray(v) && Object.values(v as object).every(emptyish));
+
+/**
+ * Runs the proposed graph on its trigger's sample input when every step is local and pure, so the person approving
+ * sees what it actually returns. Anything the preview reveals (a failure, an empty result) becomes a visible warning.
+ */
+export async function previewGraph(graph: FlowGraph): Promise<{ preview: Preview; issues: Issue[] }> {
+  const blocked = graph.nodes.find((n) => !PREVIEW_TYPES.has(n.type));
+  if (blocked) return { preview: { ran: false, reason: `Not previewed: "${blocked.data.label}" (${blocked.type}) runs outside Flowline — test it in the builder after approving.` }, issues: [] };
+  if (graph.nodes.some((n) => REGEX_RISK.test(JSON.stringify(n.data.config)))) return { preview: { ran: false, reason: "Not previewed: an expression uses pattern matching — run it in the builder after approving." }, issues: [] };
+  let input: unknown;
+  try {
+    input = sampleInputFor(graph);
+  } catch {
+    return { preview: { ran: false, reason: "Not previewed: the trigger's sample payload isn't valid JSON." }, issues: [{ code: "PREVIEW_FAILED", message: "The trigger's sample payload isn't valid JSON", severity: "warning" }] };
+  }
+  const res = await executeGraph(graph, input, { signal: AbortSignal.timeout(3_000) });
+  const preview: Preview = { ran: true, status: res.status, output: res.output, error: res.error };
+  const issues: Issue[] = [];
+  if (res.status !== "succeeded") issues.push({ code: "PREVIEW_FAILED", message: `On its sample input this workflow ${res.status === "failed" ? `fails${res.error ? `: ${res.error.message}` : ""}` : `ends as ${res.status}`} — review the steps before approving.`, severity: "warning", nodeId: res.error?.nodeId });
+  else if (emptyish(res.output)) issues.push({ code: "PREVIEW_EMPTY", message: `On its sample input this workflow returns no data (${JSON.stringify(res.output).slice(0, 120)}) — check the expressions before approving.`, severity: "warning" });
+  return { preview, issues };
 }

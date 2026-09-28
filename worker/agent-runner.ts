@@ -34,6 +34,8 @@ interface AgentState {
   citations: Citation[];
   nextIndex: number;
   pending?: { index: number; call: ToolCall; childRunId?: string; approvalId?: string };
+  /** Time the agent has actually been working (ms). Waiting for a person doesn't count toward its time limit. */
+  activeMs?: number;
 }
 
 export class AgentLeaseLost extends Error {}
@@ -164,7 +166,14 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     messages.push({ role: "user", content: run.input });
     state = { messages, citations: [], nextIndex: 0 };
   }
-  const deadline = (run.startedAt ?? new Date()).getTime() + limits.timeoutMs;
+  // The time limit covers the agent's own work, not the hours a request may wait for a human decision (Codex CX3R-01):
+  // the remaining budget is carried in state.activeMs across pauses.
+  const sliceStart = Date.now();
+  const spentBefore = state.activeMs ?? 0;
+  const deadline = sliceStart + Math.max(0, limits.timeoutMs - spentBefore);
+  const markPaused = () => {
+    state!.activeMs = spentBefore + (Date.now() - sliceStart);
+  };
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(new Error("AGENT_TIMEOUT")), Math.max(1, deadline - Date.now()));
   let costMicros = run.costMicros;
@@ -318,6 +327,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
             const g = await gateFor(index, call, d.flow, ready.connections, ready.versionId);
             versionId = ready.versionId ?? undefined;
             if (g.status === "pending") {
+              markPaused();
               await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object });
               return;
             }
@@ -333,6 +343,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
           } else if (state.pending.childRunId) label = d.kind === "ask" ? "approved" : "allow";
           const r = await execute(index, call, d, label, versionId);
           if (typeof r !== "string") {
+            markPaused();
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object });
             return;
           }
@@ -374,6 +385,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
               const g = await gateFor(index, nextCall, d.flow, ready.connections, ready.versionId);
               await recordStep({ index: 10_000 + index, kind: "tool", tool: nextCall.name, args: nextCall.arguments, decision: "ask", approvalId: g.approvalId });
               state.pending = { index, call: nextCall, approvalId: g.approvalId };
+              markPaused();
               await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
               log("agent run", runId, "waiting for approval");
               return;
@@ -383,11 +395,13 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
             const g = await gateFor(index, nextCall, d.flow, [], null);
             await recordStep({ index: 10_000 + index, kind: "tool", tool: nextCall.name, args: nextCall.arguments, decision: "ask", approvalId: g.approvalId });
             state.pending = { index, call: nextCall, approvalId: g.approvalId };
+            markPaused();
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
             return;
           }
           const r = await execute(index, nextCall, d as Decision & { kind: "allow" }, "allow", checkedVersion);
           if (typeof r !== "string") {
+            markPaused();
             await update({ status: "waiting_approval", lockedBy: null, state: state as unknown as object, toolCallCount });
             return;
           }

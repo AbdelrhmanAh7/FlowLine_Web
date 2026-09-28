@@ -1,7 +1,7 @@
 {
   "provider": "ollama",
   "model": "qwen2.5:7b",
-  "at": "2026-09-28T02:08:23.835Z",
+  "at": "2026-09-28T03:12:09.095Z",
   "valid": 7,
   "total": 12,
   "results": [
@@ -9,7 +9,7 @@
       "case": "held-out: AI triage",
       "run": 1,
       "ok": false,
-      "ms": 12080,
+      "ms": 12171,
       "errors": [
         "INVALID_OUTPUT_KEY: Output Category: output key must be letters, digits or _ (max 64)"
       ],
@@ -24,7 +24,7 @@
       "case": "held-out: AI triage",
       "run": 2,
       "ok": true,
-      "ms": 3630,
+      "ms": 3509,
       "errors": [],
       "warnings": [],
       "added": [
@@ -37,7 +37,7 @@
       "case": "held-out: schedule + Postgres",
       "run": 1,
       "ok": false,
-      "ms": 14244,
+      "ms": 14227,
       "errors": [
         "UNKNOWN_NODE_TYPE: \"data.query\" isn't a Flowline node type",
         "UNKNOWN_NODE: An edge references a step that doesn't exist (n2 → n3)",
@@ -55,7 +55,7 @@
       "case": "held-out: schedule + Postgres",
       "run": 2,
       "ok": false,
-      "ms": 18221,
+      "ms": 16023,
       "errors": [
         "UNKNOWN_NODE_TYPE: \"data.postgres.query\" isn't a Flowline node type",
         "UNKNOWN_NODE: An edge references a step that doesn't exist (n2 → n3)",
@@ -74,7 +74,7 @@
       "case": "held-out: remove output",
       "run": 1,
       "ok": true,
-      "ms": 1460,
+      "ms": 1408,
       "errors": [],
       "warnings": [],
       "added": []
@@ -83,7 +83,7 @@
       "case": "held-out: remove output",
       "run": 2,
       "ok": true,
-      "ms": 519,
+      "ms": 524,
       "errors": [],
       "warnings": [],
       "added": []
@@ -92,7 +92,7 @@
       "case": "held-out: rename step",
       "run": 1,
       "ok": true,
-      "ms": 1728,
+      "ms": 1663,
       "errors": [],
       "warnings": [],
       "added": []
@@ -101,7 +101,7 @@
       "case": "held-out: rename step",
       "run": 2,
       "ok": true,
-      "ms": 896,
+      "ms": 768,
       "errors": [],
       "warnings": [],
       "added": []
@@ -110,7 +110,7 @@
       "case": "held-out: Slack on hot branch",
       "run": 1,
       "ok": true,
-      "ms": 2731,
+      "ms": 2493,
       "errors": [],
       "warnings": [
         "CONVERTED_TO_INTEGRATION",
@@ -125,7 +125,7 @@
       "case": "held-out: Slack on hot branch",
       "run": 2,
       "ok": true,
-      "ms": 1910,
+      "ms": 1641,
       "errors": [],
       "warnings": [
         "CONVERTED_TO_INTEGRATION",
@@ -140,7 +140,7 @@
       "case": "held-out: webhook validate",
       "run": 1,
       "ok": false,
-      "ms": 11713,
+      "ms": 10451,
       "errors": [
         "INVALID_EXPRESSION: Check Email: expression: Syntax error: \"contains\" (at character 16)"
       ],
@@ -155,7 +155,7 @@
       "case": "held-out: webhook validate",
       "run": 2,
       "ok": false,
-      "ms": 10296,
+      "ms": 10065,
       "errors": [
         "INVALID_EXPRESSION: Check Email: expression: Syntax error: \"contains\" (at character 16)"
       ],

@@ -17,6 +17,7 @@ interface Proposal {
     removed: { id: string; type: string; label: string }[];
     edgesAdded: number;
     edgesRemoved: number;
+    preview?: { ran: boolean; reason?: string; status?: string; output?: unknown; error?: { message: string } | null };
   } | null;
   issues: { code: string; message: string; severity: "error" | "warning"; nodeId?: string }[];
   savedRevision: number | null;
@@ -130,6 +131,20 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
               <p className="data text-muted">
                 edges +{proposal.diff.edgesAdded} −{proposal.diff.edgesRemoved}
               </p>
+            </div>
+          )}
+          {proposal.diff?.preview && (
+            <div className="flex flex-col gap-1 text-sm" data-testid="copilot-preview">
+              {proposal.diff.preview.ran ? (
+                <>
+                  <p className="text-med">
+                    Preview on the sample input (local steps only): <span className="data">{proposal.diff.preview.status}</span>
+                  </p>
+                  <pre className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{proposal.diff.preview.error ? proposal.diff.preview.error.message : JSON.stringify(proposal.diff.preview.output, null, 2)}</pre>
+                </>
+              ) : (
+                <p className="text-muted">{proposal.diff.preview.reason}</p>
+              )}
             </div>
           )}
           {proposal.status === "proposed" && (
