@@ -5,7 +5,7 @@ import { monthStart } from "@/server/usage";
 
 type Ctx = { params: Promise<{ wid: string }> };
 
-/** Reports this period's ledger totals to the payment provider (idempotent per period + metric). */
+/** Reports this period's unreported ledger usage (the delta since the last report) to the payment provider. */
 export const POST = route(async (_req, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "billing.manage");

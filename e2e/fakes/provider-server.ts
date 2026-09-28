@@ -1067,6 +1067,48 @@ function signStripePayload(secret: string, payload: string, at?: number): string
   return `t=${t},v1=${v1}`;
 }
 
+/**
+ * Keeps the fake's provider state consistent with an emitted event: a provider sends an
+ * event because its state changed, and tests rely on that state being canonical
+ * (same-second webhook ordering fetches it). Tests crafting adversarial or stale events
+ * that must NOT move provider state pass `mutate: false`.
+ */
+function applyStripeEventToState(s: State, type: string, object: unknown) {
+  const obj = object as Record<string, unknown>;
+  if (type === "customer.subscription.created" || type === "customer.subscription.updated") {
+    const id = String(obj.id ?? "");
+    let sub = s.stripeSubscriptions.find((x) => x.id === id);
+    if (!sub) {
+      sub = {
+        id,
+        object: "subscription",
+        customer: String(obj.customer ?? ""),
+        status: "active",
+        items: { data: [{ price: { id: "price_unknown" } }] },
+        current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+        cancel_at_period_end: false,
+        trial_end: null,
+      };
+      s.stripeSubscriptions.push(sub);
+    }
+    if (typeof obj.status === "string") sub.status = obj.status;
+    if (obj.items) sub.items = obj.items as FakeSubscription["items"];
+    if (typeof obj.current_period_end === "number") sub.current_period_end = obj.current_period_end;
+    sub.cancel_at_period_end = obj.cancel_at_period_end === true;
+    sub.trial_end = typeof obj.trial_end === "number" ? obj.trial_end : null;
+    if (typeof obj.customer === "string" && obj.customer) sub.customer = obj.customer;
+  } else if (type === "customer.subscription.deleted") {
+    const sub = s.stripeSubscriptions.find((x) => x.id === String(obj.id ?? ""));
+    if (sub) {
+      sub.status = "canceled";
+      sub.cancel_at_period_end = false;
+    }
+  } else if (type === "invoice.payment_failed" || type === "invoice.paid") {
+    const sub = s.stripeSubscriptions.find((x) => x.id === String(obj.subscription ?? ""));
+    if (sub) sub.status = type === "invoice.paid" ? "active" : "past_due";
+  }
+}
+
 /** Records (and, when FAKE_STRIPE_WEBHOOK_URL is set, sends) a signed webhook for the app under test. */
 async function sendStripeWebhook(ctx: Ctx, event: Record<string, unknown>): Promise<{ sent: boolean; payload: string; header: string }> {
   const url = process.env.FAKE_STRIPE_WEBHOOK_URL || null;
@@ -1192,6 +1234,11 @@ const stripe: Handler = async (ctx, req, res, path, url, body) => {
     return json(ctx, req, res, 200, event);
   }
   const subMatch = /^\/v1\/subscriptions\/([^/]+)$/.exec(path);
+  if (subMatch && req.method === "GET") {
+    const sub = s.stripeSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]));
+    if (!sub) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such subscription: '${subMatch[1]}'` } });
+    return json(ctx, req, res, 200, subscriptionPayload(sub));
+  }
   if (subMatch && req.method === "POST") {
     const sub = s.stripeSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]));
     if (!sub) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: `No such subscription: '${subMatch[1]}'` } });
@@ -1468,9 +1515,11 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
   }
   // Builds a signed Stripe-style event WITHOUT sending it, so tests can post it
   // themselves, replay it, or reorder it. Optional: id, created (event time), signAt (signature time).
+  // By default the emitted event also moves the fake's provider state (a provider sends
+  // events because state changed); pass mutate: false to craft an event that leaves it alone.
   if (req.method === "POST" && path === "/__fake/stripe/emit") {
     const s = ctx.state;
-    const body = j(rawBody) as { type?: string; customer?: string; subscription?: Record<string, unknown>; id?: string; created?: number; signAt?: number };
+    const body = j(rawBody) as { type?: string; customer?: string; subscription?: Record<string, unknown>; id?: string; created?: number; signAt?: number; mutate?: boolean };
     if (!body.type) return json(ctx, req, res, 400, { error: "type is required" }), true;
     const nowSec = Math.floor(Date.now() / 1000);
     let object: unknown;
@@ -1492,16 +1541,19 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
       object = { id: `in_fake_${next(s, "stripeInvoice")}`, object: "invoice", customer: body.customer ?? "", subscription: body.subscription?.id ?? null };
     }
     const event = stripeEvent(s, body.type, object, { id: body.id, created: body.created });
+    if (body.mutate !== false) applyStripeEventToState(s, body.type, object);
     const payload = JSON.stringify(event);
     const header = signStripePayload(process.env.FAKE_STRIPE_WEBHOOK_SECRET || "whsec_fake", payload, body.signAt);
     return json(ctx, req, res, 200, { id: event.id, payload, header }), true;
   }
   // Sends a signed invoice.payment_failed webhook for a known fake subscription.
+  // Like the real provider, the failure moves the subscription to past_due first.
   if (req.method === "POST" && path === "/__fake/stripe/fail-payment") {
     const s = ctx.state;
     const body = j(rawBody) as { subscription?: string };
     const sub = s.stripeSubscriptions.find((x) => x.id === body.subscription);
     if (!sub) return json(ctx, req, res, 404, { error: `No such subscription: '${body.subscription}'` }), true;
+    sub.status = "past_due";
     const event = stripeEvent(s, "invoice.payment_failed", { id: `in_fake_${next(s, "stripeInvoice")}`, object: "invoice", customer: sub.customer, subscription: sub.id });
     const result = await sendStripeWebhook(ctx, event);
     return json(ctx, req, res, 200, { ok: true, id: event.id, sent: result.sent, payload: result.payload, header: result.header }), true;

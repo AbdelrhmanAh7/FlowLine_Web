@@ -116,6 +116,13 @@ export class StripePaymentAdapter implements PaymentAdapter {
     else await this.request("DELETE", path);
   }
 
+  async retrieveSubscription(subscriptionId: string): Promise<NormalizedSubscription> {
+    const res = await this.request<unknown>("GET", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
+    const sub = normalizeSubscription(res);
+    if (!sub) throw new BillingProviderError("unavailable", "Billing provider returned an unrecognized subscription");
+    return sub;
+  }
+
   async reportUsage(input: UsageReportInput): Promise<void> {
     await this.request("POST", "/v1/billing/meter_events", {
       json: {

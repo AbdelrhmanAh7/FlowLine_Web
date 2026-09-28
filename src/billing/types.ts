@@ -74,6 +74,8 @@ export interface PaymentAdapter {
   createCheckoutSession(input: CheckoutSessionInput): Promise<{ id: string; url: string }>;
   changeSubscriptionPrice(subscriptionId: string, priceId: string): Promise<void>;
   cancelSubscription(subscriptionId: string, opts: { atPeriodEnd: boolean }): Promise<void>;
+  /** The provider's canonical subscription state, fetched live (used when webhook order is ambiguous). */
+  retrieveSubscription(subscriptionId: string): Promise<NormalizedSubscription>;
   reportUsage(input: UsageReportInput): Promise<void>;
   /** Verifies the webhook signature (and replay window) and parses the event, or throws WebhookVerificationError. */
   verifyWebhook(rawBody: string, signatureHeader: string | null, now: Date): BillingWebhookEvent;
