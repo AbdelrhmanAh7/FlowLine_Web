@@ -7,17 +7,67 @@ export function uniqueEmail(prefix = "e2e") {
   return `${prefix}-${randomUUID().slice(0, 8)}@flowline-e2e.test`;
 }
 
+export interface OutboxMessage {
+  subject: string;
+  text: string;
+  purpose: string | null;
+  link: string | null;
+}
+
 /**
- * Fast setup for tests whose subject is NOT sign-up: creates the account,
- * workspace and (optionally) a template flow through the public API. The
- * cookie lands in the page's browser context. The full new-user journey is
- * covered through the UI in journey.spec.ts.
+ * The test stack's "inbox" (test-only /api/test/outbox, backed by the outbox email provider): waits for the newest
+ * message to `email` (optionally of one purpose, e.g. "verify") and returns it.
+ */
+export async function latestEmail(req: APIRequestContext, email: string, purpose?: string): Promise<OutboxMessage> {
+  let found: OutboxMessage | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await req.get(`/api/test/outbox?email=${encodeURIComponent(email)}`);
+        expect(res.ok(), await res.text()).toBeTruthy();
+        const { messages } = (await res.json()) as { messages: OutboxMessage[] };
+        found = messages.find((m) => !purpose || m.purpose === purpose);
+        return Boolean(found);
+      },
+      { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+    )
+    .toBe(true);
+  return found!;
+}
+
+/** The verification link from the newest verification email to `email`. */
+export async function verificationLink(req: APIRequestContext, email: string) {
+  const link = (await latestEmail(req, email, "verify")).link;
+  expect(link, "verification email carries a link").toMatch(/\/verify-email\?token=[A-Za-z0-9_-]{40,}/);
+  return link!;
+}
+
+/**
+ * Creates an account the way a person does — sign up, open the emailed verification link, confirm, sign in — but
+ * through the HTTP API. Sign-up alone gives no session (email verification is required). The session cookie lands
+ * in the request context (for `page.request`, the page's browser context).
+ */
+export async function signUpVerified(req: APIRequestContext, email: string, name = "E2E User") {
+  const signUp = await req.post("/api/auth/sign-up/email", { data: { email, password: PASSWORD, name } });
+  expect(signUp.ok(), await signUp.text()).toBeTruthy();
+  expect((await signUp.json()).token, "sign-up must not sign in before verification").toBeNull();
+  const token = new URL(await verificationLink(req, email)).searchParams.get("token");
+  const verify = await req.post("/api/email", { data: { action: "verify", token } });
+  expect(verify.ok(), await verify.text()).toBeTruthy();
+  expect((await verify.json()).status).toBe("done");
+  const signIn = await req.post("/api/auth/sign-in/email", { data: { email, password: PASSWORD } });
+  expect(signIn.ok(), await signIn.text()).toBeTruthy();
+}
+
+/**
+ * Fast setup for tests whose subject is NOT sign-up: creates (and verifies) the account, workspace and (optionally)
+ * a template flow through the public API. The cookie lands in the page's browser context. The full new-user journey
+ * is covered through the UI in journey.spec.ts.
  */
 export async function setupUser(page: Page, opts: { template?: string; workspace?: string } = {}) {
   const email = uniqueEmail();
   const req = page.request;
-  const signUp = await req.post("/api/auth/sign-up/email", { data: { email, password: PASSWORD, name: "E2E User" } });
-  expect(signUp.ok(), await signUp.text()).toBeTruthy();
+  await signUpVerified(req, email);
   const ws = await (await req.post("/api/workspaces", { data: { name: opts.workspace ?? `E2E ${randomUUID().slice(0, 6)}` } })).json();
   expect((await req.post("/api/onboarding", { data: { goal: "sales", skipped: false } })).ok()).toBeTruthy();
   let flowId: string | undefined;

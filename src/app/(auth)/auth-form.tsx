@@ -24,27 +24,63 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [ssoSlug, setSsoSlug] = useState("");
   const [error, setError] = useState<string | null>(params.get("sso_error"));
   const [pending, setPending] = useState(false);
-  const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean }>("/api/auth-config") });
+  const [betaCode, setBetaCode] = useState("");
+  const [notVerified, setNotVerified] = useState(false);
+  // Sign-up never signs in: the account is activated from the emailed link. This holds the address we sent it to.
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean; betaMode?: "open" | "invite_only" }>("/api/auth-config") });
+  const inviteOnly = mode === "sign-up" && config.data?.betaMode === "invite_only";
+  const invited = next?.startsWith("invite:") ?? false;
+  // Where the verification link continues to: sign-in, keeping `next` (e.g. an invitation) intact.
+  const afterVerify = `/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   const destination = mode === "sign-up" ? `/onboarding${next ? `?next=${encodeURIComponent(next)}` : ""}` : `/app${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotVerified(false);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError(t("auth.errors.invalidEmail"));
     if (password.length < 8) return setError(t("auth.errors.passwordShort"));
     setPending(true);
     try {
-      const res =
-        mode === "sign-up"
-          ? await authClient.signUp.email({ email, password, name: name.trim() || email.split("@")[0]! })
-          : await authClient.signIn.email({ email, password });
-      if (res.error) {
-        setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
+      if (mode === "sign-up") {
+        // Private beta: sign-up answers generically (no account enumeration), so ask first whether this email or
+        // code can create an account — a refused person gets a clear reason instead of a "check your email" that
+        // never arrives. The sign-up itself decides again and is the only thing that consumes a code.
+        if (inviteOnly) {
+          const check = await fetch("/api/beta/check", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, code: betaCode.trim() || null }) });
+          if (!check.ok) {
+            setError(check.status === 429 ? t("auth.errors.betaRate") : t("errors.generic"));
+            setPending(false);
+            return;
+          }
+          if (!((await check.json()) as { allowed?: boolean }).allowed) {
+            setError(t("auth.errors.betaRefused"));
+            setPending(false);
+            return;
+          }
+        }
+        const body = { email, password, name: name.trim() || email.split("@")[0]!, callbackURL: afterVerify, ...(inviteOnly && betaCode.trim() ? { betaCode: betaCode.trim() } : {}) };
+        const res = await authClient.signUp.email(body as Parameters<typeof authClient.signUp.email>[0]);
+        if (res.error) {
+          setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
+          setPending(false);
+          return;
+        }
+        setSentTo(email.trim());
         setPending(false);
         return;
       }
-      router.replace(mode === "sign-up" ? "/verify-email?pending=1" : destination);
+      const res = await authClient.signIn.email({ email, password });
+      if (res.error) {
+        const unverified = res.error.status === 403 && /not verified/i.test(res.error.message ?? "");
+        setNotVerified(unverified);
+        setError(unverified ? t("auth.errors.notVerified") : friendly(t, res.error.message ?? res.error.statusText, res.error.status));
+        setPending(false);
+        return;
+      }
+      router.replace(destination);
       router.refresh();
     } catch {
       setError(t("errors.NETWORK"));
@@ -73,7 +109,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <p className="mt-1 text-base text-med">
             {mode === "sign-up" ? t("auth.signUpSub") : t("auth.signInSub")}
           </p>
+          {invited && !sentTo && <p className="mt-2 text-base text-hi">{t("auth.inviteHint")}</p>}
 
+          {sentTo ? (
+            <CheckInbox email={sentTo} callbackURL={afterVerify} signInHref={afterVerify} onBack={() => setSentTo(null)} />
+          ) : (
+          <>
+          {inviteOnly && (
+            <p role="note" className="mt-6 rounded-md border border-line bg-surface px-3 py-2 text-base text-med">
+              {t("auth.betaNotice")}
+            </p>
+          )}
           <div className="mt-8 flex flex-col gap-3">
             <Button size="lg" className="w-full" disabledReason={oauthReason("Google", config.data?.google)} onClick={() => social("google")}>
               <span aria-hidden className="font-semibold">G</span> {t("auth.google")}
@@ -109,9 +155,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 required
               />
             </Field>
+            {inviteOnly && (
+              <Field label={t("auth.betaCode")} htmlFor="beta-code" hint={t("auth.betaCodeHint")}>
+                <Input id="beta-code" dir="ltr" className="data" autoComplete="off" spellCheck={false} placeholder="FL-XXXXXXXX" value={betaCode} onChange={(e) => setBetaCode(e.target.value)} maxLength={64} />
+              </Field>
+            )}
             {error && (
               <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-base text-danger">
                 {error}
+                {notVerified && (
+                  <>
+                    {" "}
+                    <Link className="text-accent underline" href="/resend-verification">
+                      {t("account.resend.title")}
+                    </Link>
+                  </>
+                )}
               </p>
             )}
             <Button type="submit" variant="primary" size="lg" className="mt-1 w-full" loading={pending}>
@@ -119,7 +178,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </Button>
           </form>
 
-          {mode === "sign-in" && <p className="mt-3 text-sm"><Link className="text-accent hover:underline" href="/forgot-password">نسيت كلمة المرور؟ / Forgot password?</Link></p>}
+          {mode === "sign-in" && (
+            <p className="mt-3 text-sm">
+              <Link className="text-accent hover:underline" href="/forgot-password">
+                {t("auth.forgot")}
+              </Link>
+            </p>
+          )}
 
           {mode === "sign-in" && (
             <>
@@ -165,6 +230,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               </>
             )}
           </p>
+          </>
+          )}
         </div>
       </div>
       <aside aria-hidden className="relative hidden overflow-hidden border-s border-line bg-surface lg:block">
@@ -187,6 +254,46 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
       </aside>
     </div>
+  );
+}
+
+/** After sign-up: the account exists but stays inactive until the emailed link is opened. */
+function CheckInbox({ email, callbackURL, signInHref, onBack }: { email: string; callbackURL: string; signInHref: string; onBack: () => void }) {
+  const t = useT();
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "rate" | "failed">("idle");
+  async function resend() {
+    setState("sending");
+    try {
+      const res = await fetch("/api/email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "resend", email, callbackURL }) });
+      setState(res.status === 429 ? "rate" : res.ok ? "sent" : "failed");
+    } catch {
+      setState("failed");
+    }
+  }
+  return (
+    <section aria-labelledby="check-inbox-title" className="mt-8 flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
+      <h2 id="check-inbox-title" className="text-lg font-semibold text-hi">
+        {t("auth.checkInbox.title")}
+      </h2>
+      <p className="text-base text-med">{t.rich("auth.checkInbox.body", { email: <strong dir="ltr" className="text-hi">{email}</strong> })}</p>
+      <p className="text-sm text-muted">{t("auth.checkInbox.spam")}</p>
+      {state !== "idle" && state !== "sending" && (
+        <p role="status" className={state === "sent" ? "text-sm text-success" : "text-sm text-danger"}>
+          {state === "sent" ? t("auth.checkInbox.resent") : state === "rate" ? t("auth.checkInbox.resendRate") : t("auth.checkInbox.resendFailed")}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={() => void resend()} loading={state === "sending"} disabledReason={state === "sent" ? t("auth.checkInbox.resent") : null}>
+          {t("auth.checkInbox.resend")}
+        </Button>
+        <Link className="text-accent hover:underline" href={signInHref}>
+          {t("auth.checkInbox.signIn")}
+        </Link>
+        <button type="button" onClick={onBack} className="text-base text-med hover:text-hi hover:underline">
+          {t("auth.checkInbox.otherEmail")}
+        </button>
+      </div>
+    </section>
   );
 }
 

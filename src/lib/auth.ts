@@ -37,7 +37,13 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     expiresIn: 24 * 60 * 60,
-    sendVerificationEmail: async ({ user }, request) => { await issueAccountToken("verify", user, request); },
+    // better-auth's own link carries the sign-up's callbackURL; Flowline sends its own single-use token instead and
+    // keeps only that (same-origin, validated) path so the verify page can continue where sign-up started.
+    sendVerificationEmail: async ({ user, url }, request) => {
+      let callbackURL: string | null = null;
+      try { callbackURL = new URL(url).searchParams.get("callbackURL"); } catch { /* no callback */ }
+      await issueAccountToken("verify", user, request, { callbackURL });
+    },
   },
   socialProviders,
   session: {
@@ -58,8 +64,9 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user, ctx) => {
-          const body = (ctx as { body?: { betaCode?: unknown } } | null | undefined)?.body;
-          const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null);
+          const c = ctx as { body?: { betaCode?: unknown }; headers?: Headers; request?: Request } | null | undefined;
+          const body = c?.body;
+          const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null, betaMode(c?.headers ?? c?.request?.headers));
           if (!decision.ok) throw new APIError("FORBIDDEN", { message: BETA_REFUSAL, code: "BETA_INVITE_REQUIRED" });
         },
         after: async (user) => {
