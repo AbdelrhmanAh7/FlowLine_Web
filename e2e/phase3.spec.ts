@@ -46,7 +46,7 @@ test("members: invite link → accept; a VIEWER can see but not approve (UI + AP
   const invitee = uniqueEmail("viewer");
   await page.goto(`/w/${workspace.slug}/settings`);
   await page.getByLabel("Email").fill(invitee);
-  await page.getByLabel("Role").selectOption("viewer");
+  await page.getByLabel("Role", { exact: true }).selectOption("viewer");
   await page.getByRole("button", { name: "Create invite link" }).click();
   const link = (await page.getByTestId("invite-link").textContent())!.trim();
   expect(link).toMatch(/\/invite\/[A-Za-z0-9_-]{40,}$/);
