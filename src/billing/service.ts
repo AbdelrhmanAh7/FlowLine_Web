@@ -13,6 +13,7 @@ import type { CurrentUser } from "@/server/access";
 import { audit, userActor, type Actor } from "@/server/audit";
 import { HttpError } from "@/server/http";
 import { monthStart } from "@/server/usage";
+import { checkoutPageUrl, settingsUrls } from "./urls";
 import { PaddlePaymentAdapter } from "./paddle";
 import { loadBillingPlans, planById, planByProviderPrice, type BillingPlansConfig } from "./plans";
 import { StripePaymentAdapter } from "./stripe";
@@ -144,11 +145,6 @@ export async function getBillingState(workspaceId: string) {
   };
 }
 
-function settingsUrls(slug: string) {
-  const base = (process.env.FLOWLINE_PUBLIC_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  return { successUrl: `${base}/w/${slug}/settings?billing=success`, cancelUrl: `${base}/w/${slug}/settings?billing=cancelled` };
-}
-
 /** Starts a checkout for a workspace without an active subscription. Creates the customer on first use. */
 export async function startCheckout(user: CurrentUser, workspaceId: string, planId: string): Promise<{ url: string }> {
   const cfg = requirePlans();
@@ -177,9 +173,11 @@ export async function startCheckout(user: CurrentUser, workspaceId: string, plan
   }
 
   const { successUrl, cancelUrl } = settingsUrls(ws.slug);
-  const session = await adapter.createCheckoutSession({ customerId: account.customerId, priceId: plan.providerPriceId, trialDays: plan.trialDays, successUrl, cancelUrl }).catch((e) => {
-    throw billingHttpError(e);
-  });
+  const session = await adapter
+    .createCheckoutSession({ customerId: account.customerId, priceId: plan.providerPriceId, trialDays: plan.trialDays, successUrl, cancelUrl, checkoutPageUrl: checkoutPageUrl(ws.slug) })
+    .catch((e) => {
+      throw billingHttpError(e);
+    });
   await audit(db, {
     workspaceId,
     actor: userActor(user),

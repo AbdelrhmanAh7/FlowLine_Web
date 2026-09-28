@@ -20,6 +20,7 @@ export const ar = {
     resetPassword: "تعيين كلمة المرور",
     resendVerification: "إعادة إرسال التأكيد",
     deleteAccount: "حذف الحساب",
+    billingCheckout: "الدفع",
   },
 
   common: {
@@ -262,6 +263,31 @@ export const ar = {
     accept: "قبول الدعوة",
     acceptError: "تعذّر قبول الدعوة",
     signOutHint: "سجّل الخروج ثم سجّل الدخول (أو أنشئ حسابًا) بالبريد {invited} لقبولها.",
+  },
+
+  billingCheckout: {
+    title: "إتمام الاشتراك",
+    workspace: "مساحة العمل: {name}",
+    backToSettings: "العودة إلى الخطة والفوترة",
+    sandboxBadge: "بيئة تجريبية — بلا دفع حقيقي",
+    sandboxNote: "تعمل صفحة الدفع هذه في البيئة التجريبية لـ Paddle. استخدم بطاقات Paddle التجريبية؛ لن يُخصم أي مبلغ حقيقي.",
+    loading: "جارٍ تحميل صفحة الدفع الآمنة من Paddle…",
+    open: "صفحة الدفع مفتوحة في نافذة Paddle الآمنة. أكمل الدفع هناك.",
+    completed: "أبلغت Paddle بإتمام الدفع. تسري خطتك بعد أن تؤكد Paddle ذلك لـ Flowline — ستعود إلى الإعدادات.",
+    closed: "أُغلقت صفحة الدفع قبل إتمام الدفع.",
+    reopen: "إعادة فتح صفحة الدفع",
+    loadErrorTitle: "تعذّر تحميل صفحة الدفع من Paddle",
+    loadErrorBody: "لم يُحمَّل Paddle.js (مشكلة في الشبكة أو مانع محتوى أو تعذّر الوصول إلى Paddle). لم يُخصم أي مبلغ.",
+    openErrorTitle: "تعذّر فتح صفحة الدفع",
+    openErrorBody: "حُمِّل Paddle.js لكنه رفض فتح صفحة الدفع هذه. لم يُخصم أي مبلغ.",
+    forbiddenTitle: "لا يمكنك إتمام عملية الدفع هذه",
+    invalidTitle: "رابط الدفع غير صالح",
+    invalidBody: "لا يحمل هذا الرابط معاملة Paddle صالحة. ابدأ عملية الدفع من جديد من الخطة والفوترة.",
+    notConfiguredTitle: "الدفع غير مُعدّ",
+    notConfiguredBody: "الدفع عبر Paddle غير مُعدّ في هذا التثبيت (لم يُضبط رمز Paddle الخاص بالمتصفح). لم يُخصم أي مبلغ.",
+    liveRefusedBody: "ضُبط رمز Paddle مباشر للمتصفح، لكن المدفوعات الحقيقية غير مفعّلة في هذا التثبيت. لم يُخصم أي مبلغ.",
+    envMismatchBody: "رمز Paddle الخاص بالمتصفح لا يطابق بيئة Paddle المضبوطة. لم يُخصم أي مبلغ.",
+    invalidTokenBody: "رمز Paddle الخاص بالمتصفح المضبوط غير صالح (يجب أن يبدأ بـ test_ في البيئة التجريبية). لم يُخصم أي مبلغ.",
   },
 
   roles: {

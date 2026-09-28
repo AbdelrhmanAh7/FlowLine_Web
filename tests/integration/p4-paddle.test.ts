@@ -140,8 +140,17 @@ async function subscribedWorkspace() {
   const owner = await makeUser("pdl-owner");
   const ws = await createWorkspace(owner, unique("Paddle Co"));
   const { url } = await startCheckout(owner, ws.id, "test_starter");
-  const paid = await fetch(`${url}/complete`, { method: "POST", redirect: "manual" });
+  // Paddle sends the buyer to OUR checkout page with the transaction id in _ptxn.
+  const checkoutUrl = new URL(url);
+  expect(checkoutUrl.origin + checkoutUrl.pathname).toBe(`${process.env.FLOWLINE_PUBLIC_URL?.replace(/\/$/, "")}/billing/checkout`);
+  expect(checkoutUrl.searchParams.get("ws")).toBe(ws.slug);
+  const txnId = checkoutUrl.searchParams.get("_ptxn");
+  expect(txnId).toMatch(/^txn_[a-z0-9_]+$/i);
+  // Paying in the (fake) Paddle.js overlay; Paddle.js then goes to the successUrl our page passed.
+  const successUrl = `${process.env.FLOWLINE_PUBLIC_URL?.replace(/\/$/, "")}/w/${ws.slug}/settings?billing=success`;
+  const paid = await fetch(`${fake.url}/paddle/checkout/${txnId}/complete?success_url=${encodeURIComponent(successUrl)}`, { method: "POST", redirect: "manual" });
   expect(paid.status).toBe(303);
+  expect(paid.headers.get("location")).toBe(successUrl);
   const s = await paddleState();
   const sub = s.subscriptions.at(-1)!;
   for (const w of s.webhooks.filter((x) => x.type === "transaction.completed" || x.type === "subscription.created")) {

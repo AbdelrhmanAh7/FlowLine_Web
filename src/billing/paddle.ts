@@ -11,9 +11,11 @@
  * - Auth: `Authorization: Bearer <key>`; sandbox keys are pdl_sdbx_…, live pdl_live_…
  * - Webhooks: `Paddle-Signature: ts=<unix>;h1=<hex HMAC-SHA256(secret, "ts:rawBody")>`
  * - Event envelope: { event_id, event_type, occurred_at, data }
- * - Sandbox auto-approves domains for hosted checkout, so a transaction's
- *   `checkout.url` (Paddle-hosted page) works without website approval; the
- *   Paddle.js overlay would also work but needs a client-side token in the bundle.
+ * - Checkout: a transaction's `checkout.url` is a page on OUR approved domain (the
+ *   default payment link, or an approved URL passed as `checkout.url`). Paddle returns
+ *   it with `?_ptxn=<transaction id>` appended; that page must load Paddle.js,
+ *   initialize it with a client-side token and open the checkout. Flowline's page is
+ *   `/billing/checkout` (src/app/billing/checkout). There is no Paddle-hosted page.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { EgressError, safeFetch } from "@/server/egress";
@@ -119,24 +121,25 @@ export class PaddlePaymentAdapter implements PaymentAdapter {
   }
 
   /**
-   * Checkout = a Paddle transaction for the price + customer; the response carries a
-   * Paddle-hosted `checkout.url`. Chosen over the Paddle.js overlay because the hosted
-   * page needs no client-side token and domains are auto-approved in sandbox, while an
-   * overlay/inline checkout on our own page would need website approval for live.
-   * Paddle has no cancel-redirect parameter on transactions: `cancelUrl` is unused
-   * (the hosted page simply stays open). Trials come from the price's trial_period in
-   * the Paddle catalog, so `trialDays` is plan metadata only here.
+   * Checkout = a Paddle transaction for the price + customer, with `checkout.url` set to
+   * our checkout page (`input.checkoutPageUrl`, which must be on a domain approved in the
+   * Paddle dashboard). Paddle responds with that URL plus `_ptxn=<id>`; the buyer is sent
+   * there, and the page opens Paddle.js (overlay) for the transaction with the success URL.
+   * Without `checkoutPageUrl`, Paddle falls back to the account's default payment link.
+   * Paddle has no cancel-redirect parameter on transactions: `cancelUrl` is unused (our page
+   * links back to settings when the overlay is closed). Trials come from the price's
+   * trial_period in the Paddle catalog, so `trialDays` is plan metadata only here.
    */
   async createCheckoutSession(input: CheckoutSessionInput): Promise<{ id: string; url: string }> {
     const res = await this.request<{ id: string; checkout?: { url?: string | null } | null }>("POST", "/transactions", {
       json: {
         items: [{ price_id: input.priceId, quantity: 1 }],
         customer_id: input.customerId,
-        checkout: { url: input.successUrl },
+        ...(input.checkoutPageUrl ? { checkout: { url: input.checkoutPageUrl } } : {}),
       },
     });
     const url = res.checkout?.url;
-    if (!url) throw new BillingProviderError("unavailable", "Billing provider returned a transaction without a checkout URL");
+    if (!url) throw new BillingProviderError("unavailable", "Billing provider returned a transaction without a checkout URL (is a default payment link set in Paddle?)");
     return { id: res.id, url };
   }
 

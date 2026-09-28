@@ -17,6 +17,7 @@ export const en: Messages = {
     resetPassword: "Reset password",
     resendVerification: "Resend verification",
     deleteAccount: "Delete account",
+    billingCheckout: "Checkout",
   },
 
   common: {
@@ -259,6 +260,31 @@ export const en: Messages = {
     accept: "Accept invitation",
     acceptError: "Couldn't accept the invitation",
     signOutHint: "Sign out and sign in (or create an account) with {invited} to accept.",
+  },
+
+  billingCheckout: {
+    title: "Complete your subscription",
+    workspace: "Workspace: {name}",
+    backToSettings: "Back to Plan & billing",
+    sandboxBadge: "Sandbox — no real payment",
+    sandboxNote: "This checkout runs in Paddle's sandbox. Use Paddle's test cards; no real money is charged.",
+    loading: "Loading Paddle's secure checkout…",
+    open: "The checkout is open in Paddle's secure window. Finish the payment there.",
+    completed: "Paddle reported the payment as complete. Your plan applies once Paddle confirms it to Flowline — you'll be returned to settings.",
+    closed: "The checkout was closed before the payment finished.",
+    reopen: "Reopen checkout",
+    loadErrorTitle: "Couldn't load Paddle's checkout",
+    loadErrorBody: "Paddle.js didn't load (network, content blocker or Paddle unavailable). No payment was taken.",
+    openErrorTitle: "Couldn't open the checkout",
+    openErrorBody: "Paddle.js loaded but refused to open this checkout. No payment was taken.",
+    forbiddenTitle: "You can't complete this checkout",
+    invalidTitle: "Checkout link is invalid",
+    invalidBody: "This link doesn't carry a valid Paddle transaction. Start the checkout again from Plan & billing.",
+    notConfiguredTitle: "Checkout isn't configured",
+    notConfiguredBody: "Paddle checkout isn't configured on this installation (no Paddle client-side token is set). No payment was taken.",
+    liveRefusedBody: "A live Paddle client-side token is configured, but live payments aren't enabled on this installation. No payment was taken.",
+    envMismatchBody: "The Paddle client-side token doesn't match the configured Paddle environment. No payment was taken.",
+    invalidTokenBody: "The configured Paddle client-side token isn't valid (it must start with test_ for sandbox). No payment was taken.",
   },
 
   roles: {
