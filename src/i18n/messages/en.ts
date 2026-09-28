@@ -1203,6 +1203,9 @@ export const en: Messages = {
       runOutput: "Run output",
       stepStatus: "{label}: {status}",
     },
+    errorText: {
+      PLATFORM_UNAVAILABLE: "This step was interrupted because Flowline's database was unavailable. Nothing is wrong with the step itself.",
+    },
     fixes: {
       EXPRESSION_SYNTAX: "Fix the expression syntax in this node's config, save, then re-run from this step.",
       EXPRESSION_RUNTIME: "Check that the fields the expression references exist in the Input tab, adjust the node config, then re-run from this step.",
@@ -1225,6 +1228,7 @@ export const en: Messages = {
       RUN_TIMEOUT: "The run exceeded its time budget. Split the work or reduce per-step timeouts.",
       WORKER_LOST: "The worker stopped mid-run. Make sure the worker is running, then re-run from this step.",
       NODE_ERROR: "Check the node configuration, then re-run from this step.",
+      PLATFORM_UNAVAILABLE: "Flowline's database was briefly unavailable. Once the service is healthy again (the banner at the top clears), re-run from this step — your configuration is fine.",
     },
     decision: {
       recorded: "Decision recorded — the run continues",

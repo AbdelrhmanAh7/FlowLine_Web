@@ -1,0 +1,26 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb",
+  "text": "انتقل إلى المحتوى\nCodex Phase 4 QA\nتجريبي\n\nالبناء\n\n▦\nالمسارات\n⌘\nلوحة التصميم\n▤\nالقوالب\n\nالذكاء الاصطناعي\n\n✦\nالوكلاء\n❏\nالمعرفة\n\nالمراقبة\n\n◷\nسجل التشغيل\n⬡\nالتكاملات\n⚙\nالإعدادات\nCM\nCodex Member\n← المسارات\n/\nاسم المسار\nمحفوظ\nغير منشور\nالمُشغِّلات\nانشر المسار لتفعيل مُشغِّلات Webhook والجدولة\nنشر\n↶\nلا شيء للتراجع عنه\n↷\nلا شيء لإعادته\nالسجل\n✦ Copilot\nعمليات التشغيل\nCtrlJ\n▶ تشغيل\n\nInbound lead\n\nمُشغِّل · يدوي\n\n0 ملي ث\n\nNormalise lead\n\nتحويل · JSONATA\n\n1 ملي ث\n\n50+ employees?\n\nمنطق · إذا / وإلا\n\n1 ملي ث\n\ntrue\nfalse\n\nHot lead\n\nمُخرَج · النتيجة\n\n1 ملي ث\n\nNurture\n\nمُخرَج · النتيجة\n\nمتخطّى\n\nReact Flow\n+ إضافة عقدة\n/\n−\n87%\n+\nملاءمة\nعمليات التشغيل\n#7\nناجح\n4/4 · 30 ملي ث\nفتح في فاحص التشغيل →\n✕\n#7\nالآن\nInbound lead\nناجح\n· 0 ملي ث\n→\nNormalise lead\nناجح\n· 1 ملي ث\n→\n50+ employees?\nناجح\n· 1 ملي ث\n→\nHot lead\nناجح\n· 1 ملي ث\n→\nNurture\nمتخطّى\n\nمُخرجات التشغيل\n\n{\n  \"hot_lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"tier\": \"hot\",\n    \"domain\": \"analytical.io\"\n  }\n}",
+  "buttons": [
+    "CMCodex Member",
+    "المُشغِّلات",
+    "نشر",
+    "↶",
+    "↷",
+    "السجل",
+    "✦ Copilot",
+    "عمليات التشغيل CtrlJ",
+    "▶ تشغيل",
+    "+ إضافة عقدة /",
+    "−",
+    "+",
+    "ملاءمة",
+    "✕",
+    "#7الآن",
+    "Inbound leadناجح· 0 ملي ث",
+    "Normalise leadناجح· 1 ملي ث",
+    "50+ employees?ناجح· 1 ملي ث",
+    "Hot leadناجح· 1 ملي ث",
+    "Nurtureمتخطّى"
+  ]
+}

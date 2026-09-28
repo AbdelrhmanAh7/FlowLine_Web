@@ -1,0 +1,24 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/cddaeb57-701e-436e-96c3-e479a4fb0e14",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\n↶\n↷\nNothing to redo\nHistory\n✦ Copilot\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\n0ms\n\nHTTP request\n\nHTTP · REQUEST\n\n✗ fetch failed\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nRUNS\n#4\nFAILED\n1/2 · 70ms\nOpen in inspector →\n✕\n#4\nnow\nManual trigger\nSuccess\n· 0ms\n→\nHTTP request\nFailed\n· 55ms\n\n⚠ fetch failed\n\nPublished v1\nRun #4 failed",
+  "buttons": [
+    "COCodex Owner",
+    "● Published",
+    "Triggers",
+    "Publish changes",
+    "↶",
+    "↷",
+    "History",
+    "✦ Copilot",
+    "Runs CtrlJ",
+    "▶ Run",
+    "+ Add node /",
+    "−",
+    "+",
+    "Fit",
+    "✕",
+    "#4now",
+    "Manual triggerSuccess· 0ms",
+    "HTTP requestFailed· 55ms"
+  ]
+}

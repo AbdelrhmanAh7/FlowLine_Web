@@ -1,0 +1,15 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/settings",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nSettings\nMembers\nGeneral\nAPI keys\nPlan & billing\nUsage & limits\nAudit log\nSSO\nAPI keys\n\nStart runs of your flows from other systems. Live keys run published versions only; test keys run a snapshot of the current draft. Keys act with their creator's access and stop working if it's reduced.\n\nCodex QA temporary\nfl_test_cf9pgmge_…\ntest\nruns:write, runs:read\nrevoked\nlast used Sep 28, 2026, 8:56 PM\nCreate a key\nNAME\nMODE\nTest\nLive\nEXPIRES\nin 30 days\nin 90 days\nin 1 year\nnever\nScopes\nflows:read\nruns:read\nruns:write\nagents:run\nCreate key\nName the key\nKey revoked — requests using it now fail",
+  "buttons": [
+    "COCodex Owner",
+    "Members",
+    "General",
+    "API keys",
+    "Plan & billing",
+    "Usage & limits",
+    "Audit log",
+    "SSO",
+    "Create key"
+  ]
+}

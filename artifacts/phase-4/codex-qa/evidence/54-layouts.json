@@ -1,0 +1,386 @@
+[
+  {
+    "page": "canvas",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "canvas",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "canvas",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "canvas",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "canvas",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "canvas",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "flows",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "flows",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "flows",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "templates",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "templates",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "templates",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "integrations",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "integrations",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "integrations",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "knowledge",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "knowledge",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "knowledge",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "settings",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "settings",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "settings",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "runs",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "runs",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "runs",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "agents",
+    "lang": "en",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "ltr"
+  },
+  {
+    "page": "agents",
+    "lang": "en",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "ltr"
+  },
+  {
+    "page": "agents",
+    "lang": "en",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "ltr"
+  },
+  {
+    "page": "flows",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "flows",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "flows",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "templates",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "templates",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "templates",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "integrations",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "integrations",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "integrations",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "knowledge",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "knowledge",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "knowledge",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "settings",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "settings",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "settings",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "runs",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "runs",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "runs",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  },
+  {
+    "page": "agents",
+    "lang": "ar",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "dir": "rtl"
+  },
+  {
+    "page": "agents",
+    "lang": "ar",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "clientWidth": 1024,
+    "dir": "rtl"
+  },
+  {
+    "page": "agents",
+    "lang": "ar",
+    "width": 375,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "dir": "rtl"
+  }
+]

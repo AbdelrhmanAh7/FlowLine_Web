@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useT } from "@/i18n/client";
-import { runLabel } from "@/i18n/engine-text";
+import { runLabel, stepErrorText } from "@/i18n/engine-text";
 import { pretty } from "@/lib/format";
 import { modKey, useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
@@ -119,7 +119,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               </ol>
               {run.status === "failed" && run.error && (
                 <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
-                  ⚠ {run.error.message}
+                  ⚠ {stepErrorText(t, run.error)}
                 </p>
               )}
               {run.status === "succeeded" && (

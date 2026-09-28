@@ -1,0 +1,22 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/runs",
+  "text": "انتقل إلى المحتوى\nCodex Phase 4 QA\nتجريبي\n\nالبناء\n\n▦\nالمسارات\n⌘\nلوحة التصميم\n▤\nالقوالب\n\nالذكاء الاصطناعي\n\n✦\nالوكلاء\n❏\nالمعرفة\n\nالمراقبة\n\n◷\nسجل التشغيل\n⬡\nالتكاملات\n⚙\nالإعدادات\nCO\nCodex Owner\nسجل التشغيل\nالبحث في المسارات أو رقم التشغيل\nكل عمليات التشغيل\nناجحة\nفاشلة\nقيد التشغيل\nتحتاج إلى انتباهك\nملغاة\n▾\n#5\nCodex Provider Failure\nفاشل\n1/2 · 41 ملي ث\nإعادة تشغيل\nقبل 3 دقائق\n⚡ Manual trigger\nمُعاد استخدامه\n→\n⇅ HTTP request\nفاشل\n· 30 ملي ث\n⚠ HTTP request — fetch failed\nفحص\n▸\n#4\nCodex Provider Failure\nفاشل\n1/2 · 70 ملي ث\nقبل 3 دقائق",
+  "buttons": [
+    "COCodex Owner",
+    "كل عمليات التشغيل",
+    "ناجحة",
+    "فاشلة",
+    "قيد التشغيل",
+    "تحتاج إلى انتباهك",
+    "ملغاة",
+    "▾#5Codex Provider Failureفاشل1/2 · 41 ملي ثإعادة تشغيلقبل 3 دقائق",
+    "⚡ Manual triggerمُعاد استخدامه",
+    "⇅ HTTP requestفاشل· 30 ملي ث",
+    "فحص",
+    "▸#4Codex Provider Failureفاشل1/2 · 70 ملي ثقبل 3 دقائق",
+    "✕",
+    "↻ إعادة التشغيل من هذه الخطوة",
+    "",
+    ""
+  ]
+}

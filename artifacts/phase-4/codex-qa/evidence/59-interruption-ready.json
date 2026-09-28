@@ -1,0 +1,20 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\n← Flows\n/\nFlow name\nSaved\n● Published\nTriggers\nPublish changes\n↶\n↷\nNothing to redo\nHistory\n✦ Copilot\nRuns\nCtrlJ\n▶ Run\n\nManual trigger\n\nTRIGGER · MANUAL\n\nNot run yet\n\nAI · Generate\n\nAI · TEXT\n\nNot run yet\n\nReact Flow\n+ Add node\n/\n−\n100%\n+\nFit\nPublished v1",
+  "buttons": [
+    "COCodex Owner",
+    "● Published",
+    "Triggers",
+    "Publish changes",
+    "↶",
+    "↷",
+    "History",
+    "✦ Copilot",
+    "Runs CtrlJ",
+    "▶ Run",
+    "+ Add node /",
+    "−",
+    "+",
+    "Fit"
+  ]
+}

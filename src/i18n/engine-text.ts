@@ -221,3 +221,13 @@ export function notPreviewedReason(t: Translator, reason: string): string {
   if (m) return t("copilot.notPreviewed.generic", { reason: m[1]! });
   return reason;
 }
+
+/**
+ * A step/run error as shown to the user: codes with a catalogue text (`runs.errorText.<CODE>`, e.g. a platform outage)
+ * are shown translated; everything else keeps the stored message (provider/engine text, see engine-text notes).
+ */
+export function stepErrorText(t: Translator, error: { code?: string | null; message?: string | null } | null | undefined): string {
+  if (!error) return "";
+  const key = `runs.errorText.${error.code ?? ""}`;
+  return error.code && t.has(key) ? t(key as MessageKey) : (error.message ?? "");
+}

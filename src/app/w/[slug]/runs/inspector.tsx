@@ -11,7 +11,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, cx, onTabListKeyDown } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { denyReasonText, runLabel, statusWord } from "@/i18n/engine-text";
+import { denyReasonText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
@@ -281,7 +281,7 @@ export function RunInspector() {
                           {attention && (
                             <div className={cx("flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 text-base", attention.status === "failed" ? "border-danger/40 bg-danger/5" : "border-warning/40 bg-warning/5")}>
                               <span className={cx("min-w-0 flex-1", attention.status === "failed" ? "text-danger" : "text-warning")}>
-                                {attention.status === "failed" ? "⚠" : "⏸"} {attention.nodeLabel} — <span className="text-med">{attention.error?.message ?? runLabel(t, attention.status)}</span>
+                                {attention.status === "failed" ? "⚠" : "⏸"} {attention.nodeLabel} — <span className="text-med">{attention.error ? stepErrorText(t, attention.error) : runLabel(t, attention.status)}</span>
                               </span>
                               <Button size="sm" variant={attention.status === "failed" ? "danger" : "secondary"} onClick={() => selectStep(attention)}>
                                 {attention.status === "failed" ? t("runs.inspect") : t("runs.review")}
@@ -466,7 +466,7 @@ function StepPanel({
           <div className="flex flex-col gap-3">
             <div className="rounded-lg border border-danger/40 bg-danger/5 p-3">
               <p className="data font-medium text-danger">⚠ {step.error.code}</p>
-              <p className="mt-1 text-base text-hi">{step.error.message}</p>
+              <p className="mt-1 text-base text-hi">{stepErrorText(t, step.error)}</p>
             </div>
             <div className="rounded-lg border border-line bg-card p-3">
               <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runs.panel.suggestedFix")}</p>

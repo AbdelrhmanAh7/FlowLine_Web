@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-28T18:12:37.156Z",
+  "files": 196,
+  "screenshots": 118,
+  "knownSecretMatches": [],
+  "missingReportLinks": [],
+  "healthFinal": {
+    "revision": "fdb1cb00a2326303e3923478254afd5a5f1e0567",
+    "schemaVersion": 12,
+    "db": "ok",
+    "worker": "ok",
+    "workerLastSeenAt": "2026-09-28T18:12:33.133Z"
+  }
+}

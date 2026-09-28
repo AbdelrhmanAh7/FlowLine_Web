@@ -1,0 +1,21 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nHistory\n✦ Copilot\nRuns\nCtrlJ\n▶ Run\n✦ Copilot\nEXPERIMENTAL\n✕\n\nDescribe the workflow or a change. Copilot proposes steps using only Flowline's real nodes, integrations and your existing connections — you review the diff before anything is saved. Nothing runs.\n\nExperimental: proposal quality is still being measured — review every change before approving.\n\nWhat should this workflow do?\nPropose\nDescribe what you want\n\nOrder batch\n\nTRIGGER · MANUAL\n\n0ms\n\nSum items\n\nTRANSFORM · JSONATA\n\n1ms\n\nOver $250?\n\nLOGIC · IF / ELSE\n\n1ms\n\ntrue\nfalse\n\nFlag for review\n\nOUTPUT · RESULT\n\nSkipped\n\nAuto-approve\n\nOUTPUT · RESULT\n\n0ms\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit",
+  "buttons": [
+    "COCodex Owner",
+    "Triggers",
+    "Publish",
+    "↶",
+    "↷",
+    "History",
+    "✦ Copilot",
+    "Runs CtrlJ",
+    "▶ Run",
+    "✕",
+    "Propose",
+    "+ Add node /",
+    "−",
+    "+",
+    "Fit"
+  ]
+}

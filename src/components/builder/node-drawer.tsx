@@ -5,7 +5,7 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { evaluateExpression } from "@/engine/expression";
 import type { NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
-import { nodeText, runLabel, statusWord } from "@/i18n/engine-text";
+import { nodeText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
@@ -209,7 +209,7 @@ function LogsTab({ step }: { step?: RunStepDto }) {
     ["duration", t.duration(step.durationMs)],
   ];
   if (step.skipReason) rows.push(["skipReason", step.skipReason]);
-  if (step.error) rows.push(["error", `${step.error.code}: ${step.error.message}`]);
+  if (step.error) rows.push(["error", `${step.error.code}: ${stepErrorText(t, step.error)}`]);
   return (
     <dl className="data grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-sm">
       {rows.map(([k, v]) => (

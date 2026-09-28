@@ -5,7 +5,7 @@ import { createContext, memo, useContext } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { NODE_TYPES, type NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
-import { nodeText, runLabel, statusWord } from "@/i18n/engine-text";
+import { nodeText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
 import type { RunDetailDto, RunStepDto } from "@/lib/types";
@@ -45,7 +45,7 @@ function StatusLine({ step }: { step?: RunStepDto }) {
     case "reused":
       return <p className="data text-sm text-success">{t("canvasNode.reused")}</p>;
     case "failed":
-      return <p className="truncate text-sm text-danger">✗ {step.error?.message ?? t("canvasNode.failed")}</p>;
+      return <p className="truncate text-sm text-danger">✗ {step.error ? stepErrorText(t, step.error) : t("canvasNode.failed")}</p>;
     case "running":
       return <RunningLine step={step} />;
     case "waiting_approval":

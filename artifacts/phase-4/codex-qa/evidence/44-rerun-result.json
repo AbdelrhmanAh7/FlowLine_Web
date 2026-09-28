@@ -1,0 +1,25 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/runs",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#5\nCodex Provider Failure\nRUNNING\n1/2 · —\nre-run\nnow\n⚡ Manual trigger\nReused\n→\n⇅ HTTP request\nRunning\n▸\n#4\nCodex Provider Failure\nFAILED\n1/2 · 70ms\n29s ago\n▸\n#3\nCodex Copilot Greeting\nSUCCESS\n3/3 · 19ms\n4m ago\n▸\n#2\nOrder Totals Digest\nSUCCESS\n4/4 · 30ms\napi\n6m ago\n▸\n#1\nOrder Totals Digest\nSUCCESS\n4/4 · 68ms\n10m ago\n⇅\nHTTP request\nRUNNING\n\n— · run #5 · v2 · http.request · n0c4a2 · 1 attempt\n\n✕\nRun is in progress\nCancel run\nInput\nOutput\nError\nLog\nnull\n↻ Re-run from this step\nWait for this run to finish (or cancel it)\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS\n\nRe-running as #5",
+  "buttons": [
+    "COCodex Owner",
+    "All runs",
+    "Succeeded",
+    "Failed",
+    "Running",
+    "Needs attention",
+    "Cancelled",
+    "▾#5Codex Provider FailureRunning1/2 · —re-runnow",
+    "⚡ Manual triggerReused",
+    "⇅ HTTP requestRunning",
+    "▸#4Codex Provider FailureFailed1/2 · 70ms29s ago",
+    "▸#3Codex Copilot GreetingSuccess3/3 · 19ms4m ago",
+    "▸#2Order Totals DigestSuccess4/4 · 30msapi6m ago",
+    "▸#1Order Totals DigestSuccess4/4 · 68ms10m ago",
+    "✕",
+    "Cancel run",
+    "↻ Re-run from this step",
+    "",
+    ""
+  ]
+}

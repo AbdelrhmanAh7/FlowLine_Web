@@ -1,0 +1,26 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8",
+  "text": "انتقل إلى المحتوى\nCodex Phase 4 QA\nتجريبي\n\nالبناء\n\n▦\nالمسارات\n⌘\nلوحة التصميم\n▤\nالقوالب\n\nالذكاء الاصطناعي\n\n✦\nالوكلاء\n❏\nالمعرفة\n\nالمراقبة\n\n◷\nسجل التشغيل\n⬡\nالتكاملات\n⚙\nالإعدادات\nCO\nCodex Owner\n← المسارات\n/\nاسم المسار\nمحفوظ\nغير منشور\nالمُشغِّلات\nانشر المسار لتفعيل مُشغِّلات Webhook والجدولة\nنشر\n↶\nلا شيء للتراجع عنه\n↷\nلا شيء لإعادته\nالسجل\n✦ Copilot\nعمليات التشغيل\nCtrlJ\n▶ تشغيل\n\nOrder batch\n\nمُشغِّل · يدوي\n\n0 ملي ث\n\nSum items\n\nتحويل · JSONATA\n\n34 ملي ث\n\nOver $250?\n\nمنطق · إذا / وإلا\n\n1 ملي ث\n\ntrue\nfalse\n\nFlag for review\n\nمُخرَج · النتيجة\n\n0 ملي ث\n\nAuto-approve\n\nمُخرَج · النتيجة\n\nمتخطّى\n\nReact Flow\n+ إضافة عقدة\n/\n−\n87%\n+\nملاءمة\nعمليات التشغيل\n#1\nناجح\n4/4 · 68 ملي ث\nفتح في فاحص التشغيل →\n✕\n#1\nالآن\nOrder batch\nناجح\n· 0 ملي ث\n→\nSum items\nناجح\n· 34 ملي ث\n→\nOver $250?\nناجح\n· 1 ملي ث\n→\nFlag for review\nناجح\n· 0 ملي ث\n→\nAuto-approve\nمتخطّى\n\nمُخرجات التشغيل\n\n{\n  \"review\": {\n    \"lines\": 2,\n    \"total\": 298.5\n  }\n}\nنجح التشغيل #1",
+  "buttons": [
+    "COCodex Owner",
+    "المُشغِّلات",
+    "نشر",
+    "↶",
+    "↷",
+    "السجل",
+    "✦ Copilot",
+    "عمليات التشغيل CtrlJ",
+    "▶ تشغيل",
+    "+ إضافة عقدة /",
+    "−",
+    "+",
+    "ملاءمة",
+    "✕",
+    "#1الآن",
+    "Order batchناجح· 0 ملي ث",
+    "Sum itemsناجح· 34 ملي ث",
+    "Over $250?ناجح· 1 ملي ث",
+    "Flag for reviewناجح· 0 ملي ث",
+    "Auto-approveمتخطّى"
+  ]
+}
