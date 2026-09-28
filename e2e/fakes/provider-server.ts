@@ -106,9 +106,8 @@ interface FakePaddleTransaction {
   subscription_id: string | null;
   items: { price_id: string; quantity: number }[];
   origin: string;
+  /** The app's checkout page (or the default payment link) with `_ptxn=<id>` appended, like Paddle. */
   checkout: { url: string | null };
-  /** Fake-internal: the success redirect passed as checkout.url at creation. */
-  success_url: string | null;
   currency_code: string;
   created_at: string;
 }
@@ -1500,8 +1499,55 @@ async function sendPaddleWebhook(ctx: Ctx, event: Record<string, unknown>): Prom
   return { sent: rec.sent, payload, header };
 }
 
+function requestedCheckoutUrl(payload: Record<string, unknown>): string | null {
+  const url = (payload.checkout as { url?: unknown } | undefined)?.url;
+  return typeof url === "string" && url ? url : null;
+}
+
+/** Paddle appends `_ptxn=<transaction id>` to the checkout URL. */
+function withPtxn(url: string, id: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}_ptxn=${encodeURIComponent(id)}`;
+}
+
+/**
+ * Stand-in Paddle.js, served at /paddle/checkout/paddle.js for FLOWLINE_TEST_PADDLE_JS_URL (test
+ * environment only). It records what the app called (window.__fakePaddle) and opens the fake
+ * checkout page for the transaction in place of Paddle's overlay, forwarding settings.successUrl.
+ */
+function fakePaddleJs(origin: string): string {
+  return `(function () {
+  var rec = { environment: null, token: null, opened: null };
+  var callback = null;
+  window.__fakePaddle = rec;
+  window.Paddle = {
+    Environment: { set: function (e) { rec.environment = e; } },
+    Initialize: function (o) { rec.token = o && o.token; callback = (o && o.eventCallback) || null; },
+    Checkout: {
+      open: function (o) {
+        rec.opened = o;
+        var id = o && o.transactionId;
+        var success = o && o.settings && o.settings.successUrl;
+        var frame = document.createElement("iframe");
+        frame.title = "Fake Paddle checkout";
+        frame.setAttribute("data-fake-paddle", "");
+        frame.style.cssText = "position:fixed;inset:10%;width:80%;height:80%;background:#fff;border:1px solid #888;z-index:2147483647";
+        frame.src = ${JSON.stringify(origin)} + "/paddle/checkout/" + encodeURIComponent(id) + (success ? "?success_url=" + encodeURIComponent(success) : "");
+        document.body.appendChild(frame);
+        if (callback) callback({ name: "checkout.loaded", data: { transaction_id: id } });
+      },
+    },
+  };
+})();
+`;
+}
+
 const paddle: Handler = async (ctx, req, res, path, _url, body) => {
   const s = ctx.state;
+  if (req.method === "GET" && path === "/checkout/paddle.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+    res.end(fakePaddleJs(`http://${req.headers.host}`));
+    return;
+  }
   if (req.method === "POST" && path === "/customers") {
     const payload = j(body);
     // Paddle requires an email to create a customer.
@@ -1532,14 +1578,15 @@ const paddle: Handler = async (ctx, req, res, path, _url, body) => {
       subscription_id: null,
       items: [{ price_id: priceId, quantity: items[0]?.quantity ?? 1 }],
       origin: "web",
-      checkout: { url: `http://${req.headers.host}/paddle/checkout/${id}` },
-      success_url: ((payload.checkout as { url?: string } | undefined)?.url as string) ?? null,
+      // Real Paddle: checkout.url is YOUR page (the passed approved URL, else the account's default
+      // payment link) with `_ptxn=<id>` appended; that page opens Paddle.js. The fake's own
+      // /paddle/checkout/:id page plays the default payment link here.
+      checkout: { url: withPtxn(requestedCheckoutUrl(payload) ?? `http://${req.headers.host}/paddle/checkout/${id}`, id) },
       currency_code: "USD",
       created_at: new Date().toISOString(),
     };
     s.paddleTransactions.push(txn);
-    const { success_url: _su, ...pub } = txn;
-    return json(ctx, req, res, 201, { data: pub, meta: { request_id: `req_fake_${next(s, "paddleTransaction")}` } });
+    return json(ctx, req, res, 201, { data: txn, meta: { request_id: `req_fake_${next(s, "paddleTransaction")}` } });
   }
   const subMatch = /^\/subscriptions\/([^/]+)(\/(cancel|pause|resume))?$/.exec(path);
   if (subMatch && req.method === "GET" && !subMatch[3]) {
@@ -1635,18 +1682,24 @@ const paddle: Handler = async (ctx, req, res, path, _url, body) => {
     await sendPaddleWebhook(ctx, paddleEvent(s, "adjustment.created", { ...adjustment }));
     return json(ctx, req, res, 201, { data: adjustment, meta: { request_id: "req_fake_adjustment" } });
   }
-  // ---- hosted checkout pages (unauthenticated: a browser lands here) ----
+  // ---- stand-in for the Paddle.js checkout (unauthenticated: a browser lands here) ----
+  // Real Paddle collects payment inside the Paddle.js overlay opened on the app's page.
+  // The fake models that overlay as this page + /complete and /fail actions (tests POST
+  // there with the transaction id). `success_url` is what Paddle.Checkout.open received
+  // as settings.successUrl; without it the fake redirects back to this page.
   const pageMatch = /^\/checkout\/([^/]+)$/.exec(path);
   if (pageMatch && req.method === "GET") {
     const txn = s.paddleTransactions.find((x) => x.id === pageMatch[1]);
     if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", "No such transaction"));
     const failed = txn.status === "past_due" ? `<p role="alert">Payment failed — try again.</p>` : "";
+    const successUrl = _url.searchParams.get("success_url");
+    const qs = successUrl ? `?success_url=${encodeURIComponent(successUrl)}` : "";
     const html = `<!doctype html><html><head><title>Fake Paddle checkout</title></head><body>
 <h1>Fake Paddle checkout (sandbox)</h1>
 <p>Transaction ${txn.id} — ${txn.status}</p>
 ${failed}
-<form method="post" action="/paddle/checkout/${txn.id}/complete"><button type="submit">Pay (test card)</button></form>
-<form method="post" action="/paddle/checkout/${txn.id}/fail"><button type="submit">Decline (test card)</button></form>
+<form method="post" action="/paddle/checkout/${txn.id}/complete${qs}"><button type="submit">Pay (test card)</button></form>
+<form method="post" action="/paddle/checkout/${txn.id}/fail${qs}"><button type="submit">Decline (test card)</button></form>
 </body></html>`;
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(html);
@@ -1659,8 +1712,9 @@ ${failed}
     if (completeMatch[2] === "fail") {
       // A declined payment at checkout: the transaction goes past_due and the buyer stays on the page.
       txn.status = "past_due";
-      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.payment_failed", { ...txn, success_url: undefined }));
-      res.writeHead(303, { location: `/paddle/checkout/${txn.id}` });
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.payment_failed", { ...txn }));
+      const back = _url.searchParams.get("success_url");
+      res.writeHead(303, { location: `/paddle/checkout/${txn.id}${back ? `?success_url=${encodeURIComponent(back)}` : ""}` });
       res.end();
       return;
     }
@@ -1699,11 +1753,11 @@ ${failed}
       };
       txn.subscription_id = sub.id;
       s.paddleSubscriptions.push(sub);
-      const { success_url: _su, ...pubTxn } = txn;
-      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", pubTxn));
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", { ...txn }));
       await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
     }
-    res.writeHead(303, { location: txn.success_url || "/" });
+    // The redirect Paddle.js performs to settings.successUrl after payment.
+    res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
     res.end();
     return;
   }

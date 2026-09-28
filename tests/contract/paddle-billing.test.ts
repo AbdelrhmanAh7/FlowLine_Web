@@ -87,29 +87,37 @@ describe("customers & checkout", () => {
     expect((await state()).customers).toHaveLength(0);
   });
 
-  it("creates a transaction with a hosted checkout url and completes it into a trialing subscription", async () => {
+  it("creates a transaction whose checkout url is our checkout page + _ptxn, and completes it into a trialing subscription", async () => {
     const a = adapter();
     const c = await a.createCustomer({ id: "ws-2", name: "Beta", slug: "beta", email: "owner@beta.test" });
+    const successUrl = "http://localhost:3100/w/beta/settings?billing=success";
     const session = await a.createCheckoutSession({
       customerId: c.id,
       priceId: "pri_test_starter",
       trialDays: 14,
-      successUrl: "http://localhost:3100/w/beta/settings?billing=success",
+      successUrl,
       cancelUrl: "http://localhost:3100/w/beta/settings?billing=cancelled",
+      checkoutPageUrl: "http://localhost:3100/billing/checkout?ws=beta",
     });
     expect(session.id).toMatch(/^txn_fake_/);
-    expect(session.url).toBe(`${fake.url}/paddle/checkout/${session.id}`);
+    // Paddle returns OUR page (the approved checkout.url we sent) with _ptxn appended — not a Paddle-hosted page.
+    expect(session.url).toBe(`http://localhost:3100/billing/checkout?ws=beta&_ptxn=${session.id}`);
+    const txnId = new URL(session.url).searchParams.get("_ptxn");
+    expect(txnId).toBe(session.id);
+    const sent = (await fake.requests("paddle")).filter((r) => r.method === "POST" && r.path.endsWith("/transactions")).at(-1);
+    expect((sent?.body as { checkout?: { url?: string } })?.checkout?.url).toBe("http://localhost:3100/billing/checkout?ws=beta");
 
-    // The hosted page exists and offers the two test-card actions.
-    const page = await fetch(session.url);
-    const html = await page.text();
+    // The fake's stand-in for the Paddle.js overlay offers the two test-card actions.
+    const overlay = `${fake.url}/paddle/checkout/${txnId}`;
+    const html = await (await fetch(`${overlay}?success_url=${encodeURIComponent(successUrl)}`)).text();
     expect(html).toContain("Pay (test card)");
     expect(html).toContain("Decline (test card)");
 
-    // Paying completes the transaction, creates a trialing subscription (14-day price trial) and emits both webhooks.
-    const paid = await fetch(`${session.url}/complete`, { method: "POST", redirect: "manual" });
+    // Paying completes the transaction, creates a trialing subscription (14-day price trial) and emits both webhooks;
+    // like Paddle.js, it then goes to the successUrl the page passed to Checkout.open.
+    const paid = await fetch(`${overlay}/complete?success_url=${encodeURIComponent(successUrl)}`, { method: "POST", redirect: "manual" });
     expect(paid.status).toBe(303);
-    expect(paid.headers.get("location")).toContain("billing=success");
+    expect(paid.headers.get("location")).toBe(successUrl);
     const s = await state();
     const sub = s.subscriptions.find((x) => x.customer_id === c.id);
     expect(sub).toBeDefined();
@@ -119,6 +127,15 @@ describe("customers & checkout", () => {
     const types = s.webhooks.map((w) => w.type);
     expect(types).toContain("transaction.completed");
     expect(types).toContain("subscription.created");
+  });
+
+  it("without a checkout page url, Paddle's default payment link (+ _ptxn) is returned", async () => {
+    const a = adapter();
+    const c = await a.createCustomer({ id: "ws-2c", name: "Beta3", slug: "beta3", email: "o@b3.test" });
+    const session = await a.createCheckoutSession({ customerId: c.id, priceId: "pri_test_starter", successUrl: "http://x/ok", cancelUrl: "http://x/cancel" });
+    expect(session.url).toBe(`${fake.url}/paddle/checkout/${session.id}?_ptxn=${session.id}`);
+    const sent = (await fake.requests("paddle")).filter((r) => r.method === "POST" && r.path.endsWith("/transactions")).at(-1);
+    expect((sent?.body as Record<string, unknown>)?.checkout).toBeUndefined();
   });
 
   it("an unknown price id is a client error, not a crash", async () => {
@@ -133,7 +150,7 @@ describe("customers & checkout", () => {
     const a = adapter();
     const c = await a.createCustomer({ id: "ws-3", name: "Gamma", slug: "gamma", email: "owner@gamma.test" });
     const session = await a.createCheckoutSession({ customerId: c.id, priceId: "pri_test_starter", successUrl: "http://x/ok", cancelUrl: "http://x/cancel" });
-    const declined = await fetch(`${session.url}/fail`, { method: "POST", redirect: "manual" });
+    const declined = await fetch(`${fake.url}/paddle/checkout/${session.id}/fail`, { method: "POST", redirect: "manual" });
     expect(declined.status).toBe(303);
     expect(declined.headers.get("location")).toBe(`/paddle/checkout/${session.id}`);
     const s = await state();
@@ -148,7 +165,7 @@ describe("subscription changes", () => {
     const a = adapter();
     const c = await a.createCustomer({ id: "ws-sub", name: "Sub Co", slug: "sub-co", email: "owner@sub.test" });
     const session = await a.createCheckoutSession({ customerId: c.id, priceId: "pri_test_starter", successUrl: "http://x/ok", cancelUrl: "http://x/cancel" });
-    await fetch(`${session.url}/complete`, { method: "POST", redirect: "manual" });
+    await fetch(`${fake.url}/paddle/checkout/${session.id}/complete`, { method: "POST", redirect: "manual" });
     const s = await state();
     return { a, customer: c, txn: s.transactions[0]!, sub: s.subscriptions[0]! };
   }

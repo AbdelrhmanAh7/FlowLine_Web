@@ -78,6 +78,12 @@ export interface CheckoutSessionInput {
   trialDays?: number;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * Paddle only: our checkout page (`/billing/checkout?ws=<slug>`), sent as the transaction's
+   * `checkout.url`. Paddle appends `_ptxn=<transaction id>` and the page opens Paddle.js.
+   * Stripe ignores it (its Checkout Session is Stripe-hosted).
+   */
+  checkoutPageUrl?: string;
 }
 
 export interface UsageReportInput {

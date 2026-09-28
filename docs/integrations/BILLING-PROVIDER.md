@@ -40,7 +40,8 @@ Verified (developer.paddle.com and the official `paddle-node-sdk`, checked 2026-
 
 - Auth: `Authorization: Bearer <api key>`; key formats `pdl_sdbx_apikey_…` / `pdl_live_apikey_…` ([authentication](https://developer.paddle.com/api-reference/about/authentication)).
 - Customers: `POST /customers` requires `email`; `custom_data` supported.
-- Transactions: `POST /transactions` with `items: [{price_id, quantity}]`, `customer_id`, `checkout: {url}`; response carries a hosted `checkout.url`. Sandbox auto-approves checkout domains, so the hosted page works without website approval — chosen over the Paddle.js overlay (which would need a client-side token and, for live, website approval).
+- Transactions: `POST /transactions` with `items: [{price_id, quantity}]`, `customer_id`, `checkout: {url}`. **There is no Paddle-hosted checkout page.** A transaction's `checkout.url` is a page on *our* approved domain — the URL passed as `checkout.url` (must be an approved website) or else the account's default payment link — with `?_ptxn=<transaction id>` appended ([pass a transaction to checkout](https://developer.paddle.com/build/transactions/pass-transaction-checkout), [default payment link](https://developer.paddle.com/build/transactions/default-payment-link)). That page must load Paddle.js (`https://cdn.paddle.com/paddle/v2/paddle.js`), call `Paddle.Environment.set("sandbox")` before `Paddle.Initialize({ token })` in sandbox ([Environment.set](https://developer.paddle.com/paddlejs/methods/paddle-environment-set)), and open the checkout. Paddle.js opens a checkout for `_ptxn` automatically, but an explicit `Paddle.Checkout.open({ transactionId, settings })` "takes priority" ([Checkout.open](https://developer.paddle.com/paddlejs/methods/paddle-checkout-open)); Flowline opens it explicitly so it can pass `settings.successUrl` and `locale`. The token for Paddle.js is a client-side token (`test_…` / `live_…`), which Paddle documents as safe for frontend code; API keys must never reach Paddle.js.
+- Flowline's checkout page: `/billing/checkout?ws=<slug>&_ptxn=txn_…` (`src/app/billing/checkout`, logic in `src/billing/checkout-page.ts`). The adapter sends `checkout.url = <FLOWLINE_PUBLIC_URL>/billing/checkout?ws=<slug>`. The page requires a signed-in member of the workspace (non-members get 404) with billing rights, validates `_ptxn` (`/^txn_[a-z0-9]+$/i`), builds the success URL (`/w/<slug>/settings?billing=success`) server-side — never from the query — and shows honest states: not configured (no client token), invalid transaction, Paddle.js failed to load (retry), closed (reopen), and a "Sandbox — no real payment" note. A `live_` client token is refused unless `FLOWLINE_BILLING_ALLOW_LIVE=true` and `FLOWLINE_BILLING_PADDLE_ENV=live`. In tests only (`FLOWLINE_ENV=test`), `FLOWLINE_TEST_PADDLE_JS_URL` can point at the fake provider's stand-in Paddle.js (`/paddle/checkout/paddle.js`); otherwise the CDN is always used.
 - Subscriptions: entity has `status` (`active|canceled|past_due|paused|trialing`), `items[].price.id`, `current_billing_period` (null when paused/canceled), `scheduled_change.action` (`cancel|pause|resume`), `items[].trial_dates`. Update via `PATCH /subscriptions/{id}` with `proration_billing_mode` ∈ `prorated_immediately|prorated_next_billing_period|full_immediately|full_next_billing_period|do_not_bill` (adapter uses `prorated_immediately`). Cancel via `POST /subscriptions/{id}/cancel` with `effective_from` ∈ `next_billing_period|immediately`. Pause/resume endpoints exist (`/pause`, `/resume`).
 - Adjustments: `POST /adjustments` (`action: "refund"`) — entity carries `transaction_id`, `customer_id`, `subscription_id`; sandbox auto-approves refunds (live holds most for review).
 - Webhooks: envelope `{event_id, event_type, occurred_at, data}`; `Paddle-Signature: ts=…;h1=…` = HMAC-SHA256(secret, `ts:rawBody`); multiple `h1` possible during secret rotation; delivery can be out of order — order by `occurred_at`. Paddle's SDK default replay tolerance is 5s; Flowline deliberately uses 300s (matches the Stripe adapter; replays inside the window are deduped by event id).
@@ -52,13 +53,31 @@ Assumed / not verified against a real sandbox account (no Paddle account exists 
 - Exact error `code` values (the adapter surfaces `detail`/`code` text only).
 - That a first subscription transaction always has `subscription_id` set on `transaction.completed` (documented behavior; a null case would fail the event honestly and retry).
 - Live-key behavior of `FLOWLINE_BILLING_ALLOW_LIVE=true` (nobody sets it in this phase).
+- The real Paddle.js overlay on our page has not been exercised against a sandbox account: the flow is verified against the docs and the fake's stand-in only. Whether Paddle.js requires `pwCustomer` (only used by Paddle Retain, live-only) and exactly which `checkout.*` events fire on close/complete are taken from the docs, not observed.
 
 ## Operating notes
 
 - Env: `FLOWLINE_BILLING_PROVIDER=paddle`, `FLOWLINE_BILLING_PADDLE_KEY` (sandbox `pdl_sdbx_…`),
   `FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET` (`pdl_ntfset_…` from the notification destination),
-  `FLOWLINE_BILLING_PADDLE_ENV=sandbox`. Plans stay in `FLOWLINE_BILLING_PLANS` with `pri_…` price ids.
+  `FLOWLINE_BILLING_PADDLE_ENV=sandbox`, `FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN` (public client-side
+  token, sandbox `test_…`). Plans stay in `FLOWLINE_BILLING_PLANS` with `pri_…` price ids.
+- Owner setup in the Paddle **sandbox** dashboard (sandbox-vendors.paddle.com) before checkout works:
+  1. **API key** (Developer tools > Authentication): `pdl_sdbx_apikey_…` with permissions for customers,
+     transactions, subscriptions (read/write) and adjustments → `FLOWLINE_BILLING_PADDLE_KEY`.
+  2. **Client-side token** (Developer tools > Authentication > Client-side tokens): `test_…` →
+     `FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN`.
+  3. **Website approval / default payment link** (Checkout > Checkout settings, and Website approval):
+     add the beta domain (the `FLOWLINE_PUBLIC_URL` origin) as an approved website and set the default
+     payment link to `<FLOWLINE_PUBLIC_URL>/billing/checkout`. Paddle documents that sandbox accepts
+     `https://localhost/` without approval; the beta domain must be accepted for `checkout.url` to be
+     honoured — otherwise Paddle rejects the transaction or uses the default payment link.
+  4. **Notification destination** (Developer tools > Notifications): URL
+     `<FLOWLINE_PUBLIC_URL>/api/billing/webhook`, events `transaction.completed`,
+     `transaction.payment_failed`, `subscription.*`, `adjustment.*`; its secret key (`pdl_ntfset_…`) →
+     `FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET`.
+  5. **Products and prices** (Catalog): one recurring price per paid plan (trial on the price if the plan
+     has one); put the `pri_…` ids in `FLOWLINE_BILLING_PLANS`.
 - Trials are configured on the **price** in Paddle's catalog (`trial_period`); plan `trialDays`
   is plan metadata/display only and must match the catalog.
-- Paddle has no cancel-redirect parameter on transactions; the hosted checkout simply stays open on abandonment.
+- Paddle has no cancel-redirect parameter on transactions; closing the Paddle.js overlay leaves the buyer on our checkout page, which offers "Reopen checkout" and a link back to Plan & billing.
 - Refunds are created by ops at Paddle (dashboard/API); Flowline records `adjustment.*` events for audit only.
