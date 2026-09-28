@@ -9,11 +9,11 @@ import { SCENARIOS } from "./certify/scenarios";
  *
  * Real mode (pnpm test:live:saas, env from .env): each provider runs against its real
  * sandbox account when FLOWLINE_LIVE_<PROVIDER> credentials exist; otherwise every check
- * is recorded BLOCKED. Results → artifacts/phase-3/live-results.json.
+ * is recorded BLOCKED. Results → artifacts/phase-4/live-certification/live-results.json.
  *
  * Dry-run mode (pnpm test:live:dryrun, FLOWLINE_LIVE_DRYRUN=1): the same scenario code
  * runs against the in-process provider test double (loopback only, fake tokens).
- * Results → artifacts/phase-3/live-dryrun-results.json as DRYRUN_PASS/DRYRUN_FAIL/N/A.
+ * Results → artifacts/phase-4/live-certification/live-dryrun-results.json as DRYRUN_PASS/DRYRUN_FAIL/N/A.
  */
 let fake: { close(): Promise<void> } | undefined;
 
