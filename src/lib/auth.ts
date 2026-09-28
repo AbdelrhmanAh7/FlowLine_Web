@@ -3,6 +3,7 @@ import { redactString, safeErrorText } from "@/server/redact";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
+import { issueAccountToken } from "@/server/email/flows";
 
 export const oauthConfig = {
   google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
@@ -26,8 +27,14 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
-    // Phase 1 has no email delivery; verification is documented as a Phase 3 item.
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+    resetPasswordTokenExpiresIn: 30 * 60,
+    sendResetPassword: async ({ user }, request) => { await issueAccountToken("reset", user, request); },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    expiresIn: 24 * 60 * 60,
+    sendVerificationEmail: async ({ user }, request) => { await issueAccountToken("verify", user, request); },
   },
   socialProviders,
   session: {
@@ -35,7 +42,7 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
   rateLimit: {
-    enabled: process.env.FLOWLINE_ENV !== "test",
+    enabled: true,
     window: 60,
     max: 100,
     customRules: { "/sign-in/email": { window: 60, max: 10 }, "/sign-up/email": { window: 60, max: 10 } },

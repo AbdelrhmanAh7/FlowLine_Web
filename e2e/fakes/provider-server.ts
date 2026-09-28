@@ -134,6 +134,7 @@ interface State {
   stripeWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
+  emailMessages: { provider: "resend" | "postmark"; to: string; subject: string; html: string; text: string }[];
 }
 
 function seed(): State {
@@ -153,6 +154,7 @@ function seed(): State {
     ["stripeCustomer", "stripeCheckout", "stripeSubscription", "stripeEvent", "stripeMeter", "stripeInvoice", "stripeCheckoutEmit"].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
   );
   return {
+    emailMessages: [],
     counters: stripeCounters,
     tokens,
     oauthCodes: new Map(),
@@ -1421,6 +1423,9 @@ const HANDLERS: Record<string, Handler> = {
 
 function stateDump(state: State, provider: string): unknown {
   switch (provider) {
+    case "resend":
+    case "postmark":
+      return { messages: state.emailMessages.filter((m) => m.provider === provider) };
     case "google_sheets":
       return { sheets: state.sheets };
     case "gmail":
@@ -1596,6 +1601,27 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       const provider = seg?.[1] ?? "";
       const handler = HANDLERS[provider];
       const path = seg?.[2] ?? "/";
+
+      if (provider === "resend" || provider === "postmark") {
+        const rawBody = req.method === "POST" ? await readBody(req) : "";
+        const expected = provider === "resend" ? "/emails" : "/email";
+        if (req.method !== "POST" || path !== expected) return json(ctx, req, res, 404, { error: "not found" });
+        const fi = ctx.faults.findIndex((f) => f.provider === provider && f.pattern.test(path));
+        if (fi >= 0) {
+          const fault = ctx.faults[fi]!;
+          if (--fault.times <= 0) ctx.faults.splice(fi, 1);
+          if (fault.mode === "500") return json(ctx, req, res, 500, { error: "provider failure" });
+          if (fault.mode === "429") return json(ctx, req, res, 429, { error: "rate limited" });
+          if (fault.mode === "timeout") { const timer = setTimeout(() => req.socket.destroy(), 60_000); ctx.heldSockets.add(req.socket); req.socket.on("close", () => { clearTimeout(timer); ctx.heldSockets.delete(req.socket); }); return; }
+          if (fault.mode === "drop_before_commit") { req.socket.destroy(); return; }
+        }
+        const body = j(rawBody);
+        const to = provider === "resend" ? (body.to as string[] | undefined)?.[0] : body.To;
+        const subject = provider === "resend" ? body.subject : body.Subject;
+        if (!to || !subject) return json(ctx, req, res, 422, { error: "invalid email" });
+        ctx.state.emailMessages.push({ provider, to: String(to), subject: String(subject), html: String(provider === "resend" ? body.html : body.HtmlBody), text: String(provider === "resend" ? body.text : body.TextBody) });
+        return json(ctx, req, res, provider === "resend" ? 200 : 200, { id: `email-${ctx.state.emailMessages.length}`, MessageID: `email-${ctx.state.emailMessages.length}` });
+      }
 
       // The fake OIDC IdP (SSO tests): unauthenticated by design, like the OAuth endpoints.
       if (provider === "oidc") {

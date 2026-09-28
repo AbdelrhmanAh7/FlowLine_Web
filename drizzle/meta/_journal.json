@@ -57,6 +57,13 @@
       "when": 1790560826808,
       "tag": "0007_copilot_new_flow",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790609877377,
+      "tag": "0009_email",
+      "breakpoints": true
     }
   ]
 }

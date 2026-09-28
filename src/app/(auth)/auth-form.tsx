@@ -40,7 +40,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setPending(false);
         return;
       }
-      router.replace(destination);
+      router.replace(mode === "sign-up" ? "/verify-email?pending=1" : destination);
       router.refresh();
     } catch {
       setError("Can't reach Flowline — check your connection and try again.");
@@ -110,6 +110,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {mode === "sign-up" ? "Create account" : "Sign in"}
             </Button>
           </form>
+
+          {mode === "sign-in" && <p className="mt-3 text-sm"><Link className="text-accent hover:underline" href="/forgot-password">نسيت كلمة المرور؟ / Forgot password?</Link></p>}
 
           {mode === "sign-in" && (
             <>
