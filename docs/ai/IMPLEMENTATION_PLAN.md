@@ -79,6 +79,38 @@ UI (Settings → AI Providers, ModelPicker)
 | **B — coverage + routing** | Protocols `openai-responses`, `anthropic-messages`, `gemini`, `cohere-v2`; the 15 core providers; expansion where the documented API fits; agents + Copilot on the hub (pickers, snapshots); FALLBACK / FREE_ONLY / LOW_COST; budgets with defensible max + reconciliation; streaming + cancellation; tool calls + structured output per route; research record per provider | Core adapters contract-tested; expansion status explicit; routing + cost controls tested across protocols |
 | **C — certification + QA** | Live certification on authorised connections (BLOCKED without keys); Copilot benchmark (≤3 routes + a stability repeat, within an approved budget); cumulative regression; Codex security/protocol/metering review + Chrome QA; fixes + retest; docs + report | Verdicts (§12 of the prompt) |
 
+## 3a. Owner clarification (2026-09-29): customer keys through the UI only
+
+Customer AI credentials are connected, tested, used, rotated and disconnected **entirely in Flowline**:
+Settings → AI Providers → provider → Add connection (name + key + provider-specific account/project fields) →
+validate/save → discover → select model → use in workflow / Agent / Copilot.
+
+- No terminal, server, `.env` edit, developer or restart is needed.
+- Multiple connections per provider, explicit workspace default, health + verification, Test, Replace key, Disconnect,
+  and an affected-workflows preview.
+- After save, only metadata + a masked indicator are shown; the raw key never comes back.
+- The key is never in browser storage, drafts, URLs, telemetry, logs, run meta or QA evidence.
+- MANAGE (`ai.manage`) is separate from USE (`use_roles`). Graphs, agents, Copilot settings and queued jobs hold a
+  `connectionId` only; the worker resolves it server-side, so scheduled runs work with the browser closed.
+- **No tenant path reads a model-provider env var.** The app starts with all of them absent.
+- A missing or revoked connection fails clearly and **never** falls back to a global or operator key.
+- Platform-funded AI stays disabled (a future, separately approved option).
+- Legacy env keys are not imported into workspaces.
+- Infrastructure secrets (DB, auth, encryption, Flowline OAuth apps, email, billing/webhooks) stay operator-managed
+  and are never shown in customer settings.
+- Customer OAuth integrations keep their Connect/consent flow.
+
+Acceptance (AIH-21…AIH-24):
+- UI onboarding with no env keys;
+- persistence across refresh, sign-out/in and a web/worker restart;
+- two-workspace key isolation;
+- server-side manage/use enforcement;
+- replace/disconnect with queued work and cache invalidation;
+- no global fallback;
+- a secret-leak scan (responses, HTML, browser storage, logs, evidence) using a canary key.
+
+The E2E enters the key through the UI; no DB seeding and no `.env` as a substitute.
+
 ## 4. Out of scope
 
 - Local runtimes (Ollama, LM Studio, vLLM, llama.cpp), browser inference and a desktop companion.
@@ -87,7 +119,7 @@ UI (Settings → AI Providers, ModelPicker)
 - Embeddings and rerank: no knowledge path uses them today.
 - A future local runner: extension point only (a `transport: "local-runner"` slot reserved in the registry type,
   unimplemented).
-- Platform-funded routes: supported by the model, disabled unless explicitly configured with a budget.
+- Platform-funded routes: not implemented; a future option needing separate owner approval, never an implicit fallback (§3a).
 
 ## 5. Risks and decisions
 
