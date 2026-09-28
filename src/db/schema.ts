@@ -77,6 +77,33 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const emailOutbox = pgTable("email_outbox", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recipient: text("recipient").notNull(),
+  subject: text("subject").notNull(),
+  html: text("html").notNull(),
+  plainText: text("plain_text").notNull(),
+  tags: jsonb("tags").$type<Record<string, string>>().notNull().default({}),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const emailToken = pgTable("email_token", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: text("token_hash").notNull().unique(),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  purpose: text("purpose").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("email_token_user_purpose_idx").on(t.userId, t.purpose)]);
+
+export const emailRateLimit = pgTable("email_rate_limit", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(1),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /* ───────────── Flowline domain ───────────── */
 
 export const roleEnum = pgEnum("workspace_role", ["owner", "editor", "viewer"]);

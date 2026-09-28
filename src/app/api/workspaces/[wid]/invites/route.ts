@@ -17,5 +17,5 @@ export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "member.manage");
   const b = await parseBody(req, body);
-  return json(await createInvite(user, workspace.id, b), { status: 201 });
+  return json(await createInvite(user, workspace.id, b, req), { status: 201 });
 });

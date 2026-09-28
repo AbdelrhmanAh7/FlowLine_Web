@@ -71,6 +71,13 @@
       "when": 1790610385167,
       "tag": "0009_product_events",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790611061670,
+      "tag": "0010_email",
+      "breakpoints": true
     }
   ]
 }

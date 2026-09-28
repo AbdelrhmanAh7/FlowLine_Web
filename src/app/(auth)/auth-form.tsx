@@ -44,7 +44,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setPending(false);
         return;
       }
-      router.replace(destination);
+      router.replace(mode === "sign-up" ? "/verify-email?pending=1" : destination);
       router.refresh();
     } catch {
       setError(t("errors.NETWORK"));
@@ -118,6 +118,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {mode === "sign-up" ? t("auth.createAccount") : t("auth.signIn")}
             </Button>
           </form>
+
+          {mode === "sign-in" && <p className="mt-3 text-sm"><Link className="text-accent hover:underline" href="/forgot-password">نسيت كلمة المرور؟ / Forgot password?</Link></p>}
 
           {mode === "sign-in" && (
             <>

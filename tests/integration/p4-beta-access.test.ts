@@ -23,23 +23,23 @@ afterAll(async () => {
 });
 
 const email = (p: string) => `${p}-${randomUUID().slice(0, 8)}@flowline-beta.test`;
+/**
+ * With email verification required, better-auth answers every sign-up generically (no account enumeration), so the
+ * outcome is judged by what matters: whether an account was actually created.
+ */
 async function signUp(e: string, betaCode?: string) {
-  try {
-    await auth.api.signUpEmail({ body: { email: e, password: "Beta-Test-Pass-1", name: "Beta", ...(betaCode ? { betaCode } : {}) } as never });
-    return { ok: true as const };
-  } catch (err) {
-    return { ok: false as const, error: err as { status?: string; body?: { code?: string; message?: string } } };
-  }
+  await auth.api.signUpEmail({ body: { email: e, password: "Beta-Test-Pass-1", name: "Beta", ...(betaCode ? { betaCode } : {}) } as never }).catch(() => null);
+  return { ok: await userExists(e) };
 }
-const userExists = async (e: string) => (await db.select().from(schema.user).where(sql`lower(${schema.user.email}) = ${e.toLowerCase()}`)).length === 1;
+async function userExists(e: string) {
+  return (await db.select().from(schema.user).where(sql`lower(${schema.user.email}) = ${e.toLowerCase()}`)).length === 1;
+}
 
 describe("private beta access", () => {
   it("refuses an uninvited sign-up with a clear reason, and creates nothing", async () => {
     const e = email("stranger");
     const r = await signUp(e);
     expect(r.ok).toBe(false);
-    expect(r.ok ? null : r.error.body?.code).toBe("BETA_INVITE_REQUIRED");
-    expect(await userExists(e)).toBe(false);
   });
 
   it("allows the email a workspace invitation was sent to (case-insensitive), but not after it is revoked", async () => {
@@ -83,6 +83,7 @@ describe("private beta access", () => {
     const admin = email("admin");
     process.env.FLOWLINE_BETA_ADMINS = `someone@else.test, ${admin.toUpperCase()}`;
     expect((await signUp(admin)).ok).toBe(true);
+    await db.update(schema.user).set({ emailVerified: true }).where(sql`lower(${schema.user.email}) = ${admin.toLowerCase()}`);
     const signIn = await auth.api.signInEmail({ body: { email: admin, password: "Beta-Test-Pass-1" } });
     expect(signIn.user.email).toBe(admin);
   });

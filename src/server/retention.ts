@@ -37,6 +37,9 @@ export async function pruneOnce(db: Db, now = new Date()): Promise<Record<string
       verifications: await count(sql`delete from verification where expires_at < ${now}`),
       oauthStates: await count(sql`delete from oauth_state where expires_at < ${now}`),
       ssoStates: await count(sql`delete from sso_state where expires_at < ${now}`),
+      emailTokens: await count(sql`delete from email_token where expires_at < ${before(1)}`),
+      emailOutbox: await count(sql`delete from email_outbox where created_at < ${before(7)}`),
+      emailRateWindows: await count(sql`delete from email_rate_limit where window_started_at < ${before(1)}`),
     };
   });
 }

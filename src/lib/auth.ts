@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, schema } from "@/db";
 import { allowSignUp, BETA_REFUSAL, betaMode } from "@/server/beta";
+import { issueAccountToken } from "@/server/email/flows";
 import { track } from "@/server/telemetry";
 
 export const oauthConfig = {
@@ -29,8 +30,14 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
-    // Phase 1 has no email delivery; verification is documented as a Phase 3 item.
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+    resetPasswordTokenExpiresIn: 30 * 60,
+    sendResetPassword: async ({ user }, request) => { await issueAccountToken("reset", user, request); },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    expiresIn: 24 * 60 * 60,
+    sendVerificationEmail: async ({ user }, request) => { await issueAccountToken("verify", user, request); },
   },
   socialProviders,
   session: {
@@ -38,6 +45,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
   rateLimit: {
+    // Relaxed only for the isolated test stack (E2E signs up many users); the email flows keep their own
+    // PostgreSQL-backed limits everywhere (src/server/email/flows.ts).
     enabled: process.env.FLOWLINE_ENV !== "test",
     window: 60,
     max: 100,

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -52,6 +53,7 @@ export default function SettingsPage() {
             <>
               <General />
               <AiDefaults />
+              <Card className="mt-5 flex flex-col gap-3 p-5"><Link className="text-accent hover:underline" href="/resend-verification">إعادة إرسال تأكيد البريد / Resend verification</Link><Link className="text-danger hover:underline" href="/account/delete">حذف الحساب / Delete account</Link></Card>
             </>
           )}
           {tab === "keys" && <ApiKeys />}
