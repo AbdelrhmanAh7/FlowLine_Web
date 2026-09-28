@@ -26,7 +26,7 @@ describe("ops status (P4-11)", () => {
     process.env.FLOWLINE_OPS_TOKEN = TOKEN;
     const res = await GET(new Request("http://localhost/api/ops/status", { headers: { authorization: `Bearer ${TOKEN}` } }));
     const body = await res.json();
-    expect(Object.keys(body.checks)).toEqual(expect.arrayContaining(["worker", "queue", "runs", "ai", "integrations", "billingWebhooks"]));
+    expect(Object.keys(body.checks)).toEqual(expect.arrayContaining(["worker", "queue", "runs", "ai", "integrations", "apiErrors", "billingWebhooks"]));
     for (const c of Object.values(body.checks) as { status: string }[]) expect(["ok", "warn", "fail"]).toContain(c.status);
   });
 

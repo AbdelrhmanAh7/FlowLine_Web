@@ -52,6 +52,9 @@ export async function opsStatus(opts: { dataDir?: string; backupDir?: string } =
       and ((error->>'code') = 'CONNECTION_AUTH' or left(error->>'code', 9) = 'PROVIDER_')`);
   checks.integrations = { status: n(provider.n) >= 10 ? "warn" : "ok", detail: `${n(provider.n)} integration step failures in the last hour`, value: n(provider.n) };
 
+  const apiErr = await one<{ n: number }>(sql`select count(*)::int as n from product_event where name = 'api_error' and at > now() - interval '15 minutes'`);
+  checks.apiErrors = { status: n(apiErr.n) >= 20 ? "fail" : n(apiErr.n) >= 5 ? "warn" : "ok", detail: `${n(apiErr.n)} API 5xx errors in the last 15 minutes (see logs by request id)`, value: n(apiErr.n) };
+
   const bw = await one<{ failed: number; total: number }>(sql`
     select count(*) filter (where outcome = 'failed')::int as failed, count(*)::int as total
     from billing_event where received_at > now() - interval '24 hours'`);
