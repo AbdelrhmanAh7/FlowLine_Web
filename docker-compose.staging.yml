@@ -13,6 +13,10 @@ x-app: &app
     FLOWLINE_PUBLIC_URL: http://localhost:3200
     OLLAMA_BASE_URL: http://host.docker.internal:11434
     FLOWLINE_EGRESS_ALLOWLIST: host.docker.internal:11434
+    # No real email delivery on local staging: messages land in the email_outbox table (allowed only with
+    # FLOWLINE_ENV=staging), where the release checks read verification links.
+    FLOWLINE_ENV: staging
+    FLOWLINE_EMAIL_PROVIDER: outbox
   extra_hosts: ["host.docker.internal:host-gateway"]
   depends_on:
     migrate: { condition: service_completed_successfully }
