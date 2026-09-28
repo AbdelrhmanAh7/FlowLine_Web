@@ -1,0 +1,50 @@
+{
+  "base": "http://localhost:3200",
+  "startedAt": "2026-09-28T15:27:56.957Z",
+  "revision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd",
+  "schemaVersion": 8,
+  "finishedAt": "2026-09-28T15:27:58.499Z",
+  "checks": [
+    {
+      "name": "health: db and worker ok",
+      "ok": true,
+      "detail": "rev ce08d9f schema 8"
+    },
+    {
+      "name": "sign-up + workspace + onboarding",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "template flow runs to success on the worker",
+      "ok": true,
+      "detail": "succeeded"
+    },
+    {
+      "name": "publish",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "name": "API key starts a run via /api/v1",
+      "ok": true,
+      "detail": "HTTP 202"
+    },
+    {
+      "name": "revoked key refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "name": "tenancy: another user gets 404 for the flow and workspace",
+      "ok": true,
+      "detail": "404/404"
+    },
+    {
+      "name": "unauthenticated API refused",
+      "ok": true,
+      "detail": "HTTP 401"
+    }
+  ],
+  "pass": true
+}

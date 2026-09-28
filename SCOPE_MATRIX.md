@@ -175,3 +175,41 @@ Source `p3§N` = section N of the Phase 3 prompt (2026-09-28). Existing IDs P3-0
 | CODE COMPLETE | Implementation + deterministic tests for the approved scope pass | **YES** (`ce08d9f`) |
 | STAGING VERIFIED | Deployed artifact passed smoke, cumulative E2E, browser QA, security checks, backup/restore, rollback, billing sandbox, available live dependencies | **YES, with stated limits** (billing vs test double; SSO vs test IdP; R-01…R-11 BLOCKED; Copilot real-model quality not verified) |
 | PRODUCTION APPROVED | Explicit owner approval only | **NO** |
+
+## Phase 4: launch candidate & private beta
+
+Source `p4§N` = section N of the Phase 4 prompt (2026-09-28). The goal is a small, safe, invitation-only private beta for 2–5 users — **not** broad new scope, public launch, live payments, unrestricted sign-up or automatic production deployment. Out of scope: light mode, canvas presence, redesign. Baseline: `ce08d9f` (entry smoke 8/8 PASS, `artifacts/phase-4/smoke/`).
+
+| ID | Requirement | Source | Acceptance test | Status | Evidence |
+|---|---|---|---|---|---|
+| P4-01 | Entry gate: branch, SHA, clean tree, release image, staging health, smoke suite | p4§1 | `scripts/release/smoke.mjs` against staging | PASS | `artifacts/phase-4/smoke/smoke-ce08d9f-*.json` (8/8) |
+| P4-02 | Copilot benchmark (≥12 fixed requests: schedule, webhook, Gmail, Sheets, Slack, GitHub, transform, branch, AI classification, multi-step, missing integration, ambiguous) scored separately: structure, node selection, order, parameter mapping, requested result, safe refusal | p4§2 | Benchmark harness; provider/model/prompt version/cost/latency recorded; target ≥10/12 held-out correct-or-safe-refusal, else Copilot stays BETA/EXPERIMENTAL | PLANNED | |
+| P4-03 | Copilot on a stronger hosted model through the provider abstraction (no provider hard-coding; never bypasses validation, registry, credentials, permissions, budget, preview, approval) | p4§2 | Benchmark run on a hosted model | PLANNED (needs a hosted model API key) | |
+| P4-04 | Preview wording: "Ran without errors — verify the output matches your request" (CX3S-01) | p4§2 | UI + E2E | PLANNED | |
+| P4-05 | Email provider abstraction (sandbox/dev mode) | p4§3 | Provider adapter + dev outbox; provider failure/timeout tests | PLANNED | |
+| P4-06 | Email flows: verification, forgot/reset password, invitation email, account deletion confirmation, security notices — signed single-use expiring tokens, replay protection, rate limits, no account enumeration, safe redirects, branded templates, no tokens in logs | p4§3 | Tests per flow + expired/reused/invalid token, provider failure/timeout, rate limit | PLANNED | |
+| P4-07 | Flowline subscription billing on a Merchant-of-Record provider (Paddle, else Lemon Squeezy) behind the existing abstraction; eligibility (Egypt onboarding, SaaS, subscriptions, sandbox, payouts, webhooks, API, MoR) verified first; Stripe stays as a customer workflow integration | p4§4 | Eligibility note; adapter + sandbox events (checkout, created, updated, plan change, cancel scheduled/completed, payment failed, resumed, test refund); webhook signature/idempotency/replay/duplicate/out-of-order/reconciliation; UI provider-neutral; real sandbox flow through the UI | PLANNED | |
+| P4-08 | Live certification of Google Sheets, Gmail, Slack, GitHub (connect, identity, read, write, verify, cleanup, revoke, reconnect, error state, affected flows pause) | p4§5 | `artifacts/phase-4/live-certification/` | PLANNED (needs dedicated test accounts) | |
+| P4-09 | HubSpot, Zendesk, Airtable, Snowflake, Stripe, Notion, Linear stay in release scope, deferred for private beta and labelled as not live-verified | p4§5 | UI labels + docs | PLANNED | |
+| P4-10 | Real Google and GitHub sign-in (dev/beta redirect URIs): sign-up, sign-in, account linking, duplicate email, revoked permission, invalid state, callback errors, CSRF | p4§6 | Tests + live check | PLANNED (needs OAuth apps) | |
+| P4-11 | Beta environment on `beta.<domain>`: TLS, secrets outside git, persistent PostgreSQL, automated backups + proven restore, logs, error monitoring, uptime, worker/queue/disk/AI/email/billing-webhook monitoring, nothing internal exposed | p4§7 | Deploy + checks | PLANNED (needs domain/DNS + host) | |
+| P4-12 | Invitation-only beta access (no unrestricted sign-up) | p4§7 | Sign-up without an invitation/code refused; tests | PLANNED | |
+| P4-13 | Rate limiting safe for the chosen topology (shared store, or a documented single web instance) | p4§8 | Test + runbook | PLANNED | |
+| P4-14 | First-user UX: onboarding, credential-free sample workflow/template, integration setup help, BETA labels, feedback/report-issue link, support contact, safe account deletion, no misleading claims | p4§9 | UI + E2E | PLANNED | |
+| P4-15 | Product telemetry (sign-up, onboarding, first flow, first success/failure, integration connected, agent created, Copilot request/decision, template used, billing test event, error category) without sensitive content; correlation IDs; internal beta report | p4§10 | Tests + report | PLANNED | |
+| P4-16 | Privacy/safety drafts: data inventory, retention, deletion, subprocessors, security contact, incident checklist, backup policy, beta limitations (no compliance claims) | p4§11 | Docs | PLANNED | |
+| P4-17 | Manual Chrome QA (real Chrome, roles, 1440/1024/375, console/network), BUGS.md with P0–P3; P0/P1 fixed and retested | p4§12 | QA report | PLANNED | |
+| P4-18 | Private beta acceptance journeys 1–10 through the UI | p4§13 | Evidence per journey | PLANNED | |
+| P4-19 | Codex independent reviews (code, billing, OAuth, email security, live integrations, Chrome QA, regression, final gate) | p4§14 | `artifacts/phase-4/codex-*` | PLANNED | |
+| P4-20 | Private beta load check (5 users, 20–50 workflows, 10–20 concurrent runs, AI, email, integrations, browser) | p4§15 | Report, no SLA claims | PLANNED | |
+| P4-21 | Immutable beta artifact: SHA, image digest, migration version, environment, provider configuration names | p4§16 | Release record | PLANNED | |
+| P4-22 | Docs: PHASE4_BETA_REPORT, PRIVATE_BETA_RUNBOOK, BETA_USER_GUIDE, BETA_LIMITATIONS; SCOPE_MATRIX, NEXT_ACTION, CLAUDE.md, AGENTS.md updated | p4§19 | Docs | PLANNED | |
+
+### Phase 4 verdicts (p4§17)
+
+| Verdict | Status |
+|---|---|
+| CODE COMPLETE | PLANNED |
+| BETA INFRA VERIFIED | PLANNED |
+| PRIVATE BETA READY | PLANNED |
+| PUBLIC PRODUCTION APPROVED | **NO** (owner authorisation only) |
