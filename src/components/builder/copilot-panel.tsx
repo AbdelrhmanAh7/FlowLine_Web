@@ -4,7 +4,11 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { Button, StatusBadge, Textarea, cx } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { useT } from "@/i18n/client";
+import { issueMessage, notPreviewedReason, statusWord } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
+import type { MessageKey } from "@/i18n/types";
+import { api } from "@/lib/api";
 
 interface Proposal {
   id: string;
@@ -34,6 +38,7 @@ export type CopilotTarget = { kind: "flow"; flowId: string } | { kind: "new"; wo
 export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { target: CopilotTarget; onClose: () => void; beforePropose?: () => Promise<void>; onApplied: (applied: { flowId: string; revision: number }) => void }) {
   const base = target.kind === "flow" ? `/api/flows/${target.flowId}/copilot` : `/api/workspaces/${target.workspaceId}/copilot`;
   const toast = useToast();
+  const t = useT();
   const [request, setRequest] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [confirmRemovals, setConfirmRemovals] = useState(false);
@@ -46,31 +51,32 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
       setProposal(proposal);
       setConfirmRemovals(false);
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Copilot couldn't make a proposal", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("copilot.proposeError")), "danger"),
   });
   const decide = useMutation({
     mutationFn: (decision: "approve" | "reject") => api<{ proposal: Proposal }>(`${base}/${proposal!.id}`, { method: "POST", json: target.kind === "flow" ? { decision, confirmRemovals } : { decision } }),
     onSuccess: ({ proposal: p }) => {
       setProposal(p);
       if (p.status === "approved") {
-        toast(target.kind === "new" ? "Flow created as a draft — nothing was run or published" : `Saved as draft revision ${p.savedRevision} — nothing was run or published`, "success");
+        toast(target.kind === "new" ? t("copilot.createdDraft") : t("copilot.savedDraft", { revision: p.savedRevision ?? "" }), "success");
         onApplied({ flowId: p.flowId!, revision: p.savedRevision! });
-      } else toast(target.kind === "new" ? "Proposal rejected — no flow was created" : "Proposal rejected — nothing changed", "info");
+      } else toast(target.kind === "new" ? t("copilot.rejectedNew") : t("copilot.rejected"), "info");
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't apply the proposal", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("copilot.applyError")), "danger"),
   });
   const errors = proposal?.issues.filter((i) => i.severity === "error") ?? [];
   const warnings = proposal?.issues.filter((i) => i.severity === "warning") ?? [];
   const removed = proposal?.diff?.removed ?? [];
+  const preview = proposal?.diff?.preview;
   return (
     <aside role="dialog" aria-label="Copilot" className="absolute top-0 end-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">✦ Copilot</h2>
-        <button onClick={onClose} aria-label="Close Copilot" className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+        <button onClick={onClose} aria-label={t("copilot.close")} className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
           ✕
         </button>
       </div>
-      <p className="text-sm text-med">Describe the workflow or a change. Copilot proposes steps using only Flowline&apos;s real nodes, integrations and your existing connections — you review the diff before anything is saved. Nothing runs.</p>
+      <p className="text-sm text-med">{t("copilot.intro")}</p>
       <form
         className="flex flex-col gap-2"
         onSubmit={(e) => {
@@ -79,11 +85,11 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
         }}
       >
         <label htmlFor="copilot-request" className="sr-only">
-          What should this workflow do?
+          {t("copilot.requestLabel")}
         </label>
-        <Textarea id="copilot-request" rows={4} maxLength={2000} value={request} onChange={(e) => setRequest(e.target.value)} placeholder="e.g. Every Monday get the latest KPI data, summarize the important changes, and email leadership." />
-        <Button type="submit" variant="primary" className="self-start" loading={ask.isPending} disabledReason={request.trim() ? null : "Describe what you want"}>
-          Propose
+        <Textarea id="copilot-request" rows={4} maxLength={2000} value={request} onChange={(e) => setRequest(e.target.value)} placeholder={t("copilot.placeholder")} />
+        <Button type="submit" variant="primary" className="self-start" loading={ask.isPending} disabledReason={request.trim() ? null : t("copilot.describeFirst")}>
+          {t("copilot.propose")}
         </Button>
       </form>
 
@@ -91,28 +97,28 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
         <section className="flex flex-col gap-3 border-t border-line pt-3" data-testid="copilot-proposal" aria-live="polite">
           <p className="flex items-center gap-2 text-sm">
             <StatusBadge tone={proposal.status === "proposed" ? "info" : proposal.status === "approved" ? "success" : proposal.status === "invalid" ? "danger" : "muted"}>
-              {proposal.status === "proposed" ? "Proposal — review" : proposal.status}
+              {t.has(`copilot.status.${proposal.status}`) ? t(`copilot.status.${proposal.status}` as MessageKey) : proposal.status}
             </StatusBadge>
             {proposal.model && <span className="data text-muted">{proposal.model}</span>}
           </p>
           {proposal.summary && <p className="text-base">{proposal.summary}</p>}
           {errors.length > 0 && (
-            <ul role="alert" className="flex flex-col gap-1 rounded-md border border-danger/40 bg-danger/5 p-2 text-sm text-danger" aria-label="Proposal errors">
+            <ul role="alert" className="flex flex-col gap-1 rounded-md border border-danger/40 bg-danger/5 p-2 text-sm text-danger" aria-label={t("copilot.errorsAria")}>
               {errors.map((i, k) => (
-                <li key={k}>✗ {i.message}</li>
+                <li key={k}>✗ {issueMessage(t, i)}</li>
               ))}
-              <li className="text-med">This proposal can&apos;t be applied. Rephrase the request and try again.</li>
+              <li className="text-med">{t("copilot.cantApply")}</li>
             </ul>
           )}
           {warnings.length > 0 && (
-            <ul className="flex flex-col gap-1 rounded-md border border-warning/40 bg-warning/5 p-2 text-sm text-warning" aria-label="Setup needed">
+            <ul className="flex flex-col gap-1 rounded-md border border-warning/40 bg-warning/5 p-2 text-sm text-warning" aria-label={t("copilot.setupAria")}>
               {warnings.map((i, k) => (
-                <li key={k}>⚠ {i.message}</li>
+                <li key={k}>⚠ {issueMessage(t, i)}</li>
               ))}
             </ul>
           )}
           {proposal.diff && (
-            <div className="flex flex-col gap-1.5 text-sm" aria-label="Proposed changes">
+            <div className="flex flex-col gap-1.5 text-sm" aria-label={t("copilot.changesAria")}>
               {proposal.diff.added.map((a) => (
                 <p key={`a-${a.id}`} className="text-success">
                   + {a.label} <span className="data text-muted">{a.type}</span>
@@ -129,21 +135,23 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
                 </p>
               ))}
               <p className="data text-muted">
-                edges +{proposal.diff.edgesAdded} −{proposal.diff.edgesRemoved}
+                {t("copilot.edges", { added: proposal.diff.edgesAdded, removed: proposal.diff.edgesRemoved })}
               </p>
             </div>
           )}
-          {proposal.diff?.preview && (
+          {preview && (
             <div className="flex flex-col gap-1 text-sm" data-testid="copilot-preview">
-              {proposal.diff.preview.ran ? (
+              {preview.ran ? (
                 <>
+                  {/* CX3S-01: a clean dry run only means the steps executed — it says nothing about whether the output is right. */}
                   <p className="text-med">
-                    Preview on the sample input (local steps only): <span className="data">{proposal.diff.preview.status}</span>
+                    {t("copilot.previewLabel")}{" "}
+                    {preview.status === "succeeded" ? <span className="text-hi">{t("copilot.previewOk")}</span> : <span className="data">{statusWord(t, preview.status ?? "")}</span>}
                   </p>
-                  <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{proposal.diff.preview.error ? proposal.diff.preview.error.message : JSON.stringify(proposal.diff.preview.output, null, 2)}</pre>
+                  <pre dir="ltr" className="data max-h-40 overflow-auto rounded-md border border-line bg-app p-2 text-xs">{preview.error ? preview.error.message : JSON.stringify(preview.output, null, 2)}</pre>
                 </>
               ) : (
-                <p className="text-muted">{proposal.diff.preview.reason}</p>
+                <p className="text-muted">{preview.reason ? notPreviewedReason(t, preview.reason) : null}</p>
               )}
             </div>
           )}
@@ -153,16 +161,16 @@ export function CopilotPanel({ target, onClose, beforePropose, onApplied }: { ta
                 <label className={cx("flex items-start gap-2 rounded-md border border-danger/40 p-2 text-sm")}>
                   <input type="checkbox" className="mt-0.5" checked={confirmRemovals} onChange={(e) => setConfirmRemovals(e.target.checked)} />
                   <span>
-                    I understand this removes {removed.length} existing step{removed.length > 1 ? "s" : ""}: {removed.map((r) => r.label).join(", ")}
+                    {t.plural("copilot.confirmRemovals", removed.length, { labels: removed.map((r) => r.label).join(t("perm.listSep")) })}
                   </span>
                 </label>
               )}
               <div className="flex gap-2">
-                <Button variant="primary" loading={decide.isPending && decide.variables === "approve"} disabledReason={removed.length > 0 && !confirmRemovals ? "Confirm the removals first" : null} onClick={() => decide.mutate("approve")}>
-                  {target.kind === "new" ? "Approve & create draft" : "Approve & save draft"}
+                <Button variant="primary" loading={decide.isPending && decide.variables === "approve"} disabledReason={removed.length > 0 && !confirmRemovals ? t("copilot.confirmFirst") : null} onClick={() => decide.mutate("approve")}>
+                  {target.kind === "new" ? t("copilot.approveNew") : t("copilot.approveSave")}
                 </Button>
                 <Button variant="ghost" loading={decide.isPending && decide.variables === "reject"} onClick={() => decide.mutate("reject")}>
-                  Reject
+                  {t("copilot.reject")}
                 </Button>
               </div>
             </>

@@ -267,18 +267,7 @@ export const RUN_TONE: Record<string, Tone> = {
   waiting_approval: "warning",
   uncertain: "warning",
 };
-export const RUN_LABEL: Record<string, string> = {
-  queued: "Queued",
-  running: "Running",
-  succeeded: "Success",
-  failed: "Failed",
-  cancelled: "Cancelled",
-  pending: "Queued",
-  skipped: "Skipped",
-  reused: "Reused",
-  waiting_approval: "Needs approval",
-  uncertain: "Outcome unknown",
-};
+/* Run/step status labels are translated: `runLabel(t, status)` in src/i18n/engine-text.ts (catalogue `runStatus`). */
 
 export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="data inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-strong bg-card px-1 text-xs text-med">{children}</kbd>;
