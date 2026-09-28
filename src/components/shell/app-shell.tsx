@@ -9,7 +9,7 @@ import { initials } from "@/lib/format";
 import { useHealth, useOnline } from "@/lib/hooks";
 import { useT } from "@/i18n/client";
 import { LanguageSwitcher } from "../language-switcher";
-import { cx } from "../ui";
+import { StatusBadge, cx } from "../ui";
 import { WorkspaceContext, type WorkspaceInfo } from "./workspace-context";
 
 interface Props {
@@ -17,8 +17,17 @@ interface Props {
   workspace: WorkspaceInfo;
   role: Role;
   workspaces: { id: string; name: string; slug: string; role?: string }[];
+  support?: Support;
   children: ReactNode;
 }
+
+interface Support {
+  beta: boolean;
+  supportEmail: string | null;
+  feedbackUrl: string | null;
+}
+
+const NO_SUPPORT: Support = { beta: false, supportEmail: null, feedbackUrl: null };
 
 interface NavItem {
   href: string;
@@ -27,7 +36,7 @@ interface NavItem {
   match: (p: string) => boolean;
 }
 
-export function AppShell({ user, workspace, role, workspaces, children }: Props) {
+export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPORT, children }: Props) {
   const t = useT();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,7 +83,7 @@ export function AppShell({ user, workspace, role, workspaces, children }: Props)
       <div className="flex h-dvh overflow-hidden bg-app">
         {/* Desktop sidebar (240px) / tablet icon rail (48px) */}
         <aside aria-label={t("shell.workspaceNav")} className="hidden shrink-0 flex-col border-e border-line bg-surface md:flex md:w-[var(--rail-w)] xl:w-[var(--sidebar-w)]">
-          <SidebarContent sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} compact />
+          <SidebarContent support={support} sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} compact />
         </aside>
 
         {/* Mobile menu sheet */}
@@ -82,7 +91,7 @@ export function AppShell({ user, workspace, role, workspaces, children }: Props)
           <div className="fixed inset-0 z-50 md:hidden">
             <button aria-label={t("shell.closeMenu")} className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
             <aside aria-label={t("shell.workspaceNav")} className="relative flex h-full w-[min(280px,85vw)] animate-drawer-in flex-col border-e border-line bg-surface">
-              <SidebarContent sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} />
+              <SidebarContent support={support} sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} />
             </aside>
           </div>
         )}
@@ -110,8 +119,10 @@ function SidebarContent({
   pathname,
   workspace,
   user,
+  support,
   compact,
 }: {
+  support: Support;
   sections: { title: string; items: NavItem[] }[];
   settings: NavItem;
   pathname: string;
@@ -119,6 +130,7 @@ function SidebarContent({
   user: { name: string; email: string };
   compact?: boolean;
 }) {
+  const t = useT();
   // `compact` = icon rail on tablet widths; labels appear from xl (≥1280).
   const label = compact ? "hidden xl:inline" : "";
   return (
@@ -128,6 +140,11 @@ function SidebarContent({
         <span className={cx("truncate text-base font-semibold", label)} title={workspace.name}>
           {workspace.name}
         </span>
+        {support.beta && (
+          <StatusBadge tone="accent" upper className={cx("shrink-0", compact && "hidden xl:inline-flex")}>
+            {t("shell.beta")}
+          </StatusBadge>
+        )}
       </div>
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
         {sections.map((s) => (
@@ -145,7 +162,7 @@ function SidebarContent({
       </nav>
       <div className="flex flex-col gap-1 border-t border-line p-2">
         <NavLink item={settings} active={settings.match(pathname)} compact={compact} />
-        <UserMenu user={user} compact={compact} />
+        <UserMenu user={user} support={support} compact={compact} />
       </div>
     </>
   );
@@ -169,7 +186,7 @@ function NavLink({ item, active, compact }: { item: NavItem; active: boolean; co
   );
 }
 
-function UserMenu({ user, compact }: { user: { name: string; email: string }; compact?: boolean }) {
+function UserMenu({ user, support, compact }: { user: { name: string; email: string }; support: Support; compact?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -208,6 +225,36 @@ function UserMenu({ user, compact }: { user: { name: string; email: string }; co
               <span dir="ltr">{user.email}</span>
             </p>
           </div>
+          {(() => {
+            const report = support.feedbackUrl ?? (support.supportEmail ? `mailto:${support.supportEmail}?subject=${encodeURIComponent("Flowline beta: issue report")}` : null);
+            const missing = t("shell.userMenu.supportNotConfigured");
+            return (
+              <>
+                {report ? (
+                  <a role="menuitem" href={report} target={support.feedbackUrl ? "_blank" : undefined} rel="noreferrer" className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
+                    {t("shell.userMenu.reportIssue")}
+                  </a>
+                ) : (
+                  <span role="menuitem" aria-disabled="true" title={missing} className="flex h-8 w-full cursor-not-allowed items-center rounded-md px-2.5 text-start text-base text-muted">
+                    {t("shell.userMenu.reportIssue")}
+                  </span>
+                )}
+                {support.supportEmail ? (
+                  <a role="menuitem" href={`mailto:${support.supportEmail}`} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
+                    {t("shell.userMenu.contactSupport")}
+                  </a>
+                ) : (
+                  <span role="menuitem" aria-disabled="true" title={missing} className="flex h-8 w-full cursor-not-allowed items-center rounded-md px-2.5 text-start text-base text-muted">
+                    {t("shell.userMenu.contactSupport")}
+                  </span>
+                )}
+              </>
+            );
+          })()}
+          <Link role="menuitem" href="/account/delete" className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
+            {t("shell.userMenu.deleteAccount")}
+          </Link>
+          <div role="separator" className="my-1 h-px bg-line" />
           <button role="menuitem" onClick={() => void signOutEverywhere()} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
             {t("shell.userMenu.signOut")}
           </button>

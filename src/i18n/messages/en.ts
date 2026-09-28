@@ -69,8 +69,13 @@ export const en: Messages = {
       integrations: "Integrations",
       settings: "Settings",
     },
+    beta: "Beta",
     userMenu: {
       signOut: "Sign out",
+      reportIssue: "Report an issue",
+      contactSupport: "Contact support",
+      deleteAccount: "Delete account",
+      supportNotConfigured: "No support channel is configured for this installation yet",
     },
     banners: {
       offlineTitle: "Offline mode",

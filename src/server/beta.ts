@@ -15,6 +15,22 @@ export function betaMode(): BetaMode {
   return process.env.FLOWLINE_BETA_MODE === "invite_only" ? "invite_only" : "open";
 }
 
+/** Beta support channels shown in the user menu (P4-14). Unset values render as disabled items with a reason. */
+export interface BetaSupport {
+  beta: boolean;
+  supportEmail: string | null;
+  feedbackUrl: string | null;
+}
+export function betaSupport(): BetaSupport {
+  const email = process.env.FLOWLINE_SUPPORT_EMAIL?.trim() || null;
+  const url = process.env.FLOWLINE_FEEDBACK_URL?.trim() || null;
+  return {
+    beta: betaMode() === "invite_only",
+    supportEmail: email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null,
+    feedbackUrl: url && /^https:\/\//.test(url) ? url : null,
+  };
+}
+
 export const BETA_REFUSAL = "Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.";
 
 const hash = (code: string) => createHash("sha256").update(code.trim().toUpperCase()).digest("hex");

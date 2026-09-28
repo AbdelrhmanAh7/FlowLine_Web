@@ -72,8 +72,13 @@ export const ar = {
       integrations: "التكاملات",
       settings: "الإعدادات",
     },
+    beta: "تجريبي",
     userMenu: {
       signOut: "تسجيل الخروج",
+      reportIssue: "الإبلاغ عن مشكلة",
+      contactSupport: "التواصل مع الدعم",
+      deleteAccount: "حذف الحساب",
+      supportNotConfigured: "لم تُضبط قناة الدعم في هذه النسخة بعد",
     },
     banners: {
       offlineTitle: "وضع عدم الاتصال",
