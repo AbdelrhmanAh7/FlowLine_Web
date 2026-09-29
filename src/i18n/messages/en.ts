@@ -1,3 +1,4 @@
+import { aiProviderEnglish } from "../ai-provider-text";
 import type { Messages } from "../types";
 
 /** English catalogue — secondary language. Must have exactly the Arabic catalogue's keys (enforced by `Messages`). */
@@ -2264,6 +2265,9 @@ export const en: Messages = {
       "vercel-gateway": "The free monthly credit covers some models and needs a payment method; \"stealth\" models may be trained on by their providers.",
     },
   },
+
+  /** Generated from the AI provider registry: English is exactly the registry text (src/i18n/ai-provider-text.ts). */
+  aiProviderText: aiProviderEnglish() as Messages["aiProviderText"],
 
   agents: {
     title: "Agents",
