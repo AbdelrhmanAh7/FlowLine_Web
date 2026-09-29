@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
@@ -142,6 +142,7 @@ function General() {
 function Billing() {
   const t = useT();
   const { workspace, role } = useWorkspace();
+  const qc = useQueryClient();
   const toast = useToast();
   const router = useRouter();
   const isOwner = role === "owner";
@@ -191,6 +192,9 @@ function Billing() {
       toast(t("settings.limits.saved"), "success");
       setForm(null);
       void ws.refetch();
+      // CXQ-05: prices feed the model picker and the AI overview — refresh them too (no reload needed).
+      void qc.invalidateQueries({ queryKey: ["ai-models", workspace.id] });
+      void qc.invalidateQueries({ queryKey: ["ai", workspace.id] });
       router.refresh();
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.saveError")), "danger"),
@@ -297,7 +301,7 @@ function Billing() {
                 <div className="mt-2 flex flex-col gap-2">
                   {f.prices.map((p, i) => (
                     <div key={i} className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] gap-2">
-                      <Input aria-label={t("settings.limits.priceKey")} dir="ltr" className="data h-8" value={p.key} placeholder="ai:ollama/qwen2.5:3b" onChange={(e) => setPrice(i, { key: e.target.value })} />
+                      <Input aria-label={t("settings.limits.priceKey")} dir="ltr" className="data h-8" value={p.key} placeholder="ai:openai/gpt-4o-mini" onChange={(e) => setPrice(i, { key: e.target.value })} />
                       <Input aria-label={t("settings.limits.inputPerMTok")} className="data h-8" value={p.input} placeholder={t("settings.limits.inputPlaceholder")} onChange={(e) => setPrice(i, { input: e.target.value })} />
                       <Input aria-label={t("settings.limits.outputPerMTok")} className="data h-8" value={p.output} placeholder={t("settings.limits.outputPlaceholder")} onChange={(e) => setPrice(i, { output: e.target.value })} />
                       <Input aria-label={t("settings.limits.perCall")} className="data h-8" value={p.call} placeholder={t("settings.limits.perCallPlaceholder")} onChange={(e) => setPrice(i, { call: e.target.value })} />

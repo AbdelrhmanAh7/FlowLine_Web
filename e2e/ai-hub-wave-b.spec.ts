@@ -80,3 +80,32 @@ test("routing policy: owner saves FALLBACK with one route; an agent picks its ow
   await expect(page.getByTestId("agent-ai-route")).toContainText("This version runs on");
   await expect(page.getByTestId("agent-ai-route")).toContainText("fake-claude");
 });
+
+test("CXQ-05: saving workspace prices refreshes the model picker without a reload", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id);
+  const key = `ai:openai/${FAKE_AI_MODEL}`;
+  // Initial prices (setup through the API; the behaviour under test is the UI save below).
+  const set = await page.request.patch(`/api/workspaces/${workspace.id}`, { data: { prices: { [key]: { inputPerMTok: 2, outputPerMTok: 8 } } } });
+  expect(set.ok(), await set.text()).toBeTruthy();
+
+  await page.goto(`/w/${workspace.slug}/settings?tab=ai`);
+  const card = page.getByTestId("ai-default-route");
+  await expect(card).toContainText("2 in / 8 out per 1M tokens");
+
+  // Same SPA session: change the input price in Usage & limits and save.
+  await page.getByRole("button", { name: "Usage & limits" }).or(page.getByRole("link", { name: "Usage & limits" })).first().click();
+  const keys = page.getByLabel("Price key");
+  await expect(keys.first()).toBeVisible();
+  const n = await keys.count();
+  let row = -1;
+  for (let i = 0; i < n; i++) if ((await keys.nth(i).inputValue()) === key) row = i;
+  expect(row, "the price row for the fake model").toBeGreaterThanOrEqual(0);
+  await page.getByLabel("Input per million tokens").nth(row).fill("4");
+  await page.getByRole("button", { name: "Save limits" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /saved/i }).first()).toBeVisible();
+
+  // Back to AI Providers without reloading: the picker shows the saved price.
+  await page.getByRole("button", { name: "AI Providers" }).or(page.getByRole("link", { name: "AI Providers" })).first().click();
+  await expect(page.getByTestId("ai-default-route")).toContainText("4 in / 8 out per 1M tokens");
+});
