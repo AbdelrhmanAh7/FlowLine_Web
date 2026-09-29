@@ -9,6 +9,8 @@ import { decryptSecretV2, encryptSecretV2, envelopeKeyId, type SecretContext } f
  * Writes: `create` allocates the row id first (AAD), `update`/`updateMany` look the rows up to bind the context.
  * Reads: values that are envelopes are decrypted; anything else (legacy plaintext rows written before this change —
  * rewrapped by scripts/admin/rewrap.mts) is returned as-is. An envelope that fails authentication reads as null.
+ * KEK rotation: envelopes under an old key are re-wrapped by scripts/admin/rewrap.mts (src/server/rewrap.ts), with a
+ * compare-and-swap on the row's current values so a concurrent token refresh is never overwritten.
  */
 const FIELDS = { accessToken: "access_token", refreshToken: "refresh_token", idToken: "id_token" } as const;
 type TokenField = keyof typeof FIELDS;
@@ -29,7 +31,12 @@ function ctxFor(row: { id: string; userId: string; providerId: string }, field: 
   return { table: "account", rowId: row.id, workspaceId: row.userId, scope: "user", provider: row.providerId, purpose: FIELDS[field] };
 }
 
-function isEnvelope(v: unknown): v is string {
+/** The encrypted token fields of an account row and their AAD context (used by the KEK rewrap, CXH-06). */
+export const ACCOUNT_TOKEN_FIELDS = Object.keys(FIELDS) as TokenField[];
+export type AccountTokenField = TokenField;
+export const accountTokenContext = ctxFor;
+
+export function isEnvelope(v: unknown): v is string {
   return typeof v === "string" && v.startsWith("v2.a256gcm-kw.");
 }
 

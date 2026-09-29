@@ -21,7 +21,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEq
  *   - `v2.<iv>.<tag>.<ct>` — AI hub Wave A: AAD-bound but not enveloped (workspace ring only). `rewrapSecret` upgrades it.
  *   - `v1.<iv>.<tag>.<ct>` — no AAD. ONLY through `openSecret(..., legacy: true)` / `decryptLegacyV1`, which callers use
  *     solely for rows explicitly marked legacy, so planting a v1 blob in a migrated row cannot bypass the AAD.
- * Parsing is strict: exact segment counts, canonical base64, nonce/tag/key lengths, a size cap, and known key ids.
+ * Parsing is strict: exact segment counts, canonical base64, nonce/tag/key lengths, a per-purpose size cap, and known key ids.
  */
 interface Key {
   id: string;
@@ -95,7 +95,7 @@ export function encryptSecret(value: unknown): { ciphertext: string; keyId: stri
 
 /** Decrypts a v1 blob. Callers MUST only use this for rows explicitly marked legacy (never for migrated domains). */
 export function decryptLegacyV1<T>(ciphertext: string, keyId: string): T {
-  const parts = checkedParts(ciphertext, "v1", 4);
+  const parts = checkedParts(ciphertext, "v1", 4, LEGACY_V1_MAX_CIPHERTEXT);
   const [, ivB, tagB, dataB] = parts as [string, string, string, string];
   const iv = b64(ivB, 12);
   const tag = b64(tagB, 16);
@@ -129,7 +129,26 @@ export interface SecretContext {
   revision?: number;
 }
 
-const V2_MAX_CIPHERTEXT = 64 * 1024;
+/**
+ * Size caps (CXH-05). They are per PURPOSE, because a run's step data is not a credential:
+ *   - credentials and every other purpose: 64 KiB of encoded ciphertext (tokens, keys and client secrets are small);
+ *   - `step_data`: a run input may be up to 256 KB of JSON text (VALUE_MAX_BYTES, measured in UTF-16 code units),
+ *     plus the step's output. Each code unit is ≤ 3 bytes of UTF-8, and base64 adds 4/3 — so the maximum input and an
+ *     equally large output is ≈ 2 MiB encoded. New step data may be up to 8 MiB encoded; reading (and rewrapping) accepts
+ *     up to 40 MiB so that every record a legacy upgrade can produce stays readable.
+ *   - legacy v1 (no cap was applied when it was written; readable ONLY for rows explicitly marked legacy): 32 MiB.
+ * Parsing stays strict: the cap is checked before any split/decode, then exact segments, canonical base64 and lengths.
+ */
+const DEFAULT_MAX_CIPHERTEXT = 64 * 1024;
+const PURPOSE_LIMITS: Record<string, { write: number; read: number }> = {
+  step_data: { write: 8 * 1024 * 1024, read: 40 * 1024 * 1024 },
+};
+const LEGACY_V1_MAX_CIPHERTEXT = 32 * 1024 * 1024;
+
+function limitsFor(ctx: Pick<SecretContext, "purpose">) {
+  return PURPOSE_LIMITS[ctx.purpose] ?? { write: DEFAULT_MAX_CIPHERTEXT, read: DEFAULT_MAX_CIPHERTEXT };
+}
+
 const ENVELOPE_ALG = "a256gcm-kw";
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const KEY_ID = /^[0-9a-f]{12}$/;
@@ -166,8 +185,8 @@ function b64(s: string, len?: number): Buffer {
   return buf;
 }
 
-function checkedParts(ciphertext: unknown, version: string, count: number): string[] {
-  if (typeof ciphertext !== "string" || ciphertext.length === 0 || ciphertext.length > V2_MAX_CIPHERTEXT) throw new SecretFormatError();
+function checkedParts(ciphertext: unknown, version: string, count: number, max: number): string[] {
+  if (typeof ciphertext !== "string" || ciphertext.length === 0 || ciphertext.length > max) throw new SecretFormatError();
   const parts = ciphertext.split(".");
   if (parts.length !== count || parts[0] !== version) throw new SecretFormatError();
   return parts;
@@ -199,6 +218,10 @@ function wrapDek(ring: KeyRing, kek: Key, dek: Buffer, aad: string) {
 
 /** Encrypts `value` in the v2 envelope, bound to `ctx`. The row id must exist BEFORE encryption (allocate it app-side). */
 export function encryptSecretV2(value: unknown, ctx: SecretContext): { ciphertext: string; keyId: string } {
+  return encryptWithin(value, ctx, limitsFor(ctx).write);
+}
+
+function encryptWithin(value: unknown, ctx: SecretContext, max: number): { ciphertext: string; keyId: string } {
   const ring = ringOf(ctx);
   const aad = aadV2(ctx);
   const { current } = keys(ring);
@@ -206,7 +229,7 @@ export function encryptSecretV2(value: unknown, ctx: SecretContext): { ciphertex
   try {
     const p = gcmEncrypt(dek, Buffer.from(JSON.stringify(value), "utf8"), aad);
     const ciphertext = ["v2", ENVELOPE_ALG, ...wrapDek(ring, current, dek, aad), p.iv.toString("base64"), p.tag.toString("base64"), p.ct.toString("base64")].join(".");
-    if (ciphertext.length > V2_MAX_CIPHERTEXT) throw new SecretFormatError("Secret is too large");
+    if (ciphertext.length > max) throw new SecretFormatError("Secret is too large");
     return { ciphertext, keyId: current.id };
   } finally {
     dek.fill(0);
@@ -217,8 +240,8 @@ type Parsed =
   | { kind: "envelope"; kekId: string; wrapIv: Buffer; wrapTag: Buffer; wrapped: Buffer; iv: Buffer; tag: Buffer; ct: Buffer }
   | { kind: "waveA"; iv: Buffer; tag: Buffer; ct: Buffer };
 
-function parseV2(ciphertext: unknown): Parsed {
-  if (typeof ciphertext !== "string" || ciphertext.length > V2_MAX_CIPHERTEXT) throw new SecretFormatError();
+function parseV2(ciphertext: unknown, max: number): Parsed {
+  if (typeof ciphertext !== "string" || ciphertext.length > max) throw new SecretFormatError();
   const parts = ciphertext.split(".");
   if (parts[0] !== "v2") throw new SecretFormatError();
   if (parts.length === 4) {
@@ -244,7 +267,7 @@ function openDek(ring: KeyRing, p: Extract<Parsed, { kind: "envelope" }>, keyId:
  */
 export function decryptSecretV2<T>(ciphertext: string, keyId: string, ctx: SecretContext): T {
   const ring = ringOf(ctx);
-  const p = parseV2(ciphertext);
+  const p = parseV2(ciphertext, limitsFor(ctx).read);
   if (p.kind === "waveA") {
     if (ring !== "workspace" || ctx.revision !== undefined || (ctx.scope ?? "workspace") !== "workspace") throw new SecretFormatError();
     const key = keys("workspace").all.get(keyId);
@@ -261,8 +284,8 @@ export function decryptSecretV2<T>(ciphertext: string, keyId: string, ctx: Secre
 }
 
 /** The KEK id embedded in a v2 envelope (for columns that store only the ciphertext). Strictly parsed. */
-export function envelopeKeyId(ciphertext: string): string {
-  const p = parseV2(ciphertext);
+export function envelopeKeyId(ciphertext: string, ctx: Pick<SecretContext, "purpose"> = { purpose: "" }): string {
+  const p = parseV2(ciphertext, limitsFor(ctx).read);
   if (p.kind !== "envelope") throw new SecretFormatError();
   return p.kekId;
 }
@@ -270,7 +293,7 @@ export function envelopeKeyId(ciphertext: string): string {
 /** True when the blob is a v2 envelope under the ring's CURRENT key (nothing to rewrap). */
 export function isCurrentEnvelope(ciphertext: string, ctx: SecretContext): boolean {
   try {
-    const p = parseV2(ciphertext);
+    const p = parseV2(ciphertext, limitsFor(ctx).read);
     return p.kind === "envelope" && p.kekId === keys(ringOf(ctx)).current.id;
   } catch {
     return false;
@@ -283,13 +306,15 @@ export function isCurrentEnvelope(ciphertext: string, ctx: SecretContext): boole
  * Rewrapping does NOT invalidate a copy an attacker already stole with the old KEK — rotate the provider secret too.
  */
 export function rewrapSecret(ciphertext: string, keyId: string, ctx: SecretContext, opts: { legacyV1?: boolean } = {}): { ciphertext: string; keyId: string } {
+  // A rewrap may produce anything the purpose can READ (an upgraded legacy record can exceed the fresh-write cap).
+  const { read } = limitsFor(ctx);
   if (ciphertext.startsWith("v1.")) {
     if (!opts.legacyV1) throw new SecretFormatError("Legacy ciphertext refused for a migrated row");
-    return encryptSecretV2(decryptLegacyV1(ciphertext, keyId), ctx);
+    return encryptWithin(decryptLegacyV1(ciphertext, keyId), ctx, read);
   }
   const ring = ringOf(ctx);
-  const p = parseV2(ciphertext);
-  if (p.kind === "waveA") return encryptSecretV2(decryptSecretV2(ciphertext, keyId, ctx), ctx);
+  const p = parseV2(ciphertext, read);
+  if (p.kind === "waveA") return encryptWithin(decryptSecretV2(ciphertext, keyId, ctx), ctx, read);
   const aad = aadV2(ctx);
   const dek = openDek(ring, p, keyId, aad);
   try {

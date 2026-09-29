@@ -104,8 +104,10 @@ export type Session = typeof auth.$Infer.Session;
 const instances = new Map<string, AuthInstance>();
 
 /**
- * The instance for one sign-in-app snapshot (`key` identifies the exact revisions). Instances are immutable per key;
- * a rotation produces a new key, so no request ever sees a half-updated configuration. Bounded cache.
+ * The instance for one sign-in-app snapshot (`key` identifies each app by its immutable platform_secret id AND its
+ * revision — a revision number alone restarts at 1 after a clear, CXH-02). Instances are immutable per key; a rotation
+ * or a different app produces a new key, so no request ever sees another app's or a half-updated configuration.
+ * Bounded cache.
  */
 export function authFor(key: string, social: SocialConfig): AuthInstance {
   if (!key) return auth;

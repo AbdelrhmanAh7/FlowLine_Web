@@ -360,6 +360,12 @@ export const connection = pgTable(
     oauthAppId: uuid("oauth_app_id"),
     /** Snapshot of the client id the tokens were issued to. */
     oauthClientId: text("oauth_client_id"),
+    /**
+     * The issuing app's epoch when the tokens were issued (CXH-01). A revoke / switch / delete bumps the app's epoch, so
+     * a connection issued under an older epoch is refused at runtime even if the expiry sweep missed it. Null = issued
+     * before this was recorded (the app's status and client id are still checked).
+     */
+    oauthAppEpoch: integer("oauth_app_epoch"),
   },
   (t) => [
     index("connection_ws_idx").on(t.workspaceId, t.provider),
@@ -1405,6 +1411,11 @@ export const signinAttempt = pgTable("signin_attempt", {
   stateHash: text("state_hash").primaryKey(),
   provider: text("provider").notNull(),
   revision: integer("revision").notNull(),
+  /**
+   * The platform_secret row (the sign-in app's immutable identity) that started this attempt (CXH-02): a cleared and
+   * reconfigured app restarts at revision 1, so the revision alone doesn't identify the credentials. Null = legacy → refused.
+   */
+  secretId: uuid("secret_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });

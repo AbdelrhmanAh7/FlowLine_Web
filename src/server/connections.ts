@@ -13,6 +13,7 @@ import { oauthUrl, redirectUri, revokeAtProvider, tokenRequest, type TokenResult
 import {
   AppUnavailableError,
   appStillValid,
+  familyForProvider,
   markWorkspaceAppVerified,
   oauthAvailable,
   reportWorkspaceAppRejected,
@@ -20,14 +21,19 @@ import {
   resolveAppForNewAuthorization,
   type ResolvedApp,
 } from "./oauth-apps";
-import { markPlatformSecretVerified, reportClientAuthRejected } from "./platform-secrets";
+import { OAUTH_FAMILIES } from "./platform-purposes";
+import { markPlatformSecretVerified, platformCredentialStatus, reportClientAuthRejected } from "./platform-secrets";
 
 export { redirectUri } from "./oauth-client";
 
 export class ConnectionError extends Error {
   constructor(
-    public code: "CONNECTION_MISSING" | "CONNECTION_EXPIRED" | "CONNECTION_REVOKED" | "CONNECTION_SCOPE" | "CONNECTION_WORKSPACE" | "CONNECTION_PROVIDER" | "CONNECTION_PRIVATE",
+    public code: "CONNECTION_MISSING" | "CONNECTION_EXPIRED" | "CONNECTION_REVOKED" | "CONNECTION_SCOPE" | "CONNECTION_WORKSPACE" | "CONNECTION_PROVIDER" | "CONNECTION_PRIVATE" | "CONNECTION_UNAVAILABLE",
     message: string,
+    /** CONNECTION_UNAVAILABLE: a temporary provider condition; the same credentials may work later (CXH-14). */
+    public retryable = false,
+    /** The provider's Retry-After, when it sent one (bounded). */
+    public retryAfterMs?: number,
   ) {
     super(message);
   }
@@ -38,6 +44,7 @@ interface StoredSecret extends Credentials {
 }
 
 type ConnRow = typeof schema.connection.$inferSelect;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /**
  * Bounded status reasons (docs/security/CREDENTIALS_DESIGN.md MUST 21): `status_reason` only ever holds one of these
@@ -177,9 +184,9 @@ export async function reconnectConnection(db: Db, workspaceId: string, connectio
   return publicConnection((await db.select().from(schema.connection).where(eq(schema.connection.id, conn.id)))[0]!);
 }
 
-type AppBinding = { source: "platform" | "workspace"; appId: string | null; clientId: string } | null;
+type AppBinding = { source: "platform" | "workspace"; appId: string | null; clientId: string; epoch: number | null } | null;
 
-async function storeCredentials(db: Db, conn: Pick<ConnRow, "id" | "workspaceId" | "provider">, creds: StoredSecret, expiresAt: Date | null, scopes?: string[], app?: AppBinding) {
+async function storeCredentials(db: Db | Tx, conn: Pick<ConnRow, "id" | "workspaceId" | "provider">, creds: StoredSecret, expiresAt: Date | null, scopes?: string[], app?: AppBinding) {
   const enc = encryptSecretV2(creds, connectionContext(conn));
   await db
     .update(schema.connection)
@@ -193,7 +200,7 @@ async function storeCredentials(db: Db, conn: Pick<ConnRow, "id" | "workspaceId"
       credVersion: sql`${schema.connection.credVersion} + 1`,
       updatedAt: new Date(),
       ...(scopes ? { scopes } : {}),
-      ...(app !== undefined ? { oauthAppSource: app?.source ?? null, oauthAppId: app?.appId ?? null, oauthClientId: app?.clientId ?? null } : {}),
+      ...(app !== undefined ? { oauthAppSource: app?.source ?? null, oauthAppId: app?.appId ?? null, oauthClientId: app?.clientId ?? null, oauthAppEpoch: app?.epoch ?? null } : {}),
     })
     .where(eq(schema.connection.id, conn.id));
 }
@@ -211,7 +218,7 @@ export async function pauseFlowsUsingConnection(db: Db, connectionId: string, re
     .where(and(usesConnection(connectionId), isNull(schema.flow.deletedAt), or(isNull(schema.flow.pausedReason), like(schema.flow.pausedReason, `connection:${connectionId}:%`))));
 }
 
-export async function resumeFlowsForConnection(db: Db, connectionId: string) {
+export async function resumeFlowsForConnection(db: Db | Tx, connectionId: string) {
   await db.update(schema.flow).set({ pausedReason: null, pausedAt: null }).where(like(schema.flow.pausedReason, `connection:${connectionId}:%`));
 }
 
@@ -256,20 +263,40 @@ export async function getRuntimeCredentials(db: Db, opts: { connectionId: string
   return { creds, secrets, connection: current };
 }
 
-/** Metadata check (no decrypt of the app secret): a workspace app must still exist with the same client id. */
+/**
+ * Metadata check (no decrypt of the app secret) at EVERY credential access (CXH-01): the issuing app (the workspace's
+ * own app or Flowline's platform app) must still exist, be un-revoked, have the same client id and, when recorded, the
+ * epoch the tokens were issued under. The expiry sweep after a revoke/switch/delete is not relied on alone: a
+ * connection it missed (a racing callback, a crash between commit and sweep) is refused and expired here.
+ * (A request already sent to the provider can't be recalled; the boundary is the next credential access.)
+ */
 async function assertIssuingAppCurrent(db: Db, conn: ConnRow) {
-  if (conn.oauthAppSource !== "workspace") return; // platform revoke/switch expires its connections at commit time
-  const [app] = await db.select({ clientId: schema.workspaceOauthApp.clientId, deletedAt: schema.workspaceOauthApp.deletedAt }).from(schema.workspaceOauthApp).where(eq(schema.workspaceOauthApp.id, conn.oauthAppId!));
-  if (!app || app.deletedAt || app.clientId !== conn.oauthClientId) {
-    await markConnectionUnhealthy(db, conn.id, "expired", STATUS_REASONS.oauth_app_changed);
-    throw new ConnectionError("CONNECTION_EXPIRED", `${conn.label} needs to be reconnected (${STATUS_REASONS.oauth_app_changed})`);
+  let reason: "oauth_app_changed" | "oauth_app_revoked" | "oauth_app_deleted" | null = null;
+  if (conn.oauthAppSource === "workspace") {
+    const [app] = await db
+      .select({ clientId: schema.workspaceOauthApp.clientId, deletedAt: schema.workspaceOauthApp.deletedAt, epoch: schema.workspaceOauthApp.epoch })
+      .from(schema.workspaceOauthApp)
+      .where(eq(schema.workspaceOauthApp.id, conn.oauthAppId!));
+    if (!app || app.deletedAt) reason = "oauth_app_changed";
+    else if (app.clientId !== conn.oauthClientId || (conn.oauthAppEpoch !== null && app.epoch !== conn.oauthAppEpoch)) reason = "oauth_app_changed";
+  } else if (conn.oauthAppSource === "platform") {
+    const family = familyForProvider(conn.provider);
+    const status = family ? await platformCredentialStatus(OAUTH_FAMILIES[family].purpose, db) : null;
+    if (!status || !status.configured) reason = "oauth_app_revoked"; // revoked or cleared
+    else if (status.publicId !== conn.oauthClientId) reason = "oauth_app_changed";
+    else if (conn.oauthAppEpoch !== null && status.epoch !== conn.oauthAppEpoch) reason = "oauth_app_revoked"; // configured again after a revoke
+  }
+  if (reason) {
+    await markConnectionUnhealthy(db, conn.id, "expired", STATUS_REASONS[reason]);
+    throw new ConnectionError("CONNECTION_EXPIRED", `${conn.label} needs to be reconnected (${STATUS_REASONS[reason]})`);
   }
 }
 
 class RefreshFailure extends Error {
   constructor(
-    public kind: "client_auth" | "unavailable" | "app_unavailable",
+    public kind: "client_auth" | "transient" | "unavailable" | "app_unavailable",
     message: string,
+    public retryAfterMs?: number,
   ) {
     super(message);
   }
@@ -322,6 +349,8 @@ async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: St
         if (e instanceof AppUnavailableError) throw new RefreshFailure("app_unavailable", `${provider.name}: ${e.message} — an administrator must configure it. The connection was not changed.`);
         throw e;
       }
+      // Tokens issued under an older epoch of the app (revoked, then configured again) are never refreshed.
+      if (conn.oauthAppEpoch !== null && app.epoch !== conn.oauthAppEpoch) return deny(app.source === "workspace" ? "oauth_app_changed" : "oauth_app_revoked");
       const { result, revision } = await tokenRequestWithGrace(provider, app, { grant_type: "refresh_token", refresh_token: secret.refreshToken });
       if (!result.ok) {
         // The APP's credentials were refused: the user's refresh token is intact. Fail this step, alert admins, and
@@ -330,7 +359,13 @@ async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: St
           reported = { app, workspaceId: conn.workspaceId, revision };
           throw new RefreshFailure("client_auth", `${provider.name} rejected the OAuth app's client credentials — an administrator must fix them. The connection was not changed.`);
         }
-        if (result.kind === "unavailable") throw new RefreshFailure("unavailable", `Couldn't refresh ${conn.label}: ${provider.name} is unavailable (${result.code}). The connection was not changed.`);
+        // A temporary provider condition (rate limit, 5xx, network): keep the credentials, fail retryably (CXH-14).
+        if (result.kind === "transient") {
+          const wait = result.retryAfterMs !== undefined ? ` Retry after ${Math.ceil(result.retryAfterMs / 1000)}s.` : "";
+          throw new RefreshFailure("transient", `Couldn't refresh ${conn.label}: ${provider.name} is temporarily unavailable (${result.code}). The connection was not changed.${wait}`, result.retryAfterMs);
+        }
+        // Only a RECOGNIZED permanent grant failure costs the user their connection; anything else keeps it.
+        if (result.kind === "unavailable") throw new RefreshFailure("unavailable", `Couldn't refresh ${conn.label}: ${provider.name} returned an unexpected error (${result.code}). The connection was not changed.`);
         return deny("refresh_refused");
       }
       // Fence: the issuing app must still be the same, un-revoked app (SHARE lock serializes with a revoke/switch).
@@ -350,6 +385,7 @@ async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: St
     .catch(async (e: unknown) => {
       if (e instanceof RefreshFailure) {
         if (e.kind === "client_auth" && reported) await reportAppRejected(reported.app, reported.workspaceId, reported.revision).catch(() => {});
+        if (e.kind === "transient") throw new ConnectionError("CONNECTION_UNAVAILABLE", e.message, true, e.retryAfterMs);
         throw new ConnectionError("CONNECTION_PROVIDER", e.message);
       }
       throw e;
@@ -429,7 +465,7 @@ export async function startOAuth(db: Db, opts: { userId: string; sessionToken: s
 }
 
 /** Membership + capability, re-checked at callback time (before the exchange AND before storing). */
-async function assertStillAllowed(db: Db, workspaceId: string, userId: string, connectionId: string | null) {
+async function assertStillAllowed(db: Db | Tx, workspaceId: string, userId: string, connectionId: string | null) {
   const [m] = await db.select({ role: schema.workspaceMember.role }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, userId)));
   if (!m || !can(m.role, "integration.manage")) throw new HttpError(403, "OAUTH_ACCESS_REVOKED", "You no longer have access to connect apps in this workspace");
   if (connectionId) {
@@ -478,22 +514,31 @@ export async function completeOAuth(db: Db, opts: { state: string; code: string;
   // Re-check right before storing: membership, capability and the app may have changed during the exchange.
   await assertStillAllowed(db, st.workspaceId, opts.userId, st.connectionId);
   await appForState(st);
-  const binding: AppBinding = { source: app.source, appId: app.appId, clientId: app.clientId };
-  let out: { connectionId: string; workspaceId: string; redirectAfter: string | null; reconnected: boolean };
-  if (st.connectionId) {
-    const [conn] = await db.select().from(schema.connection).where(and(eq(schema.connection.id, st.connectionId), eq(schema.connection.workspaceId, st.workspaceId)));
-    if (!conn) throw notFound("Connection not found");
-    if (conn.provider !== provider.id) throw new HttpError(409, "DIFFERENT_PROVIDER", `This connection is for ${conn.provider}, not ${provider.name}. Nothing was changed.`);
-    if (conn.accountId !== id.accountId) {
-      throw new HttpError(409, "DIFFERENT_ACCOUNT", `You signed in as ${id.label}, but this connection is ${conn.accountLabel}. Nothing was changed.`);
+  const binding: AppBinding = { source: app.source, appId: app.appId, clientId: app.clientId, epoch: app.epoch };
+  const appChanged = () => new HttpError(409, "OAUTH_APP_CHANGED", "The OAuth app changed while you were signing in — start again");
+  // Store under a fence (CXH-01): the issuing app row is SHARE-locked and re-checked (not revoked/deleted, same client id,
+  // same epoch) in the SAME transaction that writes the connection. A revoke/switch/delete (FOR UPDATE on that row)
+  // therefore either commits first — and this callback stores nothing — or waits for this commit, and its expiry sweep
+  // then finds the new connection. Lock order matches refreshLocked (connection row, then app row).
+  const out = await db.transaction(async (tx) => {
+    if (st.connectionId) {
+      const [conn] = await tx.select().from(schema.connection).where(and(eq(schema.connection.id, st.connectionId), eq(schema.connection.workspaceId, st.workspaceId))).for("update");
+      if (!conn) throw notFound("Connection not found");
+      if (conn.provider !== provider.id) throw new HttpError(409, "DIFFERENT_PROVIDER", `This connection is for ${conn.provider}, not ${provider.name}. Nothing was changed.`);
+      if (conn.accountId !== id.accountId) {
+        throw new HttpError(409, "DIFFERENT_ACCOUNT", `You signed in as ${id.label}, but this connection is ${conn.accountLabel}. Nothing was changed.`);
+      }
+      if (!(await appStillValid(tx, app))) throw appChanged();
+      await assertStillAllowed(tx, st.workspaceId, opts.userId, st.connectionId);
+      await storeCredentials(tx, conn, creds, expiresAt, scopes, binding);
+      await resumeFlowsForConnection(tx, conn.id);
+      return { connectionId: conn.id, workspaceId: st.workspaceId, redirectAfter: st.redirectAfter, reconnected: true };
     }
-    await storeCredentials(db, conn, creds, expiresAt, scopes, binding);
-    await resumeFlowsForConnection(db, conn.id);
-    out = { connectionId: conn.id, workspaceId: st.workspaceId, redirectAfter: st.redirectAfter, reconnected: true };
-  } else {
+    if (!(await appStillValid(tx, app))) throw appChanged();
+    await assertStillAllowed(tx, st.workspaceId, opts.userId, null);
     const rowId = randomUUID();
     const enc = encryptSecretV2(creds, connectionContext({ id: rowId, workspaceId: st.workspaceId, provider: provider.id }));
-    const [row] = await db
+    const [row] = await tx
       .insert(schema.connection)
       .values({
         id: rowId,
@@ -512,10 +557,11 @@ export async function completeOAuth(db: Db, opts: { state: string; code: string;
         oauthAppSource: binding.source,
         oauthAppId: binding.appId,
         oauthClientId: binding.clientId,
+        oauthAppEpoch: binding.epoch,
       })
       .returning();
-    out = { connectionId: row!.id, workspaceId: st.workspaceId, redirectAfter: st.redirectAfter, reconnected: false };
-  }
+    return { connectionId: row!.id, workspaceId: st.workspaceId, redirectAfter: st.redirectAfter, reconnected: false };
+  });
   // A real Connect is the ONLY thing that verifies an app revision.
   if (app.source === "platform") await markPlatformSecretVerified(app.purpose!, revision, "connect");
   else await markWorkspaceAppVerified(app.appId!, st.workspaceId, revision);

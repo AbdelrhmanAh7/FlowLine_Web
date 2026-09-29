@@ -10,8 +10,12 @@ import { CLIENT_AUTH_ERRORS } from "./platform-probes";
  * - Endpoints are the provider definitions' constants (reviewed code); only the client id/secret vary. Token calls
  *   use safeFetch with the exact expected host, NO redirects, a small response cap and a timeout.
  * - Token responses are schema-validated; anything else is a bounded error, never the provider's text.
- * - Errors are classified: `client_auth` (the APP's credentials were refused — never the user's fault, never expires a
- *   connection), `grant` (the user's refresh token / code was refused), `unavailable` (network / 5xx / malformed).
+ * - Errors are classified (CXH-14) — only a RECOGNIZED permanent grant failure may cost the user their connection:
+ *   - `client_auth`: the APP's credentials were refused — never the user's fault, never expires a connection;
+ *   - `grant`: the user's refresh token / code was permanently refused (invalid_grant and its provider aliases);
+ *   - `transient`: rate limits (429), 408/425, 5xx, network failures, timeouts and the RFC 6749 transient codes —
+ *     retry later (honouring Retry-After); the credentials are kept;
+ *   - `unavailable`: anything else (an unrecognized error, a malformed response) — fails the operation, keeps credentials.
  */
 
 /** Test env only: every provider's OAuth endpoints are the fake provider's uniform /oauth/<kind>. */
@@ -33,15 +37,38 @@ const tokenSchema = z.object({
 });
 export type TokenSet = z.infer<typeof tokenSchema>;
 
+/** The user's grant was permanently refused (the only failures that expire a connection). */
+const PERMANENT_GRANT_ERRORS = new Set(["invalid_grant", "access_denied", "expired_token", "bad_verification_code", "invalid_code", "code_already_used", "invalid_refresh_token", "bad_refresh_token", "token_revoked", "token_expired"]);
+/** Temporary conditions (RFC 6749 §4.1.2.1 / RFC 8628 §3.5 and provider rate-limit codes): retry later. */
+const TRANSIENT_ERRORS = new Set(["temporarily_unavailable", "server_error", "slow_down", "rate_limited", "ratelimited"]);
+/** Other recognized codes we may surface (as codes only): request/configuration problems, not the user's grant. */
+const OTHER_KNOWN_ERRORS = new Set(["invalid_request", "unsupported_grant_type", "invalid_scope"]);
+/** HTTP statuses that mean "try again later". */
+const TRANSIENT_STATUS = new Set([408, 425, 429]);
+const MAX_RETRY_AFTER_MS = 60 * 60_000;
+
+export type TokenFailureKind = "client_auth" | "grant" | "transient" | "unavailable";
+export type TokenResult = { ok: true; tokens: TokenSet } | { ok: false; kind: TokenFailureKind; code: string; retryAfterMs?: number };
+
 /** Provider error codes we may surface (as codes only). Anything else becomes "provider_error". */
-const KNOWN_GRANT_ERRORS = new Set(["invalid_grant", "invalid_request", "unsupported_grant_type", "invalid_scope", "access_denied", "expired_token", "bad_verification_code", "invalid_code", "code_already_used", "invalid_refresh_token", "token_revoked", "token_expired"]);
-
-export type TokenResult = { ok: true; tokens: TokenSet } | { ok: false; kind: "client_auth" | "grant" | "unavailable"; code: string };
-
 export function boundedErrorCode(raw: unknown): string {
   const s = typeof raw === "string" ? raw : "";
-  if (CLIENT_AUTH_ERRORS.has(s) || KNOWN_GRANT_ERRORS.has(s)) return s;
+  if (CLIENT_AUTH_ERRORS.has(s) || PERMANENT_GRANT_ERRORS.has(s) || TRANSIENT_ERRORS.has(s) || OTHER_KNOWN_ERRORS.has(s)) return s;
   return "provider_error";
+}
+
+/** Retry-After as delay-seconds or an HTTP-date (RFC 9110 §10.2.3); bounded; undefined when absent or unusable. */
+export function parseRetryAfter(value: string | null | undefined, now = Date.now()): number | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  let ms: number;
+  if (/^\d{1,9}$/.test(v)) ms = Number(v) * 1000;
+  else {
+    const at = Date.parse(v);
+    if (Number.isNaN(at)) return undefined;
+    ms = Math.max(0, at - now);
+  }
+  return Math.min(ms, MAX_RETRY_AFTER_MS);
 }
 
 function expectedHost(provider: ProviderDef, url: string) {
@@ -66,20 +93,25 @@ export async function tokenRequest(provider: ProviderDef, client: { clientId: st
       maxRedirects: 0,
     });
   } catch {
-    return { ok: false, kind: "unavailable", code: "provider_unreachable" };
+    // Network failure, timeout, refused connection: nothing reached a decision about the grant.
+    return { ok: false, kind: "transient", code: "provider_unreachable" };
   }
+  const retryAfterMs = parseRetryAfter(res.headers.get("retry-after"));
+  const transientStatus = TRANSIENT_STATUS.has(res.status) || res.status >= 500;
   let data: Record<string, unknown> = {};
   try {
     data = res.json();
   } catch {
-    return { ok: false, kind: "unavailable", code: res.status >= 500 ? "provider_unavailable" : "provider_error" };
+    if (transientStatus) return { ok: false, kind: "transient", code: res.status === 429 ? "rate_limited" : "provider_unavailable", retryAfterMs };
+    return { ok: false, kind: "unavailable", code: "provider_error" };
   }
   // Slack wraps OAuth v2 responses: { ok, access_token | error }.
   if (data.ok === false || data.error || res.status >= 400) {
     const code = boundedErrorCode(data.error);
     if (CLIENT_AUTH_ERRORS.has(code) || res.status === 401) return { ok: false, kind: "client_auth", code: CLIENT_AUTH_ERRORS.has(code) ? code : "invalid_client" };
-    if (res.status >= 500) return { ok: false, kind: "unavailable", code: "provider_unavailable" };
-    return { ok: false, kind: "grant", code };
+    if (transientStatus || TRANSIENT_ERRORS.has(code)) return { ok: false, kind: "transient", code: res.status === 429 ? "rate_limited" : TRANSIENT_ERRORS.has(code) ? code : "provider_unavailable", retryAfterMs };
+    if (PERMANENT_GRANT_ERRORS.has(code)) return { ok: false, kind: "grant", code };
+    return { ok: false, kind: "unavailable", code };
   }
   const parsed = tokenSchema.safeParse(data);
   if (!parsed.success) return { ok: false, kind: "unavailable", code: "malformed_token_response" };
