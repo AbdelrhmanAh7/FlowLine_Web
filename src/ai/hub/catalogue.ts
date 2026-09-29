@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AiModelCapabilities, AiModelPricing } from "@/db/schema";
@@ -113,18 +113,45 @@ function caps(def: ProviderDefinition, ...layers: (Partial<AiModelCapabilities> 
 }
 
 /**
+ * TEST-ONLY interleaving points (honoured only with FLOWLINE_ENV=test) for the shared catalogue writes (CXH-12/20):
+ * `beforeSharedWrites` runs once a refresh starts its shared-row step, `afterSharedRow` after each shared row write.
+ */
+export const catalogueTestHooks: { beforeSharedWrites?: () => Promise<void>; afterSharedRow?: (modelId: string, index: number) => Promise<void> } = {};
+const testHooks = () => (process.env.FLOWLINE_ENV === "test" ? catalogueTestHooks : {});
+
+/**
  * Shared catalogue rows are written by every tenant's refresh of a provider. `observedAt` orders those writes: a row
  * is only replaced by an observation at least as new as the one it holds, so a slower (older) refresh finishing late
  * never overwrites newer prices / capabilities (CXH-12).
  */
 const notOlderThan = (observedAt: Date) => sql`(${schema.aiModel.observedAt} is null or ${schema.aiModel.observedAt} <= ${observedAt})`;
 
-/** Upserts the curated entries of one provider into ai_model (idempotent; bumps nothing when unchanged). */
-export async function syncCurated(db: Db, providerId: string, observedAt: Date = new Date()) {
+/** One shared-row upsert. `modelId` decides the order in which rows are written (and so locked), see `writeShared`. */
+interface SharedWrite {
+  modelId: string;
+  run: (db: Db) => Promise<unknown>;
+}
+
+/**
+ * Writes shared rows in ONE deterministic order — by model id (code-unit order), curated before listing for the same
+ * id (stable) — whatever order the provider listed them in. Every writer of a provider's shared rows goes through
+ * here, so two concurrent refreshes (each holding its rows until its transaction ends) acquire the row locks in the
+ * same order and can't form a lock cycle (CXH-20).
+ */
+async function writeShared(db: Db, writes: SharedWrite[]) {
+  await testHooks().beforeSharedWrites?.();
+  const ordered = writes.map((w, i) => ({ w, i })).sort((a, b) => (a.w.modelId < b.w.modelId ? -1 : a.w.modelId > b.w.modelId ? 1 : a.i - b.i));
+  let index = 0;
+  for (const { w } of ordered) {
+    await w.run(db);
+    await testHooks().afterSharedRow?.(w.modelId, index++);
+  }
+}
+
+function curatedWrites(providerId: string, observedAt: Date): SharedWrite[] {
   const def = getProviderDef(providerId);
-  if (!def || !def.protocols.length) return;
-  const rows = CATALOGUE.filter((e) => e.provider === providerId);
-  for (const e of rows) {
+  if (!def || !def.protocols.length) return [];
+  return CATALOGUE.filter((e) => e.provider === providerId).map((e) => {
     const values = {
       provider: providerId,
       modelId: e.modelId,
@@ -145,43 +172,42 @@ export async function syncCurated(db: Db, providerId: string, observedAt: Date =
       observedAt,
       updatedAt: new Date(),
     };
-    await db
-      .insert(schema.aiModel)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [schema.aiModel.provider, schema.aiModel.modelId],
-        set: { ...values },
-        // Never overwrite a newer snapshot with an older catalogue version, nor a newer observation with an older one.
-        setWhere: sql`${schema.aiModel.snapshotVersion} <= ${CATALOGUE_VERSION} and ${notOlderThan(observedAt)}`,
-      });
-  }
+    return {
+      modelId: e.modelId,
+      run: (db: Db) =>
+        db
+          .insert(schema.aiModel)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [schema.aiModel.provider, schema.aiModel.modelId],
+            set: { ...values },
+            // Never overwrite a newer snapshot with an older catalogue version, nor a newer observation with an older one.
+            setWhere: sql`${schema.aiModel.snapshotVersion} <= ${CATALOGUE_VERSION} and ${notOlderThan(observedAt)}`,
+          }),
+    };
+  });
 }
 
 /**
  * Listing metadata → ai_model, ONLY for providers whose listing is their public catalogue (not per-credential), so
  * one tenant's private/fine-tuned model names never reach another tenant. Listing prices (OpenRouter, Vercel)
- * replace curated ones. A listing that supplies NO price object keeps the known (curated / earlier) price; one that
- * supplies an unusable price (blank, malformed, "variable") makes it UNKNOWN — a known-untrustworthy or superseded
- * price is never kept (CXH-09). Rows are only replaced by an observation at least as new (`observedAt`, CXH-12).
+ * replace curated ones. A listing that supplies an unusable price (blank, malformed, "variable") makes it UNKNOWN — a
+ * known-untrustworthy or superseded price is never kept (CXH-09). A listing that supplies NO price object keeps the
+ * known price: the one in the row AT UPDATE TIME (SQL on the row the upsert locked — never an earlier unlocked read,
+ * CXH-12), else the curated one. Rows are only replaced by an observation at least as new (`observedAt`, CXH-12).
  */
-export async function storeListingMetadata(db: Db, def: ProviderDefinition, models: DiscoveredModel[], observedAt: Date = new Date()) {
-  if (!def.listingIsPublic) return;
+function listingWrites(def: ProviderDefinition, models: DiscoveredModel[], observedAt: Date): SharedWrite[] {
+  if (!def.listingIsPublic) return [];
   const curated = new Map(CATALOGUE.filter((e) => e.provider === def.id).map((e) => [e.modelId, e]));
   const now = observedAt;
-  const prior = new Map(
-    (
-      await db
-        .select({ modelId: schema.aiModel.modelId, pricing: schema.aiModel.pricing, priceSource: schema.aiModel.priceSource, priceVerifiedAt: schema.aiModel.priceVerifiedAt })
-        .from(schema.aiModel)
-        .where(eq(schema.aiModel.provider, def.id))
-    ).map((r) => [r.modelId, r]),
-  );
-  for (const m of models.slice(0, 2000)) {
+  const t = schema.aiModel;
+  return models.slice(0, 2000).map((m) => {
     const cur = curated.get(catalogueKey(m.id));
-    const existing = prior.get(m.id);
     const listingPrice = m.pricing && m.pricing.inputPerMTokMicros != null ? { ...m.pricing, verifiedAt: now.toISOString().slice(0, 10) } : null;
     const invalid = !listingPrice && m.pricingInvalid === true;
-    const kept = invalid ? null : existing?.pricing ? existing : cur?.pricing ? { pricing: cur.pricing, priceSource: cur.pricing.sourceUrl ?? null, priceVerifiedAt: new Date(`${CATALOGUE_DATE}T00:00:00Z`) } : null;
+    // Omitted price: a NEW row takes the curated price (if any); an existing row keeps its own (see `set` below).
+    const inherit = !listingPrice && !invalid;
+    const kept = inherit && cur?.pricing ? { pricing: cur.pricing, priceSource: cur.pricing.sourceUrl ?? null, priceVerifiedAt: new Date(`${CATALOGUE_DATE}T00:00:00Z`) } : null;
     const pricing = listingPrice ?? kept?.pricing ?? null;
     const zero = Boolean(listingPrice && listingPrice.inputPerMTokMicros === 0 && listingPrice.outputPerMTokMicros === 0);
     const values = {
@@ -206,9 +232,37 @@ export async function storeListingMetadata(db: Db, def: ProviderDefinition, mode
       observedAt,
       updatedAt: new Date(),
     };
-    await db
-      .insert(schema.aiModel)
-      .values(values)
-      .onConflictDoUpdate({ target: [schema.aiModel.provider, schema.aiModel.modelId], set: values, setWhere: notOlderThan(observedAt) });
-  }
+    // In ON CONFLICT DO UPDATE, `ai_model.*` is the conflicting row as locked by this very statement (its latest
+    // committed version), so a price another refresh committed after anything this one read is what gets kept.
+    const set = inherit
+      ? {
+          ...values,
+          pricing: sql`coalesce(${t.pricing}, excluded.pricing)`,
+          priceSource: sql`case when ${t.pricing} is not null then ${t.priceSource} else excluded.price_source end`,
+          priceVerifiedAt: sql`case when ${t.pricing} is not null then ${t.priceVerifiedAt} else excluded.price_verified_at end`,
+        }
+      : values;
+    return {
+      modelId: m.id,
+      run: (db: Db) => db.insert(t).values(values).onConflictDoUpdate({ target: [t.provider, t.modelId], set, setWhere: notOlderThan(observedAt) }),
+    };
+  });
+}
+
+/** Upserts the curated entries of one provider into ai_model (idempotent; bumps nothing when unchanged). */
+export async function syncCurated(db: Db, providerId: string, observedAt: Date = new Date()) {
+  await writeShared(db, curatedWrites(providerId, observedAt));
+}
+
+/** Listing metadata of a public-listing provider → ai_model (see `listingWrites`). */
+export async function storeListingMetadata(db: Db, def: ProviderDefinition, models: DiscoveredModel[], observedAt: Date = new Date()) {
+  await writeShared(db, listingWrites(def, models, observedAt));
+}
+
+/**
+ * The whole shared-catalogue step of one refresh — curated entries and (public listings only) listing metadata — as
+ * ONE ordered pass, so both kinds of rows are locked in the same global order as by every other refresh (CXH-20).
+ */
+export async function storeSharedCatalogue(db: Db, def: ProviderDefinition, models: DiscoveredModel[], observedAt: Date = new Date()) {
+  await writeShared(db, [...curatedWrites(def.id, observedAt), ...listingWrites(def, models, observedAt)]);
 }

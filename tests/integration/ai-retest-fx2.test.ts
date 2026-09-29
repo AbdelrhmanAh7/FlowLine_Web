@@ -32,7 +32,7 @@ import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { claimNextAgentRun, processAgentRun, wakeAgentsForFinishedRuns } from "../../worker/agent-runner";
 import { claimNextRun, processRun } from "../../worker/runner";
 import { connectAi, fakeKey, MODEL_PROVIDER_ENV_KEYS, useAiDouble } from "./ai-helpers";
-import { addMember, claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers";
+import { addMember, claimAndProcess, claimUntil, closeDb, freshRun, makeUser, unique } from "./helpers";
 
 let ai: Awaited<ReturnType<typeof startFakeAi>>;
 const prevEnv = { ...process.env };
@@ -145,13 +145,8 @@ const doubleGraph = (): FlowGraph => ({
 /** Processes agent runs (no workflow worker: child workflow runs are driven by the test). */
 async function runAgent(agentRunId: string) {
   await wakeAgentsForFinishedRuns(db);
-  for (let i = 0; i < 10; i++) {
-    const w = unique("a");
-    const id = await claimNextAgentRun(db, w);
-    if (!id) break;
-    await processAgentRun(db, id, w);
-    if (id === agentRunId) break;
-  }
+  // Bounded claim loop (INTERMITTENT-01): a null claim while the target is still queued is retried, then diagnosed.
+  await claimUntil({ table: "agent_run", targetId: agentRunId, claim: (w) => claimNextAgentRun(db, w), process: (id, w) => processAgentRun(db, id, w), workerId: () => unique("a") });
   return (await db.select().from(schema.agentRun).where(eq(schema.agentRun.id, agentRunId)))[0]!;
 }
 const limits = (maxCostMicros: number | null, extra: Record<string, unknown> = {}) => ({ maxSteps: 8, maxToolCalls: 6, maxCostMicros, timeoutMs: 20_000, ...extra });

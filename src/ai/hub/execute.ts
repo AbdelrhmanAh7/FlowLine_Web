@@ -138,6 +138,13 @@ async function reservationAbandoned(db: Db, ev: UsageRow, now = Date.now()): Pro
   return ev.createdAt.getTime() < now - UNLEASED_ATTEMPT_MAX_MS;
 }
 
+/**
+ * TEST-ONLY interleaving points (honoured only with FLOWLINE_ENV=test) for abandonment recovery (CXH-17):
+ * `afterLeaseRead` once an open reservation's lease was read as lost, `afterAbandonSettle` once it was settled as abandoned.
+ */
+export const recoveryTestHooks: { afterLeaseRead?: (ev: UsageRow) => Promise<void>; afterAbandonSettle?: (ev: UsageRow) => Promise<void> } = {};
+const recoveryHooks = () => (process.env.FLOWLINE_ENV === "test" ? recoveryTestHooks : {});
+
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /**
@@ -172,37 +179,76 @@ async function resumeAttempts(db: Db, input: ExecuteInput, route: ResolvedRoute)
     last = Math.max(last, n);
     numbered.add(n);
     if (ev.status !== "reserved" || recorded.has(n)) continue;
+    // Unlocked pre-filter only (cheap, and a live execution's rows are never locked by it): the decision is re-made below.
     if (!(await reservationAbandoned(db, ev))) continue; // a live execution still owns it: take the next number instead
-    // Abandoned by an execution whose lease is gone: keep it as a possible charge, and record it.
+    await recoveryHooks().afterLeaseRead?.(ev);
+    await abandonIfLeaseLost(db, input, route, ev, n);
+  }
+  return { last, prior: numbered.size };
+}
+
+/**
+ * Settles an open reservation as ABANDONED — kept at its reservation as a possible charge, with its interrupted
+ * placeholder in the attempt log — in ONE transaction that first locks the owning run / agent run (the lease row) and
+ * then the usage_event row, and re-validates both under those locks (CXH-17):
+ * - a heartbeat / lease change committed before the locks is seen here, one attempted after waits for this commit;
+ * - the late-success path (`settleOrReconcile`) locks the same usage_event row first, so whichever of the two comes
+ *   second sees the other's committed state: success first → the row is no longer reserved and this is a no-op;
+ *   abandonment first → the success finds the settled-as-abandoned row AND its placeholder, and reconciles both.
+ * Lock order is always lease row → usage_event row (the success path takes only the latter), so no cycle forms.
+ */
+async function abandonIfLeaseLost(db: Db, input: ExecuteInput, route: ResolvedRoute, ev: UsageRow, n: number) {
+  await db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
+    if (ev.runId) await t.select({ id: schema.run.id }).from(schema.run).where(eq(schema.run.id, ev.runId)).for("share");
+    else if (ev.agentRunId) await t.select({ id: schema.agentRun.id }).from(schema.agentRun).where(eq(schema.agentRun.id, ev.agentRunId)).for("share");
+    const [cur] = await t.select().from(schema.usageEvent).where(eq(schema.usageEvent.id, ev.id)).for("update");
+    if (!cur || cur.status !== "reserved") return; // settled (e.g. its success) or released meanwhile
+    if (!(await reservationAbandoned(t, cur))) return; // the lease was renewed / is live after all
     const now = new Date();
-    const [settled] = await db
-      .update(schema.usageEvent)
-      .set({ status: "settled", settledAt: now, abandonedAt: now })
-      .where(and(eq(schema.usageEvent.id, ev.id), eq(schema.usageEvent.status, "reserved")))
-      .returning({ id: schema.usageEvent.id });
-    if (!settled) continue;
-    await db.insert(schema.aiAttempt).values({
-      workspaceId: ws,
+    await t.update(schema.usageEvent).set({ status: "settled", settledAt: now, abandonedAt: now }).where(eq(schema.usageEvent.id, cur.id));
+    await recoveryHooks().afterAbandonSettle?.(cur);
+    await t.insert(schema.aiAttempt).values({
+      workspaceId: input.workspace.id,
       requestId: input.requestId,
       runId: input.runId ?? null,
       agentRunId: input.agentRunId ?? null,
       nodeId: input.nodeId ?? null,
       purpose: input.purpose,
-      provider: ev.provider ?? route.provider,
+      provider: cur.provider ?? route.provider,
       connectionId: null,
-      modelId: ev.model ?? route.modelId,
+      modelId: cur.model ?? route.modelId,
       protocol: route.protocol,
       policy: (input.policy ?? input.workspace.aiPolicy)?.mode ?? "MANUAL",
       attempt: n,
       outcome: "interrupted",
       errorCode: "AI_ATTEMPT_ABANDONED",
       costSource: "unknown",
-      usageKey: ev.idempotencyKey,
+      usageKey: cur.idempotencyKey,
       possibleCharge: true,
       routeReason: "recovery: the worker stopped after reserving this attempt",
     });
-  }
-  return { last, prior: numbered.size };
+  });
+}
+
+/**
+ * Settles this attempt's reservation at its real cost — or, if recovery already settled it as abandoned (its lease was
+ * lost), reconciles the ledger and the abandonment placeholder to the real outcome (CXH-17). Runs under the
+ * usage_event row lock, serialized with `abandonIfLeaseLost`.
+ */
+async function settleOrReconcile(db: Db, workspaceId: string, usageKey: string, settlement: Parameters<typeof settleUsage>[2]) {
+  await db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
+    const [cur] = await t.select({ status: schema.usageEvent.status }).from(schema.usageEvent).where(eq(schema.usageEvent.idempotencyKey, usageKey)).for("update");
+    if (!cur) return;
+    if (await settleUsage(t, usageKey, settlement)) return;
+    if (await reconcileAbandonedUsage(t, usageKey, settlement)) {
+      await t
+        .update(schema.aiAttempt)
+        .set({ errorCode: "AI_ATTEMPT_RECONCILED", possibleCharge: false, routeReason: "recovery marked this attempt abandoned; it answered later and its real cost was recorded" })
+        .where(and(eq(schema.aiAttempt.workspaceId, workspaceId), eq(schema.aiAttempt.usageKey, usageKey), eq(schema.aiAttempt.errorCode, "AI_ATTEMPT_ABANDONED")));
+    }
+  });
 }
 
 function waitMs(attempt: number, retryAfterMs?: number) {
@@ -450,16 +496,10 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
         ...(reported ? { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) } : {}),
         unpriced: cost == null,
       };
+      // If recovery had declared this attempt abandoned (its lease was lost) and kept its reservation as a possible
+      // charge, the attempt answered after all: the ledger and the placeholder take its real outcome (CXH-17).
       const settle = async () => {
-        if (!usageKey || (await settleUsage(db, usageKey, settlement))) return;
-        // Recovery had declared this attempt abandoned (its lease was lost) and kept its reservation as a possible
-        // charge; the attempt answered after all, so the ledger takes its real cost (CXH-17).
-        if (await reconcileAbandonedUsage(db, usageKey, settlement)) {
-          await db
-            .update(schema.aiAttempt)
-            .set({ errorCode: "AI_ATTEMPT_RECONCILED", possibleCharge: false, routeReason: "recovery marked this attempt abandoned; it answered later and its real cost was recorded" })
-            .where(and(eq(schema.aiAttempt.workspaceId, workspace.id), eq(schema.aiAttempt.usageKey, usageKey), eq(schema.aiAttempt.errorCode, "AI_ATTEMPT_ABANDONED")));
-        }
+        if (usageKey) await settleOrReconcile(db, workspace.id, usageKey, settlement);
       };
       // Fencing: the connection must still be the one (same credential version, not revoked) that was read before
       // the call. The provider may have billed the call, so the ledger is settled either way; the RESULT is discarded.

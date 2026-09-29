@@ -3,7 +3,7 @@ import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { PriceTable, Role } from "@/db/schema";
 import { can } from "@/lib/permissions";
-import { catalogueKey, storeListingMetadata, syncCurated } from "./catalogue";
+import { catalogueKey, storeSharedCatalogue } from "./catalogue";
 import { isVerifiedZeroPrice, resolvePrice } from "./pricing";
 import { listModels } from "./protocols";
 import { getProviderDef, isConnectable } from "./registry";
@@ -35,7 +35,18 @@ export async function fencedWrite(db: Db, c: Pick<Conn, "id" | "credVersion">, w
  * TEST-ONLY interleaving point (honoured only with FLOWLINE_ENV=test): called inside the fenced transaction, after the
  * connection passed its fence and before any catalogue write — lets a test pause a refresh exactly there (CXH-12).
  */
-export const discoveryTestHooks: { afterFence?: (conn: Conn) => Promise<void> } = {};
+export const discoveryTestHooks: { afterFence?: (conn: Conn) => Promise<void>; onRetry?: (sqlState: string) => Promise<void> } = {};
+
+/** PostgreSQL deadlock_detected / serialization_failure: the transaction was aborted as a whole and may be re-run. */
+const RETRYABLE_TX = new Set(["40P01", "40001"]);
+const CATALOGUE_TX_ATTEMPTS = 3;
+function retryableSqlState(e: unknown): string | null {
+  for (let c: unknown = e, depth = 0; c && typeof c === "object" && depth < 4; c = (c as { cause?: unknown }).cause, depth++) {
+    const code = (c as { code?: unknown }).code;
+    if (typeof code === "string" && RETRYABLE_TX.has(code)) return code;
+  }
+  return null;
+}
 
 /** The catalogue result belonged to a key that was replaced, or to a connection that was disconnected meanwhile. */
 export const STALE_CATALOGUE = { ok: false as const, code: "AI_CONNECTION_CHANGED", message: "The connection changed (its key was replaced or it was disconnected) while its model list was loading; that list was discarded." };
@@ -53,7 +64,22 @@ export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel
   // Fenced on the credential version the listing was made with: an old key's (or a disconnected connection's)
   // listing never overwrites the catalogue — neither the connection's own nor the shared public catalogue (CXH-12):
   // everything is written in ONE transaction while the connection row is held, so a rotation / disconnect waits.
-  const stored = await fencedWrite(db, conn, async (tx) => {
+  // Shared rows are written in one global order (CXH-20); should PostgreSQL still abort the transaction as a deadlock
+  // or serialization failure, the whole (idempotent) transaction is re-run, a bounded number of times.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await storeCatalogueOnce(db, conn, def, models, observedAt, now);
+    } catch (e) {
+      const state = retryableSqlState(e);
+      if (!state || attempt >= CATALOGUE_TX_ATTEMPTS) throw e;
+      if (process.env.FLOWLINE_ENV === "test") await discoveryTestHooks.onRetry?.(state);
+      await new Promise((r) => setTimeout(r, 20 * attempt + Math.floor(Math.random() * 30)));
+    }
+  }
+}
+
+function storeCatalogueOnce(db: Db, conn: Conn, def: ReturnType<typeof getProviderDef>, models: DiscoveredModel[], observedAt: Date, now: Date): Promise<boolean> {
+  return fencedWrite(db, conn, async (tx) => {
     if (process.env.FLOWLINE_ENV === "test" && discoveryTestHooks.afterFence) await discoveryTestHooks.afterFence(conn);
     if (models.length) {
       await tx
@@ -77,12 +103,8 @@ export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel
       );
     await tx.update(schema.aiConnection).set({ catalogRefreshedAt: now, catalogStale: false, catalogError: null, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
     // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
-    if (def) {
-      await syncCurated(tx as unknown as Db, def.id, observedAt);
-      await storeListingMetadata(tx as unknown as Db, def, models, observedAt);
-    }
+    if (def) await storeSharedCatalogue(tx as unknown as Db, def, models, observedAt);
   });
-  return stored;
 }
 
 export async function markCatalogueFailure(db: Db, conn: Conn, e: HubError) {

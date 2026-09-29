@@ -27,7 +27,7 @@ import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { claimNextAgentRun, processAgentRun } from "../../worker/agent-runner";
 import { claimNextRun, processRun, recoverStaleRuns } from "../../worker/runner";
 import { connectAi, fakeKey, MODEL_PROVIDER_ENV_KEYS, useAiDouble } from "./ai-helpers";
-import { claimAndProcess, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
+import { claimAndProcess, claimUntil, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
 
 let ai: Awaited<ReturnType<typeof startFakeAi>>;
 const prevEnv = { ...process.env };
@@ -115,13 +115,8 @@ async function aiFlow(user: CurrentUser, wsId: string, cfg: Record<string, unkno
 const stepOf = async (runId: string, nodeId = "g") => (await db.select().from(schema.runStep).where(and(eq(schema.runStep.runId, runId), eq(schema.runStep.nodeId, nodeId))))[0]!;
 
 async function runAgent(agentRunId: string) {
-  for (let i = 0; i < 10; i++) {
-    const w = unique("a");
-    const id = await claimNextAgentRun(db, w);
-    if (!id) break;
-    await processAgentRun(db, id, w);
-    if (id === agentRunId) break;
-  }
+  // Bounded claim loop (INTERMITTENT-01): a null claim while the target is still queued is retried, then diagnosed.
+  await claimUntil({ table: "agent_run", targetId: agentRunId, claim: (w) => claimNextAgentRun(db, w), process: (id, w) => processAgentRun(db, id, w), workerId: () => unique("a") });
   return (await db.select().from(schema.agentRun).where(eq(schema.agentRun.id, agentRunId)))[0]!;
 }
 const agentLedger = (agentRunId: string) => db.select().from(schema.usageEvent).where(eq(schema.usageEvent.agentRunId, agentRunId));
