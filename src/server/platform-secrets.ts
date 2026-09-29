@@ -367,14 +367,14 @@ export async function resolvePlatformCredential(purpose: string): Promise<Resolv
   }
 }
 
-/** Metadata only (no decrypt): whether a purpose is usable, and its public id / revision / epoch. */
-export async function platformCredentialStatus(purpose: string, dbOrTx: Db | Tx = db): Promise<{ configured: boolean; publicId: string | null; revision: number; epoch: number; setBy: string | null } | null> {
+/** Metadata only (no decrypt): whether a purpose is usable, and its row id (immutable identity) / public id / revision / epoch. */
+export async function platformCredentialStatus(purpose: string, dbOrTx: Db | Tx = db): Promise<{ id: string; configured: boolean; publicId: string | null; revision: number; epoch: number; setBy: string | null } | null> {
   const [row] = await dbOrTx
-    .select({ status: schema.platformSecret.status, secretEnc: schema.platformSecret.secretEnc, publicId: schema.platformSecret.publicId, revision: schema.platformSecret.revision, epoch: schema.platformSecret.epoch, setBy: schema.platformSecret.setBy })
+    .select({ id: schema.platformSecret.id, status: schema.platformSecret.status, secretEnc: schema.platformSecret.secretEnc, publicId: schema.platformSecret.publicId, revision: schema.platformSecret.revision, epoch: schema.platformSecret.epoch, setBy: schema.platformSecret.setBy })
     .from(schema.platformSecret)
     .where(eq(schema.platformSecret.purpose, purpose));
   if (!row) return null;
-  return { configured: Boolean(row.secretEnc) && row.status !== "revoked", publicId: row.publicId, revision: row.revision, epoch: row.epoch, setBy: row.setBy };
+  return { id: row.id, configured: Boolean(row.secretEnc) && row.status !== "revoked", publicId: row.publicId, revision: row.revision, epoch: row.epoch, setBy: row.setBy };
 }
 
 /* ───────────── probe ("Test") ───────────── */

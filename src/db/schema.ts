@@ -366,13 +366,23 @@ export const connection = pgTable(
      * before this was recorded (the app's status and client id are still checked).
      */
     oauthAppEpoch: integer("oauth_app_epoch"),
+    /**
+     * The IMMUTABLE identity of the issuing platform app (CXH-01): the `platform_secret.id` row the tokens were issued
+     * under. Clearing a revoked app deletes its row and configuring it again (even with the same client id) creates a
+     * new row whose epoch restarts at 1 — so (client id, epoch) alone can't tell them apart; the row id can. No FK: the
+     * row may be gone, and then the connection must reconnect. Null for a platform connection = issued before this was
+     * recorded and not provably issued by the current row (migration 0017) → usable until its next refresh, which
+     * requires a reconnect (the legacy rule). Always null for workspace apps (their row id, `oauth_app_id`, is already
+     * immutable: workspace apps are soft-deleted, never reused).
+     */
+    oauthPlatformSecretId: uuid("oauth_platform_secret_id"),
   },
   (t) => [
     index("connection_ws_idx").on(t.workspaceId, t.provider),
     index("connection_oauth_app_idx").on(t.oauthAppId),
     // A workspace app can only ever be referenced by a connection of the SAME workspace.
     foreignKey({ name: "connection_oauth_app_ws_fk", columns: [t.oauthAppId, t.workspaceId], foreignColumns: [workspaceOauthApp.id, workspaceOauthApp.workspaceId] }),
-    check("connection_oauth_app_ck", sql`(oauth_app_source is null and oauth_app_id is null) or (oauth_app_source = 'platform' and oauth_app_id is null and oauth_client_id is not null) or (oauth_app_source = 'workspace' and oauth_app_id is not null and oauth_client_id is not null)`),
+    check("connection_oauth_app_ck", sql`(oauth_app_source is null and oauth_app_id is null and oauth_platform_secret_id is null) or (oauth_app_source = 'platform' and oauth_app_id is null and oauth_client_id is not null) or (oauth_app_source = 'workspace' and oauth_app_id is not null and oauth_client_id is not null and oauth_platform_secret_id is null)`),
   ],
 );
 
@@ -403,6 +413,8 @@ export const oauthState = pgTable("oauth_state", {
   clientId: text("client_id"),
   appRevision: integer("app_revision"),
   appEpoch: integer("app_epoch"),
+  /** The platform app's immutable identity (`platform_secret.id`) when `app_source` = platform (CXH-01); the callback must find the same row. */
+  platformSecretId: uuid("platform_secret_id"),
   redirectUri: text("redirect_uri"),
 });
 

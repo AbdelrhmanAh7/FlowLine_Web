@@ -22,6 +22,12 @@ type AppRow = typeof schema.workspaceOauthApp.$inferSelect;
  * change only affects new authorizations; switching/deleting an app sends exactly its connections to reconnect;
  * clearing an override never moves connections onto the platform app. Legacy connections without a recorded app are
  * never guessed — they must reconnect.
+ *
+ * Identity is IMMUTABLE (CXH-01): a workspace app is its `workspace_oauth_app.id` (soft-deleted, never reused); the
+ * platform app is its `platform_secret.id` row. A platform app that is revoked, cleared (row deleted) and configured
+ * again gets a NEW row whose epoch restarts at 1, so client id + epoch alone would let an authorization or a token of
+ * the cleared app pass for the replacement — the row id never does. Within one row, the epoch still fences a
+ * revoke → configure-again (same row, epoch bumped) and a same-app secret rotation keeps both (tokens stay valid).
  */
 export interface ResolvedApp {
   source: "platform" | "workspace";
@@ -29,6 +35,8 @@ export interface ResolvedApp {
   appId: string | null;
   /** platform_secret purpose for platform apps. */
   purpose: string | null;
+  /** platform_secret.id (the platform app's immutable identity) for platform apps; null for workspace apps. */
+  platformSecretId: string | null;
   family: OAuthFamily;
   clientId: string;
   secret: string;
@@ -87,13 +95,13 @@ function openWorkspaceApp(row: AppRow): ResolvedApp {
   if (row.prevSecretEnc && row.prevKeyId && row.prevRevision && row.prevValidUntil && row.prevValidUntil > new Date()) {
     previous = { secret: decryptSecretV2<string>(row.prevSecretEnc, row.prevKeyId, appContext(row, row.prevRevision)), revision: row.prevRevision, validUntil: row.prevValidUntil };
   }
-  return { source: "workspace", appId: row.id, purpose: null, family: row.family as OAuthFamily, clientId: row.clientId, secret, revision: row.revision, epoch: row.epoch, previous };
+  return { source: "workspace", appId: row.id, purpose: null, platformSecretId: null, family: row.family as OAuthFamily, clientId: row.clientId, secret, revision: row.revision, epoch: row.epoch, previous };
 }
 
 async function platformApp(family: OAuthFamily): Promise<ResolvedApp | null> {
   const cred = await resolvePlatformCredential(OAUTH_FAMILIES[family].purpose);
   if (!cred || !cred.publicId) return null;
-  return { source: "platform", appId: null, purpose: cred.purpose, family, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, epoch: cred.epoch, previous: cred.previous };
+  return { source: "platform", appId: null, purpose: cred.purpose, platformSecretId: cred.id, family, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, epoch: cred.epoch, previous: cred.previous };
 }
 
 /** The app a NEW authorization (Connect / Reconnect) uses in this workspace, or null when none is configured. */
@@ -130,20 +138,26 @@ export async function resolveAppForConnection(conn: typeof schema.connection.$in
   const app = await platformApp(family);
   if (!app) throw new AppUnavailableError("app_unavailable", "Flowline's OAuth app for this provider isn't available right now");
   if (app.clientId !== conn.oauthClientId) throw new AppUnavailableError("reconnect_required", "Flowline's OAuth app for this provider changed");
+  // Legacy (no recorded row, not provably the current one — migration 0017): never refreshed with whatever row holds
+  // this client id now; a cleared-and-recreated app would otherwise inherit its tokens.
+  if (!conn.oauthPlatformSecretId) throw new AppUnavailableError("reconnect_required", "This connection was authorized before Flowline recorded which platform OAuth app issued it");
+  if (app.platformSecretId !== conn.oauthPlatformSecretId) throw new AppUnavailableError("reconnect_required", "Flowline's OAuth app for this provider was cleared and configured again");
   return app;
 }
 
 /**
  * Fence (inside the caller's transaction, after its connection row lock): the issuing app must still exist with the
- * same identity and epoch. Takes a SHARE lock on the app row so a concurrent revoke/switch serializes against it.
+ * same IMMUTABLE identity (row id), client id and epoch. Takes a SHARE lock on the app row so a concurrent
+ * revoke/switch/clear serializes against it; a replacement row (cleared → configured again) never matches.
  */
-export async function appStillValid(tx: Tx, app: Pick<ResolvedApp, "source" | "appId" | "purpose" | "clientId" | "epoch">): Promise<boolean> {
+export async function appStillValid(tx: Tx, app: Pick<ResolvedApp, "source" | "appId" | "purpose" | "platformSecretId" | "clientId" | "epoch">): Promise<boolean> {
   if (app.source === "workspace") {
     const [row] = await tx.select().from(schema.workspaceOauthApp).where(eq(schema.workspaceOauthApp.id, app.appId!)).for("share");
     return Boolean(row && !row.deletedAt && row.secretEnc && row.clientId === app.clientId && row.epoch === app.epoch);
   }
+  if (!app.platformSecretId) return false;
   const [row] = await tx.select().from(schema.platformSecret).where(eq(schema.platformSecret.purpose, app.purpose!)).for("share");
-  return Boolean(row && row.status !== "revoked" && row.secretEnc && row.publicId === app.clientId && row.epoch === app.epoch);
+  return Boolean(row && row.id === app.platformSecretId && row.status !== "revoked" && row.secretEnc && row.publicId === app.clientId && row.epoch === app.epoch);
 }
 
 /**

@@ -184,7 +184,7 @@ export async function reconnectConnection(db: Db, workspaceId: string, connectio
   return publicConnection((await db.select().from(schema.connection).where(eq(schema.connection.id, conn.id)))[0]!);
 }
 
-type AppBinding = { source: "platform" | "workspace"; appId: string | null; clientId: string; epoch: number | null } | null;
+type AppBinding = { source: "platform" | "workspace"; appId: string | null; platformSecretId: string | null; clientId: string; epoch: number | null } | null;
 
 async function storeCredentials(db: Db | Tx, conn: Pick<ConnRow, "id" | "workspaceId" | "provider">, creds: StoredSecret, expiresAt: Date | null, scopes?: string[], app?: AppBinding) {
   const enc = encryptSecretV2(creds, connectionContext(conn));
@@ -200,7 +200,7 @@ async function storeCredentials(db: Db | Tx, conn: Pick<ConnRow, "id" | "workspa
       credVersion: sql`${schema.connection.credVersion} + 1`,
       updatedAt: new Date(),
       ...(scopes ? { scopes } : {}),
-      ...(app !== undefined ? { oauthAppSource: app?.source ?? null, oauthAppId: app?.appId ?? null, oauthClientId: app?.clientId ?? null, oauthAppEpoch: app?.epoch ?? null } : {}),
+      ...(app !== undefined ? { oauthAppSource: app?.source ?? null, oauthAppId: app?.appId ?? null, oauthPlatformSecretId: app?.platformSecretId ?? null, oauthClientId: app?.clientId ?? null, oauthAppEpoch: app?.epoch ?? null } : {}),
     })
     .where(eq(schema.connection.id, conn.id));
 }
@@ -265,8 +265,11 @@ export async function getRuntimeCredentials(db: Db, opts: { connectionId: string
 
 /**
  * Metadata check (no decrypt of the app secret) at EVERY credential access (CXH-01): the issuing app (the workspace's
- * own app or Flowline's platform app) must still exist, be un-revoked, have the same client id and, when recorded, the
- * epoch the tokens were issued under. The expiry sweep after a revoke/switch/delete is not relied on alone: a
+ * own app or Flowline's platform app) must still exist, be un-revoked, be the SAME app row (immutable identity: a
+ * platform app cleared and configured again is a new row, even with the same client id and a restarted epoch), have the
+ * same client id and, when recorded, the epoch the tokens were issued under. A legacy platform connection without a
+ * recorded row (and not provably the current one — migration 0017) passes here until its next refresh, which then
+ * requires a reconnect (`resolveAppForConnection`). The expiry sweep after a revoke/switch/delete is not relied on alone: a
  * connection it missed (a racing callback, a crash between commit and sweep) is refused and expired here.
  * (A request already sent to the provider can't be recalled; the boundary is the next credential access.)
  */
@@ -284,6 +287,7 @@ async function assertIssuingAppCurrent(db: Db, conn: ConnRow) {
     const status = family ? await platformCredentialStatus(OAUTH_FAMILIES[family].purpose, db) : null;
     if (!status || !status.configured) reason = "oauth_app_revoked"; // revoked or cleared
     else if (status.publicId !== conn.oauthClientId) reason = "oauth_app_changed";
+    else if (conn.oauthPlatformSecretId !== null && status.id !== conn.oauthPlatformSecretId) reason = "oauth_app_revoked"; // cleared, then configured again
     else if (conn.oauthAppEpoch !== null && status.epoch !== conn.oauthAppEpoch) reason = "oauth_app_revoked"; // configured again after a revoke
   }
   if (reason) {
@@ -345,7 +349,7 @@ async function refreshLocked(db: Db, connectionId: string): Promise<{ secret: St
       try {
         app = await resolveAppForConnection(conn);
       } catch (e) {
-        if (e instanceof AppUnavailableError && e.reason === "reconnect_required") return deny(conn.oauthAppSource ? "oauth_app_changed" : "oauth_app_unknown");
+        if (e instanceof AppUnavailableError && e.reason === "reconnect_required") return deny(!conn.oauthAppSource || (conn.oauthAppSource === "platform" && !conn.oauthPlatformSecretId) ? "oauth_app_unknown" : "oauth_app_changed");
         if (e instanceof AppUnavailableError) throw new RefreshFailure("app_unavailable", `${provider.name}: ${e.message} — an administrator must configure it. The connection was not changed.`);
         throw e;
       }
@@ -447,6 +451,7 @@ export async function startOAuth(db: Db, opts: { userId: string; sessionToken: s
     clientId: app.clientId,
     appRevision: app.revision,
     appEpoch: app.epoch,
+    platformSecretId: app.platformSecretId,
     redirectUri: redirect,
   });
   const u = new URL(oauthUrl(provider, "authorize", provider.oauth.authorizeUrl));
@@ -474,10 +479,17 @@ async function assertStillAllowed(db: Db | Tx, workspaceId: string, userId: stri
   }
 }
 
-/** The app pinned by the state must still be the same, un-revoked app (identity + epoch); returns it with its secrets. */
+/** The app pinned by the state must still be the same, un-revoked app (immutable row identity + epoch); returns it with its secrets. */
 async function appForState(st: typeof schema.oauthState.$inferSelect): Promise<ResolvedApp> {
   const current = await resolveAppForNewAuthorization(st.workspaceId, st.provider).catch(() => null);
-  if (!current || current.source !== st.appSource || current.appId !== st.appId || current.clientId !== st.clientId || current.epoch !== st.appEpoch) {
+  if (
+    !current ||
+    current.source !== st.appSource ||
+    current.appId !== st.appId ||
+    (current.source === "platform" && (!st.platformSecretId || current.platformSecretId !== st.platformSecretId)) ||
+    current.clientId !== st.clientId ||
+    current.epoch !== st.appEpoch
+  ) {
     throw new HttpError(409, "OAUTH_APP_CHANGED", "The OAuth app changed while you were signing in — start again");
   }
   return current;
@@ -514,10 +526,10 @@ export async function completeOAuth(db: Db, opts: { state: string; code: string;
   // Re-check right before storing: membership, capability and the app may have changed during the exchange.
   await assertStillAllowed(db, st.workspaceId, opts.userId, st.connectionId);
   await appForState(st);
-  const binding: AppBinding = { source: app.source, appId: app.appId, clientId: app.clientId, epoch: app.epoch };
+  const binding: AppBinding = { source: app.source, appId: app.appId, platformSecretId: app.platformSecretId, clientId: app.clientId, epoch: app.epoch };
   const appChanged = () => new HttpError(409, "OAUTH_APP_CHANGED", "The OAuth app changed while you were signing in — start again");
-  // Store under a fence (CXH-01): the issuing app row is SHARE-locked and re-checked (not revoked/deleted, same client id,
-  // same epoch) in the SAME transaction that writes the connection. A revoke/switch/delete (FOR UPDATE on that row)
+  // Store under a fence (CXH-01): the issuing app row is SHARE-locked and re-checked (the same immutable row — never a
+  // replacement configured after a clear —, not revoked/deleted, same client id, same epoch) in the SAME transaction that writes the connection. A revoke/switch/delete (FOR UPDATE on that row)
   // therefore either commits first — and this callback stores nothing — or waits for this commit, and its expiry sweep
   // then finds the new connection. Lock order matches refreshLocked (connection row, then app row).
   const out = await db.transaction(async (tx) => {
@@ -556,6 +568,7 @@ export async function completeOAuth(db: Db, opts: { state: string; code: string;
         createdBy: opts.userId,
         oauthAppSource: binding.source,
         oauthAppId: binding.appId,
+        oauthPlatformSecretId: binding.platformSecretId,
         oauthClientId: binding.clientId,
         oauthAppEpoch: binding.epoch,
       })

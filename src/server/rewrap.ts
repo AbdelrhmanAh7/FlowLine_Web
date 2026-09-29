@@ -370,13 +370,26 @@ export async function remainingByTable(): Promise<Record<string, number>> {
  * Binds legacy OAuth connections (no recorded issuing app) of a provider family to the platform app with `clientId`
  * — ONLY when the operator attests (from deployment history) that this client id issued them. Everything not
  * backfilled stays "reconnect required" at its next refresh; nothing is guessed.
+ *
+ * The platform app ROW (immutable identity, CXH-01) is recorded only when it is provably the one: the purpose was never
+ * cleared (so its current row is the only one that ever existed), it is live, and it holds this client id — the same
+ * rule as migration 0017. Otherwise the row stays unrecorded and the next refresh requires a reconnect.
  */
 export async function backfillLegacyOAuthApp(family: OAuthFamily, clientId: string, opts: { dryRun?: boolean } = {}) {
   const where = and(isNull(schema.connection.oauthAppSource), eq(schema.connection.authType, "oauth2"), inArray(schema.connection.provider, [...OAUTH_FAMILIES[family].providers]), sql`coalesce(${schema.connection.settings}->>'tokenPasted', 'false') <> 'true'`);
   const rows = await db.select({ id: schema.connection.id }).from(schema.connection).where(where);
   if (!opts.dryRun && rows.length) {
-    await db.update(schema.connection).set({ oauthAppSource: "platform", oauthAppId: null, oauthClientId: clientId }).where(where);
-    await platformAudit(db, { actor: { userId: null, label: "cli:backfill" }, assurance: "cli", action: "crypto.rewrap", result: "ok", targetType: "table", targetId: "connection", purpose: OAUTH_FAMILIES[family].purpose, data: { backfilledConnections: rows.length, clientId } });
+    const platformSecretId = await provableSolePlatformRow(OAUTH_FAMILIES[family].purpose, clientId);
+    await db.update(schema.connection).set({ oauthAppSource: "platform", oauthAppId: null, oauthClientId: clientId, oauthPlatformSecretId: platformSecretId }).where(where);
+    await platformAudit(db, { actor: { userId: null, label: "cli:backfill" }, assurance: "cli", action: "crypto.rewrap", result: "ok", targetType: "table", targetId: "connection", purpose: OAUTH_FAMILIES[family].purpose, data: { backfilledConnections: rows.length, clientId, appRowRecorded: Boolean(platformSecretId) } });
   }
   return rows.length;
+}
+
+/** The purpose's platform_secret row id when it is provably the only row that ever existed, live, with this client id. */
+async function provableSolePlatformRow(purpose: string, clientId: string): Promise<string | null> {
+  const [row] = await db.select({ id: schema.platformSecret.id, publicId: schema.platformSecret.publicId, status: schema.platformSecret.status, secretEnc: schema.platformSecret.secretEnc }).from(schema.platformSecret).where(eq(schema.platformSecret.purpose, purpose));
+  if (!row || row.publicId !== clientId || row.status === "revoked" || !row.secretEnc) return null;
+  const [cleared] = await db.select({ id: schema.platformAuditEvent.id }).from(schema.platformAuditEvent).where(and(eq(schema.platformAuditEvent.purpose, purpose), eq(schema.platformAuditEvent.action, "platform_secret.cleared"))).limit(1);
+  return cleared ? null : row.id;
 }

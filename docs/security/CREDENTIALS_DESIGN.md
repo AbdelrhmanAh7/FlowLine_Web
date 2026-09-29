@@ -104,6 +104,13 @@ The two reviews agree on all of these.
 14. **Callback re-checks** membership, capability and app revocation before the exchange and before storing.
     - Token responses are schema-validated.
     - Refresh writes are fenced on the app epoch and connection version.
+    - App identity is **immutable** (CXH-01): a workspace app is its `workspace_oauth_app.id` (soft-deleted, never
+      reused); the platform app is its `platform_secret.id` row. Clear deletes that row and configuring it again (even
+      with the same client id) creates a new row whose epoch restarts at 1, so the row id — not client id + epoch — is
+      carried through `oauth_state.platform_secret_id`, `connection.oauth_platform_secret_id`, the callback fence,
+      runtime validation and refresh. Legacy platform connections without a recorded row are bound by migration only
+      when provable (purpose never cleared, row live, same client id and epoch); otherwise they stay usable until their
+      next refresh, which requires a reconnect.
 15. **Client-auth failure (rotation) is not user-token failure.** `refreshLocked` must not mark connections expired or
     pause flows on `invalid_client`. It fails the step and alerts admins, and retries current → previous within the
     grace window.
