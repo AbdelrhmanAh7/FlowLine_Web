@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { LtrRuns } from "@/components/ai/ltr-runs";
 import { ModelPicker } from "@/components/ai/model-picker";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge, type Tone } from "@/components/ui";
+import { providerFreeTierNote, providerNotes, providerOptionLabel, providerPrivacyNote, providerTermsNotes, providerVerdictEvidence, retiredEvidence } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -369,6 +371,7 @@ const VERDICT_TONE: Record<AiProviderDto["verdict"], Tone> = { SUITABLE: "succes
 /** Providers that are documented but not offered (unsuitable terms, pending owner review, deferred) + retired services. */
 function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retired: AiOverviewDto["retired"] }) {
   const t = useT();
+  const rtl = t.locale === "ar";
   if (!providers.length && !retired.length) return null;
   return (
     <section aria-labelledby="ai-not-offered" className="flex flex-col gap-2" data-testid="ai-not-offered">
@@ -384,8 +387,14 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
               <StatusBadge tone={VERDICT_TONE[p.verdict]}>{t(`aiHub.verdict.${p.verdict}`)}</StatusBadge>
               <span className="text-muted">{t(`aiHub.tier.${p.tier}`)}</span>
             </div>
-            <p className="mt-1 text-med">{p.verdictEvidence}</p>
-            {p.notes && <p className="mt-1 text-muted">{p.notes}</p>}
+            <p className="mt-1 text-med">
+              <LtrRuns text={providerVerdictEvidence(t, p)} rtl={rtl} />
+            </p>
+            {p.notes && (
+              <p className="mt-1 text-muted">
+                <LtrRuns text={providerNotes(t, p)!} rtl={rtl} />
+              </p>
+            )}
             <p className="mt-1 flex flex-wrap gap-x-3">
               {p.sources.map((s) => (
                 <a key={s.url} className="text-accent hover:underline" href={s.url} target="_blank" rel="noreferrer noopener">
@@ -402,7 +411,9 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
               <span className="font-medium text-hi">{r.name}</span>
               <StatusBadge tone="muted">{t("aiHub.verdict.RETIRED")}</StatusBadge>
             </div>
-            <p className="mt-1 text-med">{r.evidence}</p>
+            <p className="mt-1 text-med">
+              <LtrRuns text={retiredEvidence(t, r)} rtl={rtl} />
+            </p>
             <p className="mt-1 flex flex-wrap gap-x-3">
               {r.sources.map((u) => (
                 <a key={u} dir="ltr" className="text-accent hover:underline" href={u} target="_blank" rel="noreferrer noopener">
@@ -438,6 +449,8 @@ function errorLine(t: ReturnType<typeof useT>, e: { code: string; message: strin
 function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; count: number; canManage: boolean; onConnect: () => void }) {
   const t = useT();
   const { role } = useWorkspace();
+  const rtl = t.locale === "ar";
+  const terms = providerTermsNotes(t, p);
   const statusTone: Tone = p.connectable ? "success" : p.status === "UNSUITABLE" ? "muted" : "info";
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" data-testid={`ai-provider-${p.id}`}>
@@ -454,20 +467,26 @@ function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; co
       <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs" data-testid="ai-provider-notes">
         <dt className="text-muted">{t("aiHub.providers.freeTier")}</dt>
         <dd className="text-med">
-          {t(`aiHub.freeTier.${p.freeTier.type}`)} — {p.freeTier.note}
+          {t(`aiHub.freeTier.${p.freeTier.type}`)} — <LtrRuns text={providerFreeTierNote(t, p)} rtl={rtl} />
         </dd>
         <dt className="text-muted">{t("aiHub.providers.privacy")}</dt>
         <dd className="text-med">
-          {t(`aiHub.training.${p.privacy.training}`)} — {p.privacy.note}
+          {t(`aiHub.training.${p.privacy.training}`)} — <LtrRuns text={providerPrivacyNote(t, p)} rtl={rtl} />
         </dd>
-        {p.termsNotes && (
+        {terms && (
           <>
             <dt className="text-muted">{t("aiHub.providers.terms")}</dt>
-            <dd className="text-med">{p.termsNotes}</dd>
+            <dd className="text-med">
+              <LtrRuns text={terms} rtl={rtl} />
+            </dd>
           </>
         )}
       </dl>
-      {p.verdict === "SUITABLE_WITH_LIMITS" && <p className="text-xs text-muted">{p.verdictEvidence}</p>}
+      {p.verdict === "SUITABLE_WITH_LIMITS" && (
+        <p className="text-xs text-muted">
+          <LtrRuns text={providerVerdictEvidence(t, p)} rtl={rtl} />
+        </p>
+      )}
       {p.sources[0] && (
         <a className="text-sm text-accent hover:underline" href={p.sources.at(-1)!.url} target="_blank" rel="noreferrer noopener">
           {t("aiHub.providers.docs")}
@@ -724,7 +743,7 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
                 {!f.required && <option value="">{t("aiHub.dialog.defaultOption")}</option>}
                 {f.options.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {providerOptionLabel(t, provider.id, f.key, o)}
                   </option>
                 ))}
               </select>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { modelFreeNote } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
 import type { AiRouteRef, PickerModelDto } from "@/lib/ai";
 import { Input, StatusBadge, cx } from "../ui";
+import { LtrRuns } from "./ltr-runs";
 
 type CapFilter = "any" | "tools" | "structuredOutput";
 type CostFilter = "any" | "known" | "unknown" | "free";
@@ -162,7 +164,11 @@ export function ModelPicker({
               )}
               {m.price.known && m.price.source === "workspace_price_table" && <span className="text-xs text-muted">{t("aiHub.picker.priceOwn")}</span>}
               {m.idUnverified && <span className="text-xs text-muted">{t("aiHub.picker.idUnverified")}</span>}
-              {m.freeTierNote && <span className="text-xs text-muted">{m.freeTierNote}</span>}
+              {m.freeTierNote && (
+                <span className="text-xs text-muted">
+                  <LtrRuns text={modelFreeNote(t, m)!} rtl={t.locale === "ar"} />
+                </span>
+              )}
             </li>
           );
         })}

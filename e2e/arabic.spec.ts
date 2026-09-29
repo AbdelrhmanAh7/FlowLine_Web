@@ -279,6 +279,16 @@ test("Arabic settings, agents, knowledge and integrations: every tab and page is
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     await noHorizontalScroll(page, `settings/${tab}`);
   }
+  // AI Providers (CXQ-01): the registry's free-use, data-use and terms prose is Arabic; section numbers stay LTR.
+  await tabs.getByRole("button", { name: "مزوّدو الذكاء الاصطناعي", exact: true }).click();
+  const openaiNotes = page.getByTestId("ai-provider-openai").getByTestId("ai-provider-notes");
+  await expect(openaiNotes).toContainText("لا توجد فئة مجانية للاستدلال");
+  await expect(openaiNotes).toContainText("لا تُستخدم بيانات الواجهة البرمجية لتدريب نماذج OpenAI");
+  await expect(openaiNotes).not.toContainText("No free inference tier");
+  await expect(openaiNotes.locator('span[dir="ltr"]', { hasText: "OSA §3.1" })).toBeVisible();
+  await expect(page.getByTestId("ai-provider-anthropic").getByTestId("ai-provider-notes")).toContainText("يحصل المستخدمون الجدد على قدر صغير من الرصيد المجاني");
+  await expect(page.getByTestId("ai-retired-github-models")).toContainText("أُوقفت بالكامل في");
+
   // Details inside the tabs: translated roles, the billing test-mode badge, the SSO status.
   await tabs.getByRole("button", { name: "الأعضاء", exact: true }).click();
   await expect(page.getByRole("button", { name: "إنشاء رابط دعوة" })).toBeVisible();
