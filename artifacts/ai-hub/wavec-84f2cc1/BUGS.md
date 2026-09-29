@@ -170,3 +170,15 @@ the Codex retest.
 | ID | Severity | Status |
 |---|---|---|
 | CXH-21 | P2 (test) | FIXED by the lead; Codex retest pending |
+
+## TEST-03: CXH-06 rotation tests depended on the size of the shared test DB (found by the lead, 2026-09-29)
+- **Symptom:** on the long-lived `flowline_test_aihub`, "rotate → rewrap → retire" timed out at 30 s, and the race
+  test then failed on the half-rotated key.
+- **Cause:** a rewrap re-encrypts every envelope in the DB (about 10 000 here: 7 806 step payloads, 1 353 AI
+  connections, 863 connections…). The same tests passed on the fresh round-3 DB.
+- **Classification:** TEST DEFECT. Rewrap correctness is unaffected. Operational note: a rewrap on a large production
+  DB is a long-running maintenance job, and `docs/security/CREDENTIALS_DESIGN.md` / the runbook should say so.
+- **Fix:** both tests moved to `tests/integration/sec-cxh06-rotation.test.ts`. They create and migrate their own
+  `<test db>_rot`, load product modules only after pointing at it, and drop it afterwards. The assertions are
+  unchanged. The timeout was not raised.
+- **Result:** 2/2 in about 5 s on three consecutive runs; the full integration suite passed 460/460 twice.

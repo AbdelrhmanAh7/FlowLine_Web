@@ -6,24 +6,22 @@
  * Races use REAL PostgreSQL row locks for a controlled interleaving: a test transaction holds a lock the product code
  * needs, the test waits until the competing operations are provably blocked (pg_stat_activity), then releases it.
  */
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, pool, schema } from "@/db";
 import { dispatchAuth, instanceForCallback } from "@/server/auth-dispatch";
-import { decryptAccountTokens, encryptAccountTokens } from "@/server/auth-token-adapter";
 import { completeOAuth, ConnectionError, getRuntimeCredentials, startOAuth, STATUS_REASONS } from "@/server/connections";
 import { decryptSecretV2, openSecret, sha256Hex } from "@/server/crypto";
 import { deleteWorkspaceApp, upsertWorkspaceApp } from "@/server/oauth-apps";
 import { clearPlatformSecret, platformCredentialStatus, revokePlatformSecret } from "@/server/platform-secrets";
-import { rewrapAll } from "@/server/rewrap";
 import { createFlow } from "@/server/flows";
 import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { startFake, type Fake } from "../contract/helpers";
 import { seedPlatformCredential, unseedPlatformCredential } from "../fixtures/platform-seed";
 import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers";
-import { makeVerifiedUser, ORIGIN, sessionFor, type TestSession } from "./platform-helpers";
+import { ORIGIN, sessionFor, type TestSession } from "./platform-helpers";
 
 const SYSTEM = { userId: null, label: "test", assurance: "system" as const };
 
@@ -353,88 +351,4 @@ describe("CXH-14: transient refresh failures keep the credentials", () => {
   });
 });
 
-/* ───────────── CXH-06 (rotates the shared test DB's workspace KEK — and back — so it runs last) ───────────── */
-
-describe("CXH-06: KEK rotation rewraps social-login tokens (v2) and reports what still needs the old key", () => {
-  const K1 = process.env.FLOWLINE_ENCRYPTION_KEY!;
-  const K1_OLD = process.env.FLOWLINE_ENCRYPTION_KEYS_OLD ?? "";
-  const K2 = randomBytes(32).toString("base64");
-  const setKeys = (current: string, old: string) => {
-    process.env.FLOWLINE_ENCRYPTION_KEY = current;
-    process.env.FLOWLINE_ENCRYPTION_KEYS_OLD = old;
-  };
-  /** Rotates back to K1 (rewrapping everything written under K2), then restores the original env. */
-  async function rotateBack() {
-    setKeys(K1, [K2, K1_OLD].filter(Boolean).join(","));
-    await rewrapAll();
-    setKeys(K1, K1_OLD);
-  }
-
-  async function makeAccount(prefix: string) {
-    const { auth } = await import("@/lib/auth");
-    const ctx = await auth.$context;
-    const user = await makeVerifiedUser(prefix);
-    const token = `ya29.${prefix}-${randomUUID()}`;
-    const acct = await ctx.internalAdapter.createAccount({ userId: user.id, providerId: "google", accountId: `g-${randomUUID()}`, accessToken: token, refreshToken: `1//${token}`, idToken: `eyJ.${token}` });
-    return { ctx, user, token, acct };
-  }
-
-  it("rotate → rewrap → retire the old key: v2 account tokens stay readable; rotation is complete only when nothing remains", async () => {
-    const { ctx, user, token, acct } = await makeAccount("cxh06");
-    // A row that can't be opened with any configured key (context-swapped ciphertext): it must keep rotation incomplete.
-    const owner = await makeUser("cxh06-poison");
-    const [src] = await db.select().from(schema.account).where(eq(schema.account.id, acct.id));
-    const poisonId = randomUUID();
-    await db.insert(schema.account).values({ id: poisonId, accountId: `p-${randomUUID()}`, providerId: "google", userId: owner.id, accessToken: src!.accessToken });
-    try {
-      setKeys(K2, [K1, K1_OLD].filter(Boolean).join(","));
-      const report = await rewrapAll();
-      const accounts = report.find((r) => r.table === "account")!;
-      expect(accounts.rewrapped).toBeGreaterThanOrEqual(3); // access, refresh and id token of our row
-      expect(accounts.failed).toBeGreaterThanOrEqual(1); // the poisoned row
-      expect(accounts.remaining).toBeGreaterThanOrEqual(1);
-      expect(report.every((r) => typeof r.remaining === "number")).toBe(true);
-      const [raw] = await db.select().from(schema.account).where(eq(schema.account.id, acct.id));
-      expect(raw!.accessToken).not.toBe(src!.accessToken);
-      expect(raw!.refreshToken).not.toBe(src!.refreshToken);
-      expect(raw!.idToken).not.toBe(src!.idToken);
-      // Retire K1: the rewrapped tokens decrypt with K2 alone.
-      setKeys(K2, "");
-      const listed = (await ctx.internalAdapter.findAccounts(user.id)).find((a) => a.id === acct.id);
-      expect(listed).toMatchObject({ accessToken: token, refreshToken: `1//${token}`, idToken: `eyJ.${token}` });
-      expect(decryptAccountTokens(raw!)).toMatchObject({ accessToken: token });
-      // Once the unreadable row is dealt with, a dry run reports nothing remaining for the account table.
-      setKeys(K2, [K1, K1_OLD].filter(Boolean).join(","));
-      await db.delete(schema.account).where(eq(schema.account.id, poisonId));
-      const again = await rewrapAll({ dryRun: true });
-      expect(again.find((r) => r.table === "account")!.remaining).toBe(0);
-    } finally {
-      await db.delete(schema.account).where(eq(schema.account.id, poisonId));
-      await rotateBack();
-    }
-  });
-
-  it("a token update racing the rewrap is never overwritten (compare-and-swap on the old ciphertext)", async () => {
-    const { ctx, user, acct } = await makeAccount("cxh06race");
-    const hold = await holdLock("select id from account where id = $1 for update", [acct.id]);
-    let released = false;
-    try {
-      setKeys(K2, [K1, K1_OLD].filter(Boolean).join(","));
-      const rewrap = settle(rewrapAll());
-      await until(async () => rewrap.done || (await lockWaiters()) >= 1, "the rewrap to reach the locked account row");
-      expect(rewrap.done).toBe(false); // it had to wait: it does rewrap this (v2) row
-      // The concurrent writer (e.g. better-auth refreshing the token) commits a new token first.
-      const fresh = encryptAccountTokens({ accessToken: "ya29.concurrently-refreshed" }, { id: acct.id, userId: user.id, providerId: "google" });
-      await hold.client.query("update account set access_token = $1 where id = $2", [fresh.accessToken, acct.id]);
-      await hold.release();
-      released = true;
-      await rewrap.promise;
-      expect(rewrap.error).toBeUndefined();
-      const listed = (await ctx.internalAdapter.findAccounts(user.id)).find((a) => a.id === acct.id);
-      expect(listed!.accessToken).toBe("ya29.concurrently-refreshed");
-    } finally {
-      if (!released) await hold.release();
-      await rotateBack();
-    }
-  });
-});
+/* CXH-06 (KEK rotation) moved to sec-cxh06-rotation.test.ts: it rewraps every envelope, so it runs in its own throwaway DB. */
