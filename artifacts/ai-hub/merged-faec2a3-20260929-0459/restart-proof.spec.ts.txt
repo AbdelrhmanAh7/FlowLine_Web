@@ -1,0 +1,45 @@
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+import { PASSWORD, setupUser } from "./helpers";
+
+// TEMPORARY evidence spec (merged browser gate): a key typed in the UI survives a full web + worker restart and is the
+// key actually sent afterwards. Runs only with RESTART_PHASE set; removed after the run (copy kept in the evidence dir).
+const phase = process.env.RESTART_PHASE;
+const stateFile = process.env.RESTART_STATE!;
+const AI_FAKE = process.env.FLOWLINE_AI_TEST_OVERRIDE ?? "http://127.0.0.1:4011";
+
+test("restart proof — phase 1: connect a key through the UI", async ({ page }) => {
+  test.skip(phase !== "1");
+  const u = await setupUser(page);
+  const key = `sk-fake-restart-${randomUUID().replace(/-/g, "")}`;
+  await page.goto(`/w/${u.workspace.slug}/settings?tab=ai`);
+  await page.getByTestId("ai-provider-openai").getByRole("button", { name: "Add connection" }).click();
+  const dialog = page.getByRole("dialog", { name: "Connect OpenAI" });
+  await dialog.getByLabel("Name").fill("Restart proof");
+  await dialog.getByLabel("API key", { exact: true }).fill(key);
+  await dialog.getByRole("button", { name: "Check and save" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Connected — \d+ models found/ })).toBeVisible();
+  writeFileSync(stateFile, JSON.stringify({ email: u.email, workspaceId: u.workspace.id, slug: u.workspace.slug, keySha256: createHash("sha256").update(key).digest("hex"), last4: key.slice(-4) }));
+});
+
+test("restart proof — phase 2: after restarting web + worker, sign in again; the stored key is used", async ({ page }) => {
+  test.skip(phase !== "2");
+  const s = JSON.parse(readFileSync(stateFile, "utf8")) as { email: string; workspaceId: string; slug: string; keySha256: string; last4: string };
+  const signIn = await page.request.post("/api/auth/sign-in/email", { data: { email: s.email, password: PASSWORD } });
+  expect(signIn.ok(), await signIn.text()).toBeTruthy();
+  const list = await page.request.get(`/api/workspaces/${s.workspaceId}/ai/connections`);
+  expect(list.ok()).toBeTruthy();
+  const body = await list.text();
+  const conns = (JSON.parse(body) as { connections: { id: string; label: string; status: string }[] }).connections;
+  expect(conns.map((c) => [c.label, c.status])).toEqual([["Restart proof", "CONNECTED"]]);
+  expect(body).toContain(s.last4); // masked hint only
+  const before = ((await (await fetch(`${AI_FAKE}/__fake/openai/requests`)).json()) as { requests: { keySha256: string | null }[] }).requests.length;
+  const test1 = await page.request.post(`/api/workspaces/${s.workspaceId}/ai/connections/${conns[0]!.id}/test`, { data: { kind: "metadata" } });
+  expect(test1.ok(), await test1.text()).toBeTruthy();
+  const reqs = ((await (await fetch(`${AI_FAKE}/__fake/openai/requests`)).json()) as { requests: { keySha256: string | null }[] }).requests.slice(before);
+  expect(reqs.length).toBeGreaterThan(0);
+  expect(reqs.every((r) => r.keySha256 === s.keySha256)).toBe(true); // exactly the key typed before the restart
+  await page.goto(`/w/${s.slug}/settings?tab=ai`);
+  await expect(page.getByTestId("ai-connection")).toContainText("Restart proof");
+});
