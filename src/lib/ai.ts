@@ -10,7 +10,7 @@ export interface AiProviderDto {
   id: string;
   name: string;
   tier: "core" | "expansion" | "deferred";
-  status: "IMPLEMENTED" | "PENDING" | "UNSUITABLE";
+  status: "IMPLEMENTED" | "PENDING" | "UNSUITABLE" | "DEFERRED";
   connectable: boolean;
   routeKind: "direct" | "gateway";
   protocols: string[];
@@ -20,6 +20,33 @@ export interface AiProviderDto {
   requirements: string[];
   contractVerified: boolean;
   notes: string | null;
+  verdict: "SUITABLE" | "SUITABLE_WITH_LIMITS" | "UNSUITABLE" | "UNSUITABLE_PENDING_OWNER_REVIEW" | "DEFERRED";
+  verdictEvidence: string;
+  connectionFields: { key: string; label: string; required: boolean; pattern: string; options: { value: string; label: string }[] | null; help: string | null }[];
+  planWarning: string | null;
+  requiresPlanAttestation: boolean;
+  keyCheck: "listing" | "none";
+  freeTier: { type: "none" | "permanent_zero_price" | "limited_free_tier" | "trial_credits" | "monthly_credit" | "unknown"; note: string };
+  privacy: { training: "no" | "yes" | "depends" | "unknown"; note: string };
+  termsNotes: string | null;
+}
+
+export interface AiRetiredDto {
+  id: string;
+  name: string;
+  evidence: string;
+  sources: string[];
+}
+
+export type AiPolicyMode = "MANUAL" | "FALLBACK" | "FREE_ONLY" | "LOW_COST";
+export interface AiPolicyDto {
+  mode: AiPolicyMode;
+  allowUnknownCost: boolean;
+  fallbackRoutes?: AiRouteRef[];
+  lowCostPool?: AiRouteRef[];
+  priceCeiling?: { inputPerMTokMicros: number; outputPerMTokMicros: number } | null;
+  requireNoTraining?: boolean;
+  copilot?: { planRoute?: AiRouteRef | null; repairRoute?: AiRouteRef | null };
 }
 
 export interface AiConnectionDto {
@@ -28,6 +55,9 @@ export interface AiConnectionDto {
   providerName: string;
   label: string;
   keyHint: string | null;
+  /** Short keys get no last-4 hint: only the date the key was set (YYYY-MM-DD). */
+  keySetAt: string | null;
+  keyCheck: "listing" | "none";
   useRoles: string[];
   status: "CONNECTED" | "DEGRADED" | "REVOKED";
   verification: "IMPLEMENTED" | "CONTRACT_VERIFIED" | "LIVE_VERIFIED";
@@ -54,9 +84,10 @@ export interface AiStatusDto {
 
 export interface AiOverviewDto {
   providers: AiProviderDto[];
+  retired: AiRetiredDto[];
   connections: AiConnectionDto[];
   defaultRoute: { connectionId: string; modelId: string } | null;
-  policy: { mode: "MANUAL"; allowUnknownCost: boolean };
+  policy: AiPolicyDto;
   status: AiStatusDto;
   legacy: { workspaceDefault: { provider: string; model: string | null } | null; agents: { id: string; name: string; provider: string | null; model: string | null }[]; flows: { id: string; name: string }[]; any: boolean };
   canManage: boolean;
@@ -75,7 +106,19 @@ export interface PickerModelDto {
   accessConfirmed: boolean;
   capabilities: { tools: CapState; structuredOutput: CapState; vision: CapState; streaming: CapState; reasoning: CapState };
   contextWindow: number | null;
-  price: { known: boolean; source: string | null; inputPerMTokMicros: number | null; outputPerMTokMicros: number | null };
+  price: {
+    known: boolean;
+    source: string | null;
+    inputPerMTokMicros: number | null;
+    outputPerMTokMicros: number | null;
+    currency: string | null;
+    sourceUrl: string | null;
+    verifiedAt: string | null;
+    zero: boolean;
+  };
+  freeTierNote: string | null;
+  privacyNote: string | null;
+  idUnverified: boolean;
 }
 
 export interface AiRouteRef {

@@ -6,7 +6,8 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { dataText } from "@/i18n/workspace-text";
-import { useAiOverview } from "@/lib/ai";
+import { ModelPicker } from "@/components/ai/model-picker";
+import { useAiOverview, usePickerModels, type AiRouteRef } from "@/lib/ai";
 import { api } from "@/lib/api";
 
 export type Permission = "allow" | "ask" | "deny";
@@ -14,9 +15,11 @@ export interface AgentConfig {
   name: string;
   description: string;
   instructions: string;
-  /** Legacy pre-hub pin (read-only). Saving clears it: agents use the workspace AI connection in Wave A. */
+  /** Legacy pre-hub pin (read-only). Saving clears it. */
   provider: string | null;
   model: string | null;
+  /** AI hub route of this version. Null on save = the workspace default, snapshotted into the new version. */
+  route: AiRouteRef | null;
   tools: { tool: "knowledge_search" | "workflow_inspect" | "run_workflow"; flowId?: string; permission: Permission }[];
   knowledgeSourceIds: string[];
   limits: { maxSteps: number; maxToolCalls: number; maxCostMicros: number | null; timeoutMs: number };
@@ -27,6 +30,7 @@ export const EMPTY_AGENT: AgentConfig = {
   instructions: "",
   provider: null,
   model: null,
+  route: null,
   tools: [{ tool: "knowledge_search", permission: "allow" }],
   knowledgeSourceIds: [],
   limits: { maxSteps: 8, maxToolCalls: 6, maxCostMicros: null, timeoutMs: 120_000 },
@@ -52,6 +56,8 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
   const ro = Boolean(readOnlyReason);
   const ai = useAiOverview(workspace.id);
   const def = ai.data?.status.defaultRoute;
+  const canUse = Boolean(ai.data?.canUse);
+  const models = usePickerModels(workspace.id, canUse);
   const flows = useQuery({
     queryKey: ["flows", workspace.id],
     queryFn: () => api<{ flows: { id: string; name: string; publishedVersion: number | null }[] }>(`/api/workspaces/${workspace.id}/flows`),
@@ -99,18 +105,28 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
           </Field>
           <div className="flex flex-col gap-1 text-sm" data-testid="agent-ai-route">
             <span className="text-med">{t("agents.form.aiModel")}</span>
-            <span className="text-hi">
-              {def ? (
-                <>
-                  <span dir="ltr" className="data">
-                    {def.modelId}
-                  </span>{" "}
-                  · {def.connectionLabel}
-                </>
-              ) : (
-                t("agents.form.aiModelNone")
-              )}
-            </span>
+            {initial.route && (
+              <span className="text-muted">
+                {t("agents.form.aiModelPinned")}{" "}
+                <span dir="ltr" className="data text-hi">
+                  {initial.route.modelId}
+                </span>
+              </span>
+            )}
+            {canUse ? (
+              <ModelPicker
+                id="ag-model"
+                models={models.data ?? []}
+                loading={models.isPending}
+                value={c.route}
+                onChange={(route) => set({ route })}
+                allowDefault
+                defaultLabel={def ? t("agents.form.aiModelDefault", { model: def.modelId, connection: def.connectionLabel }) : t("agents.form.aiModelNone")}
+                disabled={ro}
+              />
+            ) : (
+              <span className="text-muted">{ai.data?.status.reason ?? t("agents.form.aiModelNone")}</span>
+            )}
             <span className="text-muted">{t("agents.form.aiModelHint")}</span>
             {initial.provider && <span className="text-warning">{t("agents.form.legacyPin", { provider: initial.provider })}</span>}
           </div>

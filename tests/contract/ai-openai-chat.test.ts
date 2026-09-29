@@ -57,14 +57,31 @@ describe("registry", () => {
         expect(p.baseUrl, p.id).toMatch(/^https:\/\//);
         expect(p.sources.length, p.id).toBeGreaterThan(0);
         expect(p.verifiedAt, p.id).not.toBeNull();
-        expect(p.allowedHosts).toContain(new URL(p.baseUrl!).host);
+        // The base URL's host (templated hosts included) is always in the provider's own allowlist.
+        expect(p.allowedHosts, p.id).toContain(/^https:\/\/([^/]+)/.exec(p.baseUrl!)![1]!);
       } else {
-        // Nothing unverified is executable: no base URL, no hosts, no protocols.
+        // Nothing unverified is executable: no base URL, no hosts, no protocols — but the verdict and its evidence stay.
         expect([p.baseUrl, p.allowedHosts.length, p.protocols.length], p.id).toEqual([null, 0, 0]);
+        expect(["UNSUITABLE", "DEFERRED"], p.id).toContain(p.status);
+        expect(p.verdictEvidence.length, p.id).toBeGreaterThan(40);
       }
       expect(p.transport).toBe("https");
     }
-    expect(PROVIDERS.filter(isConnectable).map((p) => p.id)).toEqual(["openai"]);
+    expect(PROVIDERS.filter(isConnectable).map((p) => p.id)).toEqual([
+      "openai", "anthropic", "gemini", "xai", "groq", "openrouter", "mistral", "cohere", "deepseek", "zai", "moonshot", "minimax", "dashscope",
+      "cerebras", "together", "fireworks", "deepinfra", "huggingface", "cloudflare", "vercel-gateway",
+    ]);
+    // Core targets are never silently dropped: the unsuitable ones stay listed with their verdict.
+    expect(PROVIDERS.filter((p) => !isConnectable(p)).map((p) => [p.id, p.verdict])).toEqual([
+      ["opencode-zen", "UNSUITABLE"],
+      ["command-code", "UNSUITABLE_PENDING_OWNER_REVIEW"],
+      ["nvidia", "UNSUITABLE"],
+      ["bedrock", "DEFERRED"],
+      ["azure-openai", "DEFERRED"],
+      ["vertex", "DEFERRED"],
+    ]);
+    // Retired services are not registered at all (GitHub Models, retired 2026-07-30).
+    expect(PROVIDERS.some((p) => p.id === "github-models")).toBe(false);
   });
 });
 
@@ -242,6 +259,6 @@ describe("host policy (SSRF)", () => {
       process.env.FLOWLINE_ENV = "test";
     }
     expect(() => resolveBaseUrl(def, { baseUrl: "https://my-proxy.example/v1" })).toThrowError(expect.objectContaining({ code: "AI_CUSTOM_ENDPOINT_NOT_APPROVED" }));
-    expect(() => resolveBaseUrl(getProviderDef("anthropic")!)).toThrowError(expect.objectContaining({ code: "AI_PROVIDER_NOT_AVAILABLE" }));
+    expect(() => resolveBaseUrl(getProviderDef("opencode-zen")!)).toThrowError(expect.objectContaining({ code: "AI_PROVIDER_NOT_AVAILABLE" }));
   });
 });

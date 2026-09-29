@@ -1,8 +1,9 @@
 import type { Db } from "@/db";
 import type { schema } from "@/db";
-import { executeAi } from "./hub/execute";
+import type { AiRouteRef } from "@/db/schema";
+import { executeAi, type ExecuteResult } from "./hub/execute";
 import { LEGACY_LOCAL_PROVIDERS } from "./hub/registry";
-import { LOCAL_MIGRATION_MESSAGE, resolveRoute } from "./hub/routing";
+import { isRouteRef, LOCAL_MIGRATION_MESSAGE, resolveRoute } from "./hub/routing";
 import { HubError, type ResolvedRoute } from "./hub/types";
 import { quarantineInstructions } from "./injection";
 
@@ -11,8 +12,10 @@ import { quarantineInstructions } from "./injection";
  * (ALLOW / ASK / DENY) and executes them. Tool results are untrusted data: they are wrapped in
  * <untrusted_content> and lines that try to instruct the model are quarantined before it sees them.
  *
- * Wave A: agents run on the workspace default AI route (an authorised workspace connection) through the hub.
- * No provider environment variable is ever read. Per-agent route pickers arrive in Wave B.
+ * Agents run on the route pinned by their version (snapshotted when the version was saved), or — for versions
+ * saved before routes existed — the workspace default, through the hub: metered there (reserve the defensible max,
+ * settle the real cost), retried within its bounds, and subject to the workspace policy. No provider environment
+ * variable is ever read.
  */
 export interface ChatTool {
   name: string;
@@ -33,7 +36,13 @@ export interface ChatResult {
   toolCalls: ToolCall[];
   provider: string;
   model: string;
+  connectionId: string;
   usage: { inputTokens: number; outputTokens: number };
+  /** Settled by the hub (null = price unknown). */
+  costMicros: number | null;
+  costSource: ExecuteResult["costSource"];
+  attempts: number;
+  routing: ExecuteResult["routing"];
 }
 
 export const AGENT_GUARD =
@@ -44,13 +53,15 @@ export const AGENT_GUARD =
   "When you use knowledge, cite passages as [n] using the numbers given in the search results.";
 
 /**
- * Route for an agent version. A legacy pin is never reinterpreted: "ollama" → AI_LOCAL_MIGRATION_REQUIRED; any
- * other pre-hub server provider ("anthropic" via server env) → AI_ROUTE_MIGRATION_REQUIRED. Unpinned versions use
- * the workspace default route.
+ * Route for an agent version: its hub route pin when it has one. A legacy pin is never reinterpreted: "ollama" →
+ * AI_LOCAL_MIGRATION_REQUIRED; any other pre-hub server provider ("anthropic" via server env) →
+ * AI_ROUTE_MIGRATION_REQUIRED. Versions without either use the workspace default route.
  */
-export async function resolveAgentRoute(db: Db, workspace: typeof schema.workspace.$inferSelect, pin: { provider?: string | null; model?: string | null }): Promise<ResolvedRoute> {
+export async function resolveAgentRoute(db: Db, workspace: typeof schema.workspace.$inferSelect, pin: { provider?: string | null; model?: string | null; route?: AiRouteRef | null }): Promise<ResolvedRoute> {
+  // A legacy pin is checked FIRST: it is never reinterpreted, whatever else the row holds.
   const p = (pin.provider ?? "").toLowerCase();
   if (p && LEGACY_LOCAL_PROVIDERS.has(p)) throw new HubError("AI_LOCAL_MIGRATION_REQUIRED", LOCAL_MIGRATION_MESSAGE);
+  if (isRouteRef(pin.route)) return resolveRoute(db, workspace, { pin: pin.route, pinSource: "agent" });
   if (p) throw new HubError("AI_ROUTE_MIGRATION_REQUIRED", `This agent version is pinned to "${pin.provider}" from the old server configuration, which is no longer used. Save the agent again to use the workspace's AI connection.`);
   return resolveRoute(db, workspace, {});
 }
@@ -82,18 +93,22 @@ export async function chat(
     route: req.route,
     request: { system: `${AGENT_GUARD}\n\n${req.system}`, messages: req.messages, tools: req.tools, maxTokens: req.maxTokens, temperature: 0 },
     purpose: "agent",
-    metering: "caller",
+    metering: "hub",
     requestId: req.requestId,
     agentRunId: req.agentRunId,
     signal: req.signal,
-    maxAttempts: 1,
   });
   const u = r.result.usage;
   return {
     content: r.result.text,
     toolCalls: r.result.toolCalls,
-    provider: req.route.provider,
+    provider: r.route.provider,
     model: r.result.model,
+    connectionId: r.route.connectionId,
     usage: { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) },
+    costMicros: r.costMicros,
+    costSource: r.costSource,
+    attempts: r.attempts,
+    routing: r.routing,
   };
 }

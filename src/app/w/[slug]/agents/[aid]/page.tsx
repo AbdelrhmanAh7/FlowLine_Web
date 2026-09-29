@@ -109,7 +109,7 @@ function Config({ detail, role }: { detail: AgentDetail; role: Role }) {
     <div className="max-w-3xl">
       <AgentForm
         key={current.id}
-        initial={{ name: agent.name, description: agent.description, instructions: current.instructions, provider: current.provider, model: current.model, tools: current.tools, knowledgeSourceIds: current.knowledgeSourceIds, limits: current.limits }}
+        initial={{ name: agent.name, description: agent.description, instructions: current.instructions, provider: current.provider, model: current.model, route: current.route ?? null, tools: current.tools, knowledgeSourceIds: current.knowledgeSourceIds, limits: current.limits }}
         saving={save.isPending}
         onSave={(c) => save.mutate(c)}
         readOnlyReason={can(role, "agent.edit") ? null : denyReasonText(t, role, "agent.edit")}

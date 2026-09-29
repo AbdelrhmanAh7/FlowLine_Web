@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { chat, resolveAgentRoute, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
-import { estimateTokens } from "@/ai/provider";
+import { AGENT_GUARD, chat, resolveAgentRoute, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
+import { maxCostMicros, type PriceSnapshot } from "@/ai/hub/pricing";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AgentToolSpec } from "@/db/schema";
@@ -14,8 +14,8 @@ import type { Citation } from "@/server/knowledge";
 import { searchKnowledge } from "@/server/knowledge";
 import { redact } from "@/server/redact";
 import { enqueueRunEx } from "@/server/runs";
-import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
-import { backoffMs, sleep } from "./retry";
+import { BudgetExceededError, priceFor, reserveUsage, settleUsage } from "@/server/usage";
+import { sleep } from "./retry";
 
 /**
  * Agent runtime. The model proposes tool calls; this code decides and executes them:
@@ -129,11 +129,10 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
   // AI route: the workspace's authorised AI connection (never an environment key; legacy pins are refused).
   let route: Awaited<ReturnType<typeof resolveAgentRoute>>;
   try {
-    route = await resolveAgentRoute(db, ws!, { provider: version!.provider, model: version!.model });
+    route = await resolveAgentRoute(db, ws!, { provider: version!.provider, model: version!.model, route: version!.route });
   } catch (e) {
     return fail((e as NodeError).code ?? "AI_UNAVAILABLE", (e as Error).message);
   }
-  const model = { provider: route.provider, model: route.modelId };
 
   // Tools this version exposes (DENY tools are not offered — and still refused if the model calls them).
   const specs = version!.tools;
@@ -413,57 +412,41 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
         }
       }
 
-      // Model turn.
+      // Model turn. The hub meters it (reserve the defensible max → settle real cost), retries transient errors
+      // within its bounds (Retry-After honoured) and applies the workspace policy; tool calls are NEVER replayed by
+      // a model retry: a failed attempt returns nothing, and only a successful turn's proposals reach the gate below.
       if (stepCount >= limits.maxSteps) return await fail("AGENT_STEP_LIMIT", `The agent reached its limit of ${limits.maxSteps} steps without finishing`);
       const index = state.nextIndex++;
-      const price = priceFor(ws!.prices ?? {}, `ai:${model.provider}/${model.model}`);
-      const promptChars = version!.instructions.length + state.messages.reduce((n, m) => n + m.content.length, 0);
-      const est = aiCostMicros(price, estimateTokens(" ".repeat(promptChars)), MODEL_MAX_TOKENS);
-      if (limits.maxCostMicros != null && costMicros + est.cost > limits.maxCostMicros) {
+      const promptChars = version!.instructions.length + AGENT_GUARD.length + state.messages.reduce((n, m) => n + m.content.length, 0) + JSON.stringify(tools).length;
+      const est = maxCostMicros(route.pricing as PriceSnapshot | null, promptChars, MODEL_MAX_TOKENS) ?? 0;
+      if (limits.maxCostMicros != null && costMicros + est > limits.maxCostMicros) {
         return await fail("AGENT_COST_LIMIT", `The next step could cost more than the agent's cost limit allows (spent ${costMicros} of ${limits.maxCostMicros} micro-units)`);
       }
       let result: Awaited<ReturnType<typeof chat>> | null = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        const key = `${runId}:model:${index}:${attempt}`;
-        try {
-          await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "ai", idempotencyKey: key, estimatedMicros: est.cost, provider: model.provider, model: model.model, unpriced: est.unpriced, retry: attempt > 1 });
-        } catch (e) {
-          if (e instanceof BudgetExceededError) return await fail("BUDGET_EXCEEDED", e.message);
-          throw e;
-        }
-        const started = Date.now();
-        try {
-          result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: key, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal });
-          // Provider call ids are only unique within one turn (Ollama numbers them call_0, call_1…);
-          // make them unique for the whole run so every proposed call is decided exactly once.
-          result.toolCalls = result.toolCalls.map((c, i) => ({ ...c, id: `t${index}_${i}` }));
-          const cost = aiCostMicros(price, result.usage.inputTokens, result.usage.outputTokens);
-          await settleUsage(db, key, { costMicros: cost.cost, inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens, unpriced: cost.unpriced });
-          costMicros += cost.cost;
-          stepCount++;
-          await recordStep({
-            index,
-            kind: "model",
-            result: { content: result.content.slice(0, 4000), toolCalls: result.toolCalls.map((c) => ({ name: c.name, arguments: c.arguments })) },
-            latencyMs: Date.now() - started,
-            costMicros: cost.cost,
-            inputTokens: result.usage.inputTokens,
-            outputTokens: result.usage.outputTokens,
-            args: { provider: result.provider, model: result.model, attempt },
-          });
-          break;
-        } catch (e) {
-          await releaseUsage(db, key);
-          if (ac.signal.aborted) return await fail("AGENT_TIMEOUT", `The agent exceeded its time limit (${Math.round(limits.timeoutMs / 1000)}s)`);
-          const retryable = (e as { retryable?: boolean }).retryable === true;
-          if (!retryable || attempt === 3) {
-            await recordStep({ index, kind: "model", error: { code: (e as NodeError).code ?? "AI_ERROR", message: (e as Error).message }, latencyMs: Date.now() - started, args: { attempt } });
-            return await fail((e as NodeError).code ?? "AI_ERROR", (e as Error).message);
-          }
-          log("agent run", runId, "model attempt", attempt, "failed; retrying");
-          await sleep(backoffMs(attempt), ac.signal).catch(() => {});
-        }
+      const started = Date.now();
+      try {
+        result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: `${runId}:model:${index}`, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal });
+      } catch (e) {
+        if (ac.signal.aborted) return await fail("AGENT_TIMEOUT", `The agent exceeded its time limit (${Math.round(limits.timeoutMs / 1000)}s)`);
+        await recordStep({ index, kind: "model", error: { code: (e as NodeError).code ?? "AI_ERROR", message: (e as Error).message }, latencyMs: Date.now() - started, args: { provider: route.provider, model: route.modelId } });
+        return await fail((e as NodeError).code ?? "AI_ERROR", (e as Error).message);
       }
+      // Provider call ids are only unique within one turn; make them unique for the whole run so every proposed
+      // call is decided exactly once.
+      result.toolCalls = result.toolCalls.map((c, i) => ({ ...c, id: `t${index}_${i}` }));
+      const cost = result.costMicros ?? 0;
+      costMicros += cost;
+      stepCount++;
+      await recordStep({
+        index,
+        kind: "model",
+        result: { content: result.content.slice(0, 4000), toolCalls: result.toolCalls.map((c) => ({ name: c.name, arguments: c.arguments })) },
+        latencyMs: Date.now() - started,
+        costMicros: cost,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        args: { provider: result.provider, model: result.model, attempts: result.attempts, connectionId: result.connectionId, policy: result.routing.policy, routeReason: result.routing.reason, costSource: result.costSource, ...(result.routing.fallbackFrom.length ? { fallbackFrom: result.routing.fallbackFrom } : {}) },
+      });
       if (limits.maxCostMicros != null && costMicros > limits.maxCostMicros) {
         return await fail("AGENT_COST_LIMIT", `The agent exceeded its cost limit (${costMicros} of ${limits.maxCostMicros} micro-units)`);
       }

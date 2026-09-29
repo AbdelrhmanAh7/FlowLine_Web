@@ -11,7 +11,7 @@ import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
-import { useAiOverview, usePickerModels, type AiConnectionDto, type AiOverviewDto, type AiProviderDto, type AiRouteRef } from "@/lib/ai";
+import { useAiOverview, usePickerModels, type AiConnectionDto, type AiOverviewDto, type AiPolicyMode, type AiProviderDto, type AiRouteRef, type PickerModelDto } from "@/lib/ai";
 import { api } from "@/lib/api";
 import type { Role } from "@/lib/permissions";
 
@@ -45,7 +45,7 @@ export function AiProviders() {
       </Card>
       {d.legacy.any && <LegacyBanner legacy={d.legacy} />}
       <DefaultRoute overview={d} />
-      <CostPolicy overview={d} />
+      <RoutingPolicy overview={d} />
       <section aria-labelledby="ai-conns" className="flex flex-col gap-3">
         <h3 id="ai-conns" className="text-base font-semibold">
           {t("aiHub.connections.title")}
@@ -71,12 +71,12 @@ export function AiProviders() {
         <h3 id="ai-providers" className="text-base font-semibold">
           {t("aiHub.providers.title")}
         </h3>
-        {(["core", "expansion", "deferred"] as const).map((tier) => (
+        {(["core", "expansion"] as const).map((tier) => (
           <div key={tier} className="flex flex-col gap-2">
             <h4 className="text-sm font-medium text-med">{t(`aiHub.tier.${tier}`)}</h4>
             <ul className="grid gap-2 sm:grid-cols-2">
               {d.providers
-                .filter((p) => p.tier === tier)
+                .filter((p) => p.tier === tier && p.connectable)
                 .map((p) => (
                   <ProviderCard key={p.id} p={p} count={active.filter((c) => c.provider === p.id).length} canManage={d.canManage} onConnect={() => setConnectTo(p)} />
                 ))}
@@ -84,6 +84,7 @@ export function AiProviders() {
           </div>
         ))}
       </section>
+      <NotOffered providers={d.providers.filter((p) => !p.connectable)} retired={d.retired ?? []} />
       {connectTo && <ConnectDialog provider={connectTo} onClose={() => setConnectTo(null)} />}
     </div>
   );
@@ -170,34 +171,192 @@ function DefaultRoute({ overview }: { overview: AiOverviewDto }) {
   );
 }
 
-/** Owner policy: may calls whose price is unknown run while a spending cap applies? (default: no) */
-function CostPolicy({ overview }: { overview: AiOverviewDto }) {
+const MODES: AiPolicyMode[] = ["MANUAL", "FALLBACK", "FREE_ONLY", "LOW_COST"];
+const toMicros = (v: string) => Math.round(Number(v) * 1_000_000);
+const fromMicros = (m: number | undefined | null) => (m == null ? "" : String(m / 1_000_000));
+const sameRef = (a: AiRouteRef, b: AiRouteRef) => a.connectionId === b.connectionId && a.modelId === b.modelId;
+
+/** An ordered list of routes (fallback order / low-cost pool): add from the picker, reorder, remove. */
+function RouteList({ id, label, routes, max, models, disabled, onChange }: { id: string; label: string; routes: AiRouteRef[]; max: number; models: PickerModelDto[]; disabled: boolean; onChange: (r: AiRouteRef[]) => void }) {
+  const t = useT();
+  const [pick, setPick] = useState<AiRouteRef | null>(null);
+  const name = (r: AiRouteRef) => models.find((m) => sameRef(m, r))?.connectionLabel ?? t("aiHub.picker.selectedUnavailable");
+  const move = (i: number, d: -1 | 1) => {
+    const next = [...routes];
+    [next[i], next[i + d]] = [next[i + d]!, next[i]!];
+    onChange(next);
+  };
+  return (
+    <div className="flex flex-col gap-2" data-testid={id}>
+      <p className="text-sm font-medium text-med">{label}</p>
+      {routes.length === 0 ? (
+        <p className="text-sm text-muted">{t("aiHub.policy.listEmpty")}</p>
+      ) : (
+        <ol className="flex flex-col gap-1">
+          {routes.map((r, i) => (
+            <li key={`${r.connectionId}/${r.modelId}`} className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-card px-2 py-1 text-sm">
+              <span className="text-muted">{i + 1}.</span>
+              <span dir="ltr" className="data text-hi">
+                {r.modelId}
+              </span>
+              <span className="text-muted">· {name(r)}</span>
+              <span className="ms-auto flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => move(i, -1)} disabledReason={disabled ? t("aiHub.policy.readOnly") : i === 0 ? t("aiHub.policy.first") : null}>
+                  {t("aiHub.policy.up")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => move(i, 1)} disabledReason={disabled ? t("aiHub.policy.readOnly") : i === routes.length - 1 ? t("aiHub.policy.last") : null}>
+                  {t("aiHub.policy.down")}
+                </Button>
+                <Button size="sm" variant="danger-ghost" onClick={() => onChange(routes.filter((_, j) => j !== i))} disabledReason={disabled ? t("aiHub.policy.readOnly") : null}>
+                  {t("aiHub.policy.remove")}
+                </Button>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {!disabled && routes.length < max && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-accent">{t("aiHub.policy.addRoute")}</summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <ModelPicker id={`${id}-picker`} models={models} value={pick} onChange={setPick} />
+            <div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (pick && !routes.some((r) => sameRef(r, pick))) onChange([...routes, pick]);
+                  setPick(null);
+                }}
+                disabledReason={!pick ? t("aiHub.policy.pickFirst") : routes.some((r) => sameRef(r, pick)) ? t("aiHub.policy.already") : null}
+              >
+                {t("aiHub.policy.addThis")}
+              </Button>
+            </div>
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Routing policy (owner, ai.manage): mode, ordered fallback routes, the low-cost pool + ceiling, the privacy rule,
+ * the unknown-cost rule and Copilot's planning/repair routes. Everything is re-checked by the server at save and at
+ * every call; nothing here claims a route is free or cheap unless its price is verified.
+ */
+function RoutingPolicy({ overview }: { overview: AiOverviewDto }) {
   const t = useT();
   const { workspace, role } = useWorkspace();
   const qc = useQueryClient();
   const toast = useToast();
-  const initial = Boolean(overview.policy?.allowUnknownCost);
-  const [allow, setAllow] = useState(initial);
+  const models = usePickerModels(workspace.id, overview.canUse);
+  const p = overview.policy;
+  const initial = {
+    mode: p?.mode ?? "MANUAL",
+    allowUnknownCost: Boolean(p?.allowUnknownCost),
+    fallbackRoutes: p?.fallbackRoutes ?? [],
+    lowCostPool: p?.lowCostPool ?? [],
+    ceilIn: fromMicros(p?.priceCeiling?.inputPerMTokMicros),
+    ceilOut: fromMicros(p?.priceCeiling?.outputPerMTokMicros),
+    requireNoTraining: Boolean(p?.requireNoTraining),
+    planRoute: p?.copilot?.planRoute ?? null,
+    repairRoute: p?.copilot?.repairRoute ?? null,
+  };
+  const [s, setS] = useState(initial);
+  const set = (x: Partial<typeof s>) => setS((cur) => ({ ...cur, ...x }));
+  const dirty = JSON.stringify(s) !== JSON.stringify(initial);
+  const ro = !overview.canManage;
+  const ceilingValid = s.ceilIn !== "" && s.ceilOut !== "" && Number(s.ceilIn) >= 0 && Number(s.ceilOut) >= 0;
   const save = useMutation({
-    mutationFn: () => api(`/api/workspaces/${workspace.id}/ai/policy`, { method: "PUT", json: { allowUnknownCost: allow } }),
+    mutationFn: () =>
+      api(`/api/workspaces/${workspace.id}/ai/policy`, {
+        method: "PUT",
+        json: {
+          mode: s.mode,
+          allowUnknownCost: s.allowUnknownCost,
+          fallbackRoutes: s.fallbackRoutes,
+          lowCostPool: s.lowCostPool,
+          priceCeiling: ceilingValid ? { inputPerMTokMicros: toMicros(s.ceilIn), outputPerMTokMicros: toMicros(s.ceilOut) } : null,
+          requireNoTraining: s.requireNoTraining,
+          copilot: { planRoute: s.planRoute, repairRoute: s.repairRoute },
+        },
+      }),
     onSuccess: () => {
       toast(t("aiHub.policy.saved"), "success");
       void qc.invalidateQueries({ queryKey: ["ai", workspace.id] });
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.saveError")), "danger"),
   });
+  const reason = ro
+    ? denyReasonText(t, role as Role, "ai.manage")
+    : !dirty
+      ? t("settings.noChanges")
+      : s.mode === "FALLBACK" && s.fallbackRoutes.length === 0
+        ? t("aiHub.policy.needFallback")
+        : s.mode === "LOW_COST" && !ceilingValid
+          ? t("aiHub.policy.needCeiling")
+          : null;
+  const list = models.data ?? [];
   return (
-    <Card className="p-5">
-      <h3 className="text-base font-semibold">{t("aiHub.policy.title")}</h3>
-      <label className="mt-2 flex items-start gap-2 text-sm text-med">
-        <input type="checkbox" className="mt-1" checked={allow} disabled={!overview.canManage} onChange={(e) => setAllow(e.target.checked)} />
+    <Card className="flex flex-col gap-4 p-5" data-testid="ai-policy">
+      <div>
+        <h3 className="text-base font-semibold">{t("aiHub.policy.routingTitle")}</h3>
+        <p className="mt-1 text-sm text-med">{t("aiHub.policy.routingBody")}</p>
+      </div>
+      <fieldset className="flex flex-col gap-2" disabled={ro}>
+        <legend className="mb-1 text-sm font-medium text-med">{t("aiHub.policy.mode")}</legend>
+        {MODES.map((m) => (
+          <label key={m} className="flex items-start gap-2 text-sm">
+            <input type="radio" name="ai-policy-mode" className="mt-1" value={m} checked={s.mode === m} onChange={() => set({ mode: m })} />
+            <span>
+              <span className="font-medium text-hi">{t(`aiHub.policy.modes.${m}`)}</span>
+              <span className="block text-muted">{t(`aiHub.policy.modeHelp.${m}`)}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {(s.mode === "FALLBACK" || s.mode === "FREE_ONLY") && (
+        <RouteList id="ai-policy-fallbacks" label={t("aiHub.policy.fallbacks")} routes={s.fallbackRoutes} max={5} models={list} disabled={ro} onChange={(r) => set({ fallbackRoutes: r })} />
+      )}
+      {s.mode === "LOW_COST" && (
+        <>
+          <RouteList id="ai-policy-pool" label={t("aiHub.policy.pool")} routes={s.lowCostPool} max={10} models={list} disabled={ro} onChange={(r) => set({ lowCostPool: r })} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label={t("aiHub.policy.ceilIn")} htmlFor="ai-ceil-in">
+              <Input id="ai-ceil-in" type="number" min={0} step="0.01" dir="ltr" value={s.ceilIn} disabled={ro} onChange={(e) => set({ ceilIn: e.target.value })} />
+            </Field>
+            <Field label={t("aiHub.policy.ceilOut")} htmlFor="ai-ceil-out">
+              <Input id="ai-ceil-out" type="number" min={0} step="0.01" dir="ltr" value={s.ceilOut} disabled={ro} onChange={(e) => set({ ceilOut: e.target.value })} />
+            </Field>
+          </div>
+        </>
+      )}
+      <label className="flex items-start gap-2 text-sm text-med">
+        <input type="checkbox" className="mt-1" checked={s.requireNoTraining} disabled={ro} onChange={(e) => set({ requireNoTraining: e.target.checked })} />
+        <span>
+          {t("aiHub.policy.noTraining")}
+          <span className="block text-muted">{t("aiHub.policy.noTrainingHint")}</span>
+        </span>
+      </label>
+      <label className="flex items-start gap-2 text-sm text-med">
+        <input type="checkbox" className="mt-1" checked={s.allowUnknownCost} disabled={ro} onChange={(e) => set({ allowUnknownCost: e.target.checked })} />
         <span>
           {t("aiHub.policy.allowUnknown")}
           <span className="block text-muted">{t("aiHub.policy.allowUnknownHint")}</span>
         </span>
       </label>
-      <div className="mt-3">
-        <Button size="sm" loading={save.isPending} onClick={() => save.mutate()} disabledReason={!overview.canManage ? denyReasonText(t, role as Role, "ai.manage") : allow === initial ? t("settings.noChanges") : null}>
+      <div className="flex flex-col gap-3 border-t border-line pt-3">
+        <p className="text-sm font-medium text-med">{t("aiHub.policy.copilotTitle")}</p>
+        <p className="text-sm text-muted">{t("aiHub.policy.copilotBody")}</p>
+        <Field label={t("aiHub.policy.planRoute")} htmlFor="ai-copilot-plan">
+          <ModelPicker id="ai-copilot-plan" models={list} value={s.planRoute} onChange={(v) => set({ planRoute: v })} allowDefault defaultLabel={t("aiHub.policy.useDefault")} disabled={ro} loading={overview.canUse && models.isPending} />
+        </Field>
+        <Field label={t("aiHub.policy.repairRoute")} htmlFor="ai-copilot-repair">
+          <ModelPicker id="ai-copilot-repair" models={list} value={s.repairRoute} onChange={(v) => set({ repairRoute: v })} allowDefault defaultLabel={t("aiHub.policy.useDefault")} disabled={ro} loading={overview.canUse && models.isPending} />
+        </Field>
+      </div>
+      <div>
+        <Button variant="primary" size="sm" loading={save.isPending} onClick={() => save.mutate()} disabledReason={reason}>
           {t("aiHub.policy.save")}
         </Button>
       </div>
@@ -205,10 +364,70 @@ function CostPolicy({ overview }: { overview: AiOverviewDto }) {
   );
 }
 
+const VERDICT_TONE: Record<AiProviderDto["verdict"], Tone> = { SUITABLE: "success", SUITABLE_WITH_LIMITS: "info", UNSUITABLE: "muted", UNSUITABLE_PENDING_OWNER_REVIEW: "warning", DEFERRED: "muted" };
+
+/** Providers that are documented but not offered (unsuitable terms, pending owner review, deferred) + retired services. */
+function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retired: AiOverviewDto["retired"] }) {
+  const t = useT();
+  if (!providers.length && !retired.length) return null;
+  return (
+    <section aria-labelledby="ai-not-offered" className="flex flex-col gap-2" data-testid="ai-not-offered">
+      <h3 id="ai-not-offered" className="text-base font-semibold">
+        {t("aiHub.notOffered.title")}
+      </h3>
+      <p className="text-sm text-med">{t("aiHub.notOffered.body")}</p>
+      <ul className="flex flex-col gap-2">
+        {providers.map((p) => (
+          <li key={p.id} className="rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-provider-${p.id}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-hi">{p.name}</span>
+              <StatusBadge tone={VERDICT_TONE[p.verdict]}>{t(`aiHub.verdict.${p.verdict}`)}</StatusBadge>
+              <span className="text-muted">{t(`aiHub.tier.${p.tier}`)}</span>
+            </div>
+            <p className="mt-1 text-med">{p.verdictEvidence}</p>
+            {p.notes && <p className="mt-1 text-muted">{p.notes}</p>}
+            <p className="mt-1 flex flex-wrap gap-x-3">
+              {p.sources.map((s) => (
+                <a key={s.url} className="text-accent hover:underline" href={s.url} target="_blank" rel="noreferrer noopener">
+                  {s.label}
+                </a>
+              ))}
+            </p>
+            {p.verifiedAt && <p className="mt-1 text-xs text-muted">{t("aiHub.notOffered.checked", { date: p.verifiedAt })}</p>}
+          </li>
+        ))}
+        {retired.map((r) => (
+          <li key={r.id} className="rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-retired-${r.id}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-hi">{r.name}</span>
+              <StatusBadge tone="muted">{t("aiHub.verdict.RETIRED")}</StatusBadge>
+            </div>
+            <p className="mt-1 text-med">{r.evidence}</p>
+            <p className="mt-1 flex flex-wrap gap-x-3">
+              {r.sources.map((u) => (
+                <a key={u} dir="ltr" className="text-accent hover:underline" href={u} target="_blank" rel="noreferrer noopener">
+                  {new URL(u).hostname}
+                </a>
+              ))}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Provider requirements in the UI language (registry text is the English fallback). */
 function requirementText(t: ReturnType<typeof useT>, p: AiProviderDto) {
   const key = `aiHub.requirements.${p.id}`;
   return t.has(key) ? t(key as MessageKey) : p.requirements.join("; ");
+}
+
+/** Connection field label in the UI language (registry label is the English fallback). */
+function fieldLabel(t: ReturnType<typeof useT>, providerId: string, f: { key: string; label: string }) {
+  const specific = `aiHub.fields.${providerId}.${f.key}`;
+  const generic = `aiHub.fields.${f.key}`;
+  return t.has(specific) ? t(specific as MessageKey) : t.has(generic) ? t(generic as MessageKey) : f.label;
 }
 
 function errorLine(t: ReturnType<typeof useT>, e: { code: string; message: string }) {
@@ -232,6 +451,23 @@ function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; co
         {count > 0 ? ` · ${t.plural("aiHub.providers.connections", count)}` : ""}
       </p>
       {p.connectable && p.requirements.length > 0 && <p className="text-sm text-med">{t("aiHub.providers.needs", { what: requirementText(t, p) })}</p>}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs" data-testid="ai-provider-notes">
+        <dt className="text-muted">{t("aiHub.providers.freeTier")}</dt>
+        <dd className="text-med">
+          {t(`aiHub.freeTier.${p.freeTier.type}`)} — {p.freeTier.note}
+        </dd>
+        <dt className="text-muted">{t("aiHub.providers.privacy")}</dt>
+        <dd className="text-med">
+          {t(`aiHub.training.${p.privacy.training}`)} — {p.privacy.note}
+        </dd>
+        {p.termsNotes && (
+          <>
+            <dt className="text-muted">{t("aiHub.providers.terms")}</dt>
+            <dd className="text-med">{p.termsNotes}</dd>
+          </>
+        )}
+      </dl>
+      {p.verdict === "SUITABLE_WITH_LIMITS" && <p className="text-xs text-muted">{p.verdictEvidence}</p>}
       {p.sources[0] && (
         <a className="text-sm text-accent hover:underline" href={p.sources.at(-1)!.url} target="_blank" rel="noreferrer noopener">
           {t("aiHub.providers.docs")}
@@ -261,7 +497,7 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
   const test = useMutation({
     mutationFn: () => api<{ ok: boolean; models?: number; code?: string; message?: string }>(`${base}/test`, { method: "POST", json: { kind: "metadata" } }),
     onSuccess: (r) => {
-      toast(r.ok ? t("aiHub.connection.testOk", { count: r.models ?? 0 }) : errorLine(t, { code: r.code ?? "", message: r.message ?? "" }), r.ok ? "success" : "danger");
+      toast(r.ok ? t("aiHub.connection.testOk", { count: r.models ?? 0 }) : errorLine(t, { code: r.code ?? "", message: r.message ?? "" }), r.ok ? "success" : r.code === "AI_KEY_NOT_CHECKABLE" ? "warning" : "danger");
       refresh();
     },
     onError: (e) => toast(apiErrorMessage(t, e), "danger"),
@@ -296,8 +532,8 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
       <dl className="grid grid-cols-[130px_1fr] gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted">{t("aiHub.connection.key")}</dt>
         <dd>
-          <span dir="ltr" className="data" data-testid="ai-key-hint">
-            {conn.keyHint ?? "••••"}
+          <span dir={conn.keyHint ? "ltr" : undefined} className={conn.keyHint ? "data" : undefined} data-testid="ai-key-hint">
+            {conn.keyHint ?? (conn.keySetAt ? t("aiHub.connection.keySet", { date: conn.keySetAt }) : "••••")}
           </span>{" "}
           · {t("aiHub.connection.added", { when: t.relative(conn.createdAt) })}
         </dd>
@@ -310,6 +546,11 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
         <dt className="text-muted">{t("aiHub.connection.lastTested")}</dt>
         <dd>{conn.lastTestedAt ? t.relative(conn.lastTestedAt) : t("common.never")}</dd>
       </dl>
+      {conn.keyCheck === "none" && !conn.lastTestedAt && (
+        <p className="text-sm text-warning" data-testid="ai-key-unchecked">
+          {t("aiHub.connection.keyUnchecked")}
+        </p>
+      )}
       {conn.catalogStale && <p className="text-sm text-warning">{t("aiHub.connection.stale", { reason: conn.catalogError ?? "" })}</p>}
       {conn.lastError && <p className="text-sm text-danger">{errorLine(t, conn.lastError)}</p>}
       <fieldset className="flex flex-wrap items-center gap-3 text-sm" disabled={!overview.canManage}>
@@ -413,14 +654,25 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
   const qc = useQueryClient();
   const toast = useToast();
   const [label, setLabel] = useState("");
+  // Provider fields are NON-secret (region, workspace/account IDs, API choice); they may live in React state.
+  const [settings, setSettings] = useState<Record<string, string>>(() => Object.fromEntries(provider.connectionFields.filter((f) => f.options?.length && f.required).map((f) => [f.key, f.options![0]!.value])));
+  const [attest, setAttest] = useState(false);
   const keyRef = useRef<HTMLInputElement>(null);
   const submit = useKeySubmit();
+  const missing = provider.connectionFields.find((f) => f.required && !settings[f.key]?.trim());
+  const invalid = provider.connectionFields.find((f) => settings[f.key]?.trim() && !new RegExp(f.pattern).test(settings[f.key]!.trim()));
+  const blocked = missing ? t("aiHub.dialog.fieldRequired", { field: fieldLabel(t, provider.id, missing) }) : invalid ? t("aiHub.dialog.fieldInvalid", { field: fieldLabel(t, provider.id, invalid) }) : provider.requiresPlanAttestation && !attest ? t("aiHub.dialog.attestFirst") : null;
   return (
     <Modal titleId="ai-connect-title" onClose={onClose}>
       <h2 id="ai-connect-title" className="text-lg font-semibold">
         {t("aiHub.dialog.connectTitle", { name: provider.name })}
       </h2>
-      <p className="mt-1 text-sm text-med">{t("aiHub.dialog.connectBody")}</p>
+      <p className="mt-1 text-sm text-med">{provider.keyCheck === "none" ? t("aiHub.dialog.connectBodyNoCheck") : t("aiHub.dialog.connectBody")}</p>
+      {provider.planWarning && (
+        <p role="note" className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-med" data-testid="ai-plan-warning">
+          {t.has(`aiHub.planWarning.${provider.id}` as MessageKey) ? t(`aiHub.planWarning.${provider.id}` as MessageKey) : provider.planWarning}
+        </p>
+      )}
       <form
         className="mt-4 flex flex-col gap-4"
         autoComplete="off"
@@ -430,7 +682,11 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
             .run(
               keyRef,
               async (apiKey) => {
-                const r = await api<{ connection: AiConnectionDto }>(`/api/workspaces/${workspace.id}/ai/connections`, { method: "POST", json: { provider: provider.id, label, apiKey } });
+                const clean = Object.fromEntries(Object.entries(settings).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
+                const r = await api<{ connection: AiConnectionDto }>(`/api/workspaces/${workspace.id}/ai/connections`, {
+                  method: "POST",
+                  json: { provider: provider.id, label, apiKey, settings: clean, ...(provider.requiresPlanAttestation ? { attestPayAsYouGo: attest } : {}) },
+                });
                 toast(t("aiHub.dialog.connected", { count: r.connection.models.discovered }), "success");
               },
               (err) => apiErrorMessage(t, err, t("aiHub.dialog.connectError")),
@@ -449,6 +705,33 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
         <Field label={t("aiHub.dialog.apiKey")} htmlFor="ai-conn-key" hint={t("aiHub.dialog.apiKeyHint")}>
           <KeyInput id="ai-conn-key" inputRef={keyRef} />
         </Field>
+        {provider.connectionFields.map((f) => (
+          <Field key={f.key} label={fieldLabel(t, provider.id, f)} htmlFor={`ai-field-${f.key}`} hint={f.help ? (t.has(`aiHub.fieldHelp.${provider.id}.${f.key}` as MessageKey) ? t(`aiHub.fieldHelp.${provider.id}.${f.key}` as MessageKey) : f.help) : undefined}>
+            {f.options?.length ? (
+              <select
+                id={`ai-field-${f.key}`}
+                className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none"
+                value={settings[f.key] ?? ""}
+                onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value }))}
+              >
+                {!f.required && <option value="">{t("aiHub.dialog.defaultOption")}</option>}
+                {f.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input id={`ai-field-${f.key}`} dir="ltr" value={settings[f.key] ?? ""} maxLength={128} spellCheck={false} onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value }))} />
+            )}
+          </Field>
+        ))}
+        {provider.requiresPlanAttestation && (
+          <label className="flex items-start gap-2 text-sm" data-testid="ai-attest">
+            <input type="checkbox" className="mt-1" checked={attest} onChange={(e) => setAttest(e.target.checked)} required />
+            {t("aiHub.dialog.attest")}
+          </label>
+        )}
         {provider.requirements.length > 0 && <p className="text-sm text-muted">{t("aiHub.providers.needs", { what: requirementText(t, provider) })}</p>}
         {submit.error && (
           <p role="alert" className="text-sm text-danger">
@@ -459,7 +742,7 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
           <Button type="button" variant="ghost" onClick={onClose}>
             {t("aiHub.dialog.cancel")}
           </Button>
-          <Button type="submit" variant="primary" loading={submit.pending}>
+          <Button type="submit" variant="primary" loading={submit.pending} disabledReason={blocked}>
             {t("aiHub.dialog.save")}
           </Button>
         </div>
@@ -473,12 +756,12 @@ function AffectedList({ conn }: { conn: AiConnectionDto }) {
   const { workspace } = useWorkspace();
   const q = useQuery({
     queryKey: ["ai-affected", conn.id],
-    queryFn: () => api<{ isDefault: boolean; flows: { id: string; name: string; published: boolean; via: "pinned" | "default" }[]; agents: { id: string; name: string }[]; copilot: boolean }>(`/api/workspaces/${workspace.id}/ai/connections/${conn.id}/affected`),
+    queryFn: () => api<{ isDefault: boolean; flows: { id: string; name: string; published: boolean; via: "pinned" | "default" }[]; agents: { id: string; name: string; via?: "pinned" | "default" }[]; copilot: boolean; inPolicy?: boolean }>(`/api/workspaces/${workspace.id}/ai/connections/${conn.id}/affected`),
   });
   if (q.isPending) return <Skeleton className="h-16" />;
   if (!q.data) return null;
   const a = q.data;
-  const nothing = !a.isDefault && a.flows.length === 0;
+  const nothing = !a.isDefault && a.flows.length === 0 && a.agents.length === 0 && !a.copilot && !a.inPolicy;
   return (
     <div className="mt-3 rounded-md border border-line bg-card p-3 text-sm" data-testid="ai-affected">
       <p className="font-medium">{t("aiHub.affected.title")}</p>
@@ -494,9 +777,10 @@ function AffectedList({ conn }: { conn: AiConnectionDto }) {
             </li>
           ))}
           {a.agents.map((ag) => (
-            <li key={ag.id}>{t("aiHub.affected.agent", { name: ag.name })}</li>
+            <li key={ag.id}>{ag.via === "pinned" ? t("aiHub.affected.agentPinned", { name: ag.name }) : t("aiHub.affected.agent", { name: ag.name })}</li>
           ))}
           {a.copilot && <li>{t("aiHub.affected.copilot")}</li>}
+          {a.inPolicy && <li>{t("aiHub.affected.policy")}</li>}
         </ul>
       )}
     </div>

@@ -1,6 +1,7 @@
 import Ajv from "ajv";
 import type { Db } from "@/db";
 import type { schema } from "@/db";
+import type { AiRouteRef } from "@/db/schema";
 import { NodeError } from "@/engine/execute";
 import { executeAi } from "./hub/execute";
 import { resolveRoute } from "./hub/routing";
@@ -8,10 +9,11 @@ import { HubError, type ResolvedRoute } from "./hub/types";
 import { quarantineInstructions } from "./injection";
 
 /**
- * Single-shot generation FACADE (used by Copilot in Wave A; agents use ./chat). It no longer knows any provider:
- * it resolves an authorised workspace AI connection through the hub and calls `executeAi`. There is no
- * environment-variable fallback of any kind (no server key, no local runtime). Wave B moves Copilot onto the
- * hub directly (route pickers, snapshots).
+ * Single-shot generation FACADE (used by Copilot; agents use ./chat). It no longer knows any provider: it resolves
+ * an authorised workspace AI route through the hub (a pinned route — e.g. Copilot's planning or repair route from
+ * the workspace AI policy — else the workspace default) and calls `executeAi`, which meters the call (reserve the
+ * defensible max, settle the real cost) and applies the workspace policy. There is no environment-variable
+ * fallback of any kind (no server key, no local runtime).
  */
 export interface AiRequest {
   instructions: string;
@@ -29,8 +31,12 @@ export interface AiResult {
   provider: string;
   model: string;
   usage: { inputTokens: number; outputTokens: number };
+  /** Settled by the hub (null = price unknown). */
+  costMicros: number | null;
   /** Lines removed from the untrusted content because they tried to instruct the AI. */
   quarantined: string[];
+  /** Route that answered + why (policy visibility). */
+  routing: { connectionId: string; reason: string; fallbackFrom: { modelId: string; code: string }[] };
 }
 
 export interface AiProvider {
@@ -92,10 +98,15 @@ export function parseJson(text: string): unknown {
  * The AI facade for a workspace, acting for `actorUserId`: the workspace default route (an authorised connection).
  * Unavailable (with the reason) when there is none — never a fallback.
  */
-export async function getAiProvider(db: Db, workspace: typeof schema.workspace.$inferSelect, actorUserId: string, opts: { requestId: string }): Promise<AiProvider> {
+export async function getAiProvider(
+  db: Db,
+  workspace: typeof schema.workspace.$inferSelect,
+  actorUserId: string,
+  opts: { requestId: string; pin?: AiRouteRef | null; pinSource?: "copilot" | "agent" | "node" },
+): Promise<AiProvider> {
   let route: ResolvedRoute;
   try {
-    route = await resolveRoute(db, workspace, {});
+    route = await resolveRoute(db, workspace, opts.pin ? { pin: opts.pin, pinSource: opts.pinSource ?? "copilot" } : {});
   } catch (e) {
     const code = e instanceof HubError ? e.code : "AI_NOT_CONFIGURED";
     const reason = (e as Error).message;
@@ -114,19 +125,20 @@ export async function getAiProvider(db: Db, workspace: typeof schema.workspace.$
         route,
         request: { system, messages: [{ role: "user", content: user }], maxTokens: req.maxTokens, schema: req.schema, temperature: 0 },
         purpose: "copilot",
-        metering: "caller",
+        metering: "hub",
         requestId: `${opts.requestId}:${++calls}`,
         signal: req.signal,
-        maxAttempts: 1,
       });
       const u = r.result.usage;
       return {
         text: r.result.text,
         json: req.schema ? parseJson(r.result.text) : undefined,
-        provider: route.provider,
+        provider: r.route.provider,
         model: r.result.model,
         usage: { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) },
+        costMicros: r.costMicros,
         quarantined,
+        routing: { connectionId: r.route.connectionId, reason: r.routing.reason, fallbackFrom: r.routing.fallbackFrom.map((f) => ({ modelId: f.modelId, code: f.code })) },
       };
     },
   };

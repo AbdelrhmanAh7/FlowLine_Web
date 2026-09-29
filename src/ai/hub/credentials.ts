@@ -25,8 +25,15 @@ export function encryptAiKey(apiKey: string, c: { id: string; workspaceId: strin
   return encryptSecretV2({ apiKey } satisfies StoredAiSecret, aiSecretContext(c));
 }
 
-export function keyHint(apiKey: string) {
-  return `••••${apiKey.slice(-4)}`;
+/** Keys shorter than this don't get a last-4 hint (4 characters of a short key are too large a share of it). */
+export const KEY_HINT_MIN_LENGTH = 32;
+
+/**
+ * Masked indicator stored at save time (security review): the last 4 characters only for keys of at least
+ * KEY_HINT_MIN_LENGTH characters; otherwise only the date it was set ("set:YYYY-MM-DD", rendered by the UI).
+ */
+export function keyHint(apiKey: string, at: Date = new Date()) {
+  return apiKey.length >= KEY_HINT_MIN_LENGTH ? `••••${apiKey.slice(-4)}` : `set:${at.toISOString().slice(0, 10)}`;
 }
 
 export function loadCredentials(conn: Conn): Credentials {

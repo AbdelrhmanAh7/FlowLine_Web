@@ -8,9 +8,10 @@ import { checkRate } from "@/server/rate-limit";
 import { encryptAiKey, keyHint, loadCredentials, validateApiKey } from "./credentials";
 import { refreshCatalogue, storeCatalogue } from "./discovery";
 import { executeAi } from "./execute";
-import { listModels } from "./protocols";
+import { canCheckKey, listModels } from "./protocols";
 import { getProviderDef, isConnectable, type ProviderDefinition } from "./registry";
-import { isRouteRef, resolveRoute } from "./routing";
+import { DEFAULT_POLICY, isRouteRef, resolveRoute } from "./routing";
+import { validateSettings } from "./transport";
 import { HubError } from "./types";
 
 type Conn = typeof schema.aiConnection.$inferSelect;
@@ -29,7 +30,11 @@ export function publicAiConnection(c: Conn, counts?: { discovered: number; acces
     provider: c.provider,
     providerName: def?.name ?? c.provider,
     label: c.label,
-    keyHint: c.status === "REVOKED" ? null : c.keyHint,
+    // "••••WXYZ" only for long keys; short keys show only the date the key was set (security review).
+    keyHint: c.status === "REVOKED" || !c.keyHint || c.keyHint.startsWith("set:") ? null : c.keyHint,
+    keySetAt: c.status === "REVOKED" ? null : c.keyHint?.startsWith("set:") ? c.keyHint.slice(4) : null,
+    /** "listing": the key was checked with a metadata call; "none": the provider has no such endpoint (use the inference test). */
+    keyCheck: def && canCheckKey(def) ? ("listing" as const) : ("none" as const),
     settings: c.settings,
     useRoles: c.useRoles,
     status: c.status,
@@ -87,13 +92,26 @@ function connectableDef(providerId: string): ProviderDefinition {
   return def;
 }
 
-/** Metadata-only credential check: lists models. Maps failures to HTTP errors for the settings UI. */
+function cleanSettings(def: ProviderDefinition, settings: Record<string, string> | undefined) {
+  try {
+    return validateSettings(def, settings ?? {});
+  } catch (e) {
+    if (e instanceof HubError) throw new HttpError(400, e.code, e.message);
+    throw e;
+  }
+}
+
+/**
+ * Metadata-only credential check: lists models. Maps failures to HTTP errors for the settings UI. Providers without
+ * a documented list endpoint (Z.ai, Alibaba) get their static catalogue — the key is NOT checked (keyCheck "none").
+ */
 async function verifyKey(def: ProviderDefinition, apiKey: string, settings: Record<string, string>) {
   try {
     return await listModels(def, { apiKey, settings });
   } catch (e) {
     if (!(e instanceof HubError)) throw e;
     if (e.code === "AI_AUTH_FAILED" || e.code === "AI_FORBIDDEN") throw new HttpError(400, "AI_KEY_REJECTED", `${def.name} rejected this API key`);
+    if (e.code === "AI_PLAN_NOT_ALLOWED" || e.code === "AI_TRIAL_KEY" || e.code === "AI_SETTINGS_INVALID") throw new HttpError(400, e.code, e.message);
     if (e.code === "AI_EGRESS_BLOCKED" || e.code === "AI_REDIRECT_REFUSED" || e.code === "AI_CUSTOM_ENDPOINT_NOT_APPROVED") throw new HttpError(400, e.code, e.message);
     if (e.code === "AI_CATALOGUE_MALFORMED") throw new HttpError(502, e.code, `${def.name} answered, but its model list is malformed: ${e.message}`);
     throw new HttpError(502, "AI_PROVIDER_UNREACHABLE", `Couldn't reach ${def.name} to check the key: ${e.message}`);
@@ -115,7 +133,12 @@ function hubToHttp(e: unknown): never {
   throw e;
 }
 
-export async function createAiConnection(db: Db, userId: string, workspaceId: string, input: { provider: string; label: string; apiKey: string; settings?: Record<string, string> }) {
+export async function createAiConnection(
+  db: Db,
+  userId: string,
+  workspaceId: string,
+  input: { provider: string; label: string; apiKey: string; settings?: Record<string, string>; attestPayAsYouGo?: boolean },
+) {
   const def = connectableDef(input.provider);
   let apiKey: string;
   try {
@@ -123,8 +146,13 @@ export async function createAiConnection(db: Db, userId: string, workspaceId: st
   } catch (e) {
     hubToHttp(e);
   }
-  const settings = input.settings ?? {};
+  const settings = cleanSettings(def, input.settings);
+  // Coding-plan / subscription keys can't be told apart by shape: the owner confirms it's a pay-as-you-go key.
+  if (def.requiresPlanAttestation && input.attestPayAsYouGo !== true) {
+    throw new HttpError(422, "AI_PLAN_ATTESTATION_REQUIRED", `${def.name}: confirm this is a pay-as-you-go API key. ${def.planWarning ?? ""}`.trim());
+  }
   const models = await verifyKey(def, apiKey, settings);
+  const checked = canCheckKey(def);
   // The id is generated here so the ciphertext is bound to this exact row (v2 AAD) before the insert.
   const id = randomUUID();
   const enc = encryptAiKey(apiKey, { id, workspaceId, provider: def.id });
@@ -138,12 +166,12 @@ export async function createAiConnection(db: Db, userId: string, workspaceId: st
       label: input.label.trim().slice(0, 80) || def.name,
       secretEnc: enc.ciphertext,
       keyId: enc.keyId,
-      keyHint: keyHint(apiKey),
+      keyHint: keyHint(apiKey, now),
       settings,
       useRoles: ["owner"],
       status: "CONNECTED",
       verification: def.contractVerified ? "CONTRACT_VERIFIED" : "IMPLEMENTED",
-      lastTestedAt: now,
+      lastTestedAt: checked ? now : null,
       createdBy: userId,
     })
     .returning();
@@ -154,6 +182,17 @@ export async function createAiConnection(db: Db, userId: string, workspaceId: st
 /** "Test connection": the same metadata-only check (and it refreshes the model list). Records health. */
 export async function testAiConnection(db: Db, conn: Conn) {
   if (conn.status === "REVOKED") throw new HttpError(409, "AI_CONNECTION_REVOKED", "This connection was disconnected");
+  const def = getProviderDef(conn.provider);
+  if (def && !canCheckKey(def)) {
+    // No metadata endpoint: refreshing the static catalogue proves nothing about the key. Say so (no fake success).
+    const r = await refreshCatalogue(db, conn);
+    return {
+      ok: false,
+      code: "AI_KEY_NOT_CHECKABLE",
+      message: `${def.name} has no model-list endpoint, so the key can't be checked without an inference. Run the inference test to confirm it.${r.ok ? "" : ` (${r.message})`}`,
+      connection: await publicById(db, conn.id),
+    };
+  }
   const r = await refreshCatalogue(db, conn);
   const now = new Date();
   if (r.ok) await db.update(schema.aiConnection).set({ status: "CONNECTED", lastTestedAt: now, lastError: null, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
@@ -180,10 +219,15 @@ export async function inferenceTest(db: Db, userId: string, workspace: typeof sc
       request: { system: "Connection test.", messages: [{ role: "user", content: "Reply with the single word OK." }], maxTokens: 8 },
       purpose: "connection_test",
       metering: "hub",
+      // A connection test only ever calls THIS connection (never a fallback route).
+      policy: { ...DEFAULT_POLICY, allowUnknownCost: workspace.aiPolicy?.allowUnknownCost ?? false },
       requestId: `aitest:${conn.id}:${Date.now()}`,
       signal: AbortSignal.timeout(60_000),
       maxAttempts: 1,
     });
+    // A successful inference proves the key works (the only check for providers without a list endpoint).
+    const now = new Date();
+    await db.update(schema.aiConnection).set({ lastTestedAt: now, status: "CONNECTED", lastError: null, updatedAt: now }).where(and(eq(schema.aiConnection.id, conn.id), ne(schema.aiConnection.status, "REVOKED")));
     return { ok: true, model: r.result.model, usage: r.result.usage, costMicros: r.costMicros, costSource: r.costSource };
   } catch (e) {
     if (e instanceof HubError) return { ok: false, code: e.code, message: e.message };
@@ -201,13 +245,13 @@ export async function replaceAiKey(db: Db, conn: Conn, rawKey: string) {
   } catch (e) {
     hubToHttp(e);
   }
-  const models = await verifyKey(def, apiKey, conn.settings);
+  const models = await verifyKey(def, apiKey, cleanSettings(def, conn.settings));
   const enc = encryptAiKey(apiKey, conn);
   const now = new Date();
   // Fenced on the version read BEFORE the (slow) key check: a concurrent replace or disconnect wins; this one conflicts.
   const [row] = await db
     .update(schema.aiConnection)
-    .set({ secretEnc: enc.ciphertext, keyId: enc.keyId, keyHint: keyHint(apiKey), credVersion: sql`${schema.aiConnection.credVersion} + 1`, status: "CONNECTED", lastError: null, lastTestedAt: now, updatedAt: now })
+    .set({ secretEnc: enc.ciphertext, keyId: enc.keyId, keyHint: keyHint(apiKey, now), credVersion: sql`${schema.aiConnection.credVersion} + 1`, status: "CONNECTED", lastError: null, lastTestedAt: canCheckKey(def) ? now : null, updatedAt: now })
     .where(and(eq(schema.aiConnection.id, conn.id), eq(schema.aiConnection.credVersion, conn.credVersion), ne(schema.aiConnection.status, "REVOKED")))
     .returning();
   if (!row) throw new HttpError(409, "AI_CONNECTION_CHANGED", "This connection changed while the new key was being checked (another key replacement or a disconnect). Reload and try again.");
@@ -255,7 +299,7 @@ export async function setDefaultRoute(db: Db, workspaceId: string, ref: AiRouteR
  * route, agents in Wave A).
  */
 export async function affectedBy(db: Db, workspaceId: string, connectionId: string) {
-  const [ws] = await db.select({ route: schema.workspace.aiDefaultRoute }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
+  const [ws] = await db.select({ route: schema.workspace.aiDefaultRoute, policy: schema.workspace.aiPolicy }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
   const isDefault = ws?.route?.connectionId === connectionId;
   const flows = await db
     .select({ id: schema.flow.id, name: schema.flow.name, graph: schema.flow.graph, published: schema.flow.publishedVersionId })
@@ -272,13 +316,19 @@ export async function affectedBy(db: Db, workspaceId: string, connectionId: stri
     if (nodes.some((n) => n.data?.config?.route?.connectionId === connectionId)) out.push({ id: f.id, name: f.name, published: Boolean(f.published), via: "pinned" });
     else if (isDefault && nodes.some((n) => !n.data?.config?.route)) out.push({ id: f.id, name: f.name, published: Boolean(f.published), via: "default" });
   }
-  const agents = isDefault
-    ? await db
-        .select({ id: schema.agent.id, name: schema.agent.name })
-        .from(schema.agent)
-        .where(and(eq(schema.agent.workspaceId, workspaceId), isNull(schema.agent.deletedAt), isNotNull(schema.agent.currentVersionId)))
-    : [];
-  return { isDefault, flows: out, agents, copilot: isDefault };
+  const current = await db
+    .select({ id: schema.agent.id, name: schema.agent.name, route: schema.agentVersion.route })
+    .from(schema.agent)
+    .innerJoin(schema.agentVersion, eq(schema.agentVersion.id, schema.agent.currentVersionId))
+    .where(and(eq(schema.agent.workspaceId, workspaceId), isNull(schema.agent.deletedAt), isNotNull(schema.agent.currentVersionId)));
+  const agents = current
+    .filter((a) => (isRouteRef(a.route) ? a.route.connectionId === connectionId : isDefault))
+    .map((a) => ({ id: a.id, name: a.name, via: isRouteRef(a.route) ? ("pinned" as const) : ("default" as const) }));
+  const policy = ws?.policy;
+  const cp = policy?.copilot;
+  const copilot = [cp?.planRoute, cp?.repairRoute].some((r) => (isRouteRef(r) ? r.connectionId === connectionId : isDefault));
+  const inPolicy = [...(policy?.fallbackRoutes ?? []), ...(policy?.lowCostPool ?? [])].some((r) => isRouteRef(r) && r.connectionId === connectionId);
+  return { isDefault, flows: out, agents, copilot, inPolicy };
 }
 
 /** For run-time use elsewhere (worker facades): throws HubError when revoked. */

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { listAiConnections } from "@/ai/hub/connections";
-import { aiStatus, legacyReport, publicProviders } from "@/ai/hub/status";
+import { aiStatus, legacyReport, publicProviders, retiredProviders } from "@/ai/hub/status";
 import { requireUser, requireWorkspace } from "@/server/access";
 import { can } from "@/server/permissions";
 import { jsonNoStore, route } from "@/server/http";
@@ -18,6 +18,7 @@ export const GET = route(async (_req, { params }: Ctx) => {
   const { workspace, role } = await requireWorkspace(user, (await params).wid);
   return jsonNoStore({
     providers: publicProviders(),
+    retired: retiredProviders(),
     connections: await listAiConnections(db, workspace.id),
     defaultRoute: workspace.aiDefaultRoute ?? null,
     policy: workspace.aiPolicy,

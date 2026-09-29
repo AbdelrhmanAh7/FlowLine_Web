@@ -1,7 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
-import { estimateTokens, getAiProvider } from "@/ai/provider";
+import { getAiProvider } from "@/ai/provider";
 import { db, schema } from "@/db";
-import type { PriceTable } from "@/db/schema";
 import type { FlowGraph } from "@/engine/types";
 import type { CurrentUser } from "./access";
 import { createFlow, saveFlow } from "./flows";
@@ -9,7 +8,6 @@ import { HttpError, notFound } from "./http";
 import { availableIntegrationNames, unavailableAppsIn } from "./copilot-apps";
 import { applyPatch, catalogFor, graphSummary, PATCH_JSON_SCHEMA, patchSchema, previewGraph, type CopilotPatch, type Diff, type Issue } from "./copilot-patch";
 import { checkRunRate } from "./rate-limit";
-import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "./usage";
 
 /**
  * Copilot: natural language → typed PATCH → server-side validation against the real node registry,
@@ -45,18 +43,23 @@ function copilotInstructions(text: string) {
 /** Validation-feedback rounds: an invalid patch is sent back with Flowline's exact issues (the validator still decides). */
 const REPAIR_ROUNDS = 2;
 
+type Provider = Awaited<ReturnType<typeof getAiProvider>>;
+
 /**
  * Asks the model for a patch, validates it, and — when invalid — asks for a corrected patch with the issues, up to
- * REPAIR_ROUNDS times. Returns the last patch and its parse issues. Exported so real-model behaviour can be measured.
+ * REPAIR_ROUNDS times (bounded). The first round uses the PLANNING route, repair rounds the REPAIR route (workspace AI
+ * policy → Copilot; each defaults to the workspace default route). Every model call is metered by the hub (reserved
+ * against the budget/plan cap at its defensible max, then settled with real tokens). Returns the last patch and its
+ * parse issues. Exported so real-model behaviour can be measured.
  */
 export async function generatePatch(
-  provider: Awaited<ReturnType<typeof getAiProvider>>,
+  provider: Provider,
   text: string,
   base: FlowGraph,
   conns: { id: string; provider: string; label: string; status: string }[],
-  /** Usage metering (every model call is reserved against the budget/plan cap, then settled with real tokens). */
-  meter?: { workspaceId: string; key: string; prices: PriceTable },
-): Promise<{ patch: CopilotPatch | null; issues: Issue[]; model: string; attempts: number; usage: { inputTokens: number; outputTokens: number } }> {
+  /** Route for the validator-feedback repair rounds (defaults to the planning provider). */
+  repairProvider?: Provider,
+): Promise<{ patch: CopilotPatch | null; issues: Issue[]; model: string; attempts: number; usage: { inputTokens: number; outputTokens: number }; costMicros: number | null; routes: string[] }> {
   // A request that needs an app Flowline can't connect to is refused up front — never substituted by the model.
   const missing = unavailableAppsIn(text);
   if (missing.length > 0) {
@@ -67,6 +70,8 @@ export async function generatePatch(
       model: provider.model,
       attempts: 0,
       usage: { inputTokens: 0, outputTokens: 0 },
+      costMicros: 0,
+      routes: [],
     };
   }
   const content = JSON.stringify({ catalog: catalogFor(conns), currentWorkflow: graphSummary(base) });
@@ -75,26 +80,17 @@ export async function generatePatch(
   let issues: Issue[] = [];
   let feedback = "";
   const usage = { inputTokens: 0, outputTokens: 0 };
+  let costMicros: number | null = 0;
+  const routes: string[] = [];
   let attempts = 0;
   for (let round = 0; round <= REPAIR_ROUNDS; round++) {
     attempts++;
     issues = [];
     patch = null;
     const instructions = copilotInstructions(text) + feedback;
-    const usageKey = meter ? `${meter.key}:${attempts}` : null;
-    const price = meter ? priceFor(meter.prices, `ai:${provider.id}/${provider.model}`) : undefined;
-    if (meter && usageKey) {
-      const est = aiCostMicros(price, estimateTokens(instructions + content), 1500);
-      try {
-        await reserveUsage(db, { workspaceId: meter.workspaceId, runId: null, nodeId: null, kind: "ai", idempotencyKey: usageKey, estimatedMicros: est.cost, provider: provider.id, model: provider.model, unpriced: est.unpriced, retry: attempts > 1 });
-      } catch (e) {
-        if (e instanceof BudgetExceededError) issues.push({ code: "BUDGET_EXCEEDED", message: e.message, severity: "error" });
-        else throw e;
-        break;
-      }
-    }
+    const p = round > 0 && repairProvider?.available ? repairProvider : provider;
     try {
-      const r = await provider.generate({
+      const r = await p.generate({
         instructions,
         content,
         maxTokens: 1500,
@@ -104,17 +100,16 @@ export async function generatePatch(
       model = r.model;
       usage.inputTokens += r.usage.inputTokens;
       usage.outputTokens += r.usage.outputTokens;
-      if (usageKey) {
-        const cost = aiCostMicros(price, r.usage.inputTokens, r.usage.outputTokens);
-        await settleUsage(db, usageKey, { costMicros: cost.cost, inputTokens: r.usage.inputTokens, outputTokens: r.usage.outputTokens, unpriced: cost.unpriced });
-      }
+      costMicros = costMicros == null || r.costMicros == null ? null : costMicros + r.costMicros;
+      routes.push(`${round === 0 ? "plan" : "repair"}:${r.provider}/${r.model}`);
       const parsed = patchSchema.safeParse(r.json);
       if (!parsed.success) issues.push({ code: "INVALID_PATCH", message: `The AI returned a patch Flowline can't read (${parsed.error.issues[0]?.message ?? "shape"})`, severity: "error" });
       else patch = parsed.data;
     } catch (e) {
-      if (usageKey) await releaseUsage(db, usageKey).catch(() => {}); // nothing was consumed
-      issues.push({ code: "AI_ERROR", message: (e as Error).message, severity: "error" });
-      break; // provider failure: don't retry here
+      // The hub already released or settled the reservation (a possibly-billed failure keeps its reservation).
+      const code = (e as { code?: string }).code;
+      issues.push({ code: code === "BUDGET_EXCEEDED" || code === "AI_COST_UNKNOWN" ? code : "AI_ERROR", message: (e as Error).message, severity: "error" });
+      break; // provider failure: the hub already retried within its bounds
     }
     const problems = patch ? applyPatch(base, patch, conns).issues.filter((i) => i.severity === "error") : issues;
     if (problems.length === 0) break;
@@ -122,7 +117,7 @@ export async function generatePatch(
       `\nYour previous patch was rejected by Flowline's validator:\n${problems.map((p) => `- ${p.message}`).join("\n")}\n` +
       `Previous patch: ${JSON.stringify(patch ?? {})}\nReturn a corrected, complete patch.`;
   }
-  return { patch, issues, model, attempts, usage };
+  return { patch, issues, model, attempts, usage, costMicros, routes };
 }
 
 export async function propose(user: CurrentUser, flowId: string, request: string) {
@@ -147,12 +142,15 @@ async function proposeFor(user: CurrentUser, workspaceId: string, flow: typeof s
     .where(eq(schema.connection.workspaceId, workspaceId));
   const [ws] = await db.select().from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
   if (!ws) throw notFound("Workspace not found");
-  // The workspace's authorised AI connection (default route), acting for this user. Never an environment key.
+  // The workspace's authorised AI routes (Copilot planning/repair routes, else the default), acting for this user.
+  // Never an environment key.
   const requestId = `copilot:${flow?.id ?? "new"}:${crypto.randomUUID()}`;
-  const provider = await getAiProvider(db, ws, user.id, { requestId });
+  const routes = ws.aiPolicy?.copilot ?? {};
+  const provider = await getAiProvider(db, ws, user.id, { requestId, pin: routes.planRoute ?? null, pinSource: "copilot" });
   if (!provider.available) throw new HttpError(503, provider.code ?? "AI_NOT_CONFIGURED", provider.reason ?? "No AI model is set up");
+  const repair = routes.repairRoute ? await getAiProvider(db, ws, user.id, { requestId: `${requestId}:repair`, pin: routes.repairRoute, pinSource: "copilot" }) : undefined;
   const base: FlowGraph = flow ? (flow.graph as FlowGraph) : { nodes: [], edges: [] };
-  const { patch, issues, model } = await generatePatch(provider, text, base, conns, { workspaceId, key: requestId, prices: ws.prices ?? {} });
+  const { patch, issues, model } = await generatePatch(provider, text, base, conns, repair);
   let proposedGraph: FlowGraph | null = null;
   let diff: Diff | null = null;
   if (patch) {
