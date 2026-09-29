@@ -113,3 +113,19 @@ original) and 0019 (hub data steps, verbatim).
 - **Hypothesis (unconfirmed):** `claimNextAgentRun` (`for update skip locked`) returned null while another
   transaction briefly held the row, so `runAgent` gave up early.
 - **Kept open;** not hidden and not "fixed".
+
+## Codex retest 2 of `f74a5a1` (`CODEX-RETEST2-f74a5a1.md`)
+- **FIXED (17):** CXH-01…11, 13, 14, 15, 16, 18, 19.
+- **PARTIALLY FIXED (2), reopened:**
+  - **CXH-12:** omitted pricing is inherited from an unlocked earlier read, so a stale zero can overwrite a newer
+    price.
+  - **CXH-17:** the lease check, the abandonment settlement + placeholder, and late-success reconciliation are not
+    atomic.
+- **NEW:**
+
+| ID | Severity | Area | Summary | Status |
+|---|---|---|---|---|
+| CXH-20 | P2 | Catalogue | Shared catalogue rows are locked in provider order inside one transaction, so concurrent refreshes with opposite orders deadlock | OPEN |
+
+- **INTERMITTENT-01:** the mechanism (`SKIP LOCKED` null claim → the helper breaks early) is plausible, not confirmed.
+  Codex recommends a bounded claim loop plus diagnostics.
