@@ -54,11 +54,11 @@ export async function POST(req: Request, { params }: Ctx) {
   let signature: string | null = null;
   try {
     if (scheme === "github") {
-      const g = verifyGithubSignature(ep.secretEnc, ep.keyId, req.headers.get("x-hub-signature-256"), raw);
+      const g = verifyGithubSignature(ep, req.headers.get("x-hub-signature-256"), raw);
       if (!g.ok) return reply(401, { error: `Invalid signature: ${g.reason}` });
       signature = req.headers.get("x-hub-signature-256")!.toLowerCase();
     } else {
-      const sig = verifyWebhookSignature(ep.secretEnc, ep.keyId, req.headers.get("x-flowline-signature"), raw, eventId);
+      const sig = verifyWebhookSignature(ep, req.headers.get("x-flowline-signature"), raw, eventId);
       if (!sig.ok) return reply(401, { error: `Invalid signature: ${sig.reason}` });
       signedAt = new Date(sig.t * 1000);
     }

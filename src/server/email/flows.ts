@@ -157,7 +157,7 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       if (soleWorkspaces.length) {
         const subs = await tx.select({ subscriptionId: schema.billingAccount.subscriptionId, status: schema.billingAccount.status }).from(schema.billingAccount).where(inArray(schema.billingAccount.workspaceId, soleWorkspaces));
         const live = subs.filter((s) => s.subscriptionId && s.status !== "canceled");
-        const adapter = live.length ? getAdapter() : null;
+        const adapter = live.length ? await getAdapter() : null;
         for (const s of live) {
           if (!adapter) throw new HttpError(409, "BILLING_CANCEL_FAILED", "A workspace you own has an active subscription that couldn't be cancelled. Try again later or contact support.");
           await adapter.cancelSubscription(s.subscriptionId!, { atPeriodEnd: false }).catch(() => {

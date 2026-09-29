@@ -8,7 +8,9 @@ import type { Db } from "@/db";
  *   - webhook deliveries older than WEBHOOK_DAYS, product telemetry older than TELEMETRY_DAYS,
  *     audit entries older than AUDIT_DAYS,
  *   - expired sessions, verification tokens, OAuth and SSO states.
- * Never touched: the usage ledger and billing records (billing history), workflows, versions, connections, knowledge.
+ * Never touched: the usage ledger and billing records (billing history), workflows, versions, connections, knowledge,
+ * and the PLATFORM security audit (`platform_audit_event`): it is deliberately not pruned here — whatever
+ * FLOWLINE_RETENTION_AUDIT_DAYS says — and is kept for at least 730 days (docs/security/CREDENTIALS_DESIGN.md MUST 20).
  * Queued/running/waiting runs are never deleted, whatever their age.
  */
 export const RETENTION_DEFAULTS = { RUN_DAYS: 90, WEBHOOK_DAYS: 30, TELEMETRY_DAYS: 180, AUDIT_DAYS: 365 };
@@ -41,6 +43,8 @@ export async function pruneOnce(db: Db, now = new Date()): Promise<Record<string
       emailOutbox: await count(sql`delete from email_outbox where created_at < ${before(7)}`),
       emailRateWindows: await count(sql`delete from email_rate_limit where window_started_at < ${before(1)}`),
       rateLimitHits: await count(sql`delete from rate_limit_hit where at < ${before(1)}`),
+      signinAttempts: await count(sql`delete from signin_attempt where expires_at < ${now}`),
+      platformStepups: await count(sql`delete from platform_stepup where expires_at < ${now}`),
     };
   });
 }

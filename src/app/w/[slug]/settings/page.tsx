@@ -17,10 +17,11 @@ import { ApiKeys } from "./api-keys";
 import { AuditLog } from "./audit-log";
 import { BillingPlan } from "./billing-plan";
 import { Members } from "./members";
+import { OAuthApps } from "./oauth-apps";
 import { Sso } from "./sso";
 
-type Tab = "members" | "general" | "ai" | "keys" | "plan" | "billing" | "audit" | "sso";
-const TABS: Tab[] = ["members", "general", "ai", "keys", "plan", "billing", "audit", "sso"];
+type Tab = "members" | "general" | "ai" | "keys" | "plan" | "billing" | "audit" | "sso" | "oauthApps";
+const TABS: Tab[] = ["members", "general", "ai", "keys", "plan", "billing", "audit", "sso", "oauthApps"];
 
 export default function SettingsPage() {
   const t = useT();
@@ -57,6 +58,7 @@ export default function SettingsPage() {
           {tab === "billing" && <Billing />}
           {tab === "audit" && <AuditLog />}
           {tab === "sso" && <Sso />}
+          {tab === "oauthApps" && <OAuthApps />}
         </div>
       </div>
     </div>

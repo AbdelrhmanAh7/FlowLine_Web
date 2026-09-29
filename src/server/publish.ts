@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { CronExpressionParser } from "cron-parser";
 import { and, eq } from "drizzle-orm";
 import { db, schema, type Db } from "@/db";
@@ -9,11 +9,21 @@ import { getAction } from "@/integrations/registry";
 import { aiRoutesIn, assertRoutesUsable, pinDefaultRoutes } from "@/ai/hub/selection";
 import type { CurrentUser } from "./access";
 import { assertConnectionsUsable } from "./connections";
-import { decryptSecret, encryptSecret, randomToken } from "./crypto";
+import { encryptSecretV2, openSecret, randomToken, type SecretContext } from "./crypto";
 import { insertVersion } from "./flows";
 import { HttpError, notFound } from "./http";
 
 export const WEBHOOK_TOLERANCE_SEC = 300;
+
+/** AAD context of a webhook endpoint's signing secret: bound to the endpoint row and its workspace. */
+function webhookSecretContext(ep: { id: string; workspaceId: string }): SecretContext {
+  return { table: "webhook_endpoint", rowId: ep.id, workspaceId: ep.workspaceId, provider: "flowline", purpose: "signing_secret" };
+}
+
+/** The endpoint's signing secret (v1 only for rows still marked legacy; migrated rows require v2). */
+export function webhookSecretOf(ep: { id: string; workspaceId: string; secretEnc: string; keyId: string; legacyCrypto: boolean }): string {
+  return openSecret<string>({ ciphertext: ep.secretEnc, keyId: ep.keyId, legacy: ep.legacyCrypto }, webhookSecretContext(ep));
+}
 export const WEBHOOK_MAX_BYTES = 256 * 1024;
 
 /** Server-side checks that need the database: connections, actions, subflows. */
@@ -103,9 +113,10 @@ export async function publishFlow(user: CurrentUser, flowId: string) {
         webhook = { url: webhookUrl(ep.token) };
       } else {
         const secret = `whsec_${randomToken(32)}`;
-        const enc = encryptSecret(secret);
+        const id = randomUUID(); // allocated before encryption: the ciphertext is bound to this row
+        const enc = encryptSecretV2(secret, webhookSecretContext({ id, workspaceId: flow.workspaceId }));
         const token = randomToken(24);
-        await tx.insert(schema.webhookEndpoint).values({ flowId: flow.id, workspaceId: flow.workspaceId, token, secretEnc: enc.ciphertext, keyId: enc.keyId });
+        await tx.insert(schema.webhookEndpoint).values({ id, flowId: flow.id, workspaceId: flow.workspaceId, token, secretEnc: enc.ciphertext, keyId: enc.keyId, legacyCrypto: false });
         webhook = { url: webhookUrl(token), secret };
       }
     } else {
@@ -136,8 +147,8 @@ export async function rotateWebhookSecret(flowId: string) {
   const [ep] = await db.select().from(schema.webhookEndpoint).where(eq(schema.webhookEndpoint.flowId, flowId));
   if (!ep) throw notFound("This flow has no webhook yet — publish it first");
   const secret = `whsec_${randomToken(32)}`;
-  const enc = encryptSecret(secret);
-  await db.update(schema.webhookEndpoint).set({ secretEnc: enc.ciphertext, keyId: enc.keyId, rotatedAt: new Date() }).where(eq(schema.webhookEndpoint.id, ep.id));
+  const enc = encryptSecretV2(secret, webhookSecretContext(ep));
+  await db.update(schema.webhookEndpoint).set({ secretEnc: enc.ciphertext, keyId: enc.keyId, legacyCrypto: false, rotatedAt: new Date() }).where(eq(schema.webhookEndpoint.id, ep.id));
   return { url: webhookUrl(ep.token), secret };
 }
 
@@ -166,22 +177,22 @@ export function signWebhook(secret: string, body: string, eventId: string, t = M
  * timestamp nor the delivery id, so the receiver also refuses a signature it has already accepted
  * (webhook_event.signature is unique per endpoint): a captured delivery can't be replayed under a new id.
  */
-export function verifyGithubSignature(secretEnc: string, keyId: string, header: string | null, body: string): { ok: true } | { ok: false; reason: string } {
+export function verifyGithubSignature(ep: Parameters<typeof webhookSecretOf>[0], header: string | null, body: string): { ok: true } | { ok: false; reason: string } {
   if (!header?.startsWith("sha256=")) return { ok: false, reason: "missing X-Hub-Signature-256" };
-  const secret = decryptSecret<string>(secretEnc, keyId);
+  const secret = webhookSecretOf(ep);
   const expected = createHmac("sha256", secret).update(body).digest();
   const given = Buffer.from(header.slice(7), "hex");
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "signature mismatch" };
   return { ok: true };
 }
 
-export function verifyWebhookSignature(secretEnc: string, keyId: string, header: string | null, body: string, eventId: string, now = Date.now()): { ok: true; t: number } | { ok: false; reason: string } {
+export function verifyWebhookSignature(ep: Parameters<typeof webhookSecretOf>[0], header: string | null, body: string, eventId: string, now = Date.now()): { ok: true; t: number } | { ok: false; reason: string } {
   if (!header) return { ok: false, reason: "missing signature" };
   const parts = Object.fromEntries(header.split(",").map((p) => p.trim().split("=", 2) as [string, string]));
   const t = Number(parts.t);
   if (!Number.isInteger(t) || !parts.v1) return { ok: false, reason: "malformed signature" };
   if (Math.abs(now / 1000 - t) > WEBHOOK_TOLERANCE_SEC) return { ok: false, reason: "signature timestamp outside tolerance" };
-  const secret = decryptSecret<string>(secretEnc, keyId);
+  const secret = webhookSecretOf(ep);
   const expected = createHmac("sha256", secret).update(`${t}.${eventId}.${body}`).digest();
   let given: Buffer;
   try {

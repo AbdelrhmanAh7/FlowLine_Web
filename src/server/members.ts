@@ -43,7 +43,7 @@ export async function createInvite(user: CurrentUser, workspaceId: string, input
     return { invite: publicInvite(invite!), url: inviteUrl(token) };
   });
   // The email is best-effort: the invite exists either way and the owner always gets the link. During the beta the
-  // email sandbox (FLOWLINE_EMAIL_ALLOWED_RECIPIENTS) or a provider outage can refuse delivery — say so, don't fail.
+  // email sandbox (the recipient allowlist platform setting) or a provider outage can refuse delivery — say so, don't fail.
   const emailed = await sendInviteEmail(email, result.url, request).then(
     () => true,
     () => false,

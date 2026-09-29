@@ -9,6 +9,8 @@ import { consumeAccountToken, issueAccountToken, tokenState } from "@/server/ema
 import { acceptInvite, createInvite } from "@/server/members";
 import { createWorkspace } from "@/server/workspaces";
 import { closeDb, makeUser, unique } from "./helpers";
+import { seedSetting, unseedSetting } from "../fixtures/platform-seed";
+
 
 process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
 afterAll(closeDb);
@@ -70,16 +72,15 @@ describe("Fable review fixes", () => {
     const owner = await makeUser("sandboxowner");
     const invitee = await makeUser("sandboxinvitee");
     const ws = await createWorkspace(owner, unique("Sandboxed"));
-    const before = process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS;
-    process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS = "only-this@allowed.test";
+    // The recipient allowlist is a platform-panel setting now (owner decision 3), read per send.
+    await seedSetting("email.allowed_recipients", ["only-this@allowed.test"]);
     try {
       const r = await createInvite(owner, ws.id, { email: invitee.email, role: "viewer" });
       expect(r.emailed).toBe(false);
       expect((await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, invitee.email))).length).toBe(0);
       expect((await acceptInvite(invitee, r.url.split("/").at(-1)!)).role).toBe("viewer");
     } finally {
-      if (before === undefined) delete process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS;
-      else process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS = before;
+      await unseedSetting("email.allowed_recipients");
     }
     const r2 = await createInvite(owner, ws.id, { email: `other-${crypto.randomUUID()}@flowline.test`, role: "viewer" });
     expect(r2.emailed).toBe(true);

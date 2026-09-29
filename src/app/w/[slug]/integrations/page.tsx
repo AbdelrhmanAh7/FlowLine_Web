@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
@@ -29,7 +29,7 @@ function Integrations() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
-  const catalog = useCatalog();
+  const catalog = useCatalog(workspace.id);
   const connections = useConnections(workspace.id);
   const [q, setQ] = useState("");
   const [dialog, setDialog] = useState<{ provider: CatalogProvider; reconnect?: ConnectionDto } | null>(null);
@@ -39,7 +39,7 @@ function Integrations() {
     const r = params.get("oauth");
     if (!r) return;
     toast(
-      r === "connected" ? t("integrations.oauth.connected") : r === "reconnected" ? t("integrations.oauth.reconnected") : t("integrations.oauth.failed", { message: params.get("message") ?? t("integrations.oauth.unknownError") }),
+      r === "connected" ? t("integrations.oauth.connected") : r === "reconnected" ? t("integrations.oauth.reconnected") : t("integrations.oauth.failed", { message: oauthCodeText(t, params.get("code")) }),
       r === "error" ? "danger" : "success",
     );
     router.replace(`/w/${workspace.slug}/integrations`);
@@ -248,9 +248,30 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   );
 }
 
+/** The callback carries only a bounded outcome code (never a provider message): translate it. */
+const OAUTH_CODES = ["OAUTH_STATE_INVALID", "OAUTH_EXCHANGE_FAILED", "OAUTH_APP_CHANGED", "OAUTH_ACCESS_REVOKED", "OAUTH_NOT_CONFIGURED", "DIFFERENT_ACCOUNT", "DIFFERENT_PROVIDER", "CONNECTION_REJECTED", "PROVIDER_UNREACHABLE", "EGRESS_BLOCKED", "NOT_FOUND", "PROVIDER_DENIED", "PROVIDER_ERROR", "NO_CODE", "UNKNOWN"] as const;
+function oauthCodeText(t: ReturnType<typeof useT>, code: string | null) {
+  const known = OAUTH_CODES.find((c) => c === code);
+  return known ? t(`integrations.oauth.codes.${known}`) : t("integrations.oauth.unknownError");
+}
+
+interface AuthorizationApp {
+  source: "platform" | "workspace";
+  clientId: string | null;
+  scopes: string[];
+  configuredBy: string | null;
+  verified: boolean | null;
+}
+
 function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProvider; reconnect?: ConnectionDto; onClose: () => void }) {
   const t = useT();
   const { workspace } = useWorkspace();
+  // Consent provenance: which OAuth app (Flowline's or this workspace's own) will ask for consent — shown BEFORE redirecting.
+  const provenance = useQuery({
+    queryKey: ["oauth-provenance", workspace.id, provider.id],
+    queryFn: () => api<{ app: AuthorizationApp | null }>(`/api/workspaces/${workspace.id}/oauth-apps/provenance?provider=${encodeURIComponent(provider.id)}`),
+    enabled: provider.authType === "oauth2",
+  });
   const qc = useQueryClient();
   const toast = useToast();
   const online = useOnline();
@@ -327,6 +348,18 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
                 />
               </Field>
             ))}
+          {oauth && provenance.data?.app && (
+            <p role="note" data-testid="oauth-provenance" className={provenance.data.app.source === "workspace" ? "rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-hi" : "text-sm text-med"}>
+              {provenance.data.app.source === "workspace"
+                ? t.rich("integrations.dialog.provenanceWorkspace", {
+                    provider: provider.name,
+                    clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span>,
+                    by: <span dir="ltr">{provenance.data.app.configuredBy ?? t("integrations.dialog.provenanceUnknownOwner")}</span>,
+                  })
+                : t.rich("integrations.dialog.provenancePlatform", { provider: provider.name, clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span> })}
+              {provenance.data.app.source === "workspace" && provenance.data.app.verified === false && <span className="mt-1 block text-muted">{t("integrations.dialog.provenanceUnverified")}</span>}
+            </p>
+          )}
           {oauth && (
             <p className="text-sm text-med">
               {t.rich("integrations.dialog.oauthGrant", {

@@ -24,8 +24,6 @@ const provider: ProviderDef = {
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     pkce: true,
     extraParams: { access_type: "offline", prompt: "consent" },
-    clientIdEnv: "GOOGLE_OAUTH_CLIENT_ID",
-    clientSecretEnv: "GOOGLE_OAUTH_CLIENT_SECRET",
   },
   async identity(ctx) {
     const { data } = await ctx.http.request<{ sub: string; email?: string; name?: string }>({

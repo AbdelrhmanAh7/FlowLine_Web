@@ -44,7 +44,14 @@ export type AuditAction =
   | "ai.key_replaced"
   | "ai.disconnected"
   | "ai.use_roles_changed"
-  | "ai.default_route_changed";
+  | "ai.default_route_changed"
+  | "oauth_app.configured"
+  | "oauth_app.secret_rotated"
+  | "oauth_app.switched"
+  | "oauth_app.deleted"
+  | "oauth_app.verified"
+  | "oauth_app.probe"
+  | "oauth_app.rejected_by_provider";
 
 export async function audit(db: DbOrTx, e: { workspaceId: string; actor: Actor; action: AuditAction; targetType?: string; targetId?: string; data?: unknown }) {
   await db.insert(schema.auditEvent).values({

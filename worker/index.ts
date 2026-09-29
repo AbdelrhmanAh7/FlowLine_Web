@@ -11,6 +11,8 @@ import { Client } from "pg";
 import { db, pool } from "@/db";
 import * as schema from "@/db/schema";
 import { isBillingConfigured, reconcileUsage } from "@/billing/service";
+import { sendEmail } from "@/server/email";
+import { deliverPlatformNotifications } from "@/server/platform-audit";
 import { RUN_CHANNEL } from "@/server/runs";
 import { monthStart } from "@/server/usage";
 import { stopSandbox } from "@/engine/sandbox";
@@ -49,7 +51,7 @@ async function billingReconcileTick() {
   const today = new Date().toISOString().slice(0, 10);
   if (today === lastReconcileDay) return;
   lastReconcileDay = today;
-  if (!isBillingConfigured()) return;
+  if (!(await isBillingConfigured())) return;
   const accounts = await db.select({ workspaceId: schema.billingAccount.workspaceId }).from(schema.billingAccount);
   for (const a of accounts) {
     try {
@@ -129,6 +131,17 @@ async function main() {
       .catch((e) => log("retention error", e instanceof Error ? e.message : e));
   const retentionTimer = setInterval(retentionTick, 3600_000);
   // AI model catalogues: bounded background refresh (at most 5 connections per hour, each at most once a day).
+  // Platform security notifications (metadata only) to the other admins, with retries/backoff.
+  const notifyTimer = setInterval(
+    () =>
+      void deliverPlatformNotifications(db, async (to, subject, text, id) => {
+        const html = `<pre style="font-family:monospace;white-space:pre-wrap">${text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</pre>`;
+        await sendEmail({ to, subject, text, html, tags: { purpose: "platform_security" }, idempotencyKey: `platform-notice:${id}` });
+      })
+        .then((n) => n && log("platform notifications sent", n))
+        .catch((e) => log("platform notification error", e instanceof Error ? e.message : e)),
+    60_000,
+  );
   const catalogueTimer = setInterval(
     () => void backgroundRefresh(db, { max: 5 }).then((r) => r.checked && log("ai catalogues refreshed", r.refreshed, "of", r.checked)).catch((e) => log("ai catalogue refresh error", e instanceof Error ? e.message : e)),
     3600_000,
@@ -157,6 +170,7 @@ async function main() {
   clearInterval(reconcileTimer);
   clearInterval(retentionTimer);
   clearInterval(catalogueTimer);
+  clearInterval(notifyTimer);
   await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);
   stopSandbox();

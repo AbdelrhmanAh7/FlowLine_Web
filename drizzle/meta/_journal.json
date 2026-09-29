@@ -99,6 +99,13 @@
       "when": 1790640670200,
       "tag": "0013_ai_hub_wave_b",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790645733230,
+      "tag": "0014_credentials",
+      "breakpoints": true
     }
   ]
 }

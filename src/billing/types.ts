@@ -15,7 +15,7 @@ export interface PlanEntitlements {
   maxConcurrentRuns: number;
 }
 
-/** A plan is configuration only (FLOWLINE_BILLING_PLANS); prices are never hard-coded. */
+/** A plan is configuration only (the `billing.plans` platform setting, edited in /admin); prices are never hard-coded. */
 export interface BillingPlan {
   id: string;
   name: string;

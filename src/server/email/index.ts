@@ -19,28 +19,38 @@ export class EmailDeliveryError extends Error {
   constructor(message = "Email delivery failed. Please try again later.") { super(message); }
 }
 
-function config() {
-  const provider = process.env.FLOWLINE_EMAIL_PROVIDER ?? (process.env.FLOWLINE_ENV === "test" ? "outbox" : undefined);
-  if (!provider || !["resend", "postmark", "outbox"].includes(provider)) throw new EmailDeliveryError("Email provider is not configured.");
-  // The DB outbox (no real delivery) is for the test stack and the local staging stack, whose release checks read
-  // verification links from it. Any other production build must use a real provider.
-  if (provider === "outbox" && !["test", "staging"].includes(process.env.FLOWLINE_ENV ?? "") && process.env.NODE_ENV === "production") {
-    throw new EmailDeliveryError("Outbox cannot be used in production.");
-  }
-  const from = process.env.FLOWLINE_EMAIL_FROM;
-  if (!from && provider !== "outbox") throw new EmailDeliveryError("Email sender is not configured.");
-  return { provider, from: from ?? "Flowline <no-reply@flowline.test>" };
+/** A real provider's transport configuration — resolved from the platform admin panel (never from the environment). */
+export interface EmailTransportConfig {
+  provider: "resend" | "postmark";
+  from: string;
+  key: string;
 }
 
-export function getEmailProvider(): EmailProvider {
-  const { provider, from } = config();
-  if (provider === "outbox") return {
+/**
+ * The DB outbox (no real delivery) is test/staging infrastructure, selected by the environment: the test stack and the
+ * local staging stack read verification links from it. Any other production build must use a real provider.
+ */
+function outboxProvider(): EmailProvider {
+  const provider = process.env.FLOWLINE_EMAIL_PROVIDER ?? (process.env.FLOWLINE_ENV === "test" ? "outbox" : undefined);
+  if (provider !== "outbox") throw new EmailDeliveryError("Email provider is not configured.");
+  if (!["test", "staging"].includes(process.env.FLOWLINE_ENV ?? "") && process.env.NODE_ENV === "production") {
+    throw new EmailDeliveryError("Outbox cannot be used in production.");
+  }
+  return {
     async send(message) {
       const { db, schema } = await import("@/db");
       await db.insert(schema.emailOutbox).values({ recipient: message.to, subject: message.subject, html: message.html, plainText: message.text, tags: message.tags ?? {}, idempotencyKey: message.idempotencyKey }).onConflictDoNothing();
     },
   };
-  const key = provider === "resend" ? process.env.FLOWLINE_EMAIL_RESEND_KEY : process.env.FLOWLINE_EMAIL_POSTMARK_TOKEN;
+}
+
+/**
+ * The transport for `config` (a provider configured in the platform panel), or — without one — the test/staging
+ * outbox when the environment selects it. Provider keys are NEVER read from the environment.
+ */
+export function getEmailProvider(config: EmailTransportConfig | null = null): EmailProvider {
+  if (!config) return outboxProvider();
+  const { provider, from, key } = config;
   if (!key) throw new EmailDeliveryError("Email provider credential is not configured.");
   return {
     async send(message) {
@@ -70,7 +80,16 @@ export function getEmailProvider(): EmailProvider {
   };
 }
 
+/**
+ * Sends one email with the platform's CURRENT configuration (read per send — a change in the admin panel takes effect
+ * on the next email, no restart). The recipient allowlist is a platform setting too; while a legacy
+ * FLOWLINE_EMAIL_ALLOWED_RECIPIENTS is still set but not imported, nothing is sent (never silently widened).
+ */
 export async function sendEmail(message: EmailMessage): Promise<void> {
-  if (!recipientAllowed(message.to)) throw new EmailDeliveryError("Recipient is outside the email sandbox.");
-  await getEmailProvider().send(message);
+  const { resolveEmailDelivery } = await import("./config");
+  const delivery = await resolveEmailDelivery();
+  if (!recipientAllowed(message.to, delivery.allowlist)) throw new EmailDeliveryError("Recipient is outside the email sandbox.");
+  if (delivery.onlyRecipient && message.to.trim().toLowerCase() !== delivery.onlyRecipient) throw new EmailDeliveryError("During platform setup, email can only go to the setup identity.");
+  await getEmailProvider(delivery.transport).send(message);
+  await delivery.onDelivered?.();
 }

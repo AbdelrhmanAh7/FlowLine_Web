@@ -3,7 +3,9 @@ import {
   bigint,
   bigserial,
   boolean,
+  check,
   customType,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -25,6 +27,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /** better-auth two-factor plugin: set once a TOTP authenticator is verified (required for platform admins). */
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -294,6 +298,8 @@ export const runStep = pgTable(
      * re-run (so downstream steps and approval bindings see real values); never returned by APIs.
      */
     dataEnc: jsonb("data_enc").$type<{ ciphertext: string; keyId: string }>(),
+    /** True only for step data written before crypto v2 (v1) and not yet rewrapped. */
+    dataLegacy: boolean("data_legacy").notNull().default(false),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     durationMs: integer("duration_ms"),
@@ -343,11 +349,32 @@ export const connection = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    /** True only for rows written before crypto v2 (v1, no AAD) and not yet rewrapped. New rows are always v2. */
+    legacyCrypto: boolean("legacy_crypto").notNull().default(false),
+    /**
+     * The OAuth app that ISSUED this connection's tokens (refresh always uses it): "platform" (Flowline's app for the
+     * provider family) or "workspace" (the workspace's own app, `oauth_app_id`). Null = not an OAuth authorization
+     * (pasted token / API key) or a legacy OAuth connection whose issuing app is unknown (→ reconnect required).
+     */
+    oauthAppSource: text("oauth_app_source"),
+    oauthAppId: uuid("oauth_app_id"),
+    /** Snapshot of the client id the tokens were issued to. */
+    oauthClientId: text("oauth_client_id"),
   },
-  (t) => [index("connection_ws_idx").on(t.workspaceId, t.provider)],
+  (t) => [
+    index("connection_ws_idx").on(t.workspaceId, t.provider),
+    index("connection_oauth_app_idx").on(t.oauthAppId),
+    // A workspace app can only ever be referenced by a connection of the SAME workspace.
+    foreignKey({ name: "connection_oauth_app_ws_fk", columns: [t.oauthAppId, t.workspaceId], foreignColumns: [workspaceOauthApp.id, workspaceOauthApp.workspaceId] }),
+    check("connection_oauth_app_ck", sql`(oauth_app_source is null and oauth_app_id is null) or (oauth_app_source = 'platform' and oauth_app_id is null and oauth_client_id is not null) or (oauth_app_source = 'workspace' and oauth_app_id is not null and oauth_client_id is not null)`),
+  ],
 );
 
-/** OAuth authorization requests: CSRF state + PKCE verifier, bound to user/workspace/provider, single use, short-lived. */
+/**
+ * OAuth authorization requests: single use, short-lived. `state` holds the SHA-256 of the random state (the raw value
+ * only travels in the redirect). Bound to the initiating session, user, workspace, provider, app (+ revision/epoch),
+ * redirect URI and the PKCE verifier (v2-encrypted).
+ */
 export const oauthState = pgTable("oauth_state", {
   state: text("state").primaryKey(),
   workspaceId: uuid("workspace_id")
@@ -363,6 +390,14 @@ export const oauthState = pgTable("oauth_state", {
   redirectAfter: text("redirect_after"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { withTimezone: true }),
+  /** SHA-256 of the initiating session token: the callback must arrive in the same session. */
+  sessionHash: text("session_hash"),
+  appSource: text("app_source"),
+  appId: uuid("app_id"),
+  clientId: text("client_id"),
+  appRevision: integer("app_revision"),
+  appEpoch: integer("app_epoch"),
+  redirectUri: text("redirect_uri"),
 });
 
 export const webhookEndpoint = pgTable("webhook_endpoint", {
@@ -381,6 +416,8 @@ export const webhookEndpoint = pgTable("webhook_endpoint", {
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+  /** True only for rows written before crypto v2 (v1) and not yet rewrapped. */
+  legacyCrypto: boolean("legacy_crypto").notNull().default(false),
 });
 
 /** Every accepted webhook delivery. (endpoint, event_id) is unique → duplicates return the original run. */
@@ -932,6 +969,8 @@ export const ssoConfig = pgTable("sso_config", {
   enabled: boolean("enabled").notNull().default(false),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  /** True only for rows written before crypto v2 (v1) and not yet rewrapped. */
+  legacyCrypto: boolean("legacy_crypto").notNull().default(false),
 });
 
 /** Pending SSO sign-ins: single-use state + nonce + PKCE verifier (encrypted), short-lived. */
@@ -1187,4 +1226,225 @@ export const aiAttempt = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId), index("ai_attempt_conn_time_idx").on(t.connectionId, t.createdAt)],
+);
+
+/* ───────────── Credentials in the UI (docs/security/CREDENTIALS_DESIGN.md) ───────────── */
+
+/** better-auth two-factor plugin (TOTP). The secret and backup codes are encrypted by better-auth (BETTER_AUTH_SECRET). */
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factor_user_idx").on(t.userId)],
+);
+
+/**
+ * Platform administrators: a principal SEPARATE from workspace roles, keyed by the immutable user id. Never derived
+ * from workspace ownership, SSO, invites, sign-up or FLOWLINE_BETA_ADMINS. Checked on every request (no caching).
+ */
+export const platformAdmin = pgTable("platform_admin", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id),
+  /** active | revoked */
+  status: text("status").notNull().default("active"),
+  grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
+  /** "cli:<challenge id>" for bootstrap/recovery/grant challenges. */
+  grantedBy: text("granted_by").notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedBy: text("revoked_by"),
+  /** Last TOTP time-step accepted for step-up or setup: a code is never accepted twice. */
+  lastTotpStep: bigint("last_totp_step", { mode: "number" }),
+});
+
+/** Singleton (id = 1): once setup completed it stays closed forever — deleting every admin does not reopen it. */
+export const platformSetup = pgTable("platform_setup", {
+  id: integer("id").primaryKey(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedBy: text("completed_by"),
+});
+
+/**
+ * Operator-issued (scripts/admin/bootstrap.mts) single-use, short-lived challenge bound to one email. Only its SHA-256
+ * is stored. Redeeming it opens a narrow setup session (cookie hash stored here) that may configure email first.
+ */
+export const platformSetupChallenge = pgTable("platform_setup_challenge", {
+  id: uuid("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  /** bootstrap | recovery | grant */
+  kind: text("kind").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
+  sessionHash: text("session_hash"),
+  sessionExpiresAt: timestamp("session_expires_at", { withTimezone: true }),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  consumedBy: text("consumed_by"),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+});
+
+/** Step-up elevation: 10 minutes, bound to the SHA-256 of ONE session token (a copied cookie of another session isn't elevated). */
+export const platformStepup = pgTable("platform_stepup", {
+  sessionTokenHash: text("session_token_hash").primaryKey(),
+  userId: text("user_id").notNull(),
+  method: text("method").notNull(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/**
+ * Platform security audit. NOT tied to a workspace (no cascade), excluded from retention pruning (kept >= 730 days),
+ * written in the same transaction as the change. Typed fields only — never values, suffixes, bodies, ciphertext or
+ * raw provider errors. `data` carries a few hand-built scalars (e.g. affected connection counts).
+ */
+export const platformAuditEvent = pgTable(
+  "platform_audit_event",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    actorUserId: text("actor_user_id"),
+    actorLabel: text("actor_label").notNull(),
+    /** session_totp_stepup | session | setup_session | cli | system */
+    assurance: text("assurance").notNull(),
+    action: text("action").notNull(),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    purpose: text("purpose"),
+    oldRevision: integer("old_revision"),
+    newRevision: integer("new_revision"),
+    /** A bounded code: ok | denied | failed | rejected | … */
+    result: text("result").notNull(),
+    requestId: text("request_id"),
+    data: jsonb("data").$type<Record<string, string | number | boolean | null>>(),
+  },
+  (t) => [index("platform_audit_at_idx").on(t.at), index("platform_audit_purpose_idx").on(t.purpose, t.id)],
+);
+
+/** Metadata-only notifications to the other admins, enqueued in the change's transaction, delivered with retries. */
+export const platformNotification = pgTable(
+  "platform_notification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    auditEventId: bigint("audit_event_id", { mode: "number" }).notNull(),
+    recipientUserId: text("recipient_user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    lastErrorCode: text("last_error_code"),
+  },
+  (t) => [index("platform_notification_pending_idx").on(t.sentAt, t.nextAttemptAt)],
+);
+
+/**
+ * Platform credentials (sign-in apps, shared integration OAuth apps, email, billing), one row per purpose. Current +
+ * previous revision (grace window) encrypted with the PLATFORM key ring, AAD bound to row/purpose/revision. Never
+ * returned: only `publicPlatformSecret` projections leave the server.
+ */
+export const platformSecret = pgTable("platform_secret", {
+  id: uuid("id").primaryKey(),
+  purpose: text("purpose").notNull().unique(),
+  /** Public half: OAuth client id, email sender, Paddle client-side token. Integrity-sensitive, not confidential. */
+  publicId: text("public_id"),
+  secretEnc: text("secret_enc"),
+  keyId: text("key_id"),
+  /** Monotonic revision of the secret (0 = never set). */
+  revision: integer("revision").notNull().default(0),
+  /** "••••" + last 4 characters, only when the secret is >= 32 characters; otherwise null. */
+  secretHint: text("secret_hint"),
+  setBy: text("set_by"),
+  setAt: timestamp("set_at", { withTimezone: true }),
+  prevSecretEnc: text("prev_secret_enc"),
+  prevKeyId: text("prev_key_id"),
+  prevRevision: integer("prev_revision"),
+  prevValidUntil: timestamp("prev_valid_until", { withTimezone: true }),
+  /** configured_unverified | verified | rejected | revoked */
+  status: text("status").notNull().default("configured_unverified"),
+  verifiedRevision: integer("verified_revision"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  /** connect | signin | probe | send */
+  verifiedVia: text("verified_via"),
+  lastProbeAt: timestamp("last_probe_at", { withTimezone: true }),
+  lastProbeResult: text("last_probe_result"),
+  /** Bumped on every replace/revoke: in-flight refreshes started under an older epoch never commit. */
+  epoch: integer("epoch").notNull().default(1),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedBy: text("revoked_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Import-from-environment happens at most ONCE per purpose, ever (even after the row is cleared). */
+export const platformEnvImport = pgTable("platform_env_import", {
+  purpose: text("purpose").primaryKey(),
+  importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+  importedBy: text("imported_by").notNull(),
+});
+
+/** Validated, versioned platform settings that are NOT secrets (email recipient allowlist, billing plans, active providers). */
+export const platformSetting = pgTable("platform_setting", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  revision: integer("revision").notNull().default(1),
+  setBy: text("set_by").notNull(),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Sign-in (better-auth social) attempts: the callback is dispatched with the sign-in app REVISION that started it. */
+export const signinAttempt = pgTable("signin_attempt", {
+  stateHash: text("state_hash").primaryKey(),
+  provider: text("provider").notNull(),
+  revision: integer("revision").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/**
+ * A workspace's own OAuth app for a provider family (google | slack | github). Owner-only (`oauthapp.manage`).
+ * Encrypted with the WORKSPACE key ring, AAD bound to workspace/row/family/revision. Changing the client id is a
+ * different app (a new row): connections issued by the old one must reconnect. Soft-deleted (connections keep the id).
+ */
+export const workspaceOauthApp = pgTable(
+  "workspace_oauth_app",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    family: text("family").notNull(),
+    clientId: text("client_id").notNull(),
+    secretEnc: text("secret_enc"),
+    keyId: text("key_id"),
+    revision: integer("revision").notNull().default(1),
+    secretHint: text("secret_hint"),
+    prevSecretEnc: text("prev_secret_enc"),
+    prevKeyId: text("prev_key_id"),
+    prevRevision: integer("prev_revision"),
+    prevValidUntil: timestamp("prev_valid_until", { withTimezone: true }),
+    /** configured_unverified | verified | rejected | deleted */
+    status: text("status").notNull().default("configured_unverified"),
+    verifiedRevision: integer("verified_revision"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    epoch: integer("epoch").notNull().default(1),
+    setBy: text("set_by"),
+    setAt: timestamp("set_at", { withTimezone: true }),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("workspace_oauth_app_id_ws").on(t.id, t.workspaceId),
+    uniqueIndex("workspace_oauth_app_active").on(t.workspaceId, t.family).where(sql`deleted_at is null`),
+  ],
 );

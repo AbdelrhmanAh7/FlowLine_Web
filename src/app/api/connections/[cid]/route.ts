@@ -32,7 +32,7 @@ export const PATCH = route(async (req, { params }: Ctx) => {
 export const DELETE = route(async (_req, { params }: Ctx) => {
   const user = await requireUser();
   const { connection } = await requireConnection(user, (await params).cid, "integration.manage");
-  await deleteConnection(db, connection.workspaceId, connection.id);
-  await audit(db, { workspaceId: connection.workspaceId, actor: userActor(user), action: "integration.deleted", targetType: "connection", targetId: connection.id, data: { provider: connection.provider, label: connection.label } });
-  return json({ ok: true });
+  const { remoteRevocation } = await deleteConnection(db, connection.workspaceId, connection.id);
+  await audit(db, { workspaceId: connection.workspaceId, actor: userActor(user), action: "integration.deleted", targetType: "connection", targetId: connection.id, data: { provider: connection.provider, label: connection.label, remoteRevocation } });
+  return json({ ok: true, remoteRevocation });
 });

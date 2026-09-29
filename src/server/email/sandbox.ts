@@ -1,4 +1,5 @@
-export function recipientAllowed(email: string, rules = process.env.FLOWLINE_EMAIL_ALLOWED_RECIPIENTS): boolean {
+/** `rules`: the platform recipient allowlist (admin panel setting), comma-separated; empty = no restriction. */
+export function recipientAllowed(email: string, rules: string | undefined): boolean {
   if (!rules?.trim()) return true;
   const value = email.trim().toLowerCase();
   return rules.split(",").some((entry) => {

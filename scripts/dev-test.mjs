@@ -13,6 +13,10 @@ const FAKE_AI_PORT = new URL(process.env.FLOWLINE_AI_TEST_OVERRIDE).port || "401
 // Cloud-only + UI-managed keys: the test stack runs with NO model-provider env keys.
 for (const k of ["FLOWLINE_AI_PROVIDER", "FLOWLINE_AI_MODEL", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "OPENAI_API_KEY"]) delete process.env[k];
 
+// Platform credentials are managed in the admin panel (DB) — never read from env at runtime. The E2E stack starts with
+// .env.test's fake OAuth/billing values seeded into the DB (test-only script; the admin-panel spec uses the UI).
+spawnSync("npx tsx scripts/test/seed-platform.mts", { stdio: "inherit", shell: true, env: process.env });
+
 const procs = [
   spawn(`npx tsx e2e/fakes/provider-server.ts --port ${FAKE_PROVIDERS_PORT}`, { stdio: "inherit", shell: true, env: process.env }),
   spawn(`npx tsx e2e/fakes/ai-server.ts --port ${FAKE_AI_PORT}`, { stdio: "inherit", shell: true, env: process.env }),

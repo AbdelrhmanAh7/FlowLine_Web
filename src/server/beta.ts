@@ -47,6 +47,11 @@ export function betaSupport(): BetaSupport {
 export const BETA_REFUSAL = "Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.";
 
 const hash = (code: string) => createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
+/**
+ * FLOWLINE_BETA_ADMINS is a SIGN-UP allowlist only (these emails may create an account during the invite-only beta).
+ * It is never authorization: platform administrators are the separate `platform_admin` principal, created only by the
+ * operator bootstrap challenge (scripts/admin/bootstrap.mts) — never from this list.
+ */
 const admins = () =>
   (process.env.FLOWLINE_BETA_ADMINS ?? "")
     .split(",")
@@ -63,7 +68,7 @@ export async function createBetaCode(opts: { label: string; maxUses?: number; ex
   return { code, id: row!.id };
 }
 
-type Decision = { ok: true; via: "open" | "admin" | "invite" | "code" } | { ok: false };
+type Decision = { ok: true; via: "open" | "admin" | "invite" | "code" | "setup" } | { ok: false };
 
 const usableCode = (code: string) =>
   and(
@@ -83,6 +88,13 @@ async function decide(email: string, code: string | null | undefined, mode: Beta
     .where(and(sql`lower(${schema.workspaceInvite.email}) = ${e}`, isNull(schema.workspaceInvite.acceptedAt), isNull(schema.workspaceInvite.revokedAt), gt(schema.workspaceInvite.expiresAt, new Date())))
     .limit(1);
   if (invite) return { ok: true, via: "invite" };
+  // The identity bound to an operator-issued platform setup challenge (redeemed, unexpired) may create its account.
+  const [setup] = await db
+    .select({ id: schema.platformSetupChallenge.id })
+    .from(schema.platformSetupChallenge)
+    .where(and(sql`lower(${schema.platformSetupChallenge.email}) = ${e}`, isNull(schema.platformSetupChallenge.consumedAt), isNull(schema.platformSetupChallenge.cancelledAt), gt(schema.platformSetupChallenge.sessionExpiresAt, new Date())))
+    .limit(1);
+  if (setup) return { ok: true, via: "setup" };
   if (code && code.trim()) {
     const rows = consume
       ? await db

@@ -67,6 +67,7 @@ import { GET as overviewGET } from "@/app/api/workspaces/[wid]/overview/route";
 import { GET as workspaceGET, PATCH as workspacePATCH } from "@/app/api/workspaces/[wid]/route";
 import { GET as wsRunsGET } from "@/app/api/workspaces/[wid]/runs/route";
 import { GET as ssoGET, PUT as ssoPUT } from "@/app/api/workspaces/[wid]/sso/route";
+import { GET as oauthAppsGET } from "@/app/api/workspaces/[wid]/oauth-apps/route";
 import { GET as usageGET } from "@/app/api/workspaces/[wid]/usage/route";
 import { DELETE as aiConnDELETE } from "@/app/api/workspaces/[wid]/ai/connections/[cid]/route";
 import { POST as aiConnsPOST } from "@/app/api/workspaces/[wid]/ai/connections/route";
@@ -1084,6 +1085,17 @@ const TABLE: Record<Capability, Probe[]> = {
         method: "GET",
         handler: aiModelsGET,
         path: "/api/workspaces/x/ai/models",
+        params: { wid: A.ws.id },
+      }),
+    },
+  ],
+  "oauthapp.manage": [
+    {
+      route: "GET /api/workspaces/[wid]/oauth-apps",
+      call: async () => ({
+        method: "GET",
+        handler: oauthAppsGET,
+        path: "/api/workspaces/x/oauth-apps",
         params: { wid: A.ws.id },
       }),
     },
