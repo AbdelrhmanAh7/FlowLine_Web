@@ -37,6 +37,13 @@ export const en: Messages = {
     en: "English",
   },
 
+  theme: {
+    label: "Theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+  },
+
   errors: {
     NETWORK: "Can't reach Flowline — check your connection and try again.",
     UNAUTHORIZED: "Sign in to continue.",
@@ -130,6 +137,38 @@ export const en: Messages = {
     pricingTitle: "Pricing",
     pricingBody: "Pricing hasn't been announced. During the preview, building and running local flows is free and nothing is billed.",
     footer: "Flowline preview",
+    featuresTitle: "Everything your flow needs",
+    featuresBody: "Four real capabilities, working inside the product today — no roadmap promises.",
+    featuresProgress: "Features progress",
+    scenes: {
+      copilot: {
+        title: "Describe it. Copilot drafts the flow.",
+        body: "The built-in Copilot turns one sentence into a real, editable graph on your canvas — you review every node before anything runs.",
+      },
+      agents: {
+        title: "Agents that work inside your flows",
+        body: "Give an agent a goal, tools and knowledge; it runs as a node in the flow, with every step it takes recorded and inspectable.",
+      },
+      knowledge: {
+        title: "Knowledge from your own material",
+        body: "Upload your documents and let flows answer from your content — not from thin air.",
+      },
+      integrations: {
+        title: "Connect your apps",
+        body: "Let flows read and write where your work happens. Every app shows its real live status — nothing is claimed before it's verified.",
+        verifiedLive: "Verified live",
+        notVerified: "Not verified live yet",
+      },
+    },
+    flowSceneTitle: "Watch a flow run",
+    flowSceneBody: "Keep scrolling — nodes draw in and light up step by step, exactly like the real run inspector.",
+    flowNodes: {
+      trigger: "Inbound lead",
+      normalise: "Normalise lead",
+      check: "Size check",
+      enrich: "AI enrich",
+      output: "Label result",
+    },
   },
 
   localTemplates: {

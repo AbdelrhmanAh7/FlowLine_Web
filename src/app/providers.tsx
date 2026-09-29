@@ -1,10 +1,13 @@
 "use client";
 
+import { DirectionProvider } from "@radix-ui/react-direction";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "motion/react";
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { ToastProvider } from "@/components/toast";
-import type { Locale } from "@/i18n/config";
+import { TooltipProvider } from "@/components/ui";
+import { dirOf, type Locale } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/client";
 
 export function Providers({ locale, children }: { locale: Locale; children: React.ReactNode }) {
@@ -28,9 +31,16 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
   );
   return (
     <I18nProvider locale={locale}>
-      <QueryClientProvider client={client}>
-        <ToastProvider>{children}</ToastProvider>
-      </QueryClientProvider>
+      {/* reducedMotion="user": the motion library follows prefers-reduced-motion, like our CSS. */}
+      <MotionConfig reducedMotion="user">
+        <DirectionProvider dir={dirOf(locale)}>
+          <TooltipProvider delayDuration={150}>
+            <QueryClientProvider client={client}>
+              <ToastProvider>{children}</ToastProvider>
+            </QueryClientProvider>
+          </TooltipProvider>
+        </DirectionProvider>
+      </MotionConfig>
     </I18nProvider>
   );
 }

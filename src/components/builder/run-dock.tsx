@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
 import { runLabel, stepErrorText } from "@/i18n/engine-text";
@@ -58,7 +59,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
           )}
           {variant === "dock" && (
             <button onClick={onClose} aria-label={t("runDock.hide", { shortcut: `${modKey()}J` })} className="flex size-7 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
-              ✕
+              <X aria-hidden className="size-4" />
             </button>
           )}
         </div>
@@ -67,7 +68,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
         {runs.length > 0 && (
           <ul aria-label={t("runDock.recent")} className="hidden w-44 shrink-0 overflow-y-auto border-e border-line py-1 md:block">
             {runs.map((r) => (
-              <li key={r.id}>
+              <li key={r.id} className="motion-list-in">
                 <button
                   onClick={() => onSelectRun(r.id)}
                   aria-current={run?.id === r.id ? "true" : undefined}
@@ -95,12 +96,12 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
             <div className="flex flex-col gap-3">
               <ol className="flex flex-wrap items-center gap-2" aria-label={t("runDock.steps", { number: run.number })}>
                 {run.steps.map((s, i) => (
-                  <li key={s.id} className="flex items-center gap-2">
+                  <li key={s.id} className="motion-list-in flex items-center gap-2">
                     <button
                       onClick={() => onSelectStep(s.nodeId)}
                       className={cx(
                         "rounded-md border bg-card px-2.5 py-1.5 text-start hover:bg-elevated",
-                        s.status === "failed" ? "border-danger/60" : s.status === "skipped" ? "border-dashed border-line-strong opacity-60" : "border-line",
+                        s.status === "failed" ? "border-danger-border" : s.status === "skipped" ? "border-dashed border-line-strong opacity-60" : "border-line",
                       )}
                     >
                       <span className="block max-w-36 truncate text-sm font-medium">{s.nodeLabel}</span>
@@ -118,7 +119,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                 ))}
               </ol>
               {run.status === "failed" && run.error && (
-                <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+                <p role="alert" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
                   ⚠ {stepErrorText(t, run.error)}
                 </p>
               )}

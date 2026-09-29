@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { evaluateExpression } from "@/engine/expression";
 import type { NodeType } from "@/engine/types";
@@ -9,7 +10,7 @@ import { nodeText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-tex
 import { pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
-import { Button, Field, Input, RUN_TONE, StatusBadge, cx, onTabListKeyDown } from "../ui";
+import { Button, CAT_BG, CAT_TEXT, CATEGORY_HUE, Field, Input, NODE_ICONS, RUN_TONE, StatusBadge, TabPanel, Tabs, cx } from "../ui";
 import type { RFNode } from "./graph-utils";
 import { NodeConfigForm } from "./node-config";
 
@@ -37,6 +38,8 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
   const headingId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
+  const hue = CATEGORY_HUE[def.category];
+  const Icon = NODE_ICONS[node.type as NodeType];
 
   return (
     <aside
@@ -45,7 +48,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
       data-testid="node-drawer"
       className={cx(
         "z-30 flex flex-col border-line bg-surface",
-        variant === "sheet" ? "fixed inset-x-0 bottom-0 h-[92vh] animate-sheet-in rounded-t-xl border-t" : "absolute top-0 end-0 bottom-0 w-[var(--drawer-w)] max-w-full animate-drawer-in border-s shadow-[var(--shadow-popover)]",
+        variant === "sheet" ? "motion-sheet fixed inset-x-0 bottom-0 h-[92vh] rounded-t-xl border-t" : "motion-drawer absolute top-0 end-0 bottom-0 w-[var(--drawer-w)] max-w-full border-s shadow-[var(--shadow-popover)]",
       )}
     >
       <div
@@ -68,7 +71,9 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
       >
         <div className="min-w-0">
           <h2 id={headingId} className="flex items-center gap-2 text-lg font-semibold">
-            <span aria-hidden className="text-accent">{def.icon}</span>
+            <span aria-hidden className={cx("flex size-6 shrink-0 items-center justify-center rounded-md", CAT_BG[hue])}>
+              <Icon className={cx("size-3.5", CAT_TEXT[hue])} />
+            </span>
             <span className="truncate">{node.data.label}</span>
             {step && (
               <StatusBadge tone={RUN_TONE[step.status] ?? "muted"} className="ms-1 text-sm font-normal">
@@ -83,35 +88,21 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
           </p>
         </div>
         <button ref={closeRef} onClick={onClose} aria-label={t("drawer.close")} className="-me-1 flex size-8 shrink-0 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
-          ✕
+          <X aria-hidden className="size-4" />
         </button>
       </div>
 
-      <div role="tablist" aria-label={t("drawer.tablist")} className="flex gap-5 border-b border-line px-5" onKeyDown={(e) => onTabListKeyDown(e, TABS, tab, setTab)}>
-        {TABS.map((id) => (
-          <button
-            key={id}
-            role="tab"
-            id={`tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls={`panel-${id}`}
-            tabIndex={tab === id ? 0 : -1}
-            onClick={() => setTab(id)}
-            className={cx(
-              "relative h-10 text-base capitalize transition-colors duration-[var(--dur-tab)]",
-              tab === id ? "font-semibold text-hi after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent" : "text-muted hover:text-med",
-            )}
-          >
-            {t(`drawer.tabs.${id}`)}
-          </button>
-        ))}
-      </div>
-
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        {tab === "configure" && <ConfigureTab node={node} readOnly={readOnly} readOnlyReason={readOnlyReason} issues={issues} onChange={onChange} />}
-        {tab === "test" && <TestTab node={node} step={step} />}
-        {tab === "logs" && <LogsTab step={step} />}
-      </div>
+      <Tabs tabs={TABS.map((id) => ({ id, label: t(`drawer.tabs.${id}`) }))} value={tab} onChange={setTab} label={t("drawer.tablist")}>
+        <TabPanel value="configure" className="px-5 py-4">
+          <ConfigureTab node={node} readOnly={readOnly} readOnlyReason={readOnlyReason} issues={issues} onChange={onChange} />
+        </TabPanel>
+        <TabPanel value="test" className="px-5 py-4">
+          <TestTab node={node} step={step} />
+        </TabPanel>
+        <TabPanel value="logs" className="px-5 py-4">
+          <LogsTab step={step} />
+        </TabPanel>
+      </Tabs>
 
       {tab === "configure" && (
         <div className="grid grid-cols-2 gap-3 border-t border-line px-5 py-4">
@@ -136,7 +127,7 @@ function ConfigureTab({ node, readOnly, readOnlyReason, issues, onChange }: { no
     <fieldset disabled={readOnly} className="flex flex-col gap-5">
       {readOnly && readOnlyReason && <p className="rounded-md border border-line bg-card px-3 py-2 text-sm text-med">{readOnlyReason}</p>}
       {issues.length > 0 && (
-        <ul className="flex flex-col gap-1 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning" aria-label={t("drawer.issues")}>
+        <ul className="flex flex-col gap-1 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning" aria-label={t("drawer.issues")}>
           {issues.map((i) => (
             <li key={i}>⚠ {i}</li>
           ))}
@@ -155,7 +146,7 @@ function Payload({ title, value, tone }: { title: string; value: unknown; tone?:
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{title}</p>
-      <pre dir="ltr" className={cx("data max-h-64 overflow-auto rounded-md border bg-app p-3 text-sm whitespace-pre-wrap break-all", tone === "danger" ? "border-danger/40 text-danger" : "border-line text-hi")}>{pretty(value)}</pre>
+      <pre dir="ltr" className={cx("data max-h-64 overflow-auto rounded-md border bg-app p-3 text-sm whitespace-pre-wrap break-all", tone === "danger" ? "border-danger-border text-danger" : "border-line text-hi")}>{pretty(value)}</pre>
     </div>
   );
 }

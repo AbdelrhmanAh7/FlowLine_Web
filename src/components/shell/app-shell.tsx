@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Menu as MenuIcon, type LucideIcon } from "lucide-react";
 import type { Role } from "@/db/schema";
 import { signOutEverywhere } from "@/lib/auth-client";
 import { initials } from "@/lib/format";
 import { useHealth, useOnline } from "@/lib/hooks";
-import { useT } from "@/i18n/client";
-import { LanguageSwitcher } from "../language-switcher";
-import { StatusBadge, cx } from "../ui";
+import { useLocale, useSetLocale, useT } from "@/i18n/client";
+import { LOCALES, type Locale } from "@/i18n/config";
+import { THEME_PREFERENCES, type ThemePreference } from "@/theme/config";
+import { useSetTheme, useThemePreference } from "@/theme/client";
+import { Menu, MenuContent, MenuItem, MenuLabel, MenuLink, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger, NAV_ICONS, StatusBadge, cn } from "../ui";
 import { WorkspaceContext, type WorkspaceInfo } from "./workspace-context";
 
 interface Props {
@@ -32,7 +35,7 @@ const NO_SUPPORT: Support = { beta: false, supportEmail: null, feedbackUrl: null
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   match: (p: string) => boolean;
 }
 
@@ -53,27 +56,27 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
     {
       title: t("shell.sections.build"),
       items: [
-        { href: `${base}/flows`, label: t("shell.nav.flows"), icon: "▦", match: (p) => p === `${base}/flows` },
-        { href: `${base}/canvas`, label: t("shell.nav.canvas"), icon: "⌘", match: (p) => p.startsWith(`${base}/flows/`) || p === `${base}/canvas` },
-        { href: `${base}/templates`, label: t("shell.nav.templates"), icon: "▤", match: (p) => p.startsWith(`${base}/templates`) },
+        { href: `${base}/flows`, label: t("shell.nav.flows"), icon: NAV_ICONS.flows, match: (p) => p === `${base}/flows` },
+        { href: `${base}/canvas`, label: t("shell.nav.canvas"), icon: NAV_ICONS.canvas, match: (p) => p.startsWith(`${base}/flows/`) || p === `${base}/canvas` },
+        { href: `${base}/templates`, label: t("shell.nav.templates"), icon: NAV_ICONS.templates, match: (p) => p.startsWith(`${base}/templates`) },
       ],
     },
     {
       title: t("shell.sections.ai"),
       items: [
-        { href: `${base}/agents`, label: t("shell.nav.agents"), icon: "✦", match: (p) => p.startsWith(`${base}/agents`) },
-        { href: `${base}/knowledge`, label: t("shell.nav.knowledge"), icon: "❏", match: (p) => p.startsWith(`${base}/knowledge`) },
+        { href: `${base}/agents`, label: t("shell.nav.agents"), icon: NAV_ICONS.agents, match: (p) => p.startsWith(`${base}/agents`) },
+        { href: `${base}/knowledge`, label: t("shell.nav.knowledge"), icon: NAV_ICONS.knowledge, match: (p) => p.startsWith(`${base}/knowledge`) },
       ],
     },
     {
       title: t("shell.sections.observe"),
       items: [
-        { href: `${base}/runs`, label: t("shell.nav.runs"), icon: "◷", match: (p) => p.startsWith(`${base}/runs`) },
-        { href: `${base}/integrations`, label: t("shell.nav.integrations"), icon: "⬡", match: (p) => p.startsWith(`${base}/integrations`) },
+        { href: `${base}/runs`, label: t("shell.nav.runs"), icon: NAV_ICONS.runs, match: (p) => p.startsWith(`${base}/runs`) },
+        { href: `${base}/integrations`, label: t("shell.nav.integrations"), icon: NAV_ICONS.integrations, match: (p) => p.startsWith(`${base}/integrations`) },
       ],
     },
   ];
-  const settings: NavItem = { href: `${base}/settings`, label: t("shell.nav.settings"), icon: "⚙", match: (p) => p.startsWith(`${base}/settings`) };
+  const settings: NavItem = { href: `${base}/settings`, label: t("shell.nav.settings"), icon: NAV_ICONS.settings, match: (p) => p.startsWith(`${base}/settings`) };
 
   return (
     <WorkspaceContext.Provider value={{ user, workspace, role, canEdit: role !== "viewer", workspaces }}>
@@ -89,8 +92,8 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
         {/* Mobile menu sheet */}
         {menuOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            <button aria-label={t("shell.closeMenu")} className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
-            <aside aria-label={t("shell.workspaceNav")} className="relative flex h-full w-[min(280px,85vw)] animate-drawer-in flex-col border-e border-line bg-surface">
+            <button aria-label={t("shell.closeMenu")} className="absolute inset-0 bg-scrim" onClick={() => setMenuOpen(false)} />
+            <aside aria-label={t("shell.workspaceNav")} className="motion-drawer relative flex h-full w-[min(280px,85vw)] flex-col border-e border-line bg-surface">
               <SidebarContent support={support} sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} />
             </aside>
           </div>
@@ -99,7 +102,7 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 md:hidden">
             <button aria-label={t("shell.openMenu")} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="-ms-1 flex size-9 items-center justify-center rounded-md text-lg text-med hover:bg-card hover:text-hi">
-              ☰
+              <MenuIcon className="size-5" aria-hidden />
             </button>
             <span className="truncate text-base font-semibold">{workspace.name}</span>
           </div>
@@ -135,13 +138,13 @@ function SidebarContent({
   const label = compact ? "hidden xl:inline" : "";
   return (
     <>
-      <div className={cx("flex h-14 items-center gap-2.5 border-b border-line", compact ? "justify-center px-0 xl:justify-start xl:px-4" : "px-4")}>
-        <span aria-hidden className="size-6 shrink-0 rounded-md bg-[linear-gradient(135deg,#7c6cff_0%,#38bdf8_100%)]" />
-        <span className={cx("truncate text-base font-semibold", label)} title={workspace.name}>
+      <div className={cn("flex h-14 items-center gap-2.5 border-b border-line", compact ? "justify-center px-0 xl:justify-start xl:px-4" : "px-4")}>
+        <span aria-hidden className="bg-brand size-6 shrink-0 rounded-md" />
+        <span className={cn("truncate text-base font-semibold", label)} title={workspace.name}>
           {workspace.name}
         </span>
         {support.beta && (
-          <StatusBadge tone="accent" upper className={cx("shrink-0", compact && "hidden xl:inline-flex")}>
+          <StatusBadge tone="accent" upper className={cn("shrink-0", compact && "hidden xl:inline-flex")}>
             {t("shell.beta")}
           </StatusBadge>
         )}
@@ -149,7 +152,7 @@ function SidebarContent({
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
         {sections.map((s) => (
           <div key={s.title}>
-            <p className={cx("mb-1.5 px-2 text-xs font-medium tracking-[0.4px] text-muted uppercase", compact && "hidden xl:block")}>{s.title}</p>
+            <p className={cn("mb-1.5 px-2 text-xs font-medium tracking-[0.4px] text-muted uppercase", compact && "hidden xl:block")}>{s.title}</p>
             <ul className="flex flex-col gap-0.5">
               {s.items.map((item) => (
                 <li key={item.href}>
@@ -169,18 +172,19 @@ function SidebarContent({
 }
 
 function NavLink({ item, active, compact }: { item: NavItem; active: boolean; compact?: boolean }) {
+  const Icon = item.icon;
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       title={compact ? item.label : undefined}
-      className={cx(
-        "flex h-8 items-center gap-2.5 rounded-md border px-2 text-base transition-colors duration-[var(--dur-hover)]",
+      className={cn(
+        "flex h-8 items-center gap-2.5 rounded-md border px-2 text-base transition-colors duration-[var(--dur-base)]",
         compact && "justify-center xl:justify-start",
-        active ? "border-accent/40 bg-accent/10 text-hi" : "border-transparent text-med hover:bg-card hover:text-hi",
+        active ? "border-accent-border bg-accent-bg text-hi" : "border-transparent text-med hover:bg-card hover:text-hi",
       )}
     >
-      <span aria-hidden className="w-4 text-center text-sm">{item.icon}</span>
+      <Icon aria-hidden className={cn("size-4 shrink-0", active && "text-accent")} />
       <span className={compact ? "sr-only xl:not-sr-only" : ""}>{item.label}</span>
     </Link>
   );
@@ -188,87 +192,67 @@ function NavLink({ item, active, compact }: { item: NavItem; active: boolean; co
 
 function UserMenu({ user, support, compact }: { user: { name: string; email: string }; support: Support; compact?: boolean }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open]);
+  const locale = useLocale();
+  const setLocale = useSetLocale();
+  const theme = useThemePreference();
+  const setTheme = useSetTheme();
+  const localeNames: Record<Locale, string> = { ar: t("language.ar"), en: t("language.en") };
+  const report = support.feedbackUrl ?? (support.supportEmail ? `mailto:${support.supportEmail}?subject=${encodeURIComponent("Flowline beta: issue report")}` : null);
+  const missing = t("shell.userMenu.supportNotConfigured");
   return (
-    <div ref={ref} className="relative">
-      <button
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className={cx("flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-start text-base text-med hover:bg-card hover:text-hi", compact && "justify-center xl:justify-start")}
+    <Menu>
+      <MenuTrigger
+        className={cn("flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-start text-base text-med outline-none hover:bg-card hover:text-hi", compact && "justify-center xl:justify-start")}
         title={compact ? user.name : undefined}
       >
-        <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7c6cff,#38bdf8)] text-[10px] font-semibold text-on-accent">
+        <span aria-hidden className="bg-brand flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-on-accent">
           {initials(user.name) || "?"}
         </span>
-        <span className={cx("min-w-0 flex-1 truncate", compact && "hidden xl:block")}>{user.name}</span>
-      </button>
-      {open && (
-        <div role="menu" className="absolute bottom-full start-0 z-50 mb-1 w-56 animate-fade-in rounded-lg border border-line bg-elevated p-1 shadow-[var(--shadow-popover)]">
-          <div className="px-2.5 py-2">
-            <p className="truncate text-base font-medium">{user.name}</p>
-            <p className="data truncate text-sm text-med">
-              <span dir="ltr">{user.email}</span>
-            </p>
-          </div>
-          {(() => {
-            const report = support.feedbackUrl ?? (support.supportEmail ? `mailto:${support.supportEmail}?subject=${encodeURIComponent("Flowline beta: issue report")}` : null);
-            const missing = t("shell.userMenu.supportNotConfigured");
-            return (
-              <>
-                {report ? (
-                  <a role="menuitem" href={report} target={support.feedbackUrl ? "_blank" : undefined} rel="noreferrer" className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
-                    {t("shell.userMenu.reportIssue")}
-                  </a>
-                ) : (
-                  <span role="menuitem" aria-disabled="true" title={missing} className="flex h-8 w-full cursor-not-allowed items-center rounded-md px-2.5 text-start text-base text-muted">
-                    {t("shell.userMenu.reportIssue")}
-                  </span>
-                )}
-                {support.supportEmail ? (
-                  <a role="menuitem" href={`mailto:${support.supportEmail}`} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
-                    {t("shell.userMenu.contactSupport")}
-                  </a>
-                ) : (
-                  <span role="menuitem" aria-disabled="true" title={missing} className="flex h-8 w-full cursor-not-allowed items-center rounded-md px-2.5 text-start text-base text-muted">
-                    {t("shell.userMenu.contactSupport")}
-                  </span>
-                )}
-              </>
-            );
-          })()}
-          <div role="separator" className="my-1 h-px bg-line" />
-          <p className="px-2.5 pt-1 text-xs text-muted">{t("shell.userMenu.account")}</p>
-          <Link role="menuitem" href="/resend-verification" onClick={() => setOpen(false)} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
-            {t("shell.userMenu.resendVerification")}
-          </Link>
-          <Link role="menuitem" href="/account/delete" onClick={() => setOpen(false)} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-danger hover:bg-card">
-            {t("shell.userMenu.deleteAccount")}
-          </Link>
-          <div role="separator" className="my-1 h-px bg-line" />
-          <button role="menuitem" onClick={() => void signOutEverywhere()} className="flex h-8 w-full items-center rounded-md px-2.5 text-start text-base text-hi hover:bg-card">
-            {t("shell.userMenu.signOut")}
-          </button>
-          <div role="separator" className="my-1 h-px bg-line" />
-          <p className="px-2.5 pt-1 text-xs text-muted">{t("language.label")}</p>
-          <LanguageSwitcher variant="menu" onChange={() => setOpen(false)} />
+        <span className={cn("min-w-0 flex-1 truncate", compact && "hidden xl:block")}>{user.name}</span>
+      </MenuTrigger>
+      <MenuContent>
+        <div className="px-2.5 py-2">
+          <p className="truncate text-base font-medium">{user.name}</p>
+          <p className="data truncate text-sm text-med">
+            <span dir="ltr">{user.email}</span>
+          </p>
         </div>
-      )}
-    </div>
+        <MenuItem href={report ?? undefined} disabled={!report} disabledTitle={missing}>
+          {t("shell.userMenu.reportIssue")}
+        </MenuItem>
+        <MenuItem href={support.supportEmail ? `mailto:${support.supportEmail}` : undefined} disabled={!support.supportEmail} disabledTitle={missing}>
+          {t("shell.userMenu.contactSupport")}
+        </MenuItem>
+        <MenuSeparator />
+        <MenuLabel>{t("shell.userMenu.account")}</MenuLabel>
+        <MenuLink href="/resend-verification">{t("shell.userMenu.resendVerification")}</MenuLink>
+        <MenuLink href="/account/delete" danger>
+          {t("shell.userMenu.deleteAccount")}
+        </MenuLink>
+        <MenuSeparator />
+        <MenuItem onSelect={() => void signOutEverywhere()}>{t("shell.userMenu.signOut")}</MenuItem>
+        <MenuSeparator />
+        <MenuLabel>{t("language.label")}</MenuLabel>
+        <MenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+          {LOCALES.map((l) => (
+            <MenuRadioItem key={l} value={l}>
+              <span lang={l} dir={l === "ar" ? "rtl" : "ltr"}>
+                {localeNames[l]}
+              </span>
+            </MenuRadioItem>
+          ))}
+        </MenuRadioGroup>
+        <MenuSeparator />
+        <MenuLabel>{t("theme.label")}</MenuLabel>
+        <MenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as ThemePreference)}>
+          {THEME_PREFERENCES.map((p) => (
+            <MenuRadioItem key={p} value={p}>
+              {t(`theme.${p}`)}
+            </MenuRadioItem>
+          ))}
+        </MenuRadioGroup>
+      </MenuContent>
+    </Menu>
   );
 }
 
@@ -278,7 +262,7 @@ function StatusBanners() {
   const health = useHealth();
   if (!online) {
     return (
-      <div role="status" className="flex shrink-0 items-center gap-2 border-b border-info/30 bg-info/10 px-4 py-2 text-base text-info">
+      <div role="status" className="flex shrink-0 items-center gap-2 border-b border-info-border bg-info-bg px-4 py-2 text-base text-info">
         <span aria-hidden>●</span> <strong className="font-semibold">{t("shell.banners.offlineTitle")}</strong>
         <span className="text-med">{t("shell.banners.offlineBody")}</span>
       </div>
@@ -286,7 +270,7 @@ function StatusBanners() {
   }
   if (health.data?.worker === "offline") {
     return (
-      <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-2 border-b border-warning/30 bg-warning/10 px-4 py-2 text-base text-warning">
+      <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-2 border-b border-warning-border bg-warning-bg px-4 py-2 text-base text-warning">
         <span aria-hidden>⚠</span> <strong className="font-semibold">{t("shell.banners.workerTitle")}</strong>
         <span className="text-med">
           {t.rich("shell.banners.workerBody", {
@@ -302,7 +286,7 @@ function StatusBanners() {
   }
   if (health.isError) {
     return (
-      <div role="status" className="flex shrink-0 items-center gap-2 border-b border-danger/30 bg-danger/10 px-4 py-2 text-base text-danger">
+      <div role="status" className="flex shrink-0 items-center gap-2 border-b border-danger-border bg-danger-bg px-4 py-2 text-base text-danger">
         <span aria-hidden>⚠</span> <strong className="font-semibold">{t("shell.banners.dbTitle")}</strong>
         <button className="underline" onClick={() => void health.refetch()}>
           {t("common.retry")}

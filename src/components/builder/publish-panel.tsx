@@ -10,7 +10,7 @@ import type { MessageKey } from "@/i18n/types";
 import { api, ApiError } from "@/lib/api";
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
-import { Button, cx } from "../ui";
+import { Button, Dialog, cx, useConfirm } from "../ui";
 
 interface TriggerState {
   publishedVersionId: string | null;
@@ -38,6 +38,7 @@ export function PublishControl({ flowId, canEdit, dirty, saveNow, issueCount, on
   const state = usePublishState(flowId);
   const [panel, setPanel] = useState(false);
   const [secret, setSecret] = useState<{ url: string; secret: string } | null>(null);
+  const publishedConfirm = useConfirm();
   const publish = useMutation({
     mutationFn: async () => {
       if (dirty && !(await saveNow())) throw new ApiError(0, "SAVE_FAILED", t("publish.saveFirst"));
@@ -45,6 +46,7 @@ export function PublishControl({ flowId, canEdit, dirty, saveNow, issueCount, on
     },
     onSuccess: (r) => {
       toast(t("publish.published", { version: r.version }), "success");
+      publishedConfirm.flash();
       if (r.webhook?.secret) setSecret({ url: r.webhook.url, secret: r.webhook.secret });
       setPanel(true);
       void qc.invalidateQueries({ queryKey: ["publish", flowId] });
@@ -76,18 +78,19 @@ export function PublishControl({ flowId, canEdit, dirty, saveNow, issueCount, on
       <Button size="sm" variant="ghost" onClick={() => setPanel(true)} disabledReason={published ? null : t("publish.triggersReason")}>
         {t("publish.triggers")}
       </Button>
-      <Button size="sm" onClick={() => publish.mutate()} loading={publish.isPending} disabledReason={reason}>
+      <Button size="sm" onClick={() => publish.mutate()} loading={publish.isPending} confirm={publishedConfirm.confirmed} disabledReason={reason}>
         {published ? t("publish.publishChanges") : t("publish.publish")}
       </Button>
-      {panel && <TriggerPanel flowId={flowId} state={state.data} secret={secret} onSecret={setSecret} onClose={() => setPanel(false)} canEdit={canEdit} />}
+      <TriggerPanel flowId={flowId} open={panel} state={state.data} secret={secret} onSecret={setSecret} onClose={() => setPanel(false)} canEdit={canEdit} />
     </>
   );
 }
 
-function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { flowId: string; state?: TriggerState; secret: { url: string; secret: string } | null; onSecret: (s: { url: string; secret: string } | null) => void; onClose: () => void; canEdit: boolean }) {
+function TriggerPanel({ flowId, open, state, secret, onSecret, onClose, canEdit }: { flowId: string; open: boolean; state?: TriggerState; secret: { url: string; secret: string } | null; onSecret: (s: { url: string; secret: string } | null) => void; onClose: () => void; canEdit: boolean }) {
   const toast = useToast();
   const t = useT();
   const [confirmRotate, setConfirmRotate] = useState(false);
+  const copied = useConfirm();
   const rotate = useMutation({
     mutationFn: () => api<{ url: string; secret: string }>(`/api/flows/${flowId}/webhook/rotate`, { method: "POST" }),
     onSuccess: (r) => {
@@ -96,21 +99,16 @@ function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { f
       toast(t("publish.rotated"), "info");
     },
   });
-  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast(t("publish.copied"), "info"));
+  const copy = (text: string) =>
+    void navigator.clipboard?.writeText(text).then(() => {
+      // The check appears only after the clipboard write actually resolved.
+      copied.flash();
+      toast(t("publish.copied"), "info");
+    });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button aria-label={t("publish.closeTriggers")} className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="trig-title" className="relative max-h-[90vh] w-full max-w-xl animate-fade-in overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-popover)]">
-        <div className="flex items-center justify-between">
-          <h2 id="trig-title" className="text-lg font-semibold">
-            {t("publish.triggers")}
-          </h2>
-          <button onClick={onClose} aria-label={t("publish.close")} className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
-            ✕
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={t("publish.triggers")} closeLabel={t("publish.close")}>
         {state?.pausedReason && (
-          <p role="alert" className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning">
+          <p role="alert" className="mt-3 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
             {t("publish.pausedAlert")}
           </p>
         )}
@@ -122,18 +120,18 @@ function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { f
               <code className="data min-w-0 flex-1 truncate rounded-md border border-line bg-app px-2 py-1.5 text-sm" data-testid="webhook-url">
                 {state.webhook.url}
               </code>
-              <Button size="sm" onClick={() => copy(state.webhook!.url)}>
+              <Button size="sm" confirm={copied.confirmed} onClick={() => copy(state.webhook!.url)}>
                 {t("publish.copy")}
               </Button>
             </div>
             {secret ? (
-              <div className="rounded-md border border-warning/40 bg-warning/5 p-3">
+              <div className="rounded-md border border-warning-border bg-warning-bg p-3">
                 <p className="text-sm text-warning">{t("publish.secretOnce")}</p>
                 <div className="mt-2 flex items-center gap-2">
                   <code className="data min-w-0 flex-1 truncate text-sm" data-testid="webhook-secret">
                     {secret.secret}
                   </code>
-                  <Button size="sm" onClick={() => copy(secret.secret)}>
+                  <Button size="sm" confirm={copied.confirmed} onClick={() => copy(secret.secret)}>
                     {t("publish.copy")}
                   </Button>
                 </div>
@@ -216,8 +214,7 @@ function TriggerPanel({ flowId, state, secret, onSecret, onClose, canEdit }: { f
             )}
           </section>
         )}
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -227,7 +224,7 @@ export function PausedBanner({ flowId }: { flowId: string }) {
   const state = usePublishState(flowId);
   if (!state.data?.pausedReason) return null;
   return (
-    <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
+    <div role="alert" className="flex shrink-0 flex-wrap items-center gap-2 border-b border-warning-border bg-warning-bg px-4 py-2 text-sm text-warning">
       {t("publish.pausedBanner")}
       <Link href={`/w/${workspace.slug}/integrations`} className="font-medium underline">
         {t("publish.reconnect")} <span aria-hidden className="flip-rtl">→</span>

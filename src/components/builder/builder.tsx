@@ -16,6 +16,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Minus, Plus, Redo2, Sparkles, TriangleAlert, Undo2, Zap } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createNode, newNodeId } from "@/engine/nodes";
@@ -34,12 +35,13 @@ const RUN_TOAST: Record<string, "success" | "danger" | "warning" | "info"> = {
   waiting_approval: "warning",
 };
 import { useDir, useT } from "@/i18n/client";
+import { useCanvasColors } from "@/theme/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { connectionReason, issueMessage, nodeTitle } from "@/i18n/engine-text";
 import type { MessageKey } from "@/i18n/types";
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
-import { Button, ErrorState, Kbd, Skeleton, cx } from "../ui";
+import { Button, ConfirmCheck, ErrorState, Kbd, Popover, PopoverContent, PopoverTrigger, Skeleton, useConfirm, cx } from "../ui";
 import { CanvasStatusContext, nodeTypes } from "./flow-node";
 import { edgeId, toDomain, toRF, type RFEdge, type RFNode, type Snapshot } from "./graph-utils";
 import { NodeDrawer } from "./node-drawer";
@@ -123,6 +125,11 @@ function Editor({ data }: { data: FlowResponse }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
   const [issuesOpen, setIssuesOpen] = useState(false);
+  /* Canvas enter/exit motion: nodes that just appeared or are mid-delete, and the edge just connected. */
+  const [entering, setEntering] = useState<Set<string>>(new Set());
+  const [exiting, setExiting] = useState<Set<string>>(new Set());
+  const [drawnEdge, setDrawnEdge] = useState<string | null>(null);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // "?copilot=1" (e.g. "Create with Copilot") opens the panel; search params are the same on server and client.
   const searchParams = useSearchParams();
   const [copilotOpen, setCopilotOpen] = useState(() => searchParams.has("copilot"));
@@ -166,6 +173,12 @@ function Editor({ data }: { data: FlowResponse }) {
   }, [bumpHistory]);
 
   const restore = useCallback((s: Snapshot) => {
+    // An in-flight delete animation must not remove nodes the user just restored.
+    if (deleteTimer.current) {
+      clearTimeout(deleteTimer.current);
+      deleteTimer.current = null;
+      setExiting(new Set());
+    }
     const r = toRF({ nodes: s.nodes, edges: s.edges });
     setNodes(r.nodes);
     setEdges(r.edges);
@@ -192,6 +205,11 @@ function Editor({ data }: { data: FlowResponse }) {
   /* ───── persistence ───── */
   const replace = useCallback(
     (graph: FlowGraph, newName: string) => {
+      if (deleteTimer.current) {
+        clearTimeout(deleteTimer.current);
+        deleteTimer.current = null;
+        setExiting(new Set());
+      }
       const r = toRF(graph);
       setNodes(r.nodes);
       setEdges(r.edges);
@@ -330,7 +348,11 @@ function Editor({ data }: { data: FlowResponse }) {
       }
       pushHistory();
       invalidReason.current = null;
-      setEdges((es) => [...es.map((e) => ({ ...e, selected: false })), { id: edgeId(c.source, c.sourceHandle, c.target), source: c.source, target: c.target, sourceHandle: c.sourceHandle ?? null, targetHandle: c.targetHandle ?? null }]);
+      const id = edgeId(c.source, c.sourceHandle, c.target);
+      setEdges((es) => [...es.map((e) => ({ ...e, selected: false })), { id, source: c.source, target: c.target, sourceHandle: c.sourceHandle ?? null, targetHandle: c.targetHandle ?? null }]);
+      // The new edge draws itself in (one-shot; the class is removed right after the animation).
+      setDrawnEdge(id);
+      setTimeout(() => setDrawnEdge((d) => (d === id ? null : d)), 350);
     },
     [readOnly, pushHistory, toast, t],
   );
@@ -347,6 +369,16 @@ function Editor({ data }: { data: FlowResponse }) {
     return { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 };
   }, [rf]);
 
+  // Newly added nodes play their enter animation once; the flag is dropped right after it finishes.
+  const markEntering = useCallback((ids: string[]) => {
+    setEntering((s) => new Set([...s, ...ids]));
+    setTimeout(() => setEntering((s) => {
+      const n = new Set(s);
+      for (const id of ids) n.delete(id);
+      return n;
+    }), 250);
+  }, []);
+
   const addNode = useCallback(
     (type: NodeType, at?: { x: number; y: number }) => {
       if (readOnly) return;
@@ -362,20 +394,35 @@ function Editor({ data }: { data: FlowResponse }) {
       // A new node is named after its type in the UI language (the engine default is the English title).
       const label = nodeTitle(t, type);
       setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id: node.id, type: node.type, position: node.position, data: { label, config: node.data.config as unknown as Record<string, unknown> }, selected: true }]);
+      markEntering([node.id]);
       setPaletteOpen(false);
     },
-    [readOnly, pushHistory, viewportCenter, toast, t],
+    [readOnly, pushHistory, viewportCenter, toast, t, markEntering],
   );
 
   const deleteSelection = useCallback(() => {
     if (readOnly) return;
-    const nodeIds = new Set(nodes.filter((n) => n.selected).map((n) => n.id));
+    const nodeIds = new Set(nodes.filter((n) => n.selected && !exiting.has(n.id)).map((n) => n.id));
     const edgeIds = new Set(edges.filter((e) => e.selected).map((e) => e.id));
     if (nodeIds.size === 0 && edgeIds.size === 0) return;
     pushHistory();
-    setNodes((ns) => ns.filter((n) => !nodeIds.has(n.id)));
-    setEdges((es) => es.filter((e) => !edgeIds.has(e.id) && !nodeIds.has(e.source) && !nodeIds.has(e.target)));
-  }, [nodes, edges, readOnly, pushHistory]);
+    if (nodeIds.size === 0) {
+      setEdges((es) => es.filter((e) => !edgeIds.has(e.id)));
+      return;
+    }
+    // Fade/scale out first (motion-node-out), then remove from the graph. Undo/replace cancels the timer.
+    setExiting((s) => new Set([...s, ...nodeIds]));
+    deleteTimer.current = setTimeout(() => {
+      deleteTimer.current = null;
+      setExiting((s) => {
+        const n = new Set(s);
+        for (const id of nodeIds) n.delete(id);
+        return n;
+      });
+      setNodes((ns) => ns.filter((n) => !nodeIds.has(n.id)));
+      setEdges((es) => es.filter((e) => !edgeIds.has(e.id) && !nodeIds.has(e.source) && !nodeIds.has(e.target)));
+    }, 160);
+  }, [nodes, edges, readOnly, pushHistory, exiting]);
 
   const duplicateSelection = useCallback(() => {
     if (readOnly) return;
@@ -392,7 +439,8 @@ function Editor({ data }: { data: FlowResponse }) {
       return { id, type: n.type, position: { x: n.position.x + 24, y: n.position.y + 24 }, data: { label: t("builder.copyLabel", { label: n.data.label }).slice(0, 80), config: structuredClone(n.data.config) }, selected: true };
     });
     setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), ...copies]);
-  }, [nodes, readOnly, pushHistory, toast, t]);
+    markEntering(copies.map((c) => c.id));
+  }, [nodes, readOnly, pushHistory, toast, t, markEntering]);
 
   const nudge = useCallback(
     (dx: number, dy: number) => {
@@ -491,7 +539,9 @@ function Editor({ data }: { data: FlowResponse }) {
   /* ───── layout ───── */
   const drawerVariant = isMobile ? "sheet" : "overlay";
   const showScrim = viewportKind === "tablet" && drawerNode;
-  const canvasStatus = useMemo(() => ({ steps, events: run?.events, issues: issuesByNode, readOnly }), [steps, run?.events, issuesByNode, readOnly]);
+  const canvasStatus = useMemo(() => ({ steps, events: run?.events, issues: issuesByNode, readOnly, entering, exiting }), [steps, run?.events, issuesByNode, readOnly, entering, exiting]);
+
+  const canvasColors = useCanvasColors();
 
   const edgesWithState = useMemo(
     () =>
@@ -499,9 +549,9 @@ function Editor({ data }: { data: FlowResponse }) {
         const target = steps.get(e.target);
         const source = steps.get(e.source);
         const flowing = target?.status === "running" || (source?.status === "succeeded" && target?.status === "pending" && runActive);
-        return { ...e, className: cx(flowing && "flowing", target?.status === "skipped" && "skipped") };
+        return { ...e, className: cx(flowing && "flowing", e.id === drawnEdge && "drawing", target?.status === "skipped" && "skipped") };
       }),
-    [edges, steps, runActive],
+    [edges, steps, runActive, drawnEdge],
   );
 
   const canvas = (
@@ -559,8 +609,20 @@ function Editor({ data }: { data: FlowResponse }) {
           dir="ltr"
           attributionPosition={rtl ? "bottom-left" : "bottom-right"}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#27272a" />
-          {viewportKind === "desktop" && <MiniMap style={{ width: 160, height: 96 }} pannable zoomable nodeColor="#27272a" nodeStrokeColor="#3f3f46" maskColor="rgba(9,9,11,0.7)" position={rtl ? "bottom-right" : "bottom-left"} ariaLabel={t("builder.miniMap")} />}
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color={canvasColors.dot || "transparent"} />
+          {viewportKind === "desktop" && canvasColors.minimapNode && (
+            <MiniMap
+              style={{ width: 160, height: 96 }}
+              className="motion-fade"
+              pannable
+              zoomable
+              nodeColor={canvasColors.minimapNode}
+              nodeStrokeColor={canvasColors.minimapStroke}
+              maskColor={canvasColors.minimapMask}
+              position={rtl ? "bottom-right" : "bottom-left"}
+              ariaLabel={t("builder.miniMap")}
+            />
+          )}
         </ReactFlow>
       </CanvasStatusContext.Provider>
 
@@ -577,8 +639,8 @@ function Editor({ data }: { data: FlowResponse }) {
       {/* Empty canvas */}
       {nodes.length === 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
-          <div className="pointer-events-auto flex max-w-xs flex-col items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface/90 px-6 py-8 text-center">
-            <span aria-hidden className="text-2xl text-muted">⚡</span>
+          <div className="motion-enter pointer-events-auto flex max-w-xs flex-col items-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface/90 px-6 py-8 text-center">
+            <Zap aria-hidden className="size-6 text-muted" />
             <p className="text-lg font-semibold">{t("builder.emptyTitle")}</p>
             <p className="text-base text-med">{t("builder.emptyBody")}</p>
             <Button variant="primary" className="mt-2" onClick={() => addNode("trigger.manual")} disabledReason={readOnlyReason}>
@@ -593,7 +655,7 @@ function Editor({ data }: { data: FlowResponse }) {
 
       <ZoomControls shifted={Boolean(drawerNode) && drawerVariant === "overlay"} />
 
-      {showScrim && <button aria-label={t("builder.closeDrawer")} className="absolute inset-0 z-20 bg-black/50" onClick={clearSelection} />}
+      {showScrim && <button aria-label={t("builder.closeDrawer")} className="absolute inset-0 z-20 bg-scrim" onClick={clearSelection} />}
       {drawerNode && (
         <NodeDrawer
           key={drawerNode.id}
@@ -646,39 +708,39 @@ function Editor({ data }: { data: FlowResponse }) {
         )}
         <div className="ms-auto flex items-center gap-2">
           {issues.length > 0 && (
-            <div className="relative">
-              <Button size="sm" variant="ghost" className="text-warning" onClick={() => setIssuesOpen((o) => !o)} aria-expanded={issuesOpen}>
-                ⚠ {t.plural("builder.issueCount", issues.length)}
-              </Button>
-              {issuesOpen && (
-                <div role="dialog" aria-label={t("builder.issuesDialog")} className="absolute top-full end-0 z-40 mt-1 w-80 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
-                  <ul className="flex flex-col gap-0.5">
-                    {issues.map((i, k) => (
-                      <li key={k}>
-                        <button
-                          className="w-full rounded-md px-2 py-1.5 text-start text-sm text-hi hover:bg-card disabled:cursor-default"
-                          disabled={!i.nodeId}
-                          onClick={() => {
-                            if (i.nodeId) selectNode(i.nodeId);
-                            setIssuesOpen(false);
-                          }}
-                        >
-                          <span className="text-warning">⚠</span> {issueMessage(t, i, i.nodeId ? labelOf.get(i.nodeId) : undefined)}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <Popover open={issuesOpen} onOpenChange={setIssuesOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="ghost" className="text-warning" aria-expanded={issuesOpen}>
+                  <TriangleAlert aria-hidden className="size-3.5" /> {t.plural("builder.issueCount", issues.length)}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" side="bottom" className="w-80" role="dialog" ariaLabel={t("builder.issuesDialog")}>
+                <ul className="flex flex-col gap-0.5">
+                  {issues.map((i, k) => (
+                    <li key={k}>
+                      <button
+                        className="w-full rounded-md px-2 py-1.5 text-start text-sm text-hi hover:bg-card disabled:cursor-default"
+                        disabled={!i.nodeId}
+                        onClick={() => {
+                          if (i.nodeId) selectNode(i.nodeId);
+                          setIssuesOpen(false);
+                        }}
+                      >
+                        <span className="text-warning">⚠</span> {issueMessage(t, i, i.nodeId ? labelOf.get(i.nodeId) : undefined)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
           )}
           {!readOnly && (
             <span className="hidden items-center gap-1 lg:flex">
               <Button size="sm" variant="ghost" aria-label={t("builder.undo", { shortcut: `${modKey()}Z` })} title={t("builder.undo", { shortcut: `${modKey()}Z` })} disabledReason={history.past ? null : t("builder.nothingToUndo")} onClick={undo}>
-                ↶
+                <Undo2 aria-hidden className="size-4" />
               </Button>
               <Button size="sm" variant="ghost" aria-label={t("builder.redo", { shortcut: `${modKey()}⇧Z` })} title={t("builder.redo", { shortcut: `${modKey()}⇧Z` })} disabledReason={history.future ? null : t("builder.nothingToRedo")} onClick={redo}>
-                ↷
+                <Redo2 aria-hidden className="size-4" />
               </Button>
             </span>
           )}
@@ -688,7 +750,7 @@ function Editor({ data }: { data: FlowResponse }) {
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => { setCopilotOpen((o) => !o); setHistoryOpen(false); }} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? t("builder.readOnly")) : !online ? t("builder.copilotOffline") : null}>
-            ✦ Copilot
+            <Sparkles aria-hidden className="size-3.5 text-cat-ai" /> Copilot
           </Button>
           {!isMobile && (
             <Button size="sm" variant="ghost" onClick={() => setDockOpen((o) => !o)} aria-pressed={dockOpen} title={t("builder.toggleDock", { shortcut: `${modKey()}J` })}>
@@ -777,13 +839,13 @@ function ZoomControls({ shifted }: { shifted: boolean }) {
       )}
     >
       <button aria-label={t("builder.zoomOut")} onClick={() => void rf.zoomOut({ duration: 0 })} className="flex size-7 items-center justify-center rounded-md hover:bg-card hover:text-hi">
-        −
+        <Minus aria-hidden className="size-3.5" />
       </button>
       <span className="data w-12 text-center text-sm" aria-live="polite" aria-label={t("builder.zoomLevel", { pct: Math.round(zoom * 100) })}>
         {Math.round(zoom * 100)}%
       </span>
       <button aria-label={t("builder.zoomIn")} onClick={() => void rf.zoomIn({ duration: 0 })} className="flex size-7 items-center justify-center rounded-md hover:bg-card hover:text-hi">
-        +
+        <Plus aria-hidden className="size-3.5" />
       </button>
       <button onClick={() => void rf.fitView({ padding: 0.2, duration: 0 })} className="h-7 rounded-md px-2 hover:bg-card hover:text-hi" title={t("builder.fitTitle", { shortcut: `${modKey()}0` })}>
         {t("builder.fit")}
@@ -805,9 +867,17 @@ const SAVE_TONE: Record<SaveStatus, string> = {
 
 function SaveBadge({ status, onRetry, error }: { status: SaveStatus; lastSavedAt: number | null; onRetry: () => void; error: string | null }) {
   const t = useT();
+  // The check appears only on a real transition into "saved" (server-confirmed), then fades away.
+  const { confirmed, flash } = useConfirm();
+  const prev = useRef(status);
+  useEffect(() => {
+    if (status === "saved" && prev.current !== "saved") flash();
+    prev.current = status;
+  }, [status, flash]);
   return (
     <span className="flex items-center gap-2 text-sm" data-testid="save-status" data-status={status}>
-      <span role="status" className={SAVE_TONE[status]} title={error ?? undefined}>
+      <span role="status" className={cx("inline-flex items-center gap-1", SAVE_TONE[status])} title={error ?? undefined}>
+        {confirmed && status === "saved" && <ConfirmCheck className="text-success" />}
         {t(`builder.save.${status}`)}
       </span>
       {status === "failed" && (
@@ -844,7 +914,7 @@ function BuilderSkeleton({ slug }: { slug: string }) {
         <Skeleton className="h-5 w-48" />
         <Skeleton className="ms-auto h-8 w-20" />
       </header>
-      <div className="relative flex-1 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:24px_24px]">
+      <div className="relative flex-1 bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:24px_24px]">
         <div className="absolute top-1/3 start-[10%] flex gap-16">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-[84px] w-[200px] rounded-lg" />

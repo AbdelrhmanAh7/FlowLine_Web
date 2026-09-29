@@ -6,7 +6,7 @@ import { TRIGGER_TYPES, type NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
 import { nodeCategoryLabel, nodeText } from "@/i18n/engine-text";
 import { useCatalog } from "@/lib/catalog";
-import { cx } from "../ui";
+import { CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn } from "../ui";
 
 export const DRAG_MIME = "application/x-flowline-node";
 
@@ -51,7 +51,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
   }, [ref]);
 
   return (
-    <div role="dialog" aria-label={t("palette.dialog")} className="absolute top-12 start-3 z-30 w-72 animate-fade-in rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
+    <div role="dialog" aria-label={t("palette.dialog")} className="motion-pop absolute top-12 start-3 z-30 w-72 rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
       <input
         ref={ref}
         value={q}
@@ -83,6 +83,8 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
         {items.length === 0 && <li className="px-2 py-3 text-sm text-muted">{t("palette.noMatch", { q })}</li>}
         {items.map((d, i) => {
           const reason = disabledReason(d.type);
+          const hue = CATEGORY_HUE[d.def.category];
+          const Icon = NODE_ICONS[d.type];
           return (
             <li
               key={d.type}
@@ -98,13 +100,15 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
               onMouseEnter={() => setActive(i)}
               onClick={() => !reason && onAdd(d.type)}
               title={reason ?? (allowDrag ? t("palette.dragHint") : t("palette.tapHint"))}
-              className={cx(
+              className={cn(
                 "flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-2",
                 i === active && !reason && "bg-card",
                 reason && "cursor-not-allowed opacity-50",
               )}
             >
-              <span aria-hidden className="mt-0.5 w-4 text-center text-accent">{d.icon}</span>
+              <span aria-hidden className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md", CAT_BG[hue])}>
+                <Icon className={cn("size-3.5", CAT_TEXT[hue])} />
+              </span>
               <span className="min-w-0">
                 <span className="block text-base font-medium">
                   {d.title} <span className="text-xs font-normal tracking-[0.4px] text-muted uppercase">{d.category}</span>

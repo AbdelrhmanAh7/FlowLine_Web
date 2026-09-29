@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button, Field, Input, Logo } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import type { Translator } from "@/i18n/translate";
@@ -103,7 +104,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <Link href="/" aria-label={t("common.homeAria")}>
               <Logo />
             </Link>
-            <LanguageSwitcher />
+            <span className="flex items-center gap-3">
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+            </span>
           </div>
           <h1 className="mt-10 text-2xl font-semibold tracking-tight">{mode === "sign-up" ? t("auth.signUpTitle") : t("auth.signInTitle")}</h1>
           <p className="mt-1 text-base text-med">

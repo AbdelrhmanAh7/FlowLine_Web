@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Field, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -24,8 +24,6 @@ interface ApiKeyDto {
   lastUsedAt: string | null;
 }
 
-const selectCls = "h-8 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none";
-
 export function ApiKeys() {
   const t = useT();
   const { workspace, role } = useWorkspace();
@@ -43,6 +41,10 @@ export function ApiKeys() {
   const [expiry, setExpiry] = useState("90");
   const [revealed, setRevealed] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const created = useConfirm();
+  const copied = useConfirm();
+  const revoked = useConfirm();
+  const [revokedId, setRevokedId] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: () =>
       api<{ key: string }>(`/api/workspaces/${workspace.id}/api-keys`, {
@@ -52,14 +54,17 @@ export function ApiKeys() {
     onSuccess: (r) => {
       setRevealed(r.key);
       setName("");
+      created.flash();
       void qc.invalidateQueries({ queryKey: ["api-keys", workspace.id] });
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.keys.createError")), "danger"),
   });
   const revoke = useMutation({
     mutationFn: (id: string) => api(`/api/workspaces/${workspace.id}/api-keys/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
+    onSuccess: (_r, id) => {
       toast(t("settings.keys.revoked"), "success");
+      setRevokedId(id);
+      revoked.flash();
       setConfirm(null);
       void qc.invalidateQueries({ queryKey: ["api-keys", workspace.id] });
     },
@@ -90,12 +95,12 @@ export function ApiKeys() {
           ) : (
             <ul className="divide-y divide-line" aria-label={t("settings.keys.listAria")}>
               {q.data.apiKeys.map((k) => (
-                <li key={k.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5" data-testid={`apikey-${k.name}`}>
+                <li key={k.id} className="motion-list-in flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5" data-testid={`apikey-${k.name}`}>
                   <span className="font-medium">{k.name}</span>
                   <code dir="ltr" className="data text-sm text-muted">
                     {k.prefix}_…
                   </code>
-                  <span className={cx("rounded-md border px-1.5 text-sm", k.mode === "live" ? "border-warning/40 text-warning" : "border-line text-med")}>{t(`settings.keys.mode.${k.mode}`)}</span>
+                  <span className={cx("rounded-md border px-1.5 text-sm", k.mode === "live" ? "border-warning-border text-warning" : "border-line text-med")}>{t(`settings.keys.mode.${k.mode}`)}</span>
                   <span dir="ltr" className="data text-sm text-muted">
                     {k.scopes.join(", ")}
                   </span>
@@ -112,7 +117,7 @@ export function ApiKeys() {
                         </Button>
                       </span>
                     ) : (
-                      <Button size="sm" variant="danger-ghost" className="ms-auto" onClick={() => setConfirm(k.id)}>
+                      <Button size="sm" variant="danger-ghost" className="ms-auto" confirm={revoked.confirmed && revokedId === k.id} onClick={() => setConfirm(k.id)}>
                         {t("settings.revoke")}
                       </Button>
                     ))}
@@ -137,18 +142,18 @@ export function ApiKeys() {
               <Input id="key-name" value={name} maxLength={60} placeholder={t("settings.keys.namePlaceholder")} onChange={(e) => setName(e.target.value)} className="h-8" />
             </Field>
             <Field label={t("settings.keys.modeLabel")} htmlFor="key-mode">
-              <select id="key-mode" className={selectCls} value={mode} onChange={(e) => setMode(e.target.value as "test" | "live")}>
+              <Select size="sm" id="key-mode" value={mode} onChange={(e) => setMode(e.target.value as "test" | "live")}>
                 <option value="test">{t("settings.keys.modeTest")}</option>
                 <option value="live">{t("settings.keys.modeLive")}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={t("settings.keys.expires")} htmlFor="key-exp">
-              <select id="key-exp" className={selectCls} value={expiry} onChange={(e) => setExpiry(e.target.value)}>
+              <Select size="sm" id="key-exp" value={expiry} onChange={(e) => setExpiry(e.target.value)}>
                 <option value="30">{t("settings.keys.in30")}</option>
                 <option value="90">{t("settings.keys.in90")}</option>
                 <option value="365">{t("settings.keys.in365")}</option>
                 <option value="never">{t("settings.keys.never")}</option>
-              </select>
+              </Select>
             </Field>
           </div>
           <fieldset>
@@ -165,20 +170,30 @@ export function ApiKeys() {
             </div>
           </fieldset>
           <div>
-            <Button type="submit" variant="primary" loading={create.isPending} disabledReason={!name.trim() ? t("settings.keys.nameFirst") : scopes.length === 0 ? t("settings.keys.scopeFirst") : null}>
+            <Button type="submit" variant="primary" loading={create.isPending} confirm={created.confirmed} disabledReason={!name.trim() ? t("settings.keys.nameFirst") : scopes.length === 0 ? t("settings.keys.scopeFirst") : null}>
               {t("settings.keys.create")}
             </Button>
           </div>
         </form>
         {revealed && (
-          <div role="status" className="mt-4 flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3">
+          <div role="status" className="mt-4 flex flex-col gap-2 rounded-md border border-warning-border bg-warning-bg p-3">
             <p className="text-sm text-hi">{t("settings.keys.revealWarning")}</p>
             <code dir="ltr" className="data break-all text-sm" data-testid="revealed-key">
               {revealed}
             </code>
             <pre dir="ltr" className="data overflow-x-auto rounded-md border border-line bg-app p-2 text-xs text-med">{`curl -X POST ${base}/api/v1/flows/<flow-id>/runs \\\n  -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \\\n  -d '{"input": {}}'`}</pre>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => void navigator.clipboard?.writeText(revealed).then(() => toast(t("settings.keys.copied"), "success"))}>
+              <Button
+                size="sm"
+                confirm={copied.confirmed}
+                onClick={() =>
+                  void navigator.clipboard?.writeText(revealed).then(() => {
+                    // The check appears only after the clipboard write actually resolved.
+                    copied.flash();
+                    toast(t("settings.keys.copied"), "success");
+                  })
+                }
+              >
                 {t("settings.keys.copy")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setRevealed(null)}>
