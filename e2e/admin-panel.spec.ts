@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page, type Response } from "@playwright/test";
-import { base32Decode, totpCodeFor } from "../src/server/totp";
+import { base32Decode, totpCodeFor } from "./tools/totp";
 import { EN_STATE } from "../playwright.config";
 import { PASSWORD, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
