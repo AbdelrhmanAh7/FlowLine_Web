@@ -9,11 +9,14 @@ export class HubError extends NodeError {
   retryable: boolean;
   retryAfterMs?: number;
   httpStatus?: number;
-  constructor(code: string, message: string, opts: { retryable?: boolean; retryAfterMs?: number; httpStatus?: number } = {}) {
+  /** The provider may have billed this attempt (timeout after the request was sent, stream cut after a 200). */
+  possibleCharge?: boolean;
+  constructor(code: string, message: string, opts: { retryable?: boolean; retryAfterMs?: number; httpStatus?: number; possibleCharge?: boolean } = {}) {
     super(code, message);
     this.retryable = opts.retryable ?? false;
     this.retryAfterMs = opts.retryAfterMs;
     this.httpStatus = opts.httpStatus;
+    this.possibleCharge = opts.possibleCharge;
   }
 }
 
@@ -59,13 +62,30 @@ export interface NormalisedResult {
   finishReason: string | null;
   model: string;
   usage: NormalisedUsage;
-  /** Cost reported by the provider itself, in micro-units (e.g. a gateway's usage.cost). */
+  /** Cost reported by the provider itself, in micro-USD (e.g. a gateway's usage.cost). */
   providerCostMicros?: number;
+  /** For gateways: the upstream provider that actually served the request, when the gateway reports it. */
+  servingProvider?: string | null;
+  /** false = the provider reported no usage (e.g. a stream without a usage chunk): tokens and cost are UNKNOWN. */
+  usageReported?: boolean;
 }
 
+/** Streaming events delivered to a caller while a call is in flight (text only; reasoning text is never forwarded). */
+export type StreamEvent =
+  | { type: "delta"; attemptKey: string; text: string }
+  /** The attempt that produced the earlier deltas failed: everything it streamed must be dropped (never concatenated). */
+  | { type: "discard"; attemptKey: string; reason: string };
+
+/** Listing metadata that some providers return with their model list (never invented: absent = unknown). */
 export interface DiscoveredModel {
   id: string;
   ownedBy: string | null;
+  contextWindow?: number | null;
+  maxOutputTokens?: number | null;
+  capabilities?: Partial<AiModelCapabilities>;
+  /** Per-token USD prices converted to micro-USD per million tokens, only when the listing documents the unit. */
+  pricing?: AiModelPricing | null;
+  deprecated?: boolean;
 }
 
 /** A resolved route: everything needed to call a model, minus the secret. Snapshotted into run meta. */
@@ -76,10 +96,12 @@ export interface ResolvedRoute {
   connectionLabel: string;
   modelId: string;
   protocol: Protocol;
-  /** Where the choice came from: explicit → node pin → workspace default. */
-  source: "explicit" | "node" | "legacy-node-model" | "workspace-default";
+  /** Where the choice came from: explicit → node pin → workspace default (or a policy step). */
+  source: "explicit" | "node" | "agent" | "copilot" | "legacy-node-model" | "workspace-default" | "policy";
   capabilities: AiModelCapabilities;
   pricing: (AiModelPricing & { source: string }) | null;
+  /** Free-tier classification of the price (FREE_ONLY only accepts verified zero-priced routes). */
+  free?: { zeroPriced: boolean; note: string | null };
 }
 
 export const UNKNOWN_CAPABILITIES: AiModelCapabilities = { tools: "UNKNOWN", structuredOutput: "UNKNOWN", vision: "UNKNOWN", streaming: "UNKNOWN", reasoning: "UNKNOWN" };

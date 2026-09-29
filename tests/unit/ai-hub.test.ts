@@ -122,10 +122,13 @@ describe("credentials (v2, bound to the row)", () => {
     expect(() => encryptSecretV2({}, { ...ctx, rowId: "a:b" })).toThrow(); // context fields can't smuggle separators
   });
 
-  it("a revoked connection never yields a key; key hints show only the last 4 characters", () => {
+  it("a revoked connection never yields a key; key hints show only the last 4 characters, and only for long keys", () => {
     const r = row({ status: "REVOKED" });
     expect(() => loadCredentials(r)).toThrowError(expect.objectContaining({ code: "AI_CONNECTION_REVOKED" }));
-    expect(keyHint("sk-live-1234567890WXYZ")).toBe("••••WXYZ");
+    expect(keyHint("sk-live-1234567890abcdefghijklmnWXYZ")).toBe("••••WXYZ");
+    // Security review: under 32 characters the last 4 are too large a share of the key — only the set date is kept.
+    expect(keyHint("sk-live-1234567890WXYZ", new Date("2026-09-29T10:00:00Z"))).toBe("set:2026-09-29");
+    expect(keyHint("x".repeat(31) + "LAST", new Date("2026-09-29T10:00:00Z"))).toBe("••••LAST");
     expect(() => validateApiKey("short")).toThrowError(expect.objectContaining({ code: "AI_KEY_INVALID" }));
     expect(() => validateApiKey("sk has spaces in it")).toThrowError(expect.objectContaining({ code: "AI_KEY_INVALID" }));
     expect(validateApiKey("  sk-ok-12345678  ")).toBe("sk-ok-12345678");

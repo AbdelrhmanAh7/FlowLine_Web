@@ -9,6 +9,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createHash } from "node:crypto";
+import { handleHub, hub, resetHub, type HubFault, type InnerOut, type InnerReq } from "./ai-protocols";
 
 interface Schema {
   type?: string;
@@ -448,7 +449,8 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
     rec.hasTools = Array.isArray(body.tools) && body.tools.length > 0;
     rec.responseFormat = body.response_format?.type ?? null;
     if (!listedModels().includes(body.model)) return oaError(res, 404, `The model \`${body.model}\` does not exist or you do not have access to it.`, { code: "model_not_found" }), true;
-    if (body.max_completion_tokens == null) return oaError(res, 400, "Missing required parameter: 'max_completion_tokens'."), true;
+    // OpenAI documents max_completion_tokens; OpenAI-compatible providers take max_tokens.
+    if (body.max_completion_tokens == null && (m[1] === "openai" || body.max_tokens == null)) return oaError(res, 400, "Missing required parameter: 'max_completion_tokens'."), true;
     // Translate to the Ollama-shaped request the deterministic handlers above understand.
     const names = new Map<string, string>();
     for (const msg of body.messages) for (const c of msg.tool_calls ?? []) names.set(c.id, c.function.name);
@@ -515,11 +517,46 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   return true;
 }
 
+/** Runs the deterministic rules on an Ollama-shaped request and returns a protocol-neutral answer. */
+function runRules(inner: InnerReq): Promise<InnerOut> {
+  return new Promise((resolve) => {
+    handleChat(
+      JSON.stringify(inner),
+      capture((status, out) => {
+        if (status >= 400) return resolve({ status, content: "", toolCalls: [], promptTokens: 0, outputTokens: 0 });
+        const o = JSON.parse(out) as { message: { content: string; tool_calls?: { function: { name: string; arguments: unknown } }[] }; prompt_eval_count: number; eval_count: number };
+        resolve({
+          status: 200,
+          content: o.message.content ?? "",
+          toolCalls: (o.message.tool_calls ?? []).map((c) => ({ name: c.function.name, arguments: (c.function.arguments ?? {}) as Record<string, unknown> })),
+          promptTokens: o.prompt_eval_count,
+          outputTokens: o.eval_count,
+        });
+      }),
+    );
+  });
+}
+
 export async function startFakeAi(port = 0): Promise<{ url: string; port: number; close(): Promise<void> }> {
   let boundPort = port;
   const server: Server = createServer(async (req, res) => {
     const b = await body(req);
     const url = new URL(req.url ?? "/", "http://fake.local");
+    if (req.url === "/__fake/hub/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ requests: hub.requests }));
+    if (req.url === "/__fake/hub/fault" && req.method === "POST") {
+      hub.faults.push(JSON.parse(b) as HubFault);
+      return res.writeHead(200).end("{}");
+    }
+    if (req.url === "/__fake/hub/remove" && req.method === "POST") {
+      hub.removed.add(String((JSON.parse(b) as { model: string }).model));
+      return res.writeHead(200).end("{}");
+    }
+    const delegate = (provider: string, sub: "/chat/completions" | "/models") => {
+      const u = new URL(url.toString());
+      u.pathname = `/${provider}/v1${sub}`;
+      handleOpenAi(req, res, u, b, boundPort);
+    };
+    if (await handleHub(req, res, url, b, { run: runRules, oaModels: listedModels, delegate })) return;
     if (req.url === "/__fake/openai/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ requests: openai.requests, stolen: openai.stolen }));
     if (req.url === "/__fake/openai/fault" && req.method === "POST") {
       openai.faults.push(JSON.parse(b) as OpenAiFault);
@@ -546,6 +583,7 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
       state.faults = [];
       state.price = 49;
       resetOpenAi();
+      resetHub();
       return res.writeHead(200).end("{}");
     }
     if (req.url === "/__fake/fault" && req.method === "POST") {

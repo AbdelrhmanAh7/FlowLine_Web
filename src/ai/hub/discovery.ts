@@ -3,7 +3,8 @@ import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { PriceTable, Role } from "@/db/schema";
 import { can } from "@/lib/permissions";
-import { resolvePrice } from "./pricing";
+import { catalogueKey, storeListingMetadata, syncCurated } from "./catalogue";
+import { isVerifiedZeroPrice, resolvePrice } from "./pricing";
 import { listModels } from "./protocols";
 import { getProviderDef, isConnectable } from "./registry";
 import { HubError, UNKNOWN_CAPABILITIES, type DiscoveredModel } from "./types";
@@ -19,6 +20,12 @@ type Conn = typeof schema.aiConnection.$inferSelect;
  */
 export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel[]) {
   const now = new Date();
+  // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
+  const def = getProviderDef(conn.provider);
+  if (def) {
+    await syncCurated(db, def.id);
+    await storeListingMetadata(db, def, models);
+  }
   await db.transaction(async (tx) => {
     if (models.length) {
       await tx
@@ -92,7 +99,22 @@ export interface PickerModel {
   accessConfirmed: boolean;
   capabilities: typeof UNKNOWN_CAPABILITIES;
   contextWindow: number | null;
-  price: { known: boolean; source: string | null; inputPerMTokMicros: number | null; outputPerMTokMicros: number | null };
+  price: {
+    known: boolean;
+    source: string | null;
+    inputPerMTokMicros: number | null;
+    outputPerMTokMicros: number | null;
+    currency: string | null;
+    /** Official page / listing the catalogue price came from, and its check date. */
+    sourceUrl: string | null;
+    verifiedAt: string | null;
+    /** Verified zero price (FREE_ONLY may use it). */
+    zero: boolean;
+  };
+  freeTierNote: string | null;
+  privacyNote: string | null;
+  /** Catalogue id derived from a display name (confirm with the live list). */
+  idUnverified: boolean;
 }
 
 /** Whether `role` may USE this connection (capability ai.use AND listed in the connection's use_roles). */
@@ -101,7 +123,7 @@ export function roleMayUse(role: Role | null | undefined, conn: Pick<Conn, "useR
 }
 
 /** Models the given member may pick: only from connections they are allowed to use. Nothing secret is returned. */
-export async function listPickerModels(db: Db, workspace: { id: string; prices: PriceTable }, role: Role): Promise<PickerModel[]> {
+export async function listPickerModels(db: Db, workspace: { id: string; prices: PriceTable; currency?: string }, role: Role): Promise<PickerModel[]> {
   const conns = (await db.select().from(schema.aiConnection).where(eq(schema.aiConnection.workspaceId, workspace.id))).filter((c) => roleMayUse(role, c));
   if (!conns.length) return [];
   const rows = await db
@@ -116,8 +138,8 @@ export async function listPickerModels(db: Db, workspace: { id: string; prices: 
     .map((r) => {
       const c = byId.get(r.connectionId)!;
       const def = getProviderDef(c.provider);
-      const m = cat.get(`${c.provider}/${r.modelId}`);
-      const price = resolvePrice(workspace.prices, c.provider, r.modelId, m?.pricing);
+      const m = cat.get(`${c.provider}/${r.modelId}`) ?? cat.get(`${c.provider}/${catalogueKey(r.modelId)}`);
+      const price = resolvePrice(workspace.prices, c.provider, r.modelId, m?.pricing, { currency: workspace.currency, region: c.settings?.region ?? null });
       return {
         connectionId: c.id,
         connectionLabel: c.label,
@@ -128,9 +150,21 @@ export async function listPickerModels(db: Db, workspace: { id: string; prices: 
         ownedBy: r.ownedBy,
         lifecycle: r.removedAt ? ("removed" as const) : ("active" as const),
         accessConfirmed: Boolean(r.accessConfirmedAt),
-        capabilities: m?.capabilities ?? UNKNOWN_CAPABILITIES,
+        capabilities: { ...UNKNOWN_CAPABILITIES, ...(m?.capabilities ?? {}), ...(def?.capabilityFloor ?? {}) },
         contextWindow: m?.contextWindow ?? null,
-        price: { known: Boolean(price), source: price?.source ?? null, inputPerMTokMicros: price?.inputPerMTokMicros ?? null, outputPerMTokMicros: price?.outputPerMTokMicros ?? null },
+        price: {
+          known: Boolean(price),
+          source: price?.source ?? null,
+          inputPerMTokMicros: price?.inputPerMTokMicros ?? null,
+          outputPerMTokMicros: price?.outputPerMTokMicros ?? null,
+          currency: price ? (price.currency ?? workspace.currency ?? "USD") : null,
+          sourceUrl: price?.source === "catalogue" ? (price.sourceUrl ?? m?.priceSource ?? null) : null,
+          verifiedAt: price?.source === "catalogue" ? (price.verifiedAt ?? m?.priceVerifiedAt?.toISOString().slice(0, 10) ?? null) : null,
+          zero: isVerifiedZeroPrice(price),
+        },
+        freeTierNote: m?.freeTierNote ?? null,
+        privacyNote: def?.privacy.note ?? null,
+        idUnverified: Boolean(m?.source?.endsWith(":display-name")),
       };
     })
     .sort((a, b) => a.connectionLabel.localeCompare(b.connectionLabel) || a.modelId.localeCompare(b.modelId));

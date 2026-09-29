@@ -18,6 +18,8 @@ const body = z.object({
   label: z.string().max(80).default(""),
   apiKey: z.string().max(600),
   settings: z.record(z.string().max(40), z.string().max(300)).default({}),
+  /** Required for providers whose coding-plan keys are forbidden (Z.ai, Moonshot, MiniMax, Alibaba). */
+  attestPayAsYouGo: z.boolean().optional(),
 });
 
 /**

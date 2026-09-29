@@ -6,12 +6,21 @@ its keys in the app, and the provider bills that account directly.
 ## Steps (owner)
 
 1. Open **Settings → AI Providers**.
-2. Find the provider and choose **Add connection**. Only providers marked **Available** can be connected today
-   (Wave A: OpenAI, Chat Completions). The others are listed as **Not available yet**.
-3. Give the connection a **name**, paste the **API key**, and choose **Check and save**.
-   - The key is checked by **listing the models** it can see. No paid request is made.
-   - It is stored encrypted and bound to this connection. You won't see it again: the page shows only `••••` and the
-     last four characters.
+2. Find the provider and choose **Add connection**. 20 providers can be connected (see `PROVIDERS.md`). Providers
+   judged unsuitable (OpenCode Zen, Command Code, NVIDIA's trial catalogue) or deferred (Bedrock, Azure, Vertex) are
+   listed with the reason and can't be connected.
+3. Give the connection a **name**, paste the **API key**, fill in the provider's own fields if it has any, and choose
+   **Check and save**:
+   - Alibaba Model Studio needs the **region** and **workspace ID**.
+   - Cloudflare needs the **account ID**.
+   - OpenAI takes an optional organization or project.
+   - For Z.ai, Moonshot, MiniMax and Alibaba, confirm the key is a **pay-as-you-go** API key. Their coding-plan keys
+     are restricted to coding tools and can't be used.
+   - The key is checked by **listing the models** it can see. No paid request is made. Z.ai and Alibaba have no model
+     list endpoint: their models come from a dated catalogue, and the key can only be confirmed with **Send a paid
+     test…**.
+   - It is stored encrypted and bound to this connection. You won't see it again. The page shows `••••` plus the last
+     four characters for keys of 32 characters or more; for shorter keys it shows only the date the key was set.
 4. The models the key can see are listed on the connection. Choose **Refresh models** at any time. If a refresh fails,
    the previous list is kept and marked out of date.
 5. Pick a **workspace default model**. AI steps without their own model use it, and so do agents and Copilot.
@@ -20,12 +29,16 @@ its keys in the app, and the provider bills that account directly.
 7. On an AI step, open **AI model** and search the picker. You can filter by capability, provider, cost information,
    context size, and removed models. Direct and gateway routes are labelled separately.
 
-## Costs
+## Costs and routing
 
-- Prices come from your price table (**Settings → Usage & limits**, key `ai:<provider>/<model>`). An unknown price
-  stays **unknown**; it is never assumed to be free.
-- With a spending cap set, calls whose price is unknown are **refused before anything is sent**, unless the owner
-  allows them under **AI Providers → Unknown prices**.
+- **Where prices come from:** your price table first (**Settings → Usage & limits**, key `ai:<provider>/<model>`),
+  then Flowline's dated catalogue of official prices (the source link is in the picker). An unknown price stays
+  **unknown**; it is never assumed to be free.
+- **Spending cap:** with a cap set, calls whose price is unknown are **refused before anything is sent**, unless the
+  owner allows them in the routing policy.
+- **Routing policy:** under **AI Providers → Routing policy**, choose MANUAL, FALLBACK (explicitly listed backup
+  routes), FREE_ONLY (verified zero prices only) or LOW_COST (the cheapest approved route under a price ceiling).
+  Optionally add a no-training privacy rule and Copilot's planning and repair routes. See `ROUTING.md`.
 - **Send a paid test…** sends one tiny request, but only if you explicitly confirm it.
 
 ## Changing or removing a key

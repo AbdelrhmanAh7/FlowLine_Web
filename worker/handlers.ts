@@ -214,6 +214,10 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
           env.log(`attempt ${attempt} failed (${code}); retrying`);
           await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_retry", nodeId: node.id, data: { attempt, error: code } });
         },
+        onFallback: async ({ from, to, code }) => {
+          env.log(`AI route ${from.connectionLabel}/${from.modelId} failed (${code}); the workspace policy moves to ${to.connectionLabel}/${to.modelId}`);
+          await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "ai_fallback", nodeId: node.id, data: { from: { connectionId: from.connectionId, modelId: from.modelId }, to: { connectionId: to.connectionId, modelId: to.modelId }, error: code } });
+        },
       });
     } catch (e) {
       if ((e as NodeError).code === "BUDGET_EXCEEDED" || (e as NodeError).code === "AI_COST_UNKNOWN") {
@@ -224,13 +228,20 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
     const u = r.result.usage;
     // Route snapshot + usage (no secrets, no reasoning text). Token totals keep their pre-hub meaning (all input /
     // all output); the non-overlapping breakdown is in ai_attempt and the *Tokens detail fields below.
+    // The route that ANSWERED (a workspace policy may have moved on from the step's own route) + why.
+    const used = r.route;
     const meta = {
-      provider: route.provider,
+      provider: used.provider,
       model: r.result.model,
-      connection: route.connectionLabel,
-      connectionId: route.connectionId,
-      routeSource: route.source,
-      protocol: route.protocol,
+      connection: used.connectionLabel,
+      connectionId: used.connectionId,
+      routeSource: used.source === "policy" ? route.source : used.source,
+      protocol: used.protocol,
+      policy: r.routing.policy,
+      routeReason: r.routing.reason,
+      ...(r.routing.fallbackFrom.length ? { fallbackFrom: r.routing.fallbackFrom } : {}),
+      ...(r.routing.skipped.length ? { routesSkipped: r.routing.skipped } : {}),
+      ...(r.result.servingProvider ? { servingProvider: r.result.servingProvider } : {}),
       inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0),
       outputTokens: u.outputTokens + (u.reasoningTokens ?? 0),
       ...(u.cacheReadTokens != null ? { cacheReadTokens: u.cacheReadTokens } : {}),

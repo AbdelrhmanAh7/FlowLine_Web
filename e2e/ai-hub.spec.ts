@@ -34,12 +34,15 @@ test("owner connects a provider in the UI → discover → pick a model on an AI
     if (r.url().includes("/api/")) apiBodies.push(await r.text().catch(() => ""));
   });
 
-  // 1. Settings → AI Providers: honest empty state, test-double notice, pending providers disabled.
+  // 1. Settings → AI Providers: honest empty state, test-double notice, unsuitable providers listed without a card.
   await page.goto(`/w/${workspace.slug}/settings?tab=ai`);
   await expect(page.getByRole("heading", { name: "AI Providers" })).toBeVisible();
   await expect(page.getByTestId("ai-test-double")).toBeVisible();
   await expect(page.getByText("No AI connections yet")).toBeVisible();
-  await expect(page.getByTestId("ai-provider-anthropic").getByRole("button", { name: "Add connection" })).toHaveAttribute("aria-disabled", "true");
+  const notOffered = page.getByTestId("ai-not-offered");
+  await expect(notOffered.getByTestId("ai-provider-opencode-zen")).toContainText("Unsuitable (terms)");
+  await expect(notOffered.getByTestId("ai-provider-opencode-zen").getByRole("button", { name: "Add connection" })).toHaveCount(0);
+  await expect(notOffered.getByTestId("ai-retired-github-models")).toContainText("Retired");
 
   // 2. Add connection: name + key typed into the dialog (checked by listing models — no paid request).
   await page.getByTestId("ai-provider-openai").getByRole("button", { name: "Add connection" }).click();

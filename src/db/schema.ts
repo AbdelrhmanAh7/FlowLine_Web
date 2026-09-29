@@ -143,7 +143,7 @@ export const workspace = pgTable("workspace", {
   aiModel: text("ai_model"),
   /** AI hub: workspace default route (a workspace AI connection + model id). Null = no default. */
   aiDefaultRoute: jsonb("ai_default_route").$type<AiRouteRef | null>(),
-  /** AI execution policy (Wave A: MANUAL only). */
+  /** AI execution policy (MANUAL / FALLBACK / FREE_ONLY / LOW_COST), see AiPolicy. */
   aiPolicy: jsonb("ai_policy").$type<AiPolicy>().notNull().default({ mode: "MANUAL", allowUnknownCost: false }),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -740,6 +740,8 @@ export const agentVersion = pgTable(
     instructions: text("instructions").notNull(),
     provider: text("provider"),
     model: text("model"),
+    /** AI hub route pinned by this version (connection + model). Null = the workspace default at run time. */
+    route: jsonb("route").$type<AiRouteRef | null>(),
     tools: jsonb("tools").$type<AgentToolSpec[]>().notNull().default([]),
     knowledgeSourceIds: jsonb("knowledge_source_ids").$type<string[]>().notNull().default([]),
     limits: jsonb("limits").$type<AgentLimits>().notNull(),
@@ -989,10 +991,26 @@ export interface AiRouteRef {
   modelId: string;
 }
 
+/**
+ * AI execution policy (owner, `ai.manage`). MANUAL: only the resolved route. FALLBACK: the resolved route, then the
+ * explicitly listed routes in order. FREE_ONLY: only routes whose price is VERIFIED zero (fails closed on unknown).
+ * LOW_COST: the cheapest capability-compatible route of the approved pool within the price ceiling.
+ */
+export type AiPolicyMode = "MANUAL" | "FALLBACK" | "FREE_ONLY" | "LOW_COST";
 export interface AiPolicy {
-  mode: "MANUAL";
+  mode: AiPolicyMode;
   /** Allow calls whose price is unknown even when a hard budget cap applies (the owner accepts the risk). */
   allowUnknownCost: boolean;
+  /** FALLBACK / FREE_ONLY: ordered, explicitly permitted routes tried after the resolved route. */
+  fallbackRoutes?: AiRouteRef[];
+  /** LOW_COST: the approved pool. */
+  lowCostPool?: AiRouteRef[];
+  /** LOW_COST ceiling (micro-units per million tokens). Routes with an unknown price are never "within" a ceiling. */
+  priceCeiling?: { inputPerMTokMicros: number; outputPerMTokMicros: number } | null;
+  /** Privacy: only use routes whose provider documents that API data is not used for training. */
+  requireNoTraining?: boolean;
+  /** Copilot routes (planning, and the bounded validator-feedback repair rounds). Null = workspace default. */
+  copilot?: { planRoute?: AiRouteRef | null; repairRoute?: AiRouteRef | null };
 }
 
 /** Tri-state capability (route level): never assume support that isn't documented or observed. */
@@ -1012,6 +1030,15 @@ export interface AiModelPricing {
   outputPerMTokMicros?: number;
   cacheReadPerMTokMicros?: number;
   cacheWritePerMTokMicros?: number;
+  /** ISO currency of the prices (catalogue prices are USD). A price in another currency than the workspace's is unknown. */
+  currency?: string;
+  /** Only valid for connections in this region (e.g. Alibaba Model Studio Singapore prices). */
+  region?: string;
+  /** Long-context tier: above this many input tokens per request the higher prices apply (used for the reservation). */
+  longContext?: { aboveInputTokens: number; inputPerMTokMicros: number; outputPerMTokMicros: number };
+  /** The official page or API the price was taken from, and when it was checked. */
+  sourceUrl?: string;
+  verifiedAt?: string;
 }
 
 /**
@@ -1151,7 +1178,13 @@ export const aiAttempt = pgTable(
     costSource: text("cost_source").notNull(),
     costMicros: bigint("cost_micros", { mode: "number" }),
     usageKey: text("usage_key"),
+    /** The provider may have billed this attempt although no result was kept (timeout after send, stream cut). */
+    possibleCharge: boolean("possible_charge").notNull().default(false),
+    /** Why this route was tried (policy step): "primary", or "fallback after <code>", "low-cost rank n", … */
+    routeReason: text("route_reason"),
+    /** Gateways: the upstream provider that served the call, when reported. */
+    servingProvider: text("serving_provider"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId)],
+  (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId), index("ai_attempt_conn_time_idx").on(t.connectionId, t.createdAt)],
 );

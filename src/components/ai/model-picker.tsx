@@ -6,7 +6,7 @@ import type { AiRouteRef, PickerModelDto } from "@/lib/ai";
 import { Input, StatusBadge, cx } from "../ui";
 
 type CapFilter = "any" | "tools" | "structuredOutput";
-type CostFilter = "any" | "known" | "unknown";
+type CostFilter = "any" | "known" | "unknown" | "free";
 type CtxFilter = "any" | "known";
 
 const selectCls = "h-8 rounded-md border border-line-strong bg-app px-2 text-sm text-hi focus:border-accent focus:outline-none";
@@ -54,6 +54,7 @@ export function ModelPicker({
     if (cap !== "any" && m.capabilities[cap] !== "SUPPORTED") return false;
     if (cost === "known" && !m.price.known) return false;
     if (cost === "unknown" && m.price.known) return false;
+    if (cost === "free" && !m.price.zero) return false;
     if (ctx === "known" && m.contextWindow == null) return false;
     const needle = q.trim().toLowerCase();
     return !needle || `${m.modelId} ${m.connectionLabel} ${m.providerName} ${m.ownedBy ?? ""}`.toLowerCase().includes(needle);
@@ -95,6 +96,7 @@ export function ModelPicker({
           <option value="any">{t("aiHub.picker.costAny")}</option>
           <option value="known">{t("aiHub.picker.costKnown")}</option>
           <option value="unknown">{t("aiHub.picker.costUnknown")}</option>
+          <option value="free">{t("aiHub.picker.costFree")}</option>
         </select>
         <select aria-label={t("aiHub.picker.context")} className={selectCls} value={ctx} onChange={(e) => setCtx(e.target.value as CtxFilter)}>
           <option value="any">{t("aiHub.picker.contextAny")}</option>
@@ -139,12 +141,28 @@ export function ModelPicker({
                 <StatusBadge tone={m.routeKind === "gateway" ? "info" : "muted"}>{m.routeKind === "gateway" ? t("aiHub.routeKind.gateway") : t("aiHub.routeKind.direct")}</StatusBadge>
                 {m.lifecycle === "removed" && <StatusBadge tone="danger">{t("aiHub.picker.removed")}</StatusBadge>}
                 {m.accessConfirmed && <StatusBadge tone="success">{t("aiHub.picker.confirmed")}</StatusBadge>}
+                {m.price.zero && (
+                  <span data-testid="model-free">
+                    <StatusBadge tone="success">{t("aiHub.picker.free")}</StatusBadge>
+                  </span>
+                )}
               </span>
               <span className="text-muted">
                 {m.providerName} · {m.connectionLabel} ·{" "}
                 {m.price.known ? t("aiHub.picker.price", { input: perM(m.price.inputPerMTokMicros), output: perM(m.price.outputPerMTokMicros) }) : t("aiHub.picker.priceUnknown")} ·{" "}
                 {m.contextWindow != null ? t("aiHub.picker.contextSize", { n: m.contextWindow.toLocaleString() }) : t("aiHub.picker.contextUnknown")}
               </span>
+              {m.price.known && m.price.source === "catalogue" && m.price.sourceUrl && (
+                <span className="text-xs text-muted">
+                  {t("aiHub.picker.priceSource", { date: m.price.verifiedAt ?? "—" })}{" "}
+                  <a dir="ltr" className="text-accent hover:underline" href={m.price.sourceUrl} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}>
+                    {new URL(m.price.sourceUrl).hostname}
+                  </a>
+                </span>
+              )}
+              {m.price.known && m.price.source === "workspace_price_table" && <span className="text-xs text-muted">{t("aiHub.picker.priceOwn")}</span>}
+              {m.idUnverified && <span className="text-xs text-muted">{t("aiHub.picker.idUnverified")}</span>}
+              {m.freeTierNote && <span className="text-xs text-muted">{m.freeTierNote}</span>}
             </li>
           );
         })}
