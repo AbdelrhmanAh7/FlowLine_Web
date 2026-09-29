@@ -1374,6 +1374,7 @@ export const en: Messages = {
       alreadyCancelling: "Already cancelling",
       cancelRun: "Cancel run",
       details: "Step details",
+      costIn: "Cost ({currency})",
       costUnknown: "unknown (no price set)",
       payload: "Step payload",
       tabs: {

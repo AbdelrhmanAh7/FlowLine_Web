@@ -211,24 +211,25 @@ function Billing() {
         ) : usage.data.rows.length === 0 ? (
           <p className="mt-4 text-base text-muted">{t("settings.usage.empty")}</p>
         ) : (
-          <table className="mt-4 w-full text-start text-sm">
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-start text-sm">
             <thead className="text-xs tracking-[0.4px] text-muted uppercase">
               <tr>
-                <th className="py-1 font-medium">{t("settings.usage.kind")}</th>
-                <th className="py-1 font-medium">{t("settings.usage.providerModel")}</th>
-                <th className="py-1 text-end font-medium">{t("settings.usage.events")}</th>
-                <th className="py-1 text-end font-medium">{t("settings.usage.tokens")}</th>
-                <th className="py-1 text-end font-medium">{t("settings.usage.cost")}</th>
+                <th className="px-2 py-1 first:ps-0 last:pe-0 font-medium">{t("settings.usage.kind")}</th>
+                <th className="px-2 py-1 first:ps-0 last:pe-0 font-medium">{t("settings.usage.providerModel")}</th>
+                <th className="px-2 py-1 first:ps-0 last:pe-0 text-end font-medium">{t("settings.usage.events")}</th>
+                <th className="px-2 py-1 first:ps-0 last:pe-0 text-end font-medium">{t("settings.usage.tokens")}</th>
+                <th className="px-2 py-1 first:ps-0 last:pe-0 text-end font-medium">{t("settings.usage.cost")}</th>
               </tr>
             </thead>
             <tbody className="data">
               {usage.data.rows.map((r, i) => (
                 <tr key={i} className="border-t border-line">
-                  <td className="py-1.5">{r.kind}</td>
-                  <td className="py-1.5">{[r.provider, r.model].filter(Boolean).join(" / ") || "—"}</td>
-                  <td className="py-1.5 text-end">{t.number(r.events)}</td>
-                  <td className="py-1.5 text-end">{t.number(r.inputTokens + r.outputTokens)}</td>
-                  <td className="py-1.5 text-end">
+                  <td className="px-2 py-1.5 first:ps-0 last:pe-0">{r.kind}</td>
+                  <td className="px-2 py-1.5 first:ps-0 last:pe-0">{[r.provider, r.model].filter(Boolean).join(" / ") || "—"}</td>
+                  <td className="px-2 py-1.5 first:ps-0 last:pe-0 text-end">{t.number(r.events)}</td>
+                  <td className="px-2 py-1.5 first:ps-0 last:pe-0 text-end">{t.number(r.inputTokens + r.outputTokens)}</td>
+                  <td className="px-2 py-1.5 first:ps-0 last:pe-0 text-end">
                     {r.unpriced ? (
                       <span className="text-warning" title={t("settings.usage.unpricedTitle")}>
                         {t("settings.usage.unpriced")}
@@ -241,6 +242,7 @@ function Billing() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 

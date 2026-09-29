@@ -8,6 +8,7 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import type { NodeType } from "@/engine/types";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
+import { metaText } from "@/lib/meta-text";
 import { useToast } from "@/components/toast";
 import { Button, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, cx, onTabListKeyDown } from "@/components/ui";
 import { useT } from "@/i18n/client";
@@ -361,7 +362,7 @@ function StepPanel({
   onCancel: () => void;
   cancelling: boolean;
 }) {
-  const { canEdit } = useWorkspace();
+  const { canEdit, workspace } = useWorkspace();
   const t = useT();
   const def = NODE_DEFINITIONS[step.nodeType as NodeType];
   const failed = step.status === "failed";
@@ -406,9 +407,10 @@ function StepPanel({
             .filter(([k, v]) => !["approvalId", "reviewId"].includes(k) && (v !== null || k === "costMicros"))
             .map(([k, v]) => (
               <div key={k} className="contents">
-                <dt className="text-muted">{k}</dt>
-                <dd className="data truncate text-hi" title={String(v)}>
-                  {k === "costMicros" ? (v == null ? t("runs.panel.costUnknown") : (Number(v) / 1_000_000).toFixed(6)) : String(v)}
+                {/* CXQ-02: the converted amount is labelled with its real unit (the workspace currency), not "costMicros". */}
+                <dt className="text-muted">{k === "costMicros" ? t("runs.panel.costIn", { currency: workspace.currency ?? "USD" }) : k}</dt>
+                <dd className="data truncate text-hi" title={metaText(v)}>
+                  {k === "costMicros" ? (v == null ? t("runs.panel.costUnknown") : (Number(v) / 1_000_000).toFixed(6)) : metaText(v)}
                 </dd>
               </div>
             ))}

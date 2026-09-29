@@ -114,7 +114,9 @@ test("owner connects a provider in the UI → discover → pick a model on an AI
   await expect(panel.getByLabel("Step details")).toContainText("fake-gpt-large");
   await expect(panel.getByLabel("Step details")).toContainText("Team OpenAI");
   await expect(panel.getByLabel("Step details")).toContainText(/inputTokens\s*\d+/);
-  await expect(panel.getByLabel("Step details")).toContainText(/costMicros\s*0\.\d{6}/);
+  // CXQ-02: the converted amount carries its real unit (workspace currency), never the raw "costMicros" key.
+  await expect(panel.getByLabel("Step details")).toContainText(/Cost \(USD\)\s*0\.\d{6}/);
+  await expect(panel.getByLabel("Step details")).not.toContainText("costMicros");
   await expect(panel.getByLabel("Step details")).toContainText("estimated");
 
   // 6. Persistence: reload, sign out and back in — the connection is still there, no key re-entry.

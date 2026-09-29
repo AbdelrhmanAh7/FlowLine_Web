@@ -1502,6 +1502,7 @@ export const ar = {
       alreadyCancelling: "الإلغاء جارٍ بالفعل",
       cancelRun: "إلغاء التشغيل",
       details: "تفاصيل الخطوة",
+      costIn: "التكلفة ({currency})",
       costUnknown: "غير معروفة (لم يُحدَّد سعر)",
       payload: "بيانات الخطوة",
       tabs: {

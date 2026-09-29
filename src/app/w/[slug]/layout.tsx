@@ -17,7 +17,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   return (
     <AppShell
       user={user}
-      workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone }}
+      workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone, currency: row.workspace.currency ?? "USD" }}
       role={row.role}
       support={betaSupport()}
       workspaces={workspaces.map((w) => ({ id: w.id, name: w.name, slug: w.slug, role: w.role }))}
