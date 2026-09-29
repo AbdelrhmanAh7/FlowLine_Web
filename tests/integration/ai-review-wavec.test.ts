@@ -214,7 +214,10 @@ describe("CXH-04: the agent's cost limit covers every hub reservation", () => {
     expect(run.costMicros).toBe(spentOf(rows)); // and the agent reports what the ledger holds
   });
 
-  it("an unknown price under an agent limit is refused unless the owner allows unknown cost — then it is recorded as unknown, not 0", async () => {
+  // Retest CXH-04 (cceeb5d): the workspace's unknown-cost override used to lift the agent's hard cap (this test
+  // asserted that). Correct behaviour: the override alone never does; only the AGENT's explicit opt-in (limits
+  // .allowUnknownCost, which gives up the cap guarantee for such calls) lets an unknown-price call run under a cap.
+  it("an unknown price under an agent limit is refused — even when the owner allows unknown cost — unless the agent opts in; then it is recorded as unknown, not 0", async () => {
     const { owner, ws } = await tenant("AgUnknown");
     await uncappedPlan(ws.id); // no workspace/plan cap: only the agent's limit applies
     await setPolicy(ws.id, { mode: "MANUAL", allowUnknownCost: false });
@@ -225,7 +228,12 @@ describe("CXH-04: the agent's cost limit covers every hub reservation", () => {
     expect((await oaChats()).length).toBe(before); // nothing was sent
 
     await setPolicy(ws.id, { mode: "MANUAL", allowUnknownCost: true });
-    const allowed = await runAgent((await start(agent.id, owner)).id);
+    const stillRefused = await runAgent((await start(agent.id, owner)).id);
+    expect(stillRefused).toMatchObject({ status: "failed", error: { code: "AI_COST_UNKNOWN" } });
+    expect((await oaChats()).length).toBe(before); // the workspace override alone doesn't lift the agent's cap
+
+    const optIn = await createAgent(owner, ws.id, { name: "U2", instructions: "Answer briefly.", tools: [], limits: { ...limits(1_000), allowUnknownCost: true } });
+    const allowed = await runAgent((await start(optIn.id, owner)).id);
     expect(allowed.status).toBe("succeeded");
     const [model] = await db.select().from(schema.agentStep).where(and(eq(schema.agentStep.agentRunId, allowed.id), eq(schema.agentStep.kind, "model")));
     expect(model!.costMicros).toBeNull();

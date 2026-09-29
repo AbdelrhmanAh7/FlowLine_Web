@@ -79,3 +79,37 @@ fields.
 | CXH-17 | P2 | Recovery | A live attempt older than 60 s is declared abandoned without checking ownership or lease; its later success can't settle | OPEN |
 | CXH-18 | P2 | Agent cap | A resumed agent tool's reservation is counted twice (precheck + completion) | OPEN |
 | CXH-19 | P2 | FALLBACK | After a removed primary is filtered out, the first fallback inherits primary-refusal semantics, so an allowed second fallback is never tried | OPEN |
+
+## Round 2 remediation (merged; pending Codex retest)
+
+| ID | Fix (commit) | Status |
+|---|---|---|
+| CXH-01 | Immutable platform app identity (`platform_secret` row id) in oauth_state, connection provenance, callback fence, runtime check and refresh; provable-only legacy backfill (`7dd5192`, migration 0017) | FIXED, retest pending |
+| CXH-04 | An agent cap holds under the workspace unknown-cost override; agent-level opt-in (default off, labelled); guard in `reserveUsage` (`8f9d8cc`) | FIXED, retest pending |
+| CXH-09 | `pricingInvalid` clears stored prices; data step invalidates listing-sourced false zeros (migration 0019) | FIXED, retest pending |
+| CXH-11 | `key_check_method` + `key_checked_cred_version`; data step invalidates pre-fix public-listing verification (0018/0019) | FIXED, retest pending |
+| CXH-12 | Shared catalogue writes inside the fenced transaction + `observed_at` condition | FIXED, retest pending |
+| CXH-13 / CXH-19 | Explicit `role: primary\|fallback` in planned routes | FIXED, retest pending |
+| CXH-17 | Abandonment fenced on the owning run/agent-run lease (`usage_event.holder`); late success reconciles | FIXED, retest pending |
+| CXH-18 | Resumed tool reservations decided by the locked `reserveUsage`; spend read from the ledger | FIXED, retest pending |
+| CXH-14 (wiring) | `NodeError` keeps `retryable` / `retryAfterMs`; `integrationAction` retries `CONNECTION_UNAVAILABLE` within `maxAttempts`, honouring Retry-After ≤ 60 s | FIXED, retest pending |
+
+**Merge:** the round-2 migrations were renumbered to 0017 (CXH-01), 0018 (hub columns, regenerated DDL identical to the
+original) and 0019 (hub data steps, verbatim).
+
+**Gates on the merge:**
+- lint and typecheck clean; unit 247, contract 465, integration **453** (full suite passed twice in a row).
+
+**INTERMITTENT-01 (open, cause unknown):**
+- **Failures seen:**
+  1. The first full integration run on the merge failed 1 test: `ai-review-wavec` CXH-03 "a worker that died…".
+  2. The first standalone re-run of that file then failed 2: CXH-04 `expected 'queued' to be 'succeeded'` at
+     `ai-review-wavec.test.ts:203`, and another assertion `expected 1 to be +0`.
+- **Since then:** 5 standalone runs of the file and 2 full-suite runs all passed (7 runs).
+- **Ruled out:**
+  - No stray workers or queued leftovers were found in the test DB.
+  - Fakes use ephemeral ports, so no port cross-talk.
+- **Not saved:** full logs of the two failing runs; only the extracted assertion lines were kept.
+- **Hypothesis (unconfirmed):** `claimNextAgentRun` (`for update skip locked`) returned null while another
+  transaction briefly held the row, so `runAgent` gave up early.
+- **Kept open;** not hidden and not "fixed".

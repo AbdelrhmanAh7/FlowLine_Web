@@ -127,6 +127,20 @@
       "when": 1790654120311,
       "tag": "0017_cxh01_platform_app_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790655692615,
+      "tag": "0018_hub_retest_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790655704936,
+      "tag": "0019_hub_retest_data",
+      "breakpoints": true
     }
   ]
 }

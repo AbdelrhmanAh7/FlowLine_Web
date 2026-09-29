@@ -67,6 +67,8 @@ export interface AiConnectionDto {
   keyCheck: AiKeyCheck;
   /** The key itself was proven (authenticated metadata check or a successful paid test) and the connection is healthy. */
   keyVerified: boolean;
+  /** How the key was last proven ("listing" / "key-endpoint" / "inference"); null = not proven for the current key. */
+  keyCheckMethod: "listing" | "key-endpoint" | "inference" | null;
   useRoles: string[];
   status: "CONNECTED" | "DEGRADED" | "REVOKED";
   verification: "IMPLEMENTED" | "CONTRACT_VERIFIED" | "LIVE_VERIFIED";

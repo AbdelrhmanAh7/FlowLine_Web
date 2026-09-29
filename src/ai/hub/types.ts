@@ -85,6 +85,12 @@ export interface DiscoveredModel {
   capabilities?: Partial<AiModelCapabilities>;
   /** Per-token USD prices converted to micro-USD per million tokens, only when the listing documents the unit. */
   pricing?: AiModelPricing | null;
+  /**
+   * The listing is the authoritative price source for this model and supplied a price object, but it isn't a usable
+   * fixed price (blank, malformed, negative/"variable"). The stored price must become UNKNOWN — never kept (CXH-09).
+   * Absent (no price object at all) = the endpoint supplies no pricing: known prices are kept.
+   */
+  pricingInvalid?: boolean;
   deprecated?: boolean;
 }
 

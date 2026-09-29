@@ -231,7 +231,7 @@ export interface StepResult {
   status: StepResultStatus;
   input?: unknown;
   output?: unknown;
-  error?: { code: string; message: string };
+  error?: { code: string; message: string; retryable?: boolean; retryAfterMs?: number };
   skipReason?: string;
   meta?: Record<string, unknown>;
   log?: string[];
