@@ -1231,7 +1231,7 @@ export const aiAttempt = pgTable(
     servingProvider: text("serving_provider"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId), index("ai_attempt_conn_time_idx").on(t.connectionId, t.createdAt)],
+  (t) => [index("ai_attempt_ws_time_idx").on(t.workspaceId, t.createdAt), index("ai_attempt_run_idx").on(t.runId), index("ai_attempt_conn_time_idx").on(t.connectionId, t.createdAt), index("ai_attempt_request_idx").on(t.workspaceId, t.requestId)],
 );
 
 /* ───────────── Credentials in the UI (docs/security/CREDENTIALS_DESIGN.md) ───────────── */

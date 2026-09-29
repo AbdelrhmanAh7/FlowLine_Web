@@ -1,0 +1,1 @@
+CREATE INDEX "ai_attempt_request_idx" ON "ai_attempt" USING btree ("workspace_id","request_id");

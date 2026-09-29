@@ -29,3 +29,32 @@ Sources: Codex gpt-6-astra independent review (`CODEX-REVIEW.md`, read-only, 202
 | **CXH-14** | P2 | OAuth transient failures | `src/server/oauth-client.ts:78`; `src/server/connections.ts:326` | A refresh endpoint returns HTTP 429 with a JSON error such as `rate_limited`. It is classified as a grant failure, causing a valid connection to expire and dependent flows to pause. A temporary provider limit becomes a reconnect requirement. | Classify 429 and other transient statuses separately. Expire grants only for recognized permanent grant failures; preserve credentials on temporary failures. | **Yes — code** | OPEN |
 | **CXH-15** | P2 | Stream and tool-call integrity | `src/ai/hub/protocols/openai-chat.ts:159`, `:191`; `src/ai/hub/protocols/shared.ts:16` | A stream emits valid content, then a malformed JSON data chunk, then a valid finish event. The malformed chunk is ignored and the surviving text is returned as success. Separately, incomplete tool-argument JSON silently becomes `{}`, losing the distinction between valid empty arguments and corrupt output. | Reject malformed protocol data chunks, while retaining support for documented keepalives. Reject invalid tool JSON instead of manufacturing empty arguments; discard incomplete streamed results. | **Yes — probes + code** | OPEN |
 | **CXH-16** | P2 | Provider error disclosure | `src/ai/hub/protocols/shared.ts:175`, `:207`, `:223` | A provider returns HTTP 400 with a lowercase alphanumeric secret canary in `error.code`. The regex considers it safe and inserts it verbatim into the user-facing error. A synthetic probe confirmed this reflection. Arbitrary safety-reason text is also copied into errors. | Render allowlisted identifiers through fixed messages. Omit unknown provider codes/reasons and scrub submitted credentials before any error is returned or persisted. | **Yes — probe + code** | OPEN |
+
+## Remediation (implementation lead, 2026-09-29): pending Codex retest
+
+The original rows above are unchanged, and their status column still reads OPEN. That status is superseded by this
+table.
+
+| ID | Fix | Regression test (fails before the fix unless noted) | Status |
+|---|---|---|---|
+| CXH-01 | OAuth callback finalised in one transaction that SHARE-locks the issuing app (status, client id, epoch) and re-checks membership. New `connection.oauth_app_epoch`, and a runtime issuing-app check for platform apps. Commit `15c4f57` | `sec-wavec-fixes` (PostgreSQL interleaving, runtime check) | FIXED, retest pending |
+| CXH-02 | Auth instance and sign-in attempt keys carry the `platform_secret` id + revision (`signin_attempt.secret_id`); a mismatched callback is refused | `sec-wavec-fixes` | FIXED, retest pending |
+| CXH-05 | Per-purpose crypto caps: credentials 64 KiB; step data 8 MiB write / 40 MiB read; legacy v1 32 MiB read | `crypto-limits` (unit, includes the 50 000-byte probe) + integration run with 60 000 three-byte characters | FIXED, retest pending |
+| CXH-06 | Rewrap covers every envelope, including account tokens, with compare-and-swap writes; per-table `remaining` count; rotation complete only at 0 remaining | `sec-wavec-fixes` + `sec-upgrade` (phase-4 → 0015 + rewrap + key retirement) | FIXED, retest pending |
+| CXH-10 | Authoritative row read `FOR UPDATE` + conditional revision updates (409 `REVISION_CONFLICT`) | `sec-wavec-fixes` (two rotations; rotation vs delete) | FIXED, retest pending |
+| CXH-14 | Refresh failures classified transient / grant / client_auth / unavailable; transient keeps credentials, honours Retry-After, pauses nothing. **Limitation:** the step fails as retryable; there is no in-step retry yet | `oauth-client` (contract) + `sec-wavec-fixes` (429, 500, invalid_grant) | FIXED (no in-step retry), retest pending |
+| CXH-03 | Attempt numbering continues across recovery; every send reserves a new key (an existing key never authorises a send); abandoned reservations are settled as `interrupted` + possible charge. New index `ai_attempt(workspace_id, request_id)` in migration 0016. Commit `9d39a0c`. **Limitation:** no stored-result reuse (answer text isn't stored), so a recovered request is re-sent and both charges are ledgered | `ai-review-wavec` (integration: real rewind + recovery; concurrent same request id on PostgreSQL) | FIXED (no result reuse), retest pending |
+| CXH-04 | The agent cap is enforced inside every locked reservation (retries, fallback, tool steps); unknown cost under a cap is refused unless `allowUnknownCost` is set; agent spend = ledger total | `ai-review-wavec` (integration ×2) | FIXED, retest pending |
+| CXH-07 | `requestInputChars` sizes the full serialised request, used by the executor, routing and agent limits | `ai-review-wavec` (integration + unit) | FIXED, retest pending |
+| CXH-08 | Core token counts are required in all adapters; missing or inconsistent counts mean unknown usage, the reservation is kept, and null tokens are written | `ai-review-wavec` (contract, every adapter + integration) | FIXED, retest pending |
+| CXH-09 | Strict numeric listing prices; `validPrice` enforced wherever a verified-zero decision is made. **Note:** malformed prices stored before this fix read as 0 until the next discovery refresh | `ai-review-wavec` (contract) | FIXED, retest pending |
+| CXH-11 | Registry `listingAuth` per provider (DeepInfra/Vercel public, OpenRouter uses its authenticated `/key`); unverified keys are labelled "Key not verified" (ar + en) | `ai-review-wavec` (integration ×2 + unit) | FIXED, retest pending |
+| CXH-12 | `stillCurrent` / `fencedWrite` guard every write after a network call (cred_version + not revoked) | `ai-review-wavec` (integration ×2) | FIXED, retest pending |
+| CXH-13 | A removed or unlisted primary is deferred to the planner under FALLBACK / FREE_ONLY / LOW_COST; MANUAL and auth/revoked/safety/cancel/budget still refuse immediately | `ai-review-wavec` (integration + guard) | FIXED, retest pending |
+| CXH-15 | Malformed `data:` chunks are rejected (keep-alives allowed); strict tool-argument JSON; a Chat stream needs a finish reason | `ai-review-wavec` (contract, all five adapters) | FIXED, retest pending |
+| CXH-16 | Allowlisted error ids and safety vocabulary only; the submitted key is scrubbed from every hub error | `ai-review-wavec` (contract) | FIXED, retest pending |
+
+**Gates after merging both fix branches + 0016 (product code not yet browser-gated):**
+- lint and typecheck: clean.
+- Unit 245, contract 465, integration 430.
+- 17 migrations apply on an empty database.
