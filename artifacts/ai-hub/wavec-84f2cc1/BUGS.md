@@ -58,3 +58,24 @@ table.
 - lint and typecheck: clean.
 - Unit 245, contract 465, integration 430.
 - 17 migrations apply on an empty database.
+
+## Codex retest of `cceeb5d` (`CODEX-RETEST-cceeb5d.md`)
+**FIXED (10):** CXH-02, 03, 05, 06, 07, 08, 10, 14, 15, 16. Limitations accepted: CXH-03 (no result reuse) and
+CXH-14 (no in-step retry). Correction: Retry-After is exposed, not scheduled, and the step handler drops the retry
+fields.
+
+**PARTIALLY FIXED (6), reopened:**
+- **CXH-01:** clearing and recreating a platform app resets the epoch; an in-flight callback can pass.
+- **CXH-04:** the workspace `allowUnknownCost` setting bypasses an agent's hard cap.
+- **CXH-09:** stored false-zero prices survive, and a malformed refresh keeps the old zero.
+- **CXH-11:** pre-fix public-listing rows stay `keyVerified`.
+- **CXH-12:** shared catalogue writes are outside the fence.
+- **CXH-13:** the index-based primary identity after filtering (see CXH-19).
+
+**NEW:**
+
+| ID | Severity | Area | Summary | Status |
+|---|---|---|---|---|
+| CXH-17 | P2 | Recovery | A live attempt older than 60 s is declared abandoned without checking ownership or lease; its later success can't settle | OPEN |
+| CXH-18 | P2 | Agent cap | A resumed agent tool's reservation is counted twice (precheck + completion) | OPEN |
+| CXH-19 | P2 | FALLBACK | After a removed primary is filtered out, the first fallback inherits primary-refusal semantics, so an allowed second fallback is never tried | OPEN |
