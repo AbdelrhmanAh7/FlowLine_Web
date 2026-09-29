@@ -18,18 +18,40 @@
 - **Known limitation:** Copilot's proposal quality with the local 7B model is not verified (the safety contract is).
 - **Release evidence:** rollback across migrations, backup → clean restore, DB outage, load L-1…L-6 (`artifacts/phase-3/`).
 
-## AI provider hub — IN PROGRESS on branch `ai-hub` (worktree `FL-wt-aihub`, test DB `flowline_test_aihub`)
+## AI provider hub + credentials in the UI: IN PROGRESS (branch `ai-hub`)
 
-Owner-approved cloud-only multi-provider hub (prompt 2026-09-29). Base: `phase-4` @ `1a9883f` (= code of `flowline:e42667d`).
-Plan: `docs/ai/IMPLEMENTATION_PLAN.md`; requirements AIH-01…AIH-20 in `SCOPE_MATRIX.md` (AI-HUB section).
+**Branch and base:** `ai-hub` @ `fd5cbf3`, from `phase-4` `1a9883f` (= code of `flowline:e42667d`).
+Plan: `docs/ai/IMPLEMENTATION_PLAN.md`. Security design: `docs/security/CREDENTIALS_DESIGN.md`. Scope rows:
+AIH-01…24 and SEC-01…06 in `SCOPE_MATRIX.md`.
 
-- Wave A (foundation + OpenAI chat vertical slice): Opus agent running in `FL-wt-aihub` (uncommitted until reviewed).
-- Provider verification research (official docs/terms for 26 providers): report goes to the session scratchpad, then
-  becomes `docs/ai/PROVIDERS.md`.
-- Parallel, unrelated: Kimi building the design system on `design-v2` (`FL-wt-design`).
-- Next: review + commit Wave A → Wave B (protocols + 15 core adapters + expansion + routing/budgets + agents/Copilot)
-  → Wave C (live certification BLOCKED without keys; benchmark needs an owner budget; Codex review + Chrome QA).
-- Resume: `cd ../FL-wt-aihub && git status && pnpm typecheck && pnpm test:integration`.
+**Done:**
+- **Wave A** (`9b5e36c`):
+  - hub foundation, with v2 AAD-bound encryption for AI keys;
+  - UI-only keys, no env reads and no global fallback;
+  - OpenAI Chat slice;
+  - Settings → AI Providers and the ModelPicker;
+  - legacy local configs refused.
+- **Tests:** unit 201, contract 141, integration 349. E2E full run 82/83; the one failure is fixed and passes alone.
+  **Pending:** a full E2E rerun and WebKit.
+- **Provider research** (28 providers, official sources, 2026-09-29): `artifacts/ai-hub/research/`.
+- **Credentials-in-UI design** from Fable 5.1 + Codex gpt-6-astra: `artifacts/security-review/`.
+- **Owner decisions:** TOTP day one; live sign-in rotation; allowlist + billing plans in the admin panel.
+
+**Running** (worktrees; agents run unit/contract/integration only, the lead runs E2E):
+- `FL-wt-aib` (`ai-hub-aib`): Wave B — protocols, core + expansion adapters, routing, pricing, agents/Copilot.
+- `FL-wt-sec` (`ai-hub-sec`): credentials in the UI — crypto v2 migration, platform admin + TOTP, platform secrets
+  panel, OAuth hardening, per-workspace OAuth app.
+
+**Paused:**
+- Kimi's `design-v2` run was stopped by the system for low memory. Its 27 files are uncommitted in `FL-wt-design`.
+- Resume only when the owner asks: `cd ../FL-wt-design && kimi -c -p "Continue KIMI_BRIEF.md" < /dev/null`.
+
+**Next:**
+1. Review, merge and gate both branches into `ai-hub`.
+2. Full E2E + WebKit.
+3. Wave C: Codex review + Chrome QA.
+4. Live checks: BLOCKED until the owner enters keys in the UI.
+5. Benchmark: needs an owner budget.
 
 ## Phase 4 — launch candidate & private beta: PAUSED for owner credentials (branch `phase-4`)
 
