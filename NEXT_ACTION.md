@@ -37,10 +37,26 @@ AIH-01…24 and SEC-01…06 in `SCOPE_MATRIX.md`.
 - **Credentials-in-UI design** from Fable 5.1 + Codex gpt-6-astra: `artifacts/security-review/`.
 - **Owner decisions:** TOTP day one; live sign-in rotation; allowlist + billing plans in the admin panel.
 
-**Running** (worktrees; agents run unit/contract/integration only, the lead runs E2E):
-- `FL-wt-aib` (`ai-hub-aib`): Wave B — protocols, core + expansion adapters, routing, pricing, agents/Copilot.
-- `FL-wt-sec` (`ai-hub-sec`): credentials in the UI — crypto v2 migration, platform admin + TOTP, platform secrets
-  panel, OAuth hardening, per-workspace OAuth app.
+**Merged browser gate (owner-authorised low-memory run, 2026-09-29):**
+- Chromium 65/65 (`8b7c803`), Firefox 24/24 (`8b7c803`), WebKit 24/24 (`84f2cc1`; test-only change), admin-panel 3/3.
+- Restart persistence proven.
+- Unit 235, contract 444, integration 407 on `84f2cc1`.
+- Evidence: `artifacts/ai-hub/merged-faec2a3-20260929-0459/GATE.md`.
+
+**Wave C:**
+- **Step A, Codex review of `84f2cc1`:** 6 P1 + 10 P2 → `artifacts/ai-hub/wavec-84f2cc1/BUGS.md` (all OPEN).
+- **Fixing:**
+  - `FL-wt-fxhub` (`wavec-fxhub`): CXH-03, 04, 07, 08, 09, 11, 12, 13, 15, 16.
+  - `FL-wt-fxsec` (`wavec-fxsec`): CXH-01, 02, 05, 06, 10, 14.
+- **Next:**
+  1. Merge both.
+  2. Non-browser gates.
+  3. The full browser gate again, since product code changed: `--workers=1`, sequential; the WebKit phase needs
+     `.env.test` fakes on 4010/4011.
+  4. Codex retest of the CXH fixes.
+  5. Step B, Codex Chrome exploratory QA.
+  6. Fixes, then retest.
+  7. Docs: `AI_HUB_REPORT`, `SCOPE_MATRIX`.
 
 **Paused:**
 - Kimi's `design-v2` run was stopped by the system for low memory. Its 27 files are uncommitted in `FL-wt-design`.
