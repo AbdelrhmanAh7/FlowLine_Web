@@ -1,9 +1,9 @@
-import { and, desc, eq, gt, inArray, like, lt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, like } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AiPolicy } from "@/db/schema";
 import { planEntitlements } from "@/server/entitlements";
-import { AgentCostLimitError, BudgetExceededError, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
+import { AgentCostLimitError, BudgetExceededError, reconcileAbandonedUsage, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
 import { loadCredentials } from "./credentials";
 import { fencedWrite, roleMayUse, stillCurrent } from "./discovery";
 import { costMicros, maxCostMicros, requestInputChars, type PriceSnapshot } from "./pricing";
@@ -53,9 +53,12 @@ export interface ExecuteInput {
   /**
    * The agent run's hard cost limit (needs `agentRunId`). Enforced INSIDE every hub reservation — each retry and each
    * fallback route — against everything the agent run holds in the ledger (CXH-04). An unknown price under it is
-   * refused unsent unless the owner's policy allows unknown cost (then it is recorded as unknown, never as 0).
+   * refused unsent — the workspace's unknown-cost override does NOT lift an agent's hard cap — unless the agent
+   * itself opts in (`agentAllowsUnknownCost`, which gives up the cap guarantee for such calls; recorded as unknown).
    */
   agentCapMicros?: number | null;
+  /** The agent version's explicit choice to make unknown-price calls outside its cost limit (default off). */
+  agentAllowsUnknownCost?: boolean;
 }
 
 export interface RoutingInfo {
@@ -89,8 +92,51 @@ async function hasHardCap(db: Db, workspace: Workspace) {
   return ent?.monthlyUsageCapMicros != null;
 }
 
-/** An open reservation older than this, with no attempt record, belongs to a worker that stopped (heartbeat lost). */
-export const ABANDONED_RESERVATION_MS = 60_000;
+/**
+ * Execution leases (CXH-17). A run's / agent run's worker heart-beats its row; the row is recovered by another worker
+ * once the heartbeat is older than this (worker/runner.ts STALE_AFTER_MS, worker/agent-runner.ts AGENT_STALE_MS).
+ */
+export const LEASE_STALE_MS = 60_000;
+/**
+ * An attempt with no execution lease (Copilot, connection tests, direct calls) can't outlive the transport's hard
+ * deadline (hubFetch: 120 s per request, total) — plus a wide margin for the ledger writes around it.
+ */
+export const UNLEASED_ATTEMPT_MAX_MS = 10 * 60_000;
+
+type UsageRow = typeof schema.usageEvent.$inferSelect;
+
+/** The lease this execution runs under: the owning run's / agent run's `locked_by` (null = no lease). */
+async function leaseHolder(db: Db, input: Pick<ExecuteInput, "runId" | "agentRunId">): Promise<string | null> {
+  if (input.runId) {
+    const [r] = await db.select({ lockedBy: schema.run.lockedBy }).from(schema.run).where(eq(schema.run.id, input.runId));
+    return r?.lockedBy ?? null;
+  }
+  if (input.agentRunId) {
+    const [a] = await db.select({ lockedBy: schema.agentRun.lockedBy }).from(schema.agentRun).where(eq(schema.agentRun.id, input.agentRunId));
+    return a?.lockedBy ?? null;
+  }
+  return null;
+}
+
+/**
+ * An open reservation is ABANDONED only when the execution that made it can no longer be running (CXH-17): its
+ * owning run / agent run is no longer held by the same lease (recovered by another worker, finished, gone) or that
+ * lease's heartbeat has expired. A reservation without a lease is abandoned only after the longest time an attempt
+ * can take. Age alone never decides it: a live provider call may legitimately take up to 120 s.
+ */
+async function reservationAbandoned(db: Db, ev: UsageRow, now = Date.now()): Promise<boolean> {
+  const lost = (o: { status: string; lockedBy: string | null; heartbeatAt: Date | null } | undefined) =>
+    !o || o.status !== "running" || o.lockedBy == null || o.lockedBy !== ev.holder || !o.heartbeatAt || o.heartbeatAt.getTime() < now - LEASE_STALE_MS;
+  if (ev.runId) {
+    const [r] = await db.select({ status: schema.run.status, lockedBy: schema.run.lockedBy, heartbeatAt: schema.run.heartbeatAt }).from(schema.run).where(eq(schema.run.id, ev.runId));
+    return lost(r);
+  }
+  if (ev.agentRunId) {
+    const [a] = await db.select({ status: schema.agentRun.status, lockedBy: schema.agentRun.lockedBy, heartbeatAt: schema.agentRun.heartbeatAt }).from(schema.agentRun).where(eq(schema.agentRun.id, ev.agentRunId));
+    return lost(a);
+  }
+  return ev.createdAt.getTime() < now - UNLEASED_ATTEMPT_MAX_MS;
+}
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
@@ -98,8 +144,9 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
  * Attempt identity survives worker recovery (CXH-03). A request id can already have attempts — a worker died after
  * a charge settled but before the step finished, or after reserving (and maybe sending) an attempt. Numbering
  * continues after the highest attempt found in the attempt log OR the ledger, so every new send is a NEW reserved
- * ledger event; an existing ledger key is never taken as permission to send. An abandoned open reservation was
- * possibly sent and billed: it is settled at its reservation and recorded as an interrupted possible charge.
+ * ledger event; an existing ledger key is never taken as permission to send. An abandoned open reservation (its
+ * execution lease is gone — never judged by age alone, CXH-17) was possibly sent and billed: it is settled at its
+ * reservation and recorded as an interrupted possible charge; if that attempt still answers, the ledger is reconciled.
  * No earlier answer is reused: the hub keeps no answer text outside the run's encrypted step data, so a recovered
  * request is sent again (its earlier charges stay in the ledger and count toward budgets and agent limits).
  */
@@ -124,12 +171,14 @@ async function resumeAttempts(db: Db, input: ExecuteInput, route: ResolvedRoute)
     const n = Number(suffix);
     last = Math.max(last, n);
     numbered.add(n);
-    if (ev.status !== "reserved" || recorded.has(n) || ev.createdAt.getTime() > Date.now() - ABANDONED_RESERVATION_MS) continue;
-    // Abandoned by a worker that stopped: keep it as a possible charge, and record it.
+    if (ev.status !== "reserved" || recorded.has(n)) continue;
+    if (!(await reservationAbandoned(db, ev))) continue; // a live execution still owns it: take the next number instead
+    // Abandoned by an execution whose lease is gone: keep it as a possible charge, and record it.
+    const now = new Date();
     const [settled] = await db
       .update(schema.usageEvent)
-      .set({ status: "settled", settledAt: new Date() })
-      .where(and(eq(schema.usageEvent.id, ev.id), eq(schema.usageEvent.status, "reserved"), lt(schema.usageEvent.createdAt, new Date(Date.now() - ABANDONED_RESERVATION_MS))))
+      .set({ status: "settled", settledAt: now, abandonedAt: now })
+      .where(and(eq(schema.usageEvent.id, ev.id), eq(schema.usageEvent.status, "reserved")))
       .returning({ id: schema.usageEvent.id });
     if (!settled) continue;
     await db.insert(schema.aiAttempt).values({
@@ -223,13 +272,14 @@ export async function executeAi(db: Db, input: ExecuteInput): Promise<ExecuteRes
   }
   const resumed = await resumeAttempts(db, input, input.route);
   const counter = { n: resumed.last };
+  const holder = input.metering === "hub" ? await leaseHolder(db, input) : null;
   const fallbackFrom: RoutingInfo["fallbackFrom"] = [];
   let last: HubError | null = null;
   for (let i = 0; i < plan.plan.length; i++) {
     const step = plan.plan[i]!;
     const reason = i === 0 ? step.reason : `${step.reason} after ${last?.code ?? "error"}`;
     try {
-      const r = await executeRoute(db, input, plan, step.route, reason, counter);
+      const r = await executeRoute(db, input, plan, step.route, reason, counter, holder);
       return {
         ...r,
         routing: {
@@ -243,8 +293,9 @@ export async function executeAi(db: Db, input: ExecuteInput): Promise<ExecuteRes
     } catch (e) {
       if (!(e instanceof HubError) || input.signal.aborted) throw e;
       last = e;
-      // A later route the actor may not use is skipped (use_roles are respected); the primary's refusal is final.
-      const skip = i > 0 && e.code === "AI_ROUTE_FORBIDDEN";
+      // A policy-added route the actor may not use is skipped (use_roles are respected); the primary's refusal is final.
+      // Decided by the route's identity, not its position: filtering / sorting move routes around (CXH-19).
+      const skip = step.role !== "primary" && e.code === "AI_ROUTE_FORBIDDEN";
       if (!skip && !mayFallback(e.code)) throw e;
       if (i === plan.plan.length - 1) throw e;
       fallbackFrom.push({ provider: step.route.provider, connectionId: step.route.connectionId, modelId: step.route.modelId, code: e.code });
@@ -254,7 +305,7 @@ export async function executeAi(db: Db, input: ExecuteInput): Promise<ExecuteRes
   throw last ?? new HubError("AI_NOT_CONFIGURED", "No AI route could be used");
 }
 
-async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route: ResolvedRoute, routeReason: string, counter: { n: number }): Promise<Omit<ExecuteResult, "routing">> {
+async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route: ResolvedRoute, routeReason: string, counter: { n: number }, holder: string | null): Promise<Omit<ExecuteResult, "routing">> {
   const { workspace } = input;
   const def = getProviderDef(route.provider);
   if (!def) throw new HubError("AI_PROVIDER_NOT_AVAILABLE", `${route.provider} isn't available`);
@@ -305,16 +356,19 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
     // 4. Budget: reserve a defensible maximum (the WHOLE protocol request, CXH-07) before sending anything.
     const maxCost = maxCostMicros(price, requestInputChars(input.request), input.request.maxTokens);
     const agentCap = input.agentRunId && input.agentCapMicros != null ? input.agentCapMicros : null;
-    if (maxCost == null && !(input.policy ?? workspace.aiPolicy)?.allowUnknownCost) {
-      // Unknown is not 0: under a workspace/plan cap OR an agent's own limit, an unbounded cost is refused unsent.
-      const hardCap = await hasHardCap(db, workspace);
-      if (hardCap || agentCap != null) {
+    // An agent that explicitly accepted unknown-price calls: they run outside its cap (recorded as unknown).
+    const agentWaivesCap = agentCap != null && input.agentAllowsUnknownCost === true;
+    if (maxCost == null) {
+      // Unknown is not 0. An agent's hard cap can't be proven for an unbounded cost, whatever the workspace policy
+      // says (CXH-04): refused unsent unless the AGENT opted in. A workspace/plan cap: refused unless the policy allows.
+      const agentRefuses = agentCap != null && !agentWaivesCap;
+      const wsRefuses = !(input.policy ?? workspace.aiPolicy)?.allowUnknownCost && (await hasHardCap(db, workspace));
+      if (agentRefuses || wsRefuses) {
         await record({ attempt, outcome: "refused", errorCode: "AI_COST_UNKNOWN", costSource: "unknown" });
-        const why = hardCap ? "this workspace has a spending cap" : "this agent has a cost limit";
-        throw new HubError(
-          "AI_COST_UNKNOWN",
-          `The price of ${route.modelId} is unknown and ${why}, so the call was not sent. Add its price in Settings → Usage (ai:${route.provider}/${route.modelId}) or allow unknown-cost calls.`,
-        );
+        const how = agentRefuses
+          ? `this agent has a cost limit, so the call was not sent. Add its price in Settings → Usage (ai:${route.provider}/${route.modelId}), or let this agent make unknown-price calls outside its limit.`
+          : `this workspace has a spending cap, so the call was not sent. Add its price in Settings → Usage (ai:${route.provider}/${route.modelId}) or allow unknown-cost calls.`;
+        throw new HubError("AI_COST_UNKNOWN", `The price of ${route.modelId} is unknown and ${how}`);
       }
     }
     let usageKey: string | null = null;
@@ -338,6 +392,9 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
             model: route.modelId,
             unpriced: maxCost == null,
             agentCapMicros: agentCap,
+            // Only reached for an unknown price under an agent cap when the agent opted in (checked above).
+            unknownCostOutsideCap: maxCost == null && agentWaivesCap,
+            holder,
           }));
         } catch (e) {
           if (e instanceof BudgetExceededError) {
@@ -387,15 +444,23 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
       // No usage reported → the real cost is unknown: the ledger keeps the defensible max instead of 0.
       const ledgerCost = cost ?? (reported ? 0 : (maxCost ?? 0));
       const tokens = reported ? { inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens, reasoningTokens: u.reasoningTokens } : {};
-      const settle = () =>
-        usageKey
-          ? settleUsage(db, usageKey, {
-              costMicros: ledgerCost,
-              // Unknown usage stays unknown in the ledger too (null tokens), never 0.
-              ...(reported ? { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) } : {}),
-              unpriced: cost == null,
-            })
-          : Promise.resolve();
+      const settlement = {
+        costMicros: ledgerCost,
+        // Unknown usage stays unknown in the ledger too (null tokens), never 0.
+        ...(reported ? { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) } : {}),
+        unpriced: cost == null,
+      };
+      const settle = async () => {
+        if (!usageKey || (await settleUsage(db, usageKey, settlement))) return;
+        // Recovery had declared this attempt abandoned (its lease was lost) and kept its reservation as a possible
+        // charge; the attempt answered after all, so the ledger takes its real cost (CXH-17).
+        if (await reconcileAbandonedUsage(db, usageKey, settlement)) {
+          await db
+            .update(schema.aiAttempt)
+            .set({ errorCode: "AI_ATTEMPT_RECONCILED", possibleCharge: false, routeReason: "recovery marked this attempt abandoned; it answered later and its real cost was recorded" })
+            .where(and(eq(schema.aiAttempt.workspaceId, workspace.id), eq(schema.aiAttempt.usageKey, usageKey), eq(schema.aiAttempt.errorCode, "AI_ATTEMPT_ABANDONED")));
+        }
+      };
       // Fencing: the connection must still be the one (same credential version, not revoked) that was read before
       // the call. The provider may have billed the call, so the ledger is settled either way; the RESULT is discarded.
       const [fresh] = await db.select({ status: schema.aiConnection.status, credVersion: schema.aiConnection.credVersion }).from(schema.aiConnection).where(eq(schema.aiConnection.id, conn.id));

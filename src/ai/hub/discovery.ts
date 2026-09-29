@@ -31,6 +31,12 @@ export async function fencedWrite(db: Db, c: Pick<Conn, "id" | "credVersion">, w
   });
 }
 
+/**
+ * TEST-ONLY interleaving point (honoured only with FLOWLINE_ENV=test): called inside the fenced transaction, after the
+ * connection passed its fence and before any catalogue write — lets a test pause a refresh exactly there (CXH-12).
+ */
+export const discoveryTestHooks: { afterFence?: (conn: Conn) => Promise<void> } = {};
+
 /** The catalogue result belonged to a key that was replaced, or to a connection that was disconnected meanwhile. */
 export const STALE_CATALOGUE = { ok: false as const, code: "AI_CONNECTION_CHANGED", message: "The connection changed (its key was replaced or it was disconnected) while its model list was loading; that list was discarded." };
 
@@ -39,12 +45,16 @@ export const STALE_CATALOGUE = { ok: false as const, code: "AI_CONNECTION_CHANGE
  * connection (ai_connection_model). A failed or malformed refresh never wipes the last valid snapshot: the
  * connection's catalogue is marked stale with the reason. A model that disappears from the listing is marked
  * removed (not deleted), so a step pinned to it fails with an actionable error instead of an opaque 404.
+ * `observedAt` is when the listing was received: shared (public) catalogue rows only take observations at least as new.
  */
-export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel[]): Promise<boolean> {
+export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel[], observedAt: Date = new Date()): Promise<boolean> {
   const now = new Date();
+  const def = getProviderDef(conn.provider);
   // Fenced on the credential version the listing was made with: an old key's (or a disconnected connection's)
-  // listing never overwrites the catalogue.
+  // listing never overwrites the catalogue — neither the connection's own nor the shared public catalogue (CXH-12):
+  // everything is written in ONE transaction while the connection row is held, so a rotation / disconnect waits.
   const stored = await fencedWrite(db, conn, async (tx) => {
+    if (process.env.FLOWLINE_ENV === "test" && discoveryTestHooks.afterFence) await discoveryTestHooks.afterFence(conn);
     if (models.length) {
       await tx
         .insert(schema.aiConnectionModel)
@@ -66,15 +76,13 @@ export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel
         ),
       );
     await tx.update(schema.aiConnection).set({ catalogRefreshedAt: now, catalogStale: false, catalogError: null, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
+    // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
+    if (def) {
+      await syncCurated(tx as unknown as Db, def.id, observedAt);
+      await storeListingMetadata(tx as unknown as Db, def, models, observedAt);
+    }
   });
-  if (!stored) return false;
-  // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
-  const def = getProviderDef(conn.provider);
-  if (def) {
-    await syncCurated(db, def.id);
-    await storeListingMetadata(db, def, models);
-  }
-  return true;
+  return stored;
 }
 
 export async function markCatalogueFailure(db: Db, conn: Conn, e: HubError) {
@@ -87,7 +95,7 @@ export async function refreshCatalogue(db: Db, conn: Conn): Promise<{ ok: true; 
   if (!def || !isConnectable(def)) return { ok: false, code: "AI_PROVIDER_NOT_AVAILABLE", message: "This provider isn't available" };
   try {
     const models = await listModels(def, loadCredentials(conn));
-    if (!(await storeCatalogue(db, conn, models))) return STALE_CATALOGUE;
+    if (!(await storeCatalogue(db, conn, models, new Date()))) return STALE_CATALOGUE;
     return { ok: true, count: models.length };
   } catch (e) {
     const he = e instanceof HubError ? e : new HubError("AI_CATALOGUE_UNAVAILABLE", "The model list couldn't be loaded");

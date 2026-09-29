@@ -23,6 +23,23 @@ type Conn = typeof schema.aiConnection.$inferSelect;
  */
 export const USE_ROLE_CHOICES: Role[] = ["owner", "editor"];
 
+/** How a key was proven to work: an authenticated metadata check (by the provider's key-check kind) or an inference. */
+export type KeyProof = "listing" | "key-endpoint" | "inference";
+
+/**
+ * Whether the stored proof verifies the CURRENT key (CXH-11): the method must be a real key check for this provider
+ * today (a key-required listing / authenticated key endpoint) or a disclosed inference test, and it must have been
+ * made with the current credential version. A public listing or a static catalogue never proves a key.
+ */
+export function keyProof(c: Pick<Conn, "provider" | "keyCheckMethod" | "keyCheckedCredVersion" | "credVersion">): KeyProof | null {
+  const def = getProviderDef(c.provider);
+  const m = c.keyCheckMethod;
+  if (c.keyCheckedCredVersion == null || c.keyCheckedCredVersion !== c.credVersion) return null;
+  if (m === "inference") return m;
+  if ((m === "listing" || m === "key-endpoint") && def && canCheckKey(def) && keyCheckOf(def) === m) return m;
+  return null;
+}
+
 export function publicAiConnection(c: Conn, counts?: { discovered: number; accessConfirmed: number; removed: number }) {
   const def = getProviderDef(c.provider);
   return {
@@ -39,10 +56,12 @@ export function publicAiConnection(c: Conn, counts?: { discovered: number; acces
      */
     keyCheck: def ? keyCheckOf(def) : ("none" as const),
     /**
-     * The key itself has been proven to work: an authenticated metadata check or a successful disclosed inference
-     * test (lastTestedAt), and the connection is healthy. A public listing never sets this (CXH-11).
+     * The key itself has been proven to work — an authenticated metadata check or a successful disclosed inference
+     * test, made with the CURRENT credential version — and the connection is healthy. A public listing never sets
+     * this, nor does a pre-fix timestamp without its method (CXH-11).
      */
-    keyVerified: c.status === "CONNECTED" && c.lastTestedAt != null,
+    keyVerified: c.status === "CONNECTED" && c.lastTestedAt != null && keyProof(c) != null,
+    keyCheckMethod: keyProof(c),
     settings: c.settings,
     useRoles: c.useRoles,
     status: c.status,
@@ -163,6 +182,7 @@ export async function createAiConnection(
     throw new HttpError(422, "AI_PLAN_ATTESTATION_REQUIRED", `${def.name}: confirm this is a pay-as-you-go API key. ${def.planWarning ?? ""}`.trim());
   }
   const models = await verifyKey(def, apiKey, settings);
+  const observedAt = new Date();
   const checked = canCheckKey(def);
   // The id is generated here so the ciphertext is bound to this exact row (v2 AAD) before the insert.
   const id = randomUUID();
@@ -182,11 +202,14 @@ export async function createAiConnection(
       useRoles: ["owner"],
       status: "CONNECTED",
       verification: def.contractVerified ? "CONTRACT_VERIFIED" : "IMPLEMENTED",
+      credVersion: 1,
       lastTestedAt: checked ? now : null,
+      keyCheckMethod: checked ? keyCheckOf(def) : null,
+      keyCheckedCredVersion: checked ? 1 : null,
       createdBy: userId,
     })
     .returning();
-  await storeCatalogue(db, row!, models);
+  await storeCatalogue(db, row!, models, observedAt);
   return publicById(db, row!.id);
 }
 
@@ -221,9 +244,17 @@ export async function testAiConnection(db: Db, conn: Conn) {
   r ??= await refreshCatalogue(db, conn);
   const now = new Date();
   // The fence (same key, not disconnected) guards every health write: never CONNECTED over REVOKED.
-  if (r.ok) await db.update(schema.aiConnection).set({ status: "CONNECTED", lastTestedAt: now, lastError: null, updatedAt: now }).where(stillCurrent(conn));
-  else if (r.code !== "AI_CONNECTION_CHANGED") {
-    await db.update(schema.aiConnection).set({ status: "DEGRADED", lastTestedAt: now, lastError: { code: r.code, message: r.message, at: now.toISOString() }, updatedAt: now }).where(stillCurrent(conn));
+  // The proof records HOW and for WHICH credential version the key was checked (CXH-11).
+  if (r.ok) {
+    await db
+      .update(schema.aiConnection)
+      .set({ status: "CONNECTED", lastTestedAt: now, keyCheckMethod: def ? keyCheckOf(def) : null, keyCheckedCredVersion: conn.credVersion, lastError: null, updatedAt: now })
+      .where(stillCurrent(conn));
+  } else if (r.code !== "AI_CONNECTION_CHANGED") {
+    await db
+      .update(schema.aiConnection)
+      .set({ status: "DEGRADED", lastTestedAt: now, keyCheckMethod: null, keyCheckedCredVersion: null, lastError: { code: r.code, message: r.message, at: now.toISOString() }, updatedAt: now })
+      .where(stillCurrent(conn));
   }
   return { ok: r.ok, ...(r.ok ? { models: r.count } : { code: r.code, message: r.message }), connection: await publicById(db, conn.id) };
 }
@@ -256,7 +287,10 @@ export async function inferenceTest(db: Db, userId: string, workspace: typeof sc
     // A successful inference proves the key works (the only check for providers without a list endpoint).
     const now = new Date();
     // Fenced: only the key that answered is marked working (not a key replaced or disconnected meanwhile).
-    await db.update(schema.aiConnection).set({ lastTestedAt: now, status: "CONNECTED", lastError: null, updatedAt: now }).where(stillCurrent(conn));
+    await db
+      .update(schema.aiConnection)
+      .set({ lastTestedAt: now, keyCheckMethod: "inference", keyCheckedCredVersion: conn.credVersion, status: "CONNECTED", lastError: null, updatedAt: now })
+      .where(stillCurrent(conn));
     return { ok: true, model: r.result.model, usage: r.result.usage, costMicros: r.costMicros, costSource: r.costSource };
   } catch (e) {
     if (e instanceof HubError) return { ok: false, code: e.code, message: e.message };
@@ -275,18 +309,31 @@ export async function replaceAiKey(db: Db, conn: Conn, rawKey: string) {
     hubToHttp(e);
   }
   const models = await verifyKey(def, apiKey, cleanSettings(def, conn.settings));
+  const observedAt = new Date();
   const enc = encryptAiKey(apiKey, conn);
   const now = new Date();
   // Fenced on the version read BEFORE the (slow) key check: a concurrent replace or disconnect wins; this one conflicts.
   const [row] = await db
     .update(schema.aiConnection)
-    .set({ secretEnc: enc.ciphertext, keyId: enc.keyId, keyHint: keyHint(apiKey, now), credVersion: sql`${schema.aiConnection.credVersion} + 1`, status: "CONNECTED", lastError: null, lastTestedAt: canCheckKey(def) ? now : null, updatedAt: now })
+    .set({
+      secretEnc: enc.ciphertext,
+      keyId: enc.keyId,
+      keyHint: keyHint(apiKey, now),
+      credVersion: sql`${schema.aiConnection.credVersion} + 1`,
+      status: "CONNECTED",
+      lastError: null,
+      lastTestedAt: canCheckKey(def) ? now : null,
+      // The new key's proof (if its check was a real key check) is for the NEW credential version.
+      keyCheckMethod: canCheckKey(def) ? keyCheckOf(def) : null,
+      keyCheckedCredVersion: canCheckKey(def) ? sql`${schema.aiConnection.credVersion} + 1` : null,
+      updatedAt: now,
+    })
     .where(and(eq(schema.aiConnection.id, conn.id), eq(schema.aiConnection.credVersion, conn.credVersion), ne(schema.aiConnection.status, "REVOKED")))
     .returning();
   if (!row) throw new HttpError(409, "AI_CONNECTION_CHANGED", "This connection changed while the new key was being checked (another key replacement or a disconnect). Reload and try again.");
   // Access confirmations were for the old key: they no longer prove anything.
   await db.update(schema.aiConnectionModel).set({ accessConfirmedAt: null }).where(eq(schema.aiConnectionModel.connectionId, conn.id));
-  await storeCatalogue(db, row!, models);
+  await storeCatalogue(db, row!, models, observedAt);
   return publicById(db, conn.id);
 }
 

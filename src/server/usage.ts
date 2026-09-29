@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { planEntitlements } from "./entitlements";
 import { schema } from "@/db";
@@ -52,6 +52,13 @@ export interface ReserveInput {
    * retries, fallbacks, tool steps) — so retries and fallback routes can't pass it.
    */
   agentCapMicros?: number | null;
+  /**
+   * An unknown-price model call ("ai", unpriced) under an agent cap is refused here too (defence in depth for CXH-04)
+   * unless the agent explicitly accepted unknown-price calls outside its limit.
+   */
+  unknownCostOutsideCap?: boolean;
+  /** The execution lease making this reservation (run / agent run `locked_by`), see usage_event.holder (CXH-17). */
+  holder?: string | null;
 }
 
 /**
@@ -70,6 +77,9 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
     const [existing] = await tx.select({ id: schema.usageEvent.id }).from(schema.usageEvent).where(eq(schema.usageEvent.idempotencyKey, r.idempotencyKey));
     if (existing) return { reserved: false };
     if (r.agentCapMicros != null && r.agentRunId) {
+      if (r.kind === "ai" && r.unpriced && !r.unknownCostOutsideCap) {
+        throw new AgentCostLimitError("The price of this AI call is unknown and the agent has a cost limit, so nothing was sent (an unknown cost can't be shown to stay within the limit).");
+      }
       const held = await agentRunSpentMicros(tx as unknown as Db, r.workspaceId, r.agentRunId);
       if (held + r.estimatedMicros > r.agentCapMicros) {
         throw new AgentCostLimitError(`The agent's cost limit would be passed (${fmt(held)} of ${fmt(r.agentCapMicros)} used or reserved; the next call needs up to ${fmt(r.estimatedMicros)}). Nothing was sent.`);
@@ -105,6 +115,7 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
         retry: r.retry ?? false,
         billable: r.billable ?? true,
         unpriced: r.unpriced ?? false,
+        holder: r.holder ?? null,
       })
       .onConflictDoNothing({ target: schema.usageEvent.idempotencyKey });
     return { reserved: true };
@@ -120,11 +131,35 @@ export async function agentRunSpentMicros(db: Db, workspaceId: string, agentRunI
   return Number(spent);
 }
 
-export async function settleUsage(db: Db, idempotencyKey: string, s: { costMicros: number; inputTokens?: number; outputTokens?: number; unpriced?: boolean; quantity?: number }) {
-  await db
+export interface Settlement {
+  costMicros: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  unpriced?: boolean;
+  quantity?: number;
+}
+
+/** Settles an open reservation. Returns false when there was none (already settled / released). */
+export async function settleUsage(db: Db, idempotencyKey: string, s: Settlement): Promise<boolean> {
+  const rows = await db
     .update(schema.usageEvent)
     .set({ status: "settled", costMicros: s.costMicros, inputTokens: s.inputTokens ?? null, outputTokens: s.outputTokens ?? null, unpriced: s.unpriced ?? false, quantity: s.quantity ?? 1, settledAt: new Date() })
-    .where(and(eq(schema.usageEvent.idempotencyKey, idempotencyKey), eq(schema.usageEvent.status, "reserved")));
+    .where(and(eq(schema.usageEvent.idempotencyKey, idempotencyKey), eq(schema.usageEvent.status, "reserved")))
+    .returning({ id: schema.usageEvent.id });
+  return rows.length > 0;
+}
+
+/**
+ * A late result for an attempt that recovery had already settled as ABANDONED (at its reservation, as a possible
+ * charge): the ledger takes the attempt's real outcome instead (CXH-17). Only rows settled by abandonment are touched.
+ */
+export async function reconcileAbandonedUsage(db: Db, idempotencyKey: string, s: Settlement): Promise<boolean> {
+  const rows = await db
+    .update(schema.usageEvent)
+    .set({ costMicros: s.costMicros, inputTokens: s.inputTokens ?? null, outputTokens: s.outputTokens ?? null, unpriced: s.unpriced ?? false, quantity: s.quantity ?? 1, settledAt: new Date() })
+    .where(and(eq(schema.usageEvent.idempotencyKey, idempotencyKey), eq(schema.usageEvent.status, "settled"), isNotNull(schema.usageEvent.abandonedAt)))
+    .returning({ id: schema.usageEvent.id });
+  return rows.length > 0;
 }
 
 /** The call never happened (failed before sending) — free the reservation. */

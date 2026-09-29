@@ -88,6 +88,8 @@ export async function chat(
     signal: AbortSignal;
     /** The agent run's hard cost limit: enforced by the hub inside every reservation (retries, fallback). */
     agentCapMicros?: number | null;
+    /** The agent version lets unknown-price calls run outside its cost limit (explicit, default off; CXH-04). */
+    agentAllowsUnknownCost?: boolean;
   },
 ): Promise<ChatResult> {
   const r = await executeAi(db, {
@@ -100,6 +102,7 @@ export async function chat(
     requestId: req.requestId,
     agentRunId: req.agentRunId,
     agentCapMicros: req.agentCapMicros ?? null,
+    agentAllowsUnknownCost: req.agentAllowsUnknownCost === true,
     signal: req.signal,
   });
   const u = r.result.usage;

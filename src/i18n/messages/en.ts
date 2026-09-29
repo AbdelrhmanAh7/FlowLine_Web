@@ -2327,6 +2327,9 @@ export const en: Messages = {
       timeout: "Timeout (s)",
       cost: "Cost limit per run",
       costHint: "In your workspace currency; blank = no limit. Needs prices configured in Usage & limits.",
+      allowUnknownCost: "Allow AI calls with an unknown price (gives up the cost-limit guarantee)",
+      allowUnknownCostHint:
+        "Off: with a cost limit, a model whose price is unknown is refused before anything is sent. On: such calls run and are recorded as unknown cost, but they are NOT counted toward the limit, so the limit can be exceeded.",
     },
     detail: {
       fallbackTitle: "Agent",

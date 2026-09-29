@@ -112,8 +112,15 @@ function caps(def: ProviderDefinition, ...layers: (Partial<AiModelCapabilities> 
   return Object.assign({}, UNKNOWN_CAPABILITIES, ...layers.filter(Boolean), def.capabilityFloor ?? {});
 }
 
+/**
+ * Shared catalogue rows are written by every tenant's refresh of a provider. `observedAt` orders those writes: a row
+ * is only replaced by an observation at least as new as the one it holds, so a slower (older) refresh finishing late
+ * never overwrites newer prices / capabilities (CXH-12).
+ */
+const notOlderThan = (observedAt: Date) => sql`(${schema.aiModel.observedAt} is null or ${schema.aiModel.observedAt} <= ${observedAt})`;
+
 /** Upserts the curated entries of one provider into ai_model (idempotent; bumps nothing when unchanged). */
-export async function syncCurated(db: Db, providerId: string) {
+export async function syncCurated(db: Db, providerId: string, observedAt: Date = new Date()) {
   const def = getProviderDef(providerId);
   if (!def || !def.protocols.length) return;
   const rows = CATALOGUE.filter((e) => e.provider === providerId);
@@ -135,6 +142,7 @@ export async function syncCurated(db: Db, providerId: string) {
       snapshotVersion: CATALOGUE_VERSION,
       lifecycle: "active",
       stale: false,
+      observedAt,
       updatedAt: new Date(),
     };
     await db
@@ -143,8 +151,8 @@ export async function syncCurated(db: Db, providerId: string) {
       .onConflictDoUpdate({
         target: [schema.aiModel.provider, schema.aiModel.modelId],
         set: { ...values },
-        // Never overwrite a newer snapshot with an older catalogue version.
-        setWhere: sql`${schema.aiModel.snapshotVersion} <= ${CATALOGUE_VERSION}`,
+        // Never overwrite a newer snapshot with an older catalogue version, nor a newer observation with an older one.
+        setWhere: sql`${schema.aiModel.snapshotVersion} <= ${CATALOGUE_VERSION} and ${notOlderThan(observedAt)}`,
       });
   }
 }
@@ -152,20 +160,29 @@ export async function syncCurated(db: Db, providerId: string) {
 /**
  * Listing metadata → ai_model, ONLY for providers whose listing is their public catalogue (not per-credential), so
  * one tenant's private/fine-tuned model names never reach another tenant. Listing prices (OpenRouter, Vercel)
- * replace curated ones; a listing without prices never clears a curated price.
+ * replace curated ones. A listing that supplies NO price object keeps the known (curated / earlier) price; one that
+ * supplies an unusable price (blank, malformed, "variable") makes it UNKNOWN — a known-untrustworthy or superseded
+ * price is never kept (CXH-09). Rows are only replaced by an observation at least as new (`observedAt`, CXH-12).
  */
-export async function storeListingMetadata(db: Db, def: ProviderDefinition, models: DiscoveredModel[]) {
+export async function storeListingMetadata(db: Db, def: ProviderDefinition, models: DiscoveredModel[], observedAt: Date = new Date()) {
   if (!def.listingIsPublic) return;
   const curated = new Map(CATALOGUE.filter((e) => e.provider === def.id).map((e) => [e.modelId, e]));
-  const now = new Date();
+  const now = observedAt;
   const prior = new Map(
-    (await db.select({ modelId: schema.aiModel.modelId, pricing: schema.aiModel.pricing, priceSource: schema.aiModel.priceSource }).from(schema.aiModel).where(eq(schema.aiModel.provider, def.id))).map((r) => [r.modelId, r]),
+    (
+      await db
+        .select({ modelId: schema.aiModel.modelId, pricing: schema.aiModel.pricing, priceSource: schema.aiModel.priceSource, priceVerifiedAt: schema.aiModel.priceVerifiedAt })
+        .from(schema.aiModel)
+        .where(eq(schema.aiModel.provider, def.id))
+    ).map((r) => [r.modelId, r]),
   );
   for (const m of models.slice(0, 2000)) {
     const cur = curated.get(catalogueKey(m.id));
     const existing = prior.get(m.id);
     const listingPrice = m.pricing && m.pricing.inputPerMTokMicros != null ? { ...m.pricing, verifiedAt: now.toISOString().slice(0, 10) } : null;
-    const pricing = listingPrice ?? existing?.pricing ?? cur?.pricing ?? null;
+    const invalid = !listingPrice && m.pricingInvalid === true;
+    const kept = invalid ? null : existing?.pricing ? existing : cur?.pricing ? { pricing: cur.pricing, priceSource: cur.pricing.sourceUrl ?? null, priceVerifiedAt: new Date(`${CATALOGUE_DATE}T00:00:00Z`) } : null;
+    const pricing = listingPrice ?? kept?.pricing ?? null;
     const zero = Boolean(listingPrice && listingPrice.inputPerMTokMicros === 0 && listingPrice.outputPerMTokMicros === 0);
     const values = {
       provider: def.id,
@@ -178,16 +195,20 @@ export async function storeListingMetadata(db: Db, def: ProviderDefinition, mode
       contextWindow: m.contextWindow ?? cur?.contextWindow ?? null,
       maxOutputTokens: m.maxOutputTokens ?? null,
       pricing,
-      priceSource: listingPrice ? (listingPrice.sourceUrl ?? `${def.name} model list`) : (existing?.priceSource ?? cur?.pricing?.sourceUrl ?? null),
-      priceVerifiedAt: listingPrice ? now : cur?.pricing ? new Date(`${CATALOGUE_DATE}T00:00:00Z`) : null,
-      freeTierNote: zero ? `Zero-priced in ${def.name}'s model list (${def.freeTier.note})` : (cur?.freeTierNote ?? null),
+      priceSource: listingPrice ? (listingPrice.sourceUrl ?? `${def.name} model list`) : (kept?.priceSource ?? null),
+      priceVerifiedAt: listingPrice ? now : (kept?.priceVerifiedAt ?? null),
+      freeTierNote: zero ? `Zero-priced in ${def.name}'s model list (${def.freeTier.note})` : invalid ? null : (cur?.freeTierNote ?? null),
       privacyNote: def.privacy.note,
       source: `listing:${def.discovery}`,
       snapshotVersion: CATALOGUE_VERSION,
       lifecycle: "active",
       stale: false,
-      updatedAt: now,
+      observedAt,
+      updatedAt: new Date(),
     };
-    await db.insert(schema.aiModel).values(values).onConflictDoUpdate({ target: [schema.aiModel.provider, schema.aiModel.modelId], set: values });
+    await db
+      .insert(schema.aiModel)
+      .values(values)
+      .onConflictDoUpdate({ target: [schema.aiModel.provider, schema.aiModel.modelId], set: values, setWhere: notOlderThan(observedAt) });
   }
 }

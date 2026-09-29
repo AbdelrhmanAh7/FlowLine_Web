@@ -551,7 +551,7 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
         <dt className="text-muted">{t("aiHub.connection.lastTested")}</dt>
         <dd>{conn.lastTestedAt ? t.relative(conn.lastTestedAt) : t("common.never")}</dd>
       </dl>
-      {(conn.keyCheck === "none" || conn.keyCheck === "public-listing") && !conn.lastTestedAt && (
+      {(conn.keyCheck === "none" || conn.keyCheck === "public-listing") && !conn.keyVerified && (
         <p className="text-sm text-warning" data-testid="ai-key-unchecked">
           {t(conn.keyCheck === "public-listing" ? "aiHub.connection.keyUncheckedPublic" : "aiHub.connection.keyUnchecked")}
         </p>

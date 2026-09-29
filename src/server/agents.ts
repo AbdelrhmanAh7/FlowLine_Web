@@ -43,6 +43,8 @@ export const agentInput = z.object({
       maxToolCalls: z.number().int().min(LIMIT_BOUNDS.maxToolCalls[0]).max(LIMIT_BOUNDS.maxToolCalls[1]),
       maxCostMicros: z.number().int().min(0).nullable(),
       timeoutMs: z.number().int().min(LIMIT_BOUNDS.timeoutMs[0]).max(LIMIT_BOUNDS.timeoutMs[1]),
+      /** Explicit opt-in: unknown-price AI calls run OUTSIDE the cost limit (no longer a guarantee). Default off (CXH-04). */
+      allowUnknownCost: z.boolean().optional(),
     })
     .default(DEFAULT_LIMITS),
 });

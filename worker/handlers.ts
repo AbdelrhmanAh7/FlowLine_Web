@@ -25,6 +25,8 @@ import { attemptsFor, backoffMs, sleep } from "./retry";
 
 export const MAX_SUBFLOW_DEPTH = 3;
 const FILE_MAX_BYTES = 5 * 1024 * 1024;
+/** Longest Retry-After a step waits for when an app's token endpoint is temporarily unavailable (CXH-14). */
+export const MAX_CREDENTIAL_RETRY_WAIT_MS = 60_000;
 
 export interface HandlerContext {
   db: Db;
@@ -287,15 +289,27 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
     throw new NodeError("POLICY_MISMATCH", "The connection differs from the run's permission policy");
   }
 
+  // Credentials. A TEMPORARY failure (the provider's token endpoint rate-limited or unavailable: CONNECTION_UNAVAILABLE,
+  // credentials untouched — CXH-14) is retried within the step's own attempt budget, waiting the provider's
+  // Retry-After (bounded); a Retry-After beyond the bound isn't waited for. The final error keeps its retry metadata.
   let rt: Awaited<ReturnType<typeof getRuntimeCredentials>>;
-  try {
-    rt = await getRuntimeCredentials(ctx.db, { connectionId, workspaceId: ctx.run.workspaceId, providerId: provider.id, requiredScopes: action.requiredScopes, actingUserId: (ctx.run.policy as { actingUserId?: string } | null)?.actingUserId });
-  } catch (e) {
-    if (e instanceof ConnectionError) {
+  const credAttempts = attemptsFor(cfg.retry as { maxAttempts?: number });
+  for (let attempt = 1; ; attempt++) {
+    try {
+      rt = await getRuntimeCredentials(ctx.db, { connectionId, workspaceId: ctx.run.workspaceId, providerId: provider.id, requiredScopes: action.requiredScopes, actingUserId: (ctx.run.policy as { actingUserId?: string } | null)?.actingUserId });
+      break;
+    } catch (e) {
+      if (!(e instanceof ConnectionError)) throw e;
+      const waitMs = e.retryable ? (e.retryAfterMs ?? backoffMs(attempt)) : null;
+      if (waitMs != null && waitMs <= MAX_CREDENTIAL_RETRY_WAIT_MS && attempt < credAttempts && !env.signal.aborted) {
+        env.log(`attempt ${attempt}: ${e.code}${e.retryAfterMs != null ? ` (retry after ${e.retryAfterMs}ms)` : ""}; retrying`);
+        await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_retry", nodeId: node.id, data: { attempt, error: e.code, waitMs } });
+        await sleep(waitMs, env.signal);
+        continue;
+      }
       await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "connection_blocked", nodeId: node.id, data: { code: e.code } });
-      throw new NodeError(e.code, e.message);
+      throw new NodeError(e.code, e.message, { retryable: e.retryable, retryAfterMs: e.retryAfterMs });
     }
-    throw e;
   }
   ctx.secrets.push(...rt.secrets);
 

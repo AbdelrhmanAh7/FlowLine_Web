@@ -108,10 +108,12 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
   const [ws] = await db.select().from(schema.workspace).where(eq(schema.workspace.id, run.workspaceId));
   const limits = version!.limits;
   // The agent's spend is what the LEDGER holds for this run (every model attempt — retries, fallbacks, possible
-  // charges, a dead worker's reservations — and every tool step), not only the answers it received (CXH-04).
-  let costMicros = Math.max(run.costMicros, await agentRunSpentMicros(db, run.workspaceId, runId));
+  // charges, a dead worker's reservations — and every tool step), not only the answers it received (CXH-04). It is
+  // always READ from the ledger (after every reservation / settlement), never accumulated here: a resumed tool call
+  // whose reservation is already in the ledger must not be counted twice (CXH-18).
+  let costMicros = await agentRunSpentMicros(db, run.workspaceId, runId);
   const refreshSpent = async () => {
-    costMicros = Math.max(costMicros, await agentRunSpentMicros(db, run.workspaceId, runId));
+    costMicros = await agentRunSpentMicros(db, run.workspaceId, runId);
   };
 
   const update = async (set: Partial<typeof schema.agentRun.$inferInsert>) => {
@@ -225,17 +227,17 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     const usageKey = `${runId}:step:${index}`;
     const stepPrice = priceFor(ws!.prices ?? {}, "agent_step");
     const stepCost = stepPrice?.perCallMicros ?? 0;
-    // Tool steps count toward the agent's own hard cost limit, not only the workspace budget.
-    if (limits.maxCostMicros != null && costMicros + stepCost > limits.maxCostMicros) {
-      throw new NodeError("AGENT_COST_LIMIT", `The next tool call would exceed the agent's cost limit (spent ${costMicros} of ${limits.maxCostMicros} micro-units)`);
-    }
+    // Tool steps count toward the agent's own hard cost limit, not only the workspace budget. The locked, idempotent
+    // reservation decides (CXH-18): a resumed call (e.g. after its child workflow waited for approval) already holds
+    // its reservation under this key, so it needs no more budget and is not checked — or counted — a second time.
     try {
-      await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "agent_step", idempotencyKey: usageKey, estimatedMicros: stepPrice?.perCallMicros ?? 0, unpriced: !stepPrice, agentCapMicros: limits.maxCostMicros });
+      await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "agent_step", idempotencyKey: usageKey, estimatedMicros: stepCost, unpriced: !stepPrice, agentCapMicros: limits.maxCostMicros, holder: workerId });
     } catch (e) {
       if (e instanceof BudgetExceededError) throw new NodeError("BUDGET_EXCEEDED", e.message);
       if (e instanceof AgentCostLimitError) throw new NodeError("AGENT_COST_LIMIT", e.message);
       throw e;
     }
+    await refreshSpent();
     let result: unknown;
     let content: string;
     if (call.name === "knowledge_search") {
@@ -273,6 +275,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
         } catch (e) {
           if (!(e instanceof HttpError)) throw e;
           await settleUsage(db, usageKey, { costMicros: 0, unpriced: !stepPrice });
+          await refreshSpent();
           await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, error: { code: e.code, message: e.message }, latencyMs: Date.now() - started });
           return JSON.stringify({ error: e.message });
         }
@@ -297,7 +300,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       content = untrusted(JSON.stringify(redact(result))).text;
     }
     await settleUsage(db, usageKey, { costMicros: stepCost, unpriced: !stepPrice });
-    costMicros += stepCost;
+    await refreshSpent(); // the ledger already holds this step's cost (reserved, now settled): never added again
     await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, result, latencyMs: Date.now() - started, costMicros: stepCost });
     return content;
   };
@@ -427,7 +430,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       let result: Awaited<ReturnType<typeof chat>> | null = null;
       const started = Date.now();
       try {
-        result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: `${runId}:model:${index}`, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal, agentCapMicros: limits.maxCostMicros });
+        result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: `${runId}:model:${index}`, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal, agentCapMicros: limits.maxCostMicros, agentAllowsUnknownCost: limits.allowUnknownCost === true });
       } catch (e) {
         await refreshSpent();
         if (ac.signal.aborted) return await fail("AGENT_TIMEOUT", `The agent exceeded its time limit (${Math.round(limits.timeoutMs / 1000)}s)`);

@@ -26,6 +26,11 @@ export function perTokenUsdToMicrosPerM(v: unknown): number | undefined {
   return Math.round(n * 1e12);
 }
 
+/** A price object was supplied (whatever its content): only then can the listing invalidate a known price. */
+function supplied(p: unknown): boolean {
+  return p != null && typeof p === "object" && Object.keys(p as object).length > 0;
+}
+
 function pricing(input: unknown, output: unknown, cacheRead?: unknown, cacheWrite?: unknown, sourceUrl?: string): AiModelPricing | null {
   const i = perTokenUsdToMicrosPerM(input);
   const o = perTokenUsdToMicrosPerM(output);
@@ -48,13 +53,15 @@ export function parseOpenRouterModels(body: unknown, offset: number): { models: 
     if (!m || typeof m !== "object" || !validModelId(m.id)) malformed("an entry has no valid id");
     const params = Array.isArray(m.supported_parameters) ? (m.supported_parameters as unknown[]) : null;
     const caps: Partial<AiModelCapabilities> = params ? { tools: params.includes("tools") ? "SUPPORTED" : "UNSUPPORTED", ...(params.includes("structured_outputs") ? { structuredOutput: "SUPPORTED" as const } : {}) } : {};
+    const price = pricing(m.pricing?.prompt, m.pricing?.completion, undefined, undefined, "https://openrouter.ai/docs/api/api-reference/models/get-models");
     models.push({
       id: m.id,
       ownedBy: m.id.includes("/") ? m.id.split("/")[0]!.slice(0, 120) : null,
       contextWindow: num(m.context_length),
       maxOutputTokens: num(m.top_provider?.max_completion_tokens),
       capabilities: caps,
-      pricing: pricing(m.pricing?.prompt, m.pricing?.completion, undefined, undefined, "https://openrouter.ai/docs/api/api-reference/models/get-models"),
+      pricing: price,
+      pricingInvalid: !price && supplied(m.pricing),
       deprecated: typeof m.expiration_date === "string" && m.expiration_date !== "" && Date.parse(m.expiration_date) < Date.now(),
     });
   }
@@ -72,13 +79,15 @@ export function parseVercelModels(body: unknown): { models: DiscoveredModel[]; n
   for (const m of d.data as { id?: unknown; context_window?: unknown; max_tokens?: unknown; tags?: unknown; pricing?: { input?: unknown; output?: unknown; input_cache_read?: unknown; input_cache_write?: unknown } }[]) {
     if (!m || typeof m !== "object" || !validModelId(m.id)) malformed("an entry has no valid id");
     const tags = Array.isArray(m.tags) ? (m.tags as unknown[]) : [];
+    const price = pricing(m.pricing?.input, m.pricing?.output, m.pricing?.input_cache_read, m.pricing?.input_cache_write, "https://vercel.com/docs/ai-gateway/sdks-and-apis/rest-api");
     models.push({
       id: m.id,
       ownedBy: m.id.includes("/") ? m.id.split("/")[0]!.slice(0, 120) : null,
       contextWindow: num(m.context_window),
       maxOutputTokens: num(m.max_tokens),
       capabilities: { ...(tags.includes("tool-use") ? { tools: "SUPPORTED" as const } : {}), ...(tags.includes("reasoning") ? { reasoning: "SUPPORTED" as const } : {}), ...(tags.includes("vision") ? { vision: "SUPPORTED" as const } : {}) },
-      pricing: pricing(m.pricing?.input, m.pricing?.output, m.pricing?.input_cache_read, m.pricing?.input_cache_write, "https://vercel.com/docs/ai-gateway/sdks-and-apis/rest-api"),
+      pricing: price,
+      pricingInvalid: !price && supplied(m.pricing),
     });
   }
   return { models, next: null };

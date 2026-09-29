@@ -550,6 +550,13 @@ export const usageEvent = pgTable(
     costMicros: bigint("cost_micros", { mode: "number" }).notNull().default(0),
     /** True when no price is configured for this provider/model (cost recorded as 0, flagged). */
     unpriced: boolean("unpriced").notNull().default(false),
+    /**
+     * The execution lease that made this reservation (the run's / agent run's `locked_by` at reservation time). An
+     * open reservation is only treated as abandoned once that lease is gone (CXH-17), never on age alone.
+     */
+    holder: text("holder"),
+    /** Set when recovery settled this open reservation as abandoned; a late result of the attempt reconciles it. */
+    abandonedAt: timestamp("abandoned_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },
@@ -751,6 +758,11 @@ export interface AgentLimits {
   maxToolCalls: number;
   maxCostMicros: number | null;
   timeoutMs: number;
+  /**
+   * With a cost limit: the owner explicitly lets this agent make calls whose price is unknown. Those calls are recorded
+   * as unknown and are NOT covered by the cost limit (the limit is then no longer a guarantee). Default off (CXH-04).
+   */
+  allowUnknownCost?: boolean;
 }
 
 export const agent = pgTable(
@@ -1112,6 +1124,13 @@ export const aiConnection = pgTable(
     status: text("status").notNull().default("CONNECTED"),
     verification: text("verification").notNull().default("IMPLEMENTED"),
     lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+    /**
+     * How the key was last proven to work (CXH-11): "listing" (a key-required model list), "key-endpoint" (an
+     * authenticated, non-billable key endpoint) or "inference" (a disclosed inference test). Null = never proven.
+     * Only valid for the credential version it checked (`keyCheckedCredVersion`).
+     */
+    keyCheckMethod: text("key_check_method"),
+    keyCheckedCredVersion: integer("key_checked_cred_version"),
     lastError: jsonb("last_error").$type<{ code: string; message: string; at: string } | null>(),
     credVersion: integer("cred_version").notNull().default(1),
     catalogRefreshedAt: timestamp("catalog_refreshed_at", { withTimezone: true }),
@@ -1155,6 +1174,8 @@ export const aiModel = pgTable(
     source: text("source").notNull(),
     snapshotVersion: integer("snapshot_version").notNull().default(1),
     stale: boolean("stale").notNull().default(false),
+    /** When the data in this row was observed (listing received / curated sync). Older observations never overwrite newer ones (CXH-12). */
+    observedAt: timestamp("observed_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("ai_model_unique").on(t.provider, t.modelId)],

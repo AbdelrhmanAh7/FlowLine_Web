@@ -22,7 +22,7 @@ export interface AgentConfig {
   route: AiRouteRef | null;
   tools: { tool: "knowledge_search" | "workflow_inspect" | "run_workflow"; flowId?: string; permission: Permission }[];
   knowledgeSourceIds: string[];
-  limits: { maxSteps: number; maxToolCalls: number; maxCostMicros: number | null; timeoutMs: number };
+  limits: { maxSteps: number; maxToolCalls: number; maxCostMicros: number | null; timeoutMs: number; allowUnknownCost?: boolean };
 }
 export const EMPTY_AGENT: AgentConfig = {
   name: "",
@@ -215,6 +215,19 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
             className="h-8 w-32"
           />
         </Field>
+        {/* CXH-04: an explicit, clearly labelled opt-out of the cap guarantee for unknown-price calls (default off). */}
+        <div className="flex w-full flex-col gap-1">
+          <label className="flex items-center gap-2 text-base">
+            <input
+              type="checkbox"
+              disabled={ro || c.limits.maxCostMicros == null}
+              checked={c.limits.maxCostMicros != null && c.limits.allowUnknownCost === true}
+              onChange={(e) => set({ limits: { ...c.limits, allowUnknownCost: e.target.checked } })}
+            />
+            {t("agents.form.allowUnknownCost")}
+          </label>
+          <span className={c.limits.allowUnknownCost && c.limits.maxCostMicros != null ? "text-sm text-warning" : "text-sm text-muted"}>{t("agents.form.allowUnknownCostHint")}</span>
+        </div>
       </Card>
       <div>
         <Button type="submit" variant="primary" loading={saving} disabledReason={readOnlyReason ?? invalid}>

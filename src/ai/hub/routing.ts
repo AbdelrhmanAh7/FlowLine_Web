@@ -141,6 +141,12 @@ export const DEFAULT_POLICY: AiPolicy = { mode: "MANUAL", allowUnknownCost: fals
 
 export interface PlannedRoute {
   route: ResolvedRoute;
+  /**
+   * The route's identity in the policy: the call's own (resolved) route, or one the policy added (fallback / pool).
+   * Refusal handling depends on it — never on the route's position, which filtering and LOW_COST sorting change
+   * (CXH-19): the primary's refusal is final, an alternative the actor may not use is skipped.
+   */
+  role: "primary" | "fallback";
   /** Why this route is in the plan ("primary", "fallback #2", "low-cost rank 1 (max 1200 µ)", …). */
   reason: string;
 }
@@ -191,20 +197,20 @@ export async function planRoutes(db: Db, workspace: Workspace, primary: Resolved
   const primaryRef = { connectionId: primary.connectionId, modelId: primary.modelId };
 
   const extra = mode === "FALLBACK" || mode === "FREE_ONLY" ? (policy.fallbackRoutes ?? []) : mode === "LOW_COST" ? (policy.lowCostPool ?? []) : [];
-  const candidates: { route: ResolvedRoute; label: string }[] = [{ route: primary, label: "primary" }];
+  const candidates: { route: ResolvedRoute; label: string; role: PlannedRoute["role"] }[] = [{ route: primary, label: "primary", role: "primary" }];
   let n = 0;
   for (const ref of extra.slice(0, 10)) {
     if (!isRouteRef(ref) || sameRef(ref, primaryRef) || candidates.some((c) => sameRef({ connectionId: c.route.connectionId, modelId: c.route.modelId }, ref))) continue;
     n++;
     try {
-      candidates.push({ route: await routeFor(db, workspace, ref, "policy"), label: mode === "LOW_COST" ? `pool #${n}` : `fallback #${n}` });
+      candidates.push({ route: await routeFor(db, workspace, ref, "policy"), label: mode === "LOW_COST" ? `pool #${n}` : `fallback #${n}`, role: "fallback" });
     } catch (e) {
       if (!(e instanceof HubError)) throw e;
       skipped.push({ ref, code: e.code, reason: e.message });
     }
   }
 
-  const kept: { route: ResolvedRoute; label: string; max: number | null }[] = [];
+  const kept: { route: ResolvedRoute; label: string; role: PlannedRoute["role"]; max: number | null }[] = [];
   for (const c of candidates) {
     const ref = { connectionId: c.route.connectionId, modelId: c.route.modelId };
     if (c.route.unavailable) {
@@ -244,7 +250,7 @@ export async function planRoutes(db: Db, workspace: Workspace, primary: Resolved
   }
 
   if (mode === "LOW_COST") kept.sort((a, b) => (a.max ?? Infinity) - (b.max ?? Infinity));
-  const plan = kept.map((k, i) => ({ route: k.route, reason: mode === "LOW_COST" ? `low-cost rank ${i + 1} (${k.label}, max ${k.max} µ)` : k.label }));
+  const plan = kept.map((k, i) => ({ route: k.route, role: k.role, reason: mode === "LOW_COST" ? `low-cost rank ${i + 1} (${k.label}, max ${k.max} µ)` : k.label }));
 
   if (!plan.length) {
     const why = skipped.map((s) => `${s.ref.modelId}: ${s.reason}`).join("; ").slice(0, 600);
