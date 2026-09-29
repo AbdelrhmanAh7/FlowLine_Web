@@ -15,7 +15,7 @@ test("Z.ai connect dialog: provider warning, required attestation, key can't be 
   await expect(dialog.getByTestId("ai-plan-warning")).toContainText("GLM Coding Plan keys are not accepted");
   await expect(dialog).toContainText("no model-list endpoint");
   await dialog.getByLabel("Name").fill("Z.ai PAYG");
-  await dialog.getByLabel("API key").fill(`sk-fake-zai-${randomUUID().replace(/-/g, "")}`);
+  await dialog.getByLabel("API key", { exact: true }).fill(`sk-fake-zai-${randomUUID().replace(/-/g, "")}`);
   const save = dialog.getByRole("button", { name: "Check and save" });
   await expect(save).toHaveAttribute("aria-disabled", "true"); // attestation first
   await dialog.getByTestId("ai-attest").getByRole("checkbox").check();
@@ -34,7 +34,7 @@ test("Alibaba connect dialog shows region + workspace ID fields and blocks an in
   await dialog.getByTestId("ai-attest").getByRole("checkbox").check();
   await expect(dialog.getByRole("button", { name: "Check and save" })).toHaveAttribute("aria-disabled", "true");
   await dialog.getByLabel("Workspace ID").fill("ws-e2e-1");
-  await dialog.getByLabel("API key").fill(`sk-fake-ds-${randomUUID().replace(/-/g, "")}`);
+  await dialog.getByLabel("API key", { exact: true }).fill(`sk-fake-ds-${randomUUID().replace(/-/g, "")}`);
   await dialog.getByRole("button", { name: "Check and save" }).click();
   await expect(page.getByRole("status").filter({ hasText: /Connected — \d+ models found/ })).toBeVisible();
 });
@@ -71,6 +71,8 @@ test("routing policy: owner saves FALLBACK with one route; an agent picks its ow
   await page.getByLabel("Instructions").fill("Answer briefly.");
   await page.getByRole("button", { name: /Create agent|Save/ }).first().click();
   await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}/);
+  // The pinned route is shown on the agent's Configuration tab (the detail page opens on Chat).
+  await page.getByRole("tab", { name: "Configuration" }).click();
   await expect(page.getByTestId("agent-ai-route")).toContainText("This version runs on");
   await expect(page.getByTestId("agent-ai-route")).toContainText("fake-claude");
 });
