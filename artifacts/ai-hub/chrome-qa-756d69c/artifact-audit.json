@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-29T09:05:17.341Z",
+  "generatedTextFilesScanned": 35,
+  "secretCanaryHits": [],
+  "productCodeChanged": false,
+  "commitsCreated": 0,
+  "serversStartedStoppedOrRebuilt": false,
+  "scope": "All authored evidence under artifacts/ai-hub/chrome-qa-756d69c/"
+}

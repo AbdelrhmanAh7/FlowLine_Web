@@ -1,0 +1,455 @@
+
+> flowline@0.1.0 test:e2e C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+> playwright test "--project=chromium" "--project=firefox"
+
+[WebServer] 
+[WebServer] > flowline@0.1.0 db:migrate:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+[WebServer] > node scripts/with-env.mjs .env.test tsx src/db/migrate.ts
+[WebServer] 
+[WebServer] migrated postgres://***@127.0.0.1:5433/flowline_test_aihub
+[WebServer] 
+[WebServer] > flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+[WebServer] > node scripts/dev-test.mjs
+[WebServer] 
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] [seed-platform] test platform credentials ready
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] [fake-ai] listening on http://127.0.0.1:4021
+[WebServer] Fake provider server listening on http://127.0.0.1:4020
+[WebServer] Control API: POST http://127.0.0.1:4020/__fake/reset | GET http://127.0.0.1:4020/__fake/requests?provider=slack | GET http://127.0.0.1:4020/__fake/state/slack | POST http://127.0.0.1:4020/__fake/fault
+[WebServer] ▲ Next.js 16.3.6 (Turbopack)
+[WebServer] - Local:         http://localhost:3100
+[WebServer] - Network:       http://100.73.156.121:3100
+[WebServer] - Environments: .env
+[WebServer] ✓ Ready in 406ms
+[WebServer] ✓ Running next.config.ts took 168ms
+[WebServer] 2026-09-29T01:39:44.896Z [worker] starting LAPTOP-AGGSOJ7U-74596-ef3d5b
+[WebServer] 2026-09-29T01:39:44.960Z [worker] agent run da9decae-4fb1-494d-b956-2dd79f648231 claimed
+[WebServer] 2026-09-29T01:39:44.965Z [worker] agent run 729fe196-62ee-47a3-a8de-e9dd25148b6c claimed
+[WebServer] 2026-09-29T01:39:44.983Z [worker] agent run 36100086-af15-4801-9589-524329aa0482 claimed
+[WebServer] 2026-09-29T01:39:45.000Z [worker] agent run 36df7f16-80a6-4b95-8782-3f3cbcc04c7b claimed
+[WebServer] 2026-09-29T01:39:45.060Z [worker] agent run da9decae-4fb1-494d-b956-2dd79f648231 succeeded
+[WebServer] 2026-09-29T01:39:45.067Z [worker] agent run 56ddb7e5-215e-4a24-89a4-61cc2223588a claimed
+[WebServer] 2026-09-29T01:39:45.070Z [worker] agent run 729fe196-62ee-47a3-a8de-e9dd25148b6c succeeded
+[WebServer] 2026-09-29T01:39:45.071Z [worker] agent run 36100086-af15-4801-9589-524329aa0482 succeeded
+[WebServer] 2026-09-29T01:39:45.073Z [worker] agent run dca42961-e295-4b6b-947d-afa67a4fb84f claimed
+[WebServer] 2026-09-29T01:39:45.075Z [worker] agent run 29109199-de4b-41f0-a1ea-b512110dcaab claimed
+[WebServer] 2026-09-29T01:39:45.092Z [worker] agent run 36df7f16-80a6-4b95-8782-3f3cbcc04c7b succeeded
+[WebServer] 2026-09-29T01:39:45.095Z [worker] agent run e8f15547-ff43-4e49-9941-78f71949aa27 claimed
+[WebServer] 2026-09-29T01:39:45.115Z [worker] agent run dca42961-e295-4b6b-947d-afa67a4fb84f succeeded
+[WebServer] 2026-09-29T01:39:45.116Z [worker] agent run 56ddb7e5-215e-4a24-89a4-61cc2223588a succeeded
+[WebServer] 2026-09-29T01:39:45.122Z [worker] agent run 3dc062b1-7c83-4e0c-ad94-a0112345d8c0 claimed
+[WebServer] 2026-09-29T01:39:45.125Z [worker] agent run 1df556a8-d0f9-4492-b4a9-ab685c253a20 claimed
+[WebServer] 2026-09-29T01:39:45.126Z [worker] agent run 29109199-de4b-41f0-a1ea-b512110dcaab succeeded
+[WebServer] 2026-09-29T01:39:45.130Z [worker] agent run 1df556a8-d0f9-4492-b4a9-ab685c253a20 failed
+[WebServer] 2026-09-29T01:39:45.131Z [worker] agent run 3dc062b1-7c83-4e0c-ad94-a0112345d8c0 failed
+[WebServer] 2026-09-29T01:39:45.134Z [worker] agent run e8f15547-ff43-4e49-9941-78f71949aa27 succeeded
+[WebServer] 
+[WebServer]  GET /api/health?require=worker 200 in 1632ms (next.js: 1476ms, application-code: 156ms)
+
+Running 89 tests using 2 workers
+
+[WebServer]  POST /api/auth/sign-up/email 200 in 1316ms (next.js: 1188ms, application-code: 127ms)
+[WebServer]  GET /api/test/outbox?email=e2e-4ee191e6%40flowline-e2e.test 200 in 55ms (next.js: 47ms, application-code: 8ms)
+[WebServer]  POST /api/email 200 in 108ms (next.js: 83ms, application-code: 26ms)
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+[WebServer]  POST /api/auth/sign-in/email 200 in 89ms (next.js: 16ms, application-code: 72ms)
+[WebServer] [auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+[WebServer]  POST /api/workspaces 201 in 95ms (next.js: 53ms, application-code: 42ms)
+[WebServer]  POST /api/onboarding 200 in 54ms (next.js: 39ms, application-code: 15ms)
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[WebServer] [auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+[WebServer]  GET /w/e2e-5cf693/settings?tab=ai 200 in 1159ms (next.js: 859ms, application-code: 300ms)
+[WebServer]  GET /admin/setup 200 in 311ms (next.js: 265ms, application-code: 46ms)
+[WebServer]  GET /api/health 200 in 16ms (next.js: 5ms, application-code: 11ms)
+[WebServer]  GET /api/platform/setup 404 in 243ms (next.js: 239ms, application-code: 4ms)
+[WebServer]  POST /api/platform/setup/redeem 400 in 429ms (next.js: 422ms, application-code: 8ms)
+[WebServer]  GET /api/workspaces/59238a0b-2763-4d7a-8cea-1c02fb4b3ba7/ai 200 in 1277ms (next.js: 1224ms, application-code: 53ms)
+[WebServer]  GET /api/workspaces/59238a0b-2763-4d7a-8cea-1c02fb4b3ba7/ai/models 200 in 963ms (next.js: 934ms, application-code: 29ms)
+[WebServer]  POST /api/workspaces/59238a0b-2763-4d7a-8cea-1c02fb4b3ba7/ai/connections 201 in 1001ms (next.js: 925ms, application-code: 75ms)
+[WebServer] ⨯ Failed to generate static paths for /api/workspaces/[wid]/ai:
+[WebServer] Error: Jest worker encountered 2 child process exceptions, exceeding retry limit
+[WebServer]     at ignore-listed frames {
+[WebServer]   type: 'WorkerError'
+[WebServer] }
+[WebServer] ⨯ Failed to generate static paths for /api/workspaces/[wid]/ai/models:
+[WebServer] Error: Jest worker encountered 2 child process exceptions, exceeding retry limit
+[WebServer]     at ignore-listed frames {
+[WebServer]   type: 'WorkerError'
+[WebServer] }
+[WebServer]  GET /api/workspaces/59238a0b-2763-4d7a-8cea-1c02fb4b3ba7/ai 200 in 180ms (next.js: 17ms, application-code: 163ms)
+[WebServer]  GET /api/workspaces/59238a0b-2763-4d7a-8cea-1c02fb4b3ba7/ai/models 200 in 202ms (next.js: 35ms, application-code: 167ms)
+  ok  1 [chromium] › e2e\ai-hub-wave-b.spec.ts:10:5 › Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing (6.8s)
+[WebServer] 2026-09-29T01:39:55.021Z [worker] run 01eabf13-6429-4699-a4cd-34baeb461651 claimed
+[WebServer] 2026-09-29T01:39:55.067Z [worker] run 2939ded4-5a00-4f0a-a623-9d57154ff5f7 claimed
+[WebServer] 2026-09-29T01:39:55.103Z [worker] run 01eabf13-6429-4699-a4cd-34baeb461651 done
+  x   3 [chromium] › e2e\ai-hub-wave-b.spec.ts:27:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID (59ms)
+[WebServer] 2026-09-29T01:39:55.144Z [worker] run 2939ded4-5a00-4f0a-a623-9d57154ff5f7 done
+  x   4 [chromium] › e2e\ai-hub-wave-b.spec.ts:42:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model (0ms)
+  x   5 [chromium] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical (0ms)
+  x   6 [chromium] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser (0ms)
+  -   7 [chromium] › e2e\arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+  -   8 [chromium] › e2e\arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+  -   9 [chromium] › e2e\arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+  -  10 [chromium] › e2e\arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+  -  11 [chromium] › e2e\arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+  -  12 [chromium] › e2e\arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+  x  13 [chromium] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser (0ms)
+  -  14 [chromium] › e2e\beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+  x  15 [chromium] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical (0ms)
+  -  16 [chromium] › e2e\canvas.spec.ts:81:7 › canvas interactions & keyboard map › arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)
+  -  17 [chromium] › e2e\canvas.spec.ts:101:7 › canvas interactions & keyboard map › opening and selecting does not mark the flow dirty or bump its revision
+  -  18 [chromium] › e2e\canvas.spec.ts:113:7 › canvas interactions & keyboard map › drawer tabs follow the WAI-ARIA keyboard pattern
+  -  19 [chromium] › e2e\canvas.spec.ts:133:7 › canvas interactions & keyboard map › invalid connections are refused with an explanation
+  -  20 [chromium] › e2e\canvas.spec.ts:153:7 › canvas interactions & keyboard map › re-run from a step reuses upstream outputs
+  x  21 [chromium] › e2e\failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses (0ms)
+  -  22 [chromium] › e2e\failures.spec.ts:39:5 › save failure: silent retries then recovery, and manual retry after repeated failures
+  -  23 [chromium] › e2e\failures.spec.ts:63:5 › load failure: the canvas shows an error with a working Retry
+  -  24 [chromium] › e2e\failures.spec.ts:74:5 › offline: edits kept locally, run disabled, reconciled on reconnect
+  -  25 [chromium] › e2e\failures.spec.ts:97:5 › offline conflict: newer server copy is never silently overwritten
+  x  26 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser (0ms)
+  -  27 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+  -  28 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+  x  29 [chromium] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical (0ms)
+  x  30 [chromium] › e2e\library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements (0ms)
+  -  31 [chromium] › e2e\library.spec.ts:25:5 › settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves
+  x  32 [chromium] › e2e\phase2.spec.ts:80:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates (0ms)
+  -  33 [chromium] › e2e\phase2.spec.ts:146:5 › double-clicked Run starts one run, and Cancel stops it mid-request
+  -  34 [chromium] › e2e\phase2.spec.ts:174:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical
+  -  35 [chromium] › e2e\phase2.spec.ts:198:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs
+  -  36 [chromium] › e2e\phase2.spec.ts:252:5 › mobile: Phase 2 pages fit a phone screen without horizontal scrolling
+  x  37 [chromium] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical (0ms)
+  -  38 [chromium] › e2e\phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+  -  39 [chromium] › e2e\phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+  -  40 [chromium] › e2e\phase3.spec.ts:181:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+  -  41 [chromium] › e2e\phase3.spec.ts:206:7 › Copilot › invalid proposal and missing integration are explained and can't be applied; rejection changes nothing
+  -  42 [chromium] › e2e\phase3.spec.ts:222:7 › Copilot › patching an existing flow keeps the user's steps; removals need explicit confirmation
+  -  43 [chromium] › e2e\phase3.spec.ts:244:5 › billing sandbox: choose a test plan → fake checkout → verified webhook → plan in force
+  -  44 [chromium] › e2e\phase3.spec.ts:258:5 › history: restore an older version as a draft (rollback) — history is kept
+  -  45 [chromium] › e2e\phase3.spec.ts:274:5 › mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile
+  -  46 [chromium] › e2e\phase3.spec.ts:286:5 › SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over
+  -  47 [chromium] › e2e\phase3.spec.ts:346:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser
+  x  48 [chromium] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser (0ms)
+  -  49 [chromium] › e2e\prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser
+  x  50 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1440px (0ms)
+  -  51 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1280px
+  -  52 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1279px
+  -  53 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1024px
+  -  54 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 768px
+  -  55 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 767px
+  -  56 [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 375px
+  -  57 [chromium] › e2e\responsive.spec.ts:59:5 › builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile
+  -  58 [chromium] › e2e\responsive.spec.ts:92:5 › mobile is monitor-only: editing disabled with a persistent banner, running still works
+  -  59 [chromium] › e2e\responsive.spec.ts:124:5 › capture screens & states at 1440 / 1024 / 375
+  -  60 [chromium] › e2e\responsive.spec.ts:230:5 › capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375
+  x  61 [chromium] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical (0ms)
+  -  62 [chromium] › e2e\tenancy.spec.ts:46:5 › unauthenticated API access is rejected and app routes redirect to sign-in
+  -  63 [chromium] › e2e\tenancy.spec.ts:52:5 › sign-out clears local drafts
+  x  64 [firefox] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical (0ms)
+  x  65 [firefox] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser (0ms)
+  -  66 [firefox] › e2e\arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+  -  67 [firefox] › e2e\arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+  -  68 [firefox] › e2e\arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+  -  69 [firefox] › e2e\arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+  -  70 [firefox] › e2e\arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+  -  71 [firefox] › e2e\arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+  x  72 [firefox] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser (0ms)
+  -  73 [firefox] › e2e\beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+  x  74 [firefox] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical (0ms)
+  x  75 [firefox] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser (0ms)
+  -  76 [firefox] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+  -  77 [firefox] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+  x  78 [firefox] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical (0ms)
+  x  79 [firefox] › e2e\phase2.spec.ts:174:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical (0ms)
+  x  80 [firefox] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical (0ms)
+  -  81 [firefox] › e2e\phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+  -  82 [firefox] › e2e\phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+  -  83 [firefox] › e2e\phase3.spec.ts:181:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+  -  84 [firefox] › e2e\phase3.spec.ts:346:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser
+  x  85 [firefox] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser (0ms)
+  -  86 [firefox] › e2e\prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser
+  x  87 [firefox] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical (0ms)
+[WebServer] 2026-09-29T01:39:55.576Z [worker] run eb1a2cc4-0211-43fb-9d50-a3dfd363f820 claimed
+[WebServer] 2026-09-29T01:39:55.581Z [worker] run 9eec5329-2fd0-40de-9d7c-f95f0db21061 claimed
+[WebServer] 2026-09-29T01:39:55.586Z [worker] run 53fe0ffb-a3ab-47c0-8581-b9b6a712d88b claimed
+[WebServer] 2026-09-29T01:39:55.647Z [worker] run eb1a2cc4-0211-43fb-9d50-a3dfd363f820 done
+[WebServer] 2026-09-29T01:39:55.655Z [worker] run 9eec5329-2fd0-40de-9d7c-f95f0db21061 done
+[WebServer] 2026-09-29T01:39:55.656Z [worker] run 5ebf3a6c-d3de-4c4f-95d0-e11a46489722 claimed
+[WebServer] 2026-09-29T01:39:55.661Z [worker] run 1fc55a10-0ccb-4573-9be3-b995edbb2d8a claimed
+[WebServer] 2026-09-29T01:39:55.679Z [worker] run 53fe0ffb-a3ab-47c0-8581-b9b6a712d88b done
+[WebServer] 2026-09-29T01:39:55.706Z [worker] run 74bff7a2-611f-4ae3-a775-f70ebd0a3544 claimed
+[WebServer] 2026-09-29T01:39:55.715Z [worker] run 5ebf3a6c-d3de-4c4f-95d0-e11a46489722 done
+[WebServer] 2026-09-29T01:39:55.718Z [worker] run 1fc55a10-0ccb-4573-9be3-b995edbb2d8a done
+[WebServer] 2026-09-29T01:39:55.722Z [worker] run 6fdb8da4-0de7-4eaa-95b3-448c3c52aa35 claimed
+[WebServer] 2026-09-29T01:39:55.727Z [worker] run 4ecc887b-1342-4858-bd44-3c80140f2c28 claimed
+[WebServer] 2026-09-29T01:39:55.765Z [worker] run 74bff7a2-611f-4ae3-a775-f70ebd0a3544 done
+[WebServer] 2026-09-29T01:39:55.783Z [worker] run ac7e1376-c805-4b54-aef6-0f4dfffa3285 claimed
+[WebServer] 2026-09-29T01:39:55.786Z [worker] run 6fdb8da4-0de7-4eaa-95b3-448c3c52aa35 done
+[WebServer] 2026-09-29T01:39:55.789Z [worker] run d20b4666-5123-4225-959b-ab8fde2bfdad claimed
+[WebServer] 2026-09-29T01:39:55.795Z [worker] run 4ecc887b-1342-4858-bd44-3c80140f2c28 done
+[WebServer] 2026-09-29T01:39:55.838Z [worker] run ac7e1376-c805-4b54-aef6-0f4dfffa3285 done
+[WebServer] 2026-09-29T01:39:55.846Z [worker] run d20b4666-5123-4225-959b-ab8fde2bfdad done
+[WebServer] 2026-09-29T01:39:55.848Z [worker] run 3e88a521-1a3a-41da-a5a4-47d9fc664ec2 claimed
+[WebServer] 2026-09-29T01:39:55.892Z [worker] run 3e88a521-1a3a-41da-a5a4-47d9fc664ec2 done
+[WebServer] 2026-09-29T01:39:56.111Z [worker] run 05b6639c-7c23-45fe-84da-cc11c18098cc claimed
+[WebServer] 2026-09-29T01:39:56.115Z [worker] run ecdfa443-1ce9-46c1-ae06-c037e88f54c7 claimed
+[WebServer] 2026-09-29T01:39:56.121Z [worker] run 122e967e-2e11-42be-9a96-ec783835af50 claimed
+[WebServer] 2026-09-29T01:39:56.146Z [worker] run f7b43f63-3b32-4d1f-a046-ccc0789d13f8 claimed
+[WebServer] 2026-09-29T01:39:56.177Z [worker] run 05b6639c-7c23-45fe-84da-cc11c18098cc done
+[WebServer] 2026-09-29T01:39:56.183Z [worker] run ecdfa443-1ce9-46c1-ae06-c037e88f54c7 done
+[WebServer] 2026-09-29T01:39:56.185Z [worker] run f5db441d-e67e-4843-9677-d547f6ba92db claimed
+[WebServer] 2026-09-29T01:39:56.202Z [worker] run ae96167e-b20d-414d-94f4-56863d53a134 claimed
+[WebServer] 2026-09-29T01:39:56.214Z [worker] run 122e967e-2e11-42be-9a96-ec783835af50 done
+[WebServer] 2026-09-29T01:39:56.218Z [worker] run f7b43f63-3b32-4d1f-a046-ccc0789d13f8 done
+[WebServer] 2026-09-29T01:39:56.247Z [worker] run 59550dfa-7e60-482b-9a01-970ad194e9f2 claimed
+[WebServer] 2026-09-29T01:39:56.253Z [worker] run d747930c-5863-4b9f-b010-14b0d40d0a36 claimed
+[WebServer] 2026-09-29T01:39:56.257Z [worker] run f5db441d-e67e-4843-9677-d547f6ba92db done
+[WebServer] 2026-09-29T01:39:56.261Z [worker] run ae96167e-b20d-414d-94f4-56863d53a134 done
+[WebServer] 2026-09-29T01:39:56.279Z [worker] run 03885619-d051-458e-bbf3-bbba72723dab claimed
+[WebServer] 2026-09-29T01:39:56.296Z [worker] run 4e810e83-509d-4594-9873-582389047f27 claimed
+[WebServer] 2026-09-29T01:39:56.308Z [worker] run 59550dfa-7e60-482b-9a01-970ad194e9f2 done
+[WebServer] 2026-09-29T01:39:56.325Z [worker] run d747930c-5863-4b9f-b010-14b0d40d0a36 done
+[WebServer] 2026-09-29T01:39:56.326Z [worker] run febdf16e-9efe-494a-867c-a161c639fea8 claimed
+[WebServer] 2026-09-29T01:39:56.332Z [worker] run 8b0b9938-8a3c-4509-822a-b84d682c070f claimed
+[WebServer] 2026-09-29T01:39:56.351Z [worker] run 03885619-d051-458e-bbf3-bbba72723dab done
+[WebServer] 2026-09-29T01:39:56.367Z [worker] run 1e158516-f345-4ead-9c85-75c37b377290 claimed
+[WebServer] 2026-09-29T01:39:56.369Z [worker] run 4e810e83-509d-4594-9873-582389047f27 done
+[WebServer] 2026-09-29T01:39:56.386Z [worker] run dc46b4e5-8691-4d91-88f8-1e10ea4626bf claimed
+[WebServer] 2026-09-29T01:39:56.392Z [worker] run febdf16e-9efe-494a-867c-a161c639fea8 done
+[WebServer] 2026-09-29T01:39:56.407Z [worker] run 1742f439-2f78-49ed-889b-10459d2e9952 claimed
+[WebServer] 2026-09-29T01:39:56.408Z [worker] run 8b0b9938-8a3c-4509-822a-b84d682c070f done
+[WebServer] 2026-09-29T01:39:56.415Z [worker] run 93b64a5e-3de6-46a6-8742-d6d34596fca8 claimed
+[WebServer] 2026-09-29T01:39:56.432Z [worker] run 1e158516-f345-4ead-9c85-75c37b377290 done
+[WebServer] 2026-09-29T01:39:56.439Z [worker] run 02737f73-ed42-45e3-b61c-1bdc1ad26ce3 claimed
+[WebServer] 2026-09-29T01:39:56.457Z [worker] run dc46b4e5-8691-4d91-88f8-1e10ea4626bf done
+[WebServer] 2026-09-29T01:39:56.486Z [worker] run 1742f439-2f78-49ed-889b-10459d2e9952 done
+[WebServer] 2026-09-29T01:39:56.500Z [worker] run 93b64a5e-3de6-46a6-8742-d6d34596fca8 done
+[WebServer] 2026-09-29T01:39:56.512Z [worker] run 02737f73-ed42-45e3-b61c-1bdc1ad26ce3 done
+[WebServer] 2026-09-29T01:39:56.746Z [worker] run ae899131-a970-4501-862c-42cec83141f2 claimed
+[WebServer] 2026-09-29T01:39:56.750Z [worker] run d3a0a30d-61b8-466f-904e-059f2743cbdc claimed
+[WebServer] 2026-09-29T01:39:56.755Z [worker] run 48ee559b-0334-4e0e-a05b-216ad90bcbb7 claimed
+[WebServer] 2026-09-29T01:39:56.790Z [worker] run 6a2412d6-558a-402b-863b-3b29b9e516ac claimed
+[WebServer] 2026-09-29T01:39:56.812Z [worker] run ae899131-a970-4501-862c-42cec83141f2 done
+[WebServer] 2026-09-29T01:39:56.818Z [worker] run d3a0a30d-61b8-466f-904e-059f2743cbdc done
+[WebServer] 2026-09-29T01:39:56.819Z [worker] run 8174b93b-8cbd-47d6-9dc1-d8d4f11e4004 claimed
+[WebServer] 2026-09-29T01:39:56.833Z [worker] run 48ee559b-0334-4e0e-a05b-216ad90bcbb7 done
+[WebServer] 2026-09-29T01:39:56.834Z [worker] run 3ca778c4-1a1f-4b70-a1e8-e23c71f34aee claimed
+[WebServer] 2026-09-29T01:39:56.840Z [worker] run f374f53c-b406-4dce-be17-83c4bb3095fd claimed
+[WebServer] 2026-09-29T01:39:56.849Z [worker] run 6a2412d6-558a-402b-863b-3b29b9e516ac done
+[WebServer] 2026-09-29T01:39:56.875Z [worker] run 0aab9304-24d4-469a-a18f-f0e61ed41287 claimed
+[WebServer] 2026-09-29T01:39:56.892Z [worker] run 8174b93b-8cbd-47d6-9dc1-d8d4f11e4004 done
+[WebServer] 2026-09-29T01:39:56.897Z [worker] run 3ca778c4-1a1f-4b70-a1e8-e23c71f34aee done
+[WebServer] 2026-09-29T01:39:56.900Z [worker] run 0b454775-ea8f-4db4-a456-c3fc4ee9f0cd claimed
+[WebServer] 2026-09-29T01:39:56.914Z [worker] run f374f53c-b406-4dce-be17-83c4bb3095fd done
+[WebServer] 2026-09-29T01:39:56.915Z [worker] run e3ac55b5-d007-4a17-857a-b999f4de5e79 claimed
+[WebServer] 2026-09-29T01:39:56.920Z [worker] run 2d207b5e-39d0-46a3-9373-a0fdf6211ff2 claimed
+[WebServer] 2026-09-29T01:39:56.929Z [worker] run 0aab9304-24d4-469a-a18f-f0e61ed41287 done
+[WebServer] 2026-09-29T01:39:56.948Z [worker] run 70859305-a226-4977-8703-45f4f9a6a808 claimed
+[WebServer] 2026-09-29T01:39:56.981Z [worker] run 0b454775-ea8f-4db4-a456-c3fc4ee9f0cd done
+[WebServer] 2026-09-29T01:39:56.984Z [worker] run e3ac55b5-d007-4a17-857a-b999f4de5e79 done
+[WebServer] 2026-09-29T01:39:56.986Z [worker] run 2d207b5e-39d0-46a3-9373-a0fdf6211ff2 done
+[WebServer] 2026-09-29T01:39:56.987Z [worker] run 797e708c-ea08-4e6d-b1f6-51323e244881 claimed
+[WebServer] 2026-09-29T01:39:57.002Z [worker] run 2fbe117e-cd19-42cf-b174-29a64371edf7 claimed
+[WebServer] 2026-09-29T01:39:57.007Z [worker] run 7c1b7553-ff9d-46b5-869b-a1f0d4170adc claimed
+[WebServer] 2026-09-29T01:39:57.018Z [worker] run 70859305-a226-4977-8703-45f4f9a6a808 done
+[WebServer] 2026-09-29T01:39:57.044Z [worker] run e94027c9-2f68-46e1-bbcc-de3ae33a8a99 claimed
+[WebServer] 2026-09-29T01:39:57.067Z [worker] run 797e708c-ea08-4e6d-b1f6-51323e244881 done
+[WebServer] 2026-09-29T01:39:57.073Z [worker] run 2fbe117e-cd19-42cf-b174-29a64371edf7 done
+[WebServer] 2026-09-29T01:39:57.092Z [worker] run 7c1b7553-ff9d-46b5-869b-a1f0d4170adc done
+[WebServer] 2026-09-29T01:39:57.092Z [worker] scheduler fired 47
+[WebServer] 2026-09-29T01:39:57.099Z [worker] run b47e00ae-91cf-4d14-848a-25e1bccf079a claimed
+[WebServer] 2026-09-29T01:39:57.103Z [worker] run e94027c9-2f68-46e1-bbcc-de3ae33a8a99 done
+[WebServer] 2026-09-29T01:39:57.138Z [worker] run b47e00ae-91cf-4d14-848a-25e1bccf079a done
+  x   2 [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) (14.0s)
+  x  88 [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel (0ms)
+  -  89 [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)
+
+
+  1) [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Setting up the platform admin for platform-admin-1596215d@flowline-e2e.test')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Setting up the platform admin for platform-admin-1596215d@flowline-e2e.test') with timeout 10000ms
+      - waiting for getByText('Setting up the platform admin for platform-admin-1596215d@flowline-e2e.test')
+
+
+      51 |   await page.getByLabel("Setup code").fill(token);
+      52 |   await page.getByRole("button", { name: "Continue" }).click();
+    > 53 |   await expect(page.getByText(`Setting up the platform admin for ${email}`)).toBeVisible();
+         |                                                                              ^
+      54 |   expect(page.url()).not.toContain(token);
+      55 |
+      56 |   // 2. The bound identity creates and verifies its account (the test stack's outbox is its inbox).
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub\e2e\admin-panel.spec.ts:53:78
+
+    Error Context: test-results\admin-panel-platform-admin-373de-dential-canary-never-leaks--chromium\error-context.md
+
+  2) [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  3) [chromium] › e2e\ai-hub-wave-b.spec.ts:27:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID 
+
+    Error: browserContext.newPage: Target crashed 
+
+    Error Context: test-results\ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results\ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › e2e\ai-hub-wave-b.spec.ts:42:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  5) [chromium] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  6) [chromium] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  7) [chromium] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  8) [chromium] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  9) [chromium] › e2e\failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  10) [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  11) [chromium] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  12) [chromium] › e2e\library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  13) [chromium] › e2e\phase2.spec.ts:80:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  14) [chromium] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  15) [chromium] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  16) [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1440px ─────────────────────
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  17) [chromium] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  18) [firefox] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  19) [firefox] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  20) [firefox] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  21) [firefox] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  22) [firefox] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  23) [firefox] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  24) [firefox] › e2e\phase2.spec.ts:174:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  25) [firefox] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  26) [firefox] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  27) [firefox] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical 
+
+    Error: worker process exited unexpectedly (code=3221225794, signal=null)
+
+  27 failed
+    [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) 
+    [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel 
+    [chromium] › e2e\ai-hub-wave-b.spec.ts:27:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID 
+    [chromium] › e2e\ai-hub-wave-b.spec.ts:42:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model 
+    [chromium] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+    [chromium] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser 
+    [chromium] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser 
+    [chromium] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical 
+    [chromium] › e2e\failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses 
+    [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser 
+    [chromium] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical 
+    [chromium] › e2e\library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements 
+    [chromium] › e2e\phase2.spec.ts:80:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates 
+    [chromium] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical 
+    [chromium] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser 
+    [chromium] › e2e\responsive.spec.ts:43:9 › breakpoints › shell at 1440px ───────────────────────
+    [chromium] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical 
+    [firefox] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+    [firefox] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser 
+    [firefox] › e2e\beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser 
+    [firefox] › e2e\canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical 
+    [firefox] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser 
+    [firefox] › e2e\journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical 
+    [firefox] › e2e\phase2.spec.ts:174:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical 
+    [firefox] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical 
+    [firefox] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser ─
+    [firefox] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical 
+  61 did not run
+  1 passed (21.4s)
+ ELIFECYCLE  Command failed with exit code 1.

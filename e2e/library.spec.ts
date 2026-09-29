@@ -1,11 +1,16 @@
 import { expect, test } from "@playwright/test";
-import { setupUser } from "./helpers";
+import { connectAiApi, setupUser } from "./helpers";
 
 test("templates: a local template creates a flow and opens the canvas; design templates list their real requirements", async ({ page }) => {
   const { workspace } = await setupUser(page);
   await page.goto(`/w/${workspace.slug}/templates`);
   const lead = page.getByTestId("template-lead-enrichment");
   await expect(lead.getByRole("list", { name: "Requirements" })).toContainText("Not connected");
+  // Cloud-only AI: without a workspace AI connection the requirement says so (no server key is assumed)…
+  await expect(lead.getByRole("list", { name: "Requirements" })).toContainText("AI not configured");
+  // …and with one (and a default model), it is met.
+  await connectAiApi(page.request, workspace.id);
+  await page.reload();
   await expect(lead.getByRole("list", { name: "Requirements" })).toContainText("AI available");
   await expect(lead).not.toContainText(/d+ (uses|runs|installs)/); // no invented usage counts
 

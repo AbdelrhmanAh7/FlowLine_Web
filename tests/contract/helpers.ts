@@ -22,7 +22,11 @@ export interface Fake {
   lastRequest(provider: string): Promise<RecordedRequest>;
   state<T = unknown>(provider: string): Promise<T>;
   reset(): Promise<void>;
-  fault(f: { provider: string; pathPattern: string; mode: "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit"; times?: number; retryAfterSec?: number }): Promise<void>;
+  fault(f: { provider: string; pathPattern: string; mode: "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay"; times?: number; retryAfterSec?: number; delayMs?: number }): Promise<void>;
+  /** Registers a client the provider accepts (this id + one of these secrets); an empty list removes that client. Once any client is registered, unknown clients get invalid_client. */
+  oauthClient(provider: string, clientId: string, secrets: string[]): Promise<void>;
+  /** Forces the provider's next token response(s) to be an OAuth error with this description. */
+  oauthError(provider: string, error: string, description: string, times?: number): Promise<void>;
 }
 
 /** Starts the fake provider server on an ephemeral port and points the test env at it. */
@@ -61,6 +65,8 @@ export async function startFake(): Promise<Fake> {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(f),
       }),
+    oauthClient: (provider, clientId, secrets) => call("/__fake/oauth-client", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ provider, clientId, secrets }) }),
+    oauthError: (provider, error, description, times = 1) => call("/__fake/oauth-error", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ provider, error, description, times }) }),
   };
 }
 

@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
 import { DESIGN_TEMPLATES, type DesignTemplate } from "@/engine/design-templates";
-import { useCatalog, useConnections } from "@/lib/catalog";
+import { useAiOverview, type AiStatusDto } from "@/lib/ai";
+import { useConnections } from "@/lib/catalog";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
@@ -29,7 +30,7 @@ function templateText(t: Translator, group: "localTemplates" | "designTemplates"
 export default function TemplatesPage() {
   const t = useT();
   const { canEdit, workspace } = useWorkspace();
-  const catalog = useCatalog();
+  const ai = useAiOverview(workspace.id);
   const connections = useConnections(workspace.id);
   const online = useOnline();
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>("All");
@@ -129,7 +130,7 @@ export default function TemplatesPage() {
                             <p className="text-lg font-semibold">{shown.name}</p>
                             <p className="mt-1 text-base text-med">{shown.description}</p>
                           </div>
-                          <Requirements tpl={tpl} status={(p) => reqStatus(t, p, catalog.data, connections.data)} />
+                          <Requirements tpl={tpl} status={(p) => reqStatus(t, p, ai.data?.status, connections.data)} />
                           <details className="text-sm text-med">
                             <summary className="cursor-pointer text-hi">{t.plural("templates.setup", tpl.setup.length)}</summary>
                             <ol className="mt-2 list-decimal space-y-1 ps-5">
@@ -177,13 +178,14 @@ type ReqState = { ok: boolean; text: string };
 function reqStatus(
   t: Translator,
   provider: string,
-  catalog: ReturnType<typeof useCatalog>["data"],
+  ai: AiStatusDto | undefined,
   conns: ReturnType<typeof useConnections>["data"],
 ): ReqState {
   if (provider === "http") return { ok: true, text: t("templates.req.builtIn") };
   if (provider === "ai") {
-    if (!catalog) return { ok: false, text: t("templates.req.checking") };
-    return catalog.runtime.ai.available ? { ok: true, text: t("templates.req.aiAvailable") } : { ok: false, text: catalog.runtime.ai.reason ?? t("templates.req.aiNotConfigured") };
+    // Template AI steps use the workspace default model (an AI connection the member may use).
+    if (!ai) return { ok: false, text: t("templates.req.checking") };
+    return ai.defaultRoute && ai.defaultUsable ? { ok: true, text: t("templates.req.aiAvailable") } : { ok: false, text: t("templates.req.aiNotConfigured") };
   }
   if (!conns) return { ok: false, text: t("templates.req.checking") };
   const mine = conns.filter((c) => c.provider === provider);

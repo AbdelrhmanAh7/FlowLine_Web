@@ -1,0 +1,158 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+Run history
+Search flows or run number
+All runs
+Succeeded
+Failed
+Running
+Needs attention
+Cancelled
+▾
+#8
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 1.3s
+now
+⚡ Manual trigger
+Success
+· 0ms
+→
+✦ AI · Generate
+Success
+· 1.2s
+→
+◎ Output
+Success
+· 0ms
+▸
+#7
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 547ms
+22s ago
+▸
+#6
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 87ms
+1m ago
+▸
+#5
+CXQ OpenAI workflow
+FAILED
+1/2 · 61ms
+2m ago
+▸
+#4
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 65ms
+agent
+2m ago
+▸
+#3
+CXQ Anthropic workflow
+SUCCESS
+2/2 · 74ms
+4m ago
+▸
+#2
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 85ms
+4m ago
+▸
+#1
+CXQ OpenAI workflow
+FAILED
+1/2 · 53ms
+5m ago
+✦
+AI · Generate
+SUCCESS
+
+1.2s · run #8 · v7 · ai.generate · nft1x2 · 1 attempt
+
+✕
+model
+fake-claude
+policy
+FALLBACK
+protocol
+anthropic-messages
+provider
+anthropic
+unpriced
+false
+connection
+CXQ Anthropic
+costMicros
+0.000693
+costSource
+estimated
+inputTokens
+198
+routeReason
+fallback #1 after AI_PROVIDER_ERROR
+routeSource
+node
+connectionId
+49edca22-085e-4904-84cd-7eeef8c1a021
+fallbackFrom
+[object Object]
+outputTokens
+11
+cacheReadTokens
+0
+quarantinedLines
+0
+structuredOutput
+none
+Input
+Output
+Error
+Log
+{
+  "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+}
+↻ Re-run from this step
+
+Shows exactly what will run again — and what might repeat an external action — before anything starts.
+
+STEPS
+
+RUN OUTPUT
+
+{
+  "result": {
+    "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+  }
+}

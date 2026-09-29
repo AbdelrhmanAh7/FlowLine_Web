@@ -1,0 +1,437 @@
+[
+  {
+    "number": 1,
+    "status": "failed",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "failed",
+        "meta": null,
+        "output": null,
+        "error": {
+          "code": "AI_COST_UNKNOWN",
+          "message": "The price of fake-gpt-large is unknown and this workspace has a spending cap, so the call was not sent. Add its price in Settings → Usage (ai:openai/fake-gpt-large) or allow unknown-cost calls."
+        }
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "skipped",
+        "meta": null,
+        "output": null,
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 2,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-gpt-large",
+          "policy": "MANUAL",
+          "protocol": "openai-chat",
+          "provider": "openai",
+          "unpriced": false,
+          "connection": "CXQ OpenAI",
+          "costMicros": 484,
+          "costSource": "estimated",
+          "inputTokens": 198,
+          "routeReason": "primary",
+          "routeSource": "node",
+          "connectionId": "39ad3e16-7fcd-4929-b8cc-baf86e4c7a99",
+          "outputTokens": 11,
+          "cacheReadTokens": 0,
+          "reasoningTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 3,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "nimo61",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "lead": {
+            "name": "Ada Lovelace",
+            "email": "ada@example.com",
+            "employees": 120
+          }
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nimys2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-claude",
+          "policy": "MANUAL",
+          "protocol": "anthropic-messages",
+          "provider": "anthropic",
+          "unpriced": false,
+          "connection": "CXQ Anthropic",
+          "costMicros": 813,
+          "costSource": "estimated",
+          "inputTokens": 208,
+          "routeReason": "primary",
+          "routeSource": "node",
+          "connectionId": "49edca22-085e-4904-84cd-7eeef8c1a021",
+          "outputTokens": 21,
+          "cacheReadTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"lead\":{\"name\":\"Ada Lovelace\",\"email\":\"ada@example.com\",\"employees\":120}}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 4,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "approved once"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-gpt-large",
+          "policy": "MANUAL",
+          "protocol": "openai-chat",
+          "provider": "openai",
+          "unpriced": false,
+          "connection": "CXQ OpenAI",
+          "costMicros": 464,
+          "costSource": "estimated",
+          "inputTokens": 196,
+          "routeReason": "primary",
+          "routeSource": "node",
+          "connectionId": "39ad3e16-7fcd-4929-b8cc-baf86e4c7a99",
+          "outputTokens": 9,
+          "cacheReadTokens": 0,
+          "reasoningTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"text\":\"approved once\"}"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Summary: {\"text\":\"approved once\"}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 5,
+    "status": "failed",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "failed",
+        "meta": null,
+        "output": null,
+        "error": {
+          "code": "AI_AUTH_FAILED",
+          "message": "OpenAI rejected the API key (401). Rotate the key in Settings → AI Providers."
+        }
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "skipped",
+        "meta": null,
+        "output": null,
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 6,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-gpt-large",
+          "policy": "MANUAL",
+          "protocol": "openai-chat",
+          "provider": "openai",
+          "unpriced": false,
+          "connection": "CXQ OpenAI",
+          "costMicros": 484,
+          "costSource": "estimated",
+          "inputTokens": 198,
+          "routeReason": "primary",
+          "routeSource": "node",
+          "connectionId": "39ad3e16-7fcd-4929-b8cc-baf86e4c7a99",
+          "outputTokens": 11,
+          "cacheReadTokens": 0,
+          "reasoningTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 7,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-gpt-large",
+          "policy": "FALLBACK",
+          "protocol": "openai-chat",
+          "provider": "openai",
+          "unpriced": false,
+          "connection": "CXQ OpenAI",
+          "costMicros": 484,
+          "costSource": "estimated",
+          "inputTokens": 198,
+          "routeReason": "primary",
+          "routeSource": "node",
+          "connectionId": "39ad3e16-7fcd-4929-b8cc-baf86e4c7a99",
+          "outputTokens": 11,
+          "cacheReadTokens": 0,
+          "reasoningTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 8,
+    "status": "succeeded",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "succeeded",
+        "meta": {
+          "model": "fake-claude",
+          "policy": "FALLBACK",
+          "protocol": "anthropic-messages",
+          "provider": "anthropic",
+          "unpriced": false,
+          "connection": "CXQ Anthropic",
+          "costMicros": 693,
+          "costSource": "estimated",
+          "inputTokens": 198,
+          "routeReason": "fallback #1 after AI_PROVIDER_ERROR",
+          "routeSource": "node",
+          "connectionId": "49edca22-085e-4904-84cd-7eeef8c1a021",
+          "fallbackFrom": [
+            {
+              "code": "AI_PROVIDER_ERROR",
+              "modelId": "fake-gpt-large",
+              "provider": "openai",
+              "connectionId": "39ad3e16-7fcd-4929-b8cc-baf86e4c7a99"
+            }
+          ],
+          "outputTokens": 11,
+          "cacheReadTokens": 0,
+          "quarantinedLines": 0,
+          "structuredOutput": "none"
+        },
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 9,
+    "status": "failed",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "failed",
+        "meta": null,
+        "output": null,
+        "error": {
+          "code": "AI_NO_FREE_ROUTE",
+          "message": "The workspace only allows verified free AI routes, and none is available for this call (fake-gpt-large: fake-gpt-large has a price (not verified zero); fake-claude: fake-claude has a price (not verified zero)). Nothing was sent."
+        }
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "skipped",
+        "meta": null,
+        "output": null,
+        "error": null
+      }
+    ]
+  },
+  {
+    "number": 10,
+    "status": "failed",
+    "steps": [
+      {
+        "nodeId": "netpa1",
+        "status": "succeeded",
+        "meta": null,
+        "output": {
+          "text": "Explain this QA sample."
+        },
+        "error": null
+      },
+      {
+        "nodeId": "nft1x2",
+        "status": "failed",
+        "meta": null,
+        "output": null,
+        "error": {
+          "code": "AI_CONNECTION_REVOKED",
+          "message": "The AI connection \"CXQ OpenAI\" was disconnected. Choose another connection or reconnect it in Settings → AI Providers."
+        }
+      },
+      {
+        "nodeId": "ngpwt3",
+        "status": "skipped",
+        "meta": null,
+        "output": null,
+        "error": null
+      }
+    ]
+  }
+]

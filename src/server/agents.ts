@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { configuredProviders } from "@/ai/chat";
 import { db, schema, type Db } from "@/db";
-import type { AgentLimits, AgentToolSpec } from "@/db/schema";
+import type { AgentLimits, AgentToolSpec, AiRouteRef } from "@/db/schema";
+import { isRouteRef } from "@/ai/hub/routing";
+import { assertRoutesUsable } from "@/ai/hub/selection";
 import type { CurrentUser } from "./access";
 import { audit, userActor, type Actor } from "./audit";
 import { HttpError, notFound } from "./http";
@@ -29,6 +30,8 @@ export const agentInput = z.object({
   instructions: z.string().trim().min(1).max(8000),
   provider: z.enum(["ollama", "anthropic"]).nullable().default(null),
   model: z.string().trim().max(120).nullable().default(null),
+  /** AI hub route for this version (connection + model). Null = snapshot the workspace default when saving. */
+  route: z.object({ connectionId: z.string().uuid(), modelId: z.string().trim().min(1).max(200) }).strict().nullable().default(null),
   tools: z
     .array(z.object({ tool: z.enum(Object.keys(AGENT_TOOLS) as [AgentToolName, ...AgentToolName[]]), flowId: z.string().uuid().optional(), permission: z.enum(["allow", "ask", "deny"]) }))
     .max(30)
@@ -40,6 +43,8 @@ export const agentInput = z.object({
       maxToolCalls: z.number().int().min(LIMIT_BOUNDS.maxToolCalls[0]).max(LIMIT_BOUNDS.maxToolCalls[1]),
       maxCostMicros: z.number().int().min(0).nullable(),
       timeoutMs: z.number().int().min(LIMIT_BOUNDS.timeoutMs[0]).max(LIMIT_BOUNDS.timeoutMs[1]),
+      /** Explicit opt-in: unknown-price AI calls run OUTSIDE the cost limit (no longer a guarantee). Default off (CXH-04). */
+      allowUnknownCost: z.boolean().optional(),
     })
     .default(DEFAULT_LIMITS),
 });
@@ -48,8 +53,9 @@ export type AgentInput = z.infer<typeof agentInput>;
 /** Everything an agent version references must exist in the SAME workspace (no cross-tenant tools). */
 async function validateRefs(dbx: Db, workspaceId: string, input: AgentInput) {
   if (input.provider) {
-    const p = configuredProviders().find((x) => x.id === input.provider);
-    if (!p?.available) throw new HttpError(422, "AI_PROVIDER_UNAVAILABLE", p?.reason ?? `AI provider "${input.provider}" isn't configured`);
+    // Pre-hub server providers can't be pinned any more: agents use the workspace AI connection (per-agent routes: Wave B).
+    if (input.provider === "ollama") throw new HttpError(422, "AI_LOCAL_MIGRATION_REQUIRED", "Local AI (Ollama) is no longer supported. Leave the provider empty to use the workspace's AI connection.");
+    throw new HttpError(422, "AI_PROVIDER_UNAVAILABLE", "Server-configured AI providers were replaced by AI connections. Leave the provider empty to use the workspace's AI connection.");
   }
   for (const t of input.tools) {
     if ((t.tool === "run_workflow" || t.tool === "workflow_inspect") && !t.flowId) throw new HttpError(422, "VALIDATION", `${t.tool} needs a workflow`);
@@ -79,6 +85,8 @@ async function validateRefs(dbx: Db, workspaceId: string, input: AgentInput) {
 export async function createAgent(user: CurrentUser, workspaceId: string, raw: unknown) {
   const input = agentInput.parse(raw);
   await validateRefs(db, workspaceId, input);
+  // Selection-time check: the person saving may only pick a route on a connection their role may USE.
+  if (input.route) await assertRoutesUsable(db, user.id, workspaceId, [input.route]);
   return db.transaction(async (tx) => {
     const [a] = await tx.insert(schema.agent).values({ workspaceId, name: input.name, description: input.description, createdBy: user.id }).returning();
     const v = await insertAgentVersion(tx, user, a!.id, 1, input);
@@ -90,7 +98,23 @@ export async function createAgent(user: CurrentUser, workspaceId: string, raw: u
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * The version's route is a SNAPSHOT: the picked route, or the workspace default at save time. A later change of the
+ * workspace default doesn't silently change what a saved agent version runs on (like a published flow).
+ */
+async function versionRoute(tx: Tx, agentId: string, input: AgentInput): Promise<AiRouteRef | null> {
+  if (input.route) return { connectionId: input.route.connectionId, modelId: input.route.modelId };
+  if (input.provider) return null;
+  const [ws] = await tx
+    .select({ route: schema.workspace.aiDefaultRoute })
+    .from(schema.workspace)
+    .innerJoin(schema.agent, eq(schema.agent.workspaceId, schema.workspace.id))
+    .where(eq(schema.agent.id, agentId));
+  return isRouteRef(ws?.route) ? { connectionId: ws.route.connectionId, modelId: ws.route.modelId } : null;
+}
+
 async function insertAgentVersion(tx: Tx, user: CurrentUser, agentId: string, version: number, input: AgentInput) {
+  const route = await versionRoute(tx, agentId, input);
   const [v] = await tx
     .insert(schema.agentVersion)
     .values({
@@ -99,6 +123,7 @@ async function insertAgentVersion(tx: Tx, user: CurrentUser, agentId: string, ve
       instructions: input.instructions,
       provider: input.provider,
       model: input.model,
+      route,
       tools: input.tools as AgentToolSpec[],
       knowledgeSourceIds: input.knowledgeSourceIds,
       limits: input.limits,
@@ -115,6 +140,7 @@ export async function updateAgent(user: CurrentUser, agentId: string, raw: unkno
     const [a] = await tx.select().from(schema.agent).where(and(eq(schema.agent.id, agentId), isNull(schema.agent.deletedAt))).for("update");
     if (!a) throw notFound("Agent not found");
     await validateRefs(db, a.workspaceId, input);
+    if (input.route) await assertRoutesUsable(db, user.id, a.workspaceId, [input.route]);
     const [{ max }] = await tx.select({ max: sql<number>`coalesce(max(${schema.agentVersion.version}), 0)::int` }).from(schema.agentVersion).where(eq(schema.agentVersion.agentId, a.id));
     const v = await insertAgentVersion(tx, user, a.id, max + 1, input);
     const [updated] = await tx
@@ -129,7 +155,7 @@ export async function updateAgent(user: CurrentUser, agentId: string, raw: unkno
 
 export async function listAgents(workspaceId: string) {
   return db
-    .select({ id: schema.agent.id, name: schema.agent.name, description: schema.agent.description, updatedAt: schema.agent.updatedAt, version: schema.agentVersion.version, tools: schema.agentVersion.tools, provider: schema.agentVersion.provider, model: schema.agentVersion.model })
+    .select({ id: schema.agent.id, name: schema.agent.name, description: schema.agent.description, updatedAt: schema.agent.updatedAt, version: schema.agentVersion.version, tools: schema.agentVersion.tools, provider: schema.agentVersion.provider, model: schema.agentVersion.model, route: schema.agentVersion.route })
     .from(schema.agent)
     .leftJoin(schema.agentVersion, eq(schema.agentVersion.id, schema.agent.currentVersionId))
     .where(and(eq(schema.agent.workspaceId, workspaceId), isNull(schema.agent.deletedAt)))

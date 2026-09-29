@@ -5,7 +5,9 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { TRIGGER_TYPES, type NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
 import { nodeCategoryLabel, nodeText } from "@/i18n/engine-text";
+import { useAiOverview } from "@/lib/ai";
 import { useCatalog } from "@/lib/catalog";
+import { useWorkspace } from "../shell/workspace-context";
 import { CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn } from "../ui";
 
 export const DRAG_MIME = "application/x-flowline-node";
@@ -35,10 +37,12 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
   }, [q, t]);
   const catalog = useCatalog();
   const runtime = catalog.data?.runtime;
+  const { workspace } = useWorkspace();
+  const ai = useAiOverview(workspace.id);
   const disabledReason = (type: NodeType) => {
     if (TRIGGER_TYPES.includes(type) && hasTrigger) return t("builder.hasTrigger");
     if (type === "code.js" && runtime && !runtime.codeSandbox.available) return t("palette.unavailable", { reason: runtime.codeSandbox.reason ?? "" });
-    if (type.startsWith("ai.") && runtime && !runtime.ai.available) return t("palette.unavailable", { reason: runtime.ai.reason ?? "" });
+    if (type.startsWith("ai.") && ai.data && !ai.data.status.canUseAny) return t("palette.unavailable", { reason: t("aiHub.status.noUsableConnection") });
     return null;
   };
 

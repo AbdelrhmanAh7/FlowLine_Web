@@ -57,10 +57,12 @@ Assumed / not verified against a real sandbox account (no Paddle account exists 
 
 ## Operating notes
 
-- Env: `FLOWLINE_BILLING_PROVIDER=paddle`, `FLOWLINE_BILLING_PADDLE_KEY` (sandbox `pdl_sdbx_…`),
-  `FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET` (`pdl_ntfset_…` from the notification destination),
-  `FLOWLINE_BILLING_PADDLE_ENV=sandbox`, `FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN` (public client-side
-  token, sandbox `test_…`). Plans stay in `FLOWLINE_BILLING_PLANS` with `pri_…` price ids.
+- **In the app** (platform admin, `/admin` → **Billing (sandbox)** and **Platform settings**): the Paddle sandbox API
+  key (`pdl_sdbx_…`) with its public client-side token (`test_…`), the webhook secret (`pdl_ntfset_…`), the billing
+  provider in use, and the plans JSON (`pri_…` price ids). Stripe test-mode keys have their own cards. Changes apply to
+  the next checkout/webhook with no restart; a rotated webhook secret keeps the previous one valid for 24 h. The
+  operator gates stay env: `FLOWLINE_BILLING_PADDLE_ENV=sandbox` and `FLOWLINE_BILLING_ALLOW_LIVE` (unset). The old
+  `FLOWLINE_BILLING_*` key/plan variables are no longer read at runtime (use **Import from environment** once).
 - Owner setup in the Paddle **sandbox** dashboard (sandbox-vendors.paddle.com) before checkout works:
   1. **API key** (Developer tools > Authentication): `pdl_sdbx_apikey_…` with permissions for customers,
      transactions, subscriptions (read/write) and adjustments → `FLOWLINE_BILLING_PADDLE_KEY`.

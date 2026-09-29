@@ -1,0 +1,75 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+Settings
+Members
+General
+AI Providers
+API keys
+Plan & billing
+Usage & limits
+Audit log
+SSO
+OAuth apps
+Usage this month
+
+From the durable usage ledger: every AI call and app action is recorded once. Costs use the prices you configure below; nothing is estimated from list prices.
+
+KIND	PROVIDER / MODEL	EVENTS	TOKENS	COST
+agent_step	—	1	0	unpriced
+ai	anthropic / fake-claude	2	438	USD 0.0015
+ai	openai / fake-gpt-large	7	5,596	USD 0.0137
+execution	—	11	0	unpriced
+Limits
+MONTHLY BUDGET (USD)
+
+Costed steps fail before running once reached. Blank = no limit.
+
+CONCURRENT RUNS
+
+1–20 per workspace
+
+QUEUED RUNS
+
+Beyond this, new runs are refused
+
+EXECUTIONS PER MONTH
+
+Workflow + agent runs; blank = no limit. A billing plan's limit also applies.
+
+PRICES (USD)
+
+Keys: ai:<provider>/<model> (per million tokens), action:<action id> or action:<app>/* (per call). Unpriced usage is still counted and flagged.
+
+✕
+✕
++ Add price
+Save limits
+No changes to save
+Subscriptions and plans live under Plan & billing.

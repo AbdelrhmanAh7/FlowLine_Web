@@ -16,6 +16,8 @@ import { monthStart } from "@/server/usage";
 import { checkoutPageUrl, settingsUrls } from "./urls";
 import { PaddlePaymentAdapter } from "./paddle";
 import { loadBillingPlans, planById, planByProviderPrice, type BillingPlansConfig } from "./plans";
+import { getSetting } from "@/server/platform-settings";
+import { resolvePlatformCredential } from "@/server/platform-secrets";
 import { StripePaymentAdapter } from "./stripe";
 import { BillingProviderError, type BillingEventAction, type NormalizedSubscription, type PaymentAdapter, type PlanEntitlements } from "./types";
 
@@ -23,48 +25,60 @@ import { BillingProviderError, type BillingEventAction, type NormalizedSubscript
 const METER_EVENTS = { executions: "flowline.executions", cost_micros: "flowline.cost_micros" } as const;
 type Metric = keyof typeof METER_EVENTS;
 
-let cachedAdapter: PaymentAdapter | null | undefined;
-
 /**
- * The configured payment adapter, or null when no key is set. Never a live-mode adapter.
- * The provider is installation-level configuration: FLOWLINE_BILLING_PROVIDER
- * ("stripe", the default, or "paddle"), with the matching key/secret env vars.
+ * The configured payment adapter for ONE operation, or null when billing isn't configured. Never a live-mode adapter
+ * unless the operator enabled it in env. Resolved from the platform admin panel on every call — there is NO process
+ * cache (a rotation or revocation applies to the very next checkout/webhook in every web and worker process) and NO
+ * environment fallback for keys. FLOWLINE_BILLING_ALLOW_LIVE / FLOWLINE_BILLING_PADDLE_ENV stay operator safety gates.
  */
-export function getAdapter(): PaymentAdapter | null {
-  if (cachedAdapter !== undefined) return cachedAdapter;
-  const provider = (process.env.FLOWLINE_BILLING_PROVIDER ?? "stripe").toLowerCase();
+async function resolveBilling(): Promise<{ adapter: PaymentAdapter; previousWebhook: PaymentAdapter | null } | null> {
+  const provider = (await getSetting("billing.provider"))?.value ?? null;
   if (provider === "stripe") {
-    const key = process.env.FLOWLINE_BILLING_STRIPE_KEY;
-    cachedAdapter = key ? new StripePaymentAdapter(key, process.env.FLOWLINE_BILLING_WEBHOOK_SECRET) : null;
-  } else if (provider === "paddle") {
-    const key = process.env.FLOWLINE_BILLING_PADDLE_KEY;
-    const env = process.env.FLOWLINE_BILLING_PADDLE_ENV === "live" ? "live" : "sandbox";
-    cachedAdapter = key
-      ? new PaddlePaymentAdapter(key, process.env.FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET, { env, allowLive: process.env.FLOWLINE_BILLING_ALLOW_LIVE === "true" })
-      : null;
-  } else {
-    throw new Error(`Unknown FLOWLINE_BILLING_PROVIDER "${provider}" (expected "stripe" or "paddle")`);
+    const key = await resolvePlatformCredential("billing.stripe.test");
+    if (!key) return null;
+    const hook = await resolvePlatformCredential("billing.stripe.test.webhook");
+    return {
+      adapter: new StripePaymentAdapter(key.secret, hook?.secret),
+      previousWebhook: hook?.previous ? new StripePaymentAdapter(key.secret, hook.previous.secret) : null,
+    };
   }
-  return cachedAdapter;
+  if (provider === "paddle") {
+    // Only SANDBOX Paddle credentials are managed in the panel; live payments need explicit owner approval (env gates).
+    const env = process.env.FLOWLINE_BILLING_PADDLE_ENV === "live" ? "live" : "sandbox";
+    if (env !== "sandbox") return null;
+    const key = await resolvePlatformCredential("billing.paddle.sandbox");
+    if (!key) return null;
+    const hook = await resolvePlatformCredential("billing.paddle.sandbox.webhook");
+    const opts = { env, allowLive: process.env.FLOWLINE_BILLING_ALLOW_LIVE === "true" } as const;
+    return {
+      adapter: new PaddlePaymentAdapter(key.secret, hook?.secret, opts),
+      previousWebhook: hook?.previous ? new PaddlePaymentAdapter(key.secret, hook.previous.secret, opts) : null,
+    };
+  }
+  return null;
+}
+
+export async function getAdapter(): Promise<PaymentAdapter | null> {
+  return (await resolveBilling())?.adapter ?? null;
 }
 
 /** The webhook signature header of the configured provider (for the webhook route). */
-export function webhookSignatureHeader(): string {
-  return getAdapter()?.webhookSignatureHeader ?? "stripe-signature";
+export async function webhookSignatureHeader(): Promise<string> {
+  return (await getAdapter())?.webhookSignatureHeader ?? "stripe-signature";
 }
 
-export function isBillingConfigured(): boolean {
-  return getAdapter() !== null && loadBillingPlans() !== null;
+export async function isBillingConfigured(): Promise<boolean> {
+  return (await getAdapter()) !== null && (await loadBillingPlans()) !== null;
 }
 
-function requirePlans(): BillingPlansConfig {
-  const cfg = loadBillingPlans();
+async function requirePlans(): Promise<BillingPlansConfig> {
+  const cfg = await loadBillingPlans();
   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billing isn't configured for this installation");
   return cfg;
 }
 
-function requireAdapter(): PaymentAdapter {
-  const adapter = getAdapter();
+async function requireAdapter(): Promise<PaymentAdapter> {
+  const adapter = await getAdapter();
   if (!adapter) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billing isn't configured for this installation");
   return adapter;
 }
@@ -103,7 +117,7 @@ async function ledgerTotals(dbOrTx: DbOrTx, workspaceId: string, periodStart: Da
  * active/trialing, otherwise the configured free plan. null when billing isn't configured.
  */
 export async function getEntitlements(dbOrTx: Db, workspaceId: string): Promise<PlanEntitlements | null> {
-  const cfg = loadBillingPlans();
+  const cfg = await loadBillingPlans(dbOrTx);
   if (!cfg) return null;
   const [account] = await dbOrTx.select().from(schema.billingAccount).where(eq(schema.billingAccount.workspaceId, workspaceId));
   const inForce = account && (account.status === "active" || account.status === "trialing") ? account.planId : null;
@@ -113,15 +127,15 @@ export async function getEntitlements(dbOrTx: Db, workspaceId: string): Promise<
 
 /** Full billing picture for the settings UI. */
 export async function getBillingState(workspaceId: string) {
-  const cfg = loadBillingPlans();
-  const adapter = getAdapter();
+  const cfg = await loadBillingPlans();
+  const adapter = await getAdapter();
   const account = await getAccount(workspaceId);
   const periodStart = monthStart();
   const usage = await ledgerTotals(db, workspaceId, periodStart);
   const entitlements = await getEntitlements(db, workspaceId);
   const planInForce = account && (account.status === "active" || account.status === "trialing") ? account.planId : cfg?.freePlanId;
   return {
-    configured: isBillingConfigured(),
+    configured: adapter !== null && cfg !== null,
     /** Which provider and environment payments run against — the UI shows these verbatim. */
     provider: adapter?.provider ?? null,
     providerMode: adapter?.mode ?? null,
@@ -147,8 +161,8 @@ export async function getBillingState(workspaceId: string) {
 
 /** Starts a checkout for a workspace without an active subscription. Creates the customer on first use. */
 export async function startCheckout(user: CurrentUser, workspaceId: string, planId: string): Promise<{ url: string }> {
-  const cfg = requirePlans();
-  const adapter = requireAdapter();
+  const cfg = await requirePlans();
+  const adapter = await requireAdapter();
   const plan = planById(cfg, planId);
   if (!plan) throw new HttpError(400, "UNKNOWN_PLAN", `Unknown plan "${planId}"`);
   if (plan.id === cfg.freePlanId) throw new HttpError(400, "UNKNOWN_PLAN", "The free plan has no checkout");
@@ -191,8 +205,8 @@ export async function startCheckout(user: CurrentUser, workspaceId: string, plan
 
 /** Upgrade/downgrade: a subscription price change at the provider; the webhook applies it locally. */
 export async function changePlan(user: CurrentUser, workspaceId: string, planId: string): Promise<void> {
-  const cfg = requirePlans();
-  const adapter = requireAdapter();
+  const cfg = await requirePlans();
+  const adapter = await requireAdapter();
   const plan = planById(cfg, planId);
   if (!plan) throw new HttpError(400, "UNKNOWN_PLAN", `Unknown plan "${planId}"`);
   const account = await getAccount(workspaceId);
@@ -214,8 +228,8 @@ export async function changePlan(user: CurrentUser, workspaceId: string, planId:
 }
 
 export async function cancel(user: CurrentUser, workspaceId: string, atPeriodEnd: boolean): Promise<void> {
-  requirePlans();
-  const adapter = requireAdapter();
+  await requirePlans();
+  const adapter = await requireAdapter();
   const account = await getAccount(workspaceId);
   if (!account?.subscriptionId) throw new HttpError(400, "NO_SUBSCRIPTION", "No subscription to cancel");
   await adapter.cancelSubscription(account.subscriptionId, { atPeriodEnd }).catch((e) => {
@@ -237,9 +251,19 @@ const SUBSCRIPTION_STATE_ACTIONS: ReadonlySet<BillingEventAction> = new Set(["su
  * events whose previous processing failed, which a redelivery reprocesses.
  */
 export async function applyWebhookEvent(rawBody: string, signatureHeader: string | null): Promise<{ duplicate: boolean; outcome?: WebhookOutcome }> {
-  const adapter = requireAdapter();
-  const event = adapter.verifyWebhook(rawBody, signatureHeader, new Date());
-  const cfg = loadBillingPlans();
+  const billing = await resolveBilling();
+  if (!billing) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billing isn't configured for this installation");
+  const adapter = billing.adapter;
+  let event: ReturnType<PaymentAdapter["verifyWebhook"]>;
+  try {
+    event = adapter.verifyWebhook(rawBody, signatureHeader, new Date());
+  } catch (e) {
+    // Bounded overlap after a webhook-secret rotation: a delivery signed with the previous secret is still accepted
+    // until its grace window ends (then only the current secret verifies).
+    if (!billing.previousWebhook) throw e;
+    event = billing.previousWebhook.verifyWebhook(rawBody, signatureHeader, new Date());
+  }
+  const cfg = await loadBillingPlans();
 
   return db.transaction(async (tx) => {
     const inserted = await tx
@@ -422,9 +446,9 @@ export interface ReconcileResult {
  * retry can succeed later.
  */
 export async function reconcileUsage(workspaceId: string, periodStart: Date = monthStart()): Promise<ReconcileResult> {
-  const result: ReconcileResult = { configured: isBillingConfigured(), periodStart, reported: [], skipped: [] };
+  const result: ReconcileResult = { configured: await isBillingConfigured(), periodStart, reported: [], skipped: [] };
   if (!result.configured) return result;
-  const adapter = requireAdapter();
+  const adapter = await requireAdapter();
 
   // The provider has no usage-metering API (Paddle): usage stays in the local ledger.
   // Nothing is sent and nothing is marked "reported" — that would be fake reporting.

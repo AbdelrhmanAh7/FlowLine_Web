@@ -38,11 +38,18 @@ export type HostHandler = (node: FlowNode, input: unknown, env: NodeEnv) => Prom
 
 /** Error with a stable code (thrown by handlers). */
 export class NodeError extends Error {
+  /** A temporary condition: the same step may succeed later (e.g. CONNECTION_UNAVAILABLE, CXH-14). */
+  retryable?: boolean;
+  /** The provider's Retry-After for a retryable failure (ms, bounded by the caller). */
+  retryAfterMs?: number;
   constructor(
     public code: string,
     message: string,
+    retry?: { retryable?: boolean; retryAfterMs?: number },
   ) {
     super(message);
+    if (retry?.retryable) this.retryable = true;
+    if (retry?.retryAfterMs != null) this.retryAfterMs = retry.retryAfterMs;
   }
 }
 
@@ -100,8 +107,9 @@ function isPlatformDbError(err: unknown): boolean {
 
 export const PLATFORM_UNAVAILABLE_MESSAGE = "This step was interrupted because Flowline's database was unavailable. Nothing is wrong with the step itself.";
 
-export function errorOf(err: unknown): { code: string; message: string } {
-  if (err instanceof ExpressionError || err instanceof NodeError) return { code: err.code, message: err.message };
+export function errorOf(err: unknown): { code: string; message: string; retryable?: boolean; retryAfterMs?: number } {
+  if (err instanceof NodeError) return { code: err.code, message: err.message, ...(err.retryable ? { retryable: true } : {}), ...(err.retryAfterMs != null ? { retryAfterMs: err.retryAfterMs } : {}) };
+  if (err instanceof ExpressionError) return { code: err.code, message: err.message };
   if (isPlatformDbError(err)) return { code: "PLATFORM_UNAVAILABLE", message: PLATFORM_UNAVAILABLE_MESSAGE };
   const e = err as { code?: unknown; message?: unknown };
   if (typeof e?.code === "string" && typeof e?.message === "string") return { code: e.code, message: e.message };

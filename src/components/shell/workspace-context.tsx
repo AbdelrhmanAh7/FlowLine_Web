@@ -8,6 +8,8 @@ export interface WorkspaceInfo {
   name: string;
   slug: string;
   timezone: string;
+  /** Workspace currency for displaying costs (ISO 4217, default USD). */
+  currency?: string;
 }
 export interface WorkspaceCtx {
   user: { id: string; name: string; email: string };

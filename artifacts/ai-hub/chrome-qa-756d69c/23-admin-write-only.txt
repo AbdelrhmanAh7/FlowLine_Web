@@ -1,0 +1,718 @@
+Platform admin
+
+cxq-owner-1790671081486@flowline-qa.test
+
+العربية
+English
+
+Flowline's own service credentials. Secrets are write-only: after you save one it is never shown again — not to you, not to anyone.
+
+Changes unlocked until 12:00 PM.
+Remove these variables from the server environment
+
+Flowline no longer reads them at runtime: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, SLACK_OAUTH_CLIENT_ID, SLACK_OAUTH_CLIENT_SECRET, FLOWLINE_BILLING_STRIPE_KEY, FLOWLINE_BILLING_WEBHOOK_SECRET, FLOWLINE_BILLING_PLANS, FLOWLINE_BILLING_FREE_PLAN
+
+Redirect URIs to register
+
+Register exactly these URLs in each provider's app settings.
+
+INTEGRATIONS (GOOGLE, SLACK, GITHUB)
+http://localhost:3100/api/oauth/callback
+Copy
+GOOGLE SIGN-IN
+http://localhost:3100/api/auth/callback/google
+Copy
+GITHUB SIGN-IN
+http://localhost:3100/api/auth/callback/github
+Copy
+Sign-in apps
+
+The Google and GitHub apps people use to sign in to Flowline. A change applies to the next sign-in — no restart.
+
+Google sign-in
+NOT CONFIGURED
+
+Replacing the secret keeps the previous one working for 7 days, so nothing is interrupted while the provider accepts both.
+
+CLIENT ID
+SECRET
+
+Paste the secret. It won't be shown again.
+
+Save
+Test
+Not configured
+GitHub sign-in
+NOT CONFIGURED
+
+Replacing the secret keeps the previous one working for 7 days, so nothing is interrupted while the provider accepts both.
+
+CLIENT ID
+SECRET
+
+Paste the secret. It won't be shown again.
+
+Save
+Test
+Not configured
+Integration apps
+
+Flowline's shared OAuth apps for connecting Google, Slack and GitHub. Workspaces may use their own app instead. Existing connections keep refreshing with the app that issued them.
+
+Google (Gmail, Sheets)
+VERIFIED
+
+Set Sep 29, 2026, 11:12 AM by test-seed · Revision 7
+
+Verified Sep 29, 2026, 11:15 AM (a real Connect)
+
+Replacing the secret keeps the previous one working for 7 days, so nothing is interrupted while the provider accepts both.
+
+CLIENT ID
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Slack
+VERIFIED
+
+Set Sep 29, 2026, 4:36 AM by test-seed · Revision 1
+
+Verified Sep 29, 2026, 5:06 AM (a real Connect)
+
+This provider invalidates the old secret as soon as you regenerate it: calls may fail until the new one is saved here.
+
+CLIENT ID
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+GitHub
+CONFIGURED — NOT VERIFIED
+
+Set Sep 29, 2026, 11:51 AM by cxq-owner-1790671081486@flowline-qa.test · Revision 3 · Ends in ••••ae05
+
+Not verified yet — a real sign-in or Connect with this revision verifies it.
+
+Replacing the secret keeps the previous one working for 7 days, so nothing is interrupted while the provider accepts both.
+
+CLIENT ID
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Email delivery
+
+The provider that sends verification, password and notification emails.
+
+Resend
+NOT CONFIGURED
+SENDER (FROM)
+SECRET
+
+Paste the secret. It won't be shown again.
+
+Save
+Test
+Not configured
+Postmark
+NOT CONFIGURED
+SENDER (FROM)
+SECRET
+
+Paste the secret. It won't be shown again.
+
+Save
+Test
+Not configured
+Billing (sandbox)
+
+Payment provider credentials for SANDBOX / test mode only. Live payments need the owner's approval and stay disabled from here.
+
+Live payments stay off unless the server operator enables them (FLOWLINE_BILLING_ALLOW_LIVE). This panel can't turn them on. Paddle environment (operator setting): sandbox
+
+Paddle sandbox API key
+CONFIGURED — NOT VERIFIED
+
+Set Sep 29, 2026, 11:12 AM by test-seed · Revision 1
+
+Not verified yet — a successful test or delivery verifies it.
+
+CLIENT-SIDE TOKEN (PUBLIC)
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Paddle sandbox webhook secret
+CONFIGURED — NOT VERIFIED
+
+Set Sep 29, 2026, 4:38 AM by test-seed · Revision 1
+
+Not verified yet — a successful test or delivery verifies it.
+
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Stripe test-mode key
+CONFIGURED — NOT VERIFIED
+
+Set Sep 29, 2026, 4:36 AM by test-seed · Revision 1
+
+Not verified yet — a successful test or delivery verifies it.
+
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Stripe test-mode webhook secret
+CONFIGURED — NOT VERIFIED
+
+Set Sep 29, 2026, 11:11 AM by test-seed · Revision 3
+
+Not verified yet — a successful test or delivery verifies it.
+
+The previous secret keeps working until Sep 30, 2026, 11:11 AM.
+
+SECRET
+
+Leave empty to keep the current secret.
+
+Save
+Test
+Revoke
+Platform settings
+EMAIL PROVIDER IN USE
+None
+Resend
+Postmark
+
+Configure the provider's key below before selecting it.
+
+Save setting
+EMAIL RECIPIENT ALLOWLIST
+
+One rule per line: an address, @domain or *.domain. Empty = no restriction. Keep it set on beta stacks.
+
+Save setting
+BILLING PROVIDER IN USE
+None
+Stripe (test mode)
+Paddle (sandbox)
+Save setting
+BILLING PLANS (JSON)
+
+A JSON object with the plans list and freePlanId (the plan in force without a subscription). Prices must match the sandbox provider.
+
+Save setting
+Administrators
+
+Adding an administrator is an operator action on the server (scripts/admin/bootstrap.mts --grant).
+
+oauthcred-57d663cb@flowline-test.local
+revoked
+import-33483294@flowline-test.local
+revoked
+boot-15935840@flowline-test.local
+revoked
+boundary-c867a3e7@flowline-test.local
+revoked
+rev-a-00d3da6d@flowline-test.local
+revoked
+assurance-e41de634@flowline-test.local
+revoked
+revoked-f12048dc@flowline-test.local
+revoked
+stepup-6f70534d@flowline-test.local
+revoked
+stepup-rl-717bd3c5@flowline-test.local
+revoked
+cred-deaf41aa@flowline-test.local
+revoked
+revoke-env-ec8995b6@flowline-test.local
+revoked
+settings-40c52003@flowline-test.local
+revoked
+audit-a-2e90ba2d@flowline-test.local
+revoked
+audit-b-1ca36d55@flowline-test.local
+revoked
+rev-b-f8103c58@flowline-test.local
+revoked
+platform-admin-fa966f7d@flowline-e2e.test
+revoked
+platform-admin-613a3eab@flowline-e2e.test
+revoked
+platform-admin-48de25c5@flowline-e2e.test
+revoked
+boundary-f7c58cba@flowline-test.local
+revoked
+assurance-a250f842@flowline-test.local
+revoked
+revoked-0d001414@flowline-test.local
+revoked
+stepup-5526040d@flowline-test.local
+revoked
+stepup-rl-66be4d50@flowline-test.local
+revoked
+cred-c66fe03c@flowline-test.local
+revoked
+oauthcred-f4000232@flowline-test.local
+revoked
+import-4d41d35e@flowline-test.local
+revoked
+revoke-env-4207de50@flowline-test.local
+revoked
+settings-21d2e882@flowline-test.local
+revoked
+audit-a-6b18e012@flowline-test.local
+revoked
+audit-b-b648ac90@flowline-test.local
+revoked
+rev-a-1519aca7@flowline-test.local
+revoked
+rev-b-4b85a0e7@flowline-test.local
+revoked
+platform-admin-428336a3@flowline-e2e.test
+revoked
+boundary-60a9a466@flowline-test.local
+revoked
+stepup-3a690930@flowline-test.local
+revoked
+assurance-0faed5d9@flowline-test.local
+revoked
+revoked-35c00986@flowline-test.local
+revoked
+stepup-rl-dd636ed7@flowline-test.local
+revoked
+cred-9fc0e0ed@flowline-test.local
+revoked
+oauthcred-d98365c6@flowline-test.local
+revoked
+import-790fcf0c@flowline-test.local
+revoked
+revoke-env-83715a03@flowline-test.local
+revoked
+settings-702686bb@flowline-test.local
+revoked
+audit-a-dbe2010e@flowline-test.local
+revoked
+audit-b-c24d6da1@flowline-test.local
+revoked
+rev-a-3f2625fa@flowline-test.local
+revoked
+rev-b-c55e7940@flowline-test.local
+revoked
+boot-d98c1371@flowline-test.local
+revoked
+boot-87262865@flowline-test.local
+revoked
+boundary-fc3d7c19@flowline-test.local
+revoked
+assurance-34f1cd0b@flowline-test.local
+revoked
+revoked-98e124c8@flowline-test.local
+revoked
+stepup-91e780a7@flowline-test.local
+revoked
+stepup-rl-3509e6d9@flowline-test.local
+revoked
+cred-cd873c85@flowline-test.local
+revoked
+oauthcred-c66427de@flowline-test.local
+revoked
+import-872ce9ba@flowline-test.local
+revoked
+revoke-env-32cc2429@flowline-test.local
+revoked
+settings-a98ce64b@flowline-test.local
+revoked
+audit-a-49eb6451@flowline-test.local
+revoked
+audit-b-a7a73cb0@flowline-test.local
+revoked
+rev-a-0a8f7f45@flowline-test.local
+revoked
+rev-b-254ae36f@flowline-test.local
+revoked
+boot-e032676c@flowline-test.local
+revoked
+revoke-env-4891468f@flowline-test.local
+revoked
+settings-020e89d9@flowline-test.local
+revoked
+audit-a-7679dbef@flowline-test.local
+revoked
+audit-b-8dac415d@flowline-test.local
+revoked
+rev-a-289dd8e0@flowline-test.local
+revoked
+rev-b-1d2922f2@flowline-test.local
+revoked
+boot-85458997@flowline-test.local
+revoked
+boundary-390e4379@flowline-test.local
+revoked
+stepup-cafac82f@flowline-test.local
+revoked
+assurance-3cc3bb4c@flowline-test.local
+revoked
+revoked-b021ac40@flowline-test.local
+revoked
+stepup-rl-03f72df6@flowline-test.local
+revoked
+cred-cebad4e0@flowline-test.local
+revoked
+oauthcred-0ed9a520@flowline-test.local
+revoked
+import-bd41639f@flowline-test.local
+revoked
+revoke-env-942442df@flowline-test.local
+revoked
+settings-a74d3811@flowline-test.local
+revoked
+audit-a-81222822@flowline-test.local
+revoked
+audit-b-54a4d3c2@flowline-test.local
+revoked
+rev-a-63bb2e27@flowline-test.local
+revoked
+rev-b-da428eec@flowline-test.local
+revoked
+boot-4979077e@flowline-test.local
+revoked
+boundary-c8c8abf5@flowline-test.local
+revoked
+stepup-rl-03c385db@flowline-test.local
+revoked
+assurance-bfc47879@flowline-test.local
+revoked
+revoked-38dcbef5@flowline-test.local
+revoked
+stepup-d8da08e3@flowline-test.local
+revoked
+cred-f03c9c46@flowline-test.local
+revoked
+boundary-a458f445@flowline-test.local
+revoked
+assurance-d47b87af@flowline-test.local
+revoked
+revoked-f32b2369@flowline-test.local
+revoked
+stepup-57f03378@flowline-test.local
+revoked
+stepup-rl-800cccc1@flowline-test.local
+revoked
+cred-dc6230cd@flowline-test.local
+revoked
+oauthcred-4997c22a@flowline-test.local
+revoked
+import-0d5b9049@flowline-test.local
+revoked
+revoke-env-bc814304@flowline-test.local
+revoked
+settings-61390ab8@flowline-test.local
+revoked
+audit-a-048668b0@flowline-test.local
+revoked
+audit-b-2c700a34@flowline-test.local
+revoked
+rev-a-bb75ca92@flowline-test.local
+revoked
+rev-b-9bf386cf@flowline-test.local
+revoked
+boot-be1b6adf@flowline-test.local
+revoked
+oauthcred-8b9f1f2c@flowline-test.local
+revoked
+import-c2d2190c@flowline-test.local
+revoked
+boundary-bfb994e3@flowline-test.local
+revoked
+assurance-3625c374@flowline-test.local
+revoked
+revoked-028e8da5@flowline-test.local
+revoked
+stepup-b6974246@flowline-test.local
+revoked
+stepup-rl-ce6c31be@flowline-test.local
+revoked
+cred-b686962c@flowline-test.local
+revoked
+oauthcred-109427ee@flowline-test.local
+revoked
+import-aa68b471@flowline-test.local
+revoked
+revoke-env-02ef0259@flowline-test.local
+revoked
+settings-306d955a@flowline-test.local
+revoked
+audit-a-7cb7780a@flowline-test.local
+revoked
+audit-b-f6abbe23@flowline-test.local
+revoked
+rev-a-c5f32943@flowline-test.local
+revoked
+rev-b-23f32f39@flowline-test.local
+revoked
+boot-a578bfae@flowline-test.local
+revoked
+boundary-66f09743@flowline-test.local
+revoked
+assurance-9e352b7a@flowline-test.local
+revoked
+revoked-71fd48fb@flowline-test.local
+revoked
+stepup-e00f0f76@flowline-test.local
+revoked
+stepup-rl-c2d656c9@flowline-test.local
+revoked
+cred-ed5729a0@flowline-test.local
+revoked
+oauthcred-ac6b373d@flowline-test.local
+revoked
+import-8c5811e1@flowline-test.local
+revoked
+revoke-env-3750df81@flowline-test.local
+revoked
+settings-9f1e4166@flowline-test.local
+revoked
+audit-a-72aef40c@flowline-test.local
+revoked
+audit-b-da3f2e02@flowline-test.local
+revoked
+rev-a-5841851e@flowline-test.local
+revoked
+rev-b-bfaa47ac@flowline-test.local
+revoked
+boot-bd8f6ece@flowline-test.local
+revoked
+platform-admin-902f5d58@flowline-e2e.test
+active
+Revoke admin
+platform-admin-faa35649@flowline-e2e.test
+active
+Revoke admin
+cxq-owner-1790671081486@flowline-qa.test (you)
+active
+Revoke admin
+Security log
+WHEN	ACTION	CREDENTIAL	BY	RESULT
+9/29/26, 11:51 AM	platform_secret.set	integration.github r3	cxq-owner-1790671081486@flowline-qa.test	ok
+9/29/26, 11:50 AM	admin.stepup	—	cxq-owner-1790671081486@flowline-qa.test	ok
+9/29/26, 11:50 AM	admin.granted	—	cxq-owner-1790671081486@flowline-qa.test	ok
+9/29/26, 11:50 AM	admin.totp_enrolled	—	cxq-owner-1790671081486@flowline-qa.test	ok
+9/29/26, 11:50 AM	setup.challenge_redeemed	—	setup	ok
+9/29/26, 11:50 AM	setup.challenge_issued	—	cli:Abdelrahman	ok
+9/29/26, 11:48 AM	admin.access_denied	—	cxq-editor-1790671706890@flowline-qa.test	denied
+9/29/26, 11:21 AM	admin.access_denied	—	e2e-6914a975@flowline-e2e.test	denied
+9/29/26, 11:21 AM	platform_secret.revoked	integration.github	platform-admin-faa35649@flowline-e2e.test	ok
+9/29/26, 11:21 AM	platform_secret.set	integration.github r2	platform-admin-faa35649@flowline-e2e.test	ok
+9/29/26, 11:21 AM	admin.stepup	—	platform-admin-faa35649@flowline-e2e.test	ok
+9/29/26, 11:21 AM	admin.granted	—	platform-admin-faa35649@flowline-e2e.test	ok
+9/29/26, 11:21 AM	admin.totp_enrolled	—	platform-admin-faa35649@flowline-e2e.test	ok
+9/29/26, 11:21 AM	setup.challenge_redeemed	—	setup	ok
+9/29/26, 11:21 AM	setup.challenge_issued	—	cli:Abdelrahman	ok
+9/29/26, 11:15 AM	platform_secret.verified	integration.google r7	system	ok
+9/29/26, 11:13 AM	admin.access_denied	—	e2e-e05fb716@flowline-e2e.test	denied
+9/29/26, 11:13 AM	platform_secret.revoked	integration.github	platform-admin-902f5d58@flowline-e2e.test	ok
+9/29/26, 11:13 AM	platform_secret.set	integration.github r1	platform-admin-902f5d58@flowline-e2e.test	ok
+9/29/26, 11:13 AM	admin.stepup	—	platform-admin-902f5d58@flowline-e2e.test	ok
+9/29/26, 11:13 AM	admin.granted	—	platform-admin-902f5d58@flowline-e2e.test	ok
+9/29/26, 11:13 AM	admin.totp_enrolled	—	platform-admin-902f5d58@flowline-e2e.test	ok
+9/29/26, 11:13 AM	setup.challenge_redeemed	—	setup	ok
+9/29/26, 11:13 AM	setup.challenge_issued	—	cli:Abdelrahman	ok
+9/29/26, 11:12 AM	platform_setting.set	billing.provider r55	test-seed	ok
+9/29/26, 11:12 AM	platform_setting.set	billing.provider r54	test-seed	ok
+9/29/26, 11:12 AM	platform_setting.set	billing.provider r53	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.set	billing.paddle.sandbox r1	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.rotated	billing.paddle.sandbox r3	test-seed	ok
+9/29/26, 11:12 AM	platform_setting.set	billing.provider r52	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.revoked	signin.google	test	ok
+9/29/26, 11:12 AM	platform_secret.switched	signin.google r3	test	ok
+9/29/26, 11:12 AM	platform_secret.rotated	signin.google r2	test	ok
+9/29/26, 11:12 AM	platform_secret.set	signin.google r1	test-seed	ok
+9/29/26, 11:12 AM	platform_setting.set	email.allowed_recipients r1	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.switched	integration.google r7	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.set	signin.google r1	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.cleared	signin.google	test	ok
+9/29/26, 11:12 AM	platform_secret.revoked	signin.google	test	ok
+9/29/26, 11:12 AM	platform_secret.set	signin.google r1	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.verified	integration.google r6	system	ok
+9/29/26, 11:12 AM	platform_secret.set	integration.google r6	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.revoked	integration.google	test	ok
+9/29/26, 11:12 AM	platform_secret.verified	integration.google r5	system	ok
+9/29/26, 11:12 AM	platform_secret.set	integration.google r5	test-seed	ok
+9/29/26, 11:12 AM	platform_secret.revoked	integration.google	test	ok
+9/29/26, 11:12 AM	platform_secret.switched	integration.google r4	test-seed	ok
+9/29/26, 11:12 AM	crypto.rewrap	integration.google	cli:backfill	ok
+9/29/26, 11:12 AM	crypto.rewrap	—	cli:rewrap	failed
+9/29/26, 11:11 AM	platform_setting.set	billing.plans r19	test-seed	ok
+9/29/26, 11:11 AM	platform_setting.set	billing.provider r51	test-seed	ok
+9/29/26, 11:11 AM	platform_setting.set	billing.provider r50	test-seed	ok
+9/29/26, 11:11 AM	platform_setting.set	billing.plans r18	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.rotated	billing.paddle.sandbox r2	test-seed	ok
+9/29/26, 11:11 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:11 AM	setup.completed	—	boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.granted	—	boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.totp_enrolled	—	boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.verified	email.resend r1	system	ok
+9/29/26, 11:11 AM	setup.email_configured	email.resend	setup:boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_setting.set	email.provider r1	setup:boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	email.resend r1	setup:boot-bd8f6ece@flowline-test.local	ok
+9/29/26, 11:11 AM	setup.challenge_redeemed	—	setup	ok
+9/29/26, 11:11 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:11 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:11 AM	admin.access_denied	—	rev-b-bfaa47ac@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.revoked	—	rev-a-5841851e@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	rev-b-bfaa47ac@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	rev-a-5841851e@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.rotated	billing.stripe.test.webhook r3	test-seed	ok
+9/30/23, 11:11 AM	platform_secret.rotated	billing.stripe.test.webhook r2	audit-a-72aef40c@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	billing.stripe.test.webhook r1	test-seed	ok
+9/29/26, 11:11 AM	admin.stepup	—	audit-a-72aef40c@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.verified	email.resend r1	system	ok
+9/29/26, 11:11 AM	platform_setting.set	email.allowed_recipients r1	settings-9f1e4166@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_setting.set	email.provider r1	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.set	email.resend r1	test-seed	ok
+9/29/26, 11:11 AM	platform_setting.set	email.allowed_recipients r1	settings-9f1e4166@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	settings-9f1e4166@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r3	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.revoked	integration.google	revoke-env-3750df81@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	revoke-env-3750df81@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.cleared	integration.github	import-8c5811e1@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.revoked	integration.github	import-8c5811e1@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.imported_from_env	integration.github r1	import-8c5811e1@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.github r1	import-8c5811e1@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	import-8c5811e1@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.switched	signin.github r3	oauthcred-ac6b373d@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.rotated	signin.github r2	oauthcred-ac6b373d@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	signin.github r1	oauthcred-ac6b373d@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	oauthcred-ac6b373d@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.cleared	email.postmark	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.revoked	email.postmark	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.probe	email.postmark r3	cred-ed5729a0@flowline-test.local	accepted
+9/29/26, 11:11 AM	platform_secret.rotated	email.postmark r3	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	email.postmark r2	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	platform_secret.set	email.postmark r1	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	cred-ed5729a0@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-rl-c2d656c9@flowline-test.local	denied
+9/29/26, 11:11 AM	platform_secret.set	integration.github r1	stepup-e00f0f76@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	stepup-e00f0f76@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.stepup	—	stepup-e00f0f76@flowline-test.local	ok
+9/29/26, 11:11 AM	admin.stepup	—	stepup-e00f0f76@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	revoked-71fd48fb@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	beta-admin-f0e8dec4@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	admin.access_denied	—	multi-owner-37d0ad01-a7c4-4b50-b4c2-177e6c24dc3d@flowline-test.local	denied
+9/29/26, 11:11 AM	platform_secret.switched	integration.google r2	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.rotated	integration.google r3	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.verified	integration.google r2	system	ok
+9/29/26, 11:11 AM	platform_secret.rotated	integration.google r2	test	ok
+9/29/26, 11:11 AM	platform_secret.verified	integration.google r1	system	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.verified	integration.google r1	system	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test	ok
+9/29/26, 11:11 AM	platform_secret.cleared	integration.google	test	ok
+9/29/26, 11:11 AM	platform_secret.revoked	integration.google	test	ok
+9/29/26, 11:11 AM	platform_secret.verified	integration.google r1	system	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test	ok
+9/29/26, 11:11 AM	platform_secret.cleared	integration.google	test	ok
+9/29/26, 11:11 AM	platform_secret.revoked	integration.google	test	ok
+9/29/26, 11:11 AM	platform_secret.set	integration.google r1	test-seed	ok
+9/29/26, 11:11 AM	platform_secret.verified	integration.google r11	system	ok
+9/29/26, 11:10 AM	platform_secret.switched	integration.google r11	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.switched	integration.google r10	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.verified	integration.google r9	system	ok
+9/29/26, 11:10 AM	platform_secret.verified	integration.github r1	system	ok
+9/29/26, 11:10 AM	platform_secret.set	integration.github r1	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.switched	integration.google r9	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.switched	integration.google r8	test	ok
+9/29/26, 11:10 AM	platform_secret.verified	integration.google r7	system	ok
+9/29/26, 11:10 AM	platform_secret.set	integration.google r7	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.revoked	integration.google	test	ok
+9/29/26, 11:10 AM	platform_secret.verified	integration.google r6	system	ok
+9/29/26, 11:10 AM	platform_secret.rejected_by_provider	integration.google r6	system	rejected
+9/29/26, 11:10 AM	platform_secret.verified	integration.google r6	system	ok
+9/29/26, 11:10 AM	platform_secret.rotated	integration.google r6	test-seed	ok
+9/29/26, 11:10 AM	platform_secret.rotated	integration.google r5	test	ok
+9/29/26, 11:10 AM	platform_secret.verified	integration.google r4	system	ok
+9/29/26, 11:10 AM	platform_secret.switched	integration.google r4	test-seed	ok
+9/29/26, 11:09 AM	crypto.rewrap	integration.google	cli:backfill	ok
+9/29/26, 11:09 AM	crypto.rewrap	—	cli:rewrap	failed
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r49	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r48	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r47	test-seed	ok
+9/29/26, 11:09 AM	platform_secret.set	billing.paddle.sandbox r1	test-seed	ok
+9/29/26, 11:09 AM	platform_secret.rotated	billing.paddle.sandbox r3	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r46	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	email.allowed_recipients r1	test-seed	ok
+9/29/26, 11:09 AM	platform_secret.revoked	signin.google	test	ok
+9/29/26, 11:09 AM	platform_secret.switched	signin.google r3	test	ok
+9/29/26, 11:09 AM	platform_secret.rotated	signin.google r2	test	ok
+9/29/26, 11:09 AM	platform_secret.set	signin.google r1	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.plans r17	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r45	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.provider r44	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	billing.plans r16	test-seed	ok
+9/29/26, 11:09 AM	platform_secret.rotated	billing.paddle.sandbox r2	test-seed	ok
+9/29/26, 11:09 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:09 AM	setup.completed	—	boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	admin.granted	—	boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	admin.totp_enrolled	—	boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.verified	email.resend r1	system	ok
+9/29/26, 11:09 AM	setup.email_configured	email.resend	setup:boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_setting.set	email.provider r1	setup:boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.set	email.resend r1	setup:boot-85458997@flowline-test.local	ok
+9/29/26, 11:09 AM	setup.challenge_redeemed	—	setup	ok
+9/29/26, 11:09 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:09 AM	setup.challenge_issued	—	cli:test	ok
+9/29/26, 11:09 AM	admin.access_denied	—	rev-b-1d2922f2@flowline-test.local	denied
+9/29/26, 11:09 AM	admin.revoked	—	rev-a-289dd8e0@flowline-test.local	ok
+9/29/26, 11:09 AM	admin.stepup	—	rev-b-1d2922f2@flowline-test.local	ok
+9/29/26, 11:09 AM	admin.stepup	—	rev-a-289dd8e0@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.rotated	billing.stripe.test.webhook r3	test-seed	ok
+9/30/23, 11:09 AM	platform_secret.rotated	billing.stripe.test.webhook r2	audit-a-7679dbef@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.set	billing.stripe.test.webhook r1	test-seed	ok
+9/29/26, 11:09 AM	admin.stepup	—	audit-a-7679dbef@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.verified	email.resend r1	system	ok
+9/29/26, 11:09 AM	platform_setting.set	email.allowed_recipients r1	settings-020e89d9@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_setting.set	email.provider r1	test-seed	ok
+9/29/26, 11:09 AM	platform_secret.set	email.resend r1	test-seed	ok
+9/29/26, 11:09 AM	platform_setting.set	email.allowed_recipients r1	settings-020e89d9@flowline-test.local	ok
+9/29/26, 11:09 AM	admin.stepup	—	settings-020e89d9@flowline-test.local	ok
+9/29/26, 11:09 AM	platform_secret.set	integration.google r3	test-seed	ok

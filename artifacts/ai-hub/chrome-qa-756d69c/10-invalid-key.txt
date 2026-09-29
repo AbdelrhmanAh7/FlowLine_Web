@@ -1,0 +1,97 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+← Flows
+/
+Flow name
+Saved
+● Published
+Triggers
+Publish changes
+↶
+Nothing to undo
+↷
+Nothing to redo
+History
+✦ Copilot
+Runs
+CtrlJ
+▶ Run
+
+Manual trigger
+
+TRIGGER · MANUAL
+
+0ms
+
+AI · Generate
+
+AI · TEXT
+
+✗ OpenAI rejected the API key (401). Rotate the key in Settings → AI Providers.
+
+Output
+
+OUTPUT · RESULT
+
+Skipped
+
+React Flow
++ Add node
+/
+−
+200%
++
+Fit
+RUNS
+#5
+FAILED
+1/2 · 61ms
+Open in inspector →
+✕
+#5
+now
+#4
+38s ago
+#2
+3m ago
+#1
+3m ago
+Manual trigger
+Success
+· 0ms
+→
+AI · Generate
+Failed
+· 36ms
+→
+Output
+Skipped
+
+⚠ OpenAI rejected the API key (401). Rotate the key in Settings → AI Providers.

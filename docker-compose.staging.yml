@@ -11,8 +11,7 @@ x-app: &app
     DATABASE_URL: postgres://flowline:${STAGING_DB_PASSWORD:?}@db:5432/flowline
     BETTER_AUTH_URL: http://localhost:3200
     FLOWLINE_PUBLIC_URL: http://localhost:3200
-    OLLAMA_BASE_URL: http://host.docker.internal:11434
-    FLOWLINE_EGRESS_ALLOWLIST: host.docker.internal:11434
+    # AI is cloud-only: no inference service; each workspace connects its own provider in Settings → AI Providers.
     # No real email delivery on local staging: messages land in the email_outbox table (allowed only with
     # FLOWLINE_ENV=staging), where the release checks read verification links.
     FLOWLINE_ENV: staging

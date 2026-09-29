@@ -5,7 +5,7 @@ import * as schema from "@/db/schema";
 import { executeGraph, type PriorStep, type ReusedStep } from "@/engine/execute";
 import { evaluateIsolated } from "@/engine/sandbox";
 import type { FlowGraph, StepResult } from "@/engine/types";
-import { decryptSecret, encryptSecret } from "@/server/crypto";
+import { contextId, encryptSecretV2, openSecret, type SecretContext } from "@/server/crypto";
 import { logEvent } from "@/server/events";
 import { redact } from "@/server/redact";
 import { createHandler, type HandlerContext } from "./handlers";
@@ -76,11 +76,16 @@ export async function recoverStaleRuns(db: Db) {
 
 const TERMINAL = new Set(["succeeded", "reused", "failed", "skipped", "cancelled"]);
 
+/** AAD context of a step's encrypted data: bound to the run, the node and the workspace. */
+function stepDataContext(runId: string, nodeId: string, workspaceId: string): SecretContext {
+  return { table: "run_step", rowId: `${runId}.${contextId(nodeId)}`, workspaceId, provider: "engine", purpose: "step_data" };
+}
+
 /** A finished step's real {input, output}: the encrypted copy when present, else the (redacted) columns. */
-function stepData(s: typeof schema.runStep.$inferSelect): { input: unknown; output: unknown } {
+function stepData(s: typeof schema.runStep.$inferSelect, workspaceId: string): { input: unknown; output: unknown } {
   if (s.dataEnc) {
     try {
-      return decryptSecret<{ input: unknown; output: unknown }>(s.dataEnc.ciphertext, s.dataEnc.keyId);
+      return openSecret<{ input: unknown; output: unknown }>({ ciphertext: s.dataEnc.ciphertext, keyId: s.dataEnc.keyId, legacy: s.dataLegacy }, stepDataContext(s.runId, s.nodeId, workspaceId));
     } catch {
       /* key rotated away — fall back to what is visible */
     }
@@ -121,7 +126,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   const prior = new Map<string, PriorStep>();
   const interrupted = new Set<string>();
   for (const s of existing) {
-    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], ...stepData(s), error: s.error, skipReason: s.skipReason });
+    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], ...stepData(s, run.workspaceId), error: s.error, skipReason: s.skipReason });
     else if (s.status === "running") interrupted.add(s.nodeId);
   }
   await logEvent(db, { runId, workspaceId: run.workspaceId, type: prior.size || interrupted.size ? "resumed" : "claimed", data: { worker: workerId.split("-").slice(-1)[0], interrupted: [...interrupted] } });
@@ -129,7 +134,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   let reused: Map<string, ReusedStep> | undefined;
   if (run.rerunOfRunId && run.rerunFromNodeId) {
     const prev = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, run.rerunOfRunId));
-    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, stepData(s)]));
+    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, stepData(s, run.workspaceId)]));
   }
 
   const hctx: HandlerContext = { db, run, workspace: workspace!, interrupted, secrets: [], path: "", flowStack: [run.flowId], depth: 0 };
@@ -200,7 +205,8 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
           input: redact(s.input ?? null, secrets) as object,
           output: redact(s.output ?? null, secrets) as object,
           // Real values for resume/re-run, encrypted; the redacted columns above are what users see.
-          dataEnc: s.output !== undefined || s.input !== undefined ? encryptSecret({ input: s.input ?? null, output: s.output ?? null }) : null,
+          dataEnc: s.output !== undefined || s.input !== undefined ? encryptSecretV2({ input: s.input ?? null, output: s.output ?? null }, stepDataContext(runId, s.nodeId, run.workspaceId)) : null,
+          dataLegacy: false,
           error: s.error ? redact(s.error, secrets) : null,
           skipReason: s.skipReason ?? null,
           meta: s.meta ? (redact(s.meta, secrets) as Record<string, unknown>) : null,

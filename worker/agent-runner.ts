@@ -1,6 +1,5 @@
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { chat, resolveModel, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
-import { estimateTokens } from "@/ai/provider";
+import { chat, resolveAgentRoute, untrusted, type ChatMessage, type ChatTool, type ToolCall } from "@/ai/chat";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AgentToolSpec } from "@/db/schema";
@@ -14,8 +13,8 @@ import type { Citation } from "@/server/knowledge";
 import { searchKnowledge } from "@/server/knowledge";
 import { redact } from "@/server/redact";
 import { enqueueRunEx } from "@/server/runs";
-import { aiCostMicros, BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
-import { backoffMs, sleep } from "./retry";
+import { AgentCostLimitError, agentRunSpentMicros, BudgetExceededError, priceFor, reserveUsage, settleUsage } from "@/server/usage";
+import { sleep } from "./retry";
 
 /**
  * Agent runtime. The model proposes tool calls; this code decides and executes them:
@@ -108,6 +107,14 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
   const [version] = await db.select().from(schema.agentVersion).where(eq(schema.agentVersion.id, run.agentVersionId));
   const [ws] = await db.select().from(schema.workspace).where(eq(schema.workspace.id, run.workspaceId));
   const limits = version!.limits;
+  // The agent's spend is what the LEDGER holds for this run (every model attempt — retries, fallbacks, possible
+  // charges, a dead worker's reservations — and every tool step), not only the answers it received (CXH-04). It is
+  // always READ from the ledger (after every reservation / settlement), never accumulated here: a resumed tool call
+  // whose reservation is already in the ledger must not be counted twice (CXH-18).
+  let costMicros = await agentRunSpentMicros(db, run.workspaceId, runId);
+  const refreshSpent = async () => {
+    costMicros = await agentRunSpentMicros(db, run.workspaceId, runId);
+  };
 
   const update = async (set: Partial<typeof schema.agentRun.$inferInsert>) => {
     const r = await db.update(schema.agentRun).set({ ...set, heartbeatAt: new Date() }).where(leased).returning({ id: schema.agentRun.id });
@@ -117,7 +124,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     await update({ status, finishedAt: new Date(), lockedBy: null, ...extra });
     log("agent run", runId, status);
   };
-  const fail = (code: string, message: string) => finish("failed", { error: { code, message } });
+  const fail = (code: string, message: string) => finish("failed", { error: { code, message }, costMicros });
 
   // Permission re-check at execution time: the acting user must still be allowed to run agents here.
   const [m] = await db
@@ -126,11 +133,12 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     .where(and(eq(schema.workspaceMember.workspaceId, run.workspaceId), eq(schema.workspaceMember.userId, run.actingUserId)));
   if (!can(m?.role, "agent.run")) return fail("PERMISSION_REVOKED", "The user this agent run acts for no longer has access to run agents in this workspace");
 
-  let model: { provider: string; model: string };
+  // AI route: the workspace's authorised AI connection (never an environment key; legacy pins are refused).
+  let route: Awaited<ReturnType<typeof resolveAgentRoute>>;
   try {
-    model = resolveModel({ provider: version!.provider, model: version!.model }, { provider: ws!.aiProvider, model: ws!.aiModel });
+    route = await resolveAgentRoute(db, ws!, { provider: version!.provider, model: version!.model, route: version!.route });
   } catch (e) {
-    return fail("AI_UNAVAILABLE", (e as Error).message);
+    return fail((e as NodeError).code ?? "AI_UNAVAILABLE", (e as Error).message);
   }
 
   // Tools this version exposes (DENY tools are not offered — and still refused if the model calls them).
@@ -176,7 +184,6 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
   };
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(new Error("AGENT_TIMEOUT")), Math.max(1, deadline - Date.now()));
-  let costMicros = run.costMicros;
   let stepCount = run.stepCount;
   let toolCallCount = run.toolCallCount;
 
@@ -220,16 +227,17 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
     const usageKey = `${runId}:step:${index}`;
     const stepPrice = priceFor(ws!.prices ?? {}, "agent_step");
     const stepCost = stepPrice?.perCallMicros ?? 0;
-    // Tool steps count toward the agent's own hard cost limit, not only the workspace budget.
-    if (limits.maxCostMicros != null && costMicros + stepCost > limits.maxCostMicros) {
-      throw new NodeError("AGENT_COST_LIMIT", `The next tool call would exceed the agent's cost limit (spent ${costMicros} of ${limits.maxCostMicros} micro-units)`);
-    }
+    // Tool steps count toward the agent's own hard cost limit, not only the workspace budget. The locked, idempotent
+    // reservation decides (CXH-18): a resumed call (e.g. after its child workflow waited for approval) already holds
+    // its reservation under this key, so it needs no more budget and is not checked — or counted — a second time.
     try {
-      await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "agent_step", idempotencyKey: usageKey, estimatedMicros: stepPrice?.perCallMicros ?? 0, unpriced: !stepPrice });
+      await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "agent_step", idempotencyKey: usageKey, estimatedMicros: stepCost, unpriced: !stepPrice, agentCapMicros: limits.maxCostMicros, holder: workerId });
     } catch (e) {
       if (e instanceof BudgetExceededError) throw new NodeError("BUDGET_EXCEEDED", e.message);
+      if (e instanceof AgentCostLimitError) throw new NodeError("AGENT_COST_LIMIT", e.message);
       throw e;
     }
+    await refreshSpent();
     let result: unknown;
     let content: string;
     if (call.name === "knowledge_search") {
@@ -267,6 +275,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
         } catch (e) {
           if (!(e instanceof HttpError)) throw e;
           await settleUsage(db, usageKey, { costMicros: 0, unpriced: !stepPrice });
+          await refreshSpent();
           await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, error: { code: e.code, message: e.message }, latencyMs: Date.now() - started });
           return JSON.stringify({ error: e.message });
         }
@@ -291,7 +300,7 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
       content = untrusted(JSON.stringify(redact(result))).text;
     }
     await settleUsage(db, usageKey, { costMicros: stepCost, unpriced: !stepPrice });
-    costMicros += stepCost;
+    await refreshSpent(); // the ledger already holds this step's cost (reserved, now settled): never added again
     await recordStep({ index, kind: "tool", tool: call.name, args: call.arguments, decision: decisionLabel, result, latencyMs: Date.now() - started, costMicros: stepCost });
     return content;
   };
@@ -411,57 +420,40 @@ export async function processAgentRun(db: Db, runId: string, workerId: string, l
         }
       }
 
-      // Model turn.
+      // Model turn. The hub meters it (reserve the defensible max of the WHOLE request → settle the real cost),
+      // retries transient errors within its bounds (Retry-After honoured) and applies the workspace policy; the
+      // agent's cost limit is enforced inside every one of those reservations, with the same request-size calculation
+      // (CXH-04, CXH-07). Tool calls are NEVER replayed by a model retry: a failed attempt returns nothing, and only a
+      // successful turn's proposals reach the gate below.
       if (stepCount >= limits.maxSteps) return await fail("AGENT_STEP_LIMIT", `The agent reached its limit of ${limits.maxSteps} steps without finishing`);
       const index = state.nextIndex++;
-      const price = priceFor(ws!.prices ?? {}, `ai:${model.provider}/${model.model}`);
-      const promptChars = version!.instructions.length + state.messages.reduce((n, m) => n + m.content.length, 0);
-      const est = aiCostMicros(price, estimateTokens(" ".repeat(promptChars)), MODEL_MAX_TOKENS);
-      if (limits.maxCostMicros != null && costMicros + est.cost > limits.maxCostMicros) {
-        return await fail("AGENT_COST_LIMIT", `The next step could cost more than the agent's cost limit allows (spent ${costMicros} of ${limits.maxCostMicros} micro-units)`);
-      }
       let result: Awaited<ReturnType<typeof chat>> | null = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        const key = `${runId}:model:${index}:${attempt}`;
-        try {
-          await reserveUsage(db, { workspaceId: run.workspaceId, runId: null, nodeId: null, agentRunId: runId, kind: "ai", idempotencyKey: key, estimatedMicros: est.cost, provider: model.provider, model: model.model, unpriced: est.unpriced, retry: attempt > 1 });
-        } catch (e) {
-          if (e instanceof BudgetExceededError) return await fail("BUDGET_EXCEEDED", e.message);
-          throw e;
-        }
-        const started = Date.now();
-        try {
-          result = await chat({ ...model, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal });
-          // Provider call ids are only unique within one turn (Ollama numbers them call_0, call_1…);
-          // make them unique for the whole run so every proposed call is decided exactly once.
-          result.toolCalls = result.toolCalls.map((c, i) => ({ ...c, id: `t${index}_${i}` }));
-          const cost = aiCostMicros(price, result.usage.inputTokens, result.usage.outputTokens);
-          await settleUsage(db, key, { costMicros: cost.cost, inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens, unpriced: cost.unpriced });
-          costMicros += cost.cost;
-          stepCount++;
-          await recordStep({
-            index,
-            kind: "model",
-            result: { content: result.content.slice(0, 4000), toolCalls: result.toolCalls.map((c) => ({ name: c.name, arguments: c.arguments })) },
-            latencyMs: Date.now() - started,
-            costMicros: cost.cost,
-            inputTokens: result.usage.inputTokens,
-            outputTokens: result.usage.outputTokens,
-            args: { provider: result.provider, model: result.model, attempt },
-          });
-          break;
-        } catch (e) {
-          await releaseUsage(db, key);
-          if (ac.signal.aborted) return await fail("AGENT_TIMEOUT", `The agent exceeded its time limit (${Math.round(limits.timeoutMs / 1000)}s)`);
-          const retryable = (e as { retryable?: boolean }).retryable === true;
-          if (!retryable || attempt === 3) {
-            await recordStep({ index, kind: "model", error: { code: (e as NodeError).code ?? "AI_ERROR", message: (e as Error).message }, latencyMs: Date.now() - started, args: { attempt } });
-            return await fail((e as NodeError).code ?? "AI_ERROR", (e as Error).message);
-          }
-          log("agent run", runId, "model attempt", attempt, "failed; retrying");
-          await sleep(backoffMs(attempt), ac.signal).catch(() => {});
-        }
+      const started = Date.now();
+      try {
+        result = await chat(db, { workspace: ws!, actorUserId: run.actingUserId, route, requestId: `${runId}:model:${index}`, agentRunId: runId, system: version!.instructions, messages: state.messages, tools, maxTokens: MODEL_MAX_TOKENS, signal: ac.signal, agentCapMicros: limits.maxCostMicros, agentAllowsUnknownCost: limits.allowUnknownCost === true });
+      } catch (e) {
+        await refreshSpent();
+        if (ac.signal.aborted) return await fail("AGENT_TIMEOUT", `The agent exceeded its time limit (${Math.round(limits.timeoutMs / 1000)}s)`);
+        await recordStep({ index, kind: "model", error: { code: (e as NodeError).code ?? "AI_ERROR", message: (e as Error).message }, latencyMs: Date.now() - started, args: { provider: route.provider, model: route.modelId } });
+        return await fail((e as NodeError).code ?? "AI_ERROR", (e as Error).message);
       }
+      // Provider call ids are only unique within one turn; make them unique for the whole run so every proposed
+      // call is decided exactly once.
+      result.toolCalls = result.toolCalls.map((c, i) => ({ ...c, id: `t${index}_${i}` }));
+      // The answering attempt's own cost (null = unknown, never 0); the run's total is what the ledger holds.
+      const cost = result.costMicros;
+      await refreshSpent();
+      stepCount++;
+      await recordStep({
+        index,
+        kind: "model",
+        result: { content: result.content.slice(0, 4000), toolCalls: result.toolCalls.map((c) => ({ name: c.name, arguments: c.arguments })) },
+        latencyMs: Date.now() - started,
+        costMicros: cost,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        args: { provider: result.provider, model: result.model, attempts: result.attempts, connectionId: result.connectionId, policy: result.routing.policy, routeReason: result.routing.reason, costSource: result.costSource, ...(result.routing.fallbackFrom.length ? { fallbackFrom: result.routing.fallbackFrom } : {}) },
+      });
       if (limits.maxCostMicros != null && costMicros > limits.maxCostMicros) {
         return await fail("AGENT_COST_LIMIT", `The agent exceeded its cost limit (${costMicros} of ${limits.maxCostMicros} micro-units)`);
       }

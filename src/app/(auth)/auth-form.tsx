@@ -23,7 +23,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [ssoSlug, setSsoSlug] = useState("");
-  const [error, setError] = useState<string | null>(params.get("sso_error"));
+  const [error, setError] = useState<string | null>(params.get("sso_error") ?? (params.get("error") === "signin_expired" ? t("auth.signinExpired") : null));
+  // Accounts with an authenticator (platform admins) finish sign-in with a TOTP code.
+  const [twoFactor, setTwoFactor] = useState(false);
   const [pending, setPending] = useState(false);
   const [betaCode, setBetaCode] = useState("");
   const [notVerified, setNotVerified] = useState(false);
@@ -74,6 +76,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
         return;
       }
       const res = await authClient.signIn.email({ email, password });
+      if (!res.error && (res.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+        setTwoFactor(true);
+        setPending(false);
+        return;
+      }
       if (res.error) {
         const unverified = res.error.status === 403 && /not verified/i.test(res.error.message ?? "");
         setNotVerified(unverified);
@@ -87,6 +94,23 @@ export function AuthForm({ mode }: { mode: Mode }) {
       setError(t("errors.NETWORK"));
       setPending(false);
     }
+  }
+
+  async function verifyTotp(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const input = e.currentTarget.elements.namedItem("totp") as HTMLInputElement | null;
+    const code = (input?.value ?? "").trim();
+    if (input) input.value = "";
+    setError(null);
+    setPending(true);
+    const r = await fetch("/api/auth/two-factor/verify-totp", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code }) }).catch(() => null);
+    if (!r?.ok) {
+      setError(r ? t("auth.twoFactorInvalid") : t("errors.NETWORK"));
+      setPending(false);
+      return;
+    }
+    router.replace(destination);
+    router.refresh();
   }
 
   async function social(provider: "google" | "github") {
@@ -115,7 +139,23 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </p>
           {invited && !sentTo && <p className="mt-2 text-base text-hi">{t("auth.inviteHint")}</p>}
 
-          {sentTo ? (
+          {twoFactor ? (
+            <form onSubmit={verifyTotp} className="mt-8 flex flex-col gap-4" noValidate>
+              <h2 className="text-lg font-semibold">{t("auth.twoFactorTitle")}</h2>
+              <p className="text-base text-med">{t("auth.twoFactorBody")}</p>
+              <Field label={t("auth.twoFactorCode")} htmlFor="totp">
+                <Input id="totp" name="totp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className="font-mono tracking-widest" />
+              </Field>
+              {error && (
+                <p role="alert" className="text-sm text-danger">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" variant="primary" size="lg" loading={pending}>
+                {t("auth.twoFactorSubmit")}
+              </Button>
+            </form>
+          ) : sentTo ? (
             <CheckInbox email={sentTo} callbackURL={afterVerify} signInHref={afterVerify} onBack={() => setSentTo(null)} />
           ) : (
           <>

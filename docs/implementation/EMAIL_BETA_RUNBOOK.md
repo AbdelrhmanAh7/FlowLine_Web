@@ -1,6 +1,6 @@
 # Private beta email
 
-Apply `drizzle/0009_email.sql` before enabling account email. Configure `FLOWLINE_EMAIL_PROVIDER` as `resend` or `postmark`, set `FLOWLINE_EMAIL_FROM` and the matching provider credential, and set `FLOWLINE_EMAIL_ALLOWED_RECIPIENTS` to approved test addresses or domain suffixes. Do not remove the recipient sandbox until the owner approves customer email. In local development and tests, `outbox` stores messages in `email_outbox`; production refuses that adapter.
+**In the app:** a platform admin opens `/admin` → **Email delivery**, enters the sender and the Resend or Postmark key on the matching card (**Save**, then **Test**), selects it under **Platform settings → Email provider in use**, and sets the **Email recipient allowlist** to approved test addresses or domain suffixes. Changes apply to the next email, with no restart. Before the first admin exists, the bootstrap setup page configures email first (see `PRIVATE_BETA_RUNBOOK.md` §2a). The old `FLOWLINE_EMAIL_*` variables are no longer read at runtime; use **Import from environment** once, then remove them. Apply `drizzle/0009_email.sql` before enabling account email. Do not remove the recipient sandbox until the owner approves customer email. In local development and tests, `outbox` stores messages in `email_outbox`; production refuses that adapter.
 
 An operator can inspect a test message in the **test database only**:
 

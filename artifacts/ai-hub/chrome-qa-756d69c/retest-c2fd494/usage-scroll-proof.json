@@ -1,0 +1,152 @@
+[
+  {
+    "locale": "ar",
+    "before": {
+      "viewport": 375,
+      "pageWidth": 375,
+      "bodyWidth": 375,
+      "containerWidth": 315,
+      "contentWidth": 364,
+      "scrollLeft": 0,
+      "direction": "rtl",
+      "headers": [
+        {
+          "text": "النوع",
+          "left": 273.4375,
+          "right": 344.75
+        },
+        {
+          "text": "المزوّد / النموذج",
+          "left": 132.84375,
+          "right": 273.4375
+        },
+        {
+          "text": "الأحداث",
+          "left": 86.265625,
+          "right": 132.84375
+        },
+        {
+          "text": "الرموز",
+          "left": 50.3125,
+          "right": 86.265625
+        },
+        {
+          "text": "التكلفة",
+          "left": -19.25,
+          "right": 50.3125
+        }
+      ]
+    },
+    "after": {
+      "viewport": 375,
+      "pageWidth": 375,
+      "bodyWidth": 375,
+      "containerWidth": 315,
+      "contentWidth": 364,
+      "scrollLeft": -49,
+      "direction": "rtl",
+      "headers": [
+        {
+          "text": "النوع",
+          "left": 322.4375,
+          "right": 393.75
+        },
+        {
+          "text": "المزوّد / النموذج",
+          "left": 181.84375,
+          "right": 322.4375
+        },
+        {
+          "text": "الأحداث",
+          "left": 135.265625,
+          "right": 181.84375
+        },
+        {
+          "text": "الرموز",
+          "left": 99.3125,
+          "right": 135.265625
+        },
+        {
+          "text": "التكلفة",
+          "left": 29.75,
+          "right": 99.3125
+        }
+      ]
+    }
+  },
+  {
+    "locale": "en",
+    "before": {
+      "viewport": 375,
+      "pageWidth": 375,
+      "bodyWidth": 375,
+      "containerWidth": 315,
+      "contentWidth": 364,
+      "scrollLeft": 0,
+      "direction": "ltr",
+      "headers": [
+        {
+          "text": "KIND",
+          "left": 30.25,
+          "right": 101.5625
+        },
+        {
+          "text": "PROVIDER / MODEL",
+          "left": 101.5625,
+          "right": 206.25
+        },
+        {
+          "text": "EVENTS",
+          "left": 206.25,
+          "right": 265.3125
+        },
+        {
+          "text": "TOKENS",
+          "left": 265.3125,
+          "right": 325.625
+        },
+        {
+          "text": "COST",
+          "left": 325.625,
+          "right": 394.25
+        }
+      ]
+    },
+    "after": {
+      "viewport": 375,
+      "pageWidth": 375,
+      "bodyWidth": 375,
+      "containerWidth": 315,
+      "contentWidth": 364,
+      "scrollLeft": 49,
+      "direction": "ltr",
+      "headers": [
+        {
+          "text": "KIND",
+          "left": -18.75,
+          "right": 52.5625
+        },
+        {
+          "text": "PROVIDER / MODEL",
+          "left": 52.5625,
+          "right": 157.25
+        },
+        {
+          "text": "EVENTS",
+          "left": 157.25,
+          "right": 216.3125
+        },
+        {
+          "text": "TOKENS",
+          "left": 216.3125,
+          "right": 276.625
+        },
+        {
+          "text": "COST",
+          "left": 276.625,
+          "right": 345.25
+        }
+      ]
+    }
+  }
+]

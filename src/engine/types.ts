@@ -121,13 +121,20 @@ export interface HttpConfig {
   sideEffect: "none" | "idempotent" | "non_idempotent";
   retry?: RetryConfig;
 }
+/** AI hub route pinned on a step: a workspace AI connection + model id (never a secret). Null/absent = workspace default. */
+export interface AiRouteConfig {
+  connectionId: string;
+  modelId: string;
+}
 export interface AiGenerateConfig {
   /** Instructions (system). */
   instructions: string;
   /** JSONata producing the text to work on. */
   source: string;
   maxTokens: number;
+  /** Pre-hub model override (legacy; honoured only if the default connection lists it). */
   model: string;
+  route?: AiRouteConfig | null;
 }
 export interface AiExtractConfig {
   instructions: string;
@@ -135,7 +142,9 @@ export interface AiExtractConfig {
   /** JSON Schema (as JSON text) the output must satisfy. */
   schema: string;
   maxTokens: number;
+  /** Pre-hub model override (legacy; honoured only if the default connection lists it). */
   model: string;
+  route?: AiRouteConfig | null;
 }
 export interface AiClassifyConfig {
   instructions: string;
@@ -143,6 +152,7 @@ export interface AiClassifyConfig {
   /** Allowed labels, comma-separated. */
   labels: string;
   model: string;
+  route?: AiRouteConfig | null;
 }
 export interface CodeConfig {
   /** JavaScript body; receives `input`, must `return` a JSON-serializable value. Runs in an isolated container. */
@@ -221,7 +231,7 @@ export interface StepResult {
   status: StepResultStatus;
   input?: unknown;
   output?: unknown;
-  error?: { code: string; message: string };
+  error?: { code: string; message: string; retryable?: boolean; retryAfterMs?: number };
   skipReason?: string;
   meta?: Record<string, unknown>;
   log?: string[];

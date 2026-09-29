@@ -12,7 +12,8 @@
  *   - Workflows created from the credential-free templates (lead-qualifier, ticket-priority, order-totals).
  *   - --runs manual runs submitted --concurrency at a time (the UI path, one clientRequestId per click), plus a few
  *     double-submits with the same clientRequestId (must yield ONE run).
- *   - --ai-runs runs of an AI · Generate workflow when /api/ai/providers reports a configured provider; otherwise N/A.
+ *   - --ai-runs runs of an AI · Generate workflow when the owner's workspace has a usable default AI model (AI hub:
+ *     workspace connections, Settings → AI Providers); otherwise N/A. No server AI keys exist any more.
  *   - --resets password-reset requests (POST /api/email forgot); the reset emails are counted in email_outbox.
  *   - Page loads (HTML only, no assets) of /w/<slug>/flows, /runs, /integrations, /settings with the session cookie.
  *   - Users watch their runs list (GET /api/workspaces/<id>/runs) while the worker drains the queue.
@@ -203,8 +204,9 @@ try {
   for (const u of users) await u.s.ok("flows.list", `/api/workspaces/${u.workspace.id}/flows`);
 
   // 3. AI provider detection
-  const prov = await owner.s.call("api", "ai.providers", "/api/ai/providers");
-  const available = (prov.body?.providers ?? []).filter((p) => p.available).map((p) => ({ id: p.id, model: p.defaultModel }));
+  const prov = await owner.s.call("api", "ai.status", `/api/workspaces/${owner.workspace.id}/ai`);
+  const st = prov.body?.status;
+  const available = st?.defaultRoute && st.defaultUsable ? [{ id: st.defaultRoute.provider, model: st.defaultRoute.modelId }] : [];
   report.ai = { providersAvailable: available, requested: AI_RUNS };
   let aiFlowId = null;
   if (AI_RUNS > 0 && available.length) {

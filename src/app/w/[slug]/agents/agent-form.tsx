@@ -6,6 +6,8 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { dataText } from "@/i18n/workspace-text";
+import { ModelPicker } from "@/components/ai/model-picker";
+import { useAiOverview, usePickerModels, type AiRouteRef } from "@/lib/ai";
 import { api } from "@/lib/api";
 
 export type Permission = "allow" | "ask" | "deny";
@@ -13,11 +15,14 @@ export interface AgentConfig {
   name: string;
   description: string;
   instructions: string;
-  provider: "ollama" | "anthropic" | null;
+  /** Legacy pre-hub pin (read-only). Saving clears it. */
+  provider: string | null;
   model: string | null;
+  /** AI hub route of this version. Null on save = the workspace default, snapshotted into the new version. */
+  route: AiRouteRef | null;
   tools: { tool: "knowledge_search" | "workflow_inspect" | "run_workflow"; flowId?: string; permission: Permission }[];
   knowledgeSourceIds: string[];
-  limits: { maxSteps: number; maxToolCalls: number; maxCostMicros: number | null; timeoutMs: number };
+  limits: { maxSteps: number; maxToolCalls: number; maxCostMicros: number | null; timeoutMs: number; allowUnknownCost?: boolean };
 }
 export const EMPTY_AGENT: AgentConfig = {
   name: "",
@@ -25,6 +30,7 @@ export const EMPTY_AGENT: AgentConfig = {
   instructions: "",
   provider: null,
   model: null,
+  route: null,
   tools: [{ tool: "knowledge_search", permission: "allow" }],
   knowledgeSourceIds: [],
   limits: { maxSteps: 8, maxToolCalls: 6, maxCostMicros: null, timeoutMs: 120_000 },
@@ -48,7 +54,10 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
   const { workspace } = useWorkspace();
   const [c, setC] = useState<AgentConfig>(initial);
   const ro = Boolean(readOnlyReason);
-  const providers = useQuery({ queryKey: ["ai-providers"], queryFn: () => api<{ providers: { id: string; defaultModel: string; available: boolean; reason?: string }[] }>("/api/ai/providers"), select: (d) => d.providers });
+  const ai = useAiOverview(workspace.id);
+  const def = ai.data?.status.defaultRoute;
+  const canUse = Boolean(ai.data?.canUse);
+  const models = usePickerModels(workspace.id, canUse);
   const flows = useQuery({
     queryKey: ["flows", workspace.id],
     queryFn: () => api<{ flows: { id: string; name: string; publishedVersion: number | null }[] }>(`/api/workspaces/${workspace.id}/flows`),
@@ -79,7 +88,8 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave(c);
+        // A legacy provider pin is never sent: saving is the explicit step that moves the agent to the workspace route.
+        onSave({ ...c, provider: null, model: null });
       }}
     >
       <Card className="flex flex-col gap-4 p-5">
@@ -93,26 +103,32 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
           <Field label={t("agents.form.instructions")} htmlFor="ag-ins" hint={t("agents.form.instructionsHint")}>
             <Textarea id="ag-ins" rows={6} value={c.instructions} maxLength={8000} onChange={(e) => set({ instructions: e.target.value })} />
           </Field>
-          <div className="flex flex-wrap gap-3">
-            <Field label={t("agents.form.provider")} htmlFor="ag-prov" hint={t("agents.form.providerHint")}>
-              <select
-                id="ag-prov"
-                className={selectCls}
-                value={c.provider ?? ""}
-                onChange={(e) => set({ provider: (e.target.value || null) as AgentConfig["provider"], model: null })}
-              >
-                <option value="">{t("agents.form.providerDefault")}</option>
-                {(providers.data ?? []).map((p) => (
-                  <option key={p.id} value={p.id} disabled={!p.available}>
-                    {p.id}
-                    {p.available ? t("agents.form.defaultModel", { model: p.defaultModel }) : ` — ${p.reason}`}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("agents.form.model")} htmlFor="ag-model" hint={t("agents.form.modelHint")}>
-              <Input id="ag-model" dir="ltr" value={c.model ?? ""} maxLength={120} disabled={!c.provider} onChange={(e) => set({ model: e.target.value || null })} className="h-8" />
-            </Field>
+          <div className="flex flex-col gap-1 text-sm" data-testid="agent-ai-route">
+            <span className="text-med">{t("agents.form.aiModel")}</span>
+            {initial.route && (
+              <span className="text-muted">
+                {t("agents.form.aiModelPinned")}{" "}
+                <span dir="ltr" className="data text-hi">
+                  {initial.route.modelId}
+                </span>
+              </span>
+            )}
+            {canUse ? (
+              <ModelPicker
+                id="ag-model"
+                models={models.data ?? []}
+                loading={models.isPending}
+                value={c.route}
+                onChange={(route) => set({ route })}
+                allowDefault
+                defaultLabel={def ? t("agents.form.aiModelDefault", { model: def.modelId, connection: def.connectionLabel }) : t("agents.form.aiModelNone")}
+                disabled={ro}
+              />
+            ) : (
+              <span className="text-muted">{ai.data?.status.reason ?? t("agents.form.aiModelNone")}</span>
+            )}
+            <span className="text-muted">{t("agents.form.aiModelHint")}</span>
+            {initial.provider && <span className="text-warning">{t("agents.form.legacyPin", { provider: initial.provider })}</span>}
           </div>
         </fieldset>
       </Card>
@@ -199,6 +215,19 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
             className="h-8 w-32"
           />
         </Field>
+        {/* CXH-04: an explicit, clearly labelled opt-out of the cap guarantee for unknown-price calls (default off). */}
+        <div className="flex w-full flex-col gap-1">
+          <label className="flex items-center gap-2 text-base">
+            <input
+              type="checkbox"
+              disabled={ro || c.limits.maxCostMicros == null}
+              checked={c.limits.maxCostMicros != null && c.limits.allowUnknownCost === true}
+              onChange={(e) => set({ limits: { ...c.limits, allowUnknownCost: e.target.checked } })}
+            />
+            {t("agents.form.allowUnknownCost")}
+          </label>
+          <span className={c.limits.allowUnknownCost && c.limits.maxCostMicros != null ? "text-sm text-warning" : "text-sm text-muted"}>{t("agents.form.allowUnknownCostHint")}</span>
+        </div>
       </Card>
       <div>
         <Button type="submit" variant="primary" loading={saving} disabledReason={readOnlyReason ?? invalid}>

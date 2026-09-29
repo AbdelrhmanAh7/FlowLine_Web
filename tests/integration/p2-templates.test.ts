@@ -13,6 +13,7 @@ import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, processRun } from "../../worker/runner";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
+import { connectAi, useAiDouble } from "./ai-helpers";
 import { startFake, type Fake } from "../contract/helpers";
 import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers";
 
@@ -24,11 +25,9 @@ const PG = new URL(process.env.DATABASE_URL!);
 beforeAll(async () => {
   fake = await startFake();
   ai = await startFakeAi(0);
-  process.env.OLLAMA_BASE_URL = ai.url;
-  process.env.FLOWLINE_AI_PROVIDER = "ollama";
-  process.env.FLOWLINE_AI_MODEL = "fake-model";
   // Exact host:port pairs only: the fake providers, the fake AI/pricing page, and the local Postgres.
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `${process.env.FLOWLINE_EGRESS_ALLOWLIST},127.0.0.1:${ai.port},127.0.0.1:${PG.port}`;
+  useAiDouble(ai.url);
   // A KPI table in the test database, read through the real Postgres adapter.
   const c = new Client({ connectionString: process.env.DATABASE_URL });
   await c.connect();
@@ -65,6 +64,7 @@ function setUp(graph: FlowGraph, connections: Record<string, string>, values: Re
 async function fromTemplate(id: string, connFor: string[], values: Record<string, string>, adjust?: (g: FlowGraph) => void) {
   const user = await makeUser("tpl");
   const ws = await createWorkspace(user, unique("Templates"));
+  await connectAi(user, ws.id); // template AI steps use the workspace default model
   const connections: Record<string, string> = {};
   for (const p of connFor) {
     const fields: Record<string, string> =
@@ -108,7 +108,7 @@ describe("the six design templates run end-to-end (deterministic provider double
     expect(s.nurture!.status).toBe("skipped");
     expect(JSON.stringify((await lastPost("google_sheets", ":append"))?.body)).toContain("Analytical Engines Ltd");
     expect(JSON.stringify((await lastPost("slack", "chat.postMessage"))?.body)).toContain("Hot lead: Ada Lovelace");
-    expect(s.enrich!.meta).toMatchObject({ provider: "ollama", model: "fake-model" });
+    expect(s.enrich!.meta).toMatchObject({ provider: "openai", model: "fake-gpt-mini" });
 
     const cold = await enqueueRun(user, flow.id, { input: { body: { lead: { name: "Tiny Co", email: "x@tiny.test", company: "Tiny", employees: 4, industry: "Retail", role: "Owner" } } } });
     await claimAndProcess(cold.id);

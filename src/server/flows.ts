@@ -1,7 +1,8 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { track } from "./telemetry";
 import { z } from "zod";
-import { db, schema } from "@/db";
+import { db, schema, type Db } from "@/db";
+import { assertRouteSelection } from "@/ai/hub/selection";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
@@ -119,6 +120,8 @@ export async function saveFlow(user: CurrentUser, flowId: string, input: SaveFlo
       // Keep the server copy as a version so the overwrite is recoverable.
       await insertVersion(tx, user, current, "overwrite");
     }
+    // AI routes a person introduces or changes must be on connections their role may use (checked again at run time).
+    if (input.graph) await assertRouteSelection(tx as unknown as Db, user.id, current.workspaceId, input.graph, current.graph as FlowGraph);
     const [updated] = await tx
       .update(schema.flow)
       .set({
@@ -199,6 +202,11 @@ export async function shareFlowCopy(user: CurrentUser, flowId: string, targetWor
     const c = n.data.config as unknown as Record<string, unknown>;
     if (typeof c.connectionId === "string" && c.connectionId) {
       c.connectionId = "";
+      cleared++;
+    }
+    // AI routes name a workspace AI connection: never carried into another workspace (it would fall back to nothing).
+    if (n.type.startsWith("ai.") && c.route && src.workspaceId !== targetWorkspaceId) {
+      c.route = null;
       cleared++;
     }
     if ((n.type === "flow.subflow" || n.type === "logic.loop") && src.workspaceId !== targetWorkspaceId) c.flowId = "";

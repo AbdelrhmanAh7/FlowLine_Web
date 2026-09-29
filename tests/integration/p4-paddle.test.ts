@@ -2,8 +2,9 @@
  * Phase 4 — Paddle billing behind the existing billing abstraction.
  *
  * Mirrors p3-billing.test.ts (Stripe) against the Paddle adapter + fake Paddle.
- * The provider is installation-level env; this file sets it for its own run and
- * restores it afterwards so sibling files in the same worker are unaffected.
+ * The provider, keys and plans are platform-panel records (never env at runtime); this file seeds them for its own
+ * run through the platform-secret service and restores the previous provider/plans afterwards so sibling files in the
+ * same worker are unaffected. The sandbox/live gate (FLOWLINE_BILLING_PADDLE_ENV) stays operator env.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
@@ -12,8 +13,10 @@ import { POST as webhookRoute } from "@/app/api/billing/webhook/route";
 import { applyWebhookEvent, cancel, changePlan, getBillingState, getEntitlements, reconcileUsage, startCheckout } from "@/billing/service";
 import { requireWorkspace } from "@/server/access";
 import { monthStart } from "@/server/usage";
+import { getSetting } from "@/server/platform-settings";
 import { createWorkspace } from "@/server/workspaces";
 import { startFake, type Fake } from "../contract/helpers";
+import { seedPlatformCredential, seedSetting, unseedSetting } from "../fixtures/platform-seed";
 import { addMember, closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
 const PADDLE_SECRET = "pdl_ntfset_fake_integration";
@@ -44,13 +47,8 @@ const PADDLE_PLANS = [
 ];
 
 const ENV_OVERRIDE: Record<string, string> = {
-  FLOWLINE_BILLING_PROVIDER: "paddle",
-  FLOWLINE_BILLING_PADDLE_KEY: "pdl_sdbx_fake_billing",
-  FLOWLINE_BILLING_PADDLE_WEBHOOK_SECRET: PADDLE_SECRET,
   FLOWLINE_BILLING_PADDLE_ENV: "sandbox",
   FAKE_PADDLE_WEBHOOK_SECRET: PADDLE_SECRET,
-  FLOWLINE_BILLING_PLANS: JSON.stringify(PADDLE_PLANS),
-  FLOWLINE_BILLING_FREE_PLAN: "test_free",
 };
 
 interface FakeSub {
@@ -75,12 +73,20 @@ interface FakePaddleState {
 
 let fake: Fake;
 let savedEnv: Record<string, string | undefined>;
+let savedProvider: "stripe" | "paddle" | null = null;
+let savedPlans: unknown = null;
 beforeAll(async () => {
   savedEnv = {};
   for (const [k, v] of Object.entries(ENV_OVERRIDE)) {
     savedEnv[k] = process.env[k];
     process.env[k] = v;
   }
+  savedProvider = (await getSetting("billing.provider"))?.value ?? null;
+  savedPlans = (await getSetting("billing.plans"))?.value ?? null;
+  await seedPlatformCredential("billing.paddle.sandbox", { publicId: "test_fakeclienttoken0001", secret: "pdl_sdbx_fake_billing" });
+  await seedPlatformCredential("billing.paddle.sandbox.webhook", { secret: PADDLE_SECRET });
+  await seedSetting("billing.plans", { plans: PADDLE_PLANS, freePlanId: "test_free" });
+  await seedSetting("billing.provider", "paddle");
   fake = await startFake();
 });
 afterAll(async () => {
@@ -88,6 +94,10 @@ afterAll(async () => {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
+  if (savedProvider) await seedSetting("billing.provider", savedProvider);
+  else await unseedSetting("billing.provider");
+  if (savedPlans) await seedSetting("billing.plans", savedPlans);
+  else await unseedSetting("billing.plans");
   await fake.close();
   await closeDb();
 });

@@ -145,6 +145,12 @@ export interface SafeFetchOptions {
   maxBytes?: number;
   maxRedirects?: number;
   signal?: AbortSignal;
+  /**
+   * Streaming: called with each body chunk of a 2xx response instead of buffering it (the returned body is empty).
+   * Returning "stop" ends the read and cancels the response. maxBytes still bounds the total streamed size.
+   * Non-2xx responses are buffered as usual so their error body can be read.
+   */
+  onChunk?: (chunk: Uint8Array) => void | "stop";
 }
 
 export interface SafeResponse {
@@ -195,13 +201,17 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
       }
       const chunks: Uint8Array[] = [];
       let size = 0;
+      const streaming = opts.onChunk && res.status >= 200 && res.status < 300;
       if (res.body) {
         for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
           size += chunk.byteLength;
           if (size > maxBytes) throw new EgressError("EGRESS_TOO_LARGE", `Response is larger than ${Math.round(maxBytes / 1024)}KB`);
-          chunks.push(chunk);
+          if (streaming) {
+            if (opts.onChunk!(chunk) === "stop") break;
+          } else chunks.push(chunk);
         }
       }
+      if (streaming) size = 0;
       const buf = new Uint8Array(size);
       let off = 0;
       for (const c of chunks) {

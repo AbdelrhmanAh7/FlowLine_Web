@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import type { CurrentUser } from "./access";
 import { requireWorkspace } from "./access";
 import { audit, userActor } from "./audit";
-import { decryptSecret, encryptSecret, randomToken } from "./crypto";
+import { contextId, encryptSecretV2, openSecret, randomToken, type SecretContext } from "./crypto";
 import { EgressError, safeFetch } from "./egress";
 import { allowSignUp, BETA_REFUSAL } from "./beta";
 import { HttpError } from "./http";
@@ -16,6 +16,15 @@ import {
   validateIdToken,
   type Jwks,
 } from "./oidc";
+
+
+/** AAD contexts: the client secret is bound to the workspace's SSO row; the PKCE verifier to its pending state. */
+function ssoSecretContext(workspaceId: string): SecretContext {
+  return { table: "sso_config", rowId: workspaceId, workspaceId, provider: "oidc", purpose: "client_secret" };
+}
+function ssoVerifierContext(state: string, workspaceId: string): SecretContext {
+  return { table: "sso_state", rowId: contextId(state), workspaceId, provider: "oidc", purpose: "pkce_verifier" };
+}
 
 export { fetchDiscovery, validateIdToken } from "./oidc";
 export type { IdTokenClaims, Jwks, OidcDiscovery } from "./oidc";
@@ -112,12 +121,14 @@ export async function saveSsoConfig(
     .from(schema.ssoConfig)
     .where(eq(schema.ssoConfig.workspaceId, workspace.id));
   let secretEnc: string, keyId: string;
+  let legacyCrypto = false;
   if (input.clientSecret?.trim()) {
-    ({ ciphertext: secretEnc, keyId } = encryptSecret(
+    ({ ciphertext: secretEnc, keyId } = encryptSecretV2(
       input.clientSecret.trim(),
+      ssoSecretContext(workspace.id),
     ));
   } else if (existing) {
-    ({ clientSecretEnc: secretEnc, keyId } = existing);
+    ({ clientSecretEnc: secretEnc, keyId, legacyCrypto } = existing);
   } else {
     throw new HttpError(400, "VALIDATION", "Client secret is required");
   }
@@ -142,6 +153,7 @@ export async function saveSsoConfig(
       clientId,
       clientSecretEnc: secretEnc,
       keyId,
+      legacyCrypto,
       domains,
       defaultRole: input.defaultRole,
       enabled: input.enabled,
@@ -155,6 +167,7 @@ export async function saveSsoConfig(
         clientId,
         clientSecretEnc: secretEnc,
         keyId,
+        legacyCrypto,
         domains,
         defaultRole: input.defaultRole,
         enabled: input.enabled,
@@ -236,7 +249,7 @@ export async function startSso(opts: {
   const nonce = randomToken(24);
   const verifier = randomToken(48);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
-  const enc = encryptSecret(verifier);
+  const enc = encryptSecretV2(verifier, ssoVerifierContext(state, ws.id));
   await db
     .insert(schema.ssoState)
     .values({
@@ -323,10 +336,14 @@ export async function completeSso(opts: {
   if (!cfg || !ws) throw notConfigured();
 
   const discovery = await fetchDiscovery(cfg.issuer);
-  const clientSecret = decryptSecret<string>(cfg.clientSecretEnc, cfg.keyId);
-  const verifier = decryptSecret<string>(
-    pending.codeVerifierEnc,
-    pending.keyId,
+  const clientSecret = openSecret<string>(
+    { ciphertext: cfg.clientSecretEnc, keyId: cfg.keyId, legacy: cfg.legacyCrypto },
+    ssoSecretContext(cfg.workspaceId),
+  );
+  // Pending states are short-lived and always written as v2 (never legacy).
+  const verifier = openSecret<string>(
+    { ciphertext: pending.codeVerifierEnc, keyId: pending.keyId, legacy: false },
+    ssoVerifierContext(pending.state, pending.workspaceId),
   );
   const body = new URLSearchParams({
     grant_type: "authorization_code",

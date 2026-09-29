@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
+import { connectAi, useAiDouble } from "./ai-helpers";
 import { db, schema } from "@/db";
 import { stopSandbox } from "@/engine/sandbox";
 import type { FlowGraph } from "@/engine/types";
@@ -19,10 +20,8 @@ const prevEnv = { ...process.env };
 
 beforeAll(async () => {
   ai = await startFakeAi(0);
-  process.env.OLLAMA_BASE_URL = ai.url;
-  process.env.FLOWLINE_AI_PROVIDER = "ollama";
-  process.env.FLOWLINE_AI_MODEL = "fake-model";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `127.0.0.1:${ai.port}`;
+  useAiDouble(ai.url);
   for (let i = 0; i < 200; i++) {
     const id = await claimNextRun(db, "drain");
     if (!id) break;
@@ -84,6 +83,8 @@ const doubleGraph = (): FlowGraph => ({
 async function setup(name: string) {
   const owner = await makeUser("ag");
   const ws = await createWorkspace(owner, unique(name));
+  // Agents run on the workspace default AI connection; editors run agents in these tests, so they may use it.
+  await connectAi(owner, ws.id, { useRoles: ["owner", "editor"] });
   const flow = await createFlow(owner, ws.id, { name: `Doubler ${unique("f")}` });
   await saveFlow(owner, flow.id, { baseRevision: 1, graph: doubleGraph() });
   await publishFlow(owner, flow.id);
@@ -326,16 +327,18 @@ describe("agents: limits, failures and recovery", () => {
     const r2 = await runAgent((await startAgentRun({ agentId: a2.id, message: "[loop] keep going", actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } })).id);
     expect(r2, JSON.stringify({ tc: r2.toolCallCount, sc: r2.stepCount, steps: (await steps(r2.id)).map((x) => [x.index, x.kind, x.tool, x.decision]) })).toMatchObject({ status: "failed", error: { code: "AGENT_TOOL_LIMIT" } });
 
-    await db.update(schema.workspace).set({ prices: { "ai:ollama/fake-model": { inputPerMTokMicros: 1_000_000_000, outputPerMTokMicros: 1_000_000_000 } } }).where(eq(schema.workspace.id, ws.id));
+    await db.update(schema.workspace).set({ prices: { "ai:openai/fake-gpt-mini": { inputPerMTokMicros: 1_000_000_000, outputPerMTokMicros: 1_000_000_000 } } }).where(eq(schema.workspace.id, ws.id));
     const a3 = await createAgent(owner, ws.id, { name: "C", instructions: "x", tools, knowledgeSourceIds: [src.id], limits: limits({ maxCostMicros: 100 }) });
     const r3 = await runAgent((await startAgentRun({ agentId: a3.id, message: "what?", actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } })).id);
     expect(r3).toMatchObject({ status: "failed", error: { code: "AGENT_COST_LIMIT" } });
     const spent = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.agentRunId, r3.id), eq(schema.usageEvent.kind, "ai")));
     expect(spent).toHaveLength(0); // refused before calling the model
 
-    // Priced tool calls count toward the agent's own cost limit too (Codex CX3-06).
+    // Priced tool calls count toward the agent's own cost limit too (Codex CX3-06). The model here has no price: since
+    // the retest of CXH-04 an unknown-price model call under a cap needs the agent's explicit opt-in (it then runs
+    // outside the limit, recorded as unknown), so this agent opts in — the tool steps are what this case measures.
     await db.update(schema.workspace).set({ prices: { "agent_step:*": { perCallMicros: 100 } } }).where(eq(schema.workspace.id, ws.id));
-    const a4 = await createAgent(owner, ws.id, { name: "P", instructions: "x", tools, knowledgeSourceIds: [src.id], limits: limits({ maxSteps: 20, maxToolCalls: 10, maxCostMicros: 250 }) });
+    const a4 = await createAgent(owner, ws.id, { name: "P", instructions: "x", tools, knowledgeSourceIds: [src.id], limits: { ...limits({ maxSteps: 20, maxToolCalls: 10, maxCostMicros: 250 }), allowUnknownCost: true } });
     const r4 = await runAgent((await startAgentRun({ agentId: a4.id, message: "[loop] keep going", actingUser: owner, actor: { kind: "user", userId: owner.id, label: owner.email } })).id);
     expect(r4).toMatchObject({ status: "failed", error: { code: "AGENT_COST_LIMIT" } });
     expect(r4.costMicros).toBe(200); // two tool calls fit; the third would pass 250

@@ -1,0 +1,65 @@
+
+Running 3 tests using 1 worker
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+  x  1 [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) (12.8s)
+  ok 2 [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel (1.6s)
+  x  3 [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) (13.0s)
+
+
+  1) [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Setting up the platform admin for platform-admin-78c52998@flowline-e2e.test')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Setting up the platform admin for platform-admin-78c52998@flowline-e2e.test') with timeout 10000ms
+      - waiting for getByText('Setting up the platform admin for platform-admin-78c52998@flowline-e2e.test')
+
+
+      51 |   await page.getByLabel("Setup code").fill(token);
+      52 |   await page.getByRole("button", { name: "Continue" }).click();
+    > 53 |   await expect(page.getByText(`Setting up the platform admin for ${email}`)).toBeVisible();
+         |                                                                              ^
+      54 |   expect(page.url()).not.toContain(token);
+      55 |
+      56 |   // 2. The bound identity creates and verifies its account (the test stack's outbox is its inbox).
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub\e2e\admin-panel.spec.ts:53:78
+
+    Error Context: test-results\admin-panel-platform-admin-373de-dential-canary-never-leaks--chromium\error-context.md
+
+  2) [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('App saved. It becomes verified after the first successful Connect.')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('App saved. It becomes verified after the first successful Connect.') with timeout 10000ms
+      - waiting for getByText('App saved. It becomes verified after the first successful Connect.')
+
+
+      142 |   await secret.fill(`ws-${CANARY}`);
+      143 |   await google.getByRole("button", { name: "Save app" }).click();
+    > 144 |   await expect(page.getByText("App saved. It becomes verified after the first successful Connect.")).toBeVisible();
+          |                                                                                                      ^
+      145 |   await expect(secret).toHaveValue("");
+      146 |   expect(await page.content()).not.toContain(CANARY);
+      147 |
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub\e2e\admin-panel.spec.ts:144:102
+
+    Error Context: test-results\admin-panel-members-see-wh-8bc9a-direct-workspace-owned-app--chromium\error-context.md
+
+  2 failed
+    [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) 
+    [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) 
+  1 passed (28.6s)

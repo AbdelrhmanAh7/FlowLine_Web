@@ -18,6 +18,7 @@ import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, processRun, recoverStaleRuns } from "../../worker/runner";
 import { startFake, type Fake } from "../contract/helpers";
 import { claimAndProcess, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
+import { seedPlatformCredential } from "../fixtures/platform-seed";
 
 /** Regression tests for the Phase 2 security review (Fable 5.1): H1/H2 live in p2-postgres.test.ts. */
 let fake: Fake;
@@ -25,8 +26,8 @@ const prev = { ...process.env };
 
 beforeAll(async () => {
   fake = await startFake();
-  process.env.SLACK_OAUTH_CLIENT_ID = "fake-slack-client";
-  process.env.SLACK_OAUTH_CLIENT_SECRET = "fake-slack-secret";
+  // Platform OAuth apps live in the admin panel's records now (never env at runtime): seed the same fake app.
+  await seedPlatformCredential("integration.slack", { publicId: "fake-slack-client", secret: "fake-slack-secret" });
   for (let i = 0; i < 200; i++) {
     const id = await claimNextRun(db, "drain");
     if (!id) break;
@@ -210,7 +211,7 @@ describe("Low findings", () => {
   it("L1: OAuth reconnect can't target a connection of another provider", async () => {
     const { user, ws } = await setup("Provider");
     const zd = await createConnection(db, user.id, ws.id, "zendesk", "zd", { email: "agent@acme.test", token: "test-token", subdomain: "acme" });
-    await expectHttpError(startOAuth(db, { userId: user.id, workspaceId: ws.id, providerId: "slack", connectionId: zd.id }), 409, "DIFFERENT_PROVIDER");
+    await expectHttpError(startOAuth(db, { userId: user.id, sessionToken: "test-session-token", workspaceId: ws.id, providerId: "slack", connectionId: zd.id }), 409, "DIFFERENT_PROVIDER");
   });
 
   it("L2: Zendesk subdomain and Snowflake URL can't point credentials elsewhere", async () => {

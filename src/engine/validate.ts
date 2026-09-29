@@ -201,6 +201,8 @@ function validateConfig(node: FlowNode): ValidationIssue[] {
         const labels = str(cfg.labels).split(",").map((l) => l.trim()).filter(Boolean);
         if (labels.length < 2 || labels.length > 20) push("INVALID_CONFIG", "give 2–20 comma-separated labels");
       }
+      const r = cfg.route as { connectionId?: unknown; modelId?: unknown } | null | undefined;
+      if (r != null && (typeof r !== "object" || typeof r.connectionId !== "string" || typeof r.modelId !== "string" || !r.modelId)) push("INVALID_CONFIG", "the AI model choice is invalid; pick a model again");
       const mt = cfg.maxTokens === undefined ? 400 : Number(cfg.maxTokens);
       if (!(mt >= 16 && mt <= 4000)) push("INVALID_CONFIG", "max tokens must be 16–4000");
       break;

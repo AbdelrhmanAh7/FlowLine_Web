@@ -145,6 +145,7 @@ const DETAILS: Detail[] = [
   fixed("the output schema is not valid JSON", "issues.detail.schemaJson"),
   fixed("give 2–20 comma-separated labels", "issues.detail.labels"),
   fixed("max tokens must be 16–4000", "issues.detail.maxTokens"),
+  fixed("the AI model choice is invalid; pick a model again", "issues.detail.aiRoute"),
   fixed("code is empty", "issues.detail.codeEmpty"),
   fixed("code is longer than 20,000 characters", "issues.detail.codeLong"),
   fixed("timeout must be 0.5–30 seconds", "issues.detail.codeTimeout"),

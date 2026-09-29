@@ -161,8 +161,6 @@ const provider: ProviderDef = {
     revokeUrl: "https://api.github.com/applications/{client_id}/grant",
     scopes: ["repo", "read:user"],
     pkce: true,
-    clientIdEnv: "GITHUB_OAUTH_CLIENT_ID",
-    clientSecretEnv: "GITHUB_OAUTH_CLIENT_SECRET",
   },
   connectFields: [{ key: "token", label: "Personal access token", secret: true, placeholder: "ghp_…" }],
   async identity(ctx) {

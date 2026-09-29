@@ -1,0 +1,50 @@
+
+> flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+> node scripts/dev-test.mjs
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[seed-platform] test platform credentials ready
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[fake-ai] listening on http://127.0.0.1:4011
+Fake provider server listening on http://127.0.0.1:4010
+Control API: POST http://127.0.0.1:4010/__fake/reset | GET http://127.0.0.1:4010/__fake/requests?provider=slack | GET http://127.0.0.1:4010/__fake/state/slack | POST http://127.0.0.1:4010/__fake/fault
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://100.73.156.121:3100
+- Environments: .env
+✓ Ready in 423ms
+✓ Running next.config.ts took 56ms
+2026-09-29T02:18:39.612Z [worker] starting LAPTOP-AGGSOJ7U-47084-5d25a0
+
+ GET /api/health?require=worker 200 in 387ms (next.js: 276ms, application-code: 111ms)
+ GET /api/health?require=worker 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/health?require=worker 200 in 159ms (next.js: 152ms, application-code: 6ms)
+ POST /api/auth/sign-in/email 200 in 1058ms (next.js: 946ms, application-code: 113ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ GET /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai/connections 200 in 908ms (next.js: 875ms, application-code: 33ms)
+ POST /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai/connections/d1356a98-ce5a-48a1-906d-f88a905d7e1d/test 400 in 1977ms (next.js: 1955ms, application-code: 22ms)
+ GET /api/health?require=worker 200 in 168ms (next.js: 161ms, application-code: 7ms)
+ GET /api/health?require=worker 200 in 7ms (next.js: 1.9ms, application-code: 5ms)
+ POST /api/auth/sign-in/email 200 in 87ms (next.js: 17ms, application-code: 70ms)
+ GET /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai/connections 200 in 36ms (next.js: 18ms, application-code: 18ms)
+ POST /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai/connections/d1356a98-ce5a-48a1-906d-f88a905d7e1d/test 200 in 107ms (next.js: 18ms, application-code: 90ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ GET /w/e2e-9d40b5/settings?tab=ai 200 in 1170ms (next.js: 867ms, application-code: 303ms)
+ GET /api/health 200 in 8ms (next.js: 1.7ms, application-code: 7ms)
+ GET /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai 200 in 888ms (next.js: 860ms, application-code: 28ms)
+ GET /api/workspaces/cea83157-b53a-44a1-a77d-94985fc5af68/ai/models 200 in 430ms
+[?25h
+ ELIFECYCLE  Command failed with exit code 1.

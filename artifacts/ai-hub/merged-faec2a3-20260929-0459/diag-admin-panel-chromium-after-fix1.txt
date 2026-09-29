@@ -1,0 +1,11 @@
+
+Running 3 tests using 1 worker
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+  ok 1 [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) (11.3s)
+  ok 2 [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel (786ms)
+  ok 3 [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) (6.8s)
+
+  3 passed (19.6s)
