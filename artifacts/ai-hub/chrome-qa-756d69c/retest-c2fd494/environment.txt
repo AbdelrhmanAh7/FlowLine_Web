@@ -1,0 +1,16 @@
+Started: 2026-09-29 13:57 Africa/Cairo (UTC+3)
+Initial HEAD: 50682c88e33b35097a7706c018dc4cab6d2a7595
+Initial health: revision=dev, schemaVersion=20, db=ok, worker=ok
+Initial git diff c2fd494 HEAD -- src worker drizzle: empty
+Chrome installed executable: C:/Program Files/Google/Chrome/Application/chrome.exe
+Installed ProductName: Google Chrome; ProductVersion: 153.0.8010.54
+Browser launch: Playwright chromium.launch({channel:'chrome',headless:true})
+Browser CDP verification: chrome-version.json
+Final observed HEAD: 80d9b7aa534b753540630aefdf787ed0e731b4f1
+Final git diff c2fd494 HEAD -- src worker drizzle: empty
+Final git diff HEAD -- src worker drizzle: empty
+Final health at 14:05:17 Africa/Cairo: revision=dev, schemaVersion=20, db=ok, worker=ok
+HEAD changed externally during test; changes between initial and final HEAD are docs/artifacts only.
+Initial existing changes: artifacts/ai-hub/gate-final-22de627/stack-after-restart.log; docs/ai/MIGRATION.md; untracked prior retest directory; current retest directory.
+Final existing change outside tester output: artifacts/ai-hub/gate-final-c2fd494/stack-prod.log.
+The endpoint does not attest a source SHA. Production next-start build and provider double configuration are supplied by the brief; no rebuild or server manipulation was performed.

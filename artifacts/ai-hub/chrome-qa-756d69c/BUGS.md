@@ -96,11 +96,18 @@ Tested worktree HEAD: **8c4f3114d89300f7bfa1552e17e9207d68df2001** (only evidenc
 
 ---
 
-## Remediation (implementation lead): pending Codex retest in Chrome
+## Remediation (implementation lead) and Codex Chrome retests
 
 | ID | Fix | Commit | Status |
 |---|---|---|---|
 | CXQ-02 | The inspector labels the converted cost with its real unit (`Cost (<workspace currency>)`, passed through the workspace context), never the raw `costMicros` key. `e2e/ai-hub.spec.ts` asserted the buggy label; it now expects `Cost (USD)` and asserts `costMicros` is absent | `083cba9` | FIXED; `ai-hub.spec` passes in Chromium |
 | CXQ-03 | Structured step meta (e.g. `fallbackFrom`) is rendered as compact JSON via `src/lib/meta-text.ts`, never `[object Object]`; unit test `meta-text.test.ts` | `083cba9` | FIXED |
 | CXQ-04 | Usage table cells get inline gutters (`px-2`, none on the outer edges); the table has its own horizontal-scroll container (min 28 rem) on phones, so no page-level horizontal scroll | `083cba9` | FIXED |
-| CXQ-01 | Arabic translation of the provider catalogue prose, by provider id (in progress, separate branch `qa-cxq01`) | pending | IN PROGRESS |
+| CXQ-01 | Arabic translation of the provider catalogue prose, by provider id (`src/i18n/ai-provider-text.ts`, English fallback; unit test) | merged into `ai-hub` | FIXED |
+| CXQ-05 | Saving workspace prices invalidates the model-picker queries, so AI Providers shows the new price without a reload; E2E `ai-hub-wave-b.spec` test proven to fail without the fix | `c2fd494` | FIXED |
+
+Codex retests in real Google Chrome 153: CXQ-01…04 FIXED on `22de627` (`retest-22de627/RETEST.md`); **CXQ-05 FIXED on `c2fd494`** (EN + AR, 1440 and 375 px), with CXQ-01…04 spot-checks PASS (`retest-c2fd494/RETEST.md`).
+
+## CXQ-06 — P3, OPEN: `/favicon.ico` returns 404 (console error)
+
+Found in `retest-c2fd494`. The app ships no favicon (`src/app` has no `icon`/`favicon` file, no `public/`), so Chrome logs a 404 for `/favicon.ico` on every page. Cosmetic, no functional impact. Left open rather than changing product code after the final gate on `c2fd494`; the fix is one `src/app/icon.svg` in the next change set.

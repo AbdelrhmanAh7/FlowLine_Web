@@ -1,0 +1,718 @@
+[
+  {
+    "locale": "en",
+    "width": 1440,
+    "before": "fake-gpt-large\nDirect\nOpenAI · CXQ OpenAI double · 2 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+    "after": "fake-gpt-large\nDirect\nOpenAI · CXQ OpenAI double · 4 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+    "navBefore": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1
+    },
+    "navAfter": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1,
+      "canary": "en-1440"
+    },
+    "api": {
+      "models": [
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-cache",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-large",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": true,
+            "source": "workspace_price_table",
+            "inputPerMTokMicros": 4000000,
+            "outputPerMTokMicros": 8000000,
+            "currency": "USD",
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-mini",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-tools",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-reasoner",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        }
+      ]
+    }
+  },
+  {
+    "locale": "ar",
+    "width": 1440,
+    "before": "fake-gpt-large\nمباشر\nOpenAI · CXQ OpenAI double · 2 مُدخلات / 8 مُخرجات لكل مليون رمز · السياق غير معروف\nالسعر من جدول أسعار مساحة العمل",
+    "after": "fake-gpt-large\nمباشر\nOpenAI · CXQ OpenAI double · 4 مُدخلات / 8 مُخرجات لكل مليون رمز · السياق غير معروف\nالسعر من جدول أسعار مساحة العمل",
+    "navBefore": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1
+    },
+    "navAfter": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1,
+      "canary": "ar-1440"
+    },
+    "api": {
+      "models": [
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-cache",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-large",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": true,
+            "source": "workspace_price_table",
+            "inputPerMTokMicros": 4000000,
+            "outputPerMTokMicros": 8000000,
+            "currency": "USD",
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-mini",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-tools",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-reasoner",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        }
+      ]
+    }
+  },
+  {
+    "locale": "ar",
+    "width": 375,
+    "before": "fake-gpt-large\nمباشر\nOpenAI · CXQ OpenAI double · 2 مُدخلات / 8 مُخرجات لكل مليون رمز · السياق غير معروف\nالسعر من جدول أسعار مساحة العمل",
+    "after": "fake-gpt-large\nمباشر\nOpenAI · CXQ OpenAI double · 4 مُدخلات / 8 مُخرجات لكل مليون رمز · السياق غير معروف\nالسعر من جدول أسعار مساحة العمل",
+    "navBefore": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1
+    },
+    "navAfter": {
+      "timeOrigin": 1790679537708.4,
+      "navigationCount": 1,
+      "canary": "ar-375"
+    },
+    "api": {
+      "models": [
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-cache",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-large",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": true,
+            "source": "workspace_price_table",
+            "inputPerMTokMicros": 4000000,
+            "outputPerMTokMicros": 8000000,
+            "currency": "USD",
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-mini",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-tools",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-reasoner",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        }
+      ]
+    }
+  },
+  {
+    "locale": "en",
+    "width": 375,
+    "before": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · CXQ OpenAI double · 2 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+    "after": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · CXQ OpenAI double · 4 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+    "navBefore": {
+      "timeOrigin": 1790679767853.5,
+      "navigationCount": 1
+    },
+    "navAfter": {
+      "timeOrigin": 1790679767853.5,
+      "navigationCount": 1,
+      "canary": "en-375"
+    },
+    "api": {
+      "models": [
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-cache",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-large",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": true,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": true,
+            "source": "workspace_price_table",
+            "inputPerMTokMicros": 4000000,
+            "outputPerMTokMicros": 8000000,
+            "currency": "USD",
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-mini",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-gpt-tools",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        },
+        {
+          "connectionId": "868adc03-ea34-46ad-873f-31886448c76b",
+          "connectionLabel": "CXQ OpenAI double",
+          "provider": "openai",
+          "providerName": "OpenAI",
+          "routeKind": "direct",
+          "modelId": "fake-reasoner",
+          "ownedBy": "fake-org",
+          "lifecycle": "active",
+          "accessConfirmed": false,
+          "capabilities": {
+            "tools": "UNKNOWN",
+            "structuredOutput": "UNKNOWN",
+            "vision": "UNKNOWN",
+            "streaming": "UNKNOWN",
+            "reasoning": "UNKNOWN"
+          },
+          "contextWindow": null,
+          "price": {
+            "known": false,
+            "source": null,
+            "inputPerMTokMicros": null,
+            "outputPerMTokMicros": null,
+            "currency": null,
+            "sourceUrl": null,
+            "verifiedAt": null,
+            "zero": false
+          },
+          "freeTierNote": null,
+          "privacyNote": "API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.",
+          "idUnverified": false
+        }
+      ]
+    }
+  }
+]

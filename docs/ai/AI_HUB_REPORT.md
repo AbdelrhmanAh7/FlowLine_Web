@@ -158,7 +158,9 @@ Record: `artifacts/ai-hub/gate-final-c2fd494/GATE.md`. Single worker, retries 0,
 Agent-driven exploratory QA (not human UAT), test doubles only, no live cloud
 (`artifacts/ai-hub/chrome-qa-756d69c/REPORT.md`). Original pass: 9 PASS / 2 FAIL, P0 0, P1 0, P2 2, P3 2. Retest on
 `22de627`: 4/4 original findings fixed, 4/4 regression journeys pass, **1 new finding (CXQ-05)**
-(`artifacts/ai-hub/chrome-qa-756d69c/retest-22de627/RETEST.md`).
+(`artifacts/ai-hub/chrome-qa-756d69c/retest-22de627/RETEST.md`). Retest on `c2fd494` (real Google Chrome 153): **CXQ-05
+FIXED**, CXQ-01…04 spot-checks PASS, no raw key in HTML/URLs/storage/responses, **1 new P3 (CXQ-06, favicon 404)**
+(`artifacts/ai-hub/chrome-qa-756d69c/retest-c2fd494/RETEST.md`). Totals: P0 0, P1 0, P2 open 0, P3 open 1.
 
 | ID | Severity | Summary | Status |
 |---|---|---|---|
@@ -166,7 +168,8 @@ Agent-driven exploratory QA (not human UAT), test doubles only, no live cloud
 | CXQ-02 | P2 | Run inspector labelled a converted currency cost as `costMicros` (off by 10^6, display only; stored accounting was correct) | **FIXED**, verified in retest |
 | CXQ-03 | P3 | `fallbackFrom` structured metadata rendered as `[object Object]` | **FIXED**, verified in retest |
 | CXQ-04 | P3 | Phone usage table had zero horizontal gutter between columns | **FIXED**, verified in retest |
-| CXQ-05 | P2 (new, found in retest) | Model picker kept a stale workspace price after a successful price save, until reload | **Fixed in `c2fd494`** (commit message + `docs/ai/PROVIDERS.md`/price-key placeholder note in the same commit) — **pending Codex retest**; no retest artifact exists in this worktree |
+| CXQ-05 | P2 (new, found in retest) | Model picker kept a stale workspace price after a successful price save, until reload | **FIXED** in `c2fd494`, verified by the Codex Chrome retest (`artifacts/ai-hub/chrome-qa-756d69c/retest-c2fd494/RETEST.md`) |
+| CXQ-06 | P3 (new, retest `c2fd494`) | `/favicon.ico` returns 404, one console error per page; the app ships no icon | **OPEN** — cosmetic; not fixed after the final gate |
 
 ### PRIVATE BETA — unchanged: still blocked by Phase 4 external items
 
@@ -334,7 +337,8 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
    7. Have customers add their own AI keys under Settings → AI Providers — nothing is imported automatically.
 6. **Release E2E on the production build** (`FLOWLINE_TEST_NEXT=start`), because the dev stack shows INTERMITTENT-02
    stalls (§8).
-7. **Codex retest** of CXQ-05 (§2 "CHROME QA") and of CXH-21 (§3) — neither has a retest artifact in this worktree.
+7. **Codex review of CXH-21** (§3), the test-quality fix; not yet re-reviewed. CXQ-05 is retested and FIXED.
+8. **CXQ-06** (P3): add `src/app/icon.svg` in the next change set.
 
 ## 8. Known limitations
 

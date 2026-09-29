@@ -46,7 +46,7 @@ and SEC-01…06 in `SCOPE_MATRIX.md`.
   ≥10/12, from Phase 4, predates the AI hub); the hosted-model benchmark (12 frozen cases, EN+AR) is specified but
   PLANNED, pending an owner-approved budget.
 - CHROME QA — original pass 9 PASS/2 FAIL, P0 0/P1 0/P2 2/P3 2; retest on `22de627`: 4/4 original findings fixed,
-  4/4 regressions pass, 1 new finding CXQ-05 (fixed in `c2fd494`, Codex Chrome retest pending).
+  4/4 regressions pass, 1 new finding CXQ-05; retest on `c2fd494`: CXQ-05 FIXED, spot-checks PASS, 1 new P3 CXQ-06 (favicon 404, open).
 - PRIVATE BETA — unchanged: still blocked by Phase 4 external items (see the Phase 4 section below), still **NO**.
 - PUBLIC PRODUCTION APPROVED = **NO** (owner authorisation only).
 
@@ -60,8 +60,7 @@ and SEC-01…06 in `SCOPE_MATRIX.md`.
   `c2fd494`; isolated re-runs pass; 0 failures in 5 production-build suite runs. Classification: evidence-backed, not
   proven, dev-server artifact. Recommendation: run release E2E against the production build
   (`artifacts/ai-hub/gate-final-c2fd494/GATE.md`).
-- **CXQ-05** (model picker kept a stale workspace price after a successful save, until reload) — **fixed in
-  `c2fd494`; Codex Chrome retest pending**, no retest artifact exists in this worktree.
+- **CXQ-06** (P3): `/favicon.ico` 404, a console error on every page; add `src/app/icon.svg` in the next change set.
 - **CXH-21** (test-quality finding on the concurrency regression tests: `upTo` swallowed timeouts, `lockWaiting`
   accepted any ungranted lock) — fixed by the lead; **Codex retest not run**.
 
