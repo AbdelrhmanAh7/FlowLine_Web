@@ -13,9 +13,15 @@ function malformed(what: string): never {
   throw new HubError("AI_CATALOGUE_MALFORMED", `The model list is malformed (${what})`);
 }
 
-/** "0.000001" USD per token → 1_000_000 micro-USD per million tokens. Negative / non-numeric (e.g. variable) → unknown. */
+/** A plain non-negative decimal (optionally with an exponent): no blanks, signs, hex, "Infinity" or padding. */
+const PRICE_TEXT = /^(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?$/;
+
+/**
+ * "0.000001" USD per token → 1_000_000 micro-USD per million tokens. Only a non-empty, valid numeric representation
+ * is a price (CXH-09): "", " ", "abc", "0x0", negative (e.g. OpenRouter's -1 = variable) → unknown, never zero.
+ */
 export function perTokenUsdToMicrosPerM(v: unknown): number | undefined {
-  const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+  const n = typeof v === "string" ? (PRICE_TEXT.test(v) ? Number(v) : NaN) : typeof v === "number" ? v : NaN;
   if (!Number.isFinite(n) || n < 0) return undefined;
   return Math.round(n * 1e12);
 }

@@ -547,6 +547,10 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
       hub.faults.push(JSON.parse(b) as HubFault);
       return res.writeHead(200).end("{}");
     }
+    if (req.url === "/__fake/hub/public" && req.method === "POST") {
+      for (const p of (JSON.parse(b) as { providers: string[] }).providers) hub.publicListing.add(p);
+      return res.writeHead(200).end("{}");
+    }
     if (req.url === "/__fake/hub/remove" && req.method === "POST") {
       hub.removed.add(String((JSON.parse(b) as { model: string }).model));
       return res.writeHead(200).end("{}");

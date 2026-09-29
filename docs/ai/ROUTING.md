@@ -67,13 +67,18 @@ prompted, then validated.
   `AI_CREDENTIAL_UNREADABLE`.
 - **The provider refused the content:** `AI_SAFETY_REFUSAL`.
 - **Cancellation:** a user cancel, or `AI_CANCELLED`.
-- **Budget:** `BUDGET_EXCEEDED`.
+- **Budget:** `BUDGET_EXCEEDED`, and an agent's own limit, `AGENT_COST_LIMIT`.
 - **Forbidden key types:** `AI_PLAN_NOT_ALLOWED`, `AI_TRIAL_KEY`.
 - **The request itself is bad:** `AI_BAD_REQUEST`.
 - **Policy and account refusals:** `AI_PRIVACY_POLICY`, `AI_REGION_UNSUPPORTED`, `AI_ACCOUNT_ACTION_REQUIRED`.
 
 A **listed** route the acting member may not use (`use_roles`) is skipped, and the next listed route is tried. A
 **primary** route's permission refusal is final.
+
+A pinned **primary model that discovery marked removed** (or that is missing from a fresh listing) doesn't stop a
+FALLBACK / FREE_ONLY / LOW_COST call before planning: the planner skips it (`routesSkipped`, `AI_MODEL_REMOVED` /
+`AI_MODEL_NOT_LISTED`) and tries the approved routes. Under MANUAL it is refused at once, as before. A missing or
+revoked connection is still refused at once in every mode.
 
 ## 4. Retries, Retry-After and the circuit breaker
 
@@ -86,6 +91,10 @@ A **listed** route the acting member may not use (`use_roles`) is skipped, and t
     under 30 s old.
   - While it is open, calls are refused unsent (`AI_CIRCUIT_OPEN`, recorded as `refused`). FALLBACK moves on.
   - The breaker reads `ai_attempt`, so every web and worker process shares it.
+- **Stale results are fenced:** health, test and catalogue writes made after a network call only apply while the
+  connection still has the credential version the call used and isn't disconnected. A key test that finishes after a
+  disconnect never writes CONNECTED over REVOKED, and an old key's model list never overwrites the catalogue after a
+  key replacement.
 - **Rotation and revocation:** every attempt re-reads the connection, the key and the actor's membership.
   - A key replaced while a call is running: the answer is discarded (`AI_CONNECTION_CHANGED`, retryable) and the
     next attempt uses the new key.
@@ -99,8 +108,13 @@ A **listed** route the acting member may not use (`use_roles`) is skipped, and t
   - Anthropic `message_*` / `content_block_*` events, including mid-stream `error` events;
   - Gemini `alt=sse` chunks;
   - Cohere typed events.
-- **Tool-call fragments** are assembled by index. A stream that ends before its terminal event is
-  `AI_STREAM_INTERRUPTED`, never a partial answer.
+- **Tool-call fragments** are assembled by index. A stream that ends before its terminal event (for Chat: before a
+  finish reason, even after `[DONE]`) is `AI_STREAM_INTERRUPTED`, never a partial answer.
+- **Malformed data is rejected:** a `data:` chunk that isn't a JSON object fails the attempt (`AI_BAD_RESPONSE`,
+  possible charge) instead of being skipped; comments and empty keep-alives are still accepted. Tool-call arguments
+  that aren't a JSON object (e.g. cut-off JSON) are rejected too; only empty text or `{}` means "no arguments".
+- **Provider errors:** only documented error identifiers are named in messages (a fixed vocabulary); unknown codes and
+  free-text reasons are dropped, and the submitted key is scrubbed from any error before it is returned or stored.
 - **No concatenation across attempts:**
   - Every delta carries its `attemptKey`.
   - When an attempt that streamed fails, a `discard` event follows.
@@ -132,11 +146,28 @@ A **listed** route the acting member may not use (`use_roles`) is skipped, and t
   - **Timeout after send, stream cut, or cancellation:** settled at the reservation (possible charge).
   - **Success with no usage reported:** tokens unknown, the ledger keeps the reservation, and `cost_source` is
     `unknown`.
-- **Unknown is not 0.** With a hard cap (workspace budget or plan cap), an unknown-price call is refused unsent
-  (`AI_COST_UNKNOWN`) unless the owner allows unknown-cost calls. That setting never makes an unknown price "free" or
-  "within a ceiling".
-- **Metering:** AI steps, agents and Copilot are all metered by the hub, with idempotent ledger keys
-  `${requestId}:${attempt}`, so a retried or fallen-back call never double-bills. An agent model retry never replays
+- **Unknown is not 0.** With a hard cap (workspace budget or plan cap) **or an agent's own cost limit**, an
+  unknown-price call is refused unsent (`AI_COST_UNKNOWN`) unless the owner allows unknown-cost calls; then it is
+  recorded with `cost_source = unknown` (an agent step's cost is `null`), never as 0. That setting never makes an
+  unknown price "free" or "within a ceiling".
+- **Usage must be complete.** A response whose usage lacks a required count (e.g. `usage: {}`, only a prompt count,
+  cached tokens above the prompt total) is **unknown** in every adapter: the ledger keeps the reservation, the
+  tokens stay `null`.
+- **The reservation counts the whole request:** system prompt, every message including historical tool calls with
+  their arguments and tool results, tool definitions and the output schema (JSON-serialised, plus per-message
+  framing). The same size is used for LOW_COST ranking and agent limits.
+- **Agent cost limit:** enforced inside every reservation the hub makes for an agent run — each retry and each
+  fallback route — against everything the run holds in the ledger (settled charges and open reservations, model and
+  tool steps). The agent's reported cost is that ledger total, not only the answers it received.
+- **Metering:** AI steps, agents and Copilot are all metered by the hub, with ledger keys
+  `${requestId}:${attempt}`, so a retried or fallen-back call never double-bills.
+- **Recovery:** attempt numbers survive a worker restart. A recovered request continues after the highest attempt
+  found in `ai_attempt` or the ledger, and every send reserves a **new** key first; an existing key is never taken as
+  permission to send (another process holding it just moves this one to the next number). A reservation left open by
+  a worker that stopped (older than 60 s, no attempt record) is settled at its reservation and recorded as an
+  `interrupted` attempt with `possible_charge = true` (`AI_ATTEMPT_ABANDONED`). No answer is reused across a
+  recovery: the hub keeps no answer text outside the run's encrypted step data, so the request is sent again and both
+  charges stay in the ledger (step meta `recoveredAttempts`). An agent model retry never replays
   a tool: failed attempts return nothing, and only a successful turn's proposals reach ALLOW / ASK / DENY.
 
 ## 7. Where to see it

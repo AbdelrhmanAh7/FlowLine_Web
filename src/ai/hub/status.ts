@@ -3,7 +3,7 @@ import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { Role } from "@/db/schema";
 import { roleMayUse } from "./discovery";
-import { canCheckKey } from "./protocols";
+import { keyCheckOf } from "./protocols";
 import { getProviderDef, isConnectable, LEGACY_LOCAL_PROVIDERS, PROVIDERS, RETIRED_NOT_ADDED } from "./registry";
 import { NOT_CONFIGURED_MESSAGE, resolveRoute } from "./routing";
 import { testOverride } from "./transport";
@@ -31,7 +31,7 @@ export function publicProviders() {
     connectionFields: (p.connectionFields ?? []).map((f) => ({ key: f.key, label: f.label, required: f.required, pattern: f.pattern, options: f.options ?? null, help: f.help ?? null })),
     planWarning: p.planWarning ?? null,
     requiresPlanAttestation: p.requiresPlanAttestation === true,
-    keyCheck: isConnectable(p) && canCheckKey(p) ? ("listing" as const) : ("none" as const),
+    keyCheck: isConnectable(p) ? keyCheckOf(p) : ("none" as const),
     freeTier: p.freeTier,
     privacy: p.privacy,
     termsNotes: p.termsNotes ?? null,

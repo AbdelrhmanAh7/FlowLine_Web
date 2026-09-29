@@ -3,7 +3,7 @@ import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AiPolicy, AiRouteRef } from "@/db/schema";
 import { catalogueKey } from "./catalogue";
-import { isVerifiedZeroPrice, maxCostMicros, resolvePrice, type PriceSnapshot } from "./pricing";
+import { isVerifiedZeroPrice, maxCostMicros, requestInputChars, resolvePrice, type PriceSnapshot } from "./pricing";
 import { primaryProtocol } from "./protocols";
 import { getProviderDef, isConnectable, LEGACY_LOCAL_PROVIDERS, type ProviderDefinition } from "./registry";
 import { HubError, UNKNOWN_CAPABILITIES, type HubChatRequest, type ResolvedRoute } from "./types";
@@ -39,7 +39,21 @@ export interface RouteInput {
  * provider, and the model must not be removed from (or absent from a fresh) listing. Capabilities come from the
  * public catalogue (tri-state; provider-wide UNSUPPORTED facts applied), the price from workspace table → catalogue.
  */
-export async function routeFor(db: Db, workspace: Workspace, ref: AiRouteRef, source: ResolvedRoute["source"]): Promise<ResolvedRoute> {
+export interface RouteOptions {
+  /**
+   * A fallback-eligible model problem (removed from / not in the connection's listing) doesn't throw here: the route
+   * is returned marked `unavailable`, so the policy planner can move to the approved fallback routes (CXH-13). A
+   * missing / revoked / foreign connection or an unavailable provider still throws at once.
+   */
+  deferUnavailable?: boolean;
+}
+
+/** Route options for a workspace's calls: only a policy with other routes to try defers unavailable models. */
+export function deferFor(workspace: Pick<Workspace, "aiPolicy">): RouteOptions {
+  return { deferUnavailable: (workspace.aiPolicy?.mode ?? "MANUAL") !== "MANUAL" };
+}
+
+export async function routeFor(db: Db, workspace: Workspace, ref: AiRouteRef, source: ResolvedRoute["source"], opts: RouteOptions = {}): Promise<ResolvedRoute> {
   const [conn] = await db
     .select()
     .from(schema.aiConnection)
@@ -53,11 +67,14 @@ export async function routeFor(db: Db, workspace: Workspace, ref: AiRouteRef, so
     .select()
     .from(schema.aiConnectionModel)
     .where(and(eq(schema.aiConnectionModel.connectionId, conn.id), eq(schema.aiConnectionModel.modelId, ref.modelId)));
-  if (access?.removedAt) throw new HubError("AI_MODEL_REMOVED", `${ref.modelId} isn't offered by the connection "${conn.label}" anymore. Pick another model.`);
-  if (!access && conn.catalogRefreshedAt && !conn.catalogStale) {
-    throw new HubError("AI_MODEL_NOT_LISTED", `${ref.modelId} isn't in the model list of "${conn.label}". Refresh the models or pick another one.`);
-  }
-  return buildRoute(db, workspace, conn, def, ref.modelId, source);
+  const unavailable: ResolvedRoute["unavailable"] = access?.removedAt
+    ? { code: "AI_MODEL_REMOVED", message: `${ref.modelId} isn't offered by the connection "${conn.label}" anymore. Pick another model.` }
+    : !access && conn.catalogRefreshedAt && !conn.catalogStale
+      ? { code: "AI_MODEL_NOT_LISTED", message: `${ref.modelId} isn't in the model list of "${conn.label}". Refresh the models or pick another one.` }
+      : undefined;
+  if (unavailable && !opts.deferUnavailable) throw new HubError(unavailable.code, unavailable.message);
+  const route = await buildRoute(db, workspace, conn, def, ref.modelId, source);
+  return unavailable ? { ...route, unavailable } : route;
 }
 
 async function buildRoute(db: Db, workspace: Workspace, conn: Conn, def: ProviderDefinition, modelId: string, source: ResolvedRoute["source"]): Promise<ResolvedRoute> {
@@ -87,7 +104,7 @@ async function buildRoute(db: Db, workspace: Workspace, conn: Conn, def: Provide
  * another connection, to a server key or to an environment variable here: a missing / revoked / foreign connection
  * is an error. (Fallback between routes is a POLICY decision, made in `planRoutes` with explicitly listed routes.)
  */
-export async function resolveRoute(db: Db, workspace: Workspace, input: RouteInput): Promise<ResolvedRoute> {
+export async function resolveRoute(db: Db, workspace: Workspace, input: RouteInput, opts: RouteOptions = {}): Promise<ResolvedRoute> {
   const legacyLocal = LEGACY_LOCAL_PROVIDERS.has((workspace.aiProvider ?? "").toLowerCase());
   let ref: AiRouteRef | null = null;
   let source: ResolvedRoute["source"] = "workspace-default";
@@ -110,7 +127,7 @@ export async function resolveRoute(db: Db, workspace: Workspace, input: RouteInp
     throw new HubError("AI_NOT_CONFIGURED", NOT_CONFIGURED_MESSAGE);
   }
   if (!isRouteRef(ref)) throw new HubError("AI_CONNECTION_MISSING", "The AI route on this step is invalid. Pick a model again.");
-  return routeFor(db, workspace, ref, source);
+  return routeFor(db, workspace, ref, source, opts);
 }
 
 /** The route snapshot persisted with run steps / published versions (no secrets, no prices). */
@@ -158,10 +175,6 @@ export function capabilityProblem(route: ResolvedRoute, req: HubChatRequest, str
   return null;
 }
 
-function promptChars(req: HubChatRequest) {
-  return req.system.length + req.messages.reduce((n, m) => n + m.content.length, 0) + JSON.stringify(req.tools ?? []).length + JSON.stringify(req.schema ?? {}).length;
-}
-
 /**
  * Plans the ordered routes an AI call may use under the workspace policy:
  * - MANUAL: the resolved route only.
@@ -194,6 +207,12 @@ export async function planRoutes(db: Db, workspace: Workspace, primary: Resolved
   const kept: { route: ResolvedRoute; label: string; max: number | null }[] = [];
   for (const c of candidates) {
     const ref = { connectionId: c.route.connectionId, modelId: c.route.modelId };
+    if (c.route.unavailable) {
+      // MANUAL has nothing else to try: the same immediate refusal as before. Other modes skip it (visible in meta).
+      if (mode === "MANUAL") throw new HubError(c.route.unavailable.code, c.route.unavailable.message);
+      skipped.push({ ref, code: c.route.unavailable.code, reason: c.route.unavailable.message });
+      continue;
+    }
     const priv = privacyAllows(policy, c.route);
     if (priv) {
       skipped.push({ ref, code: "AI_PRIVACY_POLICY", reason: `Refused by the workspace privacy policy: ${priv}` });
@@ -204,7 +223,7 @@ export async function planRoutes(db: Db, workspace: Workspace, primary: Resolved
       skipped.push({ ref, code: "AI_CAPABILITY_UNSUPPORTED", reason: `${c.route.modelId}: ${cap}` });
       continue;
     }
-    const max = maxCostMicros(c.route.pricing as PriceSnapshot | null, promptChars(req), req.maxTokens);
+    const max = maxCostMicros(c.route.pricing as PriceSnapshot | null, requestInputChars(req), req.maxTokens);
     if (mode === "FREE_ONLY" && !c.route.free?.zeroPriced) {
       skipped.push({ ref, code: "AI_NOT_FREE", reason: c.route.pricing ? `${c.route.modelId} has a price (not verified zero)` : `${c.route.modelId}'s price is unknown (unknown is never free)` });
       continue;
@@ -232,7 +251,7 @@ export async function planRoutes(db: Db, workspace: Workspace, primary: Resolved
     if (mode === "FREE_ONLY") throw new HubError("AI_NO_FREE_ROUTE", `The workspace only allows verified free AI routes, and none is available for this call (${why}). Nothing was sent.`);
     if (mode === "LOW_COST") throw new HubError("AI_NO_ROUTE_WITHIN_CEILING", `No approved route with a known price within the ceiling can serve this call (${why}). Nothing was sent.`);
     const first = skipped[0];
-    throw new HubError(first?.code ?? "AI_NOT_CONFIGURED", first ? `${first.reason}. Nothing was sent.` : NOT_CONFIGURED_MESSAGE);
+    throw new HubError(first?.code ?? "AI_NOT_CONFIGURED", first ? `${first.reason.replace(/\.$/, "")}. Nothing was sent.` : NOT_CONFIGURED_MESSAGE);
   }
   return { mode, plan, skipped };
 }
@@ -271,6 +290,8 @@ export const FALLBACK_NEVER = new Set([
   "AI_SAFETY_REFUSAL",
   "AI_CANCELLED",
   "BUDGET_EXCEEDED",
+  "AGENT_COST_LIMIT",
+  "AI_ATTEMPT_CONFLICT",
   "AI_PLAN_NOT_ALLOWED",
   "AI_TRIAL_KEY",
   "AI_BAD_REQUEST",

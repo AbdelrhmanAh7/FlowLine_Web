@@ -1,7 +1,7 @@
 import type { ProviderDefinition } from "../registry";
 import { HubError, type AiModelCapabilities, type DiscoveredModel, type HubChatRequest, type HubToolCall, type NormalisedResult } from "../types";
 import { extras, usageFields } from "./openai-chat";
-import { mapInBandError, num, SAFETY_FINISH, safetyRefusal, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
+import { badToolArgs, mapInBandError, num, SAFETY_FINISH, safetyRefusal, streamJson, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
 
 /**
  * Gemini API native protocol (generativelanguage.googleapis.com/v1beta):
@@ -44,23 +44,30 @@ export function buildGeminiBody(def: ProviderDefinition, model: string, req: Hub
 
 type GUsage = { promptTokenCount?: unknown; cachedContentTokenCount?: unknown; candidatesTokenCount?: unknown; thoughtsTokenCount?: unknown };
 
+/** null = UNKNOWN (no usage, a missing prompt / candidates count, cached > prompt): never read as zero (CXH-08). */
 function normaliseUsage(u: GUsage | undefined | null) {
   if (!u || typeof u !== "object") return null;
-  const prompt = num(u.promptTokenCount) ?? 0;
+  const prompt = num(u.promptTokenCount);
+  const output = num(u.candidatesTokenCount);
+  if (prompt == null || output == null) return null;
   const cached = num(u.cachedContentTokenCount);
-  return { inputTokens: Math.max(0, prompt - (cached ?? 0)), cacheReadTokens: cached, cacheWriteTokens: null, outputTokens: num(u.candidatesTokenCount) ?? 0, reasoningTokens: num(u.thoughtsTokenCount) };
+  if ((cached ?? 0) > prompt) return null;
+  return { inputTokens: prompt - (cached ?? 0), cacheReadTokens: cached, cacheWriteTokens: null, outputTokens: output, reasoningTokens: num(u.thoughtsTokenCount) };
 }
 
 type Candidate = { content?: { parts?: { text?: unknown; thought?: unknown; functionCall?: { name?: unknown; args?: unknown } }[] }; finishReason?: unknown };
 
-function readParts(c: Candidate | undefined, into: { text: string; calls: HubToolCall[] }, onText?: (t: string) => void) {
+function readParts(def: ProviderDefinition, c: Candidate | undefined, into: { text: string; calls: HubToolCall[] }, onText?: (t: string) => void) {
   for (const p of c?.content?.parts ?? []) {
     if (!p || typeof p !== "object" || p.thought === true) continue;
     if (typeof p.text === "string") {
       into.text += p.text;
       onText?.(p.text);
     } else if (p.functionCall && typeof p.functionCall.name === "string" && p.functionCall.name) {
-      const args = p.functionCall.args && typeof p.functionCall.args === "object" && !Array.isArray(p.functionCall.args) ? (p.functionCall.args as Record<string, unknown>) : {};
+      // `args` is optional (absent = no arguments); present, it must be an object — never coerced to {}.
+      const raw = p.functionCall.args;
+      if (raw !== undefined && (!raw || typeof raw !== "object" || Array.isArray(raw))) throw badToolArgs(def);
+      const args = (raw ?? {}) as Record<string, unknown>;
       into.calls.push({ id: `call_${into.calls.length}`, name: p.functionCall.name, arguments: args });
     }
   }
@@ -77,7 +84,7 @@ export function parseGeminiResponse(def: ProviderDefinition, requestedModel: str
   blocked(def, d);
   if (!Array.isArray(d.candidates) || !d.candidates.length) throw new HubError("AI_BAD_RESPONSE", `${def.name} returned no candidates`, { retryable: true, possibleCharge: true });
   const acc = { text: "", calls: [] as HubToolCall[] };
-  readParts(d.candidates[0], acc);
+  readParts(def, d.candidates[0], acc);
   const finishReason = typeof d.candidates[0]?.finishReason === "string" ? d.candidates[0].finishReason : null;
   if (!acc.text && !acc.calls.length && finishReason && SAFETY_FINISH.has(finishReason.toLowerCase())) throw safetyRefusal(def, finishReason);
   return {
@@ -98,18 +105,14 @@ export function geminiStream(def: ProviderDefinition, requestedModel: string, on
   let model = requestedModel;
   return {
     onEvent(e: SseEvent) {
-      let d: { error?: unknown; candidates?: Candidate[]; usageMetadata?: GUsage; modelVersion?: unknown; promptFeedback?: { blockReason?: unknown } };
-      try {
-        d = JSON.parse(e.data) as typeof d;
-      } catch {
-        return;
-      }
+      const d = streamJson(def, e.data) as { error?: unknown; candidates?: Candidate[]; usageMetadata?: GUsage; modelVersion?: unknown; promptFeedback?: { blockReason?: unknown } } | null;
+      if (!d) return; // empty keep-alive
       if (d.error && typeof d.error === "object") throw mapInBandError(def, requestedModel, d);
       blocked(def, d);
       if (typeof d.modelVersion === "string" && d.modelVersion) model = d.modelVersion;
       if (d.usageMetadata) usage = d.usageMetadata;
       const c = d.candidates?.[0];
-      readParts(c, acc, onText);
+      readParts(def, c, acc, onText);
       if (typeof c?.finishReason === "string") finishReason = c.finishReason;
     },
     result(): NormalisedResult {

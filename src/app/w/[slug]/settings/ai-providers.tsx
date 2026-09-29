@@ -527,7 +527,12 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
           <p className="font-medium text-hi">{conn.label}</p>
           <p className="text-sm text-muted">{conn.providerName}</p>
         </div>
-        <StatusBadge tone={STATUS_TONE[conn.status]}>{t(`aiHub.status.${conn.status}`)}</StatusBadge>
+        {/* A saved key that nothing has proven yet is not shown as "Connected" (CXH-11). */}
+        {conn.status === "CONNECTED" && !conn.keyVerified ? (
+          <StatusBadge tone="warning">{t("aiHub.status.UNVERIFIED")}</StatusBadge>
+        ) : (
+          <StatusBadge tone={STATUS_TONE[conn.status]}>{t(`aiHub.status.${conn.status}`)}</StatusBadge>
+        )}
       </div>
       <dl className="grid grid-cols-[130px_1fr] gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted">{t("aiHub.connection.key")}</dt>
@@ -546,9 +551,9 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
         <dt className="text-muted">{t("aiHub.connection.lastTested")}</dt>
         <dd>{conn.lastTestedAt ? t.relative(conn.lastTestedAt) : t("common.never")}</dd>
       </dl>
-      {conn.keyCheck === "none" && !conn.lastTestedAt && (
+      {(conn.keyCheck === "none" || conn.keyCheck === "public-listing") && !conn.lastTestedAt && (
         <p className="text-sm text-warning" data-testid="ai-key-unchecked">
-          {t("aiHub.connection.keyUnchecked")}
+          {t(conn.keyCheck === "public-listing" ? "aiHub.connection.keyUncheckedPublic" : "aiHub.connection.keyUnchecked")}
         </p>
       )}
       {conn.catalogStale && <p className="text-sm text-warning">{t("aiHub.connection.stale", { reason: conn.catalogError ?? "" })}</p>}
@@ -667,7 +672,7 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
       <h2 id="ai-connect-title" className="text-lg font-semibold">
         {t("aiHub.dialog.connectTitle", { name: provider.name })}
       </h2>
-      <p className="mt-1 text-sm text-med">{provider.keyCheck === "none" ? t("aiHub.dialog.connectBodyNoCheck") : t("aiHub.dialog.connectBody")}</p>
+      <p className="mt-1 text-sm text-med">{t(provider.keyCheck === "none" ? "aiHub.dialog.connectBodyNoCheck" : provider.keyCheck === "public-listing" ? "aiHub.dialog.connectBodyPublic" : provider.keyCheck === "key-endpoint" ? "aiHub.dialog.connectBodyKeyEndpoint" : "aiHub.dialog.connectBody")}</p>
       {provider.planWarning && (
         <p role="note" className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-med" data-testid="ai-plan-warning">
           {t.has(`aiHub.planWarning.${provider.id}` as MessageKey) ? t(`aiHub.planWarning.${provider.id}` as MessageKey) : provider.planWarning}
@@ -687,7 +692,9 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
                   method: "POST",
                   json: { provider: provider.id, label, apiKey, settings: clean, ...(provider.requiresPlanAttestation ? { attestPayAsYouGo: attest } : {}) },
                 });
-                toast(t("aiHub.dialog.connected", { count: r.connection.models.discovered }), "success");
+                // Only a proven key is "connected"; an unverified one is saved, and says so (no fake success).
+                if (r.connection.keyVerified) toast(t("aiHub.dialog.connected", { count: r.connection.models.discovered }), "success");
+                else toast(t("aiHub.dialog.connectedUnverified", { count: r.connection.models.discovered }), "warning");
               },
               (err) => apiErrorMessage(t, err, t("aiHub.dialog.connectError")),
             )

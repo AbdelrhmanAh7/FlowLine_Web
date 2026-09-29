@@ -1,6 +1,6 @@
 import type { AiModelPricing, PriceEntry, PriceTable } from "@/db/schema";
 import { priceFor } from "@/server/prices";
-import type { NormalisedUsage } from "./types";
+import type { HubChatRequest, NormalisedUsage } from "./types";
 
 /**
  * Pricing math for the hub. Rules:
@@ -15,8 +15,13 @@ import type { NormalisedUsage } from "./types";
  */
 export type PriceSnapshot = AiModelPricing & { perCallMicros?: number; source: "workspace_price_table" | "catalogue" };
 
+/** A usable per-token price: a finite, non-negative number (a malformed stored value is UNKNOWN, never 0). */
+export function validPrice(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n) && n >= 0;
+}
+
 export function fromPriceEntry(p: PriceEntry | undefined): PriceSnapshot | null {
-  if (!p || p.inputPerMTokMicros == null || p.outputPerMTokMicros == null) return null;
+  if (!p || !validPrice(p.inputPerMTokMicros) || !validPrice(p.outputPerMTokMicros)) return null;
   return { inputPerMTokMicros: p.inputPerMTokMicros, outputPerMTokMicros: p.outputPerMTokMicros, perCallMicros: p.perCallMicros, source: "workspace_price_table" };
 }
 
@@ -29,7 +34,7 @@ export function resolvePrice(
 ): PriceSnapshot | null {
   const own = fromPriceEntry(priceFor(prices ?? {}, `ai:${provider}/${modelId}`));
   if (own) return own;
-  if (!catalogue || catalogue.inputPerMTokMicros == null || catalogue.outputPerMTokMicros == null) return null;
+  if (!catalogue || !validPrice(catalogue.inputPerMTokMicros) || !validPrice(catalogue.outputPerMTokMicros)) return null;
   if (catalogue.currency && ctx.currency && catalogue.currency !== ctx.currency) return null;
   if (catalogue.region && catalogue.region !== (ctx.region ?? null)) return null;
   return { ...catalogue, source: "catalogue" };
@@ -37,7 +42,16 @@ export function resolvePrice(
 
 /** A route is FREE only when its price is known, verified (catalogue: official page or documented listing) and zero. */
 export function isVerifiedZeroPrice(p: PriceSnapshot | null): boolean {
-  return Boolean(p && p.source === "catalogue" && p.inputPerMTokMicros === 0 && p.outputPerMTokMicros === 0 && !p.perCallMicros && !(p.cacheWritePerMTokMicros && p.cacheWritePerMTokMicros > 0));
+  return Boolean(
+    p &&
+      p.source === "catalogue" &&
+      validPrice(p.inputPerMTokMicros) &&
+      validPrice(p.outputPerMTokMicros) &&
+      p.inputPerMTokMicros === 0 &&
+      p.outputPerMTokMicros === 0 &&
+      !p.perCallMicros &&
+      !(p.cacheWritePerMTokMicros && p.cacheWritePerMTokMicros > 0),
+  );
 }
 
 const perM = (tokens: number, microsPerM: number) => (tokens * microsPerM) / 1_000_000;
@@ -63,6 +77,26 @@ export function costMicros(p: PriceSnapshot | null, u: NormalisedUsage): number 
   const cacheWrite = perM(u.cacheWriteTokens ?? 0, p.cacheWritePerMTokMicros ?? 0);
   const output = perM(u.outputTokens + (u.reasoningTokens ?? 0), t.output);
   return Math.round(input + cacheRead + cacheWrite + output) + (p.perCallMicros ?? 0);
+}
+
+/** Per-message framing (role markers, separators) the protocols add around every turn, in characters. */
+const MESSAGE_FRAMING_CHARS = 16;
+
+/**
+ * Every character a protocol request sends as model input (CXH-07): the system prompt, every message — its text,
+ * the historical assistant tool calls WITH their arguments, the tool results with their call ids and names — the tool
+ * definitions and the output schema, plus per-message framing. Serialised as JSON, so keys and quotes are counted
+ * too: a conservative bound, never an optimistic one. The ONE size used for budget reservations, policy ranking
+ * (LOW_COST) and agent cost limits.
+ */
+export function requestInputChars(req: HubChatRequest): number {
+  return (
+    req.system.length +
+    JSON.stringify(req.messages).length +
+    req.messages.length * MESSAGE_FRAMING_CHARS +
+    JSON.stringify(req.tools ?? []).length +
+    JSON.stringify(req.schema ?? {}).length
+  );
 }
 
 /**

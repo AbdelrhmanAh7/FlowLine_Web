@@ -102,6 +102,11 @@ export interface ResolvedRoute {
   pricing: (AiModelPricing & { source: string }) | null;
   /** Free-tier classification of the price (FREE_ONLY only accepts verified zero-priced routes). */
   free?: { zeroPriced: boolean; note: string | null };
+  /**
+   * Set when the model can't be used on this connection (removed from / absent from its listing) and the caller asked
+   * the planner to decide (CXH-13): FALLBACK / FREE_ONLY / LOW_COST skip it and try their listed routes; MANUAL refuses.
+   */
+  unavailable?: { code: "AI_MODEL_REMOVED" | "AI_MODEL_NOT_LISTED"; message: string };
 }
 
 export const UNKNOWN_CAPABILITIES: AiModelCapabilities = { tools: "UNKNOWN", structuredOutput: "UNKNOWN", vision: "UNKNOWN", streaming: "UNKNOWN", reasoning: "UNKNOWN" };

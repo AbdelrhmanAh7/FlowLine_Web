@@ -20,7 +20,9 @@ test("Z.ai connect dialog: provider warning, required attestation, key can't be 
   await expect(save).toHaveAttribute("aria-disabled", "true"); // attestation first
   await dialog.getByTestId("ai-attest").getByRole("checkbox").check();
   await save.click();
-  await expect(page.getByRole("status").filter({ hasText: /Connected — \d+ models found/ })).toBeVisible();
+  // The key can't be checked without a paid request: saved UNVERIFIED, never "Connected" (CXH-11).
+  await expect(page.getByRole("status").filter({ hasText: /Saved — \d+ models listed, but the key isn't verified yet/ })).toBeVisible();
+  await expect(page.getByTestId("ai-connection")).toContainText("Key not verified");
   await expect(page.getByTestId("ai-connection").getByTestId("ai-key-unchecked")).toBeVisible();
 });
 
@@ -36,7 +38,9 @@ test("Alibaba connect dialog shows region + workspace ID fields and blocks an in
   await dialog.getByLabel("Workspace ID").fill("ws-e2e-1");
   await dialog.getByLabel("API key", { exact: true }).fill(`sk-fake-ds-${randomUUID().replace(/-/g, "")}`);
   await dialog.getByRole("button", { name: "Check and save" }).click();
-  await expect(page.getByRole("status").filter({ hasText: /Connected — \d+ models found/ })).toBeVisible();
+  // The key can't be checked without a paid request: saved UNVERIFIED, never "Connected" (CXH-11).
+  await expect(page.getByRole("status").filter({ hasText: /Saved — \d+ models listed, but the key isn't verified yet/ })).toBeVisible();
+  await expect(page.getByTestId("ai-connection")).toContainText("Key not verified");
 });
 
 test("routing policy: owner saves FALLBACK with one route; an agent picks its own model", async ({ page }) => {

@@ -3,7 +3,7 @@ import type { schema } from "@/db";
 import type { AiRouteRef } from "@/db/schema";
 import { executeAi, type ExecuteResult } from "./hub/execute";
 import { LEGACY_LOCAL_PROVIDERS } from "./hub/registry";
-import { isRouteRef, LOCAL_MIGRATION_MESSAGE, resolveRoute } from "./hub/routing";
+import { deferFor, isRouteRef, LOCAL_MIGRATION_MESSAGE, resolveRoute } from "./hub/routing";
 import { HubError, type ResolvedRoute } from "./hub/types";
 import { quarantineInstructions } from "./injection";
 
@@ -37,8 +37,9 @@ export interface ChatResult {
   provider: string;
   model: string;
   connectionId: string;
-  usage: { inputTokens: number; outputTokens: number };
-  /** Settled by the hub (null = price unknown). */
+  /** null = the provider reported no (complete) usage: UNKNOWN, never 0. */
+  usage: { inputTokens: number | null; outputTokens: number | null };
+  /** Settled by the hub for the answering attempt (null = unknown). The agent's total comes from the ledger. */
   costMicros: number | null;
   costSource: ExecuteResult["costSource"];
   attempts: number;
@@ -61,9 +62,9 @@ export async function resolveAgentRoute(db: Db, workspace: typeof schema.workspa
   // A legacy pin is checked FIRST: it is never reinterpreted, whatever else the row holds.
   const p = (pin.provider ?? "").toLowerCase();
   if (p && LEGACY_LOCAL_PROVIDERS.has(p)) throw new HubError("AI_LOCAL_MIGRATION_REQUIRED", LOCAL_MIGRATION_MESSAGE);
-  if (isRouteRef(pin.route)) return resolveRoute(db, workspace, { pin: pin.route, pinSource: "agent" });
+  if (isRouteRef(pin.route)) return resolveRoute(db, workspace, { pin: pin.route, pinSource: "agent" }, deferFor(workspace));
   if (p) throw new HubError("AI_ROUTE_MIGRATION_REQUIRED", `This agent version is pinned to "${pin.provider}" from the old server configuration, which is no longer used. Save the agent again to use the workspace's AI connection.`);
-  return resolveRoute(db, workspace, {});
+  return resolveRoute(db, workspace, {}, deferFor(workspace));
 }
 
 /** Wraps a tool result as untrusted data, quarantining lines that address the model. */
@@ -85,6 +86,8 @@ export async function chat(
     tools: ChatTool[];
     maxTokens: number;
     signal: AbortSignal;
+    /** The agent run's hard cost limit: enforced by the hub inside every reservation (retries, fallback). */
+    agentCapMicros?: number | null;
   },
 ): Promise<ChatResult> {
   const r = await executeAi(db, {
@@ -96,16 +99,18 @@ export async function chat(
     metering: "hub",
     requestId: req.requestId,
     agentRunId: req.agentRunId,
+    agentCapMicros: req.agentCapMicros ?? null,
     signal: req.signal,
   });
   const u = r.result.usage;
+  const known = r.result.usageReported !== false;
   return {
     content: r.result.text,
     toolCalls: r.result.toolCalls,
     provider: r.route.provider,
     model: r.result.model,
     connectionId: r.route.connectionId,
-    usage: { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) },
+    usage: known ? { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) } : { inputTokens: null, outputTokens: null },
     costMicros: r.costMicros,
     costSource: r.costSource,
     attempts: r.attempts,
