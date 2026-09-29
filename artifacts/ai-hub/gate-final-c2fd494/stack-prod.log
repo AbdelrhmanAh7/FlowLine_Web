@@ -489,3 +489,88 @@ Control API: POST http://127.0.0.1:4010/__fake/reset | GET http://127.0.0.1:4010
 2026-09-29T10:48:35.550Z [worker] run 4352ec9b-15b3-4ef0-8ae8-7e9c962f157b claimed
 2026-09-29T10:48:35.605Z [worker] run 4352ec9b-15b3-4ef0-8ae8-7e9c962f157b done
 2026-09-29T10:48:37.337Z [worker] knowledge source indexed
+2026-09-29T10:48:40.100Z [worker] agent run 751d92a8-57fa-4f47-99e4-b5edbdf04b7c claimed
+2026-09-29T10:48:40.219Z [worker] agent run 751d92a8-57fa-4f47-99e4-b5edbdf04b7c succeeded
+2026-09-29T10:48:41.513Z [worker] agent run 5b40123c-96f7-49ba-9469-41bfd9cc2cac claimed
+2026-09-29T10:48:41.582Z [worker] agent run 5b40123c-96f7-49ba-9469-41bfd9cc2cac waiting for approval
+2026-09-29T10:48:42.849Z [worker] agent run 5b40123c-96f7-49ba-9469-41bfd9cc2cac claimed
+2026-09-29T10:48:42.909Z [worker] run 2d644a32-e355-4b0f-b67a-ee5196a8fa06 claimed
+2026-09-29T10:48:42.950Z [worker] run 2d644a32-e355-4b0f-b67a-ee5196a8fa06 done
+2026-09-29T10:48:43.453Z [worker] agent run 5b40123c-96f7-49ba-9469-41bfd9cc2cac succeeded
+2026-09-29T10:48:47.832Z [worker] agent run f170a4d9-aeb6-4e3f-a3c1-be5eeaefa270 claimed
+2026-09-29T10:48:47.897Z [worker] agent run f170a4d9-aeb6-4e3f-a3c1-be5eeaefa270 waiting for approval
+2026-09-29T10:48:50.298Z [worker] agent run f170a4d9-aeb6-4e3f-a3c1-be5eeaefa270 claimed
+2026-09-29T10:48:50.363Z [worker] run f7454ad1-1d62-48f4-a30a-c6861bf32410 claimed
+2026-09-29T10:48:50.405Z [worker] run f7454ad1-1d62-48f4-a30a-c6861bf32410 done
+2026-09-29T10:48:50.902Z [worker] agent run f170a4d9-aeb6-4e3f-a3c1-be5eeaefa270 succeeded
+[auth] User not found
+2026-09-29T10:49:06.456Z [worker] run 96eca148-1211-4eec-a738-d973c400d29d claimed
+2026-09-29T10:49:06.498Z [worker] run 96eca148-1211-4eec-a738-d973c400d29d done
+2026-09-29T10:49:25.375Z [worker] run fd464205-1b64-4682-a406-e3a593a8089d claimed
+2026-09-29T10:49:25.446Z [worker] run fd464205-1b64-4682-a406-e3a593a8089d done
+2026-09-29T10:49:38.081Z [worker] run 1a95ef18-9ff5-42bb-999f-5922a486f08e claimed
+2026-09-29T10:49:38.141Z [worker] run 1a95ef18-9ff5-42bb-999f-5922a486f08e done
+2026-09-29T10:50:15.681Z [worker] run 6ff76e6d-aa4e-4a75-aaf5-17d98596a95d claimed
+2026-09-29T10:50:15.726Z [worker] run 6ff76e6d-aa4e-4a75-aaf5-17d98596a95d done
+2026-09-29T10:50:17.843Z [worker] run f6dc07c6-cd44-4a30-84df-50b50834a59d claimed
+2026-09-29T10:50:17.878Z [worker] run f6dc07c6-cd44-4a30-84df-50b50834a59d done
+2026-09-29T10:50:19.666Z [worker] run f6dc07c6-cd44-4a30-84df-50b50834a59d claimed
+2026-09-29T10:50:19.720Z [worker] run f6dc07c6-cd44-4a30-84df-50b50834a59d done
+2026-09-29T10:50:21.147Z [worker] run 9666a8a2-8684-4830-8d44-0d0126ba09de claimed
+2026-09-29T10:50:21.175Z [worker] run 9666a8a2-8684-4830-8d44-0d0126ba09de done
+2026-09-29T10:50:22.269Z [worker] run 9666a8a2-8684-4830-8d44-0d0126ba09de claimed
+2026-09-29T10:50:22.323Z [worker] run 9666a8a2-8684-4830-8d44-0d0126ba09de done
+2026-09-29T10:50:23.763Z [worker] run 3c3feff0-a5e2-4df8-a37c-19bc5dd44729 claimed
+2026-09-29T10:50:23.811Z [worker] run 3c3feff0-a5e2-4df8-a37c-19bc5dd44729 done
+2026-09-29T10:50:24.845Z [worker] knowledge source indexed
+2026-09-29T10:50:25.405Z [worker] agent run 5b4381f6-0a43-4fd3-be58-9afcb9873b1a claimed
+2026-09-29T10:50:25.505Z [worker] agent run 5b4381f6-0a43-4fd3-be58-9afcb9873b1a succeeded
+2026-09-29T10:50:26.852Z [worker] agent run 300d0f3d-3222-452a-8ba4-3d2801899f27 claimed
+2026-09-29T10:50:26.908Z [worker] agent run 300d0f3d-3222-452a-8ba4-3d2801899f27 waiting for approval
+2026-09-29T10:50:28.240Z [worker] agent run 300d0f3d-3222-452a-8ba4-3d2801899f27 claimed
+2026-09-29T10:50:28.288Z [worker] run 3b29717b-02a3-4c3f-84a2-5c5fb4ad9fe9 claimed
+2026-09-29T10:50:28.318Z [worker] run 3b29717b-02a3-4c3f-84a2-5c5fb4ad9fe9 done
+2026-09-29T10:50:28.832Z [worker] agent run 300d0f3d-3222-452a-8ba4-3d2801899f27 succeeded
+2026-09-29T10:50:31.966Z [worker] agent run 5f102341-61ef-4e65-a36d-b49771b52a09 claimed
+2026-09-29T10:50:32.038Z [worker] agent run 5f102341-61ef-4e65-a36d-b49771b52a09 waiting for approval
+2026-09-29T10:50:34.090Z [worker] agent run 5f102341-61ef-4e65-a36d-b49771b52a09 claimed
+2026-09-29T10:50:34.142Z [worker] run 7175daaa-7148-4c90-8813-632eba4ab328 claimed
+2026-09-29T10:50:34.173Z [worker] run 7175daaa-7148-4c90-8813-632eba4ab328 done
+2026-09-29T10:50:34.683Z [worker] agent run 5f102341-61ef-4e65-a36d-b49771b52a09 succeeded
+[auth] User not found
+2026-09-29T10:50:52.587Z [worker] run 19b5c76e-7c1c-4a44-b87e-fdfe9ad14788 claimed
+2026-09-29T10:50:52.627Z [worker] run 19b5c76e-7c1c-4a44-b87e-fdfe9ad14788 done
+2026-09-29T10:51:09.185Z [worker] run 2c656cb0-0252-43be-bd21-f333e157312a claimed
+2026-09-29T10:51:09.252Z [worker] run 2c656cb0-0252-43be-bd21-f333e157312a done
+2026-09-29T10:51:25.847Z [worker] run ea3fcdf5-e024-43de-b28f-d8f563447534 claimed
+2026-09-29T10:51:25.906Z [worker] run ea3fcdf5-e024-43de-b28f-d8f563447534 done
+2026-09-29T10:52:13.654Z [worker] run d630df6e-06c6-4317-a204-44fb28d76031 claimed
+2026-09-29T10:52:13.707Z [worker] run d630df6e-06c6-4317-a204-44fb28d76031 done
+2026-09-29T10:52:16.432Z [worker] run b22595ab-fb94-4bd7-b047-86d093a16dfe claimed
+2026-09-29T10:52:16.477Z [worker] run b22595ab-fb94-4bd7-b047-86d093a16dfe done
+2026-09-29T10:52:18.328Z [worker] run b22595ab-fb94-4bd7-b047-86d093a16dfe claimed
+2026-09-29T10:52:18.389Z [worker] run b22595ab-fb94-4bd7-b047-86d093a16dfe done
+2026-09-29T10:52:20.661Z [worker] run 00da1aac-bdac-451c-892f-67cb1453e8ed claimed
+2026-09-29T10:52:20.690Z [worker] run 00da1aac-bdac-451c-892f-67cb1453e8ed done
+2026-09-29T10:52:21.747Z [worker] run 00da1aac-bdac-451c-892f-67cb1453e8ed claimed
+2026-09-29T10:52:21.794Z [worker] run 00da1aac-bdac-451c-892f-67cb1453e8ed done
+2026-09-29T10:52:23.724Z [worker] run ab0da0cd-64c7-4d94-a315-399f973bc743 claimed
+2026-09-29T10:52:23.779Z [worker] run ab0da0cd-64c7-4d94-a315-399f973bc743 done
+2026-09-29T10:52:25.344Z [worker] knowledge source indexed
+2026-09-29T10:52:26.390Z [worker] agent run 0615fa73-6471-46b5-bdf7-fe9c9b2fca74 claimed
+2026-09-29T10:52:26.493Z [worker] agent run 0615fa73-6471-46b5-bdf7-fe9c9b2fca74 succeeded
+2026-09-29T10:52:27.805Z [worker] agent run 3e40b38b-5aa1-492e-90d2-9cb46958bc8b claimed
+2026-09-29T10:52:27.870Z [worker] agent run 3e40b38b-5aa1-492e-90d2-9cb46958bc8b waiting for approval
+2026-09-29T10:52:29.169Z [worker] agent run 3e40b38b-5aa1-492e-90d2-9cb46958bc8b claimed
+2026-09-29T10:52:29.227Z [worker] run e814909e-cd48-4f97-ae57-f284ebabe581 claimed
+2026-09-29T10:52:29.267Z [worker] run e814909e-cd48-4f97-ae57-f284ebabe581 done
+2026-09-29T10:52:29.774Z [worker] agent run 3e40b38b-5aa1-492e-90d2-9cb46958bc8b succeeded
+2026-09-29T10:52:34.089Z [worker] agent run 19f85573-3a2a-4304-a6f6-52ce153d6e4a claimed
+2026-09-29T10:52:34.162Z [worker] agent run 19f85573-3a2a-4304-a6f6-52ce153d6e4a waiting for approval
+2026-09-29T10:52:36.453Z [worker] agent run 19f85573-3a2a-4304-a6f6-52ce153d6e4a claimed
+2026-09-29T10:52:36.521Z [worker] run db6b2cec-1388-4ddf-a0ec-45da0241fee8 claimed
+2026-09-29T10:52:36.561Z [worker] run db6b2cec-1388-4ddf-a0ec-45da0241fee8 done
+2026-09-29T10:52:37.057Z [worker] agent run 19f85573-3a2a-4304-a6f6-52ce153d6e4a succeeded
+[auth] User not found
+2026-09-29T10:52:52.418Z [worker] run 1c29b1a5-369c-454c-8018-c81abd8652d8 claimed
+2026-09-29T10:52:52.459Z [worker] run 1c29b1a5-369c-454c-8018-c81abd8652d8 done
