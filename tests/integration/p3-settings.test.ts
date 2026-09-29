@@ -28,13 +28,15 @@ describe("workspace AI defaults (P3-07, superseded by the AI hub: cloud-only, wo
       await expectHttpError(updateWorkspace(ws.id, { aiProvider: "ollama", aiModel: "other-local-model" }), 400, "AI_LOCAL_MIGRATION_REQUIRED");
       const cleared = await updateWorkspace(ws.id, { aiProvider: null });
       expect(cleared).toMatchObject({ aiProvider: null, aiModel: null });
+      // Request ids key the GLOBAL usage ledger (idempotency keys are unique across workspaces): unique per run (TEST-05).
+      const reqId = `t:${crypto.randomUUID()}`;
       const row = async () => (await db.select().from(schema.workspace).where(eq(schema.workspace.id, ws.id)))[0]!;
       // No connection → the facade is unavailable with a clear reason (no env fallback).
-      const none = await getAiProvider(db, await row(), user.id, { requestId: "t" });
+      const none = await getAiProvider(db, await row(), user.id, { requestId: reqId });
       expect(none).toMatchObject({ available: false, code: "AI_NOT_CONFIGURED" });
       // With a workspace connection + default model, that route is used.
       const { connection } = await connectAi(user, ws.id, { model: "fake-gpt-large" });
-      const p = await getAiProvider(db, await row(), user.id, { requestId: "t" });
+      const p = await getAiProvider(db, await row(), user.id, { requestId: reqId });
       expect(p).toMatchObject({ available: true, id: "openai", model: "fake-gpt-large" });
       expect((await row()).aiDefaultRoute).toEqual({ connectionId: connection.id, modelId: "fake-gpt-large" });
       const r = await p.generate({ instructions: "summarise", content: "hello", maxTokens: 50, signal: AbortSignal.timeout(10_000) });

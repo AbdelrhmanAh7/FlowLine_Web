@@ -2460,3 +2460,215 @@ https://react.dev/link/hydration-mismatch
  GET /api/health 200 in 7ms (next.js: 3ms, application-code: 4ms)
  GET /api/health 200 in 7ms (next.js: 3ms, application-code: 5ms)
  GET /api/health 200 in 6ms (next.js: 1.9ms, application-code: 4ms)
+ GET /w 404 in 34ms (next.js: 10ms, application-code: 25ms)
+ GET /api/health?require=worker 200 in 164ms (next.js: 148ms, application-code: 16ms)
+ GET /api/health?require=worker 200 in 6ms (next.js: 1.9ms, application-code: 4ms)
+ POST /api/auth/sign-up/email 200 in 95ms (next.js: 16ms, application-code: 79ms)
+ GET /api/test/outbox?email=e2e-f4c97080%40flowline-e2e.test 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ POST /api/email 200 in 21ms (next.js: 2ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 1.9ms, application-code: 70ms)
+ POST /api/workspaces 201 in 22ms (next.js: 2ms, application-code: 19ms)
+ POST /api/onboarding 200 in 21ms (next.js: 2ms, application-code: 19ms)
+ GET /w/e2e-1cf286/settings?tab=ai 200 in 74ms (next.js: 27ms, application-code: 48ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 51ms (next.js: 18ms, application-code: 34ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 33ms (next.js: 17ms, application-code: 15ms)
+ POST /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/connections 201 in 80ms (next.js: 16ms, application-code: 64ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 22ms (next.js: 2ms, application-code: 19ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 22ms (next.js: 5ms, application-code: 17ms)
+ PUT /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/default-route 200 in 43ms (next.js: 17ms, application-code: 27ms)
+ PATCH /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8 200 in 37ms (next.js: 17ms, application-code: 20ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 59ms (next.js: 2ms, application-code: 57ms)
+ POST /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/flows 201 in 41ms (next.js: 22ms, application-code: 18ms)
+ PUT /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 49ms (next.js: 23ms, application-code: 27ms)
+ GET /w/e2e-1cf286/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 88ms (next.js: 30ms, application-code: 58ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 19ms (next.js: 3ms, application-code: 16ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/publish 200 in 60ms (next.js: 20ms, application-code: 40ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/runs 200 in 40ms (next.js: 21ms, application-code: 19ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 53ms (next.js: 21ms, application-code: 32ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 38ms (next.js: 19ms, application-code: 19ms)
+ PUT /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 47ms (next.js: 14ms, application-code: 32ms)
+ POST /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/runs 202 in 86ms (next.js: 15ms, application-code: 71ms)
+2026-09-29T09:09:34.987Z [worker] run 084f375d-943f-4deb-8eb0-972c9af5507b claimed
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/runs 200 in 43ms (next.js: 3ms, application-code: 40ms)
+ GET /api/runs/084f375d-943f-4deb-8eb0-972c9af5507b 200 in 55ms (next.js: 23ms, application-code: 31ms)
+2026-09-29T09:09:35.088Z [worker] run 084f375d-943f-4deb-8eb0-972c9af5507b done
+ GET /w/e2e-1cf286/runs?run=084f375d-943f-4deb-8eb0-972c9af5507b 200 in 43ms (next.js: 29ms, application-code: 14ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/runs?limit=25 200 in 45ms (next.js: 23ms, application-code: 23ms)
+ GET /api/runs/084f375d-943f-4deb-8eb0-972c9af5507b 200 in 45ms (next.js: 15ms, application-code: 31ms)
+ GET /w/e2e-1cf286/settings?tab=ai 200 in 57ms (next.js: 15ms, application-code: 42ms)
+ GET /api/health 200 in 7ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 44ms (next.js: 16ms, application-code: 28ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 34ms (next.js: 16ms, application-code: 17ms)
+ POST /api/auth/sign-out 200 in 35ms (next.js: 15ms, application-code: 19ms)
+ GET /sign-in 200 in 43ms (next.js: 9ms, application-code: 34ms)
+ GET /api/auth-config 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 2ms, application-code: 70ms)
+ GET /w/e2e-1cf286/settings?tab=ai 200 in 61ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 32ms (next.js: 2ms, application-code: 30ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 31ms (next.js: 2ms, application-code: 29ms)
+ POST /api/auth/sign-up/email 200 in 90ms (next.js: 3ms, application-code: 88ms)
+ GET /api/test/outbox?email=ai-other-7d485612%40flowline-e2e.test 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/email 200 in 21ms (next.js: 2ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 2.0ms, application-code: 70ms)
+ POST /api/workspaces 201 in 43ms (next.js: 2ms, application-code: 41ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/connections 404 in 24ms (next.js: 15ms, application-code: 9ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 404 in 31ms (next.js: 15ms, application-code: 16ms)
+ GET /w/other-ai-19/settings?tab=ai 200 in 61ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/f2d33429-7c95-4ef6-bf2e-0e6abd27c093/ai 200 in 41ms (next.js: 16ms, application-code: 25ms)
+ GET /api/workspaces/f2d33429-7c95-4ef6-bf2e-0e6abd27c093/ai/models 200 in 15ms (next.js: 3ms, application-code: 12ms)
+ POST /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/invites 201 in 52ms (next.js: 17ms, application-code: 35ms)
+ POST /api/auth/sign-up/email 200 in 105ms (next.js: 19ms, application-code: 87ms)
+ GET /api/test/outbox?email=ai-editor-c358eaf0%40flowline-e2e.test 200 in 11ms (next.js: 3ms, application-code: 8ms)
+ POST /api/email 200 in 27ms (next.js: 3ms, application-code: 24ms)
+ POST /api/auth/sign-in/email 200 in 74ms (next.js: 3ms, application-code: 71ms)
+ POST /api/invites/iAEP1jsjDfDySuyBL57HM2Qp9zMRRR5HPlGWcdLe_tc 200 in 44ms (next.js: 15ms, application-code: 29ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 35ms (next.js: 14ms, application-code: 21ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/connections 200 in 40ms (next.js: 16ms, application-code: 23ms)
+ POST /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/connections 403 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 42ms (next.js: 17ms, application-code: 25ms)
+ PUT /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 403 in 39ms (next.js: 3ms, application-code: 36ms)
+ GET /w/e2e-1cf286/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 81ms (next.js: 19ms, application-code: 62ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d 200 in 30ms (next.js: 2ms, application-code: 28ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/publish 200 in 63ms (next.js: 18ms, application-code: 45ms)
+ GET /api/flows/8516184e-e160-44db-be8b-4cfee2213c5d/runs 200 in 47ms (next.js: 19ms, application-code: 27ms)
+ GET /api/runs/084f375d-943f-4deb-8eb0-972c9af5507b 200 in 72ms (next.js: 20ms, application-code: 52ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai 200 in 56ms (next.js: 24ms, application-code: 32ms)
+ GET /api/workspaces/cc43aa5b-67dc-46bc-9288-4a6b0d504db8/ai/models 200 in 33ms (next.js: 3ms, application-code: 30ms)
+2026-09-29T09:15:05.016Z [worker] run fb1159f1-cafd-4171-8058-cbff4bd6ea81 claimed
+2026-09-29T09:15:05.020Z [worker] run d0764abe-5a8d-4f58-bf73-736a434b9d19 claimed
+2026-09-29T09:15:05.046Z [worker] run fb1159f1-cafd-4171-8058-cbff4bd6ea81 done
+2026-09-29T09:15:05.057Z [worker] run 1303be9b-184b-40aa-a3eb-6ab7510e956d claimed
+2026-09-29T09:15:05.062Z [worker] run ad980fc9-cdfc-4263-994c-10f50f8bff05 claimed
+2026-09-29T09:15:05.064Z [worker] run d0764abe-5a8d-4f58-bf73-736a434b9d19 done
+2026-09-29T09:15:05.083Z [worker] run 1303be9b-184b-40aa-a3eb-6ab7510e956d done
+2026-09-29T09:15:05.088Z [worker] run 220294bc-348e-4d12-bfc3-ffbc0c80dd16 claimed
+2026-09-29T09:15:05.094Z [worker] run ad980fc9-cdfc-4263-994c-10f50f8bff05 done
+2026-09-29T09:15:05.112Z [worker] run 220294bc-348e-4d12-bfc3-ffbc0c80dd16 done
+2026-09-29T09:15:05.118Z [worker] run 2e60ea66-78d5-4d42-9cb0-fb1a81b71dbd claimed
+2026-09-29T09:15:05.123Z [worker] run fa933e7f-dc9a-4164-9bce-4de516a0f565 claimed
+2026-09-29T09:15:05.145Z [worker] run ee128cca-cb72-4104-8e33-af1aa7e3d970 claimed
+2026-09-29T09:15:05.147Z [worker] run fa933e7f-dc9a-4164-9bce-4de516a0f565 done
+2026-09-29T09:15:05.150Z [worker] run 2e60ea66-78d5-4d42-9cb0-fb1a81b71dbd done
+2026-09-29T09:15:05.166Z [worker] run e92c8ae2-3404-41d6-8868-150c47b3094f claimed
+2026-09-29T09:15:05.169Z [worker] run ee128cca-cb72-4104-8e33-af1aa7e3d970 done
+2026-09-29T09:15:05.184Z [worker] run 17f17615-2c73-4477-b62c-4b7a619ea184 claimed
+2026-09-29T09:15:05.189Z [worker] run e92c8ae2-3404-41d6-8868-150c47b3094f done
+2026-09-29T09:15:05.205Z [worker] run 69d2010f-c13a-4aab-9152-16f8c503e121 claimed
+2026-09-29T09:15:05.211Z [worker] run 17f17615-2c73-4477-b62c-4b7a619ea184 done
+2026-09-29T09:15:05.227Z [worker] run 55905488-e7df-4030-b767-e13406909d1f claimed
+2026-09-29T09:15:05.230Z [worker] run 69d2010f-c13a-4aab-9152-16f8c503e121 done
+2026-09-29T09:15:05.246Z [worker] run 6c36fe8e-90da-45af-acab-4070e0e7bd75 claimed
+2026-09-29T09:15:05.251Z [worker] run 55905488-e7df-4030-b767-e13406909d1f done
+2026-09-29T09:15:05.265Z [worker] run 7cb0a559-256b-41d3-b2fe-a654b2ac9797 claimed
+2026-09-29T09:15:05.272Z [worker] run 6c36fe8e-90da-45af-acab-4070e0e7bd75 done
+2026-09-29T09:15:05.284Z [worker] run 025723f4-bdfd-47b5-9707-4386d54fdbc6 claimed
+2026-09-29T09:15:05.291Z [worker] run 7cb0a559-256b-41d3-b2fe-a654b2ac9797 done
+2026-09-29T09:15:05.305Z [worker] run e5b1adc6-6468-4372-9d76-05a56f887bf8 claimed
+2026-09-29T09:15:05.309Z [worker] run 025723f4-bdfd-47b5-9707-4386d54fdbc6 done
+2026-09-29T09:15:05.330Z [worker] run 9181a9e8-db56-4695-8bc9-b08f38c8976f claimed
+2026-09-29T09:15:05.333Z [worker] run e5b1adc6-6468-4372-9d76-05a56f887bf8 done
+2026-09-29T09:15:05.352Z [worker] run 1d1344bc-1c5d-445d-9b04-4a8323d53326 claimed
+2026-09-29T09:15:05.356Z [worker] run 9181a9e8-db56-4695-8bc9-b08f38c8976f done
+2026-09-29T09:15:05.373Z [worker] run 8c911eae-21ba-4b38-9aad-0508ac49e16f claimed
+2026-09-29T09:15:05.377Z [worker] run 1d1344bc-1c5d-445d-9b04-4a8323d53326 done
+2026-09-29T09:15:05.394Z [worker] run 0c34b296-7106-4620-a1bb-f0a05643de9c claimed
+2026-09-29T09:15:05.397Z [worker] run 8c911eae-21ba-4b38-9aad-0508ac49e16f done
+2026-09-29T09:15:05.413Z [worker] run 09d2d76d-b0b9-4dcb-9e92-cf51d41d386e claimed
+2026-09-29T09:15:05.418Z [worker] run 0c34b296-7106-4620-a1bb-f0a05643de9c done
+2026-09-29T09:15:05.433Z [worker] run dd44f50e-ad47-4972-9086-50229c9a0d27 claimed
+2026-09-29T09:15:05.439Z [worker] run 09d2d76d-b0b9-4dcb-9e92-cf51d41d386e done
+2026-09-29T09:15:05.451Z [worker] run 892cce8b-39ee-4e7f-857b-41c3811d8b9f claimed
+2026-09-29T09:15:05.458Z [worker] run dd44f50e-ad47-4972-9086-50229c9a0d27 done
+2026-09-29T09:15:05.473Z [worker] run 0094960f-3fcf-4888-b756-65a420ec603f claimed
+2026-09-29T09:15:05.476Z [worker] run 892cce8b-39ee-4e7f-857b-41c3811d8b9f done
+2026-09-29T09:15:05.493Z [worker] run 90aecbe0-00f4-4fae-bb9e-2a81110e503e claimed
+2026-09-29T09:15:05.497Z [worker] run 0094960f-3fcf-4888-b756-65a420ec603f done
+2026-09-29T09:15:05.513Z [worker] run ec6fbbef-2a89-4d06-9676-a70e9669af9f claimed
+2026-09-29T09:15:05.518Z [worker] run 90aecbe0-00f4-4fae-bb9e-2a81110e503e done
+2026-09-29T09:15:05.534Z [worker] run 71ea041a-32b0-4092-91ef-d18b273c7aa9 claimed
+2026-09-29T09:15:05.538Z [worker] run ec6fbbef-2a89-4d06-9676-a70e9669af9f done
+2026-09-29T09:15:05.555Z [worker] run 904c9146-4ef3-4496-a95f-12fd1967bb41 claimed
+2026-09-29T09:15:05.559Z [worker] run 71ea041a-32b0-4092-91ef-d18b273c7aa9 done
+2026-09-29T09:15:05.574Z [worker] run 42bee148-b8bc-41ed-b9d7-3f5c0daa4a45 claimed
+2026-09-29T09:15:05.582Z [worker] run 904c9146-4ef3-4496-a95f-12fd1967bb41 done
+2026-09-29T09:15:05.595Z [worker] run 06646685-a6ee-41a1-938a-cf04e57082b3 claimed
+2026-09-29T09:15:05.599Z [worker] run 42bee148-b8bc-41ed-b9d7-3f5c0daa4a45 done
+2026-09-29T09:15:05.616Z [worker] run 58eb83b2-833c-4fd7-a752-b312943cbf21 claimed
+2026-09-29T09:15:05.620Z [worker] run 06646685-a6ee-41a1-938a-cf04e57082b3 done
+2026-09-29T09:15:05.636Z [worker] run af0c7765-7443-4db2-b138-6496564d9dd8 claimed
+2026-09-29T09:15:05.642Z [worker] run 58eb83b2-833c-4fd7-a752-b312943cbf21 done
+2026-09-29T09:15:05.657Z [worker] run 113a07d6-7724-4eac-9597-f4fc93b22004 claimed
+2026-09-29T09:15:05.661Z [worker] run af0c7765-7443-4db2-b138-6496564d9dd8 done
+2026-09-29T09:15:05.678Z [worker] run d652c5dd-1955-4692-b3e8-90f22cb7d108 claimed
+2026-09-29T09:15:05.681Z [worker] run 113a07d6-7724-4eac-9597-f4fc93b22004 done
+2026-09-29T09:15:05.699Z [worker] run d2976aba-5abe-4264-b4fc-675129994cfb claimed
+2026-09-29T09:15:05.704Z [worker] run d652c5dd-1955-4692-b3e8-90f22cb7d108 done
+2026-09-29T09:15:05.718Z [worker] run 06c80a40-a717-4b83-ae73-28a1daabbd96 claimed
+2026-09-29T09:15:05.726Z [worker] run d2976aba-5abe-4264-b4fc-675129994cfb done
+2026-09-29T09:15:05.739Z [worker] run dac0f6b1-03cb-4af0-ac3b-b12bd3d4da04 claimed
+2026-09-29T09:15:05.743Z [worker] run 06c80a40-a717-4b83-ae73-28a1daabbd96 done
+2026-09-29T09:15:05.760Z [worker] run 226fd3a9-6d0d-4dc4-a84b-df9141cffcc9 claimed
+2026-09-29T09:15:05.764Z [worker] run dac0f6b1-03cb-4af0-ac3b-b12bd3d4da04 done
+2026-09-29T09:15:05.780Z [worker] run e1b372da-b19d-4b92-b65d-d6581374169d claimed
+2026-09-29T09:15:05.786Z [worker] run 226fd3a9-6d0d-4dc4-a84b-df9141cffcc9 done
+2026-09-29T09:15:05.804Z [worker] run ee7f3b13-05b8-40ea-bf2b-39b5a4c8c0cf claimed
+2026-09-29T09:15:05.807Z [worker] run e1b372da-b19d-4b92-b65d-d6581374169d done
+2026-09-29T09:15:05.824Z [worker] run 7b4cc7c2-665d-4995-b6e0-217aa3776d2f claimed
+2026-09-29T09:15:05.829Z [worker] run ee7f3b13-05b8-40ea-bf2b-39b5a4c8c0cf done
+2026-09-29T09:15:05.845Z [worker] run ed937683-7e84-4308-a238-b7b9f8729600 claimed
+2026-09-29T09:15:05.851Z [worker] run 7b4cc7c2-665d-4995-b6e0-217aa3776d2f done
+2026-09-29T09:15:05.864Z [worker] run 7f3441ee-df78-4515-9af0-b093b96c7274 claimed
+2026-09-29T09:15:05.871Z [worker] run ed937683-7e84-4308-a238-b7b9f8729600 done
+2026-09-29T09:15:05.884Z [worker] run 01d1f9c1-833d-4b25-959c-0f3355369583 claimed
+2026-09-29T09:15:05.891Z [worker] run 7f3441ee-df78-4515-9af0-b093b96c7274 done
+2026-09-29T09:15:05.905Z [worker] run 82dbaebc-3651-4285-8f60-5d405a08329f claimed
+2026-09-29T09:15:05.909Z [worker] run 01d1f9c1-833d-4b25-959c-0f3355369583 done
+2026-09-29T09:15:05.927Z [worker] run d434c9e4-7305-4900-b34e-e17ff7472ec6 claimed
+2026-09-29T09:15:05.930Z [worker] run 82dbaebc-3651-4285-8f60-5d405a08329f done
+2026-09-29T09:15:05.948Z [worker] run 657a6ae5-71b3-4cb5-ba32-34fecf896888 claimed
+2026-09-29T09:15:05.952Z [worker] run d434c9e4-7305-4900-b34e-e17ff7472ec6 done
+2026-09-29T09:15:05.969Z [worker] run 409e6481-f39b-4e0d-a73d-67b9308895eb claimed
+2026-09-29T09:15:05.972Z [worker] run 657a6ae5-71b3-4cb5-ba32-34fecf896888 done
+2026-09-29T09:15:05.988Z [worker] run e3faee5c-cf01-4c4c-b7ee-0131493d6fed claimed
+2026-09-29T09:15:05.994Z [worker] run 409e6481-f39b-4e0d-a73d-67b9308895eb done
+2026-09-29T09:15:06.011Z [worker] run c27aebb0-558c-413d-8f6d-04e8e919bc3c claimed
+2026-09-29T09:15:06.014Z [worker] run e3faee5c-cf01-4c4c-b7ee-0131493d6fed done
+2026-09-29T09:15:06.031Z [worker] run b7381d31-167d-4190-8327-5775a558eea0 claimed
+2026-09-29T09:15:06.036Z [worker] run c27aebb0-558c-413d-8f6d-04e8e919bc3c done
+2026-09-29T09:15:06.052Z [worker] run 6af5b02f-a2af-4574-9336-36237ab88f50 claimed
+2026-09-29T09:15:06.057Z [worker] run b7381d31-167d-4190-8327-5775a558eea0 done
+2026-09-29T09:15:06.072Z [worker] run 9bf530fe-673f-4eb6-9cf4-d033848fab3b claimed
+2026-09-29T09:15:06.076Z [worker] run 6af5b02f-a2af-4574-9336-36237ab88f50 done
+2026-09-29T09:15:06.092Z [worker] run 6a2ae866-36d3-40ac-99e9-b37de08a0872 claimed
+2026-09-29T09:15:06.098Z [worker] run 9bf530fe-673f-4eb6-9cf4-d033848fab3b done
+2026-09-29T09:15:06.111Z [worker] run 2a630ca9-b42f-417f-ab43-aad8a75c34c7 claimed
+2026-09-29T09:15:06.117Z [worker] run 6a2ae866-36d3-40ac-99e9-b37de08a0872 done
+2026-09-29T09:15:06.131Z [worker] run 4fdde3f2-2f05-4149-be8e-4ef858f337e2 claimed
+2026-09-29T09:15:06.135Z [worker] run 2a630ca9-b42f-417f-ab43-aad8a75c34c7 done
+2026-09-29T09:15:06.150Z [worker] run 5071ee10-8509-4d07-9cc4-aa05cb4641a9 claimed
+2026-09-29T09:15:06.156Z [worker] run 4fdde3f2-2f05-4149-be8e-4ef858f337e2 done
+2026-09-29T09:15:06.171Z [worker] run 03c5556f-b167-49be-849e-a1a52aaf272a claimed
+2026-09-29T09:15:06.174Z [worker] run 5071ee10-8509-4d07-9cc4-aa05cb4641a9 done
+2026-09-29T09:15:06.194Z [worker] run 1b913149-e97b-4c09-aef1-800b9996785c claimed
+2026-09-29T09:15:06.197Z [worker] run 03c5556f-b167-49be-849e-a1a52aaf272a done
+2026-09-29T09:15:06.213Z [worker] run 5b7e080e-77c8-4ee2-a58b-d34757aab276 claimed
+2026-09-29T09:15:06.219Z [worker] run 1b913149-e97b-4c09-aef1-800b9996785c done
+2026-09-29T09:15:06.234Z [worker] run 1f76f846-ec97-4c96-8588-c4a16175b525 claimed
+2026-09-29T09:15:06.239Z [worker] run 5b7e080e-77c8-4ee2-a58b-d34757aab276 done
+2026-09-29T09:15:06.252Z [worker] run f757e97e-28c6-4a42-baeb-04dcf4f7a541 claimed
+2026-09-29T09:15:06.261Z [worker] run 1f76f846-ec97-4c96-8588-c4a16175b525 done
+2026-09-29T09:15:06.276Z [worker] run f757e97e-28c6-4a42-baeb-04dcf4f7a541 done
+2026-09-29T09:15:06.282Z [worker] run 705ba695-4443-4c0d-a766-cba194def3ef claimed
+2026-09-29T09:15:06.293Z [worker] run 9280022e-2ca0-4f01-ab9e-bcb90fc5ca4f claimed
+2026-09-29T09:15:06.307Z [worker] run 705ba695-4443-4c0d-a766-cba194def3ef done
+2026-09-29T09:15:06.307Z [worker] scheduler fired 65
+2026-09-29T09:15:06.313Z [worker] run a6adfbff-ed9e-4e85-90d7-81fc180f1485 claimed
+2026-09-29T09:15:06.317Z [worker] run 9280022e-2ca0-4f01-ab9e-bcb90fc5ca4f done
+2026-09-29T09:15:06.337Z [worker] run a6adfbff-ed9e-4e85-90d7-81fc180f1485 done
+[?25h
+ ELIFECYCLE  Command failed with exit code 1.

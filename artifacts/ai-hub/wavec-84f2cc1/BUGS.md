@@ -182,3 +182,19 @@ the Codex retest.
   `<test db>_rot`, load product modules only after pointing at it, and drop it afterwards. The assertions are
   unchanged. The timeout was not raised.
 - **Result:** 2/2 in about 5 s on three consecutive runs; the full integration suite passed 460/460 twice.
+
+## TEST-05: `p3-settings` used a fixed request id in the shared test DB (found by the lead, 2026-09-29)
+- **Symptom:** `p3-settings` "server-configured providers can't be chosen any more" failed on 2 consecutive runs with
+  "Another process keeps taking this request's attempt numbers" (`AI_ATTEMPT_CONFLICT`).
+- **Cause:**
+  - The test called the facade with `requestId: "t"` on every run.
+  - Usage-ledger idempotency keys (`<requestId>:<n>`) are unique **across all workspaces**, so each earlier run left
+    `t:1:1`, `t:1:2`, … behind.
+  - Once enough accumulated, the CXH-03 guard (never send on an existing key) correctly gave up looking for a free
+    attempt number.
+- **Classification:** TEST DEFECT. The guard behaved as designed.
+- **Fix:** a unique request id per run (`t:<uuid>`). The integration suite passed 460/460 twice.
+- **Product note (open, P3 hardening):** ledger keys are not scoped by workspace, so the hub relies on callers passing
+  globally unique request ids. All product callers do: ids come from run / agent-run UUIDs and `randomUUID()`. A
+  future hardening could prefix keys with the workspace id; not changed now, to avoid touching the reviewed ledger
+  code.
