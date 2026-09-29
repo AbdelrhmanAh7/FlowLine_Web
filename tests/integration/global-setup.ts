@@ -8,6 +8,8 @@ export default async function setup() {
     throw new Error(`Integration tests must run against flowline_test (got ${url.replace(/\/\/[^@]*@/, "//***@")}). Use pnpm test:integration.`);
   }
   execSync("npx tsx src/db/migrate.ts", { stdio: "inherit", env: process.env });
+  // Platform credentials live in the DB (never env at runtime): mirror .env.test's fake OAuth/billing values into them.
+  execSync("npx tsx scripts/test/seed-platform.mts", { stdio: "inherit", env: process.env });
   // A live worker (e.g. the E2E stack on :3100) would claim runs these tests enqueue and process themselves.
   const c = new Client({ connectionString: url });
   await c.connect();

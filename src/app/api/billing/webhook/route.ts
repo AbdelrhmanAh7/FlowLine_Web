@@ -5,7 +5,7 @@ import { capBody, HttpError, json, route } from "@/server/http";
 /**
  * Provider webhook endpoint — public (no session; authenticity comes from the
  * signature). One generic route: the provider is installation-level configuration
- * (FLOWLINE_BILLING_PROVIDER), so the route reads the configured provider's signature
+ * (the `billing.provider` platform setting, read per request), so the route reads the configured provider's signature
  * header (stripe-signature or paddle-signature) and the adapter does the rest.
  * Bad or stale signatures get 401; duplicate events are acknowledged without
  * re-applying; unknown customers/types are recorded and acknowledged.
@@ -15,7 +15,7 @@ export const POST = route(async (req) => {
   const rawBody = await (await capBody(req, 256 * 1024, new HttpError(413, "PAYLOAD_TOO_LARGE", "Webhook payload too large"))).text();
   let result;
   try {
-    result = await applyWebhookEvent(rawBody, req.headers.get(webhookSignatureHeader()));
+    result = await applyWebhookEvent(rawBody, req.headers.get(await webhookSignatureHeader()));
   } catch (e) {
     if (e instanceof WebhookVerificationError) throw new HttpError(401, "WEBHOOK_VERIFICATION_FAILED", e.message);
     throw e;

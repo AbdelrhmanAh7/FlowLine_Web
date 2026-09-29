@@ -133,8 +133,6 @@ export interface OAuthConfig {
   pkce: boolean;
   /** Extra authorize params, e.g. access_type=offline for Google. */
   extraParams?: Record<string, string>;
-  clientIdEnv: string;
-  clientSecretEnv: string;
 }
 
 export interface ConnectField {

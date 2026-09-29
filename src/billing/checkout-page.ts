@@ -26,13 +26,14 @@ export type PaddleClientConfig =
   | { ok: false; reason: "not_configured" | "live_token_refused" | "token_env_mismatch" | "invalid_token" };
 
 /**
- * The Paddle.js configuration for the browser, from the environment. Mirrors the API-key
- * guard in PaddlePaymentAdapter: a live client token (`live_…`) is refused unless
- * FLOWLINE_BILLING_ALLOW_LIVE=true and FLOWLINE_BILLING_PADDLE_ENV=live.
+ * The Paddle.js configuration for the browser. The client-side token comes from the platform admin panel (the public
+ * half of `billing.paddle.sandbox`); the environment keeps only the operator safety gates. Mirrors the API-key guard
+ * in PaddlePaymentAdapter: a live client token (`live_…`) is refused unless FLOWLINE_BILLING_ALLOW_LIVE=true and
+ * FLOWLINE_BILLING_PADDLE_ENV=live.
  */
-export function paddleClientConfig(env: NodeJS.ProcessEnv = process.env): PaddleClientConfig {
-  if ((env.FLOWLINE_BILLING_PROVIDER ?? "stripe").toLowerCase() !== "paddle") return { ok: false, reason: "not_configured" };
-  const token = env.FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN?.trim();
+export function paddleClientConfig(cfg: { provider: string | null; token: string | null }, env: NodeJS.ProcessEnv = process.env): PaddleClientConfig {
+  if ((cfg.provider ?? "").toLowerCase() !== "paddle") return { ok: false, reason: "not_configured" };
+  const token = cfg.token?.trim();
   if (!token) return { ok: false, reason: "not_configured" };
   const environment = env.FLOWLINE_BILLING_PADDLE_ENV === "live" ? "live" : "sandbox";
   if (token.startsWith("live_")) {
@@ -45,6 +46,15 @@ export function paddleClientConfig(env: NodeJS.ProcessEnv = process.env): Paddle
   // A stand-in Paddle.js is allowed only in the test environment.
   const override = env.FLOWLINE_ENV === "test" ? env.FLOWLINE_TEST_PADDLE_JS_URL?.trim() : undefined;
   return { ok: true, token, environment, scriptUrl: override || PADDLE_JS_URL };
+}
+
+/** Reads the active billing provider and the Paddle client token from the platform panel (per request, no cache). */
+export async function currentPaddleClientConfig(): Promise<PaddleClientConfig> {
+  const { getSetting } = await import("@/server/platform-settings");
+  const { platformCredentialStatus } = await import("@/server/platform-secrets");
+  const provider = (await getSetting("billing.provider"))?.value ?? null;
+  const status = await platformCredentialStatus("billing.paddle.sandbox");
+  return paddleClientConfig({ provider, token: status?.configured ? status.publicId : null });
 }
 
 export type CheckoutPageState =
@@ -65,7 +75,7 @@ export async function resolveCheckoutPage(user: CurrentUser, query: { ws?: strin
   if (!row) throw notFound("Workspace not found");
   const base = { workspaceName: row.workspace.name, settingsPath: `/w/${row.workspace.slug}/settings?tab=plan` };
   if (!allowed(row.role, "billing.manage")) return { kind: "forbidden", ...base };
-  const cfg = paddleClientConfig();
+  const cfg = await currentPaddleClientConfig();
   if (!cfg.ok) return { kind: cfg.reason, ...base };
   const txn = typeof query._ptxn === "string" ? query._ptxn : "";
   if (!txn || txn.length > 64 || !TXN_RE.test(txn)) return { kind: "invalid_transaction", ...base };

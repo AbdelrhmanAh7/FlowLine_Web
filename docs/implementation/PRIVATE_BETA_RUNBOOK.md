@@ -40,6 +40,43 @@ node scripts/release/smoke.mjs --base https://beta.<domain> --invite <beta code>
 
 Firewall: allow 22 (your IP only), 80 and 443. Nothing else.
 
+## 2a. Platform admin and service credentials
+
+Service credentials (sign-in apps, integration OAuth apps, email, sandbox billing, the recipient allowlist, billing
+plans) are entered in the app at **`/admin`**, not in `.env.beta`. Details: `docs/security/CREDENTIALS_DESIGN.md`,
+`docs/integrations/CONNECTING.md`.
+
+**In the app (after the one-time bootstrap below):** sign in → `/admin` → enter an authenticator code under
+**Unlock changes** → fill each card (client id / sender / client token + secret) → **Save** → **Test**. Register the
+redirect URIs the panel shows. Rotation, revocation and provider changes apply to the next operation — no restart.
+
+**Bootstrap the first admin (operator, once):**
+
+1. Set `FLOWLINE_PLATFORM_ENCRYPTION_KEY` in `.env.beta` (32 random bytes, base64, **different** from
+   `FLOWLINE_ENCRYPTION_KEY`; back it up with the other keys, separately from DB backups). Restart once.
+2. On the server: `docker compose exec web node_modules/.bin/tsx scripts/admin/bootstrap.mts --email you@example.com`.
+   It prints a one-time code (30 minutes, single use, bound to that email; only its hash is stored).
+3. Open `https://beta.<domain>/admin/setup`, paste the code. If email isn't configured yet, the setup page lets you
+   configure the email provider first — until setup completes it delivers only to that email.
+4. Sign up / sign in as that email and verify it; enrol an authenticator app on the setup page; enter a fresh code →
+   you are the platform admin. Setup is then closed for good (deleting admins doesn't reopen it).
+5. More admins: `… bootstrap.mts --email other@example.com --grant`. Lost access: `… --recover --confirm-recovery`
+   (audited). Revoke admins in the panel.
+
+**Upgrading an installation that used env vars:** keep the old variables for now; in `/admin`, choose **Import from
+environment** on each card and setting (explicit, audited, once per purpose); then remove the variables the panel
+lists under "Remove these variables" and restart. Until `FLOWLINE_EMAIL_ALLOWED_RECIPIENTS` is imported, no email is
+sent (the sandbox is never silently widened).
+
+**Crypto v2 migration and key rotation:** after deploying this release, run
+`docker compose exec web node_modules/.bin/tsx scripts/admin/rewrap.mts` (add `--dry-run` first). It upgrades rows
+written before crypto v2 and encrypts stored social-login tokens. To rotate a key: move the old value to
+`*_KEYS_OLD`, set the new one, restart, run `rewrap.mts` until it reports nothing left, then drop the old key. After a
+suspected key compromise, also rotate the provider secrets themselves — rewrapping doesn't invalidate stolen copies.
+Existing Google/Slack/GitHub OAuth connections from before this release have no recorded issuing app and must
+reconnect at their next refresh, unless deployment history proves which client id issued them:
+`… rewrap.mts --backfill-oauth-app google --client-id <that id>`.
+
 ## 3. Inviting beta users
 
 - **Workspace invitation** (preferred): an owner invites the person in Settings → Members. The invitation email lets
@@ -47,8 +84,10 @@ Firewall: allow 22 (your IP only), 80 and 443. Nothing else.
 - **Beta code** (for someone without a workspace yet):
   `docker compose exec web node_modules/.bin/tsx scripts/beta/create-code.mts --label "Name (why)" --uses 1 --days 14`.
   The code is printed once; share it privately.
-- **Admins:** `FLOWLINE_BETA_ADMINS` (comma-separated emails) can always sign up.
-- Email is restricted to `FLOWLINE_EMAIL_ALLOWED_RECIPIENTS` until the owner approves sending to real customers.
+- **Sign-up allowlist:** `FLOWLINE_BETA_ADMINS` (comma-separated emails) can always sign up. It grants nothing else —
+  platform admins are created only by the bootstrap challenge (§2a).
+- Email is restricted to the **recipient allowlist** (`/admin` → Platform settings) until the owner approves sending
+  to real customers.
 
 ## 4. Monitoring
 

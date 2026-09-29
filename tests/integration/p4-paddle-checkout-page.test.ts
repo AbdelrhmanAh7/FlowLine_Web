@@ -6,24 +6,26 @@
  * membership (404 for non-members), transaction validation, configuration states, the live-token
  * guard, the test-only Paddle.js override, and the success URL (never taken from the query).
  */
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PADDLE_JS_URL, paddleClientConfig, resolveCheckoutPage } from "@/billing/checkout-page";
+import { getSetting } from "@/server/platform-settings";
 import { createWorkspace } from "@/server/workspaces";
+import { seedPlatformCredential, seedSetting, unseedPlatformCredential, unseedSetting } from "../fixtures/platform-seed";
 import { addMember, closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
-const KEYS = [
-  "FLOWLINE_BILLING_PROVIDER",
-  "FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN",
-  "FLOWLINE_BILLING_PADDLE_ENV",
-  "FLOWLINE_BILLING_ALLOW_LIVE",
-  "FLOWLINE_TEST_PADDLE_JS_URL",
-  "FLOWLINE_ENV",
-] as const;
+// The billing provider and the Paddle client-side token are platform-panel records now (never env at runtime); the
+// sandbox/live gates (FLOWLINE_BILLING_PADDLE_ENV, FLOWLINE_BILLING_ALLOW_LIVE) stay operator environment.
+const KEYS = ["FLOWLINE_BILLING_PADDLE_ENV", "FLOWLINE_BILLING_ALLOW_LIVE", "FLOWLINE_TEST_PADDLE_JS_URL", "FLOWLINE_ENV"] as const;
+const TOKEN = "test_0123456789abcdef0123456789a";
 let saved: Record<string, string | undefined>;
-beforeEach(() => {
+let providerBefore: "stripe" | "paddle" | null = null;
+beforeAll(async () => {
+  providerBefore = (await getSetting("billing.provider"))?.value ?? null;
+});
+beforeEach(async () => {
   saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
-  process.env.FLOWLINE_BILLING_PROVIDER = "paddle";
-  process.env.FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN = "test_0123456789abcdef0123456789a";
+  await seedSetting("billing.provider", "paddle");
+  await seedPlatformCredential("billing.paddle.sandbox", { publicId: TOKEN, secret: "pdl_sdbx_fake_billing" });
   process.env.FLOWLINE_BILLING_PADDLE_ENV = "sandbox";
   delete process.env.FLOWLINE_BILLING_ALLOW_LIVE;
   delete process.env.FLOWLINE_TEST_PADDLE_JS_URL;
@@ -35,6 +37,8 @@ afterEach(() => {
   }
 });
 afterAll(async () => {
+  if (providerBefore) await seedSetting("billing.provider", providerBefore);
+  else await unseedSetting("billing.provider");
   await closeDb();
 });
 
@@ -53,7 +57,7 @@ describe("checkout page: access", () => {
     expect(state.kind).toBe("ready");
     if (state.kind !== "ready") return;
     expect(state.transactionId).toBe(TXN);
-    expect(state.token).toBe("test_0123456789abcdef0123456789a");
+    expect(state.token).toBe(TOKEN);
     expect(state.environment).toBe("sandbox");
     expect(state.scriptUrl).toBe(PADDLE_JS_URL);
     const base = (process.env.FLOWLINE_PUBLIC_URL ?? "http://localhost:3000").replace(/\/$/, "");
@@ -100,40 +104,40 @@ describe("checkout page: transaction id", () => {
 describe("checkout page: configuration", () => {
   it("is 'not configured' without a client token or when the provider isn't Paddle", async () => {
     const { owner, ws } = await ownedWorkspace();
-    delete process.env.FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN;
+    await unseedPlatformCredential("billing.paddle.sandbox");
     expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("not_configured");
-    process.env.FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN = "test_0123456789abcdef0123456789a";
-    process.env.FLOWLINE_BILLING_PROVIDER = "stripe";
+    await seedPlatformCredential("billing.paddle.sandbox", { publicId: TOKEN, secret: "pdl_sdbx_fake_billing" });
+    await seedSetting("billing.provider", "stripe");
     expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("not_configured");
   });
 
   it("refuses a live client token unless ALLOW_LIVE=true and PADDLE_ENV=live (mirrors the API-key guard)", async () => {
+    // The panel only ever stores a sandbox `test_…` client token; the live guard is still enforced on any token.
+    const live = { provider: "paddle", token: "live_0123456789abcdef0123456789a" };
+    expect(paddleClientConfig(live, { ...process.env })).toEqual({ ok: false, reason: "live_token_refused" });
+    expect(paddleClientConfig(live, { ...process.env, FLOWLINE_BILLING_PADDLE_ENV: "live" })).toEqual({ ok: false, reason: "live_token_refused" });
+    expect(paddleClientConfig(live, { ...process.env, FLOWLINE_BILLING_PADDLE_ENV: "sandbox", FLOWLINE_BILLING_ALLOW_LIVE: "true" })).toEqual({ ok: false, reason: "live_token_refused" });
+    const ok = paddleClientConfig(live, { ...process.env, FLOWLINE_BILLING_PADDLE_ENV: "live", FLOWLINE_BILLING_ALLOW_LIVE: "true" });
+    expect(ok.ok && ok.environment).toBe("live");
+    // End to end through the page: the stored sandbox token is refused once the operator switches Paddle to live.
     const { owner, ws } = await ownedWorkspace();
-    process.env.FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN = "live_0123456789abcdef0123456789a";
-    expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("live_token_refused");
     process.env.FLOWLINE_BILLING_PADDLE_ENV = "live";
-    expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("live_token_refused");
-    process.env.FLOWLINE_BILLING_PADDLE_ENV = "sandbox";
     process.env.FLOWLINE_BILLING_ALLOW_LIVE = "true";
-    expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("live_token_refused");
-    process.env.FLOWLINE_BILLING_PADDLE_ENV = "live";
-    const live = await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN });
-    expect(live.kind).toBe("ready");
-    expect(live.kind === "ready" && live.environment).toBe("live");
+    expect((await resolveCheckoutPage(owner, { ws: ws.slug, _ptxn: TXN })).kind).toBe("token_env_mismatch");
   });
 
   it("rejects a sandbox token in live mode and a token that isn't a client-side token", () => {
-    expect(paddleClientConfig({ ...process.env, FLOWLINE_BILLING_PADDLE_ENV: "live" })).toEqual({ ok: false, reason: "token_env_mismatch" });
+    expect(paddleClientConfig({ provider: "paddle", token: TOKEN }, { ...process.env, FLOWLINE_BILLING_PADDLE_ENV: "live" })).toEqual({ ok: false, reason: "token_env_mismatch" });
     // An API key must never be handed to Paddle.js.
-    expect(paddleClientConfig({ ...process.env, FLOWLINE_BILLING_PADDLE_CLIENT_TOKEN: "pdl_sdbx_apikey_01abc" })).toEqual({ ok: false, reason: "invalid_token" });
+    expect(paddleClientConfig({ provider: "paddle", token: "pdl_sdbx_apikey_01abc" }, { ...process.env })).toEqual({ ok: false, reason: "invalid_token" });
   });
 
   it("uses a stand-in Paddle.js only when FLOWLINE_ENV=test; production always loads Paddle's CDN", () => {
     const env = { ...process.env, FLOWLINE_TEST_PADDLE_JS_URL: "http://127.0.0.1:9/paddle/checkout/paddle.js" };
-    const inTest = paddleClientConfig({ ...env, FLOWLINE_ENV: "test" });
+    const inTest = paddleClientConfig({ provider: "paddle", token: TOKEN }, { ...env, FLOWLINE_ENV: "test" });
     expect(inTest.ok && inTest.scriptUrl).toBe("http://127.0.0.1:9/paddle/checkout/paddle.js");
     for (const flEnv of ["production", "development", undefined]) {
-      const cfg = paddleClientConfig({ ...env, FLOWLINE_ENV: flEnv });
+      const cfg = paddleClientConfig({ provider: "paddle", token: TOKEN }, { ...env, FLOWLINE_ENV: flEnv });
       expect(cfg.ok && cfg.scriptUrl).toBe(PADDLE_JS_URL);
     }
   });

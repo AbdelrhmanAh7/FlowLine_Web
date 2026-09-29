@@ -380,13 +380,15 @@ interface RecordedRequest {
   time: string;
 }
 
-type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit";
+type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
 interface Fault {
   provider: string;
   pattern: RegExp;
   mode: FaultMode;
   times: number;
   retryAfterSec?: number;
+  /** mode "delay": hold the request this long, then answer normally (race tests). */
+  delayMs?: number;
 }
 
 interface Ctx {
@@ -395,6 +397,13 @@ interface Ctx {
   faults: Fault[];
   dropAfterCommit: boolean;
   heldSockets: Set<import("node:net").Socket>;
+  /**
+   * Registered OAuth clients per provider (credential-rotation tests). When a provider has an entry, its token endpoint
+   * requires a matching client_id + one of the listed secrets, else it answers like the real provider (invalid_client).
+   */
+  oauthClients: Map<string, { clientId: string; secrets: string[] }[]>;
+  /** Forced token-endpoint errors (to prove provider error text is never reflected). */
+  oauthErrors: { provider: string; error: string; description: string; times: number }[];
   /** RSA keys for the fake OIDC IdP; stable across resets so JWKS never rotates mid-test. */
   oidc: { privateKey: KeyObject; altPrivateKey: KeyObject; publicJwk: Record<string, unknown> };
 }
@@ -494,6 +503,22 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
   }
   if (req.method === "POST" && path === "/oauth/token") {
     const form = parseForm(rawBody);
+    const forced = ctx.oauthErrors.findIndex((e) => e.provider === provider);
+    if (forced >= 0) {
+      const f = ctx.oauthErrors[forced]!;
+      if (--f.times <= 0) ctx.oauthErrors.splice(forced, 1);
+      json(ctx, req, res, 400, { error: f.error, error_description: f.description });
+      return true;
+    }
+    const clients = ctx.oauthClients.get(provider);
+    const client = clients?.find((c) => c.clientId === form.client_id);
+    if (clients && (!client || !client.secrets.includes(form.client_secret ?? ""))) {
+      // Like the real providers: Slack answers 200 {ok:false}, GitHub 200 {error}, Google 401 invalid_client.
+      if (provider === "slack") json(ctx, req, res, 200, { ok: false, error: !client ? "invalid_client_id" : "bad_client_secret" });
+      else if (provider === "github") json(ctx, req, res, 200, { error: "incorrect_client_credentials", error_description: "The client_id and/or client_secret passed are incorrect." });
+      else json(ctx, req, res, 401, { error: "invalid_client", error_description: "The OAuth client was not found." });
+      return true;
+    }
     const issue = (account: AccountKey) => {
       const accessToken = `fake-at-${randomBytes(8).toString("hex")}`;
       const refreshToken = `fake-rt-${randomBytes(8).toString("hex")}`;
@@ -1231,6 +1256,7 @@ function subscriptionPayload(sub: FakeSubscription): Record<string, unknown> {
 
 const stripe: Handler = async (ctx, req, res, path, url, body) => {
   const s = ctx.state;
+  if (req.method === "GET" && path === "/v1/balance") return json(ctx, req, res, 200, { object: "balance", available: [], pending: [] });
   if (req.method === "GET" && path === "/v1/account") {
     return json(ctx, req, res, 200, {
       id: "acct_fake123",
@@ -1543,6 +1569,7 @@ function fakePaddleJs(origin: string): string {
 
 const paddle: Handler = async (ctx, req, res, path, _url, body) => {
   const s = ctx.state;
+  if (req.method === "GET" && path === "/event-types") return json(ctx, req, res, 200, { data: [] });
   if (req.method === "GET" && path === "/checkout/paddle.js") {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
     res.end(fakePaddleJs(`http://${req.headers.host}`));
@@ -1931,6 +1958,8 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     ctx.state = seed();
     ctx.requests.length = 0;
     ctx.faults.length = 0;
+    ctx.oauthClients.clear();
+    ctx.oauthErrors.length = 0;
     return json(ctx, req, res, 200, { ok: true }), true;
   }
   // Simulates the user revoking the app's access at the provider: every access and refresh
@@ -1968,8 +1997,23 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
   if (req.method === "GET" && m) {
     return json(ctx, req, res, 200, stateDump(ctx.state, m[1])), true;
   }
+  // Registers (or replaces) an OAuth client a provider accepts: { provider, clientId, secrets: [...] }; secrets: [] removes it.
+  if (req.method === "POST" && path === "/__fake/oauth-client") {
+    const payload = j(rawBody) as unknown as { provider: string; clientId: string; secrets: string[] };
+    const list = (ctx.oauthClients.get(payload.provider) ?? []).filter((c) => c.clientId !== payload.clientId);
+    if (payload.secrets?.length) list.push({ clientId: payload.clientId, secrets: payload.secrets });
+    if (list.length) ctx.oauthClients.set(payload.provider, list);
+    else ctx.oauthClients.delete(payload.provider);
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
+  // Forces the next token response(s) of a provider to be an error carrying `description` (reflection tests).
+  if (req.method === "POST" && path === "/__fake/oauth-error") {
+    const payload = j(rawBody) as unknown as { provider: string; error: string; description: string; times?: number };
+    ctx.oauthErrors.push({ provider: payload.provider, error: payload.error, description: payload.description, times: payload.times ?? 1 });
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
   if (req.method === "POST" && path === "/__fake/fault") {
-    const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number };
+    const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number; delayMs?: number };
     try {
       ctx.faults.push({
         provider: payload.provider,
@@ -1977,6 +2021,7 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
         mode: payload.mode,
         times: payload.times ?? 1,
         retryAfterSec: payload.retryAfterSec,
+        delayMs: payload.delayMs,
       });
     } catch (e) {
       return json(ctx, req, res, 400, { error: String(e) }), true;
@@ -2146,7 +2191,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const { privateKey: altPrivateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const publicJwk = { ...(publicKey.export({ format: "jwk" }) as Record<string, unknown>), kid: "fake-oidc-key-1", alg: "RS256", use: "sig" };
-  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oidc: { privateKey, altPrivateKey, publicJwk } };
+  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
 
   const server: Server = createServer((req, res) => {
     void (async () => {
@@ -2166,6 +2211,12 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       if (provider === "resend" || provider === "postmark") {
         const rawBody = req.method === "POST" ? await readBody(req) : "";
         const expected = provider === "resend" ? "/emails" : "/email";
+        // Authenticated no-op endpoints used by the admin panel's "Test" (never sends anything).
+        if (req.method === "GET" && ((provider === "resend" && path === "/domains") || (provider === "postmark" && path === "/server"))) {
+          const key = provider === "resend" ? (req.headers.authorization ?? "").replace(/^Bearer /, "") : String(req.headers["x-postmark-server-token"] ?? "");
+          if (!key || key.includes("invalid")) return json(ctx, req, res, 401, { message: "invalid key" });
+          return json(ctx, req, res, 200, provider === "resend" ? { data: [] } : { ID: 1, Name: "fake" });
+        }
         if (req.method !== "POST" || path !== expected) return json(ctx, req, res, 404, { error: "not found" });
         const fi = ctx.faults.findIndex((f) => f.provider === provider && f.pattern.test(path));
         if (fi >= 0) {
@@ -2234,9 +2285,26 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
           });
           return;
         }
-        ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
+        if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
+        else ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
       }
 
+      // GitHub revokes a grant with the APP's Basic auth: DELETE /applications/{client_id}/grant { access_token }.
+      const ghGrant = /^\/applications\/([^/]+)\/grant$/.exec(path);
+      if (provider === "github" && req.method === "DELETE" && ghGrant) {
+        const rawBody = await readBody(req);
+        const [id, secret] = Buffer.from((req.headers.authorization ?? "").replace(/^Basic /, ""), "base64").toString("utf8").split(":");
+        const clients = ctx.oauthClients.get("github");
+        const client = clients?.find((c) => c.clientId === id);
+        if (clients && (!client || !client.secrets.includes(secret ?? "") || decodeURIComponent(ghGrant[1]!) !== client.clientId)) return json(ctx, req, res, 401, { message: "Bad credentials" });
+        const token = String(j(rawBody).access_token ?? "");
+        const info = ctx.state.tokens.get(token);
+        if (info) info.status = "revoked";
+        for (const [t, r] of ctx.state.refreshTokens) if (info && r.account === info.account) ctx.state.refreshTokens.delete(t);
+        res.writeHead(204);
+        res.end();
+        return;
+      }
       // OAuth endpoints are unauthenticated by design.
       if (path.startsWith("/oauth/")) {
         const rawBody = req.method === "POST" ? await readBody(req) : "";

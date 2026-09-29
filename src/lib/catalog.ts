@@ -48,8 +48,13 @@ export interface ConnectionDto {
   lastUsedAt: string | null;
 }
 
-export function useCatalog() {
-  return useQuery({ queryKey: ["catalog"], queryFn: () => api<Catalog>("/api/integrations/catalog"), staleTime: 60_000 });
+/** With a workspace id, OAuth availability reflects that workspace's own OAuth apps too (never cached across workspaces). */
+export function useCatalog(workspaceId?: string) {
+  return useQuery({
+    queryKey: ["catalog", workspaceId ?? null],
+    queryFn: () => api<Catalog>(workspaceId ? `/api/integrations/catalog?workspaceId=${encodeURIComponent(workspaceId)}` : "/api/integrations/catalog"),
+    staleTime: 60_000,
+  });
 }
 
 export function useConnections(workspaceId: string) {
