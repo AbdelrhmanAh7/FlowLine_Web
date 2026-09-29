@@ -17,10 +17,18 @@ for (const k of ["FLOWLINE_AI_PROVIDER", "FLOWLINE_AI_MODEL", "OLLAMA_BASE_URL",
 // .env.test's fake OAuth/billing values seeded into the DB (test-only script; the admin-panel spec uses the UI).
 spawnSync("npx tsx scripts/test/seed-platform.mts", { stdio: "inherit", shell: true, env: process.env });
 
+// FLOWLINE_TEST_NEXT=start runs a PRODUCTION build (`next build` once, then `next start`) instead of `next dev`, with the
+// same fakes, worker, DB and FLOWLINE_ENV=test routes. Used to tell dev-server (on-demand compile) stalls apart from
+// application defects (INTERMITTENT-02). Default: `next dev`.
+const prodMode = process.env.FLOWLINE_TEST_NEXT === "start";
+if (prodMode) {
+  const build = spawnSync("npx next build", { stdio: "inherit", shell: true, env: process.env });
+  if (build.status !== 0) process.exit(build.status ?? 1);
+}
 const procs = [
   spawn(`npx tsx e2e/fakes/provider-server.ts --port ${FAKE_PROVIDERS_PORT}`, { stdio: "inherit", shell: true, env: process.env }),
   spawn(`npx tsx e2e/fakes/ai-server.ts --port ${FAKE_AI_PORT}`, { stdio: "inherit", shell: true, env: process.env }),
-  spawn("npx next dev -p 3100", { stdio: "inherit", shell: true, env: process.env }),
+  spawn(prodMode ? "npx next start -p 3100" : "npx next dev -p 3100", { stdio: "inherit", shell: true, env: process.env }),
   spawn("npx tsx worker/index.ts", { stdio: "inherit", shell: true, env: process.env }),
 ];
 
