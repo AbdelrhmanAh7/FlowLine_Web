@@ -368,7 +368,7 @@ function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf
             </Field>
           )}
           <Field label={t("platformAdmin.field.secret")} htmlFor={`sec-${cred.purpose}`} hint={cred.configured ? t("platformAdmin.field.secretKeep") : t("platformAdmin.field.secretNew")}>
-            <SecretInput id={`sec-${cred.purpose}`} placeholder={cred.configured ? "••••••••" : ""} maxLength={4096} />
+            <SecretInput ref={secretRef} id={`sec-${cred.purpose}`} placeholder={cred.configured ? "••••••••" : ""} maxLength={4096} />
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-2">

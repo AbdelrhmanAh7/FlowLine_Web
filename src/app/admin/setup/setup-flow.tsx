@@ -99,7 +99,7 @@ export function SetupFlow() {
             }}
           >
             <Field label={t("platformAdmin.setup.codeLabel")} htmlFor="setup-token">
-              <SecretInput id="setup-token" maxLength={200} />
+              <SecretInput ref={tokenRef} id="setup-token" maxLength={200} />
             </Field>
             <Button type="submit" variant="primary" loading={pending === "redeem"}>
               {t("platformAdmin.setup.redeem")}
@@ -141,7 +141,7 @@ export function SetupFlow() {
                     <Input id="setup-from" dir="ltr" className="data" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Flowline <no-reply@example.com>" maxLength={300} />
                   </Field>
                   <Field label={t("platformAdmin.setup.key")} htmlFor="setup-key">
-                    <SecretInput id="setup-key" maxLength={4096} />
+                    <SecretInput ref={keyRef} id="setup-key" maxLength={4096} />
                   </Field>
                   <Button type="submit" variant="primary" loading={pending === "email"}>
                     {t("platformAdmin.setup.saveEmail")}
@@ -195,7 +195,7 @@ export function SetupFlow() {
                 >
                   <p className="text-sm text-med">{t("platformAdmin.setup.stepTotpBody")}</p>
                   <Field label={t("platformAdmin.setup.password")} htmlFor="setup-password">
-                    <SecretInput id="setup-password" maxLength={128} />
+                    <SecretInput ref={passwordRef} id="setup-password" maxLength={128} />
                   </Field>
                   <Button type="submit" variant="primary" loading={pending === "enable"}>
                     {t("platformAdmin.setup.startTotp")}

@@ -137,7 +137,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
             <Input id={`oa-client-${family}`} dir="ltr" className="data" autoComplete="off" spellCheck={false} value={clientId} onChange={(e) => setClientId(e.target.value)} maxLength={300} />
           </Field>
           <Field label={t("oauthApps.secret")} htmlFor={`oa-secret-${family}`} hint={app ? t("oauthApps.secretKeep") : t("oauthApps.secretNew")}>
-            <SecretInput id={`oa-secret-${family}`} maxLength={4096} />
+            <SecretInput ref={secretRef} id={`oa-secret-${family}`} maxLength={4096} />
           </Field>
         </div>
         <div className="flex flex-wrap gap-2">

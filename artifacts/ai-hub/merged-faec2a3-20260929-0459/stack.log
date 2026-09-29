@@ -1,0 +1,215 @@
+
+> flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+> node scripts/dev-test.mjs
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[seed-platform] test platform credentials ready
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[fake-ai] listening on http://127.0.0.1:4021
+Fake provider server listening on http://127.0.0.1:4020
+Control API: POST http://127.0.0.1:4020/__fake/reset | GET http://127.0.0.1:4020/__fake/requests?provider=slack | GET http://127.0.0.1:4020/__fake/state/slack | POST http://127.0.0.1:4020/__fake/fault
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://100.73.156.121:3100
+- Environments: .env
+✓ Ready in 760ms
+✓ Running next.config.ts took 152ms
+2026-09-29T02:00:13.104Z [worker] starting LAPTOP-AGGSOJ7U-57028-f667d1
+
+ GET /api/health?require=worker 200 in 464ms (next.js: 355ms, application-code: 109ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ GET / 200 in 662ms (next.js: 348ms, application-code: 315ms)
+ GET /sign-in 200 in 278ms (next.js: 239ms, application-code: 39ms)
+ GET /sign-up 200 in 50ms (next.js: 18ms, application-code: 32ms)
+ GET /w 404 in 236ms (next.js: 209ms, application-code: 27ms)
+ GET /admin 404 in 603ms (next.js: 519ms, application-code: 85ms)
+ GET /admin/setup 200 in 45ms (next.js: 17ms, application-code: 28ms)
+2026-09-29T02:00:23.260Z [worker] run 31608e9b-6669-4255-a54e-7fd1e008dea3 claimed
+2026-09-29T02:00:23.266Z [worker] run 671a91af-f678-47ca-aef0-a33029c1ff89 claimed
+2026-09-29T02:00:23.311Z [worker] run 3b3de34c-c149-430c-bdaa-6b2c00745f32 claimed
+2026-09-29T02:00:23.316Z [worker] run e2a7da5a-4351-4fe3-aa6d-baefa97b0ca6 claimed
+2026-09-29T02:00:23.362Z [worker] run 31608e9b-6669-4255-a54e-7fd1e008dea3 done
+2026-09-29T02:00:23.363Z [worker] run 671a91af-f678-47ca-aef0-a33029c1ff89 done
+2026-09-29T02:00:23.363Z [worker] run 3b3de34c-c149-430c-bdaa-6b2c00745f32 done
+2026-09-29T02:00:23.366Z [worker] run e2a7da5a-4351-4fe3-aa6d-baefa97b0ca6 done
+2026-09-29T02:00:23.384Z [worker] run 4a378677-cae8-4930-bc9e-43540052f432 claimed
+2026-09-29T02:00:23.389Z [worker] run 7c6ebb0f-df88-4aed-a869-e16b963c42a5 claimed
+2026-09-29T02:00:23.394Z [worker] run bd079a64-c6d2-4540-aab7-801d67313d9c claimed
+2026-09-29T02:00:23.412Z [worker] run 371e0791-f7e3-4e3b-bc8b-866c2c5391f8 claimed
+2026-09-29T02:00:23.423Z [worker] run 4a378677-cae8-4930-bc9e-43540052f432 done
+2026-09-29T02:00:23.426Z [worker] run 7c6ebb0f-df88-4aed-a869-e16b963c42a5 done
+2026-09-29T02:00:23.429Z [worker] run bd079a64-c6d2-4540-aab7-801d67313d9c done
+2026-09-29T02:00:23.430Z [worker] run 50fd057b-51c6-49bc-bfa9-aba4c86faf1c claimed
+2026-09-29T02:00:23.434Z [worker] run 9a422c2f-38b1-4c23-9c10-917cce11d53d claimed
+2026-09-29T02:00:23.448Z [worker] run 371e0791-f7e3-4e3b-bc8b-866c2c5391f8 done
+2026-09-29T02:00:23.463Z [worker] run 50fd057b-51c6-49bc-bfa9-aba4c86faf1c done
+2026-09-29T02:00:23.468Z [worker] run 9a422c2f-38b1-4c23-9c10-917cce11d53d done
+2026-09-29T02:00:23.478Z [worker] run 4364deb0-5dea-41fe-9581-545551e7a9ca claimed
+2026-09-29T02:00:23.483Z [worker] run be1c3e4f-6b36-4608-8c69-11826711239f claimed
+2026-09-29T02:00:23.505Z [worker] run 4364deb0-5dea-41fe-9581-545551e7a9ca done
+2026-09-29T02:00:23.510Z [worker] run be1c3e4f-6b36-4608-8c69-11826711239f done
+2026-09-29T02:00:23.517Z [worker] run ffb86e2c-dd78-4047-8d1c-93c19f62ecbf claimed
+2026-09-29T02:00:23.521Z [worker] run 8f2fd3a7-1df1-49ac-98c0-89e026b48809 claimed
+2026-09-29T02:00:23.540Z [worker] run 7247364d-71af-44ac-bfd6-9b9d76fe11ab claimed
+2026-09-29T02:00:23.549Z [worker] run ffb86e2c-dd78-4047-8d1c-93c19f62ecbf done
+2026-09-29T02:00:23.553Z [worker] run 8f2fd3a7-1df1-49ac-98c0-89e026b48809 done
+2026-09-29T02:00:23.567Z [worker] run 7247364d-71af-44ac-bfd6-9b9d76fe11ab done
+2026-09-29T02:00:23.574Z [worker] run 1b2018de-0317-48a3-ab00-6cf9cc320e62 claimed
+2026-09-29T02:00:23.578Z [worker] run fddf2165-48ef-4d5c-a4ee-74f3cacb33b7 claimed
+2026-09-29T02:00:23.600Z [worker] run 1b2018de-0317-48a3-ab00-6cf9cc320e62 done
+2026-09-29T02:00:23.601Z [worker] run 295ee4cf-92ea-40ec-8b5e-442feea330e2 claimed
+2026-09-29T02:00:23.607Z [worker] run fddf2165-48ef-4d5c-a4ee-74f3cacb33b7 done
+2026-09-29T02:00:23.625Z [worker] run 295ee4cf-92ea-40ec-8b5e-442feea330e2 done
+2026-09-29T02:00:23.637Z [worker] run 692deabd-0f5f-45b1-adb9-b31c2ffedd11 claimed
+2026-09-29T02:00:23.642Z [worker] run ab36f4b9-1e75-49f4-b5e4-e4b9a01bffa0 claimed
+2026-09-29T02:00:23.662Z [worker] run 692deabd-0f5f-45b1-adb9-b31c2ffedd11 done
+2026-09-29T02:00:23.667Z [worker] run ab36f4b9-1e75-49f4-b5e4-e4b9a01bffa0 done
+2026-09-29T02:00:23.694Z [worker] run 08e3c95f-0641-4da0-91b7-3157628c5203 claimed
+2026-09-29T02:00:23.699Z [worker] run 223805ee-19e2-4e58-b141-9e0be43d98ad claimed
+2026-09-29T02:00:23.704Z [worker] run 32eb8296-fe70-4b4a-99e9-9f17edbd35da claimed
+2026-09-29T02:00:23.720Z [worker] run 745300c3-447e-42eb-bd0d-a04c5eab3d60 claimed
+2026-09-29T02:00:23.723Z [worker] run 08e3c95f-0641-4da0-91b7-3157628c5203 done
+2026-09-29T02:00:23.727Z [worker] run 223805ee-19e2-4e58-b141-9e0be43d98ad done
+2026-09-29T02:00:23.734Z [worker] run 32eb8296-fe70-4b4a-99e9-9f17edbd35da done
+2026-09-29T02:00:23.747Z [worker] run 745300c3-447e-42eb-bd0d-a04c5eab3d60 done
+2026-09-29T02:00:23.778Z [worker] run bd95cb98-1051-449f-83dd-e1bd6613fcb1 claimed
+2026-09-29T02:00:23.783Z [worker] run 6a3a96ae-fef2-4bea-968c-1e7beea5edd1 claimed
+2026-09-29T02:00:23.788Z [worker] run 226003cf-30cd-4297-b9e8-286a8dab6868 claimed
+2026-09-29T02:00:23.805Z [worker] run bd95cb98-1051-449f-83dd-e1bd6613fcb1 done
+2026-09-29T02:00:23.811Z [worker] run 6a3a96ae-fef2-4bea-968c-1e7beea5edd1 done
+2026-09-29T02:00:23.812Z [worker] run d07b13a3-b2e8-4f62-b834-bb998129e5c2 claimed
+2026-09-29T02:00:23.816Z [worker] run 26417cd4-9531-4007-96b7-f29c935e0ca6 claimed
+2026-09-29T02:00:23.818Z [worker] run 226003cf-30cd-4297-b9e8-286a8dab6868 done
+2026-09-29T02:00:23.838Z [worker] run d07b13a3-b2e8-4f62-b834-bb998129e5c2 done
+2026-09-29T02:00:23.842Z [worker] run 26417cd4-9531-4007-96b7-f29c935e0ca6 done
+2026-09-29T02:00:23.851Z [worker] run f07b0f25-333e-4e6e-ac94-f0da3cc50d74 claimed
+2026-09-29T02:00:23.856Z [worker] run 7ec70cbb-157b-4ac8-ae11-3ce7672f69fa claimed
+2026-09-29T02:00:23.877Z [worker] run f07b0f25-333e-4e6e-ac94-f0da3cc50d74 done
+2026-09-29T02:00:23.878Z [worker] run e683856d-d1da-4dd5-b7bf-1162cf82cbee claimed
+2026-09-29T02:00:23.882Z [worker] run 7ec70cbb-157b-4ac8-ae11-3ce7672f69fa done
+2026-09-29T02:00:23.904Z [worker] run e683856d-d1da-4dd5-b7bf-1162cf82cbee done
+2026-09-29T02:00:23.906Z [worker] run 348e885f-9233-4a0e-a113-a01790060214 claimed
+2026-09-29T02:00:23.911Z [worker] run 804100d6-5b2a-4f4b-a995-c9f7ab6949a1 claimed
+2026-09-29T02:00:23.931Z [worker] run 348e885f-9233-4a0e-a113-a01790060214 done
+2026-09-29T02:00:23.935Z [worker] run 804100d6-5b2a-4f4b-a995-c9f7ab6949a1 done
+2026-09-29T02:00:23.961Z [worker] run 0023b402-4fa4-4de3-802f-ec56d75e0b40 claimed
+2026-09-29T02:00:23.966Z [worker] run ce3033ec-9e76-424f-9dab-4baede2babff claimed
+2026-09-29T02:00:23.971Z [worker] run 086f37d4-c6ca-4f99-b061-31422d04580a claimed
+2026-09-29T02:00:23.986Z [worker] run 0023b402-4fa4-4de3-802f-ec56d75e0b40 done
+2026-09-29T02:00:23.995Z [worker] run ce3033ec-9e76-424f-9dab-4baede2babff done
+2026-09-29T02:00:24.001Z [worker] run 30220d92-78d9-4706-87e5-d6418ef97705 claimed
+2026-09-29T02:00:24.002Z [worker] run 086f37d4-c6ca-4f99-b061-31422d04580a done
+2026-09-29T02:00:24.005Z [worker] run 006e8de7-4fd1-469b-8aa9-80178ab0f0c9 claimed
+2026-09-29T02:00:24.018Z [worker] scheduler fired 40
+2026-09-29T02:00:24.024Z [worker] run 7dda5dea-a070-44ec-96c7-5ff45f6c3644 claimed
+2026-09-29T02:00:24.026Z [worker] run 30220d92-78d9-4706-87e5-d6418ef97705 done
+2026-09-29T02:00:24.030Z [worker] run 006e8de7-4fd1-469b-8aa9-80178ab0f0c9 done
+2026-09-29T02:00:24.049Z [worker] run 7dda5dea-a070-44ec-96c7-5ff45f6c3644 done
+ GET /api/health?require=worker 200 in 10ms (next.js: 5ms, application-code: 5ms)
+ GET /api/health?require=worker 200 in 5ms (next.js: 1.4ms, application-code: 4ms)
+ GET /admin/setup 200 in 32ms (next.js: 8ms, application-code: 24ms)
+ GET /api/platform/setup 404 in 138ms (next.js: 112ms, application-code: 25ms)
+ POST /api/platform/setup/redeem 400 in 69ms (next.js: 61ms, application-code: 8ms)
+ POST /api/auth/sign-up/email 200 in 898ms (next.js: 797ms, application-code: 101ms)
+ GET /api/test/outbox?email=e2e-6d8f7d64%40flowline-e2e.test 200 in 46ms (next.js: 36ms, application-code: 9ms)
+ POST /api/email 200 in 74ms (next.js: 41ms, application-code: 33ms)
+ POST /api/auth/sign-in/email 200 in 90ms (next.js: 16ms, application-code: 74ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ POST /api/workspaces 201 in 61ms (next.js: 31ms, application-code: 30ms)
+ POST /api/onboarding 200 in 43ms (next.js: 30ms, application-code: 12ms)
+ GET /admin 404 in 73ms (next.js: 7ms, application-code: 67ms)
+ POST /api/auth/sign-up/email 200 in 83ms (next.js: 2ms, application-code: 81ms)
+ GET /api/test/outbox?email=e2e-a50e9249%40flowline-e2e.test 200 in 7ms (next.js: 1.7ms, application-code: 5ms)
+ POST /api/email 200 in 20ms (next.js: 1.5ms, application-code: 18ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 1.6ms, application-code: 70ms)
+ POST /api/workspaces 201 in 26ms (next.js: 1.5ms, application-code: 25ms)
+ POST /api/onboarding 200 in 23ms (next.js: 1.6ms, application-code: 22ms)
+ GET /w/e2e-9a4fe2/settings?tab=oauthApps 200 in 654ms (next.js: 578ms, application-code: 75ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 4ms)
+ GET /api/workspaces/f4266c94-d827-4770-be15-f88fb0469eb2/oauth-apps 200 in 1342ms (next.js: 1309ms, application-code: 33ms)
+ PUT /api/workspaces/f4266c94-d827-4770-be15-f88fb0469eb2/oauth-apps/google 400 in 1111ms (next.js: 1087ms, application-code: 24ms)
+2026-09-29T02:01:13.335Z [worker] platform notifications sent 20
+2026-09-29T02:02:13.288Z [worker] platform notifications sent 20
+ GET /admin/setup 200 in 31ms (next.js: 7ms, application-code: 24ms)
+ GET /w 404 in 24ms (next.js: 4ms, application-code: 20ms)
+ GET /api/health?require=worker 200 in 140ms (next.js: 126ms, application-code: 14ms)
+ GET /api/health?require=worker 200 in 5ms (next.js: 1.6ms, application-code: 4ms)
+ GET /admin/setup 200 in 32ms (next.js: 10ms, application-code: 22ms)
+ GET /api/platform/setup 404 in 9ms (next.js: 5ms, application-code: 3ms)
+ POST /api/platform/setup/redeem 200 in 36ms (next.js: 5ms, application-code: 31ms)
+ GET /api/platform/setup 200 in 22ms (next.js: 1.6ms, application-code: 20ms)
+ POST /api/auth/sign-up/email 200 in 105ms (next.js: 21ms, application-code: 84ms)
+ GET /api/test/outbox?email=platform-admin-613a3eab%40flowline-e2e.test 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ POST /api/email 200 in 23ms (next.js: 4ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 69ms (next.js: 1.5ms, application-code: 67ms)
+ GET /admin/setup 200 in 23ms (next.js: 1.9ms, application-code: 21ms)
+ GET /api/platform/setup 200 in 21ms (next.js: 1.7ms, application-code: 19ms)
+ POST /api/auth/two-factor/enable 200 in 77ms (next.js: 1.8ms, application-code: 76ms)
+ POST /api/auth/two-factor/verify-totp 200 in 30ms (next.js: 2.0ms, application-code: 28ms)
+ GET /api/platform/setup 200 in 26ms (next.js: 2ms, application-code: 24ms)
+ POST /api/platform/setup/complete 200 in 542ms (next.js: 480ms, application-code: 62ms)
+ GET /admin 200 in 35ms (next.js: 8ms, application-code: 27ms)
+ GET /api/platform/me 200 in 295ms (next.js: 260ms, application-code: 35ms)
+ GET /api/platform/credentials 200 in 314ms (next.js: 224ms, application-code: 90ms)
+ GET /api/platform/audit 200 in 355ms (next.js: 240ms, application-code: 115ms)
+ GET /api/platform/admins 200 in 360ms (next.js: 275ms, application-code: 86ms)
+ POST /api/platform/step-up 200 in 370ms (next.js: 238ms, application-code: 132ms)
+ GET /api/platform/me 200 in 29ms (next.js: 1.7ms, application-code: 27ms)
+ PUT /api/platform/credentials/integration.github 200 in 1173ms (next.js: 1133ms, application-code: 40ms)
+ GET /api/platform/credentials 200 in 35ms (next.js: 1.8ms, application-code: 33ms)
+ GET /admin 200 in 43ms (next.js: 2ms, application-code: 40ms)
+ GET /api/platform/me 200 in 19ms (next.js: 2.0ms, application-code: 17ms)
+ GET /api/platform/credentials 200 in 26ms (next.js: 5ms, application-code: 21ms)
+ GET /api/platform/admins 200 in 17ms (next.js: 2ms, application-code: 15ms)
+ GET /api/platform/audit 200 in 19ms (next.js: 5ms, application-code: 14ms)
+ GET /api/platform/credentials/integration.github/impact 200 in 1151ms (next.js: 1126ms, application-code: 25ms)
+ POST /api/platform/credentials/integration.github/revoke 200 in 1156ms (next.js: 1109ms, application-code: 47ms)
+ GET /api/platform/credentials 200 in 19ms (next.js: 1.7ms, application-code: 17ms)
+ GET /api/platform/credentials/integration.github/impact 200 in 38ms (next.js: 16ms, application-code: 22ms)
+ POST /api/auth/sign-up/email 200 in 151ms (next.js: 14ms, application-code: 136ms)
+ GET /api/test/outbox?email=e2e-e431ad61%40flowline-e2e.test 200 in 15ms (next.js: 2ms, application-code: 12ms)
+ POST /api/email 200 in 39ms (next.js: 6ms, application-code: 33ms)
+ POST /api/auth/sign-in/email 200 in 173ms (next.js: 30ms, application-code: 143ms)
+ POST /api/workspaces 201 in 40ms (next.js: 3ms, application-code: 37ms)
+ POST /api/onboarding 200 in 33ms (next.js: 4ms, application-code: 29ms)
+ GET /admin 404 in 50ms (next.js: 3ms, application-code: 48ms)
+ POST /api/auth/sign-up/email 200 in 86ms (next.js: 2.0ms, application-code: 84ms)
+ GET /api/test/outbox?email=e2e-49740de8%40flowline-e2e.test 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ POST /api/email 200 in 21ms (next.js: 1.5ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 93ms (next.js: 13ms, application-code: 80ms)
+ POST /api/workspaces 201 in 30ms (next.js: 3ms, application-code: 28ms)
+ POST /api/onboarding 200 in 23ms (next.js: 2ms, application-code: 20ms)
+ GET /w/e2e-c3b5aa/settings?tab=oauthApps 200 in 111ms (next.js: 28ms, application-code: 83ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps 200 in 34ms (next.js: 17ms, application-code: 17ms)
+ PUT /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps/google 200 in 56ms (next.js: 16ms, application-code: 41ms)
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps 200 in 25ms (next.js: 1.9ms, application-code: 23ms)
+ POST /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/invites 201 in 861ms (next.js: 821ms, application-code: 41ms)
+ POST /api/auth/sign-up/email 200 in 93ms (next.js: 13ms, application-code: 80ms)
+ GET /api/test/outbox?email=oauth-editor-20d19bd3%40flowline-e2e.test 200 in 6ms (next.js: 1.6ms, application-code: 5ms)
+ POST /api/email 200 in 19ms (next.js: 1.6ms, application-code: 18ms)
+ POST /api/auth/sign-in/email 200 in 71ms (next.js: 1.7ms, application-code: 69ms)
+ POST /api/invites/UOmDQTPeHBeHPFNQvHkdUO_6ZGI8ldM9toht-mRFGW8 200 in 798ms (next.js: 775ms, application-code: 23ms)
+ GET /w/e2e-c3b5aa/integrations 200 in 642ms (next.js: 576ms, application-code: 65ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/integrations/catalog?workspaceId=defbcbb4-f4f9-4c98-a889-62f82aba2f6d 200 in 215ms (next.js: 47ms, application-code: 169ms)
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/connections 200 in 1020ms (next.js: 996ms, application-code: 24ms)
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps/provenance?provider=google_sheets 200 in 1110ms (next.js: 1093ms, application-code: 17ms)
+2026-09-29T02:03:13.356Z [worker] platform notifications sent 20
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps/google/impact 200 in 1162ms (next.js: 1145ms, application-code: 17ms)
+ DELETE /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps/google 200 in 45ms (next.js: 14ms, application-code: 32ms)
+ GET /api/workspaces/defbcbb4-f4f9-4c98-a889-62f82aba2f6d/oauth-apps 200 in 35ms (next.js: 15ms, application-code: 20ms)
