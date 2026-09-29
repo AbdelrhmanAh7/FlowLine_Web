@@ -1,0 +1,62 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+CXQ Approval Agent
+
+v1 · No description
+
+Chat
+Configuration
+Runs
+
+run CXQ OpenAI workflow with {"text":"approved once"}
+
+Needs approval
+v1 · 1 model steps · cost 0.0009
+
+The agent wants to run a tool that needs a human decision (agent.run_workflow). Expires Sep 30, 2026, 11:44 AM.
+
+{
+  "tool": "run_workflow",
+  "input": {
+    "text": "approved once"
+  },
+  "query": null,
+  "workflow": "CXQ OpenAI workflow",
+  "workflowId": "99747726-54ed-4e06-93ba-ba3695902f96",
+  "connections": [],
+  "publishedVersionId": "1821bd54-9caa-41c4-9d59-57494eb7c3e3"
+}
+Approve
+Reject
+Show steps (2)
+Message the agent
+Send
+Type a message
+New conversation

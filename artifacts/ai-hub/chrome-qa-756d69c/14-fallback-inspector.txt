@@ -1,0 +1,118 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+Run history
+Search flows or run number
+All runs
+Succeeded
+Failed
+Running
+Needs attention
+Cancelled
+▾
+#7
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 547ms
+now
+⚡ Manual trigger
+Success
+· 0ms
+→
+✦ AI · Generate
+Success
+· 517ms
+→
+◎ Output
+Success
+· 0ms
+▸
+#6
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 87ms
+49s ago
+▸
+#5
+CXQ OpenAI workflow
+FAILED
+1/2 · 61ms
+2m ago
+▸
+#4
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 65ms
+agent
+2m ago
+▸
+#3
+CXQ Anthropic workflow
+SUCCESS
+2/2 · 74ms
+4m ago
+▸
+#2
+CXQ OpenAI workflow
+SUCCESS
+3/3 · 85ms
+4m ago
+▸
+#1
+CXQ OpenAI workflow
+FAILED
+1/2 · 53ms
+5m ago
+◎
+Output
+SUCCESS
+
+0ms · run #7 · v6 · output · ngpwt3 · 1 attempt
+
+✕
+Input
+Output
+Error
+Log
+{
+  "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+}
+↻ Re-run from this step
+
+Shows exactly what will run again — and what might repeat an external action — before anything starts.
+
+STEPS
+
+RUN OUTPUT
+
+{
+  "result": {
+    "text": "Summary: {\"text\":\"Explain this QA sample.\"}"
+  }
+}
