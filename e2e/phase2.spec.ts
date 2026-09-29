@@ -48,9 +48,11 @@ async function openNode(page: Page, id: string) {
 /** Choose the workspace's (only) connection for this action node. */
 async function pickConnection(drawer: Locator) {
   const select = drawer.getByLabel("Connection");
-  const label = (await select.locator("option").allTextContents()).find((o) => o && !o.startsWith("Choose") && !o.startsWith("No "));
-  expect(label, "a connection is offered").toBeTruthy();
-  await select.selectOption({ label: label! });
+  // The connection list loads asynchronously: wait for a real option instead of reading the list once (TEST-04 — under
+  // full-suite load the one-shot read ran before the connections request resolved and saw only "No … connections").
+  const offered = async () => (await select.locator("option").allTextContents()).find((o) => o && !o.startsWith("Choose") && !o.startsWith("No "));
+  await expect.poll(offered, { message: "a connection is offered" }).toBeTruthy();
+  await select.selectOption({ label: (await offered())! });
 }
 async function closeDrawer(page: Page) {
   await page.keyboard.press("Escape");
