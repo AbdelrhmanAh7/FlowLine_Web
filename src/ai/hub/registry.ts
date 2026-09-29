@@ -98,6 +98,19 @@ export interface ProviderDefinition {
   discoveryFromOrigin?: boolean;
   /** The listing is the provider's PUBLIC catalogue (not per-credential), so its metadata may enter ai_model. */
   listingIsPublic?: boolean;
+  /**
+   * Whether the model-list endpoint AUTHENTICATES the key (CXH-11), from the research record:
+   * - "key-required": documented to need the key → a successful listing proves the key (no paid request);
+   * - "public": documented as readable without auth (DeepInfra, Vercel) → it proves nothing about the key;
+   * - "unverified": the sources conflict or don't say (OpenRouter) → treated like "public".
+   * Absent = not documented = not a key check. Only "key-required" (or `keyCheckPath`) counts as a check.
+   */
+  listingAuth?: "key-required" | "public" | "unverified";
+  /**
+   * A documented authenticated, NON-billable endpoint that checks the key when the listing can't (path relative to
+   * baseUrl; must answer 2xx with a JSON object). E.g. OpenRouter GET /key (key information).
+   */
+  keyCheckPath?: string;
   /** Name of the output-token cap in an OpenAI-Chat-compatible request. */
   maxTokensParam?: "max_completion_tokens" | "max_tokens";
   connectionFields?: ConnectionField[];
@@ -145,6 +158,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     protocols: ["openai-chat", "openai-responses"],
     defaultProtocol: "openai-chat",
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_completion_tokens",
     connectionFields: [
       { key: "protocol", label: "API", required: false, pattern: "^(openai-chat|openai-responses)$", options: [{ value: "openai-chat", label: "Chat Completions" }, { value: "openai-responses", label: "Responses" }] },
@@ -184,6 +198,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     // Native Messages only: the OpenAI-compatible layer is documented as test-only and ignores response_format/strict.
     protocols: ["anthropic-messages"],
     discovery: "anthropic-models-list",
+    listingAuth: "key-required",
     discoveryPath: "/v1/models",
     listingIsPublic: true,
     connectionFields: [{ key: "workspaceId", label: "Anthropic workspace ID (only for keys spanning several workspaces)", required: false, pattern: "^[A-Za-z0-9_-]{1,128}$", header: "anthropic-workspace-id" }],
@@ -218,6 +233,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "x-goog-api-key",
     protocols: ["gemini"],
     discovery: "gemini-models-list",
+    listingAuth: "key-required",
     listingIsPublic: true,
     planWarning: "Free-tier Gemini keys: your prompts and outputs may be used to improve Google products and read by human reviewers. Use a paid key for users in the EEA, Switzerland or the UK.",
     freeTier: { type: "limited_free_tier", note: "Many models are free of charge on the Free tier with low per-project RPM/RPD limits; Flowline can't tell a free key from a paid key." },
@@ -249,6 +265,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     protocols: ["openai-responses", "openai-chat"],
     defaultProtocol: "openai-responses",
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     connectionFields: [{ key: "protocol", label: "API", required: false, pattern: "^(openai-chat|openai-responses)$", options: [{ value: "openai-responses", label: "Responses (primary)" }, { value: "openai-chat", label: "Chat Completions (legacy)" }] }],
     freeTier: { type: "none", note: "No API free tier or free credits are mentioned on the pricing page." },
@@ -281,6 +298,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     protocols: ["openai-chat", "openai-responses"],
     defaultProtocol: "openai-chat",
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     connectionFields: [{ key: "protocol", label: "API", required: false, pattern: "^(openai-chat|openai-responses)$", options: [{ value: "openai-chat", label: "Chat Completions" }, { value: "openai-responses", label: "Responses" }] }],
     freeTier: { type: "limited_free_tier", note: "Free plan with limited org-level quota; Developer plan for higher limits." },
@@ -312,6 +330,10 @@ export const PROVIDERS: ProviderDefinition[] = [
     // Chat Completions is the canonical endpoint (per-family parity of /responses and /messages is unverified).
     protocols: ["openai-chat"],
     discovery: "openrouter-models-list",
+    // research §6 OpenRouter: lists the whole catalogue (not per key); whether it needs auth is UNKNOWN.
+    listingAuth: "unverified",
+    // research §6 OpenRouter: "GET /api/v1/key returns remaining credit and free-model daily requests" (authenticated).
+    keyCheckPath: "/key",
     listingIsPublic: true,
     maxTokensParam: "max_tokens",
     planWarning: "`:free` model variants are zero-priced but limited (20 req/min; 50 req/day under $10 of lifetime credits). Upstream providers' data terms apply per model.",
@@ -342,6 +364,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     planWarning: "Free-mode keys: Mistral may use your inputs and outputs to train its models (pay-as-you-go can opt out).",
     freeTier: { type: "limited_free_tier", note: "Free mode with included monthly usage within limits." },
@@ -373,6 +396,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["cohere-v2"],
     discovery: "cohere-models-list",
+    listingAuth: "key-required",
     discoveryPath: "/v1/models",
     planWarning: "Trial keys are free but \"not permitted to be used for production or commercial purposes\" — use a production key. Switch off Data Controls if you don't want prompts used for training.",
     freeTier: { type: "trial_credits", note: "Trial keys: 1,000 calls/month, rate-limited, non-commercial only." },
@@ -403,6 +427,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     capabilityFloor: { structuredOutput: "UNSUPPORTED" },
     planWarning: "DeepSeek's terms (§2.2) ask you not to share your API key: Flowline stores it encrypted, server-side, and uses it only for this workspace.",
@@ -467,6 +492,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     planWarning: `Kimi Code membership keys are not accepted (coding tools only). Keys only work on the platform that issued them (.ai, not .cn). ${PAYG_ATTESTATION}`,
     requiresPlanAttestation: true,
@@ -499,6 +525,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     // json_schema is documented only for the legacy MiniMax-Text-01; treat as unsupported for current models.
     capabilityFloor: { structuredOutput: "UNSUPPORTED" },
@@ -622,6 +649,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     freeTier: { type: "trial_credits", note: "$5 in free credits that expire 30 days after they're granted; no renewing no-cost tier." },
     privacy: { training: "unknown", note: "Retention/training terms UNKNOWN (ToS page script-rendered)." },
@@ -650,6 +678,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     planWarning: "By default Together stores prompts and responses and may use them for product improvement; enable Zero Data Retention in your Together settings.",
     freeTier: { type: "none", note: "No free trial ($5 minimum prepay); one model listed at $0.00 (durability UNKNOWN)." },
@@ -679,6 +708,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "fireworks-models-list",
+    listingAuth: "key-required",
     discoveryPath: "/v1/accounts/fireworks/models",
     discoveryFromOrigin: true,
     maxTokensParam: "max_tokens",
@@ -709,6 +739,8 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "deepinfra-models-list",
+    // research §4 DeepInfra: "GET /models/list is public, with no auth".
+    listingAuth: "public",
     discoveryPath: "/models/list",
     discoveryFromOrigin: true,
     maxTokensParam: "max_tokens",
@@ -741,6 +773,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     protocols: ["openai-chat", "openai-responses"],
     defaultProtocol: "openai-chat",
     discovery: "openai-models-list",
+    listingAuth: "key-required",
     maxTokensParam: "max_tokens",
     connectionFields: [
       { key: "protocol", label: "API", required: false, pattern: "^(openai-chat|openai-responses)$", options: [{ value: "openai-chat", label: "Chat Completions" }, { value: "openai-responses", label: "Responses (beta)" }] },
@@ -774,6 +807,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "cloudflare-models-search",
+    listingAuth: "key-required",
     discoveryPath: "/client/v4/accounts/{accountId}/ai/models/search",
     discoveryFromOrigin: true,
     maxTokensParam: "max_tokens",
@@ -808,6 +842,8 @@ export const PROVIDERS: ProviderDefinition[] = [
     auth: "bearer",
     protocols: ["openai-chat"],
     discovery: "vercel-models-list",
+    // research §7 Vercel: "GET /v1/models needs no auth".
+    listingAuth: "public",
     listingIsPublic: true,
     maxTokensParam: "max_tokens",
     planWarning: "Free monthly credit covers a subset of models and needs a payment method on file; Stealth models may be trained on by their providers.",

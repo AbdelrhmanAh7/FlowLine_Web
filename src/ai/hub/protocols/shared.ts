@@ -13,16 +13,28 @@ export function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
 }
 
-export function parseArgs(a: unknown): Record<string, unknown> {
+/** A tool call whose arguments aren't a JSON object: corrupt (or cut) model output, possibly billed. */
+export function badToolArgs(def: ProviderDefinition) {
+  return new HubError("AI_BAD_RESPONSE", `${def.name} returned a tool call whose arguments aren't valid JSON`, { retryable: true, possibleCharge: true });
+}
+
+/**
+ * Tool-call arguments: an object, or its JSON text. Empty text is a valid call without arguments (Anthropic streams
+ * no `partial_json` for an empty input; some compatible servers send ""). Anything else — incomplete or invalid JSON,
+ * an array, a number, a missing field — is rejected: it is never turned into `{}`.
+ */
+export function parseArgs(def: ProviderDefinition, a: unknown): Record<string, unknown> {
   let v = a;
   if (typeof v === "string") {
+    if (!v.trim()) return {};
     try {
       v = JSON.parse(v);
     } catch {
-      return {};
+      throw badToolArgs(def);
     }
   }
-  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  throw badToolArgs(def);
 }
 
 /** Structured output is sent natively only when the route SUPPORTS it; otherwise the JSON is prompted and validated. */
@@ -99,13 +111,26 @@ export function createSseParser(onEvent: (e: SseEvent) => void) {
   };
 }
 
-export function parseJsonEvent(data: string): Record<string, unknown> | null {
+/**
+ * One SSE `data:` payload as a JSON object. An empty payload is a keep-alive (null: ignored); comments never reach
+ * here (the parser drops them). Anything else that isn't a JSON object is a malformed protocol chunk: the attempt
+ * fails rather than returning an answer with a silently missing piece. `[DONE]` is handled by the callers that
+ * document it before calling this.
+ */
+export function streamJson(def: ProviderDefinition, data: string): Record<string, unknown> | null {
+  if (!data.trim()) return null;
+  let v: unknown;
   try {
-    const v = JSON.parse(data) as unknown;
-    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    v = JSON.parse(data);
   } catch {
-    return null;
+    throw malformedChunk(def);
   }
+  if (!v || typeof v !== "object" || Array.isArray(v)) throw malformedChunk(def);
+  return v as Record<string, unknown>;
+}
+
+function malformedChunk(def: ProviderDefinition) {
+  return new HubError("AI_BAD_RESPONSE", `${def.name} sent a malformed stream chunk; the partial answer was discarded`, { retryable: true, possibleCharge: true });
 }
 
 /* ───────────── errors ───────────── */
@@ -157,6 +182,45 @@ function has(tokens: Set<string>, list: string[] | undefined) {
 }
 
 /**
+ * The ONLY provider error identifiers that may appear in a message: the documented ones this mapper recognises
+ * (fixed vocabulary). Anything else a provider sends in `code` / `type` / `status` — possibly an echoed secret or
+ * request content — is dropped (CXH-16).
+ */
+const KNOWN_ERROR_IDS = new Set<string>([
+  ...QUOTA_TOKENS,
+  ...SAFETY_TOKENS,
+  ...[QUOTA_CODES, PLAN_CODES, AUTH_CODES, MODEL_CODES, RATE_CODES].flatMap((m) => Object.values(m).flat()),
+  "1313",
+  "invalidapikey",
+  "invalid_api_key",
+  "invalid_authentication_error",
+  "incorrect_api_key_error",
+  "authentication_error",
+  "permission_error",
+  "customer_verification_required",
+  "accessdenied.unpurchased",
+  "model_not_found",
+  "modelnotfound",
+  "resource_not_found_error",
+  "not_found_error",
+  "not_found",
+  "overloaded_error",
+  "engine_overloaded_error",
+  "rate_limit_exceeded",
+  "rate_limit_error",
+  "rate_limit_reached_error",
+  "throttling.allocationquota",
+  "failed_precondition",
+  "invalid_request_error",
+  "invalid_argument",
+  "context_length_exceeded",
+  "request_too_large",
+]);
+
+/** Gemini block reasons + finish reasons that mean a safety refusal (documented values, lower-cased). */
+const SAFETY_REASONS = new Set(["content_filter", "refusal", "safety", "blocklist", "prohibited_content", "spii", "recitation", "image_safety", "other", "blocked"]);
+
+/**
  * Maps a provider error (HTTP status + body) to a stable, actionable HubError. Rules from the research record:
  * - "out of balance" is NOT a retryable 429: DeepSeek 402, Z.ai 429/1113, Kimi 429 exceeded_current_quota_error,
  *   MiniMax base_resp 1008, Alibaba 400 Arrearage, Anthropic spend-cap 429 without retry-after, OpenAI
@@ -172,7 +236,7 @@ export function mapProviderError(def: ProviderDefinition, model: string, status:
   const retryAfterRaw = headers?.get("retry-after") ?? null;
   const retryAfterMs = parseRetryAfter(retryAfterRaw);
   const p = def.id;
-  const safe = [...tokens].find((t) => /^[a-z0-9_.]{1,40}$/.test(t));
+  const safe = [...tokens].find((t) => KNOWN_ERROR_IDS.has(t));
   const safeCode = safe ? ` [${safe}]` : "";
 
   if (has(tokens, PLAN_CODES[p])) return new HubError("AI_PLAN_NOT_ALLOWED", `${def.name} says this key belongs to a coding plan (${safe}). Coding-plan keys can't be used for automations — connect a pay-as-you-go API key.`, opts);
@@ -220,7 +284,21 @@ export function mapInBandError(def: ProviderDefinition, model: string, body: unk
 export const SAFETY_FINISH = new Set(["content_filter", "refusal", "safety", "blocklist", "prohibited_content", "spii", "recitation"]);
 
 export function safetyRefusal(def: ProviderDefinition, reason: string | null) {
-  return new HubError("AI_SAFETY_REFUSAL", `${def.name} refused to answer (${(reason ?? "blocked").slice(0, 40)}). Nothing was retried or sent elsewhere.`);
+  // Only a documented reason is named; free text from the provider is never copied into the error.
+  const r = (reason ?? "").toLowerCase();
+  return new HubError("AI_SAFETY_REFUSAL", `${def.name} refused to answer (${SAFETY_REASONS.has(r) ? r : "blocked"}). Nothing was retried or sent elsewhere.`);
+}
+
+/**
+ * Defence in depth (CXH-16): whatever a provider call raises, the credential that was submitted with it never
+ * travels further in the error (returned to the UI, stored as last_error, written to run meta or logs).
+ */
+export function scrubHubError<E>(e: E, apiKey: string): E {
+  if (e instanceof HubError && apiKey) {
+    const clean = redactString(e.message, [apiKey]).replace(/\b(sk|key|api)[-_][A-Za-z0-9_*.\-]{3,}/gi, "[REDACTED_API_KEY]");
+    if (clean !== e.message) e.message = clean;
+  }
+  return e;
 }
 
 /** Response bodies that aren't JSON. */

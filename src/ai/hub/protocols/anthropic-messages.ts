@@ -1,7 +1,7 @@
 import type { ProviderDefinition } from "../registry";
 import { HubError, type AiModelCapabilities, type DiscoveredModel, type HubChatRequest, type HubToolCall, type NormalisedResult } from "../types";
 import { extras, usageFields, validModelId } from "./openai-chat";
-import { mapInBandError, num, SAFETY_FINISH, safetyRefusal, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
+import { badToolArgs, mapInBandError, num, parseArgs, SAFETY_FINISH, safetyRefusal, streamJson, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
 
 /**
  * Anthropic Messages protocol, native (POST {base}/v1/messages with x-api-key + anthropic-version: 2023-06-01).
@@ -48,9 +48,13 @@ export function buildMessagesBody(def: ProviderDefinition, model: string, req: H
 
 type AUsage = { input_tokens?: unknown; output_tokens?: unknown; cache_creation_input_tokens?: unknown; cache_read_input_tokens?: unknown };
 
+/** null = UNKNOWN (no usage, or input / output tokens missing): never read as zero (CXH-08). */
 function normaliseUsage(u: AUsage | undefined | null) {
   if (!u || typeof u !== "object") return null;
-  return { inputTokens: num(u.input_tokens) ?? 0, cacheReadTokens: num(u.cache_read_input_tokens), cacheWriteTokens: num(u.cache_creation_input_tokens), outputTokens: num(u.output_tokens) ?? 0, reasoningTokens: null };
+  const input = num(u.input_tokens);
+  const output = num(u.output_tokens);
+  if (input == null || output == null) return null;
+  return { inputTokens: input, cacheReadTokens: num(u.cache_read_input_tokens), cacheWriteTokens: num(u.cache_creation_input_tokens), outputTokens: output, reasoningTokens: null };
 }
 
 function finish(def: ProviderDefinition, text: string, toolCalls: HubToolCall[], stop: string | null) {
@@ -66,7 +70,9 @@ export function parseMessagesResponse(def: ProviderDefinition, requestedModel: s
   for (const b of d.content) {
     if (b?.type === "text" && typeof b.text === "string") text += b.text;
     else if (b?.type === "tool_use" && typeof b.name === "string" && b.name) {
-      const input = b.input && typeof b.input === "object" && !Array.isArray(b.input) ? (b.input as Record<string, unknown>) : {};
+      // `input` is documented as an object: anything else is corrupt output (never turned into {}).
+      if (!b.input || typeof b.input !== "object" || Array.isArray(b.input)) throw badToolArgs(def);
+      const input = b.input as Record<string, unknown>;
       toolCalls.push({ id: typeof b.id === "string" && b.id ? b.id : `call_${toolCalls.length}`, name: b.name, arguments: input });
     }
     // thinking / redacted_thinking blocks are dropped (never stored).
@@ -86,12 +92,8 @@ export function messagesStream(def: ProviderDefinition, requestedModel: string, 
   const blocks = new Map<number, { kind: "text" | "tool" | "other"; id: string; name: string; json: string }>();
   return {
     onEvent(e: SseEvent) {
-      let d: Record<string, unknown>;
-      try {
-        d = JSON.parse(e.data) as Record<string, unknown>;
-      } catch {
-        return;
-      }
+      const d = streamJson(def, e.data);
+      if (!d) return; // empty keep-alive
       const type = typeof d.type === "string" ? d.type : e.event;
       if (type === "error") throw mapInBandError(def, requestedModel, d);
       if (type === "message_start") {
@@ -129,16 +131,8 @@ export function messagesStream(def: ProviderDefinition, requestedModel: string, 
       const toolCalls: HubToolCall[] = [...blocks.entries()]
         .sort(([a], [b]) => a - b)
         .filter(([, b]) => b.kind === "tool" && b.name)
-        .map(([i, b]) => {
-          let args: Record<string, unknown> = {};
-          try {
-            const v = JSON.parse(b.json || "{}") as unknown;
-            if (v && typeof v === "object" && !Array.isArray(v)) args = v as Record<string, unknown>;
-          } catch {
-            args = {};
-          }
-          return { id: b.id || `call_${i}`, name: b.name, arguments: args };
-        });
+        // No partial_json at all = an empty input (documented); anything present must be a complete JSON object.
+        .map(([i, b]) => ({ id: b.id || `call_${i}`, name: b.name, arguments: parseArgs(def, b.json) }));
       finish(def, text, toolCalls, stop);
       return { text, toolCalls, finishReason: stop, model, ...usageFields(sawUsage ? normaliseUsage(usage) : null), ...extras(undefined, null) };
     },

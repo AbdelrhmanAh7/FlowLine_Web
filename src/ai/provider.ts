@@ -4,7 +4,7 @@ import type { schema } from "@/db";
 import type { AiRouteRef } from "@/db/schema";
 import { NodeError } from "@/engine/execute";
 import { executeAi } from "./hub/execute";
-import { resolveRoute } from "./hub/routing";
+import { deferFor, resolveRoute } from "./hub/routing";
 import { HubError, type ResolvedRoute } from "./hub/types";
 import { quarantineInstructions } from "./injection";
 
@@ -106,7 +106,7 @@ export async function getAiProvider(
 ): Promise<AiProvider> {
   let route: ResolvedRoute;
   try {
-    route = await resolveRoute(db, workspace, opts.pin ? { pin: opts.pin, pinSource: opts.pinSource ?? "copilot" } : {});
+    route = await resolveRoute(db, workspace, opts.pin ? { pin: opts.pin, pinSource: opts.pinSource ?? "copilot" } : {}, deferFor(workspace));
   } catch (e) {
     const code = e instanceof HubError ? e.code : "AI_NOT_CONFIGURED";
     const reason = (e as Error).message;

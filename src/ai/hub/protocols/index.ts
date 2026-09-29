@@ -8,7 +8,7 @@ import { buildGeminiBody, geminiStream, parseGeminiModelsPage, parseGeminiRespon
 import { parseCloudflareModels, parseDeepInfraModels, parseFireworksModels, parseOpenRouterModels, parseVercelModels } from "./listings";
 import { buildChatBody, chatStream, paginate, parseChatResponse, parseModelsPage } from "./openai-chat";
 import { buildResponsesBody, parseResponsesResponse, responsesStream } from "./openai-responses";
-import { createSseParser, errorBody, mapProviderError, parseBody, pathModel, type SseEvent } from "./shared";
+import { createSseParser, errorBody, mapProviderError, parseBody, pathModel, scrubHubError, type SseEvent } from "./shared";
 
 export const IMPLEMENTED_PROTOCOLS: Protocol[] = ["openai-chat", "openai-responses", "anthropic-messages", "gemini", "cohere-v2"];
 
@@ -67,8 +67,19 @@ export function buildBody(def: ProviderDefinition, protocol: Protocol, model: st
   return ADAPTERS[protocol].build(def, model, req, caps, { stream });
 }
 
-/** One provider call (no retries, no metering): request → HTTP → normalised result or a mapped HubError. */
+/**
+ * One provider call (no retries, no metering): request → HTTP → normalised result or a mapped HubError. Whatever it
+ * raises never carries the submitted key (CXH-16, defence in depth).
+ */
 export async function callChat(def: ProviderDefinition, protocol: Protocol, creds: Credentials, model: string, req: HubChatRequest, caps: AiModelCapabilities, signal: AbortSignal, opts: CallOptions = {}): Promise<NormalisedResult> {
+  try {
+    return await callChatRaw(def, protocol, creds, model, req, caps, signal, opts);
+  } catch (e) {
+    throw scrubHubError(e, creds.apiKey);
+  }
+}
+
+async function callChatRaw(def: ProviderDefinition, protocol: Protocol, creds: Credentials, model: string, req: HubChatRequest, caps: AiModelCapabilities, signal: AbortSignal, opts: CallOptions): Promise<NormalisedResult> {
   requireProtocol(def, protocol);
   const a = ADAPTERS[protocol];
   const stream = opts.stream === true;
@@ -111,9 +122,38 @@ async function getJson(def: ProviderDefinition, creds: Credentials, path: string
   }
 }
 
-/** Whether a provider's key can be checked without a billable call (a documented model-list endpoint). */
+/**
+ * How a provider's key can be checked WITHOUT a billable call (CXH-11):
+ * - "listing": the model list is documented to require the key, so a successful listing proves it;
+ * - "key-endpoint": a documented authenticated, non-billable key endpoint (the listing alone proves nothing);
+ * - "public-listing": the model list is public (or its auth is unverified): it proves nothing about the key;
+ * - "none": no model list at all (static catalogue).
+ * Only the first two are key checks; otherwise the key stays UNVERIFIED until a disclosed inference test succeeds.
+ */
+export type KeyCheck = "listing" | "key-endpoint" | "public-listing" | "none";
+
+export function keyCheckOf(def: ProviderDefinition): KeyCheck {
+  const listing = def.discovery !== "static-catalogue" && def.discovery !== "none";
+  if (def.keyCheckPath) return "key-endpoint";
+  if (!listing) return "none";
+  return def.listingAuth === "key-required" ? "listing" : "public-listing";
+}
+
+/** Whether a provider's key can be checked without a billable call. */
 export function canCheckKey(def: ProviderDefinition) {
-  return def.discovery !== "static-catalogue" && def.discovery !== "none";
+  const k = keyCheckOf(def);
+  return k === "listing" || k === "key-endpoint";
+}
+
+/** The documented authenticated, non-billable key check (e.g. OpenRouter GET /key): 2xx with a JSON object, or a mapped error. */
+export async function checkKeyEndpoint(def: ProviderDefinition, creds: Credentials, signal?: AbortSignal): Promise<void> {
+  if (!def.keyCheckPath) throw new HubError("AI_KEY_NOT_CHECKABLE", `${def.name} has no key-check endpoint`);
+  try {
+    const body = await getJson(def, creds, def.keyCheckPath, {}, signal);
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new HubError("AI_CATALOGUE_MALFORMED", `${def.name}'s key check answered with an unexpected shape`);
+  } catch (e) {
+    throw scrubHubError(e, creds.apiKey);
+  }
 }
 
 /**
@@ -122,6 +162,14 @@ export function canCheckKey(def: ProviderDefinition) {
  * key (see `canCheckKey`).
  */
 export async function listModels(def: ProviderDefinition, creds: Credentials, signal?: AbortSignal): Promise<DiscoveredModel[]> {
+  try {
+    return await listModelsRaw(def, creds, signal);
+  } catch (e) {
+    throw scrubHubError(e, creds.apiKey);
+  }
+}
+
+async function listModelsRaw(def: ProviderDefinition, creds: Credentials, signal?: AbortSignal): Promise<DiscoveredModel[]> {
   const path = def.discoveryPath ?? "/models";
   const origin = def.discoveryFromOrigin === true;
   switch (def.discovery) {

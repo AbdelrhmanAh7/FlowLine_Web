@@ -1,7 +1,7 @@
 import type { ProviderDefinition } from "../registry";
 import { HubError, type AiModelCapabilities, type DiscoveredModel, type HubChatRequest, type HubToolCall, type NormalisedResult } from "../types";
 import { extras, usageFields, validModelId } from "./openai-chat";
-import { mapInBandError, num, parseArgs, SAFETY_FINISH, safetyRefusal, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
+import { mapInBandError, num, parseArgs, SAFETY_FINISH, safetyRefusal, streamJson, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
 
 /**
  * Cohere v2 chat, native (POST https://api.cohere.com/v2/chat; models: GET https://api.cohere.com/v1/models with
@@ -43,8 +43,12 @@ type CUsage = { billed_units?: { input_tokens?: unknown; output_tokens?: unknown
 function normaliseUsage(u: CUsage | undefined | null) {
   if (!u || typeof u !== "object") return null;
   const b = u.billed_units ?? u.tokens;
-  if (!b) return null;
-  return { inputTokens: num(b.input_tokens) ?? 0, cacheReadTokens: null, cacheWriteTokens: null, outputTokens: num(b.output_tokens) ?? 0, reasoningTokens: null };
+  if (!b || typeof b !== "object") return null;
+  const input = num(b.input_tokens);
+  const output = num(b.output_tokens);
+  // Both billed counts are needed; a missing one is UNKNOWN, never zero (CXH-08).
+  if (input == null || output == null) return null;
+  return { inputTokens: input, cacheReadTokens: null, cacheWriteTokens: null, outputTokens: output, reasoningTokens: null };
 }
 
 function textOf(content: unknown): string {
@@ -60,7 +64,7 @@ export function parseCohereResponse(def: ProviderDefinition, requestedModel: str
   const text = textOf(d.message.content);
   const toolCalls: HubToolCall[] = (Array.isArray(d.message.tool_calls) ? d.message.tool_calls : [])
     .filter((c) => typeof c?.function?.name === "string" && c.function.name)
-    .map((c, i) => ({ id: typeof c.id === "string" && c.id ? c.id : `call_${i}`, name: c.function!.name as string, arguments: parseArgs(c.function!.arguments) }));
+    .map((c, i) => ({ id: typeof c.id === "string" && c.id ? c.id : `call_${i}`, name: c.function!.name as string, arguments: parseArgs(def, c.function!.arguments) }));
   const finishReason = typeof d.finish_reason === "string" ? d.finish_reason : null;
   if (finishReason === "ERROR") throw mapInBandError(def, requestedModel, { error: { code: 502 } });
   if (!text && !toolCalls.length && finishReason && SAFETY_FINISH.has(finishReason.toLowerCase())) throw safetyRefusal(def, finishReason);
@@ -75,12 +79,8 @@ export function cohereStream(def: ProviderDefinition, requestedModel: string, on
   return {
     onEvent(e: SseEvent) {
       if (e.data === "[DONE]") return;
-      let d: { type?: unknown; index?: unknown; delta?: { message?: { content?: { text?: unknown }; tool_calls?: { id?: unknown; function?: { name?: unknown; arguments?: unknown } } }; finish_reason?: unknown; usage?: CUsage }; error?: unknown };
-      try {
-        d = JSON.parse(e.data) as typeof d;
-      } catch {
-        return;
-      }
+      const d = streamJson(def, e.data) as { type?: unknown; index?: unknown; delta?: { message?: { content?: { text?: unknown }; tool_calls?: { id?: unknown; function?: { name?: unknown; arguments?: unknown } } }; finish_reason?: unknown; usage?: CUsage }; error?: unknown } | null;
+      if (!d) return; // empty keep-alive
       const type = typeof d.type === "string" ? d.type : e.event;
       if (d.error && typeof d.error === "object") throw mapInBandError(def, requestedModel, d);
       const i = typeof d.index === "number" ? d.index : 0;
@@ -108,7 +108,7 @@ export function cohereStream(def: ProviderDefinition, requestedModel: string, on
       const toolCalls = [...calls.entries()]
         .sort(([a], [b]) => a - b)
         .filter(([, c]) => c.name)
-        .map(([idx, c]) => ({ id: c.id || `call_${idx}`, name: c.name, arguments: parseArgs(c.args) }));
+        .map(([idx, c]) => ({ id: c.id || `call_${idx}`, name: c.name, arguments: parseArgs(def, c.args) }));
       if (!text && !toolCalls.length && SAFETY_FINISH.has(finishReason.toLowerCase())) throw safetyRefusal(def, finishReason);
       return { text, toolCalls, finishReason, model: requestedModel, ...usageFields(normaliseUsage(usage)), ...extras(undefined, null) };
     },

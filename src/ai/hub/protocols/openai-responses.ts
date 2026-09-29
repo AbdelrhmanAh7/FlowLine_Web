@@ -1,7 +1,7 @@
 import type { ProviderDefinition } from "../registry";
 import { HubError, type AiModelCapabilities, type HubChatRequest, type HubToolCall, type NormalisedResult } from "../types";
 import { extras, usageFields } from "./openai-chat";
-import { mapInBandError, num, parseArgs, SAFETY_FINISH, safetyRefusal, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
+import { mapInBandError, num, parseArgs, SAFETY_FINISH, safetyRefusal, streamJson, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
 
 /**
  * OpenAI Responses protocol (POST {base}/responses) — OpenAI (primary API), xAI (primary), Groq, HF router (beta).
@@ -35,13 +35,16 @@ export function buildResponsesBody(def: ProviderDefinition, model: string, req: 
 
 type RUsage = { input_tokens?: unknown; output_tokens?: unknown; input_tokens_details?: { cached_tokens?: unknown }; output_tokens_details?: { reasoning_tokens?: unknown }; cost_in_nano_usd?: unknown };
 
+/** null = UNKNOWN (no usage, a missing total, or details larger than their total): never read as zero (CXH-08). */
 function normaliseUsage(u: RUsage | undefined | null) {
   if (!u || typeof u !== "object") return null;
-  const input = num(u.input_tokens) ?? 0;
-  const output = num(u.output_tokens) ?? 0;
+  const input = num(u.input_tokens);
+  const output = num(u.output_tokens);
+  if (input == null || output == null) return null;
   const cached = num(u.input_tokens_details?.cached_tokens);
   const reasoning = num(u.output_tokens_details?.reasoning_tokens);
-  return { inputTokens: Math.max(0, input - (cached ?? 0)), cacheReadTokens: cached, cacheWriteTokens: null, outputTokens: Math.max(0, output - (reasoning ?? 0)), reasoningTokens: reasoning };
+  if ((cached ?? 0) > input || (reasoning ?? 0) > output) return null;
+  return { inputTokens: input - (cached ?? 0), cacheReadTokens: cached, cacheWriteTokens: null, outputTokens: output - (reasoning ?? 0), reasoningTokens: reasoning };
 }
 
 function nanoUsd(...vals: unknown[]): number | undefined {
@@ -69,7 +72,7 @@ export function parseResponsesResponse(def: ProviderDefinition, requestedModel: 
       for (const c of item.content) if (c && c.type === "output_text" && typeof c.text === "string") text += c.text;
     } else if (item.type === "function_call" && typeof item.name === "string" && item.name) {
       const id = typeof item.call_id === "string" && item.call_id ? item.call_id : `call_${toolCalls.length}`;
-      toolCalls.push({ id, name: item.name, arguments: parseArgs(item.arguments) });
+      toolCalls.push({ id, name: item.name, arguments: parseArgs(def, item.arguments) });
     }
     // "reasoning" items (and any reasoning text) are dropped.
   }
@@ -92,12 +95,8 @@ export function responsesStream(def: ProviderDefinition, requestedModel: string,
   return {
     onEvent(e: SseEvent) {
       if (e.data === "[DONE]") return;
-      let d: { type?: unknown; delta?: unknown; response?: unknown; error?: unknown; code?: unknown; message?: unknown };
-      try {
-        d = JSON.parse(e.data) as typeof d;
-      } catch {
-        return;
-      }
+      const d = streamJson(def, e.data) as { type?: unknown; delta?: unknown; response?: unknown; error?: unknown; code?: unknown; message?: unknown } | null;
+      if (!d) return; // empty keep-alive
       const type = typeof d.type === "string" ? d.type : e.event;
       if (type === "response.output_text.delta" && typeof d.delta === "string") onText(d.delta);
       else if (type === "response.completed" || type === "response.incomplete") completed = d.response;

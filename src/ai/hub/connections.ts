@@ -6,9 +6,9 @@ import type { AiRouteRef, Role } from "@/db/schema";
 import { HttpError, notFound } from "@/server/http";
 import { checkRate } from "@/server/rate-limit";
 import { encryptAiKey, keyHint, loadCredentials, validateApiKey } from "./credentials";
-import { refreshCatalogue, storeCatalogue } from "./discovery";
+import { refreshCatalogue, stillCurrent, storeCatalogue } from "./discovery";
 import { executeAi } from "./execute";
-import { canCheckKey, listModels } from "./protocols";
+import { canCheckKey, checkKeyEndpoint, keyCheckOf, listModels } from "./protocols";
 import { getProviderDef, isConnectable, type ProviderDefinition } from "./registry";
 import { DEFAULT_POLICY, isRouteRef, resolveRoute } from "./routing";
 import { validateSettings } from "./transport";
@@ -33,8 +33,16 @@ export function publicAiConnection(c: Conn, counts?: { discovered: number; acces
     // "••••WXYZ" only for long keys; short keys show only the date the key was set (security review).
     keyHint: c.status === "REVOKED" || !c.keyHint || c.keyHint.startsWith("set:") ? null : c.keyHint,
     keySetAt: c.status === "REVOKED" ? null : c.keyHint?.startsWith("set:") ? c.keyHint.slice(4) : null,
-    /** "listing": the key was checked with a metadata call; "none": the provider has no such endpoint (use the inference test). */
-    keyCheck: def && canCheckKey(def) ? ("listing" as const) : ("none" as const),
+    /**
+     * How the key can be checked for free: "listing" / "key-endpoint" (authenticated metadata call), "public-listing"
+     * (the model list is public: it proves nothing) or "none" (no list). See `keyCheckOf`.
+     */
+    keyCheck: def ? keyCheckOf(def) : ("none" as const),
+    /**
+     * The key itself has been proven to work: an authenticated metadata check or a successful disclosed inference
+     * test (lastTestedAt), and the connection is healthy. A public listing never sets this (CXH-11).
+     */
+    keyVerified: c.status === "CONNECTED" && c.lastTestedAt != null,
     settings: c.settings,
     useRoles: c.useRoles,
     status: c.status,
@@ -102,11 +110,14 @@ function cleanSettings(def: ProviderDefinition, settings: Record<string, string>
 }
 
 /**
- * Metadata-only credential check: lists models. Maps failures to HTTP errors for the settings UI. Providers without
- * a documented list endpoint (Z.ai, Alibaba) get their static catalogue — the key is NOT checked (keyCheck "none").
+ * Metadata-only credential check + discovery. Where the provider documents an authenticated, non-billable key
+ * endpoint it is called first (OpenRouter); then the models are listed. Only an AUTHENTICATED listing checks the key:
+ * a public one (DeepInfra, Vercel) or a static catalogue (Z.ai, Alibaba) doesn't (keyCheck "public-listing" / "none").
+ * Maps failures to HTTP errors for the settings UI.
  */
 async function verifyKey(def: ProviderDefinition, apiKey: string, settings: Record<string, string>) {
   try {
+    if (def.keyCheckPath) await checkKeyEndpoint(def, { apiKey, settings });
     return await listModels(def, { apiKey, settings });
   } catch (e) {
     if (!(e instanceof HubError)) throw e;
@@ -179,24 +190,41 @@ export async function createAiConnection(
   return publicById(db, row!.id);
 }
 
-/** "Test connection": the same metadata-only check (and it refreshes the model list). Records health. */
+/**
+ * "Test connection": the same metadata-only check (and it refreshes the model list). Records health — but only for
+ * the key it tested: every write is fenced on the credential version read before the network call and on the
+ * connection not being disconnected meanwhile (CXH-12). A stale result is discarded, never written.
+ */
 export async function testAiConnection(db: Db, conn: Conn) {
   if (conn.status === "REVOKED") throw new HttpError(409, "AI_CONNECTION_REVOKED", "This connection was disconnected");
   const def = getProviderDef(conn.provider);
   if (def && !canCheckKey(def)) {
-    // No metadata endpoint: refreshing the static catalogue proves nothing about the key. Say so (no fake success).
+    // Refreshing a static catalogue or a PUBLIC model list proves nothing about the key. Say so (no fake success).
     const r = await refreshCatalogue(db, conn);
+    const why = keyCheckOf(def) === "public-listing" ? `${def.name}'s model list is public, so listing models doesn't check the key.` : `${def.name} has no model-list endpoint, so the key can't be checked without an inference.`;
     return {
       ok: false,
       code: "AI_KEY_NOT_CHECKABLE",
-      message: `${def.name} has no model-list endpoint, so the key can't be checked without an inference. Run the inference test to confirm it.${r.ok ? "" : ` (${r.message})`}`,
+      message: `${why} Run the inference test to confirm it.${r.ok ? "" : ` (${r.message})`}`,
       connection: await publicById(db, conn.id),
     };
   }
-  const r = await refreshCatalogue(db, conn);
+  let r: Awaited<ReturnType<typeof refreshCatalogue>> | null = null;
+  if (def?.keyCheckPath) {
+    try {
+      await checkKeyEndpoint(def, loadCredentials(conn));
+    } catch (e) {
+      if (!(e instanceof HubError)) throw e;
+      r = { ok: false, code: e.code, message: e.message };
+    }
+  }
+  r ??= await refreshCatalogue(db, conn);
   const now = new Date();
-  if (r.ok) await db.update(schema.aiConnection).set({ status: "CONNECTED", lastTestedAt: now, lastError: null, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
-  else await db.update(schema.aiConnection).set({ status: "DEGRADED", lastTestedAt: now, lastError: { code: r.code, message: r.message, at: now.toISOString() }, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
+  // The fence (same key, not disconnected) guards every health write: never CONNECTED over REVOKED.
+  if (r.ok) await db.update(schema.aiConnection).set({ status: "CONNECTED", lastTestedAt: now, lastError: null, updatedAt: now }).where(stillCurrent(conn));
+  else if (r.code !== "AI_CONNECTION_CHANGED") {
+    await db.update(schema.aiConnection).set({ status: "DEGRADED", lastTestedAt: now, lastError: { code: r.code, message: r.message, at: now.toISOString() }, updatedAt: now }).where(stillCurrent(conn));
+  }
   return { ok: r.ok, ...(r.ok ? { models: r.count } : { code: r.code, message: r.message }), connection: await publicById(db, conn.id) };
 }
 
@@ -227,7 +255,8 @@ export async function inferenceTest(db: Db, userId: string, workspace: typeof sc
     });
     // A successful inference proves the key works (the only check for providers without a list endpoint).
     const now = new Date();
-    await db.update(schema.aiConnection).set({ lastTestedAt: now, status: "CONNECTED", lastError: null, updatedAt: now }).where(and(eq(schema.aiConnection.id, conn.id), ne(schema.aiConnection.status, "REVOKED")));
+    // Fenced: only the key that answered is marked working (not a key replaced or disconnected meanwhile).
+    await db.update(schema.aiConnection).set({ lastTestedAt: now, status: "CONNECTED", lastError: null, updatedAt: now }).where(stillCurrent(conn));
     return { ok: true, model: r.result.model, usage: r.result.usage, costMicros: r.costMicros, costSource: r.costSource };
   } catch (e) {
     if (e instanceof HubError) return { ok: false, code: e.code, message: e.message };

@@ -41,6 +41,10 @@ Anything you can't confirm is **UNKNOWN** and stays unknown in code.
   - With no list endpoint, use `static-catalogue` and add the models to `catalogue.ts` with `static: true`. The key
     then can't be checked without an inference; the UI says so.
   - Set `listingIsPublic: true` only when the docs say the list is the public catalogue, not per credential.
+  - **`listingAuth`** (required with a list endpoint): `"key-required"` only when the docs say the list needs the key;
+    `"public"` when they say it doesn't; `"unverified"` when the sources conflict. Only `"key-required"` counts as a
+    key check. If the provider documents an authenticated, non-billable key endpoint, set **`keyCheckPath`** (e.g.
+    OpenRouter `/key`); otherwise the key stays **unverified** until a disclosed paid test succeeds.
 - **`capabilityFloor`:** only documented provider-wide **UNSUPPORTED** facts (e.g. "no json_schema"). SUPPORTED comes
   per model from the listing or the catalogue.
 - **Plan and privacy fields:**

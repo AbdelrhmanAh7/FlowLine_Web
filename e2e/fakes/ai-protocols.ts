@@ -67,12 +67,18 @@ export const hub = {
   requests: [] as HubRecord[],
   faults: [] as HubFault[],
   removed: new Set<string>(),
+  /**
+   * Providers whose model list answers WITHOUT checking the key, as DeepInfra and Vercel document theirs
+   * (POST /__fake/hub/public). Off by default, so the per-adapter auth assertions keep their shape.
+   */
+  publicListing: new Set<string>(),
 };
 
 export function resetHub() {
   hub.requests = [];
   hub.faults = [];
   hub.removed = new Set();
+  hub.publicListing = new Set();
 }
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -426,7 +432,11 @@ export async function handleHub(
   const pending = hub.faults.some((f) => f.times > 0 && (!f.provider || f.provider === provider) && (f.path ?? "chat") === (isModels ? "models" : "chat"));
   if (/^\/v1\/(chat\/completions|models)$/.test(sub) && !pending && !stream && !OWN_MODEL_IDS.has(provider) && !(provider in NATIVE_MODELS)) return false;
 
+  // A documented PUBLIC list answers whatever key (or none) is sent: listing it proves nothing about the key.
+  if (isModels && hub.publicListing.has(provider) && listModels(provider, sub, url, res, ctx.oaModels())) return true;
   if (!key || !key.startsWith("sk-fake-") || key.includes("revoked")) return unauthorized(res, provider), true;
+  // OpenRouter GET /api/v1/key: authenticated, non-billable key information (remaining credit, free-tier flag).
+  if (provider === "openrouter" && sub === "/api/v1/key" && req.method === "GET") return json(res, 200, { data: { label: "fake key", usage: 0, limit: null, is_free_tier: false } }), true;
   const fault = takeFault(provider, isModels ? "models" : "chat");
   if (fault?.mode === "hang") return true; // never answer
   if (fault?.mode === "http") return json(res, fault.status ?? 500, fault.body ?? {}, fault.headers ?? {}), true;

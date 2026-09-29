@@ -25,11 +25,18 @@ export interface AiProviderDto {
   connectionFields: { key: string; label: string; required: boolean; pattern: string; options: { value: string; label: string }[] | null; help: string | null }[];
   planWarning: string | null;
   requiresPlanAttestation: boolean;
-  keyCheck: "listing" | "none";
+  /** How a key can be checked without a paid request (only "listing" / "key-endpoint" are real checks). */
+  keyCheck: AiKeyCheck;
   freeTier: { type: "none" | "permanent_zero_price" | "limited_free_tier" | "trial_credits" | "monthly_credit" | "unknown"; note: string };
   privacy: { training: "no" | "yes" | "depends" | "unknown"; note: string };
   termsNotes: string | null;
 }
+
+/**
+ * "listing": the model list needs the key, so listing models checks it; "key-endpoint": a free, authenticated key
+ * endpoint checks it; "public-listing": the model list is public (it proves nothing about the key); "none": no list.
+ */
+export type AiKeyCheck = "listing" | "key-endpoint" | "public-listing" | "none";
 
 export interface AiRetiredDto {
   id: string;
@@ -57,7 +64,9 @@ export interface AiConnectionDto {
   keyHint: string | null;
   /** Short keys get no last-4 hint: only the date the key was set (YYYY-MM-DD). */
   keySetAt: string | null;
-  keyCheck: "listing" | "none";
+  keyCheck: AiKeyCheck;
+  /** The key itself was proven (authenticated metadata check or a successful paid test) and the connection is healthy. */
+  keyVerified: boolean;
   useRoles: string[];
   status: "CONNECTED" | "DEGRADED" | "REVOKED";
   verification: "IMPLEMENTED" | "CONTRACT_VERIFIED" | "LIVE_VERIFIED";

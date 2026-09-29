@@ -148,15 +148,20 @@ describe("response normalisation", () => {
 
   it("unreported details stay unknown (null), not 0; tool call arguments are parsed", () => {
     const r = parseChatResponse(def, "m", {
-      choices: [{ message: { content: null, tool_calls: [{ id: "call_9", type: "function", function: { name: "run", arguments: '{"n":2}' } }, { id: "x", function: { name: "bad", arguments: "{not json" } }] }, finish_reason: "tool_calls" }],
+      choices: [{ message: { content: null, tool_calls: [{ id: "call_9", type: "function", function: { name: "run", arguments: '{"n":2}' } }, { id: "x", function: { name: "empty", arguments: "{}" } }] }, finish_reason: "tool_calls" }],
       usage: { prompt_tokens: 5, completion_tokens: 2 },
     });
     expect(r.usage).toEqual({ inputTokens: 5, cacheReadTokens: null, cacheWriteTokens: null, outputTokens: 2, reasoningTokens: null });
     expect(r.toolCalls).toEqual([
       { id: "call_9", name: "run", arguments: { n: 2 } },
-      { id: "x", name: "bad", arguments: {} },
+      { id: "x", name: "empty", arguments: {} },
     ]);
     expect(r.model).toBe("m");
+  });
+
+  it("invalid tool-call argument JSON is corrupt output, not {} (Codex CXH-15)", () => {
+    const bad = { choices: [{ message: { content: null, tool_calls: [{ id: "call_9", type: "function", function: { name: "run", arguments: '{"n":2}' } }, { id: "x", function: { name: "bad", arguments: "{not json" } }] }, finish_reason: "tool_calls" }], usage: { prompt_tokens: 5, completion_tokens: 2 } };
+    expect(() => parseChatResponse(def, "m", bad)).toThrowError(expect.objectContaining({ code: "AI_BAD_RESPONSE", retryable: true, possibleCharge: true }));
   });
 
   it("a response without a message is a retryable bad response", () => {

@@ -1,7 +1,7 @@
 import type { SafeResponse } from "@/server/egress";
 import type { ProviderDefinition } from "../registry";
 import { HubError, type AiModelCapabilities, type DiscoveredModel, type HubChatRequest, type HubToolCall, type NormalisedResult } from "../types";
-import { errorBody, mapInBandError, mapProviderError, num, parseArgs, SAFETY_FINISH, safetyRefusal, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
+import { errorBody, mapInBandError, mapProviderError, num, parseArgs, SAFETY_FINISH, safetyRefusal, streamJson, structuredOutputMode, validateRequest, type SseEvent } from "./shared";
 
 export { scrubProviderMessage, structuredOutputMode } from "./shared";
 
@@ -61,19 +61,26 @@ type ChatUsage = {
   completion_tokens_details?: { reasoning_tokens?: unknown };
 };
 
-/** Usage → non-overlapping fields (see the header comment). `null` usage = the provider didn't report any. */
+/**
+ * Usage → non-overlapping fields (see the header comment). `null` = UNKNOWN: the provider reported no usage, or an
+ * incomplete / inconsistent one (a missing or non-numeric prompt or completion count, cached or reasoning tokens
+ * larger than the total they are part of). Unknown usage is never read as zero (CXH-08): the ledger keeps the
+ * reservation instead.
+ */
 export function normaliseChatUsage(u: ChatUsage | undefined | null) {
   if (!u || typeof u !== "object") return null;
-  const prompt = num(u.prompt_tokens) ?? 0;
-  const completion = num(u.completion_tokens) ?? 0;
+  const prompt = num(u.prompt_tokens);
+  const completion = num(u.completion_tokens);
+  if (prompt == null || completion == null) return null;
   const cached = num(u.prompt_tokens_details?.cached_tokens) ?? num(u.prompt_cache_hit_tokens) ?? num(u.cached_tokens);
   const cacheWrite = num(u.prompt_tokens_details?.cache_write_tokens);
   const reasoning = num(u.completion_tokens_details?.reasoning_tokens) ?? num(u.reasoning_tokens);
+  if ((cached ?? 0) + (cacheWrite ?? 0) > prompt || (reasoning ?? 0) > completion) return null;
   return {
-    inputTokens: Math.max(0, prompt - (cached ?? 0) - (cacheWrite ?? 0)),
+    inputTokens: prompt - (cached ?? 0) - (cacheWrite ?? 0),
     cacheReadTokens: cached,
     cacheWriteTokens: cacheWrite,
-    outputTokens: Math.max(0, completion - (reasoning ?? 0)),
+    outputTokens: completion - (reasoning ?? 0),
     reasoningTokens: reasoning,
   };
 }
@@ -120,7 +127,7 @@ export function parseChatResponse(def: ProviderDefinition, requestedModel: strin
   const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((p) => (typeof (p as { text?: unknown }).text === "string" ? (p as { text: string }).text : "")).join("") : "";
   const toolCalls: HubToolCall[] = (Array.isArray(choice.message.tool_calls) ? choice.message.tool_calls : [])
     .filter((c) => typeof c?.function?.name === "string" && c.function.name)
-    .map((c, i) => ({ id: typeof c.id === "string" && c.id ? c.id : `call_${i}`, name: c.function!.name as string, arguments: parseArgs(c.function!.arguments) }));
+    .map((c, i) => ({ id: typeof c.id === "string" && c.id ? c.id : `call_${i}`, name: c.function!.name as string, arguments: parseArgs(def, c.function!.arguments) }));
   const finishReason = typeof choice.finish_reason === "string" ? choice.finish_reason : null;
   if (finishReason === "error") throw mapInBandError(def, requestedModel, { error: { code: 502 } });
   if (!text && !toolCalls.length && finishReason && SAFETY_FINISH.has(finishReason.toLowerCase())) throw safetyRefusal(def, finishReason);
@@ -155,12 +162,8 @@ export function chatStream(def: ProviderDefinition, requestedModel: string, onTe
         done = true;
         return;
       }
-      let d: Record<string, unknown>;
-      try {
-        d = JSON.parse(e.data) as Record<string, unknown>;
-      } catch {
-        return; // not a JSON chunk (keep-alive text): ignored
-      }
+      const d = streamJson(def, e.data);
+      if (!d) return; // empty keep-alive
       const inBand = inBandError(def, requestedModel, d);
       if (inBand) throw inBand;
       if (typeof d.model === "string" && d.model) model = d.model;
@@ -188,12 +191,12 @@ export function chatStream(def: ProviderDefinition, requestedModel: string, onTe
       }
     },
     result(): NormalisedResult {
-      if (!finish && !done) throw new HubError("AI_STREAM_INTERRUPTED", `${def.name} ended the stream before the answer finished`, { retryable: true, possibleCharge: true });
-      if (!finish && calls.size === 0 && !text) throw new HubError("AI_STREAM_INTERRUPTED", `${def.name} ended the stream without an answer`, { retryable: true, possibleCharge: true });
+      // Complete only with a finish reason: a stream that stops (even with [DONE]) before one is discarded.
+      if (!finish) throw new HubError("AI_STREAM_INTERRUPTED", done ? `${def.name} ended the stream without a finish reason` : `${def.name} ended the stream before the answer finished`, { retryable: true, possibleCharge: true });
       const toolCalls = [...calls.entries()]
         .sort(([a], [b]) => a - b)
         .filter(([, c]) => c.name)
-        .map(([i, c]) => ({ id: c.id || `call_${i}`, name: c.name, arguments: parseArgs(c.args) }));
+        .map(([i, c]) => ({ id: c.id || `call_${i}`, name: c.name, arguments: parseArgs(def, c.args) }));
       if (!text && !toolCalls.length && finish && SAFETY_FINISH.has(finish.toLowerCase())) throw safetyRefusal(def, finish);
       const u = normaliseChatUsage(usage);
       return {

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { PriceTable, Role } from "@/db/schema";
@@ -11,6 +11,28 @@ import { HubError, UNKNOWN_CAPABILITIES, type DiscoveredModel } from "./types";
 import { loadCredentials } from "./credentials";
 
 type Conn = typeof schema.aiConnection.$inferSelect;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/**
+ * Fence for writes made AFTER a network call (CXH-12): the connection must still be the one the call used — same
+ * credential version (no key replaced in between) and not disconnected. A stale result is discarded, never written.
+ */
+export function stillCurrent(c: Pick<Conn, "id" | "credVersion">) {
+  return and(eq(schema.aiConnection.id, c.id), eq(schema.aiConnection.credVersion, c.credVersion), ne(schema.aiConnection.status, "REVOKED"));
+}
+
+/** Runs `write` in one transaction while holding the connection row, only if the fence still holds. */
+export async function fencedWrite(db: Db, c: Pick<Conn, "id" | "credVersion">, write: (tx: Tx) => Promise<unknown>): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select({ id: schema.aiConnection.id }).from(schema.aiConnection).where(stillCurrent(c)).for("update");
+    if (!row) return false;
+    await write(tx);
+    return true;
+  });
+}
+
+/** The catalogue result belonged to a key that was replaced, or to a connection that was disconnected meanwhile. */
+export const STALE_CATALOGUE = { ok: false as const, code: "AI_CONNECTION_CHANGED", message: "The connection changed (its key was replaced or it was disconnected) while its model list was loading; that list was discarded." };
 
 /**
  * Model discovery. The provider's listing API is the source of what a CREDENTIAL can see; it is stored per
@@ -18,15 +40,11 @@ type Conn = typeof schema.aiConnection.$inferSelect;
  * connection's catalogue is marked stale with the reason. A model that disappears from the listing is marked
  * removed (not deleted), so a step pinned to it fails with an actionable error instead of an opaque 404.
  */
-export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel[]) {
+export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel[]): Promise<boolean> {
   const now = new Date();
-  // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
-  const def = getProviderDef(conn.provider);
-  if (def) {
-    await syncCurated(db, def.id);
-    await storeListingMetadata(db, def, models);
-  }
-  await db.transaction(async (tx) => {
+  // Fenced on the credential version the listing was made with: an old key's (or a disconnected connection's)
+  // listing never overwrites the catalogue.
+  const stored = await fencedWrite(db, conn, async (tx) => {
     if (models.length) {
       await tx
         .insert(schema.aiConnectionModel)
@@ -49,10 +67,18 @@ export async function storeCatalogue(db: Db, conn: Conn, models: DiscoveredModel
       );
     await tx.update(schema.aiConnection).set({ catalogRefreshedAt: now, catalogStale: false, catalogError: null, updatedAt: now }).where(eq(schema.aiConnection.id, conn.id));
   });
+  if (!stored) return false;
+  // Public catalogue data: curated prices/notes for this provider, and (public listings only) listing metadata.
+  const def = getProviderDef(conn.provider);
+  if (def) {
+    await syncCurated(db, def.id);
+    await storeListingMetadata(db, def, models);
+  }
+  return true;
 }
 
 export async function markCatalogueFailure(db: Db, conn: Conn, e: HubError) {
-  await db.update(schema.aiConnection).set({ catalogStale: true, catalogError: `${e.code}: ${e.message}`.slice(0, 300), updatedAt: new Date() }).where(eq(schema.aiConnection.id, conn.id));
+  await db.update(schema.aiConnection).set({ catalogStale: true, catalogError: `${e.code}: ${e.message}`.slice(0, 300), updatedAt: new Date() }).where(stillCurrent(conn));
 }
 
 /** Refreshes one connection's catalogue. Returns ok=false (and keeps the last snapshot, stale) on any failure. */
@@ -61,13 +87,13 @@ export async function refreshCatalogue(db: Db, conn: Conn): Promise<{ ok: true; 
   if (!def || !isConnectable(def)) return { ok: false, code: "AI_PROVIDER_NOT_AVAILABLE", message: "This provider isn't available" };
   try {
     const models = await listModels(def, loadCredentials(conn));
-    await storeCatalogue(db, conn, models);
+    if (!(await storeCatalogue(db, conn, models))) return STALE_CATALOGUE;
     return { ok: true, count: models.length };
   } catch (e) {
     const he = e instanceof HubError ? e : new HubError("AI_CATALOGUE_UNAVAILABLE", "The model list couldn't be loaded");
     await markCatalogueFailure(db, conn, he);
     if (he.code === "AI_AUTH_FAILED") {
-      await db.update(schema.aiConnection).set({ status: "DEGRADED", lastError: { code: he.code, message: he.message, at: new Date().toISOString() } }).where(eq(schema.aiConnection.id, conn.id));
+      await db.update(schema.aiConnection).set({ status: "DEGRADED", lastError: { code: he.code, message: he.message, at: new Date().toISOString() } }).where(stillCurrent(conn));
     }
     return { ok: false, code: he.code, message: he.message };
   }

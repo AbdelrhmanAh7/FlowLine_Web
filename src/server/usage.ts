@@ -11,6 +11,14 @@ export class BudgetExceededError extends Error {
   }
 }
 
+/** An agent run's own cost limit would be passed by this reservation (checked with the ledger, under the lock). */
+export class AgentCostLimitError extends Error {
+  code = "AGENT_COST_LIMIT";
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 export function monthStart(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
@@ -38,6 +46,12 @@ export interface ReserveInput {
   provider?: string;
   model?: string;
   unpriced?: boolean;
+  /**
+   * The agent run's hard cost limit (CXH-04). Checked in the same locked transaction against everything the agent
+   * run already holds in the ledger — settled charges AND outstanding reservations, of every kind (model attempts,
+   * retries, fallbacks, tool steps) — so retries and fallback routes can't pass it.
+   */
+  agentCapMicros?: number | null;
 }
 
 /**
@@ -55,6 +69,12 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
       .for("update");
     const [existing] = await tx.select({ id: schema.usageEvent.id }).from(schema.usageEvent).where(eq(schema.usageEvent.idempotencyKey, r.idempotencyKey));
     if (existing) return { reserved: false };
+    if (r.agentCapMicros != null && r.agentRunId) {
+      const held = await agentRunSpentMicros(tx as unknown as Db, r.workspaceId, r.agentRunId);
+      if (held + r.estimatedMicros > r.agentCapMicros) {
+        throw new AgentCostLimitError(`The agent's cost limit would be passed (${fmt(held)} of ${fmt(r.agentCapMicros)} used or reserved; the next call needs up to ${fmt(r.estimatedMicros)}). Nothing was sent.`);
+      }
+    }
     // The stricter of the owner's monthly budget and the billing plan's usage cap applies.
     const ent = await planEntitlements(tx, r.workspaceId);
     const caps = [ws?.budget ?? null, ent?.monthlyUsageCapMicros ?? null].filter((c): c is number => c != null);
@@ -89,6 +109,15 @@ export async function reserveUsage(db: Db, r: ReserveInput): Promise<{ reserved:
       .onConflictDoNothing({ target: schema.usageEvent.idempotencyKey });
     return { reserved: true };
   });
+}
+
+/** Everything an agent run holds in the ledger: settled charges plus outstanding reservations (all kinds). */
+export async function agentRunSpentMicros(db: Db, workspaceId: string, agentRunId: string): Promise<number> {
+  const [{ spent }] = await db
+    .select({ spent: sql<number>`coalesce(sum(${schema.usageEvent.costMicros}), 0)::bigint` })
+    .from(schema.usageEvent)
+    .where(and(eq(schema.usageEvent.workspaceId, workspaceId), eq(schema.usageEvent.agentRunId, agentRunId), inArray(schema.usageEvent.status, ["reserved", "settled"])));
+  return Number(spent);
 }
 
 export async function settleUsage(db: Db, idempotencyKey: string, s: { costMicros: number; inputTokens?: number; outputTokens?: number; unpriced?: boolean; quantity?: number }) {

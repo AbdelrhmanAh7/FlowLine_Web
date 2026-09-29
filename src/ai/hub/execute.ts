@@ -1,12 +1,12 @@
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, like, lt } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import type { AiPolicy } from "@/db/schema";
 import { planEntitlements } from "@/server/entitlements";
-import { BudgetExceededError, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
+import { AgentCostLimitError, BudgetExceededError, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
 import { loadCredentials } from "./credentials";
-import { roleMayUse } from "./discovery";
-import { costMicros, maxCostMicros, type PriceSnapshot } from "./pricing";
+import { fencedWrite, roleMayUse, stillCurrent } from "./discovery";
+import { costMicros, maxCostMicros, requestInputChars, type PriceSnapshot } from "./pricing";
 import { callChat } from "./protocols";
 import { structuredOutputMode } from "./protocols/shared";
 import { getProviderDef } from "./registry";
@@ -50,6 +50,12 @@ export interface ExecuteInput {
   onStream?: (e: StreamEvent) => void;
   onRetry?: (info: { attempt: number; code: string; waitMs: number }) => void | Promise<void>;
   onFallback?: (info: { from: ReturnType<typeof routeSnapshot>; to: ReturnType<typeof routeSnapshot>; code: string }) => void | Promise<void>;
+  /**
+   * The agent run's hard cost limit (needs `agentRunId`). Enforced INSIDE every hub reservation — each retry and each
+   * fallback route — against everything the agent run holds in the ledger (CXH-04). An unknown price under it is
+   * refused unsent unless the owner's policy allows unknown cost (then it is recorded as unknown, never as 0).
+   */
+  agentCapMicros?: number | null;
 }
 
 export interface RoutingInfo {
@@ -60,6 +66,8 @@ export interface RoutingInfo {
   fallbackFrom: { provider: string; connectionId: string; modelId: string; code: string }[];
   /** Listed routes the policy refused (privacy, price, capability, unresolvable). */
   skipped: { connectionId: string; modelId: string; code: string }[];
+  /** Recovery: attempts of this request id that already existed (an earlier worker's) — their charges stay recorded. */
+  recoveredAttempts?: number;
 }
 
 export interface ExecuteResult {
@@ -81,8 +89,71 @@ async function hasHardCap(db: Db, workspace: Workspace) {
   return ent?.monthlyUsageCapMicros != null;
 }
 
-function promptChars(req: HubChatRequest) {
-  return req.system.length + req.messages.reduce((n, m) => n + m.content.length, 0) + JSON.stringify(req.tools ?? []).length + JSON.stringify(req.schema ?? {}).length;
+/** An open reservation older than this, with no attempt record, belongs to a worker that stopped (heartbeat lost). */
+export const ABANDONED_RESERVATION_MS = 60_000;
+
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/**
+ * Attempt identity survives worker recovery (CXH-03). A request id can already have attempts — a worker died after
+ * a charge settled but before the step finished, or after reserving (and maybe sending) an attempt. Numbering
+ * continues after the highest attempt found in the attempt log OR the ledger, so every new send is a NEW reserved
+ * ledger event; an existing ledger key is never taken as permission to send. An abandoned open reservation was
+ * possibly sent and billed: it is settled at its reservation and recorded as an interrupted possible charge.
+ * No earlier answer is reused: the hub keeps no answer text outside the run's encrypted step data, so a recovered
+ * request is sent again (its earlier charges stay in the ledger and count toward budgets and agent limits).
+ */
+async function resumeAttempts(db: Db, input: ExecuteInput, route: ResolvedRoute): Promise<{ last: number; prior: number }> {
+  const ws = input.workspace.id;
+  const logged = await db
+    .select({ attempt: schema.aiAttempt.attempt })
+    .from(schema.aiAttempt)
+    .where(and(eq(schema.aiAttempt.workspaceId, ws), eq(schema.aiAttempt.requestId, input.requestId)));
+  const recorded = new Set(logged.map((a) => a.attempt));
+  let last = Math.max(0, ...recorded);
+  if (input.metering !== "hub") return { last, prior: recorded.size };
+  const prefix = `${input.requestId}:`;
+  const events = await db
+    .select()
+    .from(schema.usageEvent)
+    .where(and(eq(schema.usageEvent.workspaceId, ws), like(schema.usageEvent.idempotencyKey, `${escapeLike(prefix)}%`)));
+  const numbered = new Set(recorded);
+  for (const ev of events) {
+    const suffix = ev.idempotencyKey.slice(prefix.length);
+    if (!/^\d{1,9}$/.test(suffix)) continue;
+    const n = Number(suffix);
+    last = Math.max(last, n);
+    numbered.add(n);
+    if (ev.status !== "reserved" || recorded.has(n) || ev.createdAt.getTime() > Date.now() - ABANDONED_RESERVATION_MS) continue;
+    // Abandoned by a worker that stopped: keep it as a possible charge, and record it.
+    const [settled] = await db
+      .update(schema.usageEvent)
+      .set({ status: "settled", settledAt: new Date() })
+      .where(and(eq(schema.usageEvent.id, ev.id), eq(schema.usageEvent.status, "reserved"), lt(schema.usageEvent.createdAt, new Date(Date.now() - ABANDONED_RESERVATION_MS))))
+      .returning({ id: schema.usageEvent.id });
+    if (!settled) continue;
+    await db.insert(schema.aiAttempt).values({
+      workspaceId: ws,
+      requestId: input.requestId,
+      runId: input.runId ?? null,
+      agentRunId: input.agentRunId ?? null,
+      nodeId: input.nodeId ?? null,
+      purpose: input.purpose,
+      provider: ev.provider ?? route.provider,
+      connectionId: null,
+      modelId: ev.model ?? route.modelId,
+      protocol: route.protocol,
+      policy: (input.policy ?? input.workspace.aiPolicy)?.mode ?? "MANUAL",
+      attempt: n,
+      outcome: "interrupted",
+      errorCode: "AI_ATTEMPT_ABANDONED",
+      costSource: "unknown",
+      usageKey: ev.idempotencyKey,
+      possibleCharge: true,
+      routeReason: "recovery: the worker stopped after reserving this attempt",
+    });
+  }
+  return { last, prior: numbered.size };
 }
 
 function waitMs(attempt: number, retryAfterMs?: number) {
@@ -150,7 +221,8 @@ export async function executeAi(db: Db, input: ExecuteInput): Promise<ExecuteRes
     }
     throw e;
   }
-  const counter = { n: 0 };
+  const resumed = await resumeAttempts(db, input, input.route);
+  const counter = { n: resumed.last };
   const fallbackFrom: RoutingInfo["fallbackFrom"] = [];
   let last: HubError | null = null;
   for (let i = 0; i < plan.plan.length; i++) {
@@ -160,7 +232,13 @@ export async function executeAi(db: Db, input: ExecuteInput): Promise<ExecuteRes
       const r = await executeRoute(db, input, plan, step.route, reason, counter);
       return {
         ...r,
-        routing: { policy: plan.mode, reason, fallbackFrom, skipped: plan.skipped.map((s) => ({ connectionId: s.ref.connectionId, modelId: s.ref.modelId, code: s.code })) },
+        routing: {
+          policy: plan.mode,
+          reason,
+          fallbackFrom,
+          skipped: plan.skipped.map((s) => ({ connectionId: s.ref.connectionId, modelId: s.ref.modelId, code: s.code })),
+          ...(resumed.prior ? { recoveredAttempts: resumed.prior } : {}),
+        },
       };
     } catch (e) {
       if (!(e instanceof HubError) || input.signal.aborted) throw e;
@@ -203,7 +281,7 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
     });
 
   for (let local = 1; ; local++) {
-    const attempt = ++counter.n;
+    let attempt = ++counter.n;
     // 1. Permission (live): member with ai.use AND listed in the connection's use_roles.
     const [conn] = await db.select().from(schema.aiConnection).where(and(eq(schema.aiConnection.id, route.connectionId), eq(schema.aiConnection.workspaceId, workspace.id)));
     if (!conn) throw new HubError("AI_CONNECTION_MISSING", "The AI connection this uses no longer exists in this workspace. Pick another model.");
@@ -224,25 +302,60 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
       throw new HubError("AI_CIRCUIT_OPEN", `"${conn.label}" failed repeatedly in the last minute, so calls to it are paused for ${BREAKER.coolDownMs / 1000}s.`);
     }
 
-    // 4. Budget: reserve a defensible maximum before sending anything.
-    const maxCost = maxCostMicros(price, promptChars(input.request), input.request.maxTokens);
-    if (maxCost == null && !(input.policy ?? workspace.aiPolicy)?.allowUnknownCost && (await hasHardCap(db, workspace))) {
-      await record({ attempt, outcome: "refused", errorCode: "AI_COST_UNKNOWN", costSource: "unknown" });
-      throw new HubError(
-        "AI_COST_UNKNOWN",
-        `The price of ${route.modelId} is unknown and this workspace has a spending cap, so the call was not sent. Add its price in Settings → Usage (ai:${route.provider}/${route.modelId}) or allow unknown-cost calls.`,
-      );
+    // 4. Budget: reserve a defensible maximum (the WHOLE protocol request, CXH-07) before sending anything.
+    const maxCost = maxCostMicros(price, requestInputChars(input.request), input.request.maxTokens);
+    const agentCap = input.agentRunId && input.agentCapMicros != null ? input.agentCapMicros : null;
+    if (maxCost == null && !(input.policy ?? workspace.aiPolicy)?.allowUnknownCost) {
+      // Unknown is not 0: under a workspace/plan cap OR an agent's own limit, an unbounded cost is refused unsent.
+      const hardCap = await hasHardCap(db, workspace);
+      if (hardCap || agentCap != null) {
+        await record({ attempt, outcome: "refused", errorCode: "AI_COST_UNKNOWN", costSource: "unknown" });
+        const why = hardCap ? "this workspace has a spending cap" : "this agent has a cost limit";
+        throw new HubError(
+          "AI_COST_UNKNOWN",
+          `The price of ${route.modelId} is unknown and ${why}, so the call was not sent. Add its price in Settings → Usage (ai:${route.provider}/${route.modelId}) or allow unknown-cost calls.`,
+        );
+      }
     }
-    const usageKey = input.metering === "hub" ? `${input.requestId}:${attempt}` : null;
-    if (usageKey) {
-      try {
-        await reserveUsage(db, { workspaceId: workspace.id, runId: input.runId ?? null, nodeId: input.nodeId ?? null, agentRunId: input.agentRunId ?? undefined, kind: "ai", idempotencyKey: usageKey, retry: attempt > 1, estimatedMicros: maxCost ?? 0, provider: route.provider, model: route.modelId, unpriced: maxCost == null });
-      } catch (e) {
-        if (e instanceof BudgetExceededError) {
-          await record({ attempt, outcome: "refused", errorCode: "BUDGET_EXCEEDED", costSource: "unknown", usageKey });
-          throw new HubError("BUDGET_EXCEEDED", e.message);
+    let usageKey: string | null = null;
+    if (input.metering === "hub") {
+      // Every send needs its OWN new reservation: a key that already exists (another process, or a worker that
+      // stopped) is never permission to send — the next attempt number is taken instead (CXH-03).
+      for (let taken = 0; ; taken++) {
+        const key = `${input.requestId}:${attempt}`;
+        let reserved: boolean;
+        try {
+          ({ reserved } = await reserveUsage(db, {
+            workspaceId: workspace.id,
+            runId: input.runId ?? null,
+            nodeId: input.nodeId ?? null,
+            agentRunId: input.agentRunId ?? undefined,
+            kind: "ai",
+            idempotencyKey: key,
+            retry: attempt > 1,
+            estimatedMicros: maxCost ?? 0,
+            provider: route.provider,
+            model: route.modelId,
+            unpriced: maxCost == null,
+            agentCapMicros: agentCap,
+          }));
+        } catch (e) {
+          if (e instanceof BudgetExceededError) {
+            await record({ attempt, outcome: "refused", errorCode: "BUDGET_EXCEEDED", costSource: "unknown", usageKey: key });
+            throw new HubError("BUDGET_EXCEEDED", e.message);
+          }
+          if (e instanceof AgentCostLimitError) {
+            await record({ attempt, outcome: "refused", errorCode: "AGENT_COST_LIMIT", costSource: "unknown", usageKey: key });
+            throw new HubError("AGENT_COST_LIMIT", e.message);
+          }
+          throw e;
         }
-        throw e;
+        if (reserved) {
+          usageKey = key;
+          break;
+        }
+        if (taken >= 8) throw new HubError("AI_ATTEMPT_CONFLICT", "Another process keeps taking this request's attempt numbers, so nothing was sent.");
+        attempt = ++counter.n;
       }
     }
     /** The provider may have billed an attempt that gave no usable result: keep the reservation (defensible max). */
@@ -275,7 +388,14 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
       const ledgerCost = cost ?? (reported ? 0 : (maxCost ?? 0));
       const tokens = reported ? { inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens, reasoningTokens: u.reasoningTokens } : {};
       const settle = () =>
-        usageKey ? settleUsage(db, usageKey, { costMicros: ledgerCost, inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0), unpriced: cost == null }) : Promise.resolve();
+        usageKey
+          ? settleUsage(db, usageKey, {
+              costMicros: ledgerCost,
+              // Unknown usage stays unknown in the ledger too (null tokens), never 0.
+              ...(reported ? { inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0), outputTokens: u.outputTokens + (u.reasoningTokens ?? 0) } : {}),
+              unpriced: cost == null,
+            })
+          : Promise.resolve();
       // Fencing: the connection must still be the one (same credential version, not revoked) that was read before
       // the call. The provider may have billed the call, so the ledger is settled either way; the RESULT is discarded.
       const [fresh] = await db.select({ status: schema.aiConnection.status, credVersion: schema.aiConnection.credVersion }).from(schema.aiConnection).where(eq(schema.aiConnection.id, conn.id));
@@ -296,11 +416,14 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
       await settle();
       await record({ attempt, outcome: "success", latencyMs, httpStatus: 200, ...tokens, costSource: source, costMicros: cost, usageKey, servingProvider: result.servingProvider ?? null });
       const now = new Date();
-      await db.update(schema.aiConnection).set({ lastUsedAt: now, ...(conn.status === "DEGRADED" ? { status: "CONNECTED", lastError: null } : {}) }).where(eq(schema.aiConnection.id, conn.id));
-      await db
-        .update(schema.aiConnectionModel)
-        .set({ accessConfirmedAt: now, lastError: null })
-        .where(and(eq(schema.aiConnectionModel.connectionId, conn.id), eq(schema.aiConnectionModel.modelId, route.modelId)));
+      // Health + access confirmation only for the key that answered (fenced: not replaced / disconnected since).
+      await fencedWrite(db, conn, async (tx) => {
+        await tx.update(schema.aiConnection).set({ lastUsedAt: now, ...(conn.status === "DEGRADED" ? { status: "CONNECTED", lastError: null } : {}) }).where(eq(schema.aiConnection.id, conn.id));
+        await tx
+          .update(schema.aiConnectionModel)
+          .set({ accessConfirmedAt: now, lastError: null })
+          .where(and(eq(schema.aiConnectionModel.connectionId, conn.id), eq(schema.aiConnectionModel.modelId, route.modelId)));
+      });
       return { result, route: routeSnapshot(route), costMicros: cost, costSource: source, price, attempts: attempt, structuredOutput: soMode, usageKey };
     } catch (e) {
       if ((e as { recorded?: boolean }).recorded) throw e;
@@ -319,14 +442,17 @@ async function executeRoute(db: Db, input: ExecuteInput, plan: RoutePlan, route:
       const outcome = e.code === "AI_TIMEOUT" ? "timeout" : e.code === "AI_STREAM_INTERRUPTED" ? "interrupted" : "error";
       await record({ attempt, outcome, errorCode: e.code, httpStatus: e.httpStatus ?? null, latencyMs: Date.now() - started, costSource: "unknown", usageKey, possibleCharge: possible });
       const at = new Date().toISOString();
+      // Health writes describe the key that was used: fenced, so an old key's failure never marks a new key.
       if (e.code === "AI_AUTH_FAILED" || e.code === "AI_FORBIDDEN") {
-        await db.update(schema.aiConnection).set({ status: "DEGRADED", lastError: { code: e.code, message: e.message, at } }).where(eq(schema.aiConnection.id, conn.id));
+        await db.update(schema.aiConnection).set({ status: "DEGRADED", lastError: { code: e.code, message: e.message, at } }).where(stillCurrent(conn));
       }
       if (e.code === "AI_MODEL_REMOVED") {
-        await db
-          .insert(schema.aiConnectionModel)
-          .values({ connectionId: conn.id, workspaceId: workspace.id, modelId: route.modelId, listed: false, removedAt: new Date(), lastError: { code: e.code, message: e.message, at } })
-          .onConflictDoUpdate({ target: [schema.aiConnectionModel.connectionId, schema.aiConnectionModel.modelId], set: { removedAt: new Date(), lastError: { code: e.code, message: e.message, at } } });
+        await fencedWrite(db, conn, (tx) =>
+          tx
+            .insert(schema.aiConnectionModel)
+            .values({ connectionId: conn.id, workspaceId: workspace.id, modelId: route.modelId, listed: false, removedAt: new Date(), lastError: { code: e.code, message: e.message, at } })
+            .onConflictDoUpdate({ target: [schema.aiConnectionModel.connectionId, schema.aiConnectionModel.modelId], set: { removedAt: new Date(), lastError: { code: e.code, message: e.message, at } } }),
+        );
       }
       if (input.signal.aborted || !e.retryable || local >= max) throw e;
       // A Retry-After beyond the cap isn't waited for: this route is exhausted (a policy may try the next one).

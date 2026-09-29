@@ -16,9 +16,12 @@ its keys in the app, and the provider bills that account directly.
    - OpenAI takes an optional organization or project.
    - For Z.ai, Moonshot, MiniMax and Alibaba, confirm the key is a **pay-as-you-go** API key. Their coding-plan keys
      are restricted to coding tools and can't be used.
-   - The key is checked by **listing the models** it can see. No paid request is made. Z.ai and Alibaba have no model
-     list endpoint: their models come from a dated catalogue, and the key can only be confirmed with **Send a paid
-     test…**.
+   - Where the provider's model list needs the key, the key is checked by **listing the models** it can see. No paid
+     request is made. OpenRouter's list is the public catalogue, so its key is checked with OpenRouter's free,
+     authenticated key-information endpoint instead.
+   - DeepInfra's and Vercel's model lists are **public**, and Z.ai and Alibaba have no model list at all (a dated
+     catalogue is used). Listing models proves nothing about the key there, so the connection is saved as **Key not
+     verified** until **Send a paid test…** succeeds. It is never shown as "Connected" before that.
    - It is stored encrypted and bound to this connection. You won't see it again. The page shows `••••` plus the last
      four characters for keys of 32 characters or more; for shorter keys it shows only the date the key was set.
 4. The models the key can see are listed on the connection. Choose **Refresh models** at any time. If a refresh fails,

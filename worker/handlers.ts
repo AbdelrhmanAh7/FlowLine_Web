@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import { executeAi } from "@/ai/hub/execute";
-import { isRouteRef, resolveRoute } from "@/ai/hub/routing";
+import { deferFor, isRouteRef, resolveRoute } from "@/ai/hub/routing";
 import { frame, parseJson, validateAgainstSchema } from "@/ai/provider";
 import { executeGraph, NodeError, type HostHandler, type NodeEnv, type NodeOutcome } from "@/engine/execute";
 import { normalizeValue, VALUE_MAX_BYTES } from "@/engine/expression";
@@ -193,7 +193,8 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
   const actor = ctx.run.policy?.actingUserId ?? ctx.run.createdBy;
   if (!actor) throw new NodeError("AI_ROUTE_FORBIDDEN", "This run has no acting user, so no AI connection can be used for it");
   const pin = isRouteRef(cfg.route) ? cfg.route : null;
-  const route = await resolveRoute(ctx.db, ctx.workspace, { pin, legacyModel: pin ? null : str(cfg.model) || null });
+  // A removed / unlisted pinned model is left to the policy planner: FALLBACK may use an approved route (CXH-13).
+  const route = await resolveRoute(ctx.db, ctx.workspace, { pin, legacyModel: pin ? null : str(cfg.model) || null }, deferFor(ctx.workspace));
   const { system, user, quarantined } = frame({ instructions: str(cfg.instructions), content, schema });
 
   for (let round = 1; round <= 2; round++) {
@@ -226,6 +227,7 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
       throw e;
     }
     const u = r.result.usage;
+    const usageKnown = r.result.usageReported !== false;
     // Route snapshot + usage (no secrets, no reasoning text). Token totals keep their pre-hub meaning (all input /
     // all output); the non-overlapping breakdown is in ai_attempt and the *Tokens detail fields below.
     // The route that ANSWERED (a workspace policy may have moved on from the step's own route) + why.
@@ -242,8 +244,10 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
       ...(r.routing.fallbackFrom.length ? { fallbackFrom: r.routing.fallbackFrom } : {}),
       ...(r.routing.skipped.length ? { routesSkipped: r.routing.skipped } : {}),
       ...(r.result.servingProvider ? { servingProvider: r.result.servingProvider } : {}),
-      inputTokens: u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0),
-      outputTokens: u.outputTokens + (u.reasoningTokens ?? 0),
+      ...(r.routing.recoveredAttempts ? { recoveredAttempts: r.routing.recoveredAttempts } : {}),
+      // Usage the provider didn't report (completely) is UNKNOWN: null, never 0.
+      inputTokens: usageKnown ? u.inputTokens + (u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0) : null,
+      outputTokens: usageKnown ? u.outputTokens + (u.reasoningTokens ?? 0) : null,
       ...(u.cacheReadTokens != null ? { cacheReadTokens: u.cacheReadTokens } : {}),
       ...(u.reasoningTokens != null ? { reasoningTokens: u.reasoningTokens } : {}),
       costMicros: r.costMicros,
