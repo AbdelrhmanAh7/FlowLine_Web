@@ -62,18 +62,18 @@ async function until(cond: () => Promise<boolean> | boolean, what: string, ms = 
   }
   throw new Error(`Timed out waiting for: ${what}`);
 }
-/** Waits until `cond` holds, or gives up quietly after `ms` (used where the fixed code is EXPECTED to block). */
-async function upTo(cond: () => Promise<boolean> | boolean, ms: number) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    if (await cond()) return true;
-    await sleep(25);
-  }
-  return false;
-}
-/** Some session of this test database is waiting on a lock (row / transaction id). */
-async function lockWaiting() {
-  const r = await pool.query(`select count(*)::int as n from pg_locks l join pg_stat_activity a on a.pid = l.pid where not l.granted and a.datname = current_database()`);
+/**
+ * A session of this test database is blocked by another session while running a statement on `table` — i.e. the
+ * contention the test is about, not an unrelated lock (CXH-21: `pg_blocking_pids` must be non-empty AND the waiting
+ * statement must touch the contested table).
+ */
+async function blockedOn(table: string) {
+  const r = await pool.query(
+    `select count(*)::int as n from pg_stat_activity a
+      where a.datname = current_database() and a.pid <> pg_backend_pid() and cardinality(pg_blocking_pids(a.pid)) > 0
+        and a.query ilike $1`,
+    [`%${table}%`],
+  );
   return (r.rows[0] as { n: number }).n > 0;
 }
 const post = (p: string, body: unknown) => fetch(`${ai.url}${p}`, { method: "POST", body: JSON.stringify(body) });
@@ -210,8 +210,12 @@ describe("CXH-20: concurrent shared-catalogue refreshes with opposite listing or
     await until(() => arrivals === 1, "refresh A to hold its first shared row");
     const pb = storeCatalogue(db, b, [priced(m2, 2_000_000), priced(m1, 2_000_000)], observed);
     // B either holds its own first row (inconsistent order: a lock cycle follows) or waits for A's row (ordered).
-    await upTo(async () => arrivals === 2 || (await lockWaiting()), 5_000);
-    release();
+    // CXH-21: this rendezvous MUST happen — a timeout fails the test instead of letting A finish alone (false green).
+    try {
+      await until(async () => arrivals === 2 || (await blockedOn("ai_model")), "refresh B to reach the contested shared row (holding its own row, or blocked on A's)", 8_000);
+    } finally {
+      release();
+    }
     const results = await Promise.allSettled([pa, pb]);
     catalogueTestHooks.afterSharedRow = undefined;
     expect(results.map((r) => (r.status === "fulfilled" ? r.value : `rejected: SQLSTATE ${(r.reason as { cause?: { code?: string } }).cause?.code ?? "?"}`))).toEqual([true, true]);
@@ -301,7 +305,8 @@ describe("CXH-17: lease validation, abandonment and late-success reconciliation 
       recoveryTestHooks.afterAbandonSettle = undefined;
       paused = true;
       // Let A's late success run now: it either completes (unserialized) or waits on the usage_event row (serialized).
-      await upTo(async () => aDone || (await lockWaiting()), 8_000);
+      // CXH-21: required rendezvous — a timeout fails the test (it would otherwise pass without the race occurring).
+      await until(async () => aDone || (await blockedOn("usage_event")), "attempt A's late success to complete or block on the usage_event row", 10_000);
     };
     await exec(ws.id, owner, ref(conn, "fake-gpt-mini"), { requestId, runId });
     const ra = await a;

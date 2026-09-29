@@ -147,3 +147,26 @@ the Codex retest.
 **Gates:**
 - lint and typecheck: clean.
 - Unit 247, contract 465, integration 460 (×3).
+
+## Codex retest 3 of `a0b92df` (`CODEX-RETEST3-a0b92df.md`)
+- **All 20 product findings FIXED:** CXH-01…20. CXH-12, 17 and 20 were accepted by code inspection; the other 17 had
+  no regressions.
+- **No new product-code issue.**
+- **INTERMITTENT-01:** mitigated; no assertion weakened; cause unresolved.
+- **NEW CXH-21 (P2, test quality):** the concurrency tests could pass without reaching the intended interleaving.
+  `upTo` swallowed timeouts, and `lockWaiting` accepted any ungranted lock in the database.
+  - **Remediation (lead):**
+    - `upTo` was removed.
+    - Both rendezvous now use `until` (a timeout **fails** the test; the gate is released in `finally`).
+    - `lockWaiting` was replaced by `blockedOn(table)`: a session with non-empty `pg_blocking_pids` whose statement
+      touches the contested table (`ai_model` for CXH-20, `usage_event` for CXH-17).
+    - `ai-retest-fx3` passed 7/7 three times in a row, with the rendezvous enforced.
+  - **Still noted, not changed:**
+    - The `:250` test (heartbeat after a stale lease read) delays A with a 2 s provider fault instead of a response
+      barrier.
+    - The CXH-12 counterfactual depends on the hook placement: the decisive order is A reads zero → B commits → A
+      writes.
+
+| ID | Severity | Status |
+|---|---|---|
+| CXH-21 | P2 (test) | FIXED by the lead; Codex retest pending |
