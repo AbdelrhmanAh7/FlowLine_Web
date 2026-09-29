@@ -65,6 +65,22 @@ async function activeWorkspaceApp(dbOrTx: Db | Tx, workspaceId: string, family: 
   return row ?? null;
 }
 
+/**
+ * The AUTHORITATIVE active app row, read under its row lock (CXH-10). A concurrent rotation/switch/delete that commits
+ * while we wait is re-evaluated by PostgreSQL (READ COMMITTED re-checks the locked row): we see its committed revision,
+ * or no active row at all after a delete — never the stale copy we might have read before acquiring the lock.
+ */
+async function lockedActiveWorkspaceApp(tx: Tx, workspaceId: string, family: OAuthFamily): Promise<AppRow | null> {
+  const [row] = await tx
+    .select()
+    .from(schema.workspaceOauthApp)
+    .where(and(eq(schema.workspaceOauthApp.workspaceId, workspaceId), eq(schema.workspaceOauthApp.family, family), isNull(schema.workspaceOauthApp.deletedAt)))
+    .for("update");
+  return row ?? null;
+}
+
+const revisionConflict = () => new HttpError(409, "REVISION_CONFLICT", "This app changed since you loaded it. Reload and try again.");
+
 function openWorkspaceApp(row: AppRow): ResolvedApp {
   const secret = decryptSecretV2<string>(row.secretEnc!, row.keyId!, appContext(row, row.revision));
   let previous: ResolvedApp["previous"] = null;
@@ -229,26 +245,37 @@ export async function upsertWorkspaceApp(user: { id: string; email: string }, wo
   if (!validClientId(family, clientId)) throw new HttpError(400, "PUBLIC_ID_INVALID", "This client ID doesn't look right for this provider");
   if (input.secret !== undefined && !validSecret(input.secret)) throw new HttpError(400, "SECRET_INVALID", "Paste the client secret exactly as the provider shows it (no spaces or line breaks).");
   const result = await db.transaction(async (tx) => {
-    const existing = await activeWorkspaceApp(tx, workspaceId, family);
-    if (existing) await tx.select({ id: schema.workspaceOauthApp.id }).from(schema.workspaceOauthApp).where(eq(schema.workspaceOauthApp.id, existing.id)).for("update");
-    if ((existing?.revision ?? 0) !== input.expectedRevision) throw new HttpError(409, "REVISION_CONFLICT", "This app changed since you loaded it. Reload and try again.");
+    const existing = await lockedActiveWorkspaceApp(tx, workspaceId, family);
+    if ((existing?.revision ?? 0) !== input.expectedRevision) throw revisionConflict();
     const switching = Boolean(existing && existing.clientId !== clientId);
     if ((!existing || switching) && input.secret === undefined) throw new HttpError(400, "SECRET_REQUIRED", "Enter the app's client secret");
     if (existing && !switching && input.secret === undefined) throw new HttpError(400, "NOTHING_TO_CHANGE", "Nothing to change: enter a new client secret");
     if (existing && switching) {
-      await tx.update(schema.workspaceOauthApp).set({ status: "deleted", deletedAt: new Date(), secretEnc: null, keyId: null, prevSecretEnc: null, prevKeyId: null, prevRevision: null, prevValidUntil: null, secretHint: null, epoch: existing.epoch + 1, updatedAt: new Date() }).where(eq(schema.workspaceOauthApp.id, existing.id));
+      const gone = await tx
+        .update(schema.workspaceOauthApp)
+        .set({ status: "deleted", deletedAt: new Date(), secretEnc: null, keyId: null, prevSecretEnc: null, prevKeyId: null, prevRevision: null, prevValidUntil: null, secretHint: null, epoch: existing.epoch + 1, updatedAt: new Date() })
+        .where(and(eq(schema.workspaceOauthApp.id, existing.id), eq(schema.workspaceOauthApp.revision, existing.revision), isNull(schema.workspaceOauthApp.deletedAt)))
+        .returning({ id: schema.workspaceOauthApp.id });
+      if (!gone.length) throw revisionConflict();
     }
     if (!existing || switching) {
       const id = randomUUID();
       const enc = encryptSecretV2(input.secret!, appContext({ id, workspaceId, family }, 1));
-      await tx.insert(schema.workspaceOauthApp).values({ id, workspaceId, family, clientId, secretEnc: enc.ciphertext, keyId: enc.keyId, revision: 1, secretHint: secretHint(input.secret!), setBy: user.id, setAt: new Date(), createdBy: user.id });
+      // Two concurrent creations both saw "no app": the unique active-app index lets exactly one in; the other conflicts.
+      await tx
+        .insert(schema.workspaceOauthApp)
+        .values({ id, workspaceId, family, clientId, secretEnc: enc.ciphertext, keyId: enc.keyId, revision: 1, secretHint: secretHint(input.secret!), setBy: user.id, setAt: new Date(), createdBy: user.id })
+        .catch((e: unknown) => {
+          const code = (e as { code?: string; cause?: { code?: string } }).code ?? (e as { cause?: { code?: string } }).cause?.code;
+          throw code === "23505" ? revisionConflict() : e;
+        });
       await audit(tx, { workspaceId, actor: userActor(user), action: "oauth_app.configured", targetType: "oauth_app", targetId: id, data: { family, clientId, previousClientId: existing?.clientId ?? null } });
       return { id, switchedFrom: switching ? existing!.id : null };
     }
     const revision = existing!.revision + 1;
     const enc = encryptSecretV2(input.secret!, appContext(existing!, revision));
     const grace = GRACE_MS[family];
-    await tx
+    const rotated = await tx
       .update(schema.workspaceOauthApp)
       .set({
         secretEnc: enc.ciphertext,
@@ -264,7 +291,10 @@ export async function upsertWorkspaceApp(user: { id: string; email: string }, wo
         setAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(schema.workspaceOauthApp.id, existing!.id));
+      // Compare-and-swap on the authoritative revision: exactly one of two concurrent rotations can apply.
+      .where(and(eq(schema.workspaceOauthApp.id, existing!.id), eq(schema.workspaceOauthApp.revision, existing!.revision), isNull(schema.workspaceOauthApp.deletedAt)))
+      .returning({ id: schema.workspaceOauthApp.id });
+    if (!rotated.length) throw revisionConflict();
     await audit(tx, { workspaceId, actor: userActor(user), action: "oauth_app.secret_rotated", targetType: "oauth_app", targetId: existing!.id, data: { family, clientId, revision, graceDays: Math.round(grace / 86_400_000) } });
     return { id: existing!.id, switchedFrom: null as string | null };
   });
@@ -280,11 +310,19 @@ export async function upsertWorkspaceApp(user: { id: string; email: string }, wo
 /** Deleting an override sends exactly its connections to reconnect (never onto the platform app silently). */
 export async function deleteWorkspaceApp(user: { id: string; email: string }, workspaceId: string, family: OAuthFamily, expectedRevision: number) {
   const app = await db.transaction(async (tx) => {
-    const existing = await activeWorkspaceApp(tx, workspaceId, family);
-    if (!existing) throw notFound("No OAuth app is configured for this provider");
-    await tx.select({ id: schema.workspaceOauthApp.id }).from(schema.workspaceOauthApp).where(eq(schema.workspaceOauthApp.id, existing.id)).for("update");
-    if (existing.revision !== expectedRevision) throw new HttpError(409, "REVISION_CONFLICT", "This app changed since you loaded it. Reload and try again.");
-    await tx.update(schema.workspaceOauthApp).set({ status: "deleted", deletedAt: new Date(), secretEnc: null, keyId: null, prevSecretEnc: null, prevKeyId: null, prevRevision: null, prevValidUntil: null, secretHint: null, epoch: existing.epoch + 1, updatedAt: new Date() }).where(eq(schema.workspaceOauthApp.id, existing.id));
+    const existing = await lockedActiveWorkspaceApp(tx, workspaceId, family);
+    // Deleted meanwhile by a concurrent request that loaded the same revision: that's a conflict, not "never existed".
+    if (!existing) {
+      if (expectedRevision > 0) throw revisionConflict();
+      throw notFound("No OAuth app is configured for this provider");
+    }
+    if (existing.revision !== expectedRevision) throw revisionConflict();
+    const gone = await tx
+      .update(schema.workspaceOauthApp)
+      .set({ status: "deleted", deletedAt: new Date(), secretEnc: null, keyId: null, prevSecretEnc: null, prevKeyId: null, prevRevision: null, prevValidUntil: null, secretHint: null, epoch: existing.epoch + 1, updatedAt: new Date() })
+      .where(and(eq(schema.workspaceOauthApp.id, existing.id), eq(schema.workspaceOauthApp.revision, expectedRevision), isNull(schema.workspaceOauthApp.deletedAt)))
+      .returning({ id: schema.workspaceOauthApp.id });
+    if (!gone.length) throw revisionConflict();
     return existing;
   });
   const affected = await expireConnectionsOfApp({ source: "workspace", appId: app.id }, "oauth_app_deleted");

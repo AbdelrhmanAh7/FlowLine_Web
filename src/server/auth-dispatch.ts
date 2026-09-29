@@ -11,15 +11,21 @@ import { markPlatformSecretVerified, resolvePlatformCredential } from "./platfor
  * - Every request resolves a request-local SNAPSHOT of the sign-in apps (`signin.google`, `signin.github`) from the
  *   platform panel's DB records and uses the better-auth instance built for exactly those revisions. Rotation takes
  *   effect on the next request — no restart, no stale cache, no environment fallback.
- * - Starting a social sign-in records (hash of state → provider, revision). The callback is dispatched ONLY with that
- *   stored revision, and only while it is still accepted: the current revision, or the previous one inside its grace
- *   window. A callback for an unknown/expired/revoked attempt is refused; a query parameter never selects credentials.
+ * - Starting a social sign-in records (hash of state → provider, app identity, revision). The callback is dispatched
+ *   ONLY with that stored app + revision, and only while it is still accepted: the same app (platform_secret row) at its
+ *   current revision, or the previous one inside its grace window. A callback for an unknown/expired/revoked attempt is
+ *   refused; a query parameter never selects credentials.
+ * - Identity (CXH-02): revisions restart at 1 when a credential is cleared and configured again, so every instance key
+ *   and attempt binding carries the platform_secret row id (immutable; a cleared + reconfigured app gets a new row) as
+ *   well as the revision. Two different apps can never share a cached better-auth instance.
  */
 const PROVIDERS = ["google", "github"] as const;
 type Provider = (typeof PROVIDERS)[number];
 const ATTEMPT_TTL_MS = 10 * 60_000;
 
 interface SigninApp {
+  /** platform_secret.id: the app's immutable identity (a cleared + reconfigured app is a new row). */
+  id: string;
   clientId: string;
   secret: string;
   revision: number;
@@ -29,22 +35,29 @@ interface SigninApp {
 async function signinApp(p: Provider): Promise<SigninApp | null> {
   const cred = await resolvePlatformCredential(`signin.${p}`);
   if (!cred?.publicId) return null;
-  return { clientId: cred.publicId, secret: cred.secret, revision: cred.revision, previous: cred.previous };
+  return { id: cred.id, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, previous: cred.previous };
+}
+
+/** Instance-key part of one provider's app: identity AND revision (a revision number alone is reused after a clear). */
+function keyPart(p: string, appId: string, revision: number) {
+  return `${p}:${appId}:r${revision}`;
 }
 
 /** Request-local snapshot of the CURRENT sign-in apps. */
-export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; revisions: Partial<Record<Provider, number>> }> {
+export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; revisions: Partial<Record<Provider, number>>; appIds: Partial<Record<Provider, string>> }> {
   const social: SocialConfig = {};
   const revisions: Partial<Record<Provider, number>> = {};
+  const appIds: Partial<Record<Provider, string>> = {};
   const parts: string[] = [];
   for (const p of PROVIDERS) {
     const app = await signinApp(p);
     if (!app) continue;
     social[p] = { clientId: app.clientId, clientSecret: app.secret };
     revisions[p] = app.revision;
-    parts.push(`${p}:r${app.revision}`);
+    appIds[p] = app.id;
+    parts.push(keyPart(p, app.id, app.revision));
   }
-  return { key: parts.join("|"), social, revisions };
+  return { key: parts.join("|"), social, revisions, appIds };
 }
 
 /** Public: which sign-in methods are configured right now (read per request). */
@@ -67,6 +80,8 @@ export async function instanceForCallback(provider: string, state: string | null
   if (!attempt) return null;
   const app = await signinApp(provider as Provider);
   if (!app) return null; // revoked / cleared since the attempt started
+  // The attempt must belong to THIS app (not merely to a revision number a cleared-and-reconfigured app reuses).
+  if (!attempt.secretId || attempt.secretId !== app.id) return null;
   let secret: string;
   if (attempt.revision === app.revision) secret = app.secret;
   else if (app.previous && app.previous.revision === attempt.revision && app.previous.validUntil > new Date()) secret = app.previous.secret;
@@ -74,12 +89,15 @@ export async function instanceForCallback(provider: string, state: string | null
   // Other providers keep their current configuration; only this provider is pinned to the attempt's revision.
   const snap = await currentSnapshot();
   const social: SocialConfig = { ...snap.social, [provider]: { clientId: app.clientId, clientSecret: secret } };
-  const key = `${Object.keys(social).sort().map((p) => (p === provider ? `${p}:r${attempt.revision}` : `${p}:r${snap.revisions[p as Provider]}`)).join("|")}`;
+  const key = Object.keys(social)
+    .sort()
+    .map((p) => (p === provider ? keyPart(p, app.id, attempt.revision) : keyPart(p, snap.appIds[p as Provider]!, snap.revisions[p as Provider]!)))
+    .join("|");
   return { instance: authFor(key, social), revision: attempt.revision };
 }
 
-async function recordAttempt(provider: string, responseBody: unknown, revision: number | undefined) {
-  if (!revision || !(PROVIDERS as readonly string[]).includes(provider)) return;
+async function recordAttempt(provider: string, responseBody: unknown, revision: number | undefined, secretId: string | undefined) {
+  if (!revision || !secretId || !(PROVIDERS as readonly string[]).includes(provider)) return;
   const url = (responseBody as { url?: unknown } | null)?.url;
   if (typeof url !== "string") return;
   let state: string | null = null;
@@ -90,7 +108,7 @@ async function recordAttempt(provider: string, responseBody: unknown, revision: 
   }
   if (!state) return;
   await db.delete(schema.signinAttempt).where(lt(schema.signinAttempt.expiresAt, new Date()));
-  await db.insert(schema.signinAttempt).values({ stateHash: sha256Hex(state), provider, revision, expiresAt: new Date(Date.now() + ATTEMPT_TTL_MS) }).onConflictDoNothing();
+  await db.insert(schema.signinAttempt).values({ stateHash: sha256Hex(state), provider, revision, secretId, expiresAt: new Date(Date.now() + ATTEMPT_TTL_MS) }).onConflictDoNothing();
 }
 
 function refused(): Response {
@@ -142,7 +160,7 @@ export async function dispatchAuth(request: Request, method: "GET" | "POST"): Pr
     const res = await toNextJsHandler(instance).POST(request);
     if (res.ok) {
       try {
-        await recordAttempt(provider, await res.clone().json(), snap.revisions[provider as Provider]);
+        await recordAttempt(provider, await res.clone().json(), snap.revisions[provider as Provider], snap.appIds[provider as Provider]);
       } catch {
         /* non-JSON response: nothing to record */
       }

@@ -1411,6 +1411,7 @@ export const en: Messages = {
       CONNECTION_AUTH: "The app rejected the connection. Reconnect it in Integrations, then re-run from this step.",
       CONNECTION_REVOKED: "The connection was revoked. Reconnect it in Integrations.",
       CONNECTION_SCOPE: "The connection lacks a required permission. Reconnect and grant it.",
+      CONNECTION_UNAVAILABLE: "The app's sign-in service is temporarily unavailable. The connection wasn't changed — re-run from this step in a few minutes.",
       PROVIDER_RATE_LIMIT: "The app rate-limited us after retries. Wait a moment, then re-run from this step.",
       PROVIDER_SERVER: "The app returned server errors after retries. Re-run from this step later.",
       PROVIDER_CLIENT: "The app rejected the request. Check the input values in this step's mapping.",
