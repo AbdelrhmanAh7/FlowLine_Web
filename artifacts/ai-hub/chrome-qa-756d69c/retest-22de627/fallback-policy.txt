@@ -1,0 +1,733 @@
+Skip to content
+CXQ Retest 22de627
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CR
+CXQ Retest
+Settings
+Members
+General
+AI Providers
+API keys
+Plan & billing
+Usage & limits
+Audit log
+SSO
+OAuth apps
+AI Providers
+
+Connect your own AI provider accounts: your keys, your provider billing. Keys are encrypted and never shown again. Connecting doesn't give members access — choose who may use each connection.
+
+Test environment: provider requests go to a local test double, not to the real provider.
+
+Workspace default model
+
+Used by AI steps that don't pick their own model, by agents and by Copilot.
+
+Selected: fake-gpt-large · Retest OpenAI
+
+Any capability
+Tool calls (documented)
+Structured output (documented)
+All providers
+Anthropic
+OpenAI
+Any cost info
+Price known
+Price unknown
+Verified free
+Any context size
+Context size known
+Show removed
+No default model
+fake-claude
+Direct
+Anthropic · Retest Anthropic · 3 in / 9 out per 1M tokens · 200,000 tokens context
+Price from your workspace price table
+fake-claude-json
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-claude-old
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-cache
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-large
+Direct
+Confirmed
+OpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown
+Price from your workspace price table
+fake-gpt-mini
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-tools
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-reasoner
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+Save default
+No changes to save
+Routing policy
+
+How AI calls choose a route. Only routes you list here are ever used as alternatives — never another key or a server key.
+
+Mode
+Manual
+Each call uses exactly its chosen model (step, agent, Copilot or the workspace default). No alternatives.
+Fallback
+If the chosen model keeps failing (rate limits, outages, removed model, no balance), try the listed routes in order. Never after a rejected key, a safety refusal, a disconnected connection or a cancellation.
+Free only
+Only routes whose price is verified as zero (official pricing page or documented model list). Unknown prices are never treated as free, and no-charge quotas (e.g. a Gemini free-tier key, Cloudflare's daily free Neurons) can't be confirmed per call, so they are refused. If no free route fits, nothing is sent.
+Low cost
+The cheapest route among the call's own route and the approved pool whose price is KNOWN and within the ceiling. Routes with unknown prices are never picked.
+
+Fallback routes (in order, up to 5)
+
+1.
+fake-claude
+· Retest Anthropic
+Up
+Already first
+Down
+Already last
+Remove
+Add a route…
+
+No model selected
+
+Any capability
+Tool calls (documented)
+Structured output (documented)
+All providers
+Anthropic
+OpenAI
+Any cost info
+Price known
+Price unknown
+Verified free
+Any context size
+Context size known
+Show removed
+fake-claude
+Direct
+Anthropic · Retest Anthropic · 3 in / 9 out per 1M tokens · 200,000 tokens context
+Price from your workspace price table
+fake-claude-json
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-claude-old
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-cache
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-large
+Direct
+Confirmed
+OpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown
+Price from your workspace price table
+fake-gpt-mini
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-tools
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-reasoner
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+Add to list
+Pick a model first
+Only use providers that document that API data isn't used for training
+Routes that can't guarantee it (gateways with varying upstream terms, providers that train by default or whose terms are unknown) are refused.
+Allow AI calls whose price is unknown while a spending cap is set
+Off (recommended): such calls are refused before anything is sent, because their cost can't be bounded. Add prices in Settings → Usage & limits instead.
+
+Copilot models
+
+Copilot plans a change with the planning model; if Flowline's validator rejects the plan, up to two repair rounds use the repair model.
+
+PLANNING MODEL
+
+Workspace default model
+
+Any capability
+Tool calls (documented)
+Structured output (documented)
+All providers
+Anthropic
+OpenAI
+Any cost info
+Price known
+Price unknown
+Verified free
+Any context size
+Context size known
+Show removed
+Workspace default model
+fake-claude
+Direct
+Anthropic · Retest Anthropic · 3 in / 9 out per 1M tokens · 200,000 tokens context
+Price from your workspace price table
+fake-claude-json
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-claude-old
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-cache
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-large
+Direct
+Confirmed
+OpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown
+Price from your workspace price table
+fake-gpt-mini
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-tools
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-reasoner
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+REPAIR MODEL
+
+Workspace default model
+
+Any capability
+Tool calls (documented)
+Structured output (documented)
+All providers
+Anthropic
+OpenAI
+Any cost info
+Price known
+Price unknown
+Verified free
+Any context size
+Context size known
+Show removed
+Workspace default model
+fake-claude
+Direct
+Anthropic · Retest Anthropic · 3 in / 9 out per 1M tokens · 200,000 tokens context
+Price from your workspace price table
+fake-claude-json
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-claude-old
+Direct
+Anthropic · Retest Anthropic · price unknown · 200,000 tokens context
+fake-cache
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-large
+Direct
+Confirmed
+OpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown
+Price from your workspace price table
+fake-gpt-mini
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-gpt-tools
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+fake-reasoner
+Direct
+OpenAI · Retest OpenAI · price unknown · context unknown
+Save
+Connections
+
+Retest OpenAI
+
+OpenAI
+
+Connected
+Key
+••••d9f3 · added 4m ago
+Verification
+Contract-tested (not live-verified)
+Cost
+From your price table where set (Settings → Usage & limits); otherwise unknown — never assumed free.
+Models
+5 found · 1 confirmed by a successful call
+Last tested
+4m ago
+Who may use it
+Owner
+Editor
+Save
+No changes to save
+Test connection
+Refresh models
+Replace key
+Send a paid test…
+Disconnect
+
+Retest Anthropic
+
+Anthropic
+
+Connected
+Key
+••••bc7e · added 4m ago
+Verification
+Contract-tested (not live-verified)
+Cost
+From your price table where set (Settings → Usage & limits); otherwise unknown — never assumed free.
+Models
+3 found · 0 confirmed by a successful call
+Last tested
+4m ago
+Who may use it
+Owner
+Editor
+Save
+No changes to save
+Test connection
+Refresh models
+Replace key
+Send a paid test…
+Disconnect
+Providers
+Core providers
+OpenAI
+Available
+
+Direct · Contract-tested (not live-verified) · 1 connection
+
+Needs: an OpenAI API key (platform.openai.com → API keys)
+
+Free use
+None — No free inference tier (only omni-moderation-latest is free); billing is prepaid credits.
+Training on data
+Not used for training — API data is not used to train OpenAI models unless you opt in; abuse-monitoring logs up to 30 days.
+Terms
+OSA §3.1: no credential sharing between users; §16.12: supported countries only (requests originate from Flowline's server region).
+Official documentation
+Add connection
+Anthropic
+Available
+
+Direct · Contract-tested (not live-verified) · 1 connection
+
+Needs: an Anthropic API key from the Claude Console
+
+Free use
+Trial credits — New users receive a small amount of free credits to test the API; no permanent free tier.
+Training on data
+Not used for training — Commercial Terms §B: Anthropic may not train models on Customer Content from Services.
+Terms
+§D.4: no resale except as expressly approved.
+Official documentation
+Add connection
+Google Gemini API
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Gemini API key (Google AI Studio)
+
+Free use
+Limited free tier — Many models are free of charge on the Free tier with low per-project RPM/RPD limits; Flowline can't tell a free key from a paid key.
+Training on data
+Depends on key/plan/model — Free tier: content used to improve products and may be human-reviewed. Paid tier: not used.
+
+Suitable, but free-tier keys carry training/human-review terms, and only Paid Services may serve users in the EEA, Switzerland or the UK (Gemini API Additional Terms).
+
+Official documentation
+Add connection
+xAI
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: an xAI API key
+
+Free use
+None — No API free tier or free credits are mentioned on the pricing page.
+Training on data
+Unknown — Data/training terms UNKNOWN (legal pages not readable on 2026-09-29).
+Terms
+Enterprise ToS (search excerpts): End Users only via a Bundled Service; full text unverified.
+
+Responses is primary (Chat Completions is legacy). Terms and country eligibility were only readable via search excerpts (x.ai/legal returned 403): flagged for legal review.
+
+Official documentation
+Add connection
+Groq
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a GroqCloud API key
+
+Free use
+Limited free tier — Free plan with limited org-level quota; Developer plan for higher limits.
+Training on data
+Not used for training — Services Agreement §4.2: Groq may not use Inputs or Outputs for training unless permitted.
+
+Services Agreement §3.1 allows Customer Applications for End Users; free plan has tight org quotas; Preview models may be discontinued at short notice.
+
+Official documentation
+Add connection
+OpenRouter
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: an OpenRouter API key
+
+Free use
+Limited free tier — Zero-priced `:free` variants with request quotas; availability can change.
+Training on data
+Depends on key/plan/model — ToS §6.1: some models may store or train on inputs per their model terms.
+
+ToS §7(4) forbids reselling API access (a customer's own key inside Flowline is fine). Upstream model terms vary (§6.1); privacy routing controls are not documented in the research, so privacy-restricted policies refuse OpenRouter routes.
+
+Official documentation
+Add connection
+Mistral AI
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Mistral API key
+
+Free use
+Limited free tier — Free mode with included monthly usage within limits.
+Training on data
+Depends on key/plan/model — Free mode may train on data (Help Center); pay-as-you-go can opt out.
+
+Commercial ToS (search excerpts): no buy/sell/transfer of keys; flagged for legal review. Free mode may train on data; its quota 429 lasts until the billing cycle ends.
+
+Official documentation
+Add connection
+Cohere
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Cohere production API key
+
+Free use
+Trial credits — Trial keys: 1,000 calls/month, rate-limited, non-commercial only.
+Training on data
+Depends on key/plan/model — SaaS §3(a) grants broad data use; Enterprise Data Commitments offer a dashboard opt-out.
+Terms
+SaaS §2(d): access only for Permitted Users; §4(a)(i) credential-sharing clause.
+
+Weakest of the core set: SaaS §4(a)(i) says Access Credentials are not shared with third parties without Cohere's consent (needs legal review); trial keys are not permitted for production or commercial use.
+
+Official documentation
+Add connection
+DeepSeek
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a DeepSeek API key
+
+Free use
+None — No free tier; a granted balance may exist (terms UNKNOWN). Off-peak prices are half of peak.
+Training on data
+Unknown — The Open Platform ToS has no explicit clause on DeepSeek's use of API data.
+
+ToS §1.1 allows downstream apps for end users; §2.2 says not to share the API key (disclosed: the key is stored server-side by Flowline). Balance errors are 402; json_object only.
+
+Official documentation
+Add connection
+Z.ai (GLM)
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Z.ai pay-as-you-go API key
+
+Free use
+Some models listed as free — GLM-4.7-Flash, GLM-4.5-Flash and GLM-4.6V-Flash are listed as "Free"; quota and durability are not stated.
+Training on data
+Not used for training — Additional Terms §3(b): API End User Content is not used to improve Services unless the customer agrees.
+
+General pay-as-you-go API is permitted (Terms §III.9). GLM Coding Plan keys are restricted to supported coding tools (usage policy) and are refused (codes 1309/1315).
+
+Official documentation
+Add connection
+Moonshot AI (Kimi)
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Moonshot (platform.kimi.ai) pay-as-you-go API key
+
+Free use
+Trial credits — No free tier; a $5 voucher after $5 of cumulative recharge. Tier 0 limits are tiny (3 RPM).
+Training on data
+May be used for training — Content may be used to improve the Services unless an enterprise agreement says otherwise.
+Terms
+§3.2(6): no buying, selling or transferring API keys to or with a third party.
+
+Technically the best fit, but §3.2(6) forbids transferring API keys "to or with a third party" (strongest BYOK wording; needs owner/legal sign-off) and training is not excluded by default. Kimi Code keys are coding-only and refused.
+
+Official documentation
+Add connection
+MiniMax
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a MiniMax (minimax.io) pay-as-you-go API key
+
+Free use
+None — No free LLM tier or trial credits are documented.
+Training on data
+Unknown — Platform terms were not readable (script-rendered).
+
+Provisional: pay-as-you-go ToS could not be read (script-rendered). Token Plan subscription keys are for coding tools only and not interchangeable with API keys.
+
+Official documentation
+Add connection
+Alibaba Cloud Model Studio
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Model Studio API key, its region and workspace ID
+
+Free use
+Trial credits — Limited trial quota (~1M tokens per model for 90 days, Singapore only).
+Training on data
+Not used for training — Does not use customer business data to improve models without explicit consent (privacy/FAQ excerpts).
+
+Uses the recommended workspace-dedicated domains (the legacy dashscope-intl domain gets no new features after 2026-09-30). Coding/Token Plan keys are for interactive coding tools only and refused. Pay-as-you-go product terms were not reviewed.
+
+Official documentation
+Add connection
+More providers
+Cerebras
+Available
+
+Direct · Contract-tested (not live-verified)
+
+Needs: a Cerebras API key
+
+Free use
+Trial credits — $5 in free credits that expire 30 days after they're granted; no renewing no-cost tier.
+Training on data
+Unknown — Retention/training terms UNKNOWN (ToS page script-rendered).
+
+Clean OpenAI Chat Completions match. Terms (search snippet, page script-rendered): no buying/selling/transferring keys — needs legal confirmation. $5 trial credits expire after 30 days.
+
+Official documentation
+Add connection
+Together AI
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a Together AI API key
+
+Free use
+None — No free trial ($5 minimum prepay); one model listed at $0.00 (durability UNKNOWN).
+Training on data
+Depends on key/plan/model — Stored by default and may be used for product improvements; ZDR available; training share is opt-in.
+Official documentation
+Add connection
+Fireworks AI
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a Fireworks API key
+
+Free use
+Trial credits — $1 of credits for new accounts (search snippet); 10 RPM without a payment method.
+Training on data
+Not used for training — ToS §3.6: will not use your Content to train models (not covering Response API / training features).
+Terms
+§1.2(d) no credential sharing; §2.2(d) no transferring keys.
+
+ToS §1.2(d) "you will not share … authentication credentials with anyone else" is a direct BYOK question (written clarification advised); §2.1 personal or internal business use.
+
+Official documentation
+Add connection
+DeepInfra
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a DeepInfra API key
+
+Free use
+None — "You have to add a card or pre-pay".
+Training on data
+Not used for training — ToS §7(b): Customer Data is not used to train or improve any model; zero data retention.
+Terms
+§11(a)(viii): no sharing of access credentials.
+
+ToS §11(a)(viii) forbids sharing account or access credentials (needs legal sign-off); no free tier (card or prepay required). No training on Customer Data (§7(b)).
+
+Official documentation
+Add connection
+Hugging Face Inference Providers
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a Hugging Face fine-grained token
+
+Free use
+Monthly credit — Monthly credits: Free $0.10, PRO $2.00 (subject to change).
+Training on data
+Unknown — Router data terms UNKNOWN; provider data policies apply.
+
+No explicit BYOK prohibition found; feature support varies by routed provider; error/retry contract undocumented; Responses is beta.
+
+Official documentation
+Add connection
+Cloudflare Workers AI
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a Cloudflare API token (Workers AI) and the account ID
+
+Free use
+Limited free tier — 10,000 Neurons per day at no charge on Free and Paid plans (reset 00:00 UTC); beyond it is billed — not confirmable per request.
+Training on data
+Not used for training — Cloudflare does not use your Customer Content to train AI models on Workers AI.
+
+No training on Customer Content. §2.2.1(a): no signing up on behalf of a third party — the customer must own the Cloudflare account. JSON mode on few models and not while streaming.
+
+Official documentation
+Add connection
+Vercel AI Gateway
+Available
+
+Gateway · Contract-tested (not live-verified)
+
+Needs: a Vercel AI Gateway API key
+
+Free use
+Monthly credit — Monthly included credit on a subset of models; buying credits ends it.
+Training on data
+Depends on key/plan/model — FAQ: no training on prompts; contractual warranty only for Enterprise (§8.4); Stealth models excepted.
+Official documentation
+Add connection
+Evaluated but not offered
+
+These were researched and are not available to connect. The reason and the official sources are shown; nothing here can be used.
+
+OpenCode Zen
+Unsuitable (terms)
+Core providers
+
+OpenCode ToS (effective 2026-08-15): "You will only use the Services for your own internal use, and not on behalf of or for the benefit of any third party" — Zen is named as a Service. Discovery has no metadata and errors are undocumented.
+
+Documented base https://opencode.ai/zen/v1 (Responses for OpenAI models, Messages for Anthropic, Google-style for Gemini, Chat for open models). Not built: terms forbid use for third parties. OpenCode Go is also unsuitable (coding-agent traffic only).
+
+Zen docs (per-family endpoints)
+Terms of service
+
+Sources checked 2026-09-29
+
+Command Code Provider API
+Not offered — pending owner review
+Core providers
+
+Terms (updated 2026-09-20) prohibit sublicensing/transferring access and "automated requests"; payments "within the United States"; three conflicting statements on which plans include API access. Technically clean (Chat, Responses, Messages, /models with supported_endpoints). Not offered until the owner/legal review decides.
+
+Documented base https://api.commandcode.ai/provider/v1. Handle 403 upgrade_required if it is ever offered.
+
+Provider API docs
+Pricing and limits
+Announcement
+Terms
+
+Sources checked 2026-09-29
+
+NVIDIA API catalog (build.nvidia.com)
+Unsuitable (terms)
+More providers
+
+NVIDIA API Trial Terms §1.2: "limited trial purposes only and without use of the API Service or Generated Content in production"; §1.4: "internal testing and evaluation purposes, not in production". Running customer workflows is production use.
+
+Documented endpoint https://integrate.api.nvidia.com/v1/chat/completions (OpenAI Chat). Not built: trial terms forbid production use.
+
+LLM APIs
+API Trial Terms of Service
+
+Sources checked 2026-09-29
+
+Amazon Bedrock
+Deferred
+Enterprise clouds (not planned yet)
+
+Medium-high complexity: per-region endpoints, SigV4 (access key + secret) or Bedrock API keys (short-term keys expire within 12 h; long-term keys are "for exploration only"), per-region model availability matrix.
+
+Requirements to build: region + key type choice, bedrock-runtime /openai/v1/chat/completions (no /models) or bedrock-mantle (/models), ListFoundationModels/ListInferenceProfiles discovery, cross-region inference profile ids.
+
+Bedrock API keys
+OpenAI Chat Completions on Bedrock
+
+Sources checked 2026-09-29
+
+Azure OpenAI / Microsoft Foundry
+Deferred
+Enterprise clouds (not planned yet)
+
+Medium complexity: per-resource endpoints (https://{resource}.openai.azure.com/openai/v1/), `api-key` header, model = the customer's deployment name; no global catalogue (the model list is the customer's deployments). Entra ID is impractical for BYOK.
+
+Requirements to build: resource name + api-key + deployment names; a custom-endpoint host allowlist per resource.
+
+API version lifecycle (v1 GA)
+
+Sources checked 2026-09-29
+
+Google Vertex AI
+Deferred
+Enterprise clouds (not planned yet)
+
+High complexity: project + location + service-account JSON or OAuth tokens that must be refreshed; express-mode API keys are positioned for testing.
+
+Requirements to build: service-account credential storage + token refresh, {location}-aiplatform.googleapis.com hosts per location.
+
+OpenAI compatibility on Vertex
+
+Sources checked 2026-09-29
+
+GitHub Models
+Retired
+
+Fully retired 2026-07-30: "The playground, model catalog, inference API, and bring your own key (BYOK) are no longer available to any customer."
+
+github.blog
+docs.github.com
+
+Policy saved

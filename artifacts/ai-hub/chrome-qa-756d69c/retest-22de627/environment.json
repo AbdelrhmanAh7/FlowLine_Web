@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-29T10:03:51.825Z",
+  "target": "http://localhost:3100",
+  "requestedRevision": "22de627",
+  "actualHead": "98e401ae0235ce5054c6a1b029f3055786aed0b1",
+  "revisionDifference": "11 gate artifact files only",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.54",
+    "revision": "@ab3ecba863fd7852cc9b0fe5736187e19ed52a1c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.13"
+  },
+  "channel": "chrome",
+  "executable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "healthEnd": {
+    "revision": "dev",
+    "schemaVersion": 20,
+    "db": "ok",
+    "worker": "ok",
+    "workerLastSeenAt": "2026-09-29T10:03:51.421Z"
+  },
+  "fakes": {
+    "ai": "http://127.0.0.1:4011",
+    "saas": "http://127.0.0.1:4010"
+  },
+  "liveVerification": false
+}

@@ -1,0 +1,7 @@
+{
+  "before": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+  "afterSave": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+  "stillStale": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · Retest OpenAI · 2 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+  "afterReload": "fake-gpt-large\nDirect\nConfirmed\nOpenAI · Retest OpenAI · 4 in / 8 out per 1M tokens · context unknown\nPrice from your workspace price table",
+  "apiInputPerMTok": 4
+}

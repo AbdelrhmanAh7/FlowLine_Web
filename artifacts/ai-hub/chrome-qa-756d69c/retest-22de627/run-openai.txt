@@ -1,0 +1,107 @@
+Skip to content
+CXQ Retest 22de627
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CR
+CXQ Retest
+Run history
+Search flows or run number
+All runs
+Succeeded
+Failed
+Running
+Needs attention
+Cancelled
+▾
+#1
+CXQ OpenAI retest
+SUCCESS
+2/2 · 79ms
+29s ago
+⚡ Manual trigger
+Success
+· 0ms
+→
+✦ AI · Generate
+Success
+· 55ms
+✦
+AI · Generate
+SUCCESS
+
+55ms · run #1 · v1 · ai.generate · n40im2 · 1 attempt
+
+✕
+model
+fake-gpt-large
+policy
+MANUAL
+protocol
+openai-chat
+provider
+openai
+unpriced
+false
+connection
+Retest OpenAI
+Cost (USD)
+0.000456
+costSource
+estimated
+inputTokens
+188
+routeReason
+primary
+routeSource
+node
+connectionId
+6478ed58-be0b-48f4-b57c-1fe7df2d1d88
+outputTokens
+10
+cacheReadTokens
+0
+reasoningTokens
+0
+quarantinedLines
+0
+structuredOutput
+none
+Input
+Output
+Error
+Log
+{
+  "text": "Summary: Invoice 17 from Acme is overdue"
+}
+↻ Re-run from this step
+
+Shows exactly what will run again — and what might repeat an external action — before anything starts.
+
+STEPS
+
+RUN OUTPUT
+
+{}

@@ -46,6 +46,31 @@ deployments.
 2. Remove the AI variables listed above from your environment files. They are ignored anyway.
 3. Tell workspace owners to open **Settings → AI Providers** and add a connection (see `CONNECTING.md`).
 
+## Upgrading an existing Phase 4 deployment: required order
+
+This release also moves Flowline's own service credentials into the UI (`docs/security/CREDENTIALS_DESIGN.md`). An
+installation configured through env **stops using those env values** until the operator completes these steps. Details
+are in the private beta runbook.
+
+1. **Before deploying:** set `FLOWLINE_PLATFORM_ENCRYPTION_KEY`, a key that differs from every workspace key. Take a
+   backup.
+2. **Deploy:** migrations `0012`–`0019` run. They are expand-only, plus data steps that mark legacy ciphertext and
+   invalidate unproven prices and key verifications. They are tested from a Phase 4 database in
+   `tests/integration/sec-upgrade.test.ts`.
+3. **Bootstrap the first platform admin:**
+   - `scripts/admin/bootstrap.mts --email <admin>` prints a one-time code; redeem it at `/admin/setup`.
+   - Configure email first if needed, verify the address, enrol TOTP.
+4. **Import from environment,** once per credential, in `/admin`: Google/Slack/GitHub OAuth apps, sign-in apps,
+   email, Paddle. It is explicit and audited, and runtime never falls back to env afterwards.
+5. **Re-encrypt:** run `scripts/admin/rewrap.mts`. Repeat until it reports `remaining=0` and "rotation complete"; it
+   exits non-zero while anything still needs an old key. Only then retire old keys. On a large database this is a
+   long-running maintenance job.
+6. **Existing Google/Slack/GitHub connections** have no recorded issuing app. They reconnect at their next refresh,
+   unless you run the backfill with the client ID that is proven to have issued them (the `--backfill-oauth-app`
+   option of the rewrap script). Unproven ones are never guessed.
+7. **Customers** add their AI keys under Settings → AI Providers. Nothing is imported from the server's old AI env
+   variables.
+
 ## Historical records
 
 - The Phase 2 live checks against a local Ollama model are kept verbatim in
