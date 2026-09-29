@@ -85,7 +85,7 @@ and is not hidden.
 
 ## Blockers: what the owner must provide
 
-Put these in the server's env file only, never in chat.
+Put these in the server's env file only, never in chat. **Superseded on branch `ai-hub`:** OAuth apps, sign-in apps, email and Paddle credentials are entered in the platform admin panel (`/admin`), and AI keys per workspace in Settings → AI Providers (`docs/security/CREDENTIALS_DESIGN.md`, `docs/ai/MIGRATION.md`). Only the encryption keys, database and auth secret stay in the env file.
 1. **Domain + DNS and a small VPS** for `beta.<domain>`. Then: `deploy/beta/` + `scripts/release/verify-beta-stack.mjs`
    (runbook §2).
 2. **Email provider** (Resend or Postmark) with a verified sending domain, plus a test inbox:
