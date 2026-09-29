@@ -129,3 +129,21 @@ original) and 0019 (hub data steps, verbatim).
 
 - **INTERMITTENT-01:** the mechanism (`SKIP LOCKED` null claim → the helper breaks early) is plausible, not confirmed.
   Codex recommends a bounded claim loop plus diagnostics.
+
+## Round 3 remediation (commit `a0b92df`, merged; pending Codex retest)
+
+| ID | Fix | Regression test | Status |
+|---|---|---|---|
+| CXH-12 | Omitted pricing is inherited in the upsert from the row current at update time (never an earlier unlocked read); an explicitly invalid price still clears | `ai-retest-fx3` CXH-12 ×2 | FIXED, retest pending |
+| CXH-17 | Lease re-check, abandonment settlement + interrupted placeholder, and late-success reconciliation are serialized on the locked `usage_event` row | `ai-retest-fx3` CXH-17 ×3 | FIXED, retest pending |
+| CXH-20 | Shared catalogue rows are written in deterministic model-id order; bounded retry on 40P01/40001 | `ai-retest-fx3` CXH-20 ×2 | FIXED, retest pending |
+| INTERMITTENT-01 | `claimUntil` test helper: a null claim while the target is queued is retried (5 × 100 ms), then throws with diagnostics (row state, NOWAIT lock probe, locking sessions). Root cause still not identified | Integration suite passed 460/460 three times in a row | MITIGATED (diagnostics), cause unknown |
+
+**Caveat, stated honestly:** the 7 new tests fail on the old product code, but only because the interleaving hooks they
+use (`catalogueTestHooks`, `discoveryTestHooks.onRetry`, `recoveryTestHooks`) were introduced together with the fixes.
+That is `TypeError`, not a demonstration of the original behaviour. Whether the tests exercise the scenarios is left to
+the Codex retest.
+
+**Gates:**
+- lint and typecheck: clean.
+- Unit 247, contract 465, integration 460 (×3).
