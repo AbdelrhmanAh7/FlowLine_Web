@@ -4,6 +4,8 @@
  * Product and service names (Flowline, Slack, Google Sheets, GitHub…) stay in Latin script.
  * Placeholders: {name}. Plural entries are objects with Arabic's six CLDR forms; {count} is the formatted number.
  */
+import { companyBuilderAr } from "./company-builder.ar";
+
 export const ar = {
   meta: {
     description: "أتمتة سير العمل بصريًا — ابنِ المسارات وشغّلها وافحص كل خطوة.",
@@ -114,6 +116,7 @@ export const ar = {
       flows: "المسارات",
       canvas: "لوحة التصميم",
       templates: "القوالب",
+      companyBuilder: "فريقك الرقمي",
       agents: "الوكلاء",
       knowledge: "المعرفة",
       runs: "سجل التشغيل",
@@ -3479,4 +3482,5 @@ export const ar = {
       connect: "ربط",
     },
   },
+  companyBuilder: companyBuilderAr,
 };

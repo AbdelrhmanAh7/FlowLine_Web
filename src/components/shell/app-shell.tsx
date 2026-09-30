@@ -21,6 +21,8 @@ interface Props {
   role: Role;
   workspaces: { id: string; name: string; slug: string; role?: string }[];
   support?: Support;
+  /** Company Builder nav entry (only when FLOWLINE_COMPANY_BUILDER=on). */
+  companyBuilder?: boolean;
   children: ReactNode;
 }
 
@@ -39,7 +41,7 @@ interface NavItem {
   match: (p: string) => boolean;
 }
 
-export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPORT, children }: Props) {
+export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPORT, companyBuilder = false, children }: Props) {
   const t = useT();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,6 +61,7 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
         { href: `${base}/flows`, label: t("shell.nav.flows"), icon: NAV_ICONS.flows, match: (p) => p === `${base}/flows` },
         { href: `${base}/canvas`, label: t("shell.nav.canvas"), icon: NAV_ICONS.canvas, match: (p) => p.startsWith(`${base}/flows/`) || p === `${base}/canvas` },
         { href: `${base}/templates`, label: t("shell.nav.templates"), icon: NAV_ICONS.templates, match: (p) => p.startsWith(`${base}/templates`) },
+        ...(companyBuilder ? [{ href: `${base}/company`, label: t("shell.nav.companyBuilder"), icon: NAV_ICONS.companyBuilder, match: (p: string) => p.startsWith(`${base}/company`) }] : []),
       ],
     },
     {

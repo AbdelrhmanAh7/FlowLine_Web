@@ -2,6 +2,8 @@ import { aiProviderEnglish } from "../ai-provider-text";
 import type { Messages } from "../types";
 
 /** English catalogue — secondary language. Must have exactly the Arabic catalogue's keys (enforced by `Messages`). */
+import { companyBuilderEn } from "./company-builder.en";
+
 export const en: Messages = {
   meta: {
     description: "Visual workflow automation — build, run and inspect flows.",
@@ -112,6 +114,7 @@ export const en: Messages = {
       flows: "Flows",
       canvas: "Canvas",
       templates: "Templates",
+      companyBuilder: "Digital team",
       agents: "Agents",
       knowledge: "Knowledge",
       runs: "Run history",
@@ -3123,4 +3126,5 @@ export const en: Messages = {
       connect: "Connect",
     },
   },
+  companyBuilder: companyBuilderEn,
 };

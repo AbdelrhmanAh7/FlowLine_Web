@@ -157,11 +157,14 @@ function needsAsking(facts: Facts, q: Question): boolean {
   return f.status === "inferred" || f.status === "contradictory";
 }
 
+const rank = (state: InterviewState, q: Question) => (state.facts[q.target]?.status === "contradictory" ? -1 : q.stage);
+
 export function eligibleQuestions(state: InterviewState): Question[] {
   const view = factView(state.facts);
   return QUESTIONS.map((q, i) => ({ q, i }))
     .filter(({ q }) => q.when(view) && !q.skipIf?.(view) && needsAsking(state.facts, q))
-    .sort((a, b) => a.q.stage - b.q.stage || a.i - b.i)
+    // A contradiction is clarified first; then the normal asking order.
+    .sort((a, b) => rank(state, a.q) - rank(state, b.q) || a.i - b.i)
     .map(({ q }) => q);
 }
 
