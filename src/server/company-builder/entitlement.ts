@@ -60,3 +60,11 @@ export async function reconcileEntitlement(workspaceId: string) {
   }
   return { paused: active.length };
 }
+
+/** Worker tick: reconciles every workspace that has an active Company Builder task. Returns the number paused. */
+export async function reconcileActiveEntitlements() {
+  const rows = await db.selectDistinct({ ws: schema.cbActivation.workspaceId }).from(schema.cbActivation).where(eq(schema.cbActivation.state, "active"));
+  let paused = 0;
+  for (const r of rows) paused += (await reconcileEntitlement(r.ws)).paused;
+  return paused;
+}

@@ -54,6 +54,11 @@ export async function startTrial(user: CurrentUser, workspaceId: string, install
     .where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, taskId), eq(schema.cbTrial.trialKey, input.trialKey)));
   if (existing) return { trial: existing, duplicate: true };
 
+  // A sample trial must never reach an account: if a person added steps outside the pack's local nodes (HTTP, AI,
+  // integrations, code), the draft is no longer a sample-safe definition and the trial is refused (use the editor).
+  const [flow] = await db.select({ graph: schema.flow.graph, deletedAt: schema.flow.deletedAt }).from(schema.flow).where(eq(schema.flow.id, item.refId));
+  if (!flow || flow.deletedAt) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "The draft was deleted");
+  if ((flow.graph as FlowGraph).nodes.some((n) => !pack.nodeTypes.includes(n.type))) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft now has steps that could reach real accounts — run it from the editor instead");
   const sample = input.input ?? (pack.sample(task.params) as Record<string, unknown>);
   const { run } = await enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` });
   const [trial] = await db
@@ -70,6 +75,7 @@ export async function startTrial(user: CurrentUser, workspaceId: string, install
 
 /** Computes (once the run is terminal) and stores the verdict. Safe to call repeatedly. */
 export async function refreshTrial(workspaceId: string, trialId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(trialId)) throw notFound("Trial not found");
   const [trial] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.id, trialId), eq(schema.cbTrial.workspaceId, workspaceId)));
   if (!trial) throw notFound("Trial not found");
   if (trial.status === "completed" || !trial.runId) return trial;

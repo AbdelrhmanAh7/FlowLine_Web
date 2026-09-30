@@ -16,7 +16,7 @@ import { DEFAULT_TIMEOUT_MS, MAX_OUTPUT_BYTES, PROPOSAL_JSON_SCHEMA, TEXT_TRIAL_
  *   there is no automatic bypass, account switch or paid fallback.
  */
 
-export type CliErrorCode = "CLI_UNAVAILABLE" | "CLI_FLAG_UNSUPPORTED" | "ISOLATION_UNVERIFIED" | "AUTH_REQUIRED" | "QUOTA_EXHAUSTED" | "PERMISSION_DENIED" | "TIMEOUT" | "OUTPUT_TOO_LARGE" | "OUTPUT_INVALID" | "INTERRUPTED" | "CANCELLED" | "CLI_FAILED";
+export type CliErrorCode = "CLI_UNAVAILABLE" | "CLI_FLAG_UNSUPPORTED" | "ISOLATION_UNVERIFIED" | "AUTH_REQUIRED" | "QUOTA_EXHAUSTED" | "PERMISSION_DENIED" | "TIMEOUT" | "OUTPUT_TOO_LARGE" | "OUTPUT_INVALID" | "SECRET_IN_OUTPUT" | "INTERRUPTED" | "CANCELLED" | "CLI_FAILED";
 
 export class CliError extends Error {
   constructor(public code: CliErrorCode) {
@@ -45,7 +45,7 @@ export function cliConfig(cli: CliKind, env: NodeJS.ProcessEnv = process.env): C
   return {
     bin,
     jobRoot: env.FLOWLINE_CB_JOB_ROOT || join(tmpdir(), "flowline-cb-jobs"),
-    timeoutMs: Math.min(Number(env.FLOWLINE_CB_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, 600_000),
+    timeoutMs: Math.max(5_000, Math.min(Number(env.FLOWLINE_CB_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS, 600_000)),
     maxOutputBytes: MAX_OUTPUT_BYTES,
     maxBudgetUsd: cli === "claude" && /^\d+(\.\d+)?$/.test(env.FLOWLINE_CB_CLAUDE_MAX_BUDGET_USD ?? "") ? env.FLOWLINE_CB_CLAUDE_MAX_BUDGET_USD : undefined,
   };
@@ -140,6 +140,39 @@ export function inheritedInstructionFiles(cli: CliKind, jobRoot: string, env: No
   return found;
 }
 
+/** Managed (administrator) Claude settings still apply under --restricted; hooks/plugins/MCP there break isolation. */
+const MANAGED_SETTINGS = ["/etc/claude-code/managed-settings.json", "/Library/Application Support/ClaudeCode/managed-settings.json", "C:\\ProgramData\\ClaudeCode\\managed-settings.json"];
+
+/**
+ * Configuration the CLI would load that isolation flags can't switch off (fail closed when present):
+ *  - Claude: `--restricted` ignores user/project/local settings (hooks, plugins, MCP) — managed settings still apply.
+ *  - Codex: `exec --sandbox read-only` still loads MCP servers from config.toml and lets the model READ files; its
+ *    isolation is therefore UNVERIFIED until the operator has checked their Codex configuration (no MCP servers, no
+ *    shell/tools they don't want) and sets FLOWLINE_CB_CODEX_ISOLATION_VERIFIED=1. Output is also scanned for secrets.
+ */
+export function inheritedConfigProblems(cli: CliKind, env: NodeJS.ProcessEnv = process.env): string[] {
+  const home = env.HOME || homedir();
+  const found: string[] = [];
+  if (cli === "claude") {
+    for (const p of MANAGED_SETTINGS) {
+      if (!existsSync(p)) continue;
+      const txt = readFileSync(p, "utf8");
+      if (/"(hooks|enabledPlugins|mcpServers|apiKeyHelper)"/.test(txt)) found.push(p);
+    }
+  } else {
+    const cfgPath = join(env.CODEX_HOME || join(home, ".codex"), "config.toml");
+    if (existsSync(cfgPath) && /^\s*\[mcp_servers/m.test(readFileSync(cfgPath, "utf8"))) found.push(cfgPath);
+    if (env.FLOWLINE_CB_CODEX_ISOLATION_VERIFIED !== "1") found.push("FLOWLINE_CB_CODEX_ISOLATION_VERIFIED not set");
+  }
+  return found;
+}
+
+/** Secret-looking content in model output (e.g. a token read from disk) is rejected, never stored. */
+const SECRET_PATTERNS = [/sk-[A-Za-z0-9_-]{16,}/, /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/, /-----BEGIN [A-Z ]*PRIVATE KEY-----/, /"?(access|refresh|id)_token"?\s*[:=]/i, /\b(ghp|gho|github_pat|xox[abp])_[A-Za-z0-9_]{10,}/, /AKIA[0-9A-Z]{16}/];
+export function containsSecret(text: string) {
+  return SECRET_PATTERNS.some((r) => r.test(text));
+}
+
 export function preflight(cli: CliKind, cfg: CliConfig, env: NodeJS.ProcessEnv = process.env): Preflight {
   const res: Preflight = { ok: false, code: null, version: null, missingFlags: [], auth: "unknown", isolation: [] };
   if (!cfg.bin || !isAbsolute(cfg.bin) || !existsSync(cfg.bin) || !statSync(cfg.bin).isFile()) return { ...res, code: "CLI_UNAVAILABLE" };
@@ -159,7 +192,7 @@ export function preflight(cli: CliKind, cfg: CliConfig, env: NodeJS.ProcessEnv =
     }
   } else res.auth = st.status === 0 ? "logged_in" : "not_logged_in";
   if (res.auth !== "logged_in") return { ...res, code: "AUTH_REQUIRED" };
-  res.isolation = inheritedInstructionFiles(cli, cfg.jobRoot, env);
+  res.isolation = [...inheritedInstructionFiles(cli, cfg.jobRoot, env), ...inheritedConfigProblems(cli, env)];
   if (res.isolation.length) return { ...res, code: "ISOLATION_UNVERIFIED" };
   return { ...res, ok: true };
 }
@@ -168,8 +201,11 @@ export function preflight(cli: CliKind, cfg: CliConfig, env: NodeJS.ProcessEnv =
 
 export function createJobDir(jobRoot: string, jobId: string): string {
   mkdirSync(jobRoot, { recursive: true, mode: 0o700 });
-  const root = realpathSync(jobRoot);
   if (lstatSync(jobRoot).isSymbolicLink()) throw new CliError("ISOLATION_UNVERIFIED");
+  const root = realpathSync(jobRoot);
+  // The job root must belong to this user and be private (a shared /tmp directory could be pre-created by another user).
+  const st = statSync(root);
+  if ((typeof process.getuid === "function" && st.uid !== process.getuid()) || (process.platform !== "win32" && (st.mode & 0o077) !== 0)) throw new CliError("ISOLATION_UNVERIFIED");
   const dir = mkdtempSync(join(root, `job-${jobId.slice(0, 8)}-`));
   const real = realpathSync(dir);
   if (!real.startsWith(root + sep)) throw new CliError("ISOLATION_UNVERIFIED");
@@ -258,10 +294,10 @@ export async function runCli(cli: CliKind, env: Envelope, cfg: CliConfig, opts: 
     if (reason) throw new CliError(reason);
     if (exit.signal) throw new CliError("INTERRUPTED");
     if (exit.code !== 0) throw new CliError(classifyFailure(stderr, stdout));
-    if (cli === "claude") return parseClaude(stdout);
-    const last = readJobFile(jobDir, "last-message.json", cfg.maxOutputBytes);
-    if (last == null) throw new CliError("OUTPUT_INVALID");
-    return { output: last, reported: {} };
+    const result = cli === "claude" ? parseClaude(stdout) : { output: readJobFile(jobDir, "last-message.json", cfg.maxOutputBytes), reported: {} };
+    if (result.output == null) throw new CliError("OUTPUT_INVALID");
+    if (containsSecret(result.output)) throw new CliError("SECRET_IN_OUTPUT");
+    return result as CliRun;
   } finally {
     removeJobDir(cfg.jobRoot, jobDir);
   }

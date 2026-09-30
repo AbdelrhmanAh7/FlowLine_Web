@@ -31,6 +31,10 @@ export function prototypeConfigProblem(env: NodeJS.ProcessEnv = process.env): st
   if (flEnv !== "development" && flEnv !== "test") return "PROTOTYPE_NOT_ALLOWED_IN_THIS_BUILD";
   if (env.FLOWLINE_BETA_MODE) return "PROTOTYPE_NOT_ALLOWED_IN_BETA";
   if (!env.FLOWLINE_CB_FOUNDER_USER_ID || !env.FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID) return "PROTOTYPE_IDENTITY_NOT_CONFIGURED";
+  // Host / X-Forwarded-For headers are client-controlled, so the header check below is only defence in depth: the
+  // network boundary is the server's BIND address. scripts/company-builder/start-private.mjs binds Next to 127.0.0.1
+  // (or one approved private address) and sets this marker; a server started any other way never enables the prototype.
+  if (env.FLOWLINE_CB_BOUND !== "loopback" && env.FLOWLINE_CB_BOUND !== "private") return "PROTOTYPE_NOT_PRIVATELY_BOUND";
   return null;
 }
 
@@ -51,6 +55,8 @@ export function isPrivateRequest(req: Request, env: NodeJS.ProcessEnv = process.
   const list = (v: string | undefined) => (v ?? "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
   const host = hostOf(req).toLowerCase();
   if (LOOPBACK.has(host)) return relayed.every((ip) => ip === "127.0.0.1" || ip === "::1");
+  // A LAN host is only possible when the operator deliberately bound the server to an approved private address.
+  if (env.FLOWLINE_CB_BOUND !== "private") return false;
   // An explicitly approved private host (e.g. the Pi on the LAN) also needs explicitly approved client addresses.
   if (!list(env.FLOWLINE_CB_PRIVATE_HOSTS).includes(host)) return false;
   const clients = list(env.FLOWLINE_CB_PRIVATE_CLIENTS);

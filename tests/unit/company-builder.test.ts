@@ -115,6 +115,22 @@ describe("adaptive interview", () => {
     expect(x.answers.length).toBeLessThanOrEqual(MAX_QUESTIONS);
   });
 
+  it("Latin keywords match whole words only; a new description replaces the old inferences", () => {
+    expect(inferFromText("We pride ourselves on excellent customer relationships").unsupportedTools).toEqual([]);
+    expect(inferFromText("we postpone nothing").departments).toEqual([]);
+    let s = applyAnswer(emptyState(), "offering", "We use WhatsApp and send invoices");
+    expect(s.facts.tools_mentioned_unsupported).toBeDefined();
+    s = applyAnswer(s, "offering", "We make content for clients", false, "correction");
+    expect(s.facts.tools_mentioned_unsupported).toBeUndefined();
+    expect(s.facts.first_outcome).toMatchObject({ status: "inferred", value: "content" });
+  });
+
+  it("the question cap counts distinct questions, not corrections", () => {
+    let s = applyAnswer(emptyState(), "situation", "start");
+    for (let i = 0; i < 30; i++) s = applyAnswer(s, "situation", i % 2 ? "start" : "improve", false, "correction");
+    expect(nextQuestion(s)).not.toBeNull();
+  });
+
   it("Arabic tokens match at word starts only (no substring false positives)", () => {
     expect(inferFromText("زيادة المبيعات").unsupportedTools).toEqual([]);
     expect(inferFromText("نستخدم الواتساب").unsupportedTools).toContain("whatsapp");
@@ -269,7 +285,7 @@ describe("CLI envelope and adapter (no real CLI)", () => {
 
 describe("owner prototype gate", () => {
   const founder = { id: "founder-1", email: "f@x.test", name: "F" };
-  const env = { FLOWLINE_CB_PROTOTYPE: "owner_cli", FLOWLINE_ENV: "development", FLOWLINE_CB_FOUNDER_USER_ID: "founder-1", FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID: SID } as unknown as NodeJS.ProcessEnv;
+  const env = { FLOWLINE_CB_PROTOTYPE: "owner_cli", FLOWLINE_ENV: "development", FLOWLINE_CB_FOUNDER_USER_ID: "founder-1", FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID: SID, FLOWLINE_CB_BOUND: "loopback" } as unknown as NodeJS.ProcessEnv;
   const req = (host: string, headers: Record<string, string> = {}) => new Request(`http://${host}/x`, { headers: { host, ...headers } });
   it("allows only the founder, in the designated workspace, on a loopback host", () => {
     expect(prototypeAccess(founder, SID, req("localhost:3000"), env)).toEqual({ allowed: true, reason: null });
@@ -284,9 +300,12 @@ describe("owner prototype gate", () => {
     expect(prototypeConfigProblem({ ...env, FLOWLINE_BETA_MODE: "invite_only" })).toBe("PROTOTYPE_NOT_ALLOWED_IN_BETA");
     expect(prototypeConfigProblem({ ...env, FLOWLINE_ENV: "staging" })).toBe("PROTOTYPE_NOT_ALLOWED_IN_THIS_BUILD");
     expect(prototypeConfigProblem({ ...env, FLOWLINE_CB_FOUNDER_USER_ID: "" })).toBe("PROTOTYPE_IDENTITY_NOT_CONFIGURED");
+    // A server not started through the private-bind script never enables it (headers alone are client-controlled).
+    expect(prototypeConfigProblem({ ...env, FLOWLINE_CB_BOUND: undefined })).toBe("PROTOTYPE_NOT_PRIVATELY_BOUND");
   });
   it("an approved private host also needs approved client addresses", () => {
-    const e = { ...env, FLOWLINE_CB_PRIVATE_HOSTS: "pi.local", FLOWLINE_CB_PRIVATE_CLIENTS: "192.168.1.20" } as NodeJS.ProcessEnv;
+    const e = { ...env, FLOWLINE_CB_BOUND: "private", FLOWLINE_CB_PRIVATE_HOSTS: "pi.local", FLOWLINE_CB_PRIVATE_CLIENTS: "192.168.1.20" } as NodeJS.ProcessEnv;
+    expect(isPrivateRequest(req("pi.local:3000", { "x-forwarded-for": "192.168.1.20" }), { ...e, FLOWLINE_CB_BOUND: "loopback" })).toBe(false);
     expect(isPrivateRequest(req("pi.local:3000", { "x-forwarded-for": "192.168.1.20" }), e)).toBe(true);
     expect(isPrivateRequest(req("pi.local:3000", { "x-forwarded-for": "192.168.1.99" }), e)).toBe(false);
   });

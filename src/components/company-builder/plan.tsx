@@ -61,6 +61,14 @@ function TaskDetails({ task, capabilities }: { task: TaskPlan; capabilities: str
           <dd>{task.unavailable.map((c) => cbt(t, `unavailableCap.${c}`)).join(" · ")}</dd>
         </>
       )}
+      {typeof task.params.modelNote === "string" && task.params.modelNote && (
+        <>
+          <dt className="text-muted">{t("companyBuilder.label.modelNote")}</dt>
+          <dd dir="auto" className="text-med italic">
+            {task.params.modelNote}
+          </dd>
+        </>
+      )}
       <dt className="text-muted" />
       <dd className="text-muted">{t("companyBuilder.label.limits", { items: task.limits.maxItemsPerRun, runs: task.limits.maxRunsPerDay })}</dd>
     </dl>
@@ -87,7 +95,8 @@ export function PlanPanel({
   const t = useT();
   const sep = useLocale() === "ar" ? "، " : ", ";
   const bp = data.blueprint;
-  const inst = data.installation;
+  // Installation state of THIS plan version (an older installed version keeps running and is shown in the task cards).
+  const inst = data.installation && data.installation.blueprintId === bp?.id ? data.installation : null;
   const viewOnly = canEdit ? null : t("companyBuilder.disabledViewer");
   if (!bp) {
     return (
@@ -121,6 +130,11 @@ export function PlanPanel({
           {bp.diff.addedTasks.length > 0 && <p>{t("companyBuilder.plan.diffAdded", { list: bp.diff.addedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
           {bp.diff.removedTasks.length > 0 && <p>{t("companyBuilder.plan.diffRemoved", { list: bp.diff.removedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
           {bp.diff.changedTasks.length > 0 && <p>{t("companyBuilder.plan.diffChanged", { list: bp.diff.changedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
+          {Object.entries(bp.diff.changedFields ?? {}).map(([task, fields]) => (
+            <p key={task} className="text-xs" dir="ltr">
+              {task}: {fields.join(", ")}
+            </p>
+          ))}
         </div>
       )}
 
@@ -194,7 +208,7 @@ export function PlanPanel({
   );
 }
 
-export function TaskCard({ view, slug, canRun, busy, onTry, onSendForReview, onActivate, onPause }: { view: TaskView; slug: string; canRun: boolean; busy: string | null; onTry: () => void; onSendForReview: (trialId: string) => void; onActivate: () => void; onPause: () => void }) {
+export function TaskCard({ view, slug, canRun, canPublish, busy, onTry, onSendForReview, onActivate, onPause }: { view: TaskView; slug: string; canRun: boolean; canPublish: boolean; busy: string | null; onTry: () => void; onSendForReview: (trialId: string) => void; onActivate: () => void; onPause: () => void }) {
   const t = useT();
   const { task, status, trial } = view;
   const v = trial?.verdict ?? null;
@@ -291,12 +305,12 @@ export function TaskCard({ view, slug, canRun, busy, onTry, onSendForReview, onA
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap gap-2">
             {status.canRequestActivation && (
-              <Button size="sm" variant="secondary" onClick={onActivate} loading={busy === `activate:${task.id}`} disabledReason={canRun ? null : t("companyBuilder.errors.FORBIDDEN")} data-testid={`cb-activate-${task.id}`}>
+              <Button size="sm" variant="secondary" onClick={onActivate} loading={busy === `activate:${task.id}`} disabledReason={canPublish ? null : t("companyBuilder.errors.FORBIDDEN")} data-testid={`cb-activate-${task.id}`}>
                 {t("companyBuilder.activation.request")}
               </Button>
             )}
             {status.state === "active" && (
-              <Button size="sm" variant="ghost" onClick={onPause} loading={busy === `pause:${task.id}`} data-testid={`cb-pause-${task.id}`}>
+              <Button size="sm" variant="ghost" onClick={onPause} loading={busy === `pause:${task.id}`} disabledReason={canPublish ? null : t("companyBuilder.errors.FORBIDDEN")} data-testid={`cb-pause-${task.id}`}>
                 {t("companyBuilder.activation.pause")}
               </Button>
             )}

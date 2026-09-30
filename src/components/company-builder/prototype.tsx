@@ -29,9 +29,19 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
     void qc.invalidateQueries({ queryKey: ["cb-jobs", sid] });
     void qc.invalidateQueries({ queryKey: ["cb-session", sid] });
   };
+  // One request key per intended job: a double click or a retry after a network error re-sends the SAME key (the
+  // server returns the same job); a new key is minted only after a job was created.
+  const pendingKeys = useRef(new Map<string, string>());
+  const keyFor = (k: string) => {
+    if (!pendingKeys.current.has(k)) pendingKeys.current.set(k, key());
+    return pendingKeys.current.get(k)!;
+  };
   const enqueue = useMutation({
-    mutationFn: (b: { cli: "claude" | "codex"; kind: "blueprint" | "text_trial" }) => api(`${base}/sessions/${sid}/cli-jobs`, { method: "POST", json: { ...b, requestKey: key(), text: b.kind === "text_trial" ? text : undefined } }),
-    onSuccess: refresh,
+    mutationFn: (b: { cli: "claude" | "codex"; kind: "blueprint" | "text_trial" }) => api(`${base}/sessions/${sid}/cli-jobs`, { method: "POST", json: { ...b, requestKey: keyFor(`${b.cli}:${b.kind}:${b.kind === "text_trial" ? text : ""}`), text: b.kind === "text_trial" ? text : undefined } }),
+    onSuccess: (_d, b) => {
+      pendingKeys.current.delete(`${b.cli}:${b.kind}:${b.kind === "text_trial" ? text : ""}`);
+      refresh();
+    },
     onError: () => setError(t("companyBuilder.errors.generic")),
   });
   const act = useMutation({
@@ -66,7 +76,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
       <p className="text-sm text-warning">{t("companyBuilder.prototype.labels")}</p>
       <div className="flex flex-wrap gap-2">
         {(["claude", "codex"] as const).map((cli) => (
-          <Button key={cli} size="sm" onClick={() => enqueue.mutate({ cli, kind: "blueprint" })} disabledReason={data.blueprint ? null : t("companyBuilder.errors.generic")} data-testid={`cb-cli-refine-${cli}`}>
+          <Button key={cli} size="sm" loading={enqueue.isPending && enqueue.variables?.cli === cli && enqueue.variables.kind === "blueprint"} disabled={enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "blueprint" })} disabledReason={data.blueprint ? null : t("companyBuilder.errors.generic")} data-testid={`cb-cli-refine-${cli}`}>
             {t("companyBuilder.prototype.refine", { cli: cli === "claude" ? "Claude" : "Codex" })}
           </Button>
         ))}
@@ -74,7 +84,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
       <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={2000} placeholder={t("companyBuilder.prototype.textPlaceholder")} aria-label={t("companyBuilder.prototype.textPlaceholder")} dir="auto" />
       <div className="flex flex-wrap gap-2">
         {(["claude", "codex"] as const).map((cli) => (
-          <Button key={cli} size="sm" variant="ghost" disabled={!text.trim()} onClick={() => enqueue.mutate({ cli, kind: "text_trial" })}>
+          <Button key={cli} size="sm" variant="ghost" disabled={!text.trim() || enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "text_trial" })}>
             {t("companyBuilder.prototype.textTrial", { cli: cli === "claude" ? "Claude" : "Codex" })}
           </Button>
         ))}

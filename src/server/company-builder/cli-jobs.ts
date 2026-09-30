@@ -55,17 +55,20 @@ export async function requireJob(workspaceId: string, jobId: string) {
 export async function cancelJob(user: CurrentUser, workspaceId: string, jobId: string) {
   const job = await requireJob(workspaceId, jobId);
   if (TERMINAL.includes(job.status)) return job;
-  // A waiting job is cancelled at once; a running one is flagged and the controller kills its process group.
-  const [row] = await db
+  // A waiting job is cancelled at once (only if still waiting); a running one is flagged and the controller kills its
+  // process group. Conditional updates: a job that finished meanwhile keeps its real outcome.
+  const [waiting] = await db
     .update(schema.cbCliJob)
-    .set(job.status === "waiting_operator" ? { status: "cancelled", cancelRequestedAt: new Date(), finishedAt: new Date() } : { cancelRequestedAt: new Date() })
-    .where(eq(schema.cbCliJob.id, job.id))
+    .set({ status: "cancelled", cancelRequestedAt: new Date(), finishedAt: new Date() })
+    .where(and(eq(schema.cbCliJob.id, job.id), eq(schema.cbCliJob.status, "waiting_operator")))
     .returning();
+  const [row] = waiting ? [waiting] : await db.update(schema.cbCliJob).set({ cancelRequestedAt: new Date() }).where(and(eq(schema.cbCliJob.id, job.id), inArray(schema.cbCliJob.status, ["generating", "validating"]))).returning();
   await audit(db, { workspaceId, actor: userActor(user), action: "company_builder.cli_job", targetType: "cb_cli_job", targetId: job.id, data: { event: "cancel_requested" } });
-  return row!;
+  return row ?? (await requireJob(workspaceId, jobId));
 }
 
 export async function listJobs(workspaceId: string, sessionId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(sessionId)) throw notFound("Session not found");
   return db
     .select({ id: schema.cbCliJob.id, kind: schema.cbCliJob.kind, cli: schema.cbCliJob.cli, status: schema.cbCliJob.status, error: schema.cbCliJob.error, attempts: schema.cbCliJob.attempts, repairAttempts: schema.cbCliJob.repairAttempts, reported: schema.cbCliJob.reported, resultBlueprintId: schema.cbCliJob.resultBlueprintId, result: schema.cbCliJob.result, createdAt: schema.cbCliJob.createdAt, finishedAt: schema.cbCliJob.finishedAt })
     .from(schema.cbCliJob)
@@ -121,12 +124,23 @@ export async function importJobResult(founder: CurrentUser, workspaceId: string,
   const envelope = job.envelope as Envelope;
   const check = validateJobOutput(envelope, m.output);
   if (!check.ok) {
-    await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "OUTPUT_INVALID" }, finishedAt: new Date() }).where(eq(schema.cbCliJob.id, job.id));
+    await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "OUTPUT_INVALID" }, finishedAt: new Date() }).where(and(eq(schema.cbCliJob.id, job.id), eq(schema.cbCliJob.status, "waiting_operator")));
     throw new HttpError(422, "OUTPUT_INVALID", "The imported result failed validation", { problem: check.problem });
   }
   const reported = m.reported && typeof m.reported === "object" ? Object.fromEntries(Object.entries(m.reported as Record<string, unknown>).filter(([k, v]) => ["totalCostUsd", "inputTokens", "outputTokens", "models", "durationMs", "cliVersion"].includes(k) && (typeof v === "number" || typeof v === "string" || Array.isArray(v))).slice(0, 6)) : {};
-  await db.update(schema.cbCliJob).set({ status: "validating", reported: { ...reported, source: "imported_claim" } }).where(eq(schema.cbCliJob.id, job.id));
-  return applyJobResult(founder, { ...job, status: "validating" }, check.value, "cli_import");
+  // Claim the job atomically (a controller can't process it at the same time; a second import gets 409).
+  const [claimed] = await db
+    .update(schema.cbCliJob)
+    .set({ status: "validating", reported: { ...reported, source: "imported_claim" } })
+    .where(and(eq(schema.cbCliJob.id, job.id), eq(schema.cbCliJob.status, "waiting_operator")))
+    .returning();
+  if (!claimed) throw new HttpError(409, "NOT_IMPORTABLE", "This job is no longer waiting");
+  try {
+    return await applyJobResult(founder, claimed, check.value, "cli_import");
+  } catch (e) {
+    await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "OUTPUT_INVALID" }, finishedAt: new Date() }).where(eq(schema.cbCliJob.id, job.id));
+    throw e;
+  }
 }
 
 /* ───────────── Controller claim / recovery ───────────── */

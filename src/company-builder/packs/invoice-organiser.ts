@@ -21,7 +21,7 @@ const VALIDATE = (currencies: string[]) => `(
       "stated_total": $d.stated_total,
       "malformed_lines": $count($append([], $d.lines)) - $count($append([], $ok)),
       "mismatch": $type($d.stated_total) = "number" ? $abs($computed - $d.stated_total) > 0.01 : $exists($d.stated_total),
-      "missing": $append([], $filter(["vendor", "invoice_number", "date", "currency", "lines"], function($k) { $not($exists($lookup($d, $k))) })),
+      "missing": $append([], $filter(["vendor", "invoice_number", "date", "currency", "lines", "stated_total"], function($k) { $not($exists($lookup($d, $k))) })),
       "unexpected_currency": $exists($d.currency) and $count($allowed) > 0 and $not($d.currency in $allowed)
     }
   )}))
@@ -84,7 +84,8 @@ export const invoiceOrganiserPack: TaskPack = {
 
   evaluate(output, input): PackCheck[] {
     const res = (output.ledger_draft ?? output.discrepancy_review) as { ledger_rows?: { amount: number; currency: string }[]; totals_by_currency?: { currency: string; total: number }[]; discrepancies?: unknown[]; empty?: boolean } | undefined;
-    const docs = ((input as { documents?: unknown[] } | null)?.documents ?? []) as unknown[];
+    const raw = (input as { documents?: unknown } | null)?.documents;
+    const docs = Array.isArray(raw) ? raw : raw ? [raw] : [];
     const checks: PackCheck[] = [{ id: "one_outcome", passed: Boolean(output.ledger_draft) !== Boolean(output.discrepancy_review) }];
     if (!res) return checks;
     checks.push({ id: "not_empty", passed: docs.length > 0 && !res.empty });

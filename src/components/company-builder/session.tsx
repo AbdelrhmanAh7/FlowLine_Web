@@ -159,6 +159,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
                     view={v}
                     slug={workspace.slug}
                     canRun={canRun}
+                    canPublish={can(r, "flow.publish")}
                     busy={busy}
                     onTry={() => run(`try:${v.task.id}`, () => api(`${base}/installations/${data.installation!.id}/tasks/${v.task.id}/trial`, { method: "POST", json: { trialKey: clickKey() } }))}
                     onSendForReview={(trialId) => run(`review:${trialId}`, () => api(`${base}/trials/${trialId}/review`, { method: "POST", json: {} }), () => focusHeading("cb-inbox-heading"))}

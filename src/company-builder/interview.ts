@@ -54,7 +54,11 @@ export function applyAnswer(state: InterviewState, questionId: string, raw: unkn
   if (!q) throw new AnswerError("UNKNOWN_QUESTION");
   const value = parseAnswer(q, raw, unknown);
   let facts = setFact(state.facts, q.target, value, { status: unknown ? "unknown" : "confirmed", source, questionId });
-  if (q.id === "offering" && typeof value === "string") facts = applyInferences(facts, inferFromText(value));
+  if (q.id === "offering") {
+    // A new description replaces what the previous one implied (answers are never touched).
+    facts = Object.fromEntries(Object.entries(facts).filter(([, f]) => !(f.source === "inference" && f.questionId === "offering")));
+    if (typeof value === "string") facts = applyInferences(facts, inferFromText(value));
+  }
   facts = markContradictions(facts);
   const record: AnswerRecord = { questionId, value, unknown, at: now() };
   const path = state.path.includes(questionId) ? state.path : [...state.path, questionId];
@@ -64,10 +68,10 @@ export function applyAnswer(state: InterviewState, questionId: string, raw: unkn
 /* ───────────── Free-text interpretation (deterministic keyword rules; Arabic + English) ───────────── */
 
 const DEPT_KEYWORDS: Record<Department, string[]> = {
-  customer: ["customer", "inquir", "enquir", "support", "order", "booking", "client request", "عملاء", "العملاء", "استفسار", "طلبات", "دعم", "حجوزات", "الطلبات"],
-  finance: ["invoice", "receipt", "accounting", "bookkeep", "expense", "ledger", "فاتورة", "فواتير", "محاسب", "مصروفات", "إيصال", "ايصال", "دفاتر"],
-  content: ["content", "social", "marketing", "post", "copy", "newsletter", "محتوى", "تسويق", "منشورات", "إعلان", "اعلان"],
-  recruitment: ["hiring", "recruit", "candidate", "job post", "applicant", "توظيف", "مرشحين", "وظيفة", "متقدمين"],
+  customer: ["customer", "inquiry", "inquiries", "enquiry", "enquiries", "support", "order", "booking", "client request", "عملاء", "العملاء", "استفسار", "طلبات", "دعم", "حجوزات", "الطلبات"],
+  finance: ["invoice", "receipt", "accounting", "bookkeeping", "expense", "ledger", "فاتورة", "فواتير", "محاسب", "مصروفات", "إيصال", "ايصال", "دفاتر"],
+  content: ["content", "social media", "marketing", "social post", "copywriting", "newsletter", "محتوى", "تسويق", "منشورات", "إعلان", "اعلان"],
+  recruitment: ["hiring", "hire", "recruit", "recruiting", "recruitment", "candidate", "job post", "applicant", "توظيف", "مرشحين", "وظيفة", "متقدمين"],
 };
 const TOOL_KEYWORDS: Record<string, string[]> = {
   gmail: ["gmail", "جيميل"],
@@ -103,7 +107,7 @@ export interface Inference {
 const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Word-start match: Latin words on \b; Arabic words at a token start, allowing the attached prefixes و ف ب ل ال. */
 const hit = (text: string, words: string[]) =>
-  words.some((w) => (/^[\x00-\x7f]+$/.test(w) ? new RegExp(`\\b${esc(w)}`, "i") : new RegExp(`(?:^|[^\u0600-\u06FF])(?:و|ف|ب|ل|ال|وال|بال|لل)?${esc(w)}`)).test(text));
+  words.some((w) => (/^[\x00-\x7f]+$/.test(w) ? new RegExp(`\\b${esc(w)}(?:s|es|ed|ing)?\\b`, "i") : new RegExp(`(?:^|[^\u0600-\u06FF])(?:و|ف|ب|ل|ال|وال|بال|لل)?${esc(w)}`)).test(text));
 
 export function inferFromText(text: string): Inference {
   const t = text.toLowerCase();
@@ -170,7 +174,7 @@ export function eligibleQuestions(state: InterviewState): Question[] {
 
 /** The next question, or null when nothing that would change the plan is left (or the cap is reached). */
 export function nextQuestion(state: InterviewState): Question | null {
-  if (state.answers.length >= MAX_QUESTIONS) return null;
+  if (state.path.length >= MAX_QUESTIONS) return null;
   return eligibleQuestions(state)[0] ?? null;
 }
 

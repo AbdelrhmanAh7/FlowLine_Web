@@ -70,8 +70,11 @@ export const blueprintProposalSchema = z
           .object({
             taskId: z.string().max(48),
             include: z.boolean(),
+            /** Model-written rationale, shown labelled as unverified model text (never used as a fact or as reply content). */
+            note: z.string().max(200).default(""),
+            /** The owner's approved information and confirmed facts are NOT editable by a model; currencies can only be narrowed. */
             params: z
-              .object({ approvedInfo: z.string().max(1200).optional(), currencies: z.array(z.string().regex(/^[A-Z]{3}$/)).max(6).optional() })
+              .object({ currencies: z.array(z.string().regex(/^[A-Z]{3}$/)).max(6).optional() })
               .strict()
               .default({}),
           })
@@ -105,11 +108,12 @@ export const PROPOSAL_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["taskId", "include", "params"],
+        required: ["taskId", "include", "note", "params"],
         properties: {
           taskId: { type: "string", maxLength: 48 },
           include: { type: "boolean" },
-          params: { type: "object", additionalProperties: false, properties: { approvedInfo: { type: "string", maxLength: 1200 }, currencies: { type: "array", maxItems: 6, items: { type: "string", pattern: "^[A-Z]{3}$" } } } },
+          note: { type: "string", maxLength: 200 },
+          params: { type: "object", additionalProperties: false, properties: { currencies: { type: "array", maxItems: 6, items: { type: "string", pattern: "^[A-Z]{3}$" } } } },
         },
       },
     },
@@ -135,7 +139,7 @@ export function buildBlueprintEnvelope(jobId: string, cli: CliKind, facts: Facts
     cli,
     brief: {
       situation: factStr(facts, "situation").slice(0, 16),
-      departments: activeDepartments(facts),
+      departments: activeDepartments(Object.fromEntries(Object.entries(facts).filter(([, v]) => v.status === "confirmed"))),
       offering: sanitiseText(factStr(facts, "offering"), 600),
       tools: factList(facts, "tools").slice(0, 12),
       currencies: factList(facts, "finance.currency").filter((c) => /^[A-Z]{3}$/.test(c)),
@@ -159,8 +163,12 @@ export function applyProposal(base: CompanyBlueprint, proposal: BlueprintProposa
     const p = byId.get(t.id);
     if (p && !p.include) continue;
     const params = { ...t.params };
-    if (p?.params.approvedInfo !== undefined && "approvedInfo" in t.params) params.approvedInfo = sanitiseText(p.params.approvedInfo, 1200);
-    if (p?.params.currencies && "currencies" in t.params) params.currencies = p.params.currencies;
+    // Only a subset of the owner-confirmed currencies (a model can't introduce one).
+    if (p?.params.currencies && Array.isArray(t.params.currencies)) {
+      const confirmed = t.params.currencies as string[];
+      params.currencies = p.params.currencies.filter((c) => confirmed.includes(c));
+    }
+    if (p?.note) params.modelNote = sanitiseText(p.note, 200);
     tasks.push({ ...t, params });
   }
   const ids = new Set(tasks.map((t) => t.id));

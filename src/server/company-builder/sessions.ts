@@ -5,6 +5,7 @@ import type { InterviewState } from "@/company-builder/model";
 import { QUESTION_BANK_VERSION, QUESTION_BY_ID } from "@/company-builder/questions";
 import type { CurrentUser } from "@/server/access";
 import { HttpError, notFound } from "@/server/http";
+import { unpublishFlow } from "@/server/publish";
 
 export type SessionRow = typeof schema.cbSession.$inferSelect;
 
@@ -124,5 +125,15 @@ export async function archiveSession(workspaceId: string, sessionId: string) {
  * edited, deleted separately from the Flows/Agents pages. Export first if the answers should be kept.
  */
 export async function deleteSession(workspaceId: string, sessionId: string) {
+  // Active tasks are withdrawn first (unpublished) so nothing stays published without its Company Builder record.
+  const active = await db
+    .select({ refId: schema.cbInstalledItem.refId })
+    .from(schema.cbActivation)
+    .innerJoin(schema.cbInstallation, eq(schema.cbInstallation.id, schema.cbActivation.installationId))
+    .innerJoin(schema.cbBlueprint, eq(schema.cbBlueprint.id, schema.cbInstallation.blueprintId))
+    .innerJoin(schema.cbInstalledItem, and(eq(schema.cbInstalledItem.installationId, schema.cbActivation.installationId), eq(schema.cbInstalledItem.taskId, schema.cbActivation.taskId), eq(schema.cbInstalledItem.kind, "flow")))
+    .where(and(eq(schema.cbBlueprint.sessionId, sessionId), eq(schema.cbActivation.workspaceId, workspaceId), eq(schema.cbActivation.state, "active")));
+  for (const a of active) await unpublishFlow(a.refId);
   await db.delete(schema.cbSession).where(and(eq(schema.cbSession.id, sessionId), eq(schema.cbSession.workspaceId, workspaceId)));
+  return { unpublished: active.length };
 }

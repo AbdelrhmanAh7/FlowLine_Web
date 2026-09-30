@@ -52,9 +52,9 @@ export interface Overview {
     backTo: string | null;
     readiness: { complete: boolean; missing: string[]; departments: string[] };
   };
-  blueprint: { id: string; version: number; status: string; generator: CompanyBlueprint["generator"]; diff: { addedTasks: string[]; removedTasks: string[]; changedTasks: string[] } | null; body: CompanyBlueprint } | null;
+  blueprint: { id: string; version: number; status: string; generator: CompanyBlueprint["generator"]; diff: { addedTasks: string[]; removedTasks: string[]; changedTasks: string[]; changedFields?: Record<string, string[]> } | null; body: CompanyBlueprint } | null;
   versions: { id: string; version: number; status: string; generator: string }[];
-  installation: { id: string; status: string; error: { code: string } | null; blueprintId: string } | null;
+  installation: { id: string; status: string; error: { code: string } | null; blueprintId: string; blueprintVersion: number | null } | null;
   tasks: TaskView[];
   reviews: ReviewItemDto[];
   outbox: { id: string; reviewItemId: string; payload: Record<string, unknown>; provenance: string; createdAt: string }[];

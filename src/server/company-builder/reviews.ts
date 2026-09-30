@@ -1,6 +1,7 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
+import type { FlowGraph } from "@/engine/types";
 import type { CurrentUser } from "@/server/access";
 import { canDecide } from "@/server/approvals";
 import { audit, userActor } from "@/server/audit";
@@ -20,6 +21,12 @@ import { refreshTrial, trialOutput } from "./trials";
  */
 
 export const REVIEW_TTL_MS = 24 * 3600_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Hash of what a flow does (nodes + edges; layout ignored) — used to bind activation to the trial-verified graph. */
+export function graphHash(g: FlowGraph) {
+  return sha256Hex(canonicalJson({ nodes: g.nodes.map((n) => ({ id: n.id, type: n.type, config: n.data.config })), edges: g.edges.map((e) => ({ s: e.source, t: e.target, h: e.sourceHandle ?? null })) }));
+}
 type ReviewRow = typeof schema.cbReviewItem.$inferSelect;
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -99,11 +106,24 @@ async function currentParts(item: Pick<ReviewRow, "workspaceId" | "installationI
     if (!p) return { stale: "nothing_to_send" };
     return { workspaceId: item.workspaceId, installationId: inst.id, taskId: task.id, kind: item.kind, blueprintId: bp.id, blueprintVersion: bp.version, taskVersion, source: { trialId: trial.id, runId: trial.runId, flowVersionId: run.flowVersionId, runNumber: run.number }, proposed: p.proposed, recipient: p.recipient, connection: SAMPLE_CONNECTION, reviewerRole: task.reviewer };
   }
-  return { workspaceId: item.workspaceId, installationId: inst.id, taskId: task.id, kind: item.kind, blueprintId: bp.id, blueprintVersion: bp.version, taskVersion, source: { flowId: flow.id, flowRevision: flow.revision }, proposed: { action: "activate_task", taskId: task.id }, recipient: null, connection: null, reviewerRole: task.reviewer };
+  // Activation is bound to the graph the latest MATCHED sample trial verified, which must still be the current draft,
+  // and only a manual trigger may be activated (prototype activation never enables unattended operation).
+  const [full] = await db.select({ graph: schema.flow.graph }).from(schema.flow).where(eq(schema.flow.id, flow.id));
+  const current = full!.graph as FlowGraph;
+  if (current.nodes.some((n) => n.type === "trigger.webhook" || n.type === "trigger.schedule")) return { stale: "not_manual_trigger" };
+  const [trial] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, task.id))).orderBy(desc(schema.cbTrial.createdAt)).limit(1);
+  if (!(trial?.verdict as { matchedOutcome?: boolean } | null)?.matchedOutcome) return { stale: "sample_not_verified" };
+  const run = await trialOutput(trial!);
+  const [verified] = run ? await db.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, run.flowVersionId)) : [];
+  if (!verified || graphHash(verified.graph as FlowGraph) !== graphHash(current)) return { stale: "draft_changed_since_trial" };
+  return { workspaceId: item.workspaceId, installationId: inst.id, taskId: task.id, kind: item.kind, blueprintId: bp.id, blueprintVersion: bp.version, taskVersion, source: { flowId: flow.id, flowRevision: flow.revision, trialId: trial!.id, graphHash: graphHash(current) }, proposed: { action: "activate_task", taskId: task.id }, recipient: null, connection: null, reviewerRole: task.reviewer };
 }
 
 async function openItem(user: CurrentUser, parts: BindingParts, trialId: string | null) {
   const bindingHash = reviewBinding(parts);
+  const same = and(eq(schema.cbReviewItem.installationId, parts.installationId), eq(schema.cbReviewItem.taskId, parts.taskId), eq(schema.cbReviewItem.kind, parts.kind), eq(schema.cbReviewItem.bindingHash, bindingHash));
+  // An expired pending item is retired so a new request can be opened (only ONE pending item per binding).
+  await db.update(schema.cbReviewItem).set({ status: "invalidated", note: "expired" }).where(and(same, eq(schema.cbReviewItem.status, "pending"), sql`${schema.cbReviewItem.expiresAt} < now()`));
   await db
     .insert(schema.cbReviewItem)
     .values({
@@ -124,8 +144,11 @@ async function openItem(user: CurrentUser, parts: BindingParts, trialId: string 
       expiresAt: new Date(Date.now() + REVIEW_TTL_MS),
     })
     .onConflictDoNothing();
-  const [row] = await db.select().from(schema.cbReviewItem).where(and(eq(schema.cbReviewItem.installationId, parts.installationId), eq(schema.cbReviewItem.taskId, parts.taskId), eq(schema.cbReviewItem.kind, parts.kind), eq(schema.cbReviewItem.bindingHash, bindingHash)));
-  return row!;
+  const [pending] = await db.select().from(schema.cbReviewItem).where(and(same, eq(schema.cbReviewItem.status, "pending")));
+  if (pending) return pending;
+  // Same content already decided (e.g. the test action was sent): return that decision instead of re-sending.
+  const [latest] = await db.select().from(schema.cbReviewItem).where(same).orderBy(desc(schema.cbReviewItem.createdAt)).limit(1);
+  return latest!;
 }
 
 /** Proposes the authorised TEST action for a completed trial (idempotent: same content → same item). */
@@ -149,6 +172,7 @@ async function reviewerAllowed(workspaceId: string, userId: string, reviewerRole
  * (sample action → sample outbox; activation → publish the draft's manual-trigger version). Never a blind retry.
  */
 export async function decideReview(user: CurrentUser, workspaceId: string, itemId: string, decision: "approve" | "reject", note?: string) {
+  if (!UUID.test(itemId)) throw notFound("Review item not found");
   const item = await db.transaction(async (tx) => {
     const [it] = await tx.select().from(schema.cbReviewItem).where(and(eq(schema.cbReviewItem.id, itemId), eq(schema.cbReviewItem.workspaceId, workspaceId))).for("update");
     if (!it) throw notFound("Review item not found");
@@ -164,8 +188,9 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
       return r!;
     }
     const parts = await currentParts(it);
-    if ("stale" in parts || reviewBinding(parts) !== it.bindingHash) {
-      const reason = "stale" in parts ? parts.stale : "binding_changed";
+    const requesterGone = it.requestedBy ? !(await db.select({ u: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, it.requestedBy)))).length : true;
+    if (requesterGone || "stale" in parts || reviewBinding(parts) !== it.bindingHash) {
+      const reason = requesterGone ? "requester_not_member" : "stale" in parts ? parts.stale : "binding_changed";
       await tx.update(schema.cbReviewItem).set({ status: "invalidated", note: reason }).where(eq(schema.cbReviewItem.id, it.id));
       if (it.kind === "activation") await setActivation(tx, it, "failed", reason, user.id);
       return { ...it, status: "invalidated", note: reason };
@@ -176,7 +201,16 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
   await audit(db, { workspaceId, actor: userActor(user), action: "company_builder.review_decided", targetType: "cb_review_item", targetId: itemId, data: { decision, status: item.status, kind: item.kind } });
   if (item.status === "invalidated") throw new HttpError(409, "REVIEW_INVALIDATED", "This review no longer matches the current task — request a new review", { reason: item.note });
   if (item.status !== "approved") return item;
-  return execute(user, item);
+  try {
+    return await execute(user, item);
+  } catch (e) {
+    // A definite failure (not an unknown outcome) never leaves the item stuck in "approved".
+    if (!(e instanceof UncertainOutcomeError)) {
+      await db.update(schema.cbReviewItem).set({ status: "invalidated", note: e instanceof HttpError ? e.code : "EXECUTION_FAILED" }).where(and(eq(schema.cbReviewItem.id, item.id), eq(schema.cbReviewItem.status, "approved")));
+      if (item.kind === "activation") await setActivation(db, item, "failed", e instanceof HttpError ? e.code : "EXECUTION_FAILED", user.id);
+    }
+    throw e;
+  }
 }
 
 async function execute(user: CurrentUser, item: ReviewRow) {
@@ -193,14 +227,21 @@ async function execute(user: CurrentUser, item: ReviewRow) {
 
 /** Uncertain outcome: VERIFY first (did the outbox record it?); only a verified absence allows one more attempt. */
 export async function verifyUncertain(user: CurrentUser, workspaceId: string, itemId: string) {
+  if (!UUID.test(itemId)) throw notFound("Review item not found");
   const [it] = await db.select().from(schema.cbReviewItem).where(and(eq(schema.cbReviewItem.id, itemId), eq(schema.cbReviewItem.workspaceId, workspaceId)));
   if (!it) throw notFound("Review item not found");
-  if (it.status !== "uncertain") throw new HttpError(409, "NOT_UNCERTAIN", `This item is ${it.status}`);
+  if (it.kind !== "send_sample" || (it.status !== "uncertain" && it.status !== "approved")) throw new HttpError(409, "NOT_UNCERTAIN", `This item is ${it.status}`);
   if (!(await reviewerAllowed(workspaceId, user.id, it.reviewerRole))) throw new HttpError(403, "FORBIDDEN", "Only the reviewer can verify this action");
   const [sent] = await db.select({ id: schema.cbSampleOutbox.id }).from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.reviewItemId, it.id));
   if (sent) {
     const [done] = await db.update(schema.cbReviewItem).set({ status: "executed", executedAt: new Date(), note: "verified_after_uncertain" }).where(eq(schema.cbReviewItem.id, it.id)).returning();
     return { item: done!, verified: "already_applied" as const };
+  }
+  // Verified NOT applied: one more attempt, only if the binding still holds.
+  const parts = await currentParts(it);
+  if ("stale" in parts || reviewBinding(parts) !== it.bindingHash) {
+    await db.update(schema.cbReviewItem).set({ status: "invalidated", note: "stale" in parts ? parts.stale : "binding_changed" }).where(eq(schema.cbReviewItem.id, it.id));
+    throw new HttpError(409, "REVIEW_INVALIDATED", "This review no longer matches the current task — request a new review");
   }
   const [back] = await db.update(schema.cbReviewItem).set({ status: "approved" }).where(eq(schema.cbReviewItem.id, it.id)).returning();
   return { item: await execute(user, back!), verified: "not_applied_retried" as const };
@@ -212,20 +253,28 @@ async function setActivation(tx: Tx | typeof db, it: Pick<ReviewRow, "workspaceI
   await tx
     .insert(schema.cbActivation)
     .values({ workspaceId: it.workspaceId, installationId: it.installationId, taskId: it.taskId, state, reason, bindingHash: it.bindingHash, reviewItemId: it.id, decidedBy: userId })
-    .onConflictDoUpdate({ target: [schema.cbActivation.installationId, schema.cbActivation.taskId], set: { state, reason, bindingHash: it.bindingHash, reviewItemId: it.id, decidedBy: userId, updatedAt: new Date() } });
+    .onConflictDoUpdate({
+      target: [schema.cbActivation.installationId, schema.cbActivation.taskId],
+      set: { state, reason, bindingHash: it.bindingHash, reviewItemId: it.id, decidedBy: userId, updatedAt: new Date() },
+      // Only an actual activation/pause changes an ACTIVE task; a rejected or stale re-request leaves it as it is.
+      setWhere: state === "active" || state === "paused" ? undefined : ne(schema.cbActivation.state, "active"),
+    });
 }
 
 /** Requests activation of ONE verified task. Needs a matched sample trial AND an entitlement (trial or billing). */
 export async function requestActivation(user: CurrentUser, workspaceId: string, installationId: string, taskId: string) {
   const ent = await effectiveEntitlement(workspaceId);
   if (!ent) throw new HttpError(402, "ENTITLEMENT_REQUIRED", "Activation needs a development trial or an active subscription");
-  const [trial] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.installationId, installationId), eq(schema.cbTrial.taskId, taskId), eq(schema.cbTrial.workspaceId, workspaceId))).orderBy(desc(schema.cbTrial.createdAt)).limit(1);
-  const verdict = trial?.verdict as { matchedOutcome?: boolean } | null | undefined;
-  if (!verdict?.matchedOutcome) throw new HttpError(409, "SAMPLE_NOT_VERIFIED", "Run a sample trial that matches the expected result first");
+  if (!UUID.test(installationId)) throw notFound("Installation not found");
+  const [owned] = await db.select({ id: schema.cbInstallation.id }).from(schema.cbInstallation).where(and(eq(schema.cbInstallation.id, installationId), eq(schema.cbInstallation.workspaceId, workspaceId)));
+  if (!owned) throw notFound("Installation not found");
   const { task } = await taskOf(installationId, taskId);
   if (task.reviewer === "unknown" || task.trigger.status === "unsupported") throw new HttpError(409, "REQUIRES_SETUP", "This task still needs setup before activation");
   const parts = await currentParts({ workspaceId, installationId, taskId, kind: "activation", trialId: null });
-  if ("stale" in parts) throw new HttpError(409, "NOT_ACTIVATABLE", "This task can't be activated now", { reason: parts.stale });
+  if ("stale" in parts) {
+    if (parts.stale === "sample_not_verified" || parts.stale === "draft_changed_since_trial") throw new HttpError(409, "SAMPLE_NOT_VERIFIED", "Run a sample trial of the current draft that matches the expected result first", { reason: parts.stale });
+    throw new HttpError(409, "NOT_ACTIVATABLE", "This task can't be activated now", { reason: parts.stale });
+  }
   const item = await openItem(user, parts, null);
   if (item.status === "pending") await setActivation(db, item, "approval_required", null, user.id);
   return item;
@@ -237,9 +286,16 @@ async function activate(user: CurrentUser, item: ReviewRow) {
     await setActivation(db, item, "paused", "entitlement_missing", user.id);
     throw new HttpError(402, "ENTITLEMENT_REQUIRED", "Activation needs a development trial or an active subscription");
   }
-  const source = item.source as { flowId: string };
-  // Publishing pins the reviewed draft as the version runs use. The trigger is manual: nothing runs unattended.
-  await publishFlow(user, source.flowId);
+  const source = item.source as { flowId: string; graphHash: string };
+  // Publishing pins the reviewed draft as the version runs use (manual trigger only — checked in the binding).
+  const published = await publishFlow(user, source.flowId);
+  const [pv] = await db.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, published.versionId));
+  const g = pv!.graph as FlowGraph;
+  if (graphHash(g) !== source.graphHash || published.trigger !== "trigger.manual") {
+    // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published.
+    await unpublishFlow(source.flowId);
+    throw new HttpError(409, "REVIEW_INVALIDATED", "The draft changed while it was being activated — request a new review", { reason: "draft_changed_during_activation" });
+  }
   await setActivation(db, item, "active", null, user.id);
   await audit(db, { workspaceId: item.workspaceId, actor: userActor(user), action: "company_builder.activation_changed", targetType: "cb_task", targetId: item.taskId, data: { state: "active", source: ent.source } });
   const [done] = await db.update(schema.cbReviewItem).set({ status: "executed", executedAt: new Date() }).where(eq(schema.cbReviewItem.id, item.id)).returning();

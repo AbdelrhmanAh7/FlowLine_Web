@@ -22,7 +22,9 @@ import { approveBlueprint, generateDeterministic } from "@/server/company-builde
 import { cancelDevTrial, effectiveEntitlement, grantDevTrial, reconcileEntitlement } from "@/server/company-builder/entitlement";
 import { cancelInstallation, install, installedItems } from "@/server/company-builder/install";
 import { sessionOverview } from "@/server/company-builder/overview";
-import { decideReview, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
+import { decideReview, pauseTask, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
+import { reconcileActiveEntitlements } from "@/server/company-builder/entitlement";
+import { deleteSession } from "@/server/company-builder/sessions";
 import { answer, createSession } from "@/server/company-builder/sessions";
 import { refreshTrial, startTrial } from "@/server/company-builder/trials";
 import { resetFaults, setFault } from "@/server/faults";
@@ -183,7 +185,7 @@ describe("Milestone B — real drafts, idempotent installation, sample trials", 
     const b = await startTrial(owner, ws.id, installation.id, "customer-triage", { trialKey: "same-key-123" });
     expect(b).toMatchObject({ duplicate: true });
     expect(b.trial.id).toBe(a.trial.id);
-    expect(await db.select().from(schema.run).where(eq(schema.run.triggerRef, "cb-trial:same-key-123"))).toHaveLength(1);
+    expect(await db.select().from(schema.run).where(and(eq(schema.run.flowId, a.trial.flowId!), eq(schema.run.triggerRef, "cb-trial:same-key-123")))).toHaveLength(1);
   });
 
   it("a person's edit that breaks the business result is caught: ran OK, outcome NOT matched", async () => {
@@ -208,7 +210,7 @@ describe("Milestone B — real drafts, idempotent installation, sample trials", 
     await answer(ws.id, session.id, { questionId: "fin_currency", value: ["SAR", "USD"], revision: row!.revision, mode: "correction" });
     const { row: v2 } = await generateDeterministic(owner, ws.id, session.id, "en");
     expect(v2.version).toBe(2);
-    expect(v2.diff).toMatchObject({ changedTasks: ["invoice-organiser"], addedTasks: [], removedTasks: [] });
+    expect(v2.diff).toMatchObject({ changedTasks: ["invoice-organiser"], addedTasks: [], removedTasks: [], changedFields: { "invoice-organiser": ["params.currencies"] } });
     await approveBlueprint(owner, ws.id, v2.id);
     const r2 = await install(owner, ws.id, v2.id, { locale: "en" });
     const items2 = await installedItems(r2.installation.id);
@@ -414,5 +416,118 @@ describe("tenancy, feature gate and the HTTP surface", () => {
     expect((await call(cookie, "GET", ws.id, ["sessions", sid])).status).toBe(404);
     // Drafts are user data and stay after the interview is deleted.
     expect(await db.select().from(schema.flow).where(eq(schema.flow.workspaceId, ws.id))).toHaveLength(1);
+  });
+});
+
+describe("independent-review fixes (P1/P2 regressions)", () => {
+  async function flowOf(installationId: string, taskId: string) {
+    const [fi] = (await installedItems(installationId)).filter((i) => i.taskId === taskId && i.kind === "flow");
+    const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId));
+    return f!;
+  }
+
+  it("P1-4: a paused task can be activated again (a new review is opened)", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    await runTrial(owner, ws.id, installation.id, "customer-triage");
+    await grantDevTrial(owner, ws.id);
+    const first = await requestActivation(owner, ws.id, installation.id, "customer-triage");
+    await decideReview(owner, ws.id, first.id, "approve");
+    await pauseTask(owner, ws.id, installation.id, "customer-triage");
+    const second = await requestActivation(owner, ws.id, installation.id, "customer-triage");
+    expect(second.id).not.toBe(first.id);
+    expect(second.status).toBe("pending");
+    expect((await decideReview(owner, ws.id, second.id, "approve")).status).toBe("executed");
+    const [a] = await db.select().from(schema.cbActivation).where(and(eq(schema.cbActivation.installationId, installation.id), eq(schema.cbActivation.taskId, "customer-triage")));
+    expect(a!.state).toBe("active");
+  });
+
+  it("P1-3: activation requires the trial-verified graph and a manual trigger; nothing unattended is published", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    await runTrial(owner, ws.id, installation.id, "customer-triage");
+    await grantDevTrial(owner, ws.id);
+    // Draft changed after the trial (same structure validity, different behaviour) → a new trial is required.
+    const f = await flowOf(installation.id, "customer-triage");
+    const g = structuredClone(f.graph);
+    (g.nodes.find((n) => n.id === "has-answer")!.data.config as { expression: string }).expression = "true";
+    await saveFlow(owner, f.id, { graph: g, baseRevision: f.revision });
+    await expectHttpError(requestActivation(owner, ws.id, installation.id, "customer-triage"), 409, "SAMPLE_NOT_VERIFIED");
+    // Trigger switched to a schedule → never activatable here, even after a matching trial.
+    const f2 = await flowOf(installation.id, "customer-triage");
+    const g2 = structuredClone(f.graph);
+    const trig = g2.nodes.find((n) => n.id === "request")!;
+    trig.type = "trigger.schedule";
+    trig.data.config = { cron: "0 * * * *", timezone: "UTC", missedPolicy: "skip" } as never;
+    await saveFlow(owner, f2.id, { graph: g2, baseRevision: f2.revision });
+    const e = await expectHttpError(requestActivation(owner, ws.id, installation.id, "customer-triage"), 409, "NOT_ACTIVATABLE");
+    expect(e.details).toEqual({ reason: "not_manual_trigger" });
+    expect(await db.select().from(schema.schedule).where(eq(schema.schedule.flowId, f.id))).toHaveLength(0);
+  });
+
+  it("P1-5: the worker tick pauses active tasks when the development trial has expired", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    await runTrial(owner, ws.id, installation.id, "customer-triage");
+    await grantDevTrial(owner, ws.id);
+    const act = await requestActivation(owner, ws.id, installation.id, "customer-triage");
+    await decideReview(owner, ws.id, act.id, "approve");
+    await db.update(schema.cbEntitlement).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.cbEntitlement.workspaceId, ws.id));
+    expect(await reconcileActiveEntitlements()).toBeGreaterThanOrEqual(1);
+    const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, installation.id));
+    expect(a).toMatchObject({ state: "paused", reason: "entitlement_lapsed" });
+    expect((await flowOf(installation.id, "customer-triage")).publishedVersionId).toBeNull();
+  });
+
+  it("P1-6: a complaint that mentions price or refund goes to a person, never an auto-drafted reply", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const { trial } = await startTrial(owner, ws.id, installation.id, "customer-triage", { trialKey: "complaint-001", input: { request: { from: "x@example.com", subject: "Order", body: "The item arrived damaged, I paid full price and I want a refund." } } });
+    await claimAndProcess(trial.runId!);
+    const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId!));
+    expect((run!.output as { needs_person?: { reason: string } }).needs_person?.reason).toBe("complaint_needs_person");
+    await expectHttpError(requestSampleAction(owner, ws.id, trial.id), 409, "NOTHING_TO_REVIEW");
+  });
+
+  it("P2-1 (verified not reproducible): concurrent trials with the same key create ONE run", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const res = await Promise.allSettled([1, 2, 3].map(() => startTrial(owner, ws.id, installation.id, "customer-triage", { trialKey: "race-key-001" })));
+    const ok = res.filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof startTrial>>> => r.status === "fulfilled");
+    expect(new Set(ok.map((r) => r.value.trial.id)).size).toBe(1);
+    expect(await db.select().from(schema.run).where(and(eq(schema.run.flowId, ok[0]!.value.trial.flowId!), eq(schema.run.triggerRef, "cb-trial:race-key-001")))).toHaveLength(1);
+  });
+
+  it("P2-5/P2-6: a newer plan version doesn't hide installed tasks; deleting the interview withdraws active drafts", async () => {
+    const { owner, ws, session, installation } = await installedCompany();
+    await runTrial(owner, ws.id, installation.id, "customer-triage");
+    await grantDevTrial(owner, ws.id);
+    const act = await requestActivation(owner, ws.id, installation.id, "customer-triage");
+    await decideReview(owner, ws.id, act.id, "approve");
+    const [row] = await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, session.id));
+    await answer(ws.id, session.id, { questionId: "fin_currency", value: ["SAR", "EGP"], revision: row!.revision, mode: "correction" });
+    await generateDeterministic(owner, ws.id, session.id, "en");
+    const view = await sessionOverview(ws.id, session.id, null);
+    expect(view.blueprint!.version).toBe(2);
+    expect(view.installation!.id).toBe(installation.id);
+    expect(view.tasks.find((t) => t.task.id === "customer-triage")!.status.state).toBe("active");
+    const f = await flowOf(installation.id, "customer-triage");
+    expect(f.publishedVersionId).not.toBeNull();
+    expect(await deleteSession(ws.id, session.id)).toEqual({ unpublished: 1 });
+    const [after] = await db.select().from(schema.flow).where(eq(schema.flow.id, f.id));
+    expect(after!.publishedVersionId).toBeNull();
+    expect(after!.deletedAt).toBeNull(); // the draft itself stays (user data)
+  });
+
+  it("P2-8: a draft that gained a step able to reach accounts is refused as a sample trial", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const f = await flowOf(installation.id, "customer-triage");
+    const g = structuredClone(f.graph);
+    g.nodes.push({ id: "call", type: "http.request", position: { x: 1500, y: 120 }, data: { label: "Call", config: { method: "GET", url: '"https://example.com"', headers: "", body: "", timeoutMs: 5000, sideEffect: "none" } } } as never);
+    g.edges.push({ id: "ex", source: "reply", target: "call", sourceHandle: "out" });
+    await saveFlow(owner, f.id, { graph: g, baseRevision: f.revision });
+    await expectHttpError(startTrial(owner, ws.id, installation.id, "customer-triage", { trialKey: "unsafe-0001" }), 409, "TRIAL_NOT_SAMPLE_SAFE");
+  });
+
+  it("P3: malformed ids are 404, not 500", async () => {
+    const { owner, ws } = await installedCompany();
+    await expectHttpError(decideReview(owner, ws.id, "not-a-uuid", "approve"), 404);
+    await expectHttpError(refreshTrial(ws.id, "nope"), 404);
+    await expectHttpError(cancelInstallation(ws.id, "nope"), 404);
   });
 });

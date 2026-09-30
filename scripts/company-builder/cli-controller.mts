@@ -11,7 +11,8 @@ import { prototypeConfigProblem } from "@/server/company-builder/gate";
 import { claimJob, recoverStaleJobs } from "@/server/company-builder/cli-jobs";
 import { processJob } from "@/server/company-builder/cli-controller";
 
-const problem = prototypeConfigProblem();
+// The controller serves no HTTP (it only reads jobs from the database), so the web server's bind marker doesn't apply.
+const problem = prototypeConfigProblem({ ...process.env, FLOWLINE_CB_BOUND: "loopback" });
 if (problem) {
   console.error(`[cb-controller] refusing to start: ${problem}`);
   process.exit(2);

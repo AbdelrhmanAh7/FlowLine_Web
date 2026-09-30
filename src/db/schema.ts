@@ -1674,7 +1674,8 @@ export const cbReviewItem = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
     expiresAt: ts("expires_at").notNull(),
   },
-  (t) => [index("cb_review_ws_idx").on(t.workspaceId, t.status, t.createdAt), uniqueIndex("cb_review_open").on(t.installationId, t.taskId, t.kind, t.bindingHash)],
+  // One OPEN (pending) item per binding; decided/expired items don't block a new request (e.g. re-activation after pause).
+  (t) => [index("cb_review_ws_idx").on(t.workspaceId, t.status, t.createdAt), uniqueIndex("cb_review_pending").on(t.installationId, t.taskId, t.kind, t.bindingHash).where(sql`status = 'pending'`)],
 );
 
 /** The authorised TEST action target: a local outbox (mocked integration). One row per executed review (dedupe). */

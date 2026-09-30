@@ -7,15 +7,16 @@ import { lit, type PackCheck, type PackParams, type TaskPack } from "./types";
  * without approved information goes to a person.
  */
 
-export const TOPICS = ["pricing", "delivery", "refund", "hours", "complaint"] as const;
+/** Checked in this order: a complaint wins over any other topic it mentions (it always goes to a person). */
+export const TOPICS = ["complaint", "refund", "pricing", "delivery", "hours"] as const;
 export type Topic = (typeof TOPICS)[number] | "other";
 
 export const TOPIC_KEYWORDS: Record<(typeof TOPICS)[number], string[]> = {
   pricing: ["price", "cost", "how much", "quote", "سعر", "أسعار", "اسعار", "تكلفة", "بكم", "كم سعر"],
-  delivery: ["deliver", "shipping", "ship", "توصيل", "شحن", "التوصيل"],
+  delivery: ["deliver", "shipping", "shipped", "توصيل", "شحن", "التوصيل"],
   refund: ["refund", "return", "money back", "استرجاع", "استرداد", "إرجاع", "ارجاع"],
-  hours: ["hours", "open", "closing", "مواعيد", "دوام", "ساعات العمل", "تفتحون"],
-  complaint: ["complain", "broken", "damaged", "angry", "terrible", "شكوى", "تالف", "سيء", "سيئة", "زعلان"],
+  hours: ["hours", "opening", "closing time", "مواعيد", "دوام", "ساعات العمل", "تفتحون"],
+  complaint: ["complain", "broken", "damaged", "angry", "terrible", "unacceptable", "شكوى", "تالف", "تالفًا", "سيء", "سيئة", "زعلان"],
 };
 
 /** Phrases that look like instructions aimed at an automated system; flagged, never followed. */
@@ -121,7 +122,8 @@ export const customerTriagePack: TaskPack = {
 
   sample(params) {
     const info = approvedByTopic(String(params.approvedInfo ?? ""));
-    const topic = (TOPICS.find((t) => info[t]?.length) ?? "pricing") as (typeof TOPICS)[number];
+    // The labelled sample asks about a topic the approved information covers (never a complaint: that goes to a person).
+    const topic = (TOPICS.find((t) => t !== "complaint" && info[t]?.length) ?? "pricing") as (typeof TOPICS)[number];
     const ar = params.language === "ar";
     const bodies: Record<string, [string, string]> = {
       pricing: ["Hi, how much does your service cost?", "مرحبًا، كم سعر الخدمة؟"],
@@ -175,6 +177,11 @@ export const customerTriagePack: TaskPack = {
             { id: "no_refund_promise", passed: !r?.body?.toLowerCase().includes("100% refund") },
           ];
         },
+      },
+      {
+        id: "cust-complaint-with-price",
+        input: { request: { from: "e@example.com", channel: "email", subject: "Order", body: "The item arrived damaged, I paid full price and I want a refund." } },
+        expect: (o) => [{ id: "complaint_to_person", passed: (o.needs_person as { reason?: string })?.reason === "complaint_needs_person" && !o.reply_draft }],
       },
       {
         id: "cust-empty",

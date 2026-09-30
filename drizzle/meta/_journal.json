@@ -148,6 +148,13 @@
       "when": 1790804164857,
       "tag": "0020_company_builder",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790806467310,
+      "tag": "0021_company_builder_review_fixes",
+      "breakpoints": true
     }
   ]
 }

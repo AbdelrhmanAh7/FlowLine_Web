@@ -59,10 +59,10 @@ beforeAll(async () => {
   for (let i = 0; i < path.length; i++) await answer(ws.id, s.id, { questionId: path[i]![0], value: path[i]![1], revision: i + 1 });
   const { row } = await generateDeterministic(founder, ws.id, s.id, "en");
   await approveBlueprint(founder, ws.id, row.id);
-  Object.assign(process.env, { FLOWLINE_CB_PROTOTYPE: "owner_cli", FLOWLINE_CB_FOUNDER_USER_ID: founder.id, FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID: ws.id });
+  Object.assign(process.env, { FLOWLINE_CB_PROTOTYPE: "owner_cli", FLOWLINE_CB_FOUNDER_USER_ID: founder.id, FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID: ws.id, FLOWLINE_CB_BOUND: "loopback", FLOWLINE_CB_CODEX_ISOLATION_VERIFIED: "1" });
 });
 afterAll(async () => {
-  for (const k of ["FLOWLINE_CB_PROTOTYPE", "FLOWLINE_CB_FOUNDER_USER_ID", "FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID"]) delete process.env[k];
+  for (const k of ["FLOWLINE_CB_PROTOTYPE", "FLOWLINE_CB_FOUNDER_USER_ID", "FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID", "FLOWLINE_CB_BOUND", "FLOWLINE_CB_CODEX_ISOLATION_VERIFIED"]) delete process.env[k];
   rmSync(binDir, { recursive: true, force: true });
   rmSync(jobRoot, { recursive: true, force: true });
   await closeDb();
@@ -202,8 +202,22 @@ describe("controller + adapter with fake CLIs", () => {
     expect(job.status).toBe("review_required");
     const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
     const triage = (bp!.body as CompanyBlueprint).tasks.find((t) => t.id === "customer-triage")!;
-    expect(triage.params.approvedInfo).toContain("rm -rf");
+    expect(triage.params.modelNote).toContain("rm -rf"); // shown labelled as unverified model text, never executed
+    expect(triage.params.approvedInfo).toBe("Our monthly plan price is 250 SAR."); // the owner's text is untouched
     expect(triage.params.currencies).toBeUndefined(); // a param the task doesn't take is dropped
+  });
+
+  it("a model can't rewrite the owner's approved information, and secret-looking output is rejected", async () => {
+    expect(await runWith(fakeBin("rewrite_approved"))).toMatchObject({ status: "failed", error: { code: "OUTPUT_INVALID" } });
+    const leak = await runWith(fakeBin("leak"));
+    expect(leak).toMatchObject({ status: "failed", error: { code: "SECRET_IN_OUTPUT" } });
+    expect(JSON.stringify(leak)).not.toContain("sk-ant");
+  });
+
+  it("Codex stays fail-closed until the operator has verified its isolation", async () => {
+    delete process.env.FLOWLINE_CB_CODEX_ISOLATION_VERIFIED;
+    expect(await runWith(fakeBin("success", "codex"), "blueprint", "codex")).toMatchObject({ status: "failed", error: { code: "ISOLATION_UNVERIFIED" } });
+    process.env.FLOWLINE_CB_CODEX_ISOLATION_VERIFIED = "1";
   });
 
   it("cancel during generation kills the process group; a dead controller leaves the job INTERRUPTED, not re-run", async () => {
@@ -244,7 +258,7 @@ describe("operator export / import (laptop path)", () => {
     const exported = await exportJob(wsId, job.id);
     expect(exported.format).toBe("flowline-cb-envelope");
     await expectHttpError(importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: "someone-else", output: {} }), 422, "MANIFEST_INVALID");
-    const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-answers", include: false, params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
+    const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-answers", include: false, note: "", params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
     expect(bp).toMatchObject({ generator: "cli_import", status: "review_required" });
     const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
     expect(after!.reported).toEqual({ cliVersion: "2.1.286", source: "imported_claim" }); // unknown keys dropped

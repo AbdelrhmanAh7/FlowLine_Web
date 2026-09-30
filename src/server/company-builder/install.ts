@@ -183,6 +183,7 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
 
 /** Cancels an installation that is still running: already-created drafts stay (listed), nothing else is created. */
 export async function cancelInstallation(workspaceId: string, installationId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(installationId)) throw notFound("Installation not found");
   const [row] = await db
     .update(schema.cbInstallation)
     .set({ status: "cancelled", updatedAt: new Date(), finishedAt: new Date() })

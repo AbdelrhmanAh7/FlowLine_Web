@@ -15,6 +15,8 @@ export interface BlueprintDiff {
   addedTasks: string[];
   removedTasks: string[];
   changedTasks: string[];
+  /** Field-level detail for changed tasks, e.g. { "invoice-organiser": ["params.currencies"] } (model-proposed changes are visible). */
+  changedFields: Record<string, string[]>;
   addedBlockers: string[];
   removedBlockers: string[];
 }
@@ -29,6 +31,23 @@ export function diffBlueprints(prev: CompanyBlueprint | null, next: CompanyBluep
     addedTasks: [...nt.keys()].filter((k) => !pt.has(k)),
     removedTasks: [...pt.keys()].filter((k) => !nt.has(k)),
     changedTasks: [...nt.keys()].filter((k) => pt.has(k) && pt.get(k) !== nt.get(k)),
+    changedFields: Object.fromEntries(
+      next.tasks
+        .filter((t) => pt.has(t.id) && pt.get(t.id) !== nt.get(t.id))
+        .map((t) => {
+          const before = prev!.tasks.find((x) => x.id === t.id)! as unknown as Record<string, unknown>;
+          const after = t as unknown as Record<string, unknown>;
+          const fields: string[] = [];
+          for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (k === "params") {
+              const bp = (before.params ?? {}) as Record<string, unknown>;
+              const ap = (after.params ?? {}) as Record<string, unknown>;
+              for (const pk of new Set([...Object.keys(bp), ...Object.keys(ap)])) if (canonicalJson(bp[pk]) !== canonicalJson(ap[pk])) fields.push(`params.${pk}`);
+            } else if (canonicalJson(before[k]) !== canonicalJson(after[k])) fields.push(k);
+          }
+          return [t.id, fields];
+        }),
+    ),
     addedBlockers: [...nb].filter((k) => !pb.has(k)),
     removedBlockers: [...pb].filter((k) => !nb.has(k)),
   };

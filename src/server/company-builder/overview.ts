@@ -17,7 +17,20 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
   await reconcileEntitlement(workspaceId);
   const bp = await latestBlueprint(sessionId);
   const versions = await listBlueprints(sessionId);
-  const [inst] = bp ? await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.blueprintId, bp.id)).orderBy(desc(schema.cbInstallation.createdAt)).limit(1) : [];
+  // The installation shown: the latest plan's, else the most recent INSTALLED one of this interview (a newer plan
+  // version — e.g. a CLI proposal awaiting review — never hides tasks that are installed or active).
+  const [latestInst] = bp ? await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.blueprintId, bp.id)).orderBy(desc(schema.cbInstallation.createdAt)).limit(1) : [];
+  const [liveInst] = latestInst
+    ? []
+    : await db
+        .select({ inst: schema.cbInstallation })
+        .from(schema.cbInstallation)
+        .innerJoin(schema.cbBlueprint, eq(schema.cbBlueprint.id, schema.cbInstallation.blueprintId))
+        .where(and(eq(schema.cbBlueprint.sessionId, sessionId), eq(schema.cbInstallation.status, "installed")))
+        .orderBy(desc(schema.cbInstallation.createdAt))
+        .limit(1);
+  const inst = latestInst ?? liveInst?.inst;
+  const [instBp] = inst && inst.blueprintId !== bp?.id ? await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, inst.blueprintId)) : [];
   const items = inst ? await installedItems(inst.id) : [];
   const flowIds = items.filter((i) => i.kind === "flow").map((i) => i.refId);
   const agentIds = items.filter((i) => i.kind === "agent").map((i) => i.refId);
@@ -30,12 +43,13 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
   const [devTrial] = await db.select().from(schema.cbEntitlement).where(eq(schema.cbEntitlement.workspaceId, workspaceId));
   const reviews = (await listReviewItems(workspaceId)).filter((r) => !inst || r.installationId === inst.id);
   const body = bp ? (bp.body as CompanyBlueprint) : null;
+  const taskBody = instBp ? (instBp.body as CompanyBlueprint) : body;
   // The AI connection status is the workspace's CURRENT default route (the plan only recorded it as needed).
   const [ws] = await db.select({ route: schema.workspace.aiDefaultRoute }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
   const aiReady = isRouteRef(ws?.route);
 
   const tasks = await Promise.all(
-    (body?.tasks ?? []).map(async (planned) => {
+    (taskBody?.tasks ?? []).map(async (planned) => {
       const task = { ...planned, connections: planned.connections.map((c) => (c.provider === "ai" ? { ...c, status: aiReady ? ("connected" as const) : ("missing" as const) } : c)) };
       const own = items.filter((i) => i.taskId === task.id);
       const flowItem = own.find((i) => i.kind === "flow");
@@ -65,7 +79,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
     session: sessionView(row, cursor),
     blueprint: bp ? { id: bp.id, version: bp.version, status: bp.status, generator: bp.generator, diff: bp.diff, body, createdAt: bp.createdAt } : null,
     versions,
-    installation: inst ? { id: inst.id, status: inst.status, error: inst.error, blueprintId: inst.blueprintId } : null,
+    installation: inst ? { id: inst.id, status: inst.status, error: inst.error, blueprintId: inst.blueprintId, blueprintVersion: instBp?.version ?? bp?.version ?? null } : null,
     tasks,
     reviews,
     outbox: await sampleOutbox(workspaceId),

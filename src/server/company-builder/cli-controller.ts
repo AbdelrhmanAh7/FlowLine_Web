@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { CliError, cliConfig, parseJsonOutput, preflight, runCli, type CliConfig, type CliErrorCode } from "@/company-builder/cli/adapter";
 import { MAX_REPAIRS, type CliKind, type Envelope } from "@/company-builder/cli/envelope";
@@ -17,7 +17,7 @@ async function finish(jobId: string, code: CliErrorCode, reported?: Record<strin
   await db
     .update(schema.cbCliJob)
     .set({ status: code === "CANCELLED" ? "cancelled" : (STATUS_FOR[code] ?? "failed"), error: { code }, finishedAt: new Date(), lockedBy: null, ...(reported ? { reported } : {}) })
-    .where(eq(schema.cbCliJob.id, jobId));
+    .where(and(eq(schema.cbCliJob.id, jobId), ne(schema.cbCliJob.status, "cancelled")));
 }
 
 export async function processJob(job: typeof schema.cbCliJob.$inferSelect, founder: CurrentUser, cfgOverride?: CliConfig) {
