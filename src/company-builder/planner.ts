@@ -1,4 +1,5 @@
 import { inferFromText, readiness, UNSUPPORTED_TOOL_KEYWORDS } from "./interview";
+import { activeDepartments } from "./questions";
 import { CB_SCHEMA_VERSION, type Blocker, type CompanyBlueprint, type Department, type Facts, type InterviewState, type TaskPlan } from "./model";
 import { customerTriagePack } from "./packs/customer-triage";
 import { contentBriefPack } from "./packs/content-brief";
@@ -219,7 +220,8 @@ export function composeBlueprint(state: InterviewState, ctx: PlanContext): Compa
   const f = state.facts;
   const ready = readiness(state);
   const blockers: Blocker[] = [];
-  const departments = ready.departments;
+  // The plan is built for CONFIRMED departments only; an inferred outcome stays an assumption until answered.
+  const departments = activeDepartments(Object.fromEntries(Object.entries(f).filter(([, v]) => v.status === "confirmed")));
   const tasks: TaskPlan[] = [];
   for (const d of departments) {
     if (d === "customer") tasks.push(...customerTasks(f, ctx, blockers));

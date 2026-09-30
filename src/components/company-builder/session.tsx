@@ -123,7 +123,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
         <div className="flex min-w-0 flex-col gap-6">
           {s.question && canEdit ? (
             <InterviewCard
-              key={`${s.question.id}-${s.revision}`}
+              key={`${s.question.id}-${s.question.current?.version ?? 0}`}
               question={s.question}
               answered={s.answered}
               backTo={s.backTo}
