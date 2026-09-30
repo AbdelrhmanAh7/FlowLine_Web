@@ -5,3 +5,4 @@ check:evidence exit=0 1s
 test exit=0 9s  Test Files 43 passed (43)  Tests 534 passed (534) 
 test:contract exit=1 25s  Test Files 1 failed | 21 passed (22)  Tests 1 failed | 466 passed (467) 
 test:integration exit=0 167s  Test Files 50 passed (50)  Tests 512 passed (512) 
+test:contract (rerun after deterministic tamper fix, f84e44b) exit=0  Tests 467 passed (467)

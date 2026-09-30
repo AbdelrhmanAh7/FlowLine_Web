@@ -27,18 +27,18 @@ inference.
 |---|---|
 | Enabled only in private dev config | `FLOWLINE_CB_PROTOTYPE=owner_cli`, and `FLOWLINE_ENV` ∈ {development, test}, and no `FLOWLINE_BETA_MODE` (`gate.ts prototypeConfigProblem`) |
 | Server-verified founder + designated workspace | session user id = `FLOWLINE_CB_FOUNDER_USER_ID` **and** workspace id = `FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID`; everyone else gets the same 404 (checked before any role check) |
-| Private/loopback only | request host must be loopback with only loopback relay addresses, or an explicitly listed `FLOWLINE_CB_PRIVATE_HOSTS` + `FLOWLINE_CB_PRIVATE_CLIENTS` pair. **Also bind the server to loopback** (`next start -H 127.0.0.1`): the Host header alone is client-supplied |
+| Private/loopback only | the network boundary is the **bind address**: the prototype is enabled only on a server started by `scripts/company-builder/start-private.mjs` (binds `-H 127.0.0.1`, or one approved RFC 1918 address with `--private-host`), which sets `FLOWLINE_CB_BOUND`. The request host/relay check (loopback, or `FLOWLINE_CB_PRIVATE_HOSTS` + `FLOWLINE_CB_PRIVATE_CLIENTS`) is defence in depth only, because those headers are client-supplied |
 | Explicit initiation | jobs are created only by the founder's click (`waiting_operator`); nothing in billing, schedules, webhooks or customer input creates one; the shared worker never runs them |
 | Typed envelope, opaque id | `envelope.ts` zod union; job id is a UUID; UI sends only `{cli, kind, requestKey, text?}` |
 | Fixed executables/args, no shell | `FLOWLINE_CB_CLAUDE_BIN` / `FLOWLINE_CB_CODEX_BIN` absolute paths from operator env; `buildArgs()` fixed arrays; `spawn(…, {shell:false})`; prompt via stdin |
 | Separate job dirs, fresh context | `mkdtemp` under `FLOWLINE_CB_JOB_ROOT` (0700), realpath containment, removed after each job; `--no-session-persistence`; Codex `--cd <job dir>` |
 | Minimum sanitised data | brief = situation, departments, offering, tools, currencies, approved info — emails/long numbers replaced; no credentials/files |
-| No tools / plugins / hooks / MCP / project instructions | Claude: `--tools "" --restricted --strict-mcp-config --mcp-config '{"mcpServers":{}}' --disable-slash-commands`; Codex: `--sandbox read-only`; preflight fails closed (`ISOLATION_UNVERIFIED`) if `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` or any `CLAUDE.md`/`AGENTS.md` above the job root exists |
+| No tools / plugins / hooks / MCP / project instructions | Claude: `--tools "" --restricted` (ignores user/project/local settings, so their hooks, plugins and MCP servers) `--strict-mcp-config --mcp-config '{"mcpServers":{}}' --disable-slash-commands`; preflight refuses managed settings that contain hooks/plugins/MCP/apiKeyHelper. Codex: `--sandbox read-only` still lets the model READ files and load MCP servers, so Codex is **fail-closed** until the operator has checked `~/.codex/config.toml` (no `[mcp_servers…]`) and set `FLOWLINE_CB_CODEX_ISOLATION_VERIFIED=1`. Both: preflight fails closed on inherited `CLAUDE.md`/`AGENTS.md` (personal or above the job root); output that looks like a secret (API keys, JWTs, private keys, `access_token`) is rejected as `SECRET_IN_OUTPUT` and never stored |
 | No root/Docker/shell/external writes | no tools at all for Claude; read-only sandbox for Codex; child env is minimal (no `DATABASE_URL`, auth secrets, Flowline keys, API keys) |
 | Bounds | 64 KB output, timeout (default 180 s, max 600 s), 1 generation + max 1 schema repair, one job at a time; process group killed on timeout/cancel |
 | Durable state, cancel, cleanup | `cb_cli_job` statuses; cancel flag polled every 2 s → SIGKILL to the group; stale `generating` jobs → `failed/INTERRUPTED` (never silently re-run) |
 | Auth / quota / permission apart | `blocked_auth`, `blocked_quota`, `blocked_permission`; no automatic bypass, account switch or paid fallback (`--fallback-model` never passed) |
-| Persist only validated results | proposals can only include/exclude existing task ids and tune `approvedInfo`/`currencies`; result becomes a new blueprint version requiring review; raw transcripts, session ids and reasoning are not stored; usage = only fields the CLI reported |
+| Persist only validated results | proposals can only include/exclude existing task ids, narrow the owner-confirmed currencies and add a short note shown as "Model note (not verified)"; the owner's approved information can't be changed by a model; the result becomes a new plan version (field-level diff) requiring review; raw transcripts, session ids and reasoning are not stored; usage = only fields the CLI reported |
 | No database writes by the CLI | the CLI returns JSON to the controller; `storeBlueprint()` validates and writes |
 
 Truthful states shown: waiting for operator, generating, validating, review required, completed, cancelled, failed,
@@ -55,11 +55,13 @@ blocked (sign-in / usage limit / permission).
    FLOWLINE_CB_CLAUDE_BIN=/absolute/path/to/claude      # `command -v claude`
    FLOWLINE_CB_CODEX_BIN=/absolute/path/to/codex        # `command -v codex`
    ```
-   `pnpm db:migrate && pnpm build && npx next start -H 127.0.0.1 -p 3000` (plus `pnpm worker` in a second terminal).
+   `pnpm db:migrate && pnpm build && node scripts/company-builder/start-private.mjs` (binds 127.0.0.1:3000 and starts the
+   worker; `--dev` for `next dev`). A server started any other way keeps the prototype closed (`PROTOTYPE_NOT_PRIVATELY_BOUND`).
 2. Sign in to each CLI with its **official** login yourself (`claude` → `/login`; `codex login`). Flowline never asks for
    or reads these credentials. Check: `claude auth status`, `codex login status`.
 3. Make sure no personal instruction files would be inherited (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), or move
-   them aside for the session — preflight refuses to run otherwise.
+   them aside for the session — preflight refuses to run otherwise. For Codex, check `~/.codex/config.toml` has no MCP
+   servers and whatever tool settings you rely on, then add `FLOWLINE_CB_CODEX_ISOLATION_VERIFIED=1` to `.env`.
 4. Start the controller: `node scripts/with-env.mjs .env npx tsx scripts/company-builder/cli-controller.mts`.
 5. Open `http://localhost:3000/w/<slug>/company/<session>` → "Refine the plan with Claude/Codex" → the job goes
    waiting → generating → validating → review required; review the new plan version before approving it.
