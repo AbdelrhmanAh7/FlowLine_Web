@@ -1492,3 +1492,277 @@ export const workspaceOauthApp = pgTable(
     uniqueIndex("workspace_oauth_app_active").on(t.workspaceId, t.family).where(sql`deleted_at is null`),
   ],
 );
+
+/* ───────────── Company Builder (docs/company-builder/ARCHITECTURE.md) ───────────── */
+
+const ts = (name: string) => timestamp(name, { withTimezone: true });
+
+/** One adaptive interview. `state` is the versioned InterviewState (facts + provenance + answer history). */
+export const cbSession = pgTable(
+  "cb_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    /** active | completed | archived */
+    status: text("status").notNull().default("active"),
+    state: jsonb("state").notNull(),
+    /** Optimistic concurrency for answers (two tabs never overwrite each other silently). */
+    revision: integer("revision").notNull().default(1),
+    profileVersion: integer("profile_version").notNull().default(0),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [index("cb_session_ws_idx").on(t.workspaceId, t.updatedAt)],
+);
+
+/** Immutable BusinessProfile snapshot (the confirmed/inferred facts a blueprint was built from). */
+export const cbProfile = pgTable(
+  "cb_profile",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cbSession.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    facts: jsonb("facts").notNull(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("cb_profile_version").on(t.sessionId, t.version)],
+);
+
+/** Versioned CompanyBlueprint. Only validated bodies are stored; `diff` compares with the previous version. */
+export const cbBlueprint = pgTable(
+  "cb_blueprint",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cbSession.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    profileVersion: integer("profile_version").notNull(),
+    /** deterministic | cli_claude | cli_codex | cli_import */
+    generator: text("generator").notNull(),
+    /** review_required | approved | superseded */
+    status: text("status").notNull().default("review_required"),
+    body: jsonb("body").notNull(),
+    diff: jsonb("diff"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    approvedBy: text("approved_by").references(() => user.id, { onDelete: "set null" }),
+    approvedAt: ts("approved_at"),
+  },
+  (t) => [uniqueIndex("cb_blueprint_version").on(t.sessionId, t.version)],
+);
+
+/** InstallationJob: creating drafts for ONE blueprint version. `install_key` makes it idempotent. */
+export const cbInstallation = pgTable(
+  "cb_installation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    blueprintId: uuid("blueprint_id")
+      .notNull()
+      .references(() => cbBlueprint.id, { onDelete: "cascade" }),
+    installKey: text("install_key").notNull(),
+    /** installing | installed | failed | cancelled */
+    status: text("status").notNull().default("installing"),
+    error: jsonb("error").$type<{ code: string; taskId?: string } | null>(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+    finishedAt: ts("finished_at"),
+  },
+  (t) => [uniqueIndex("cb_installation_key").on(t.installKey), index("cb_installation_ws_idx").on(t.workspaceId, t.createdAt)],
+);
+
+/** Partial-step record of an installation: one row per created (or reused) flow/agent/knowledge item. */
+export const cbInstalledItem = pgTable(
+  "cb_installed_item",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => cbInstallation.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").notNull(),
+    taskId: text("task_id").notNull(),
+    /** flow | agent | knowledge */
+    kind: text("kind").notNull(),
+    refId: uuid("ref_id").notNull(),
+    packId: text("pack_id"),
+    packVersion: integer("pack_version"),
+    /** sha256 of the compiled definition: unchanged tasks are reused across blueprint versions, never duplicated. */
+    definitionHash: text("definition_hash").notNull(),
+    /** Revision of the flow when it was created — a later revision means a person edited it (never overwritten). */
+    baseRevision: integer("base_revision"),
+    /** created | reused */
+    origin: text("origin").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("cb_installed_item_unique").on(t.installationId, t.taskId, t.kind), index("cb_installed_item_ref_idx").on(t.workspaceId, t.refId)],
+);
+
+/** A sample trial of one installed task: the engine run it started and the verdict computed from its output. */
+export const cbTrial = pgTable(
+  "cb_trial",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => cbInstallation.id, { onDelete: "cascade" }),
+    taskId: text("task_id").notNull(),
+    flowId: uuid("flow_id"),
+    runId: uuid("run_id"),
+    /** Client click id — a double click / refresh returns the same trial. */
+    trialKey: text("trial_key").notNull(),
+    /** running | completed */
+    status: text("status").notNull().default("running"),
+    provenance: text("provenance").notNull(),
+    verdict: jsonb("verdict"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    completedAt: ts("completed_at"),
+  },
+  (t) => [uniqueIndex("cb_trial_key").on(t.installationId, t.taskId, t.trialKey), index("cb_trial_task_idx").on(t.installationId, t.taskId, t.createdAt)],
+);
+
+/** Review inbox item: a proposed action/content bound (hash) to its source, version, recipient and reviewer. */
+export const cbReviewItem = pgTable(
+  "cb_review_item",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => cbInstallation.id, { onDelete: "cascade" }),
+    taskId: text("task_id").notNull(),
+    /** send_sample (authorised test action) | activation */
+    kind: text("kind").notNull(),
+    trialId: uuid("trial_id"),
+    blueprintVersion: integer("blueprint_version").notNull(),
+    taskVersion: text("task_version").notNull(),
+    source: jsonb("source").notNull(),
+    proposed: jsonb("proposed").notNull(),
+    recipient: text("recipient"),
+    connection: jsonb("connection"),
+    reviewerRole: text("reviewer_role").notNull(),
+    bindingHash: text("binding_hash").notNull(),
+    /** pending | approved | rejected | invalidated | executed | uncertain */
+    status: text("status").notNull().default("pending"),
+    requestedBy: text("requested_by").references(() => user.id, { onDelete: "set null" }),
+    decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
+    decidedAt: ts("decided_at"),
+    note: text("note"),
+    executedAt: ts("executed_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    expiresAt: ts("expires_at").notNull(),
+  },
+  (t) => [index("cb_review_ws_idx").on(t.workspaceId, t.status, t.createdAt), uniqueIndex("cb_review_open").on(t.installationId, t.taskId, t.kind, t.bindingHash)],
+);
+
+/** The authorised TEST action target: a local outbox (mocked integration). One row per executed review (dedupe). */
+export const cbSampleOutbox = pgTable("cb_sample_outbox", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspace.id, { onDelete: "cascade" }),
+  reviewItemId: uuid("review_item_id")
+    .notNull()
+    .unique()
+    .references(() => cbReviewItem.id, { onDelete: "cascade" }),
+  payload: jsonb("payload").notNull(),
+  provenance: text("provenance").notNull().default("mocked_integration"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+/** ActivationDecision per installed task (task state is separate from billing status and installation status). */
+export const cbActivation = pgTable(
+  "cb_activation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => cbInstallation.id, { onDelete: "cascade" }),
+    taskId: text("task_id").notNull(),
+    /** approval_required | active | paused | failed */
+    state: text("state").notNull(),
+    reason: text("reason"),
+    bindingHash: text("binding_hash"),
+    reviewItemId: uuid("review_item_id"),
+    decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
+    updatedAt: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("cb_activation_task").on(t.installationId, t.taskId)],
+);
+
+/** Explicit DEVELOPMENT trial entitlement (dev/test builds only). Never a spoofed paid subscription. */
+export const cbEntitlement = pgTable("cb_entitlement", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspace.id, { onDelete: "cascade" }),
+  source: text("source").notNull().default("dev_trial"),
+  /** active | cancelled | expired */
+  status: text("status").notNull(),
+  grantedBy: text("granted_by").references(() => user.id, { onDelete: "set null" }),
+  grantedAt: ts("granted_at").notNull().defaultNow(),
+  expiresAt: ts("expires_at").notNull(),
+  revision: integer("revision").notNull().default(1),
+});
+
+/**
+ * Owner-only CLI prototype job (OWNER_CLI_PROTOTYPE). Typed envelope in, validated result out; processed only by the
+ * operator-started controller (scripts/company-builder/cli-controller.mts), never by the shared worker.
+ */
+export const cbCliJob = pgTable(
+  "cb_cli_job",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => cbSession.id, { onDelete: "cascade" }),
+    /** blueprint | text_trial */
+    kind: text("kind").notNull(),
+    /** claude | codex */
+    cli: text("cli").notNull(),
+    /** waiting_operator | generating | validating | review_required | cancelled | failed | blocked_auth | blocked_quota | blocked_permission */
+    status: text("status").notNull().default("waiting_operator"),
+    requestKey: text("request_key").notNull(),
+    envelope: jsonb("envelope").notNull(),
+    result: jsonb("result"),
+    resultBlueprintId: uuid("result_blueprint_id"),
+    error: jsonb("error").$type<{ code: string } | null>(),
+    attempts: integer("attempts").notNull().default(0),
+    repairAttempts: integer("repair_attempts").notNull().default(0),
+    /** Only what the CLI itself reported (cost/usage/model); never estimated. */
+    reported: jsonb("reported"),
+    lockedBy: text("locked_by"),
+    heartbeatAt: ts("heartbeat_at"),
+    cancelRequestedAt: ts("cancel_requested_at"),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull().defaultNow(),
+    startedAt: ts("started_at"),
+    finishedAt: ts("finished_at"),
+  },
+  (t) => [uniqueIndex("cb_cli_job_request").on(t.workspaceId, t.requestKey), index("cb_cli_job_queue_idx").on(t.status, t.createdAt)],
+);

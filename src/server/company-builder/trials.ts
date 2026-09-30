@@ -1,0 +1,102 @@
+import { and, desc, eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import type { CompanyBlueprint, Provenance, TrialVerdict } from "@/company-builder/model";
+import { getPack } from "@/company-builder/packs";
+import type { FlowGraph } from "@/engine/types";
+import { validateGraph } from "@/engine/validate";
+import type { CurrentUser } from "@/server/access";
+import { HttpError, notFound } from "@/server/http";
+import { enqueueRunEx } from "@/server/runs";
+import { requireInstallation } from "./install";
+
+/**
+ * Sample trials: the installed draft flow runs through the EXISTING engine/worker (manual trigger, sample input), and
+ * the verdict is computed from the run's persisted output by the pack's business checks. Three results are kept
+ * apart: structurally valid (the graph validates), ran without errors (the run succeeded) and matched the requested
+ * outcome (the business checks pass). Exit status alone never counts as success.
+ */
+
+export const TRIAL_KEY = /^[A-Za-z0-9_-]{8,64}$/;
+
+async function taskContext(workspaceId: string, installationId: string, taskId: string) {
+  const inst = await requireInstallation(workspaceId, installationId);
+  const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, inst.blueprintId));
+  const body = bp!.body as CompanyBlueprint;
+  const task = body.tasks.find((t) => t.id === taskId);
+  if (!task) throw notFound("Task not found");
+  const [item] = await db
+    .select()
+    .from(schema.cbInstalledItem)
+    .where(and(eq(schema.cbInstalledItem.installationId, inst.id), eq(schema.cbInstalledItem.taskId, taskId), eq(schema.cbInstalledItem.kind, "flow")));
+  return { inst, blueprint: bp!, body, task, item: item ?? null };
+}
+
+export interface StartTrialInput {
+  trialKey: string;
+  /** Optional synthetic input (defaults to the pack's labelled sample). Must be a JSON object. */
+  input?: Record<string, unknown>;
+  /** Set only by the CLI text-trial path: the text came from the owner's CLI job (provenance real_cli). */
+  provenance?: Provenance;
+}
+
+export async function startTrial(user: CurrentUser, workspaceId: string, installationId: string, taskId: string, input: StartTrialInput) {
+  if (!TRIAL_KEY.test(input.trialKey)) throw new HttpError(400, "VALIDATION", "Invalid trial key");
+  const { inst, task, item } = await taskContext(workspaceId, installationId, taskId);
+  if (inst.status !== "installed") throw new HttpError(409, "NOT_INSTALLED", "Create the drafts before trying them");
+  if (task.kind !== "workflow" || !item) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "This task has no workflow to try");
+  const pack = getPack(task.packId, task.packVersion);
+  if (!pack) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "This task has no tested pack");
+
+  // Same click id → same trial (refresh / double click never starts a second run).
+  const [existing] = await db
+    .select()
+    .from(schema.cbTrial)
+    .where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, taskId), eq(schema.cbTrial.trialKey, input.trialKey)));
+  if (existing) return { trial: existing, duplicate: true };
+
+  const sample = input.input ?? (pack.sample(task.params) as Record<string, unknown>);
+  const { run } = await enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` });
+  const [trial] = await db
+    .insert(schema.cbTrial)
+    .values({ workspaceId, installationId: inst.id, taskId, flowId: item.refId, runId: run.id, trialKey: input.trialKey, provenance: input.provenance ?? "deterministic_calculation", createdBy: user.id })
+    .onConflictDoNothing()
+    .returning();
+  if (!trial) {
+    const [again] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, taskId), eq(schema.cbTrial.trialKey, input.trialKey)));
+    return { trial: again!, duplicate: true };
+  }
+  return { trial, duplicate: false };
+}
+
+/** Computes (once the run is terminal) and stores the verdict. Safe to call repeatedly. */
+export async function refreshTrial(workspaceId: string, trialId: string) {
+  const [trial] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.id, trialId), eq(schema.cbTrial.workspaceId, workspaceId)));
+  if (!trial) throw notFound("Trial not found");
+  if (trial.status === "completed" || !trial.runId) return trial;
+  const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId));
+  if (!run || !["succeeded", "failed", "cancelled", "waiting_approval"].includes(run.status)) return trial;
+  const { task } = await taskContext(workspaceId, trial.installationId, trial.taskId);
+  const pack = getPack(task.packId, task.packVersion)!;
+  const [version] = await db.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, run.flowVersionId));
+  const structurallyValid = validateGraph(version!.graph as FlowGraph).length === 0;
+  const ranWithoutErrors = run.status === "succeeded";
+  const output = (run.output ?? {}) as Record<string, unknown>;
+  const hasOutput = pack.outputKeys.some((k) => output[k] !== undefined && output[k] !== null);
+  const checks = ranWithoutErrors ? [{ id: "has_output", passed: hasOutput }, ...(hasOutput ? pack.evaluate(output, run.input, task.params) : [])] : [];
+  const verdict: TrialVerdict = { structurallyValid, ranWithoutErrors, matchedOutcome: ranWithoutErrors && checks.length > 0 && checks.every((c) => c.passed), checks };
+  const [updated] = await db.update(schema.cbTrial).set({ status: "completed", verdict, completedAt: new Date() }).where(and(eq(schema.cbTrial.id, trial.id), eq(schema.cbTrial.status, "running"))).returning();
+  return updated ?? trial;
+}
+
+export async function latestTrials(installationId: string) {
+  const rows = await db.select().from(schema.cbTrial).where(eq(schema.cbTrial.installationId, installationId)).orderBy(desc(schema.cbTrial.createdAt)).limit(100);
+  const byTask = new Map<string, typeof rows[number]>();
+  for (const r of rows) if (!byTask.has(r.taskId)) byTask.set(r.taskId, r);
+  return byTask;
+}
+
+export async function trialOutput(trial: typeof schema.cbTrial.$inferSelect) {
+  if (!trial.runId) return null;
+  const [run] = await db.select({ output: schema.run.output, input: schema.run.input, status: schema.run.status, number: schema.run.number, flowVersionId: schema.run.flowVersionId }).from(schema.run).where(eq(schema.run.id, trial.runId));
+  return run ?? null;
+}

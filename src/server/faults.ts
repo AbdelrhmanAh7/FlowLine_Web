@@ -4,7 +4,8 @@
  * other accounts) are never affected. In any other environment every function
  * here is inert and the /api/test/* routes return 404.
  */
-export type FaultKind = "save" | "load" | "run";
+/** cb_action_lost: the Company Builder sample action was recorded but its response is "lost" (uncertain outcome). */
+export type FaultKind = "save" | "load" | "run" | "cb_action_lost";
 
 type Pending = Record<FaultKind, { count: number; status: number }>;
 const g = globalThis as unknown as { __flowlineFaults?: Map<string, Pending> };
@@ -17,7 +18,7 @@ function forUser(userId: string): Pending {
   g.__flowlineFaults ??= new Map();
   let p = g.__flowlineFaults.get(userId);
   if (!p) {
-    p = { save: { count: 0, status: 500 }, load: { count: 0, status: 500 }, run: { count: 0, status: 500 } };
+    p = { save: { count: 0, status: 500 }, load: { count: 0, status: 500 }, run: { count: 0, status: 500 }, cb_action_lost: { count: 0, status: 500 } };
     g.__flowlineFaults.set(userId, p);
   }
   return p;

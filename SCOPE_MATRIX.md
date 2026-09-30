@@ -259,3 +259,36 @@ configurations are kept readable and marked for migration. Plan: `docs/ai/IMPLEM
 | SEC-04 | OAuth hardening: app-identity binding, state binding, callback re-checks, refresh fencing, `invalid_client` ≠ token expiry, bounded errors, Caddy redaction, social-token encryption | Integration | PASS (deterministic, fake providers — no live provider run) | `connection.oauth_app_*` + composite FK; hashed `oauth_state` bound to session/user/workspace/app/revision/redirect/PKCE; membership + app re-checked before exchange and before storing; zod-validated token responses; refresh fence (row lock + app SHARE lock/epoch); `invalid_client` fails the step only + alerts; GitHub revoke adapter; bounded callback codes; Caddyfile redaction + `no-referrer`; better-auth account tokens encrypted by an adapter transformation; int `sec-oauth`, `sec-signin`; unit Caddy regex |
 | SEC-05 | Per-workspace OAuth app override (owner-only), consent provenance, switch/delete impact | Integration + E2E | PASS (deterministic) — integration PASS; E2E `admin-panel.spec.ts:133` (owner saves a write-only workspace app, an editor sees provenance before the redirect, delete shows the affected-connection count) PASS in Chromium on `c2fd494`, dev stack and production build (`artifacts/ai-hub/gate-final-c2fd494/gate-chromium.txt`, `prod-build/gate-chromium.txt`); Chromium-only spec; real OAuth apps BLOCKED on owner credentials | `workspace_oauth_app`, `oauthapp.manage` (owner), Settings → OAuth apps, provenance note in the Connect dialog; int `sec-oauth` (owner-only 403/404, provenance, new Connects use the workspace app, existing connections keep their issuing app, delete expires exactly its connections, audit `oauth_app.*`), `p3-matrix` capability row |
 | SEC-06 | Platform audit log (≥730 d, transactional, typed) + admin notifications | Integration | PASS | `platform_audit_event` (no workspace FK, never pruned), `platform_notification` outbox delivered by the worker with backoff; int `sec-platform` (same-transaction event with assurance/revisions/request id, other admins notified, failed delivery retried, survives `pruneOnce` with 1-day audit retention) |
+
+## Company Builder (CB-*) — owner brief `docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md`
+
+Plan: `docs/company-builder/PLAN.md`. Status column updated from evidence in `docs/company-builder/REPORT.md`. Source-specific
+Q01–Q14 / R01–R36 / copy ids: PENDING — reference files not supplied (see `ACCEPTANCE_MATRIX.md`).
+
+| ID | Requirement | Brief § | Acceptance test | Status | Evidence |
+|---|---|---|---|---|---|
+| CB-01 | Feature gated by `FLOWLINE_COMPANY_BUILDER=on`; off by default | 1, 10 | API 404 + no nav when off | PLANNED | |
+| CB-02 | Reviewed question bank (id, target, condition, reason, schema, sensitivity, skip/stop) | 5 | unit question-bank | PLANNED | |
+| CB-03 | Adaptive follow-ups per department; no known fact asked twice; no fixed progress total | 5 | unit interview; e2e | PLANNED | |
+| CB-04 | Facts confirmed/inferred/contradictory/unknown with provenance + version; no silent promotion | 5 | unit facts | PLANNED | |
+| CB-05 | Save/resume, back, correction, "don't know yet" | 5 | int + e2e resume | PLANNED | |
+| CB-06 | Stop rule or honest partial plan with blockers; sample data for founders; unsupported tools disclosed | 5 | unit planner | PLANNED | |
+| CB-07 | Agency client isolation (separate workspaces, similar names) | 5, 9 | int isolation | PLANNED | |
+| CB-08 | Typed versioned BusinessProfile/InterviewSession/CompanyBlueprint/DigitalRole/TaskPlan/TemplateVersion/InstallationJob/ActivationDecision/ReviewItem | 6 | unit model; migration 0020 | PLANNED | |
+| CB-09 | Three executable packs from registered nodes; recruitment planned only | 6 | unit packs; int trials | PLANNED | |
+| CB-10 | Compile validation: types, refs, capabilities, permissions, cycles, limits, outputs; no eval | 6 | unit compile | PLANNED | |
+| CB-11 | Real draft flows/agents created and opened in the existing editor | 6 | int install; e2e | PLANNED | |
+| CB-12 | Idempotent resumable installation (refresh, double-click, crash) | 6, 9 | int install | PLANNED | |
+| CB-13 | Sample trials through the engine; provenance; structurally valid / ran / matched distinguished | 6 | int trials | PLANNED | |
+| CB-14 | Answer/template change creates a new version + diff; manual edits and history preserved | 6 | int versioning | PLANNED | |
+| CB-15 | Task states (draft…failed); one blocked department doesn't block others | 7 | unit activation | PLANNED | |
+| CB-16 | Review inbox with binding re-check (args, identity, version, membership) | 7 | int review | PLANNED | |
+| CB-17 | Dev trial entitlement separate from billing; payment never activates; reconciliation | 7 | int entitlement | PLANNED | |
+| CB-18 | CLI prototype gate: env + founder id + designated workspace + loopback; ordinary users refused | 4, 7 | int cli-gate | PLANNED | |
+| CB-19 | CLI adapter: typed envelope, fixed argv, no shell, job dirs, bounds, error classes, cleanup | 4 | unit/int cli adapter (fake CLIs) | PLANNED | |
+| CB-20 | Operator export/import path for laptop CLIs; imports validated | 4 | int import | PLANNED | |
+| CB-21 | Copy contract: every new string via i18n (ar source), required sentences present | 8 | unit copy; e2e arabic | PLANNED | |
+| CB-22 | 12-case benchmark scored per dimension | 9 | unit benchmark | PLANNED | |
+| CB-23 | Browser journey new session → … → history (Chromium/Firefox/WebKit) | 10 | e2e company-builder | PLANNED | |
+| CB-24 | Real CLI trial (Claude / Codex) on the owner's laptop | 4, 10 | owner-run | PLANNED | |
+| CB-25 | Real Chrome exploratory QA, Pi verification, human usability | 10 | owner/Codex-run | PLANNED | |
