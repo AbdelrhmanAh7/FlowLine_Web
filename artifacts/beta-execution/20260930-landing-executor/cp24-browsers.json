@@ -1,0 +1,62 @@
+{
+  "at": "2026-09-30T18:04:21.904Z",
+  "checkpoint": "2a19a2e3e14dfc692d619b6327c719cf3c434d44",
+  "buildId": "JkO_N50eWRr3bpIqSw3sj",
+  "supervisorPid": 77376,
+  "oneBuild": true,
+  "workers": 1,
+  "retries": 0,
+  "trace": "off",
+  "failureScreenshots": "off",
+  "browsers": [
+    {
+      "project": "chromium",
+      "platform": "Windows",
+      "startedAt": "2026-09-30T18:04:22.623Z",
+      "checkpoint": "2a19a2e3e14dfc692d619b6327c719cf3c434d44",
+      "buildId": "JkO_N50eWRr3bpIqSw3sj",
+      "pid": 85012,
+      "progress": {
+        "done": 110,
+        "total": 118
+      },
+      "exitCode": 0,
+      "endedAt": "2026-09-30T18:09:04.208Z",
+      "stats": {
+        "startTime": "2026-09-30T18:04:23.127Z",
+        "duration": 281059.083,
+        "expected": 118,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "version": "1.63.0"
+    },
+    {
+      "project": "firefox",
+      "platform": "Linux Docker",
+      "startedAt": "2026-09-30T18:09:04.212Z",
+      "checkpoint": "2a19a2e3e14dfc692d619b6327c719cf3c434d44",
+      "buildId": "JkO_N50eWRr3bpIqSw3sj",
+      "container": "flowline-cp24-firefox-1790791744213",
+      "pid": 94812,
+      "progress": {
+        "done": 50,
+        "total": 54
+      },
+      "exitCode": 1,
+      "endedAt": "2026-09-30T18:12:16.291Z",
+      "stats": {
+        "startTime": "2026-09-30T18:09:11.951Z",
+        "duration": 183939.50699999998,
+        "expected": 53,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "version": "1.63.0"
+    }
+  ],
+  "independentReview": false,
+  "state": "FAIL"
+}

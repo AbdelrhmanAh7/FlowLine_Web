@@ -37,7 +37,7 @@ export function FlowScene({ nodes, title, body }: { nodes: IllustrationNode[]; t
 
 function FlowCard({ nodes, lit }: { nodes: IllustrationNode[]; lit: number }) {
   return (
-    <div className="mt-10 overflow-x-auto rounded-xl border border-line bg-app bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
+    <div className="mt-10 overflow-x-auto rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
       <FlowIllustration nodes={nodes} lit={lit} />
     </div>
   );
@@ -63,7 +63,7 @@ function LitFlow({ nodes, lit }: { nodes: IllustrationNode[]; lit: MotionValue<n
     () => nodes.length,
   );
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-app bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
+    <div className="overflow-x-auto rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
       <FlowIllustration nodes={nodes} lit={n} />
     </div>
   );

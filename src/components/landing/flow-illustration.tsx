@@ -26,17 +26,17 @@ export function FlowIllustration({ nodes, lit, className }: { nodes: Illustratio
             <div
               data-lit={on || undefined}
               className={cn(
-                "w-44 shrink-0 rounded-lg border bg-card px-3.5 py-3 text-start transition-[border-color,box-shadow,opacity] duration-[var(--dur-slow)]",
-                on ? "border-accent shadow-[var(--shadow-glow)]" : "border-line opacity-70",
+                "w-44 shrink-0 rounded-lg border bg-elevated shadow-[var(--shadow-popover)] px-3.5 py-3 text-start transition-[border-color,box-shadow,opacity] duration-[var(--dur-slow)]",
+                on ? "border-accent shadow-[var(--shadow-glow)]" : "border-line-strong opacity-70",
               )}
             >
               <p className="flex items-center gap-2 text-base font-semibold">
                 <span aria-hidden className={cn("flex size-6 shrink-0 items-center justify-center rounded-md", CAT_BG[hue])}>
                   <Icon className={cn("size-3.5", CAT_TEXT[hue])} />
                 </span>
-                <span className="truncate">{n.label}</span>
+                <span className="min-w-0 break-words">{n.label}</span>
               </p>
-              <p className="data mt-0.5 truncate ps-8 text-[10px] tracking-[0.4px] text-muted uppercase">{n.sub}</p>
+              <p className="mt-0.5 ps-8 text-[10px] tracking-[0.4px] text-muted">{n.sub}</p>
             </div>
             {i < nodes.length - 1 && (
               <>

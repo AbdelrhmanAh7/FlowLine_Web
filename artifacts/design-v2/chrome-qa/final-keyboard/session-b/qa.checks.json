@@ -1,0 +1,44 @@
+[
+  {
+    "id": "admin:setup-mfa",
+    "result": "PASS",
+    "note": "Real disposable grant, verification, TOTP enrollment and step-up; inline forms, no setup/OTP recorded."
+  },
+  {
+    "id": "admin:credential-revoke",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": "Revoke"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "admin:credential-clear",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": "Clear"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "admin:native-revoke-observation",
+    "result": "NOT RUN",
+    "note": "Browser-native confirm auto-dismissed by launch connection before CDP controller could inspect. Retest with owning dialog listener required."
+  }
+]

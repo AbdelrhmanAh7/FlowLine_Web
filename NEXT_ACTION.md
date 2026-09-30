@@ -1,5 +1,20 @@
 # Next action
 
+## Current owner consolidation — 2026-09-30
+
+The owner explicitly requests merging the completed candidate into main for Claude continuation. See docs/implementation/MAIN_CONSOLIDATION.md for current gate, preservation and release limits. Earlier no-merge/no-push statements are historical for this consolidation only. Company Builder is not implemented; its complete updated prompt is docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md. React/React DOM are already 19.3.0. Final merge/push is pending; no deployment, live payments or invitations.
+
+
+## Active private-beta executor — 2026-09-30
+
+Use [BETA_EXECUTION_STATUS.md](docs/implementation/BETA_EXECUTION_STATUS.md), [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md) and the binding [BETA_EXECUTION_BRIEF.md](docs/implementation/BETA_EXECUTION_BRIEF.md). These supersede the historical paused/VPS/env-AI instructions below.
+
+HEAD design-v2 remains 776337c. Latest execution checkpoint cp22 is 7a26cb1e5cbaab56cc2cd68e392595fc95983b6b; it adds the Sheets identity permissions, restricted Resend probe warning and guarded current AI-hub benchmark runner. Real index/branch and all existing work are preserved. cp22 lint, main/focused typechecks, unit402 and contract467 passed; integration is running with one recovery-case failure observed. Preserve that failure and diagnose it; no rerun-only acceptance. cp20 browser114/50/50 remains historical coverage, not proof for cp22. Claude review pending.
+
+Local staging runs at http://localhost:3000 on cp21, build F6m0LaSa_-jaq5hCKtlY3, fresh isolated database flowline_beta_local20260930, schema20, worker concurrency1. Supervised exec session66698; stop via write_stdin with stop plus newline. No deletion of old DBs or credentials imported. Named bootstrap code redeemed through masked UI; owner signup completed, real verification endpoint returned200/done and persisted emailVerified. Owner replied done to sign-in; inspect non-sensitive state only after the running heavy suite finishes, then continue /admin/setup to private owner MFA. Never snapshot seeds/recovery codes. Chrome tabs846411899 (setup),846411913 (sign-in),846411866 (Google) are handoff pages.
+
+Google flowline-beta Sheets/Gmail enabled, billing unlinked, External/Testing identity and local sign-in client CREATED by owner. Client secret was not read; owner holds it privately for masked /admin entry. Integration client/test users/fixtures/access grant/live verification are not complete. Owner authorizes safe named secret transfer; password/signup/MFA remain takeover. Aggregate spending cap $0; no paid requests/billing activation/top-ups. Host/domain inputs and exact DNS/exposure/Pi approvals remain pending. MERGED: NO. PUBLIC PRODUCTION APPROVED: NO. No real invitations.
+
 ## Phase 2 — closed on revised scope
 
 - **Original verdict (2026-09-27, preserved):** NOT PASS — BLOCKED. On `bee4390` every deterministic check passed, but 11 SaaS sandbox-live checks couldn't run without credentials.

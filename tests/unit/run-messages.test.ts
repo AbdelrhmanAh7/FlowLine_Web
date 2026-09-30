@@ -187,6 +187,15 @@ describe("skipReasonText", () => {
 });
 
 describe("approvalActionId", () => {
+  it("does not attribute ambiguous approval history to a different action", () => {
+    for (const status of ["pending", "approved"]) {
+      const records = [{ nodeId: "a", actionId: "slack.post", status }, { nodeId: "a", actionId: "google_sheets.append_row", status }];
+      expect(approvalActionId(records, "a")).toBeNull();
+      expect(approvalActionId([...records].reverse(), "a")).toBeNull();
+      expect(approvalActionId([...records, { nodeId: "b", actionId: "slack.post", status }], "b")).toBe("slack.post");
+      expect(approvalActionId([records[0]!, records[0]!], "a")).toBe("slack.post");
+    }
+  });
   it("prefers the pending approval of the node and ignores other nodes", () => {
     const approvals = [
       { nodeId: "a", actionId: "gmail.send", status: "approved" },
@@ -199,6 +208,16 @@ describe("approvalActionId", () => {
     expect(approvalActionId(undefined, "a")).toBeNull();
     expect(approvalActionId(approvals, undefined)).toBeNull();
   });
+});
+
+describe("reviewer notes are preserved user data", () => {
+  for (const t of [en, ar]) {
+    it(`${t.locale}: preserves generated-looking, multiline and markup notes`, () => {
+      for (const message of ["Delete issue was rejected: keep this wording", "لا تحذف البيانات\nراجع الطلب أولًا", "<script>alert('text only')</script>"]) {
+        expect(stepErrorText(t, err("APPROVAL_REJECTED", message), { userNote: true })).toBe(message);
+      }
+    });
+  }
 });
 
 describe("catalogue", () => {

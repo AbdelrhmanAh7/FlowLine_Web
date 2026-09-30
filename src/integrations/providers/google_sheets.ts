@@ -21,7 +21,9 @@ const provider: ProviderDef = {
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     revokeUrl: "https://oauth2.googleapis.com/revoke",
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    // The userinfo identity call needs OpenID identity permission as well as Sheets access.
+    // email labels the connection; profile and unrelated Drive/Gmail permissions are unnecessary.
+    scopes: ["openid", "email", "https://www.googleapis.com/auth/spreadsheets"],
     pkce: true,
     extraParams: { access_type: "offline", prompt: "consent" },
   },

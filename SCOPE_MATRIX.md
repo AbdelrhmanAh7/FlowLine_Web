@@ -1,5 +1,7 @@
 # Scope matrix — Flowline
 
+Current authority (2026-09-30): [private-beta brief](docs/implementation/BETA_EXECUTION_BRIEF.md), [ledger](docs/implementation/BETA_EXECUTION_STATUS.md). Latest cp23 execution snapshot77879d9 includes preserved keyboard work, narrow Sheets/Resend corrections, guarded AI evaluation runner and test-fixture isolation. cp22 source/unit/contract checks pass; integration459/460 failed due proven unrelated recovered fixture calls, cp23 focused12/12 passes and full recheck is running. Browser gates/Claude review pending. Local staging runs cp21 onlocalhost3000/schema20; owner signup/sign-in/real outbox verification succeeded, private MFA completion pending. Google APIs/OAuth local client partly configured, no integration/live certification. $0 cap; actual host/domain/external journeys/benchmark remain blocked. Seven deferred beta integrations stay in full-product scope; existing light theme remains delivered. MERGED: NO. PUBLIC PRODUCTION APPROVED: NO.
+
 Legend. **Type:** `DESIGN` = required by the Product UI Design deck or the phase prompt; `EXTENSION` = added beyond the deck.
 **Status:** `PASS` = verified by the evidence listed · `PARTIAL` = implemented with a documented gap · `FAIL` · `BLOCKED` · `PLANNED` = a later phase (not started).
 Slide numbers refer to `design-reference/slides/slide-NN.png`. Evidence paths are relative to the repo root; `e2e:` = `e2e/*.spec.ts` test, `int:` = `tests/integration`, `unit:` = `tests/unit`.

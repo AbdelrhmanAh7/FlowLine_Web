@@ -1,0 +1,2494 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/run/pw/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "[redacted-long-value].config.ts",
+      "--project",
+      "webkit",
+      "--workers=1",
+      "--retries=0",
+      "--trace=off",
+      "--fail-on-flaky-tests",
+      "--forbid-only",
+      "--update-snapshots=none",
+      "--output",
+      "/out/results"
+    ],
+    "configFile": "[redacted-long-value].config.ts",
+    "rootDir": "/run/pw/e2e",
+    "failOnFlakyTests": true,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "none",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "ai-hub.spec.ts",
+      "file": "ai-hub.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 12583,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:16:46.935Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "ai-hub.spec.ts",
+          "line": 28,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "arabic.spec.ts",
+      "file": "arabic.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7910,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:00.512Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 22,
+          "column": 5
+        },
+        {
+          "title": "auth pages switch language without signing in",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1386,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:08.434Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 124,
+          "column": 5
+        },
+        {
+          "title": "an invalid locale cookie falls back to Arabic",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 531,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:09.829Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 138,
+          "column": 5
+        },
+        {
+          "title": "no horizontal scroll in RTL at 375 / 1024 / 1440",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6472,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:10.368Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 144,
+          "column": 5
+        },
+        {
+          "title": "Arabic builder: toolbar, palette, drawer, run dock and inspector are translated",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4305,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:16.849Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 164,
+          "column": 5
+        },
+        {
+          "title": "account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2863,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:21.164Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 228,
+          "column": 5
+        },
+        {
+          "title": "Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6700,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:24.034Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "arabic.spec.ts",
+          "line": 258,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "beta.spec.ts",
+      "file": "beta.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2340,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:30.746Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "beta.spec.ts",
+          "line": 20,
+          "column": 5
+        },
+        {
+          "title": "private beta: invitation link → sign up with the invited email → verify → sign in → accept",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2829,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:17:33.093Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "beta.spec.ts",
+          "line": 55,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "builder-keyboard.spec.ts",
+      "file": "builder-keyboard.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02)",
+          "file": "builder-keyboard.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1110,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:35.935Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "Add node: opened with the / shortcut from the page, Escape still lands on the launcher",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1120,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:37.051Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 48,
+              "column": 7
+            },
+            {
+              "title": "Add node: adding a node with Enter also closes the catalogue onto the launcher",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1464,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:38.177Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 62,
+              "column": 7
+            },
+            {
+              "title": "Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1380,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:39.648Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 76,
+              "column": 9
+            },
+            {
+              "title": "Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1323,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:41.035Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 76,
+              "column": 9
+            },
+            {
+              "title": "Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1409,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:42.365Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 97,
+              "column": 7
+            },
+            {
+              "title": "Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1621,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:43.834Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 116,
+              "column": 7
+            },
+            {
+              "title": "History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1287,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:45.462Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 150,
+              "column": 9
+            },
+            {
+              "title": "History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1404,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:46.818Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 150,
+              "column": 9
+            },
+            {
+              "title": "History: Tab reaches the close button inside the panel first, and Escape from it closes the panel",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1208,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:48.229Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 168,
+              "column": 7
+            },
+            {
+              "title": "History and Copilot swap without stealing focus back: the one that opens keeps it",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1507,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:49.518Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 183,
+              "column": 7
+            },
+            {
+              "title": "Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1398,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:51.031Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 203,
+              "column": 9
+            },
+            {
+              "title": "Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1391,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:52.437Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 203,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "@cross-browser Copilot preservation and panel refetch",
+          "file": "builder-keyboard.spec.ts",
+          "line": 223,
+          "column": 6,
+          "specs": [
+            {
+              "title": "proposal, request, diff and removals choice survive Escape and reopening without another POST",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1484,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:53.835Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 225,
+              "column": 9
+            },
+            {
+              "title": "proposal, request, diff and removals choice survive X and reopening without another POST",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1425,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:55.326Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 225,
+              "column": 9
+            },
+            {
+              "title": "a nested tooltip consumes Escape before Copilot",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1401,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:56.757Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 262,
+              "column": 7
+            },
+            {
+              "title": "History refetch does not steal focus inside or outside the non-modal panel",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11473,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:17:58.224Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "builder-keyboard.spec.ts",
+              "line": 287,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "canvas.spec.ts",
+      "file": "canvas.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "canvas interactions & keyboard map",
+          "file": "canvas.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "select, duplicate, nudge, delete, undo/redo, Esc, and typing guards",
+              "ok": false,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 60031,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/run/pw/e2e/canvas.spec.ts",
+                            "column": 16,
+                            "line": 7
+                          },
+                          "message": "Error: page.goto: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:[redacted-long-value]\", waiting until \"load\"\u001b[22m\n\n\n   5 |   test(\"select, duplicate, nudge, delete, undo/redo, Esc, and typing guards\", { tag: \"@critical\" }, async ({ page }) => {\n   6 |     const { workspace, flowId } = await setupUser(page, { template: \"lead-qualifier\" });\n>  7 |     await page.goto(`/w/${workspace.slug}/flows/${flowId}`);\n     |                ^\n   8 |     await expect(page.locator(\".react-flow__node\")).toHaveCount(5);\n   9 |\n  10 |     // Select → drawer opens; Esc closes and deselects.\n    at /run/pw/e2e/canvas.spec.ts:7:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:18:09.708Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "[redacted-long-value].md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "canvas.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "hydration.spec.ts",
+      "file": "hydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "no hydration warnings: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8512,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:10.157Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7807,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:18.771Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6474,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:26.585Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4263,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:33.067Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4424,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:37.341Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4288,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:41.772Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "[redacted-long-value]"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "title": "journey.spec.ts",
+      "file": "journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "new user builds, saves, reopens, runs and inspects a flow",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 10706,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:19:46.073Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "journey.spec.ts",
+          "line": 9,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "keyboard-surfaces.spec.ts",
+      "file": "keyboard-surfaces.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@cross-browser remaining keyboard surfaces (DV2-K01–K05)",
+          "file": "keyboard-surfaces.spec.ts",
+          "line": 16,
+          "column": 6,
+          "specs": [
+            {
+              "title": "inline destructive confirmations preserve focus through cancel and successful removal",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4692,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:49.137Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 17,
+              "column": 7
+            },
+            {
+              "title": "phone navigation traps focus, nested menu consumes Escape, and returns to launcher",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1613,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:53.919Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "node drawer Escape from a text field returns to the canvas node; dock returns to launcher",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1494,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:55.542Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "OAuth switch/remove confirmations focus Cancel, allow leaving, dismiss and restore focus",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1764,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:57.045Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 134,
+              "column": 7
+            },
+            {
+              "title": "connection removal keeps focus useful while the catalogue is pending",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1587,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:58.816Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "desktop run details and nested rerun dialog each dismiss one layer and restore focus",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2196,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:22:00.412Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "keyboard-surfaces.spec.ts",
+              "line": 182,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "landing.spec.ts",
+      "file": "landing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "@cross-browser en: section links preserve landing content through account-route Back and Forward",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3476,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:20:44.569Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "landing.spec.ts",
+          "line": 401,
+          "column": 7
+        },
+        {
+          "title": "@cross-browser ar: section links preserve landing content through account-route Back and Forward",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3624,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:20:48.112Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "landing.spec.ts",
+          "line": 401,
+          "column": 7
+        }
+      ],
+      "suites": [
+        {
+          "title": "landing copy and illustration contrast @cross-browser",
+          "file": "landing.spec.ts",
+          "line": 358,
+          "column": 6,
+          "specs": [
+            {
+              "title": "en/light: readable illustrations at 360, 768, 1024 and 1440",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11442,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:19:56.796Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "landing.spec.ts",
+              "line": 361,
+              "column": 11
+            },
+            {
+              "title": "en/dark: readable illustrations at 360, 768, 1024 and 1440",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12167,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:20:08.246Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "landing.spec.ts",
+              "line": 361,
+              "column": 11
+            },
+            {
+              "title": "ar/light: readable illustrations at 360, 768, 1024 and 1440",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11447,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:20:20.488Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "landing.spec.ts",
+              "line": 361,
+              "column": 11
+            },
+            {
+              "title": "ar/dark: readable illustrations at 360, 768, 1024 and 1440",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12621,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:20:31.942Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "landing.spec.ts",
+              "line": 361,
+              "column": 11
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "local-scenarios.spec.ts",
+      "file": "local-scenarios.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@cross-browser everyday scenario gallery",
+          "file": "local-scenarios.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "en: filter, search, create and run a quote from the gallery",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2074,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:20:51.745Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "local-scenarios.spec.ts",
+              "line": 6,
+              "column": 9
+            },
+            {
+              "title": "ar: filter, search, create and run a quote from the gallery",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1904,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:20:53.826Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "local-scenarios.spec.ts",
+              "line": 6,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "phase2.spec.ts",
+      "file": "phase2.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "approval: a gated Slack post waits, is approved in the inspector, and posts exactly once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2689,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:20:55.742Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "phase2.spec.ts",
+          "line": 176,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "phase3.spec.ts",
+      "file": "phase3.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5381,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:20:58.443Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "phase3.spec.ts",
+          "line": 42,
+          "column": 5
+        },
+        {
+          "title": "API keys: created with a one-time reveal, work against /api/v1, stop working when revoked",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2196,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:03.831Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "phase3.spec.ts",
+          "line": 102,
+          "column": 5
+        },
+        {
+          "title": "knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8831,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:06.034Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "phase3.spec.ts",
+          "line": 125,
+          "column": 5
+        },
+        {
+          "title": "a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 150000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5233,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:17.612Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "phase3.spec.ts",
+          "line": 349,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "Copilot",
+          "file": "phase3.spec.ts",
+          "line": 172,
+          "column": 6,
+          "specs": [
+            {
+              "title": "valid generation with a missing credential → approve → saved draft, nothing ran",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2736,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:14.869Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "phase3.spec.ts",
+              "line": 184,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "prehydration.spec.ts",
+      "file": "prehydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "text typed before hydration survives",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5431,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:22.856Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "prehydration.spec.ts",
+          "line": 7,
+          "column": 5
+        },
+        {
+          "title": "sign-in forms submitted before hydration: SSO still works, credentials never reach a URL",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6515,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:28.295Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "prehydration.spec.ts",
+          "line": 20,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "run-states.spec.ts",
+      "file": "run-states.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "run visual states @cross-browser",
+          "file": "run-states.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [
+            {
+              "title": "running glows and flows, succeeded draws its tick",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11189,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:21:34.819Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "run-states.spec.ts",
+              "line": 21,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tenancy.spec.ts",
+      "file": "tenancy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "two users in separate workspaces cannot see each other's flows or runs",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "webkit",
+              "projectName": "webkit",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2695,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-30T20:21:46.017Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "[redacted-long-value]",
+          "file": "tenancy.spec.ts",
+          "line": 5,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-30T20:16:46.177Z",
+    "duration": 316652.87799999997,
+    "expected": 58,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

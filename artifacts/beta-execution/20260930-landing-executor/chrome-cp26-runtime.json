@@ -1,0 +1,11 @@
+{
+  "at": "2026-09-30T19:34:26.184Z",
+  "checkpoint": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+  "buildId": "JSZNeWKkoufaM5_Yy2fVX",
+  "pid": 78636,
+  "supervisorPid": 90844,
+  "onlyPublicPage": true,
+  "noRebuild": true,
+  "stop": "stop plus newline in this supervised session; then pnpm stop:test",
+  "stoppedAt": "2026-09-30T19:41:45.633Z"
+}

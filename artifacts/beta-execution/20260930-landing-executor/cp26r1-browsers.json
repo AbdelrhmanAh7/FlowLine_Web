@@ -1,0 +1,86 @@
+{
+  "at": "2026-09-30T19:20:14.659Z",
+  "checkpoint": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+  "buildId": "JSZNeWKkoufaM5_Yy2fVX",
+  "supervisorPid": 70364,
+  "oneBuild": true,
+  "workers": 1,
+  "retries": 0,
+  "trace": "off",
+  "failureScreenshots": "off",
+  "browsers": [
+    {
+      "project": "chromium",
+      "platform": "Windows",
+      "startedAt": "2026-09-30T19:20:15.251Z",
+      "checkpoint": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+      "buildId": "JSZNeWKkoufaM5_Yy2fVX",
+      "pid": 41348,
+      "progress": {
+        "done": 120,
+        "total": 121
+      },
+      "exitCode": 0,
+      "endedAt": "2026-09-30T19:25:13.703Z",
+      "stats": {
+        "startTime": "2026-09-30T19:20:15.772Z",
+        "duration": 297911.35500000004,
+        "expected": 121,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "version": "1.63.0"
+    },
+    {
+      "project": "firefox",
+      "platform": "Linux Docker",
+      "startedAt": "2026-09-30T19:25:13.708Z",
+      "checkpoint": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+      "buildId": "JSZNeWKkoufaM5_Yy2fVX",
+      "container": "flowline-cp26r1-firefox-1790796313708",
+      "pid": 25400,
+      "progress": {
+        "done": 50,
+        "total": 57
+      },
+      "exitCode": 0,
+      "endedAt": "2026-09-30T19:28:19.711Z",
+      "stats": {
+        "startTime": "2026-09-30T19:25:20.201Z",
+        "duration": 179032.456,
+        "expected": 57,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "version": "1.63.0"
+    },
+    {
+      "project": "webkit",
+      "platform": "Linux Docker",
+      "startedAt": "2026-09-30T19:28:19.713Z",
+      "checkpoint": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+      "buildId": "JSZNeWKkoufaM5_Yy2fVX",
+      "container": "flowline-cp26r1-webkit-1790796499714",
+      "pid": 72860,
+      "progress": {
+        "done": 50,
+        "total": 57
+      },
+      "exitCode": 0,
+      "endedAt": "2026-09-30T19:32:45.218Z",
+      "stats": {
+        "startTime": "2026-09-30T19:28:26.349Z",
+        "duration": 258431.94999999998,
+        "expected": 57,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "version": "1.63.0"
+    }
+  ],
+  "independentReview": false,
+  "state": "PASS"
+}

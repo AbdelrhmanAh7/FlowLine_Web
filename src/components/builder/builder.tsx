@@ -317,12 +317,15 @@ function Editor({ data }: { data: FlowResponse }) {
   }, [runReason, runMut, toast]);
 
   /* ───── graph editing ───── */
+  const [dismissedNodeId, setDismissedNodeId] = useState<string | null>(null);
+  const [keyboardNodeOpen, setKeyboardNodeOpen] = useState(false);
   const selectedNodes = nodes.filter((n) => n.selected);
-  const drawerNode = selectedNodes.length === 1 ? selectedNodes[0]! : null;
+  const drawerNode = selectedNodes.length === 1 && selectedNodes[0]!.id !== dismissedNodeId ? selectedNodes[0]! : null;
 
   const onNodesChange = useCallback(
     (changes: NodeChange<RFNode>[]) => {
       const allowed = changes.filter((c) => c.type !== "remove" && (!readOnly || c.type === "select" || c.type === "dimensions"));
+      if (allowed.some((c) => c.type === "select" && c.selected)) setDismissedNodeId(null);
       setNodes((ns) => applyNodeChanges(allowed, ns));
     },
     [readOnly],
@@ -472,6 +475,8 @@ function Editor({ data }: { data: FlowResponse }) {
   }, []);
 
   const selectNode = useCallback((nodeId: string) => {
+    setKeyboardNodeOpen(true);
+    setDismissedNodeId(null);
     setNodes((ns) => ns.map((n) => ({ ...n, selected: n.id === nodeId })));
     const n = rf.getNode(nodeId);
     if (n) void rf.setCenter(n.position.x + NODE_W / 2, n.position.y + NODE_H / 2, { zoom: rf.getZoom(), duration: 0 });
@@ -564,7 +569,12 @@ function Editor({ data }: { data: FlowResponse }) {
     <div
       ref={canvasRef}
       className="relative min-h-0 flex-1"
+      onPointerDownCapture={() => setKeyboardNodeOpen(false)}
       onKeyDownCapture={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && (e.target as HTMLElement).closest?.(".react-flow__node")) {
+          setKeyboardNodeOpen(true);
+          setDismissedNodeId(null);
+        }
         // React Flow moves focused nodes with arrow keys on its own (grid-snapped), which would
         // stack with our 12px / Shift 1px nudge. Take arrows on nodes over entirely.
         if (!e.key.startsWith("Arrow") || !(e.target as HTMLElement).closest?.(".react-flow__node")) return;
@@ -592,6 +602,7 @@ function Editor({ data }: { data: FlowResponse }) {
           edges={edgesWithState}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
+          onNodeClick={() => setDismissedNodeId(null)}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onConnectEnd={onConnectEnd}
@@ -684,7 +695,9 @@ function Editor({ data }: { data: FlowResponse }) {
           onChange={(p) => updateNode(drawerNode.id, p)}
           onDuplicate={duplicateSelection}
           onDelete={deleteSelection}
-          onClose={clearSelection}
+          onClose={() => setDismissedNodeId(drawerNode.id)}
+          returnFocusTo={() => document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(drawerNode.id)}"]`) ?? addNodeButton.current}
+          initialFocus={keyboardNodeOpen && !entering.has(drawerNode.id)}
         />
       )}
     </div>

@@ -239,6 +239,8 @@ export function notPreviewedReason(t: Translator, reason: string): string {
 
 /** What the caller knows about a step beyond its stored error. */
 export interface RunMessageContext {
+  /** A reviewer-authored note is user data, never generated error wording. */
+  userNote?: boolean;
   /** The integration action (`provider.action`) the step runs, from the run's approval record: lets its title be translated. */
   actionId?: string | null;
   /** The node's label: the last-resort name of an approval wait whose message can't be parsed. */
@@ -254,7 +256,9 @@ type Shape = readonly [code: string, re: RegExp, key: MessageKey, vars?: (m: Reg
 export function approvalActionId(approvals: readonly { nodeId: string; actionId: string; status: string }[] | undefined, nodeId: string | null | undefined): string | null {
   if (!nodeId) return null;
   const forNode = (approvals ?? []).filter((a) => a.nodeId === nodeId);
-  return (forNode.find((a) => a.status === "pending") ?? forNode[0])?.actionId ?? null;
+  const pending = forNode.filter((a) => a.status === "pending");
+  const actions = new Set((pending.length ? pending : forNode).map((a) => a.actionId));
+  return actions.size === 1 ? [...actions][0]! : null;
 }
 
 /** An action's title in the UI language when the action is known by id; otherwise the English title inside the stored message. */
@@ -386,6 +390,7 @@ export function stepErrorText(t: Translator, error: { code?: string | null; mess
   if (!error) return "";
   const { code } = error;
   const text = error.message ?? "";
+  if (ctx.userNote) return text;
   if (code) {
     for (const [, re, key, vars] of SHAPES_BY_CODE.get(code) ?? []) {
       const m = re.exec(text);

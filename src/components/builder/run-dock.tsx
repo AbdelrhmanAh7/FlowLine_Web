@@ -8,7 +8,7 @@ import { pretty } from "@/lib/format";
 import { modKey, useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
 import type { RunDetailDto, RunListItem, RunStepDto } from "@/lib/types";
-import { Button, RUN_TONE, Skeleton, StatusBadge, cx } from "../ui";
+import { Button, RUN_TONE, Skeleton, StatusBadge, cx, useSidePanel } from "../ui";
 
 interface Props {
   run: RunDetailDto | null | undefined;
@@ -26,9 +26,12 @@ interface Props {
 
 export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSelectStep, onClose, variant, onCancel, cancelling, canCancel }: Props) {
   const t = useT();
+  const { panelRef, onKeyDown } = useSidePanel<HTMLElement>({ open: variant === "dock", onClose });
   const open = run && (run.status === "queued" || run.status === "running" || run.status === "waiting_approval");
   return (
     <section
+      ref={panelRef}
+      onKeyDown={variant === "dock" ? onKeyDown : undefined}
       aria-label={t("runDock.aria")}
       data-testid="run-dock"
       className={cx("flex flex-col border-t border-line bg-surface", variant === "dock" ? "h-[var(--dock-h)] shrink-0" : "min-h-0 flex-1")}
@@ -58,7 +61,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
             </Link>
           )}
           {variant === "dock" && (
-            <button onClick={onClose} aria-label={t("runDock.hide", { shortcut: `${modKey()}J` })} className="flex size-7 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+            <button data-initial-focus onClick={onClose} aria-label={t("runDock.hide", { shortcut: `${modKey()}J` })} className="flex size-7 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
               <X aria-hidden className="size-4" />
             </button>
           )}

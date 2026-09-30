@@ -6,6 +6,7 @@ export { Field, Input, Select, Textarea } from "./fields";
 export { onTabListKeyDown, TabPanel, Tabs } from "./tabs";
 export { Dialog, Drawer, useReturnFocus } from "./dialog";
 export { useKeepMounted, useSidePanel } from "./side-panel";
+export { InlineConfirmation } from "./inline-confirmation";
 export { Menu, MenuContent, MenuItem, MenuLabel, MenuLink, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "./menu";
 export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 export { Tooltip, TooltipProvider } from "./tooltip";

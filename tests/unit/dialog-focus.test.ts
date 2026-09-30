@@ -98,8 +98,9 @@ describe("phone run sheet (DV2-Q05)", () => {
   });
 
   it("Escape / scrim close it like the panel's close button (clear `run`), and it is named after the run", () => {
-    expect(src).toMatch(/onOpenChange=\{\(o\) => !o && setParam\(\{ run: null \}\)\}/);
-    expect(src).toContain("onClose={() => setParam({ run: null })}");
+    expect(src).toMatch(/const closeRun = \(\) => \{\s*setAutoSelect\(false\);\s*setParam\(\{ run: null \}\);\s*\}/);
+    expect(src).toMatch(/onOpenChange=\{\(o\) => !o && closeRun\(\)\}/);
+    expect(src).toContain("onClose={closeRun}");
     expect(src).toContain("label={sheetLabel}");
     expect(src).toContain('t("runs.panel.runRef", { number: run.number })');
   });

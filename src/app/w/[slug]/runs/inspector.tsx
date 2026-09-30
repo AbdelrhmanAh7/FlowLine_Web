@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { metaText } from "@/lib/meta-text";
 import { useToast } from "@/components/toast";
-import { Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm } from "@/components/ui";
+import { Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { approvalActionId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -47,6 +47,7 @@ export function RunInspector() {
 
   const filter = (params.get("status") as Filter) || "all";
   const selectedRunId = params.get("run");
+  const [autoSelect, setAutoSelect] = useState(true);
   const [q, setQ] = useState(params.get("q") ?? "");
   const [debouncedQ, setDebouncedQ] = useState(q);
   const [stepId, setStepId] = useState<string | null>(params.get("step"));
@@ -85,7 +86,7 @@ export function RunInspector() {
   });
   const allRuns = runs.data?.pages.flatMap((p) => p.runs) ?? [];
 
-  const activeRunId = selectedRunId ?? allRuns[0]?.id ?? null;
+  const activeRunId = selectedRunId ?? (autoSelect ? allRuns[0]?.id : null) ?? null;
   const detail = useQuery({
     queryKey: ["run", activeRunId],
     enabled: Boolean(activeRunId),
@@ -108,6 +109,10 @@ export function RunInspector() {
     setStepId(null);
     setTab(null);
     setParam({ run: id, step: null });
+  };
+  const closeRun = () => {
+    setAutoSelect(false);
+    setParam({ run: null });
   };
   const selectStep = (s: Pick<RunStepDto, "nodeId" | "status">) => {
     setStepId(s.nodeId);
@@ -139,12 +144,13 @@ export function RunInspector() {
   const sheetLabel = run ? `${run.flowName} · ${t("runs.panel.runRef", { number: run.number })}` : t("runs.title");
   const detailPanel = run && step && (
     <StepPanel
+      desktop={viewport !== "mobile"}
       run={run}
       step={step}
       tab={effectiveTab}
       setTab={setTab}
       onSelectStep={selectStep}
-      onClose={() => setParam({ run: null })}
+      onClose={closeRun}
       rerunReason={rerunReason}
       onRerun={() => setRerunFor(step)}
       onCancel={() => cancel.mutate(run.id)}
@@ -317,7 +323,7 @@ export function RunInspector() {
             // for any modal. The desktop split layout below is not modal.
             <Drawer
               open
-              onOpenChange={(o) => !o && setParam({ run: null })}
+              onOpenChange={(o) => !o && closeRun()}
               variant="sheet"
               label={sheetLabel}
               closeLabel={t("runs.panel.close")}
@@ -356,6 +362,7 @@ export function RunInspector() {
 }
 
 function StepPanel({
+  desktop,
   run,
   step,
   tab,
@@ -367,6 +374,7 @@ function StepPanel({
   onCancel,
   cancelling,
 }: {
+  desktop: boolean;
   run: RunDetailDto;
   step: RunStepDto;
   tab: "input" | "output" | "error" | "log";
@@ -380,13 +388,18 @@ function StepPanel({
 }) {
   const { canEdit, workspace } = useWorkspace();
   const t = useT();
+  const { panelRef, onKeyDown } = useSidePanel<HTMLDivElement>({
+    open: desktop,
+    onClose,
+    returnFocusTo: () => document.getElementById(`run-row-${run.id}`),
+  });
   const def = NODE_DEFINITIONS[step.nodeType as NodeType];
   const failed = step.status === "failed";
   const pending = (run.approvals ?? []).find((a) => a.nodeId === step.nodeId && a.status === "pending");
   const meta = step.meta ?? {};
   const events = (run.events ?? []).filter((e) => e.nodeId === step.nodeId || e.nodeId === null);
   return (
-    <div className="flex flex-col gap-4 p-5" data-testid="step-panel">
+    <div ref={panelRef} onKeyDown={desktop ? onKeyDown : undefined} className="flex flex-col gap-4 p-5" data-testid="step-panel">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
@@ -401,7 +414,7 @@ function StepPanel({
             {step.attempts ? ` · ${t.plural("runs.panel.attempts", step.attempts)}` : ""}
           </p>
         </div>
-        <button onClick={onClose} aria-label={t("runs.panel.close")} className="flex size-8 shrink-0 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+        <button data-initial-focus onClick={onClose} aria-label={t("runs.panel.close")} className="flex size-8 shrink-0 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
           <X className="size-4" aria-hidden />
         </button>
       </div>

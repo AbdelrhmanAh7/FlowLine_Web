@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -66,6 +66,7 @@ export function ApiKeys() {
       setRevokedId(id);
       revoked.flash();
       setConfirm(null);
+      if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById("key-create")?.focus();
       void qc.invalidateQueries({ queryKey: ["api-keys", workspace.id] });
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.revokeError")), "danger"),
@@ -106,21 +107,21 @@ export function ApiKeys() {
                   </span>
                   <span className={cx("text-sm", k.status === "active" ? "text-success" : "text-muted")}>{dataText(t, "settings.keys.status", k.status)}</span>
                   <span className="text-sm text-muted">{t("settings.keys.lastUsed", { when: k.lastUsedAt ? t.date(k.lastUsedAt) : t("common.never") })}</span>
-                  {k.status === "active" &&
-                    (confirm === k.id ? (
-                      <span className="ms-auto flex gap-2">
+                  {k.status === "active" && (
+                    <Button size="sm" variant="danger-ghost" className="ms-auto" aria-expanded={confirm === k.id} confirm={revoked.confirmed && revokedId === k.id} onClick={() => setConfirm(k.id)}>
+                      {t("settings.revoke")}
+                    </Button>
+                  )}
+                  {k.status === "active" && confirm === k.id && (
+                      <InlineConfirmation label={t("settings.keys.confirmRevoke")} onCancel={() => setConfirm(null)} busy={revoke.isPending} returnFocusTo={() => document.getElementById("key-create")} className="mt-0 flex gap-2">
                         <Button size="sm" variant="danger" loading={revoke.isPending} onClick={() => revoke.mutate(k.id)}>
                           {t("settings.keys.confirmRevoke")}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>
+                        <Button data-initial-focus size="sm" variant="ghost" onClick={() => setConfirm(null)}>
                           {t("settings.keep")}
                         </Button>
-                      </span>
-                    ) : (
-                      <Button size="sm" variant="danger-ghost" className="ms-auto" confirm={revoked.confirmed && revokedId === k.id} onClick={() => setConfirm(k.id)}>
-                        {t("settings.revoke")}
-                      </Button>
-                    ))}
+                      </InlineConfirmation>
+                  )}
                 </li>
               ))}
             </ul>
@@ -170,7 +171,7 @@ export function ApiKeys() {
             </div>
           </fieldset>
           <div>
-            <Button type="submit" variant="primary" loading={create.isPending} confirm={created.confirmed} disabledReason={!name.trim() ? t("settings.keys.nameFirst") : scopes.length === 0 ? t("settings.keys.scopeFirst") : null}>
+            <Button id="key-create" type="submit" variant="primary" loading={create.isPending} confirm={created.confirmed} disabledReason={!name.trim() ? t("settings.keys.nameFirst") : scopes.length === 0 ? t("settings.keys.scopeFirst") : null}>
               {t("settings.keys.create")}
             </Button>
           </div>
@@ -196,7 +197,7 @@ export function ApiKeys() {
               >
                 {t("settings.keys.copy")}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setRevealed(null)}>
+              <Button size="sm" variant="ghost" onClick={() => { setRevealed(null); document.getElementById("key-create")?.focus(); }}>
                 {t("settings.keys.stored")}
               </Button>
             </div>

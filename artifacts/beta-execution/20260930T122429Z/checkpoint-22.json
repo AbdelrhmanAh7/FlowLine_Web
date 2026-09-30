@@ -1,0 +1,27 @@
+{
+  "at": "2026-09-30T17:00:27.502Z",
+  "ref": "refs/checkpoints/design-v2-closeout-22",
+  "commit": "7a26cb1e5cbaab56cc2cd68e392595fc95983b6b",
+  "tree": "8d47b7f383fdb5b808583b8e8c7e7a202235e8a1",
+  "inputs": {
+    "src": "a4b32324d98175da05151c4e9bffc6bd98f571ab",
+    "e2e": "a3dbeea5fe21840f9197b997d077e10c8fde739d",
+    "tests": "d9235f8804442cc267a68df14d8fdbbb19ae7533",
+    "scripts": "4dd621d3985e7f36abae44fcd284f67164ab80da",
+    "worker": "fb714bff64286626764b438d81a17383f2c84c20",
+    "drizzle": "8d3601b853a3cc4e9a2a17e8c82728d7934fffb2",
+    "package.json": "805755d8f760fcc06eda6e5094840b42bb7af7db",
+    "pnpm-lock.yaml": "896d82a11f49c15c9333be7432c84603e132a798",
+    "playwright.config.ts": "971cb58d4b5ce8856295e8826126380c584eec09",
+    "next.config.ts": "035378d9718204d37b1c9784c875da20c6b444ae"
+  },
+  "parent": "5d2a8e1dd765058ccd6b474026e5e5e5452efa89",
+  "head": "776337cec8ed5ee823017f40020459e28cf0467a",
+  "changedInputs": [
+    "src",
+    "tests",
+    "scripts"
+  ],
+  "realIndexUnchanged": true,
+  "coverage": "Execution snapshot only; required new gates and runtime rebuild pending. No branch commit/push."
+}

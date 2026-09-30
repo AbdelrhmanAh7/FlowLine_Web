@@ -1,0 +1,1128 @@
+[
+  {
+    "id": "route:/",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/sign-in",
+    "surfaceCount": 1,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/sign-up",
+    "surfaceCount": 1,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/forgot-password",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/reset-password",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/verify-email",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/resend-verification",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": "Flowline home",
+      "text": "Flowline"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/sso",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Go to my workspace"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/privacy",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Go to my workspace"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "route:/terms",
+    "surfaceCount": 0,
+    "focusAfterTab": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Go to my workspace"
+    },
+    "result": "PASS",
+    "note": "Page navigation audit; no overlay launcher unless separately inventoried."
+  },
+  {
+    "id": "onboarding",
+    "result": "PASS",
+    "note": "All three inline steps activated by keyboard; no overlay surfaces."
+  },
+  {
+    "id": "builder:add-node",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "INPUT",
+      "role": null,
+      "label": "Search nodes",
+      "text": ""
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:copilot",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "TEXTAREA",
+      "role": null,
+      "label": null,
+      "text": ""
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:history",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "H2",
+      "role": null,
+      "label": null,
+      "text": "History"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:add-node-corrected",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "INPUT",
+      "role": null,
+      "label": "Search nodes",
+      "text": ""
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:copilot-corrected",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "TEXTAREA",
+      "role": null,
+      "label": null,
+      "text": ""
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:history-corrected",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "H2",
+      "role": null,
+      "label": null,
+      "text": "History"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:publish",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:copilot-direct",
+    "result": "PASS",
+    "focus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": " Copilot"
+    },
+    "note": "Escape from initial textarea after tooltip transition settled"
+  },
+  {
+    "id": "builder:node-drawer",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "DIV",
+      "role": "group",
+      "label": null,
+      "text": "Inbound leadTRIGGER · MANUALNot run yet"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "shell:user-menu",
+    "mode": "menu",
+    "initial": true,
+    "initialFocus": {
+      "tag": "A",
+      "role": "menuitem",
+      "label": null,
+      "text": "Resend verification email"
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "shell:phone-navigation",
+    "mode": "modal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Open menu",
+      "text": ""
+    },
+    "tabOutside": true,
+    "bodyLoss": true,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "builder:triggers",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:node-drawer-input-escape",
+    "result": "FAIL",
+    "stillVisible": true,
+    "focus": {
+      "tag": "BODY",
+      "role": null,
+      "label": null,
+      "text": "Skip to contentKeyboard sweepBuildFlowsCanvasTemplatesAIAgentsKnowledg"
+    }
+  },
+  {
+    "id": "oauth:remove",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": "Remove"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "oauth:switch",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": "Save app"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "settings:Members",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:General",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:AI Providers",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:API keys",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:Plan & billing",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:Usage & limits",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:Audit log",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:SSO",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "settings:OAuth apps",
+    "result": "PASS",
+    "note": "Section keyboard activation and rendered controls inventoried; floating variants tested separately",
+    "overlayCount": 1
+  },
+  {
+    "id": "integration:connect-0",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-1",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-2",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-3",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-4",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-5",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-6",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-7",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-8",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-9",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-10",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-11",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close dialog",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-0",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-1",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-2",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-3",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-4",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-5",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-6",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-7",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-8",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-9",
+    "mode": "modal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "ai:connect-9-settled",
+    "name": "Connect Z.ai (GLM)",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-10-settled",
+    "name": "Connect Moonshot AI (Kimi)",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-11-settled",
+    "name": "Connect MiniMax",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-12-settled",
+    "name": "Connect Alibaba Cloud Model Studio",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-13-settled",
+    "name": "Connect Cerebras",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-14-settled",
+    "name": "Connect Together AI",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-15-settled",
+    "name": "Connect Fireworks AI",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-16-settled",
+    "name": "Connect DeepInfra",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-17-settled",
+    "name": "Connect Hugging Face Inference Providers",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-18-settled",
+    "name": "Connect Cloudflare Workers AI",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-19-settled",
+    "name": "Connect Vercel AI Gateway",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Replace key",
+    "name": "Replace the key of \"Keyboard AI\"",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Send a paid test…",
+    "name": "Send a paid test request",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Disconnect",
+    "name": "Disconnect \"Keyboard AI\"?",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "workspace:templates",
+    "result": "PASS",
+    "overlays": 1,
+    "focus": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Skip to content"
+    },
+    "note": "Route inspected; inline forms/filter controls, shared account menu separately swept"
+  },
+  {
+    "id": "workspace:agents",
+    "result": "PASS",
+    "overlays": 1,
+    "focus": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Skip to content"
+    },
+    "note": "Route inspected; inline forms/filter controls, shared account menu separately swept"
+  },
+  {
+    "id": "workspace:agents/new",
+    "result": "PASS",
+    "overlays": 1,
+    "focus": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Skip to content"
+    },
+    "note": "Route inspected; inline forms/filter controls, shared account menu separately swept"
+  },
+  {
+    "id": "workspace:knowledge",
+    "result": "PASS",
+    "overlays": 1,
+    "focus": {
+      "tag": "A",
+      "role": null,
+      "label": null,
+      "text": "Skip to content"
+    },
+    "note": "Route inspected; inline forms/filter controls, shared account menu separately swept"
+  },
+  {
+    "id": "builder:run-dock",
+    "mode": "nonmodal",
+    "initial": false,
+    "initialFocus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null,
+      "text": "Runs CtrlJ"
+    },
+    "tabOutside": true,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "runs:rerun",
+    "name": "Re-run #1 from “Hot lead”",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "runs:desktop-detail",
+    "result": "FAIL",
+    "escape": false,
+    "focus": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close",
+      "text": ""
+    }
+  },
+  {
+    "id": "runs:phone-sheet",
+    "name": "Lead Qualifier · run #1",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:dialog-0",
+    "name": "Dialog title",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:drawer-0",
+    "name": "Drawer title",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:menu-0",
+    "mode": "menu",
+    "initial": true,
+    "initialFocus": {
+      "tag": "DIV",
+      "role": "menuitem",
+      "label": null,
+      "text": "Item one"
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "guide:popover-0",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "DIV",
+      "role": "dialog",
+      "label": null,
+      "text": "A popover panel with motion on open and close."
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "guide:dialog-1",
+    "name": "Dialog title",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "guide:drawer-1",
+    "name": "Drawer title",
+    "initial": true,
+    "tabContained": true,
+    "bodyLoss": false,
+    "nestedTooltip": 0,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "guide:menu-1",
+    "mode": "menu",
+    "initial": true,
+    "initialFocus": {
+      "tag": "DIV",
+      "role": "menuitem",
+      "label": null,
+      "text": "Item one"
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": true,
+    "result": "FAIL"
+  },
+  {
+    "id": "guide:popover-1",
+    "mode": "nonmodal",
+    "initial": true,
+    "initialFocus": {
+      "tag": "DIV",
+      "role": "dialog",
+      "label": null,
+      "text": "A popover panel with motion on open and close."
+    },
+    "tabOutside": false,
+    "bodyLoss": false,
+    "escape": false,
+    "returned": false,
+    "result": "FAIL"
+  },
+  {
+    "id": "account:delete",
+    "result": "PASS",
+    "overlays": 0,
+    "note": "Inline password/confirmation form, no overlay"
+  }
+]

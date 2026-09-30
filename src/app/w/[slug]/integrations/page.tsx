@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, Dialog, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, Card, Dialog, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
@@ -14,6 +14,7 @@ import { dataText } from "@/i18n/workspace-text";
 import { api } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogProvider, type ConnectionDto } from "@/lib/catalog";
 import { useOnline } from "@/lib/hooks";
+import { focusIsFree } from "@/components/ui/focus-return";
 
 export default function IntegrationsPage() {
   return (
@@ -192,7 +193,7 @@ function ConnectButton({ provider, disabledReason, onOpen }: { provider: Catalog
   const t = useT();
   const reason = disabledReason ?? (provider.authType === "oauth2" && !provider.oauthConfigured ? t("integrations.oauthNotConfigured", { name: provider.name }) : null);
   return (
-    <Button size="sm" disabledReason={reason} tooltipSide="top" onClick={onOpen}>
+    <Button id={`connect-${provider.id}`} size="sm" disabledReason={reason} tooltipSide="top" onClick={onOpen}>
       {t("integrations.connect")}
     </Button>
   );
@@ -204,10 +205,14 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   const qc = useQueryClient();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
+  const returnAfterRemoval = () => document.getElementById(`connect-${c.provider}`) ?? document.getElementById("int-search");
   const remove = useMutation({
     mutationFn: () => api(`/api/connections/${c.id}`, { method: "DELETE" }),
     onSuccess: () => {
       toast(t("integrations.card.removed"), "info");
+      const active = document.activeElement as HTMLElement | null;
+      const ownConfirmation = active?.closest('[role="alertdialog"]')?.closest(`[data-testid="connection-${c.provider}"]`);
+      if (focusIsFree(active) || ownConfirmation) returnAfterRemoval()?.focus();
       void qc.invalidateQueries({ queryKey: ["connections", workspace.id] });
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("integrations.card.removeError")), "danger"),
@@ -233,16 +238,20 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
           <Button size="sm" onClick={onReconnect} disabledReason={viewerReason}>
             {t("integrations.card.reconnect")}
           </Button>
-          {confirm ? (
+          <Button size="sm" variant="danger-ghost" aria-expanded={confirm} onClick={() => setConfirm(true)} disabledReason={viewerReason}>
+            {t("integrations.card.remove")}
+          </Button>
+        </div>
+          {confirm && (
+            <InlineConfirmation label={t("integrations.card.confirmRemove")} onCancel={() => setConfirm(false)} busy={remove.isPending} returnFocusTo={returnAfterRemoval} className="mt-0 flex gap-2">
             <Button size="sm" variant="danger" loading={remove.isPending} onClick={() => remove.mutate()}>
               {t("integrations.card.confirmRemove")}
             </Button>
-          ) : (
-            <Button size="sm" variant="danger-ghost" onClick={() => setConfirm(true)} disabledReason={viewerReason}>
-              {t("integrations.card.remove")}
+            <Button data-initial-focus size="sm" onClick={() => setConfirm(false)}>
+              {t("common.cancel")}
             </Button>
+            </InlineConfirmation>
           )}
-        </div>
       </Card>
     </li>
   );

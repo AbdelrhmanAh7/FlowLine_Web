@@ -1,5 +1,19 @@
 # Flowline — private beta runbook
 
+## Current supervised execution (2026-09-30)
+
+Follow [BETA_EXECUTION_BRIEF.md](BETA_EXECUTION_BRIEF.md), [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md) and [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The historical VPS/direct-ingress examples below are reference procedures, not authority to deploy or expose anything. Preferred host is the existing owner Raspberry Pi; verify it read-only after approval, preserving other projects. Plan a named persistent Cloudflare Tunnel on the approved beta subdomain, with exact DNS/exposure/deployment approval before changes. No domain, host, architecture-specific digest or actual beta URL is verified yet.
+
+Use cloud AI only, configured through each workspace's Settings → AI Providers. Platform service credentials use protected /admin. Infrastructure bootstrap keys use approved protected operator storage. Never put setup codes, beta codes, secrets, OTPs or keys in command arguments, chat, logs, traces or screenshots; examples below that put a code in a command must not be executed unchanged. The real owner enrolls MFA privately. Resolve the actual migration journal and fresh-install/upgrade path; the historical migration range is not an instruction to hard-code it.
+
+Deployment approval must identify host/domain, exact SHA/digest/architecture, services/DNS/tunnel, data/backup/rollback, cost, invite-only mode and sandbox billing. Test an off-device backup and clean restore, rollback and dependency compatibility on the actual architecture. Laptop checks and old `flowline:e42667d` results do not certify the new artifact or Pi. Keep one web instance and conservative workers; no public DB/Docker/debug/internal ops endpoints, no automatic provider actions and no real invitations.
+
+For new browser gates: build once, establish readiness, then Chromium → Firefox → WebKit with one runner/worker at a time. No heavy suite/build/exploration overlap. Record owner/PID/build/ports/log/stop command; stop on unsafe available/committed memory. During login/MFA/CAPTCHA/secret entry/sensitive consent stop affected-browser automation and recording, display the binding handoff block, and resume only after the owner replies.
+
+Current laptop staging: http://localhost:3000, fresh flowline_beta_local20260930/schema20, cp21 build F6m0LaSa_-jaq5hCKtlY3, local DB outbox, invite-only, sandbox billing unconfigured, worker1. Supervised exec session66698 owns web/worker; stop with write_stdin stop plus newline. Root keys/config and named setup code are ACL-protected and Git-ignored. Owner signup verification consumed the real /api/email endpoint without changing the DB directly or exposing tokens. Owner MFA remains private. This installation predates cp22 fixes and does not certify external mail delivery or Pi deployment. Owner permits direct named secret transfer only into intended masked fields; password/MFA and consequential approval handoffs remain.
+
+The remainder is preserved operational reference; deployments, invitations and secret-printing examples require the binding brief's boundaries and separate approvals.
+
 The operator's guide for the **invitation-only private beta** (2–5 invited users). This is **not production**: no
 public sign-up, no live payments, one host. Every command below uses files in this repository.
 

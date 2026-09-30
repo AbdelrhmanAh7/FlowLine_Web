@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LOCAL_TEMPLATES } from "@/engine/templates";
+import { LOCAL_TEMPLATES, onboardingTemplates } from "@/engine/templates";
 import { api, ApiError } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -69,8 +69,8 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
   // Template copy lives in the engine (English); the catalogue translates the built-in ones by id.
   const localText = (key: string, fallback: string) => (t.has(key) ? t(key as MessageKey) : fallback);
 
-  const suggested = goal ? LOCAL_TEMPLATES.filter((t) => t.goal === goal) : [];
-  const templates = [...suggested, ...LOCAL_TEMPLATES.filter((t) => !suggested.includes(t))];
+  // A short list for the chosen goal; the Templates page has all of them.
+  const templates = onboardingTemplates(goal);
 
   return (
     <div className="flex min-h-dvh flex-col bg-app">
@@ -157,7 +157,7 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
                   className="flex-1"
                   disabledReason={goal ? null : t("onboarding.pickGoal")}
                   onClick={() => {
-                    setChoice(LOCAL_TEMPLATES.find((t) => t.goal === goal)?.id ?? "blank");
+                    setChoice(onboardingTemplates(goal).find((t) => t.goal === goal)?.id ?? "blank");
                     setStep(3);
                   }}
                 >
@@ -179,7 +179,7 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
                     id: tpl.id,
                     title: localText(`localTemplates.${tpl.id}.name`, tpl.name),
                     body: localText(`localTemplates.${tpl.id}.description`, tpl.description),
-                    tag: suggested.includes(tpl) ? t("onboarding.suggested") : localText(`templateCategory.${tpl.category}`, tpl.category),
+                    tag: tpl.goal === goal ? t("onboarding.suggested") : localText(`templateCategory.${tpl.category}`, tpl.category),
                   })),
                   { id: "blank", title: t("onboarding.blankTitle"), body: t("onboarding.blankBody"), tag: "" },
                 ].map((o) => (
@@ -202,6 +202,7 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
                   </button>
                 ))}
               </div>
+              <p className="mt-3 text-sm text-muted">{t.plural("onboarding.moreTemplates", LOCAL_TEMPLATES.length)}</p>
               <ErrorLine error={error} />
               <div className="mt-8 flex gap-3">
                 <Button variant="secondary" className="w-28" onClick={() => setStep(2)}>

@@ -48,9 +48,20 @@ async function oauthProbe(provider: string, clientId: string, secret: string): P
   }
 }
 
-async function authProbe(url: string, headers: Record<string, string>): Promise<ProbeResult> {
+async function authProbe(url: string, headers: Record<string, string>, resendSendingOnly = false): Promise<ProbeResult> {
   try {
     const res = await safeFetch(url, { method: "GET", headers: { accept: "application/json", ...headers }, timeoutMs: 15_000, maxBytes: 65_536, maxRedirects: 0 });
+    if (resendSendingOnly && res.status === 401) {
+      // Resend's sending-only key cannot list domains. Its documented 401 is not proof of delivery, nor an invalid
+      // key. Match both fields exactly: the same error name with a 403 means the key is inactive and stays rejected.
+      // https://resend.com/docs/api-reference/errors — never persist or return the provider's response text.
+      try {
+        const error = res.json() as { name?: unknown; message?: unknown } | null;
+        if (error?.name === "restricted_api_key" && error.message === "This API key is restricted to only send emails.") return "insufficient_permissions";
+      } catch {
+        // An unreadable 401 still rejects the credential; it cannot establish a permission-only restriction.
+      }
+    }
     if (res.status === 401 || res.status === 403) return "rejected";
     if (res.status >= 200 && res.status < 300) return "accepted";
     return "unreachable";
@@ -65,7 +76,7 @@ export async function runProbe(def: PurposeDef, publicId: string | null, secret:
     case "oauth_integration":
       return oauthProbe(def.provider, publicId ?? "", secret);
     case "email":
-      if (def.provider === "resend") return authProbe(`${testBase("resend") ?? "https://api.resend.com"}/domains`, { authorization: `Bearer ${secret}` });
+      if (def.provider === "resend") return authProbe(`${testBase("resend") ?? "https://api.resend.com"}/domains`, { authorization: `Bearer ${secret}` }, true);
       return authProbe(`${testBase("postmark") ?? "https://api.postmarkapp.com"}/server`, { "x-postmark-server-token": secret });
     case "billing_api":
       if (def.provider === "paddle") return authProbe(`${testBase("paddle") ?? "https://sandbox-api.paddle.com"}/event-types`, { authorization: `Bearer ${secret}` });

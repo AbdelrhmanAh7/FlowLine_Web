@@ -10,7 +10,7 @@ import { nodeText, runLabel, skipReasonText, statusWord, stepErrorText } from "@
 import { pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
-import { Button, CAT_BG, CAT_TEXT, CATEGORY_HUE, Field, Input, NODE_ICONS, RUN_TONE, StatusBadge, TabPanel, Tabs, cx } from "../ui";
+import { Button, CAT_BG, CAT_TEXT, CATEGORY_HUE, Field, Input, NODE_ICONS, RUN_TONE, StatusBadge, TabPanel, Tabs, cx, useSidePanel } from "../ui";
 import type { RFNode } from "./graph-utils";
 import { NodeConfigForm } from "./node-config";
 
@@ -29,9 +29,11 @@ interface Props {
   onDuplicate: () => void;
   onDelete: () => void;
   onClose: () => void;
+  returnFocusTo?: () => HTMLElement | null;
+  initialFocus?: boolean;
 }
 
-export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, issues, variant, onChange, onDuplicate, onDelete, onClose }: Props) {
+export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, issues, variant, onChange, onDuplicate, onDelete, onClose, returnFocusTo, initialFocus = true }: Props) {
   const t = useT();
   const [tab, setTab] = useState<Tab>("configure");
   const def = NODE_DEFINITIONS[node.type as NodeType];
@@ -40,9 +42,12 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   const hue = CATEGORY_HUE[def.category];
   const Icon = NODE_ICONS[node.type as NodeType];
+  const { panelRef, onKeyDown } = useSidePanel<HTMLElement>({ onClose, returnFocusTo });
 
   return (
     <aside
+      ref={panelRef}
+      onKeyDown={onKeyDown}
       role="complementary"
       aria-labelledby={headingId}
       data-testid="node-drawer"
@@ -70,7 +75,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
         onPointerCancel={() => (swipe.current = null)}
       >
         <div className="min-w-0">
-          <h2 id={headingId} className="flex items-center gap-2 text-lg font-semibold">
+          <h2 id={headingId} tabIndex={-1} data-initial-focus={initialFocus ? true : undefined} className="flex items-center gap-2 text-lg font-semibold">
             <span aria-hidden className={cx("flex size-6 shrink-0 items-center justify-center rounded-md", CAT_BG[hue])}>
               <Icon className={cx("size-3.5", CAT_TEXT[hue])} />
             </span>

@@ -1,5 +1,25 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Current execution — 2026-09-30
+
+The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.
+
+Current HEAD remains 776337c. Latest execution checkpoint cp22 7a26cb1e5cbaab56cc2cd68e392595fc95983b6b contains the preserved keyboard work plus narrow Sheets identity/Resend probe fixes and the new guarded current hub benchmark. cp22 lint, main/focused typechecks, unit402 and contract467 passed. Full integration is running with one recovery-case failure observed; diagnosis pending. Retained cp20 browsers114/50/50 and cp21 non-browser gates remain historical, not fresh proof for cp22. New one-build sequential browser gates and Claude independent review remain pending.
+
+Local staging is RUNNING at http://localhost:3000 using cp21 build F6m0LaSa_-jaq5hCKtlY3 and fresh database flowline_beta_local20260930/schema20; it predates helper fixes. Bootstrap redeemed through masked UI, owner signup complete and real POST /api/email returned200/done with persisted verification. No external email sent: staging uses the DB outbox. Owner sign-in confirmation arrived; non-sensitive browser inspection and owner MFA follow heavy-suite completion. Private bootstrap is not host certification.
+
+DV2-02's additional FlowLine/ai-hub disposable test configurations were rotated into independent fresh test databases; old databases preserved, no active old-key fallback. Current named dev/staging reuse audit found no exposed-key reuse. Reachable text history scan: 2,592 blobs, zero affected-key hits; binaries/compressed/unreachable material excluded. No production key migration was performed.
+
+Preferred deployment is the existing owner Pi, subject to read-only approval, verified architecture/workloads, an approved domain, a named Cloudflare Tunnel plan and an exact deployment approval. No host/domain is confirmed, no current immutable artifact/digest exists, and no Pi access/exposure has occurred. No paid VPS is authorized. Customer AI keys belong in Settings → AI Providers; platform service keys in protected /admin; infrastructure in operator storage. No local inference.
+
+Google flowline-beta Sheets/Gmail APIs are enabled; billing is unlinked. Owner configured External/Testing OAuth identity and created the local sign-in client. Its saved secret remains private; platform UI entry follows admin MFA. Integration client, test users, fixtures, connect/action/revoke/reconnect and live verification remain incomplete. Other external services remain blocked on account/credential/consent dependencies. No real external email, sandbox checkout, AI inference or benchmark has run. Spend $0, cap $0; Copilot remains Experimental. The new benchmark runner passed offline/focused checks only. Remaining seven SaaS integrations stay deferred for private beta and in full-product scope.
+
+LOCAL CLOSEOUT: cp21 executor checks passed; cp22 integration failure under diagnosis and browser gates/Claude review pending.
+BETA INFRA VERIFIED: BLOCKED. PRIVATE BETA READY: NO.
+MERGED: NO. PUBLIC PRODUCTION APPROVED: NO. No real invitations or worktree deletion.
+
+## Historical Phase 4 report (preserved)
+
 **Status: private-beta candidate.** Every Phase 4 item that needs no external account is built and verified. Everything
 that needs an owner-supplied account (domain/host, email provider, Paddle sandbox, SaaS test accounts, OAuth apps,
 hosted AI key) is **BLOCKED on credentials**. Nothing here is a production deployment, and no real money can be

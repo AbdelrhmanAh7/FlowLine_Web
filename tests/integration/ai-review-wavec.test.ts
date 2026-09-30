@@ -35,6 +35,9 @@ const prevEnv = { ...process.env };
 beforeAll(async () => {
   ai = await startFakeAi(0);
   useAiDouble(ai.url);
+  // Shared synthetic fixtures can retain stale leases from earlier integration files.
+  // Recover and drain them before each test resets the double and measures its own sends.
+  await recoverStaleRuns(db);
   for (let i = 0; i < 200; i++) {
     const id = await claimNextRun(db, "drain");
     if (!id) break;

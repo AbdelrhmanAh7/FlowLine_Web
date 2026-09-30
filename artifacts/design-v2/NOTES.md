@@ -1,5 +1,15 @@
 # design-v2 design system: notes
 
+## Beta continuation — 2026-09-30
+
+Binding brief accepts U1 narrower landing, U2 current template/integration density and U3 nine settings tabs for private beta where usable and accessible. These decisions do not waive defects, and no further redesign/light-mode/local-model work is introduced.
+
+Journey 9 is now complete: final-keyboard/REPORT.md and SURFACES.md map 225 passing checks and a preserved wrong-launcher attempt subsequently corrected across cp16/cp18/cp20. Current product/E2E equals cp20; cp21 adds only the shared-close-handler unit assertion. Retained browsers pass 114/50/50; current non-browser gate passes unit/contract/integration 388/465/460. Current gate: gate/final-keyboard/GATE.md; beta coverage: ../beta-execution/20260930T122429Z/COVERAGE.md. Historical cp12 sections remain historical.
+
+DV2-02's other two disposable configurations are remediated with fresh DBs and independent keys; old DBs preserved, no old-key fallback. Named dev/staging reuse audit is clean, 2,592 history text blobs have zero affected-key hits. R01–R04 remain open for impact review. Claude review is pending; the primary executor's checks are not independent visual/security review. Actual dedicated headed Chrome 154.0.8037.92 via Playwright 1.63.0 is verified; native apps are unavailable, no personal profile was operated. External login is owner takeover with automation idle and recording off.
+
+MERGED: NO. PUBLIC PRODUCTION APPROVED: NO. No worktree deletion, real invitations, provider spending or Pi/DNS changes.
+
 The owner approved design-v2 on 2026-09-29: a colourful palette refresh, a light theme with Light / Dark / System, clear
 motion on every action, Apple-style scroll motion on the public pages, and a real design system (not "spaghetti") that
 desktop and mobile apps can reuse. The approved reference remains `design-reference/` (the v1 deck, dark).
@@ -96,6 +106,8 @@ match the deck:
   `hydration`).
 
 ## 6. E2E-visible changes (deliberate; tests updated or added, no assertion removed)
+
+Owner landing request (2026-09-30): deliberate landing-only change supersedes DV2-V02 catalogue subtitles. Plain Arabic-first visitor copy uses landing.heroNodes/flowNodes subtitles; product nodes.* remain unchanged. Real category hues are retained. Hero and flow boards use --canvas-dot, elevated cards, strong borders and existing semantic shadows. Free examples are distinguished from possible external app/AI costs. New screenshots and gate pending; no readiness claim.
 - **Copilot button** accessible name is "Copilot" (`phase3.spec`, `responsive.spec` use `exact: true`).
 - **`run-states.spec`:** the flowing edge is asserted attached (a horizontal SVG has zero height), and its animation is
   still asserted.
@@ -152,3 +164,9 @@ M01/M02 are fixed and retested: Add node returns keyboard focus; Copilot retains
 Remaining P3 findings: Q01a raw provider/rare-code translations; Q04a landing focus order; R01 tooltip tap state after drag-off; R02 keyboard access to disabled-tab reasons; R03 fallback when a dialog opener is removed; R04 multi-approval display association. The existing amber/orange distinction and System-theme first-hydration limitations also remain. U1-U3 remain owner design decisions.
 
 DV2-02 is verified for this worktree by the retained 10/10 crypto checks and zero old-key DB envelopes, not by redaction alone. The other two test environments remain OPEN for the owner. Historical verification evidence is identified as such; this closeout does not read or rotate those env files.
+
+## Owner-authorized broader scenarios (2026-09-30)
+
+The owner explicitly requested useful scenarios for wider audiences after the landing-copy task. Added twelve local scenarios (fifteen local templates total), preserving all six connected templates and their real prerequisites. Six curated landing examples and three goal-aware onboarding choices plus blank keep the first visit manageable; the full gallery remains available. Sample inputs/results are described in EN/AR and runs save real results without external sends. Personal and Operations categories are intentional. Existing order-totals copy now matches its actual graph; existing result keys/IDs remain compatible. Reviewed new scenario issues and R01/R02/R04 fixes are documented in BUGS.md; no deployment/spending/invitation scope was expanded.
+
+Claude Opus5.5 helper reached its55-turn boundary without final completion; its output was preserved and completed/reviewed by primary executor. Astra supplied bounded independent read-only findings, not final acceptance. Helper transcripts remain under ignored helper-logs and are not commit evidence. CLI estimated usage cost is not proof of incremental billing; no new billing/credit activation or product-provider calls occurred.

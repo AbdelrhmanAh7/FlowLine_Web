@@ -1,12 +1,29 @@
 # design-v2: bugs found during verification
 
+## Beta continuation — 2026-09-30
+
+Current executor record: [beta findings](../beta-execution/20260930T122429Z/BUGS.md). cp20 cumulative browsers pass 114/50/50; the failed old unit result remains preserved. cp21 product/E2E equals cp20 and updates the shared-close-handler assertion; current unit/contract/integration pass 388/465/460. Claude review pending; own checks are not independent review.
+
+DV2-02 follow-up for FlowLine/.env.test and FL-wt-aihub/.env.test is now remediated under the binding beta brief: independent replacement keys and fresh dedicated test DBs, old DBs intact, no fallback, app crypto/persistence/old-key rejection checks. Audited dev/staging settings and running staging containers do not reuse the exposed key. 2,592 reachable history text blobs have zero affected-key hits; pixels/zips/unreachable transcripts excluded. See ../beta-execution/20260930T122429Z/key-rotation.json. Earlier open statuses below describe their historical checkpoints, not current remediation.
+
+Journey 9 is complete with cp16/cp18/cp20 source-mapped checks. R01–R04 remain open. In particular R04's approval-display impact needs Claude review before treating it as harmless; no security/data/core-journey issue is waived by its old P3 label. U1/U2/U3 are accepted by the binding brief only where usable/accessibility checks pass. No beta-ready, external-provider or production claim.
+
 Severity: P0 = security / tenancy / data loss / money; P1 = core journey broken or misleading; P2 = degraded with a
 workaround; P3 = cosmetic. Class: application defect, test defect, environmental, or unresolved observation.
 
 ## Status summary (kept current by the lead)
 
+Current additions supersede historical checkpoint statuses: cp28 is under its complete gate. DV2-H01 (P1, application navigation) was reproduced twice in actual Chrome: landing section -> Sign in -> Back restored the hash URL but left Sign in content. The three section anchors now use Next Link; EN/AR regressions cover all sections and Back/Forward content. cp27 Chromium/Firefox passed; WebKit exposed a new-test innerText/textContent mismatch, corrected on cp28 without removing assertions. Final Chrome and all gates remain required. Evidence: `../beta-execution/20260930-landing-executor/chrome-current/REPORT.json` and `cp27-webkit/report.sanitized.json`.
+
 | ID | Sev | Class | Found by | Status |
 |---|---|---|---|---|
+| DV2-K01 | P2 | app (keyboard) | exhaustive headed Chrome | FIXED/RETESTED cp16: phone navigation focus/containment/Escape |
+| DV2-K02 | P2 | app (keyboard) | exhaustive headed Chrome | FIXED/RETESTED cp16: node drawer focus and Escape from inputs |
+| DV2-K03 | P2 | app (keyboard) | exhaustive headed Chrome | FIXED/RETESTED cp16: OAuth/admin inline confirmations |
+| DV2-K04 | P2 | app (keyboard) | exhaustive headed Chrome | FIXED/RETESTED cp16: run dock and desktop inspector focus/Escape |
+| DV2-K05 | P2 | app (keyboard) | exhaustive headed Chrome cp14 | FIXED/RETESTED cp16: destructive confirmation lifecycle and surviving focus |
+| DV2-K06 | P2 | app (closeout regression) | cumulative Chromium cp16 | FIXED/RETESTED cp18: preserve mouse-selected canvas focus and selection on drawer dismissal |
+| DV2-K07 | P2 | app (keyboard, WebKit) | cumulative WebKit cp18 | FIXED/RETESTED: cp20 focused WebKit 28/28 and final WebKit 50/50; mapped headed H en/ar removal checks 6/6 |
 | DV2-F01 | P2 | app | Codex headed Chrome cp11 | FIXED and retested on cp12: ordinary 404, cached panel removed, API denied (A-retest) |
 | DV2-01 | P2 | test defect | automated rerun | FIXED in the test; retested (pass) |
 | DV2-02 | P2 | key exposure / evidence | lead's secret scan | containment + replacement + verification DONE; other test envs OPEN (owner) |
@@ -346,6 +363,41 @@ See `visual-review/REPORT.md`.
 
 ## Closeout evidence scope (cp12)
 
+## Journey 9 findings (2026-09-30)
+
+Found on local commit `776337cec8ed5ee823017f40020459e28cf0467a`, execution inputs equal cp12. Method: Agent-driven Google Chrome exploratory QA via Playwright, real headed installed Chrome and isolated temporary profiles. Session/build identity and individual checks: `chrome-qa/final-keyboard/session-a2/identity.json`, `checks.json`; admin: `session-b/identity.json`, `qa.checks.json`. Test doubles only.
+
+- **DV2-K01 (P2, application accessibility):** at 375px, keyboard-activate Open menu. Initial focus remains behind the sheet, Tab reaches the page/body, and Escape does nothing. Expected a named modal navigation drawer with contained focus and return to Open menu. Fix: reuse the shared modal Drawer, retaining logical start placement.
+- **DV2-K02 (P2, application accessibility):** keyboard-select a canvas node; focus stays on the node. Focus its name input and press Escape: focus becomes BODY and the drawer remains. Expected initial focus inside, non-modal traversal, Escape dismissal and return to the node. Fix: shared side-panel lifecycle, heading initial focus, node/Add-node fallback. Successful catalog insertion retains the existing M01 focus return to Add node.
+- **DV2-K03 (P2, application accessibility):** open OAuth Remove/Switch or admin credential Revoke/Clear using Enter. Focus stays on the launcher; Escape from the confirmation does nothing. Expected non-modal inline confirmation with initial Cancel focus and Escape/return. Fix: shared InlineConfirmation using the existing side-panel lifecycle; pending secrets clear on OAuth cancel.
+- **DV2-K04 (P2, application accessibility):** open Runs dock or desktop run detail. Dock leaves focus on its launcher; Escape in either panel fails to dismiss. Expected non-modal panel initial focus, dismissal and return. Fix: shared lifecycle for dock/desktop inspector; phone primary dock remains persistent, and the phone modal sheet retains its existing behavior.
+
+Retested on cp16 `d4da9ca354b1d3da8234c7c339b65c389dcf5d94`: final headed Chrome sessions E/F record 207 passing checks and one invalid launcher attempt, corrected and passed. Initial observations are retained even when later identified as harness timing (nested tooltips, changing Publish label) rather than application defects. Individual results: `chrome-qa/final-keyboard/SURFACES.md`; scope/fixtures: `REPORT.md`; cumulative browser/non-browser gate: `gate/final-keyboard/GATE.md`.
+
+**DV2-K05 (P2, application accessibility):** on cp14 `d2da538`, create a synthetic knowledge source or test API key and keyboard-activate Delete/Revoke. The focused launcher is replaced by a fragment/span; focus becomes BODY and Escape cannot cancel. Source inspection identified the same member-removal pattern. Evidence: `chrome-qa/final-keyboard/session-d/checks.json` (`knowledge:inline-delete`, `keys:inline-revoke`). The shared confirmation now keeps its launcher mounted, initially focuses Keep/Cancel, supports Escape, and returns focus. Successful deletion/revocation focuses a surviving page control; API-key reveal dismissal also returns to Create key. Integration removal gains the same explicit cancellation. Webhook rotation's armed state resets when its containing dialog closes.
+
+Admin access revocation now uses the same named in-app confirmation with unchanged server MFA/CSRF enforcement and self-revocation navigation. This replaces browser-native `window.confirm`, whose keyboard channel blocked the cp14 Playwright controller. That historical native check was not a PASS: the isolated QA browser was stopped, the stack stopped, and the disposable admin was revoked through the authenticated cleanup API (session D). No native-keyboard success is claimed for cp14. The replacement passed on cp16: session F checks cancel/return and keyboard confirm, ordinary 404 navigation and API denial; the existing automated assertions are preserved. Successful credential and OAuth removals also move focus to surviving fields. Targeted Chromium: 25/25.
+
+### Retained cp12 scope
+
+**DV2-K07 (P2, cross-engine keyboard defect):** cp18 WebKit completed 47/50; successful connection removal did not focus the surviving Connect button. Chromium 114/114 and Firefox 50/50 do not override this failure. Evidence: `gate/final-keyboard/webkit-cp18-failed/results.txt`. Fix: connection removal focuses its surviving Connect button before query invalidation. The focused cp19 retest passed this case. The separate node-opening failure was localized by an added focus assertion: `focus()` ran while React Flow still hid the node pending measurement (`visibility: hasDimensions ? visible : hidden`), before Enter. The test now asserts visibility before focusing, then asserts focus before Enter; the attempted custom activation override was removed in cp20. No app node activation defect is claimed from that harness failure. A third WebKit failure was an agent source checkbox click not taking effect while asynchronously discovered model content could expand above it; the unchanged app form uses normal controlled checkboxes. The phase3 test adds an explicit discovered-model visibility assertion before checking the source; its selection and downstream agent/approval assertions remain intact. This readiness-race diagnosis is an inference, not a claimed independently reproduced product defect; the cp19 targeted checkbox case passed.
+
+**DV2-K06 (P2, closeout regression):** the cp16 cumulative gate found that K02's initial focus also stole focus from mouse-selected canvas nodes, breaking the existing exact nudge regression. Escape from a drawer field also cleared selection, so subsequent arrow/duplicate shortcuts had no selected node. Evidence: `gate/final-keyboard/chromium/results.txt`, two `canvas.spec.ts` failures. Fix: keyboard node activation focuses the panel, pointer selection retains canvas focus; dismissing the drawer hides it while preserving selection and returns to the node. Existing canvas assertions are unchanged. The same gate's five provider-fixture failures came from the new removal test revoking shared `test-token`; the test now issues a dedicated fake token, preserving downstream test isolation. cp17 was superseded before browser tests after lint rejected reading a ref during render; cp18 uses state.
+
 See `chrome-qa/final-cp10/REPORT.md`: nine journeys PASS; the exhaustive every-dialog sweep in journey 9 is NOT RUN, while targeted keyboard checks pass. This is a coverage limitation, not a new product finding. The original immediate reduced-motion sample is retained and resolved by a settled-media recheck; no product fix was needed.
 
 Final automated gate on cp12: Chromium 109/109, Firefox Linux 45/45, WebKit Linux 45/45, unit 388/388, contract 465/465 and integration 460/460. Lint/typecheck/evidence scan pass. DV2-01 OAuth repair and L01 header sizing are included in the passing final Chromium run. No open P0/P1 finding is recorded.
+
+## Current cp25 candidate review (supersedes historical R04 assumptions)
+
+cp24 Firefox retained one failed connection-removal focus check. The ready-catalogue test now explicitly waits for its intended Connect target; a separate held-catalogue regression checks the stable search-field fallback and no focus stealing when the catalogue later arrives. Product restoration handles lost/body focus and scopes an existing confirmation to its own card. The catalogue timing diagnosis is inferred; passing latest-browser coverage is still required.
+
+Astra read-only review found R04's historical multi-action agent-node reachability unproven and no authorization bypass: decisions bind the exact approval ID/action/arguments. A reachable display issue existed: reviewer-authored agent rejection notes could match generated-message translation regexes. Notes now retain their exact text, escaped by React; ambiguous approval-action lookup returns null instead of attributing a different action. EN/AR message regressions passed.
+
+R01 pointer-cancel stale tooltip state and R02 keyboard-unreachable disabled-tab explanations are repaired in the candidate, with an inspector keyboard regression pending full browser gate. R03 generic disappearing-opener modal fallback remains an observation without a demonstrated current affected caller; specific destructive-action fallbacks remain covered. No security/core issue is silently waived.
+
+New scenario review found and corrected duplicate attendee check-in/name conflation, negative/missing quote line acceptance and malformed registration dates. Planner strictly preserves due-date/priority order; its EN/AR description and test now state that all tasks after first overflow wait. Focused current unit slice145/145 PASS; full candidate gate still pending.
+
+## DV2-G01 — unexplained WebKit navigation timeout (OPEN)
+
+cp28 cumulative WebKit 58/59: canvas.spec.ts:7 timed out waiting for load before canvas assertions. No sensitive trace was captured. Focused unchanged-assertion diagnostic passed 1/1 (navigation 843ms), but cause remains unproven. Preserve both attempts; a passing rerun does not close reliability. Evidence: ../beta-execution/20260930-landing-executor/cp28-webkit/report.sanitized.json and cp28diag-webkit/report.sanitized.json. No product defect is inferred solely from this timeout.

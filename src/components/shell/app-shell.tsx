@@ -12,7 +12,7 @@ import { useLocale, useSetLocale, useT } from "@/i18n/client";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { THEME_PREFERENCES, type ThemePreference } from "@/theme/config";
 import { useSetTheme, useThemePreference } from "@/theme/client";
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuLink, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger, NAV_ICONS, StatusBadge, cn } from "../ui";
+import { Drawer, Menu, MenuContent, MenuItem, MenuLabel, MenuLink, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger, NAV_ICONS, StatusBadge, cn } from "../ui";
 import { WorkspaceContext, type WorkspaceInfo } from "./workspace-context";
 
 interface Props {
@@ -91,12 +91,11 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
 
         {/* Mobile menu sheet */}
         {menuOpen && (
-          <div className="fixed inset-0 z-50 md:hidden">
-            <button aria-label={t("shell.closeMenu")} className="absolute inset-0 bg-scrim" onClick={() => setMenuOpen(false)} />
-            <aside aria-label={t("shell.workspaceNav")} className="motion-drawer relative flex h-full w-[min(280px,85vw)] flex-col border-e border-line bg-surface">
+          <Drawer open side="start" onOpenChange={setMenuOpen} title={t("shell.workspaceNav")} closeLabel={t("shell.closeMenu")}>
+            <div className="flex h-full flex-col">
               <SidebarContent support={support} sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} />
-            </aside>
-          </div>
+            </div>
+          </Drawer>
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">

@@ -1,0 +1,192 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/run/pw/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "[redacted-long-value].config.ts",
+      "--project",
+      "webkit",
+      "--workers=1",
+      "--retries=0",
+      "--trace=off",
+      "--fail-on-flaky-tests",
+      "--forbid-only",
+      "--update-snapshots=none",
+      "--output",
+      "/out/results",
+      "e2e/canvas-diagnostic.spec.ts"
+    ],
+    "configFile": "[redacted-long-value].config.ts",
+    "rootDir": "/run/pw/e2e",
+    "failOnFlakyTests": true,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/out/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/run/pw/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "none",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "canvas-diagnostic.spec.ts",
+      "file": "canvas-diagnostic.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "canvas interactions & keyboard map",
+          "file": "canvas-diagnostic.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "select, duplicate, nudge, delete, undo/redo, Esc, and typing guards",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6261,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "{\"diagnostic\":\"setup-start\",\"elapsedMs\":0}\n"
+                        },
+                        {
+                          "text": "{\"diagnostic\":\"setup-complete\",\"elapsedMs\":392}\n"
+                        },
+                        {
+                          "text": "{\"diagnostic\":\"document-response:200\",\"elapsedMs\":636}\n"
+                        },
+                        {
+                          "text": "{\"diagnostic\":\"domcontentloaded\",\"elapsedMs\":714}\n"
+                        },
+                        {
+                          "text": "{\"diagnostic\":\"load\",\"elapsedMs\":843}\n"
+                        },
+                        {
+                          "text": "{\"diagnostic\":\"navigation-complete\",\"elapsedMs\":843}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-30T20:29:29.731Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "[redacted-long-value]",
+              "file": "canvas-diagnostic.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-30T20:29:29.355Z",
+    "duration": 7128.237,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

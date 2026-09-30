@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
+import { Button, Card, ErrorState, Field, InlineConfirmation, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -77,6 +77,7 @@ export function Members() {
     onSuccess: () => {
       toast(t("settings.members.removed"), "success");
       setConfirmRemove(null);
+      if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById("invite-email")?.focus();
       refresh();
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.members.removeError")), "danger"),
@@ -116,7 +117,7 @@ export function Members() {
                     </span>
                   </span>
                   {m.userId === user.id && <span className="text-sm text-muted">{t("settings.members.you")}</span>}
-                  <span className="ms-auto flex items-center gap-2">
+                  <div className="ms-auto flex flex-wrap items-center gap-2">
                     <label htmlFor={`role-${m.userId}`} className="sr-only">
                       {t("settings.members.roleOf", { email: m.email })}
                     </label>
@@ -132,21 +133,20 @@ export function Members() {
                       <option value="editor">{t("roles.editor")}</option>
                       <option value="viewer">{t("roles.viewer")}</option>
                     </Select>
-                    {confirmRemove === m.userId ? (
-                      <>
+                    <Button size="sm" variant="danger-ghost" disabledReason={reason} aria-expanded={confirmRemove === m.userId} onClick={() => setConfirmRemove(m.userId)}>
+                      {t("settings.members.remove")}
+                    </Button>
+                    {confirmRemove === m.userId && (
+                      <InlineConfirmation label={t("settings.members.confirmRemove")} onCancel={() => setConfirmRemove(null)} busy={remove.isPending} returnFocusTo={() => document.getElementById("invite-email")} className="mt-0 flex gap-2">
                         <Button size="sm" variant="danger" loading={remove.isPending} onClick={() => remove.mutate(m.userId)}>
                           {t("settings.members.confirmRemove")}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
+                        <Button data-initial-focus size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
                           {t("settings.keep")}
                         </Button>
-                      </>
-                    ) : (
-                      <Button size="sm" variant="danger-ghost" disabledReason={reason} onClick={() => setConfirmRemove(m.userId)}>
-                        {t("settings.members.remove")}
-                      </Button>
+                      </InlineConfirmation>
                     )}
-                  </span>
+                  </div>
                 </li>
               ))}
             </ul>

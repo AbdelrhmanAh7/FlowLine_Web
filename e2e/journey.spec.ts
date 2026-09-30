@@ -13,7 +13,7 @@ test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@criti
 
   // Landing → sign up
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Automate anything/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Make everyday work easier/ })).toBeVisible();
   await page.getByRole("link", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
   // OAuth is not configured in the test env: buttons must say so, not pretend.

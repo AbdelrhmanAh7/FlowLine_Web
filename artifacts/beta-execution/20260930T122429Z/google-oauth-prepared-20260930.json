@@ -1,0 +1,23 @@
+{
+  "browser": "Chrome extension via cua_repl, browser 1",
+  "tab": "846411866",
+  "projectId": "flowline-beta",
+  "page": "https://console.cloud.google.com/auth/overview/create?project=flowline-beta",
+  "ownerSteering": "Gmail is enabled continue please with ur self; used current owner-directed Chrome project without another general confirmation request",
+  "gmailApi": "Enabled, verified from actual status page; owner activated",
+  "appName": "Flowline Beta",
+  "supportEmailSelection": "Current signed-in account, offered by Google dropdown",
+  "contactEmailSelection": "Same signed-in account for Google project notifications",
+  "audience": "External, starts in testing mode and limited to configured test users",
+  "formStep": "Finish, 4 of 4",
+  "userDataPolicyAccepted": false,
+  "createSubmitted": false,
+  "oauthState": "PREPARED; not CREATED or CONFIGURED",
+  "scopeGrants": "None",
+  "credentialsCreated": false,
+  "billingActivation": false,
+  "spendCap": 0,
+  "screenshot": "google-oauth-policy-handoff-20260930.jpg",
+  "nextOwnerAction": "Review and accept Google API Services User Data Policy, then Continue and Create if accepted; reply done",
+  "recordingDuringOwnerAction": "None; automation idle after handoff"
+}

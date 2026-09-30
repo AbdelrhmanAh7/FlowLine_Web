@@ -379,12 +379,14 @@ export async function platformCredentialStatus(purpose: string, dbOrTx: Db | Tx 
 
 /* ───────────── probe ("Test") ───────────── */
 
-export type ProbeResult = "rejected" | "client_accepted" | "accepted" | "unreachable";
+export type ProbeResult = "rejected" | "client_accepted" | "accepted" | "unreachable" | "insufficient_permissions";
 
 /**
  * A read-only check against ONE fixed provider URL. OAuth probes can only reject obviously wrong client credentials
  * (`invalid_client`): they never mark an app VERIFIED — only a real Connect / sign-in does. Email and billing probes
- * call an authenticated no-op endpoint and never send mail or charge anything. The provider's body is never stored.
+ * call an authenticated no-op endpoint and never send mail or charge anything. A permission-limited probe cannot
+ * verify or reject the credential: it preserves the previous status and verification metadata, and audits as
+ * unverified. A real delivery verifies a sending-only key. The provider's body is never stored.
  */
 export async function probePlatformSecret(actor: PlatformActor, purpose: string) {
   const def = requireDef(purpose);

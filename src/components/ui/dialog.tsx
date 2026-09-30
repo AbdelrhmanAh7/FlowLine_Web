@@ -129,6 +129,7 @@ export function Drawer({
   closeLabel,
   testId,
   fallbackFocus,
+  side = "end",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -142,6 +143,7 @@ export function Drawer({
   closeLabel: string;
   testId?: string;
   fallbackFocus?: () => HTMLElement | null;
+  side?: "start" | "end";
 }) {
   const { contentRef, onCloseAutoFocus } = useReturnFocus(open, fallbackFocus);
   return (
@@ -160,7 +162,7 @@ export function Drawer({
             "fixed z-50 flex flex-col border-line bg-surface outline-none",
             variant === "sheet"
               ? "motion-sheet inset-x-0 bottom-0 max-h-[92vh] rounded-t-xl border-t"
-              : "motion-drawer top-0 bottom-0 end-0 w-[var(--drawer-w)] max-w-full border-s shadow-[var(--shadow-popover)]",
+              : cn("motion-drawer top-0 bottom-0 w-[var(--drawer-w)] max-w-full shadow-[var(--shadow-popover)]", side === "start" ? "start-0 border-e" : "end-0 border-s"),
           )}
         >
           {title ? (

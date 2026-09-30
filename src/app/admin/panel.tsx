@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Logo, Select, Skeleton, StatusBadge, Textarea, type Tone } from "@/components/ui";
+import { Button, Card, ErrorState, Field, InlineConfirmation, Input, Logo, Select, Skeleton, StatusBadge, Textarea, type Tone } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -302,6 +302,7 @@ function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf
       try {
         await api(`${base}/${kind}`, { method: "POST", headers, json: { expectedRevision: cred.revision } });
         toast(t(kind === "revoke" ? "platformAdmin.revoked" : "platformAdmin.cleared"), "success");
+        if (document.activeElement?.closest('[role="alertdialog"]')) secretRef.current?.focus();
         setConfirm(null);
         await refresh();
       } catch (err) {
@@ -313,8 +314,8 @@ function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf
   const probe = () =>
     void action.run("probe", async () => {
       try {
-        const r = await api<{ result: "rejected" | "client_accepted" | "accepted" | "unreachable" }>(`${base}/probe`, { method: "POST", headers, json: {} });
-        toast(t(`platformAdmin.probe.${r.result}`), r.result === "rejected" ? "danger" : r.result === "unreachable" ? "warning" : "success");
+        const r = await api<{ result: "rejected" | "client_accepted" | "accepted" | "unreachable" | "insufficient_permissions" }>(`${base}/probe`, { method: "POST", headers, json: {} });
+        toast(t(`platformAdmin.probe.${r.result}`), r.result === "rejected" ? "danger" : r.result === "unreachable" || r.result === "insufficient_permissions" ? "warning" : "success");
         await refresh();
       } catch (err) {
         fail(err);
@@ -402,7 +403,7 @@ function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf
       </form>
 
       {confirm && (
-        <div role="alertdialog" aria-labelledby={`confirm-${cred.purpose}`} className="mt-3 rounded-md border border-danger bg-surface p-3">
+        <InlineConfirmation labelledBy={`confirm-${cred.purpose}`} busy={action.pending === confirm.kind} onCancel={() => setConfirm(null)}>
           <p id={`confirm-${cred.purpose}`} className="text-base font-semibold">
             {t(confirm.kind === "revoke" ? "platformAdmin.confirmRevoke" : "platformAdmin.confirmClear", { name })}
           </p>
@@ -412,9 +413,9 @@ function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf
             <Button variant="danger" onClick={doConfirmed} loading={action.pending === confirm.kind}>
               {t("platformAdmin.action.confirm")}
             </Button>
-            <Button onClick={() => setConfirm(null)}>{t("platformAdmin.action.cancel")}</Button>
+            <Button data-initial-focus onClick={() => setConfirm(null)}>{t("platformAdmin.action.cancel")}</Button>
           </div>
-        </div>
+        </InlineConfirmation>
       )}
     </Card>
   );
@@ -552,9 +553,27 @@ function AdminsCard({ csrf, lockReason, self }: { csrf: string; lockReason: stri
   const toast = useToast();
   const admins = useQuery({ queryKey: ["platform-admins"], queryFn: () => api<{ admins: { userId: string; email: string; status: string; grantedAt: string }[] }>("/api/platform/admins") });
   const action = useAction();
+  const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null);
+  const revokeAdmin = (a: { userId: string; email: string }) => {
+    void action.run(a.userId, async () => {
+      try {
+        await api(`/api/platform/admins/${encodeURIComponent(a.userId)}/revoke`, { method: "POST", headers: { "x-flowline-csrf": csrf }, json: {} });
+        if (a.email === self) {
+          // Drop the cached privileged panel; the server returns the ordinary 404.
+          window.location.replace("/admin");
+          return;
+        }
+        if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById("platform-admins-title")?.focus();
+        setConfirmAdmin(null);
+        await admins.refetch();
+      } catch (err) {
+        toast(apiErrorMessage(t, err), "danger");
+      }
+    });
+  };
   return (
     <Card className="p-4">
-      <h2 className="text-lg font-semibold">{t("platformAdmin.admins.title")}</h2>
+      <h2 id="platform-admins-title" tabIndex={-1} className="text-lg font-semibold">{t("platformAdmin.admins.title")}</h2>
       <p className="mt-1 text-sm text-muted">{t("platformAdmin.admins.grantNote")}</p>
       <ul className="mt-3 flex flex-col divide-y divide-line">
         {(admins.data?.admins ?? []).map((a) => (
@@ -563,7 +582,7 @@ function AdminsCard({ csrf, lockReason, self }: { csrf: string; lockReason: stri
               {a.email}
               {a.email === self ? ` (${t("platformAdmin.admins.you")})` : ""}
             </span>
-            <span className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <StatusBadge tone={a.status === "active" ? "success" : "muted"}>{a.status}</StatusBadge>
               {a.status === "active" && (
                 <Button
@@ -571,28 +590,20 @@ function AdminsCard({ csrf, lockReason, self }: { csrf: string; lockReason: stri
                   variant="danger"
                   disabledReason={lockReason}
                   loading={action.pending === a.userId}
-                  onClick={() => {
-                    if (!window.confirm(t("platformAdmin.admins.confirmRevoke", { email: a.email }))) return;
-                    void action.run(a.userId, async () => {
-                      try {
-                        await api(`/api/platform/admins/${encodeURIComponent(a.userId)}/revoke`, { method: "POST", headers: { "x-flowline-csrf": csrf }, json: {} });
-                        if (a.email === self) {
-                          // This principal can no longer refetch admin data. Drop the cached panel and let the
-                          // server enforce the ordinary 404 instead of retaining the stale active-admin view.
-                          window.location.replace("/admin");
-                          return;
-                        }
-                        await admins.refetch();
-                      } catch (err) {
-                        toast(apiErrorMessage(t, err), "danger");
-                      }
-                    });
-                  }}
+                  aria-expanded={confirmAdmin === a.userId}
+                  onClick={() => setConfirmAdmin(a.userId)}
                 >
                   {t("platformAdmin.admins.revoke")}
                 </Button>
               )}
-            </span>
+              {confirmAdmin === a.userId && a.status === "active" && (
+                <InlineConfirmation labelledBy={`revoke-admin-${a.userId}`} onCancel={() => setConfirmAdmin(null)} busy={action.pending === a.userId} returnFocusTo={() => document.getElementById("platform-admins-title")}>
+                  <p id={`revoke-admin-${a.userId}`}>{t("platformAdmin.admins.confirmRevoke", { email: a.email })}</p>
+                  <Button variant="danger" disabledReason={lockReason} loading={action.pending === a.userId} onClick={() => revokeAdmin(a)}>{t("platformAdmin.action.confirm")}</Button>
+                  <Button data-initial-focus onClick={() => setConfirmAdmin(null)}>{t("platformAdmin.action.cancel")}</Button>
+                </InlineConfirmation>
+              )}
+            </div>
           </li>
         ))}
       </ul>

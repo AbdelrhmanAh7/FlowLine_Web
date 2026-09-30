@@ -111,6 +111,7 @@ function TriggerPanel({ flowId, open, state, secret, onSecret, onClose, canEdit 
       onOpenChange={(o) => {
         if (o) return;
         rotate.reset();
+        setConfirmRotate(false);
         onClose();
       }}
       title={t("publish.triggers")}

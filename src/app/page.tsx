@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
-import { LOCAL_TEMPLATES } from "@/engine/templates";
+import { LANDING_TEMPLATES, LOCAL_TEMPLATES } from "@/engine/templates";
 import type { NodeType } from "@/engine/types";
 import { listProviders } from "@/integrations/registry";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -15,7 +15,6 @@ import { Magnetic } from "@/components/landing/magnetic";
 import { ParallaxGradients } from "@/components/landing/parallax-gradients";
 import { Reveal, WordReveal } from "@/components/landing/reveal";
 import { ScrollRoot } from "@/components/landing/scroll-root";
-import { nodeText } from "@/i18n/engine-text";
 import { getT } from "@/i18n/server";
 import type { Translator } from "@/i18n/translate";
 import type { MessageKey } from "@/i18n/types";
@@ -35,14 +34,13 @@ export default async function Landing() {
   // Honesty: the integrations scene reads the real registry — every app shows its actual live status.
   const providers = listProviders().map((p) => ({ name: p.name, verified: p.verification.live === "verified" }));
 
-  // Illustration node subtitles come from the same catalogue the canvas uses (nodeText -> nodes.<type>.subtitle), so they are
-  // translated exactly like the real node cards ("TRIGGER · MANUAL" / "مُشغِّل · يدوي"); no English literals in the illustration.
+  // Landing illustrations use visitor-friendly copy; product catalogue labels stay unchanged.
   const flowNodes = [
-    { id: "t", type: "trigger.manual", label: t("landing.flowNodes.trigger"), sub: nodeText(t, "trigger.manual", "subtitle") },
-    { id: "n", type: "transform.json", label: t("landing.flowNodes.normalise"), sub: nodeText(t, "transform.json", "subtitle") },
-    { id: "c", type: "logic.condition", label: t("landing.flowNodes.check"), sub: nodeText(t, "logic.condition", "subtitle") },
-    { id: "a", type: "ai.extract", label: t("landing.flowNodes.enrich"), sub: nodeText(t, "ai.extract", "subtitle") },
-    { id: "o", type: "output", label: t("landing.flowNodes.output"), sub: nodeText(t, "output", "subtitle") },
+    { id: "t", type: "trigger.manual", label: t("landing.flowNodes.trigger"), sub: t("landing.flowNodes.triggerSub") },
+    { id: "n", type: "transform.json", label: t("landing.flowNodes.normalise"), sub: t("landing.flowNodes.normaliseSub") },
+    { id: "c", type: "logic.condition", label: t("landing.flowNodes.check"), sub: t("landing.flowNodes.checkSub") },
+    { id: "a", type: "ai.extract", label: t("landing.flowNodes.enrich"), sub: t("landing.flowNodes.enrichSub") },
+    { id: "o", type: "output", label: t("landing.flowNodes.output"), sub: t("landing.flowNodes.outputSub") },
   ] as const;
 
   return (
@@ -63,9 +61,9 @@ export default async function Landing() {
             <Logo />
           </Link>
           <nav aria-label={t("landing.navAria")} className="hidden items-center gap-6 text-base whitespace-nowrap text-med md:flex">
-            <a href="#product" className="hover:text-hi">{t("landing.nav.product")}</a>
-            <a href="#templates" className="hover:text-hi">{t("landing.nav.templates")}</a>
-            <a href="#pricing" className="hover:text-hi">{t("landing.nav.pricing")}</a>
+            <Link href="#product" className="hover:text-hi">{t("landing.nav.product")}</Link>
+            <Link href="#templates" className="hover:text-hi">{t("landing.nav.templates")}</Link>
+            <Link href="#pricing" className="hover:text-hi">{t("landing.nav.pricing")}</Link>
             <LandingDocsLink />
           </nav>
           <div className="contents lg:flex lg:items-center lg:gap-3">
@@ -122,7 +120,7 @@ export default async function Landing() {
               <div
                 aria-label={t("landing.canvasAria")}
                 role="img"
-                className="w-full overflow-hidden rounded-xl border border-line bg-app bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10"
+                className="w-full overflow-hidden rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10"
               >
                 <HeroFlow t={t} />
               </div>
@@ -153,8 +151,9 @@ export default async function Landing() {
               </h2>
               <p className="mt-1 text-base text-med">{t("landing.templatesBody")}</p>
             </Reveal>
+            {/* A short curated set; the in-app gallery lists every template (the count below is the real number). */}
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {LOCAL_TEMPLATES.map((tpl, i) => (
+              {LANDING_TEMPLATES.map((tpl, i) => (
                 <Reveal key={tpl.id} delay={i * 0.05}>
                   <div className="h-full rounded-xl border border-line bg-card p-4">
                     <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{tr(`templateCategory.${tpl.category}`, tpl.category)}</p>
@@ -164,6 +163,7 @@ export default async function Landing() {
                 </Reveal>
               ))}
             </div>
+            <p className="mt-4 text-base text-med">{t.plural("landing.templatesMore", LOCAL_TEMPLATES.length)}</p>
           </section>
 
           <section id="pricing" className="mx-auto max-w-6xl px-4 pb-24 sm:px-8">
@@ -184,22 +184,22 @@ export default async function Landing() {
 
 function HeroFlow({ t }: { t: Translator }) {
   const nodes = [
-    // Same subtitles as the canvas node cards (translated by nodeText), never English literals.
-    { title: t("landing.heroNodes.trigger"), type: "trigger.manual" },
-    { title: t("landing.heroNodes.transform"), type: "transform.json" },
-    { title: t("landing.heroNodes.condition"), type: "logic.condition" },
-  ].map((n) => ({ ...n, sub: nodeText(t, n.type as NodeType, "subtitle"), hue: CATEGORY_HUE[NODE_DEFINITIONS[n.type as NodeType].category] }));
+    // Plain landing subtitles, with category colours from the real catalogue.
+    { title: t("landing.heroNodes.trigger"), sub: t("landing.heroNodes.triggerSub"), type: "trigger.manual" },
+    { title: t("landing.heroNodes.transform"), sub: t("landing.heroNodes.transformSub"), type: "transform.json" },
+    { title: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub"), type: "logic.condition" },
+  ].map((n) => ({ ...n, hue: CATEGORY_HUE[NODE_DEFINITIONS[n.type as NodeType].category] }));
   // The dot is the node's real category hue (same mapping as the canvas), so the illustration can't drift from the product.
   const HUE_BG: Record<CategoryHue, string> = { trigger: "bg-cat-trigger", logic: "bg-cat-logic", ai: "bg-cat-ai", app: "bg-cat-app", output: "bg-cat-output" };
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
       {nodes.map((n, i) => (
         <div key={n.title} className="flex items-center gap-0 sm:flex-1">
-          <div className={`w-44 rounded-lg border bg-card px-3.5 py-3 text-start ${i === 1 ? "border-accent shadow-[var(--shadow-glow)]" : "border-line"}`}>
+          <div className={`w-44 rounded-lg border bg-elevated shadow-[var(--shadow-popover)] px-3.5 py-3 text-start ${i === 1 ? "border-accent shadow-[var(--shadow-glow)]" : "border-line-strong"}`}>
             <p className="flex items-center gap-2 text-base font-semibold">
               <span className={`size-2 rounded-full ${HUE_BG[n.hue]}`} /> {n.title}
             </p>
-            <p className="data mt-0.5 truncate text-xs tracking-[0.4px] text-muted">{n.sub}</p>
+            <p className="mt-0.5 text-xs tracking-[0.4px] text-muted">{n.sub}</p>
           </div>
           {i < nodes.length - 1 && <div className={`hidden h-px flex-1 sm:block ${i === 1 ? "border-t border-dashed border-accent" : "bg-line-strong"}`} />}
         </div>

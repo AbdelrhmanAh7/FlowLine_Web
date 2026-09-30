@@ -1,0 +1,57 @@
+forward 127.0.0.1:3100 → host.docker.internal:3100
+forward 127.0.0.1:4010 → host.docker.internal:4010
+forward 127.0.0.1:4011 → host.docker.internal:4011
+
+Running 50 tests using 1 worker
+
+[1/50] [webkit] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical
+[2/50] [webkit] › e2e/arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser
+[3/50] [webkit] › e2e/arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+[4/50] [webkit] › e2e/arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+[5/50] [webkit] › e2e/arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+[6/50] [webkit] › e2e/arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+[7/50] [webkit] › e2e/arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+[8/50] [webkit] › e2e/arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+[9/50] [webkit] › e2e/beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser
+[10/50] [webkit] › e2e/beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+[11/50] [webkit] › e2e/builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher
+[12/50] [webkit] › e2e/builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher
+[13/50] [webkit] › e2e/builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher
+[14/50] [webkit] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[15/50] [webkit] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[16/50] [webkit] › e2e/builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again
+[17/50] [webkit] › e2e/builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it
+[18/50] [webkit] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button
+[19/50] [webkit] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button
+[20/50] [webkit] › e2e/builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel
+[21/50] [webkit] › e2e/builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it
+[22/50] [webkit] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button
+[23/50] [webkit] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button
+[24/50] [webkit] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST
+[25/50] [webkit] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST
+[26/50] [webkit] › e2e/builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot
+[27/50] [webkit] › e2e/builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel
+[28/50] [webkit] › e2e/canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical
+[29/50] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser
+[30/50] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+[31/50] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+[32/50] [webkit] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser
+[33/50] [webkit] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser
+[34/50] [webkit] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser
+[35/50] [webkit] › e2e/journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical
+[36/50] [webkit] › e2e/phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical
+[37/50] [webkit] › e2e/phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical
+[38/50] [webkit] › e2e/phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+[39/50] [webkit] › e2e/phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+[40/50] [webkit] › e2e/phase3.spec.ts:184:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+[41/50] [webkit] › e2e/phase3.spec.ts:349:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser
+[42/50] [webkit] › e2e/prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser
+[43/50] [webkit] › e2e/prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser
+[44/50] [webkit] › e2e/run-states.spec.ts:21:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick
+[45/50] [webkit] › e2e/tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical
+[46/50] [webkit] › e2e/keyboard-surfaces.spec.ts:17:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › inline destructive confirmations preserve focus through cancel and successful removal
+[47/50] [webkit] › e2e/keyboard-surfaces.spec.ts:89:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › phone navigation traps focus, nested menu consumes Escape, and returns to launcher
+[48/50] [webkit] › e2e/keyboard-surfaces.spec.ts:112:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › node drawer Escape from a text field returns to the canvas node; dock returns to launcher
+[49/50] [webkit] › e2e/keyboard-surfaces.spec.ts:132:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › OAuth switch/remove confirmations focus Cancel, allow leaving, dismiss and restore focus
+[50/50] [webkit] › e2e/keyboard-surfaces.spec.ts:159:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › desktop run details and nested rerun dialog each dismiss one layer and restore focus
+  50 passed (2.9m)

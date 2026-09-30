@@ -353,3 +353,74 @@ test.describe("landing header: fits every width, keeps theme and language reacha
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   });
 });
+
+// Owner-requested plain landing copy and visible light/dark illustration cards.
+test.describe("landing copy and illustration contrast @cross-browser", () => {
+  for (const locale of ["en", "ar"] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      test(`${locale}/${theme}: readable illustrations at 360, 768, 1024 and 1440`, async ({ page, context }, testInfo) => {
+        await context.addCookies([
+          { name: "fl_locale", value: locale, url: BASE },
+          { name: "fl_theme", value: theme, url: BASE },
+        ]);
+        await page.goto("/", { waitUntil: "networkidle" });
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        await expect(page.locator("html")).toHaveAttribute("lang", locale);
+        const hero = page.getByRole("img");
+        await expect(hero).toContainText(locale === "en" ? "Starts the flow" : "يبدأ سير العمل");
+        await expect(hero).not.toContainText(/JSONATA|JSON|IF \/ ELSE|TRIGGER ·/);
+        for (const width of [360, 768, 1024, 1440]) {
+          await resizeTo(page, width);
+          const styles = await hero.evaluate((el) => {
+            const board = getComputedStyle(el);
+            const card = el.querySelector(".rounded-lg")!;
+            const css = getComputedStyle(card);
+            return { grid: board.backgroundImage, dot: board.getPropertyValue("--canvas-dot").trim(), board: board.backgroundColor,
+              card: css.backgroundColor, border: css.borderTopColor, shadow: css.boxShadow,
+              overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+          });
+          expect(styles.grid).toContain("radial-gradient");
+          expect(styles.dot).not.toBe("");
+          expect(styles.grid).not.toContain("transparent 1px, transparent");
+          expect(styles.card).not.toBe(styles.board);
+          expect(styles.border).not.toBe(styles.card);
+          expect(styles.shadow).not.toBe("none");
+          expect(styles.overflow).toBeLessThanOrEqual(1);
+          await hero.scrollIntoViewIfNeeded();
+          await page.screenshot({ path: testInfo.outputPath(`landing-${locale}-${theme}-${width}-hero.png`) });
+          const flowTitle = page.getByRole("heading", { name: locale === "en" ? "Follow a flow step by step" : "تابع سير العمل خطوة بخطوة" });
+          await flowTitle.scrollIntoViewIfNeeded();
+          await page.screenshot({ path: testInfo.outputPath(`landing-${locale}-${theme}-${width}-flow.png`) });
+        }
+      });
+    }
+  }
+});
+
+for (const locale of ["en", "ar"] as const) {
+  test(`@cross-browser ${locale}: section links preserve landing content through account-route Back and Forward`, async ({ page, context }) => {
+    await context.addCookies([{ name: "fl_locale", value: locale, url: "http://localhost:3100" }]);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: locale === "ar" ? "روابط الموقع" : "Site navigation" });
+    const hero = page.locator("h1");
+    const heroText = (await hero.textContent())!;
+    for (const [name, id] of (locale === "ar" ? [["المنتج", "product"], ["القوالب", "templates"], ["الأسعار", "pricing"]] : [["Product", "product"], ["Templates", "templates"], ["Pricing", "pricing"]])) {
+      await nav.getByRole("link", { name, exact: true }).press("Enter");
+      await expect(page).toHaveURL(new RegExp(`#${id}$`));
+      await expect(page.locator(`#${id}`)).toBeInViewport();
+      await page.getByRole("link", { name: locale === "ar" ? "تسجيل الدخول" : "Sign in", exact: true }).press("Enter");
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await expect(page.getByRole("textbox", { name: locale === "ar" ? "البريد الإلكتروني" : "Email", exact: true })).toBeVisible();
+      await page.goBack();
+      await expect(page).toHaveURL(new RegExp(`#${id}$`));
+      await expect(hero).toHaveText(heroText);
+      await expect(nav).toBeVisible();
+      await page.goForward();
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await expect(nav).toHaveCount(0);
+      await page.goBack();
+      await expect(hero).toHaveText(heroText);
+    }
+  });
+}

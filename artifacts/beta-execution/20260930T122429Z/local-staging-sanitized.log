@@ -1,0 +1,205 @@
+[build] ▲ Next.js 16.3.6 (webpack)
+[build] - Environments: .env
+[build] ✓ Running next.config.ts took 359ms
+[build] 
+[build]   Creating an optimized production build ...
+[build] ✓ Compiled successfully in 28.2s
+[build]   Running TypeScript ...
+[build] 
+[build]   We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+[build]   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+[build] 
+[build]   	- include was updated to add 'artifacts/beta-execution/.profile/local-staging-20260930/build/types/**/*.ts'
+[build]   	- include was updated to add 'artifacts/beta-execution/.profile/local-staging-20260930/build/dev/types/**/*.ts'
+[build] 
+[build]   Finished TypeScript in 16.3s ...
+[build]   Collecting page data using 31 workers ...
+[build] Error: Failed to collect configuration for /api/workspaces/[wid]/knowledge
+[build]     at ignore-listed frames {
+[build]   [cause]: TypeError: The "path" argument must be of type string or an instance of URL. Received an instance of URL
+[build]       at 56061 (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\chunks\6791.js:1:6888)
+[build]       at k (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\webpack-runtime.js:1:159)
+[build]       at <unknown> (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\chunks\6791.js:1:1679)
+[build]       at k.a (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\webpack-runtime.js:1:721)
+[build]       at 26791 (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\chunks\6791.js:1:1514)
+[build]       at k (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\webpack-runtime.js:1:159)
+[build]       at <unknown> (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\app\api\workspaces\[wid]\knowledge\route.js:1:1329)
+[build]       at k.a (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\webpack-runtime.js:1:721)
+[build]       at 43380 (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\artifacts\beta-execution\.profile\local-staging-20260930\build\server\app\api\workspaces\[wid]\knowledge\route.js:1:1221) {
+[build]     code: 'ERR_INVALID_ARG_TYPE'
+[build]   }
+[build] }
+[build] 
+[build] > Build error occurred
+[build] Error: Failed to collect page data for /api/workspaces/[wid]/knowledge
+[build]     at ignore-listed frames {
+[build]   type: 'Error'
+[build] }
+[build] ▲ Next.js 16.3.6 (Turbopack)
+[build] - Environments: .env
+[build] ✓ Running next.config.ts took 30ms
+[build] 
+[build]   Creating an optimized production build ...
+[build] ✓ Compiled successfully in 9.1s
+[build]   Running TypeScript ...
+[build] 
+[build]   We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+[build]   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+[build] 
+[build]   	- include was updated to add 'artifacts/beta-execution/.profile/local-staging-20260930/build-turbopack/types/**/*.ts'
+[build]   	- include was updated to add 'artifacts/beta-execution/.profile/local-staging-20260930/build-turbopack/dev/types/**/*.ts'
+[build] 
+[build]   Finished TypeScript in 12.2s ...
+[build]   Collecting page data using 31 workers ...
+[build]   Generating static pages using 31 workers (0/22) ...
+[build]   Generating static pages using 31 workers (5/22) 
+[build]   Generating static pages using 31 workers (10/22) 
+[build]   Generating static pages using 31 workers (16/22) 
+[build] ✓ Generating static pages using 31 workers (22/22) in 290ms
+[build]   Finalizing page optimization ...
+[build] 
+[build] Route (app)
+[build] ┌ ƒ /
+[build] ├ ƒ /_not-found
+[build] ├ ƒ /account/delete
+[build] ├ ƒ /admin
+[build] ├ ƒ /admin/setup
+[build] ├ ƒ /api/agent-runs/[rid]
+[build] ├ ƒ /api/agent-runs/[rid]/cancel
+[build] ├ ƒ /api/agents/[aid]
+[build] ├ ƒ /api/agents/[aid]/runs
+[build] ├ ƒ /api/ai/providers
+[build] ├ ƒ /api/approvals/[aid]/decide
+[build] ├ ƒ /api/auth-config
+[build] ├ ƒ /api/auth/[...all]
+[build] ├ ƒ /api/beta/check
+[build] ├ ƒ /api/billing/webhook
+[build] ├ ƒ /api/connections/[cid]
+[build] ├ ƒ /api/email
+[build] ├ ƒ /api/flows/[fid]
+[build] ├ ƒ /api/flows/[fid]/copilot
+[build] ├ ƒ /api/flows/[fid]/copilot/[pid]
+[build] ├ ƒ /api/flows/[fid]/publish
+[build] ├ ƒ /api/flows/[fid]/runs
+[build] ├ ƒ /api/flows/[fid]/share
+[build] ├ ƒ /api/flows/[fid]/versions
+[build] ├ ƒ /api/flows/[fid]/versions/[vid]
+[build] ├ ƒ /api/flows/[fid]/versions/[vid]/restore
+[build] ├ ƒ /api/flows/[fid]/webhook/rotate
+[build] ├ ƒ /api/health
+[build] ├ ƒ /api/hooks/[token]
+[build] ├ ƒ /api/integrations/catalog
+[build] ├ ƒ /api/invites/[token]
+[build] ├ ƒ /api/me
+[build] ├ ƒ /api/oauth/callback
+[build] ├ ƒ /api/oauth/start
+[build] ├ ƒ /api/onboarding
+[build] ├ ƒ /api/ops/status
+[build] ├ ƒ /api/platform/admins
+[build] ├ ƒ /api/platform/admins/[uid]/revoke
+[build] ├ ƒ /api/platform/audit
+[build] ├ ƒ /api/platform/credentials
+[build] ├ ƒ /api/platform/credentials/[purpose]
+[build] ├ ƒ /api/platform/credentials/[purpose]/clear
+[build] ├ ƒ /api/platform/credentials/[purpose]/impact
+[build] ├ ƒ /api/platform/credentials/[purpose]/import
+[build] ├ ƒ /api/platform/credentials/[purpose]/probe
+[build] ├ ƒ /api/platform/credentials/[purpose]/revoke
+[build] ├ ƒ /api/platform/me
+[build] ├ ƒ /api/platform/settings/[key]
+[build] ├ ƒ /api/platform/settings/[key]/import
+[build] ├ ƒ /api/platform/setup
+[build] ├ ƒ /api/platform/setup/complete
+[build] ├ ƒ /api/platform/setup/email
+[build] ├ ƒ /api/platform/setup/redeem
+[build] ├ ƒ /api/platform/step-up
+[build] ├ ƒ /api/runs/[rid]
+[build] ├ ƒ /api/runs/[rid]/cancel
+[build] ├ ƒ /api/runs/[rid]/rerun
+[build] ├ ƒ /api/runs/[rid]/rerun-preview
+[build] ├ ƒ /api/sso/callback
+[build] ├ ƒ /api/sso/start
+[build] ├ ƒ /api/test/beta
+[build] ├ ƒ /api/test/faults
+[build] ├ ƒ /api/test/outbox
+[build] ├ ƒ /api/v1/agent-runs/[rid]
+[build] ├ ƒ /api/v1/agents/[aid]/runs
+[build] ├ ƒ /api/v1/flows
+[build] ├ ƒ /api/v1/flows/[fid]/runs
+[build] ├ ƒ /api/v1/runs/[rid]
+[build] ├ ƒ /api/workspaces
+[build] ├ ƒ /api/workspaces/[wid]
+[build] ├ ƒ /api/workspaces/[wid]/agents
+[build] ├ ƒ /api/workspaces/[wid]/ai
+[build] ├ ƒ /api/workspaces/[wid]/ai/connections
+[build] ├ ƒ /api/workspaces/[wid]/ai/connections/[cid]
+[build] ├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/affected
+[build] ├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/models
+[build] ├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/test
+[build] ├ ƒ /api/workspaces/[wid]/ai/default-route
+[build] ├ ƒ /api/workspaces/[wid]/ai/models
+[build] ├ ƒ /api/workspaces/[wid]/ai/policy
+[build] ├ ƒ /api/workspaces/[wid]/api-keys
+[build] ├ ƒ /api/workspaces/[wid]/api-keys/[kid]
+[build] ├ ƒ /api/workspaces/[wid]/approvals
+[build] ├ ƒ /api/workspaces/[wid]/audit
+[build] ├ ƒ /api/workspaces/[wid]/billing
+[build] ├ ƒ /api/workspaces/[wid]/billing/cancel
+[build] ├ ƒ /api/workspaces/[wid]/billing/change
+[build] ├ ƒ /api/workspaces/[wid]/billing/checkout
+[build] ├ ƒ /api/workspaces/[wid]/billing/reconcile
+[build] ├ ƒ /api/workspaces/[wid]/connections
+[build] ├ ƒ /api/workspaces/[wid]/copilot
+[build] ├ ƒ /api/workspaces/[wid]/copilot/[pid]
+[build] ├ ƒ /api/workspaces/[wid]/files
+[build] ├ ƒ /api/workspaces/[wid]/flows
+[build] ├ ƒ /api/workspaces/[wid]/invites
+[build] ├ ƒ /api/workspaces/[wid]/invites/[iid]
+[build] ├ ƒ /api/workspaces/[wid]/knowledge
+[build] ├ ƒ /api/workspaces/[wid]/knowledge/[sid]
+[build] ├ ƒ /api/workspaces/[wid]/knowledge/search
+[build] ├ ƒ /api/workspaces/[wid]/members
+[build] ├ ƒ /api/workspaces/[wid]/members/[uid]
+[build] ├ ƒ /api/workspaces/[wid]/oauth-apps
+[build] ├ ƒ /api/workspaces/[wid]/oauth-apps/[family]
+[build] ├ ƒ /api/workspaces/[wid]/oauth-apps/[family]/impact
+[build] ├ ƒ /api/workspaces/[wid]/oauth-apps/[family]/probe
+[build] ├ ƒ /api/workspaces/[wid]/oauth-apps/provenance
+[build] ├ ƒ /api/workspaces/[wid]/overview
+[build] ├ ƒ /api/workspaces/[wid]/runs
+[build] ├ ƒ /api/workspaces/[wid]/sso
+[build] ├ ƒ /api/workspaces/[wid]/usage
+[build] ├ ƒ /app
+[build] ├ ƒ /billing/checkout
+[build] ├ ƒ /design-system
+[build] ├ ƒ /forgot-password
+[build] ├ ƒ /invite/[token]
+[build] ├ ƒ /onboarding
+[build] ├ ƒ /resend-verification
+[build] ├ ƒ /reset-password
+[build] ├ ƒ /sign-in
+[build] ├ ƒ /sign-up
+[build] ├ ƒ /verify-email
+[build] ├ ƒ /w/[slug]/agents
+[build] ├ ƒ /w/[slug]/agents/[aid]
+[build] ├ ƒ /w/[slug]/agents/new
+[build] ├ ƒ /w/[slug]/canvas
+[build] ├ ƒ /w/[slug]/flows
+[build] ├ ƒ /w/[slug]/flows/[flowId]
+[build] ├ ƒ /w/[slug]/integrations
+[build] ├ ƒ /w/[slug]/knowledge
+[build] ├ ƒ /w/[slug]/runs
+[build] ├ ƒ /w/[slug]/settings
+[build] └ ƒ /w/[slug]/templates
+[build] 
+[build] 
+[build] ƒ  (Dynamic)  server-rendered on demand
+[build] 
+[web] ▲ Next.js 16.3.6
+[web] - Local:         http://127.0.0.1:3000
+[web] - Network:       http://127.0.0.1:3000
+[web] ✓ Ready in 177ms
+[web] ✓ Running next.config.ts took 40ms
+[worker] 2026-09-30T16:33:35.859Z [worker] starting LAPTOP-AGGSOJ7U-10720-b895a2
+[web] [auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+[web] [auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.

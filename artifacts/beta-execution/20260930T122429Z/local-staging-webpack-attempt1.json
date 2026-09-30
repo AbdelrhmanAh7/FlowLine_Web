@@ -1,0 +1,74 @@
+{
+  "startedAt": "2026-09-30T16:29:32.638Z",
+  "supervisorPid": 11796,
+  "base": "http://localhost:3000",
+  "database": "flowline_beta_local20260930",
+  "checkpoint": "5d2a8e1dd765058ccd6b474026e5e5e5452efa89",
+  "environment": "staging",
+  "workerConcurrency": 1,
+  "externalCredentialsImported": false,
+  "billing": "sandbox only, unconfigured",
+  "spendCap": 0,
+  "phases": [
+    {
+      "at": "2026-09-30T16:29:34.338Z",
+      "phase": "candidate",
+      "state": "CP21_INPUTS_MATCH"
+    },
+    {
+      "at": "2026-09-30T16:29:34.793Z",
+      "phase": "operator-storage",
+      "state": "CREATED_RESTRICTED_CONFIG_AND_NEW_DB"
+    },
+    {
+      "at": "2026-09-30T16:29:35.415Z",
+      "phase": "database",
+      "state": "MIGRATED_NEW_LOCAL_STAGING",
+      "schemaVersion": 20,
+      "users": 0,
+      "workspaces": 0
+    },
+    {
+      "at": "2026-09-30T16:29:35.935Z",
+      "phase": "build",
+      "state": "STARTED_NO_BROWSER_EXPLORATION"
+    }
+  ],
+  "processes": [
+    {
+      "label": "build",
+      "pid": 70288,
+      "startedAt": "2026-09-30T16:29:35.945Z",
+      "exitCode": 1,
+      "signal": null,
+      "endedAt": "2026-09-30T16:30:30.876Z"
+    }
+  ],
+  "stopCommand": "write_stdin this supervised session with stop plus newline; only its recorded child trees are stopped",
+  "inputs": {
+    "src": "dc69022c8af7b30048b4d421d4c8efcc62061126",
+    "e2e": "a3dbeea5fe21840f9197b997d077e10c8fde739d",
+    "tests": "01d8db396afbc60b40399bc660c0918b16ac3fd4",
+    "scripts": "2decff1e9a9fbd5c08fd498609316406beef295f",
+    "worker": "fb714bff64286626764b438d81a17383f2c84c20",
+    "drizzle": "8d3601b853a3cc4e9a2a17e8c82728d7934fffb2",
+    "package.json": "805755d8f760fcc06eda6e5094840b42bb7af7db",
+    "pnpm-lock.yaml": "896d82a11f49c15c9333be7432c84603e132a798",
+    "playwright.config.ts": "971cb58d4b5ce8856295e8826126380c584eec09",
+    "next.config.ts": "035378d9718204d37b1c9784c875da20c6b444ae"
+  },
+  "head": "776337cec8ed5ee823017f40020459e28cf0467a",
+  "executionTree": "0ee305cffa25d2acd5f49929936784b404ececa1",
+  "schemaVersion": 20,
+  "initialUserCount": 0,
+  "initialWorkspaceCount": 0,
+  "tsconfigSha": "d7e8b96a8dda2bb2e4bf20521f0c572fc8b7e12e5e508f11a7f76038b71c3f01",
+  "tsconfigRestoredToPreimage": true,
+  "failure": {
+    "name": "Error",
+    "code": null,
+    "message": "Candidate build failed; sanitized log retained"
+  },
+  "stoppedAt": "2026-09-30T16:30:30.879Z",
+  "stopExitCode": 1
+}

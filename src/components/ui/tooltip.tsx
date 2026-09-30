@@ -30,9 +30,12 @@ export function Tooltip({
         onPointerDown: () => {
           openAtPointerDown.current = open;
         },
+        onPointerCancel: () => {
+          openAtPointerDown.current = false;
+        },
         onClick: (e: MouseEvent) => {
           e.preventDefault(); // Radix closes the tooltip on click unless the click is default-prevented
-          setOpen(!openAtPointerDown.current);
+          setOpen(e.detail === 0 ? !open : !openAtPointerDown.current);
           openAtPointerDown.current = false;
         },
       }

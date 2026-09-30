@@ -459,15 +459,20 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(readFileSync("src/app/page.tsx", "utf8")).toContain('providersAria={t("shell.nav.integrations")}');
   });
 
-  it("the landing illustrations take node subtitles from the translated node catalogue, not English literals", () => {
+  it("landing illustrations use plain landing subtitles and preserve product catalogue labels", () => {
     const page = readFileSync("src/app/page.tsx", "utf8");
-    expect(page).not.toMatch(/\bsub:\s*"/);
-    // Every subtitle comes from nodeText: the 5 flow-scene nodes literally, the 3 hero nodes through their node type.
-    const subs = page.match(/\bsub:\s*[^,}\n]+/g) ?? [];
-    expect(subs.length).toBeGreaterThanOrEqual(6);
-    for (const s of subs) expect(s).toMatch(/^sub:\s*nodeText\(t\b/);
-    expect(page.match(/sub: nodeText\(t, "[a-z.]+", "subtitle"\)/g)).toHaveLength(5);
-    expect(page.match(/title: t\("landing\.heroNodes\.\w+"\), type: "[a-z]+\.[a-z_]+"/g)).toHaveLength(3);
+    expect(page).not.toContain("nodeText");
+    expect(page.match(/sub: t\("landing\.flowNodes\.\w+Sub"\)/g)).toHaveLength(5);
+    expect(page.match(/sub: t\("landing\.heroNodes\.\w+Sub"\)/g)).toHaveLength(3);
+    for (const messages of [ar, en]) {
+      const strings = (value: unknown): string[] => typeof value === "string" ? [value] : Object.values(value as Record<string, unknown>).flatMap(strings);
+      expect(strings(messages.landing).join(" ")).not.toMatch(/JSONATA|JSON|IF \/ ELSE|TRIGGER ·|\b(?:nodes?|graph|agents?)\b|عُقد|عقدة|مخطط|وكلاء/i);
+    }
+    expect(Object.keys(ar.landing.heroNodes)).toEqual(Object.keys(en.landing.heroNodes));
+    expect(Object.keys(ar.landing.flowNodes)).toEqual(Object.keys(en.landing.flowNodes));
+    expect(page).toContain("var(--canvas-dot)");
+    expect(page).toContain("bg-elevated");
+    expect(readFileSync("src/components/landing/flow-scene.tsx", "utf8")).toContain("var(--canvas-dot)");
   });
 
   it("form-control boundaries use line-control (≥3:1, WCAG 1.4.11), never the lighter divider token", () => {

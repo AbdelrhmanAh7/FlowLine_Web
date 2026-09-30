@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -89,6 +89,7 @@ export default function KnowledgePage() {
     onSuccess: () => {
       toast(t("knowledge.deleted"), "success");
       setConfirmDelete(null);
+      if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById("knowledge-upload")?.focus();
       refresh();
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("knowledge.deleteError")), "danger"),
@@ -141,28 +142,27 @@ export default function KnowledgePage() {
                     </span>
                     <StatusBadge tone={STATUS_TONE[s.status]}>{dataText(t, "knowledge.status", s.status)}</StatusBadge>
                     {!s.enabled && <StatusBadge tone="warning">{t("knowledge.disabled")}</StatusBadge>}
-                    <span className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       <Button size="sm" variant="ghost" disabledReason={editReason ?? (s.status === "indexing" || s.status === "pending" ? t("knowledge.indexingInProgress") : null)} onClick={() => patch.mutate({ id: s.id, body: { reindex: true } })}>
                         {t("knowledge.reindex")}
                       </Button>
                       <Button size="sm" variant="ghost" disabledReason={editReason} onClick={() => patch.mutate({ id: s.id, body: { enabled: !s.enabled } })}>
                         {s.enabled ? t("knowledge.disable") : t("knowledge.enable")}
                       </Button>
-                      {confirmDelete === s.id ? (
-                        <>
+                      <Button size="sm" variant="danger-ghost" disabledReason={editReason} aria-expanded={confirmDelete === s.id} onClick={() => setConfirmDelete(s.id)}>
+                        {t("knowledge.delete")}
+                      </Button>
+                      {confirmDelete === s.id && (
+                        <InlineConfirmation label={t("knowledge.confirmDelete")} onCancel={() => setConfirmDelete(null)} busy={del.isPending} returnFocusTo={() => document.getElementById("knowledge-upload")} className="mt-0 flex gap-2">
                           <Button size="sm" variant="danger" loading={del.isPending} onClick={() => del.mutate(s.id)}>
                             {t("knowledge.confirmDelete")}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
+                          <Button data-initial-focus size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
                             {t("knowledge.keep")}
                           </Button>
-                        </>
-                      ) : (
-                        <Button size="sm" variant="danger-ghost" disabledReason={editReason} onClick={() => setConfirmDelete(s.id)}>
-                          {t("knowledge.delete")}
-                        </Button>
+                        </InlineConfirmation>
                       )}
-                    </span>
+                    </div>
                   </Card>
                 </li>
               ))}
@@ -186,7 +186,7 @@ export default function KnowledgePage() {
                 e.target.value = "";
               }}
             />
-            <Button className="self-start" variant="primary" loading={upload.isPending} disabledReason={editReason} onClick={() => fileRef.current?.click()}>
+            <Button id="knowledge-upload" className="self-start" variant="primary" loading={upload.isPending} disabledReason={editReason} onClick={() => fileRef.current?.click()}>
               {t("knowledge.upload")}
             </Button>
             <form

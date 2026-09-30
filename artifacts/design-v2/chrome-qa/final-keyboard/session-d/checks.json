@@ -1,0 +1,1128 @@
+[
+  {
+    "id": "admin:cleanup",
+    "result": "PASS",
+    "status": 200,
+    "note": "Corroborating API cleanup after native-dialog controller interruption; disposable credential already revoked and cleared."
+  },
+  {
+    "id": "builder:node-drawer",
+    "name": "Inbound lead",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:run-dock",
+    "name": "Run dock",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:catalog",
+    "name": "Add node",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:copilot",
+    "name": "Copilot",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:history",
+    "name": "Version history",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:publish",
+    "name": "Triggers",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:triggers",
+    "name": "Triggers",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:issues",
+    "name": "Flow issues",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "shell:account-menu",
+    "name": "KFKeyboard final",
+    "mode": "menu",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "shell:phone-navigation",
+    "name": "Workspace navigation",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:dialog-0",
+    "name": "Dialog title",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:drawer-0",
+    "name": "Drawer title",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:menu-0",
+    "name": "Menu",
+    "mode": "menu",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:popover-0",
+    "name": null,
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:dialog-1",
+    "name": "Dialog title",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:drawer-1",
+    "name": "Drawer title",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:menu-1",
+    "name": "Menu",
+    "mode": "menu",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:popover-1",
+    "name": null,
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "guide:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-0",
+    "name": "Connect Google Sheets",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-1",
+    "name": "Connect Gmail",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-2",
+    "name": "Connect Slack",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-3",
+    "name": "Connect HubSpot",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-4",
+    "name": "Connect Zendesk",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-5",
+    "name": "Connect Airtable",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-6",
+    "name": "Connect Snowflake",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-7",
+    "name": "Connect GitHub",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-8",
+    "name": "Connect Stripe",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-9",
+    "name": "Connect Notion",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-10",
+    "name": "Connect PostgreSQL",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:connect-11",
+    "name": "Connect Linear",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-0",
+    "name": "Connect OpenAI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-1",
+    "name": "Connect Anthropic",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-2",
+    "name": "Connect Google Gemini API",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-3",
+    "name": "Connect xAI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-4",
+    "name": "Connect Groq",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-5",
+    "name": "Connect OpenRouter",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-6",
+    "name": "Connect Mistral AI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-7",
+    "name": "Connect Cohere",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-8",
+    "name": "Connect DeepSeek",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-9",
+    "name": "Connect Z.ai (GLM)",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-10",
+    "name": "Connect Moonshot AI (Kimi)",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-11",
+    "name": "Connect MiniMax",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-12",
+    "name": "Connect Alibaba Cloud Model Studio",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-13",
+    "name": "Connect Cerebras",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-14",
+    "name": "Connect Together AI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-15",
+    "name": "Connect Fireworks AI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-16",
+    "name": "Connect DeepInfra",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-17",
+    "name": "Connect Hugging Face Inference Providers",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-18",
+    "name": "Connect Cloudflare Workers AI",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:connect-19",
+    "name": "Connect Vercel AI Gateway",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-2",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-3",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-4",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-5",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-6",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-7",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-8",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-9",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-10",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:pickers:native-select-11",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Replace key",
+    "name": "Replace the key of \"Keyboard final AI\"",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Send a paid test…",
+    "name": "Send a paid test request",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ai:Disconnect",
+    "name": "Disconnect \"Keyboard final AI\"?",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:Members:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:Members:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:Members",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:General:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:General",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:AI Providers:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-2",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-3",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-4",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-5",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-6",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-7",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-8",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-9",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-10",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers:native-select-11",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:AI Providers",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:API keys:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:API keys:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:API keys",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:Plan & billing",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:Usage & limits",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:Audit log",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:SSO:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "settings:SSO",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "settings:OAuth apps",
+    "result": "PASS",
+    "note": "Keyboard section activation; inline content and native selects inspected. Floating variants have separate rows."
+  },
+  {
+    "id": "oauth:google:remove",
+    "name": "Remove this workspace app? Connections it issued stop working and must reconnect (they never move to Flowline's app silently).",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "oauth:google:switch",
+    "name": "A different client ID is a different app: connections issued by the current one must reconnect.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "oauth:slack:remove",
+    "name": "Remove this workspace app? Connections it issued stop working and must reconnect (they never move to Flowline's app silently).",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "oauth:slack:switch",
+    "name": "A different client ID is a different app: connections issued by the current one must reconnect.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "oauth:github:remove",
+    "name": "Remove this workspace app? Connections it issued stop working and must reconnect (they never move to Flowline's app silently).",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "oauth:github:switch",
+    "name": "A different client ID is a different app: connections issued by the current one must reconnect.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "runs:desktop-details",
+    "name": "step-panel",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "runs:rerun",
+    "name": "Re-run #1 from “Hot lead”",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "runs:phone-sheet",
+    "name": "Lead Qualifier · run #1",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:phone-node-sheet",
+    "name": "Inbound leadSuccess",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "builder:tablet-node-overlay",
+    "name": "Inbound leadSuccess",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "flows:create-copilot",
+    "name": "Copilot",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "agents:new:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agents:new:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agents:new:native-select-2",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agents:new:native-select-3",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agents:new:native-select-4",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Chat",
+    "result": "PASS",
+    "note": "Inline tab content and native selects; no overlay or drawer launchers."
+  },
+  {
+    "id": "agent:Configuration:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Configuration:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Configuration:native-select-2",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Configuration:native-select-3",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Configuration:native-select-4",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "agent:Configuration",
+    "result": "PASS",
+    "note": "Inline tab content and native selects; no overlay or drawer launchers."
+  },
+  {
+    "id": "agent:Runs",
+    "result": "PASS",
+    "note": "Inline tab content and native selects; no overlay or drawer launchers."
+  },
+  {
+    "id": "knowledge:forms",
+    "result": "PASS",
+    "note": "Inline add-text/upload and source cards; no app overlay. File chooser is OS/browser-owned and not opened."
+  },
+  {
+    "id": "templates:catalog",
+    "result": "PASS",
+    "note": "Inline filters/cards; Use template navigates to builder without a dialog."
+  },
+  {
+    "id": "knowledge:inline-delete",
+    "result": "FAIL",
+    "initial": false,
+    "escape": false,
+    "bodyLoss": true,
+    "note": "Delete replaces its focused launcher with a fragment; focus becomes BODY. K05."
+  },
+  {
+    "id": "keys:inline-revoke",
+    "result": "FAIL",
+    "focus": {
+      "tag": "BODY",
+      "role": null,
+      "label": null
+    },
+    "note": "Revoke replaces launcher; body focus lost and Escape does not cancel."
+  }
+]

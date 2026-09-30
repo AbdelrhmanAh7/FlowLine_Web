@@ -1,0 +1,66 @@
+{
+  "at": "2026-09-30T20:24:04.869Z",
+  "checkpoint": "c1e8f5fbdcf82f991279a1dd79960b4adb554a07",
+  "supervisorPid": 2512,
+  "sequence": [
+    {
+      "name": "lint",
+      "startedAt": "2026-09-30T20:24:06.776Z",
+      "command": "pnpm -s lint",
+      "pid": 20272,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:24:18.809Z"
+    },
+    {
+      "name": "typecheck",
+      "startedAt": "2026-09-30T20:24:19.483Z",
+      "command": "pnpm -s typecheck",
+      "pid": 50908,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:24:30.657Z"
+    },
+    {
+      "name": "benchmark-typecheck",
+      "startedAt": "2026-09-30T20:24:31.368Z",
+      "command": "pnpm exec tsc --noEmit --project artifacts/beta-execution/20260930T122429Z/copilot-hub-check.tsconfig.json",
+      "pid": 91512,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:24:35.418Z"
+    },
+    {
+      "name": "unit",
+      "startedAt": "2026-09-30T20:24:36.073Z",
+      "command": "pnpm -s test --maxWorkers=1",
+      "pid": 47248,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:24:52.129Z"
+    },
+    {
+      "name": "contract",
+      "startedAt": "2026-09-30T20:24:52.846Z",
+      "command": "pnpm -s test:contract --maxWorkers=1",
+      "pid": 89216,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:25:15.452Z"
+    },
+    {
+      "name": "integration",
+      "startedAt": "2026-09-30T20:25:16.132Z",
+      "command": "pnpm -s test:integration --maxWorkers=1",
+      "pid": 90380,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:28:17.386Z"
+    },
+    {
+      "name": "evidence",
+      "startedAt": "2026-09-30T20:28:18.047Z",
+      "command": "pnpm -s check:evidence",
+      "pid": 73536,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T20:28:18.973Z"
+    }
+  ],
+  "independentReview": false,
+  "providerCalls": 0,
+  "status": "PASS"
+}

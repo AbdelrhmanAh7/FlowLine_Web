@@ -17,7 +17,7 @@ export interface TabItem<T extends string> {
   disabled?: boolean;
   /**
    * Blocked, and says why (the "disabled control with a reason" rule): the tab is `aria-disabled` and dimmed, is not
-   * activatable and is skipped by arrow/Home/End/Tab, but stays hoverable and tappable — the reason shows in a
+   * activatable and is skipped by arrow/Home/End, but an explained tab is keyboard-focusable — its reason shows in a
    * tooltip (hover, focus or tap) and is the tab's accessible description.
    */
   disabledReason?: string | null;
@@ -71,7 +71,7 @@ export function Tabs<T extends string>({
               aria-selected={selected}
               aria-disabled="true"
               aria-describedby={reason ? reasonId(t.id) : undefined}
-              tabIndex={-1}
+              tabIndex={reason ? 0 : -1}
               data-state={selected ? "active" : "inactive"}
               data-disabled=""
               className={cn(TAB_CLASS, BLOCKED_CLASS, tabClassName)}

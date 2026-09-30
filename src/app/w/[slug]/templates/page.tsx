@@ -17,7 +17,7 @@ import { useOnline } from "@/lib/hooks";
 import { topoOrder } from "@/engine/validate";
 import { useCreateFlow } from "../flows/dashboard";
 
-const CATEGORIES = ["All", "Sales", "Support", "Marketing", "Data ops", "Finance", "Engineering"] as const;
+const CATEGORIES = ["All", "Sales", "Support", "Marketing", "Data ops", "Finance", "Operations", "Personal", "Engineering"] as const;
 
 /** Catalogue text for data-driven keys (template ids, categories), with the template's own English as fallback. */
 const tr = (t: Translator, key: string, fallback: string) => (t.has(key) ? t(key as MessageKey) : fallback);
@@ -88,18 +88,29 @@ export default function TemplatesPage() {
           <>
             {local.length > 0 && (
               <section>
-                <SectionLabel className="mb-3">{t("templates.ready")}</SectionLabel>
+                <SectionLabel className="mb-1">{t("templates.ready")}</SectionLabel>
+                <p className="mb-3 max-w-3xl text-sm text-med">{t("templates.readyNote")}</p>
                 <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {local.map((tpl) => {
                     const chain = topoOrder(tpl.graph).slice(0, 4);
                     const shown = templateText(t, "localTemplates", tpl);
                     return (
                       <li key={tpl.id} className="motion-list-in">
-                        <Card className="flex h-full flex-col gap-3 p-4">
+                        <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
                           <Chain items={chain.map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
                             <p className="text-lg font-semibold">{shown.name}</p>
                             <p className="mt-1 text-base text-med">{shown.description}</p>
+                            <dl className="mt-2 flex flex-col gap-1 text-sm">
+                              <div>
+                                <dt className="inline font-medium text-hi">{t("templates.sampleLabel")}: </dt>
+                                <dd className="inline text-med">{tr(t, `localTemplates.${tpl.id}.sample`, tpl.sample)}</dd>
+                              </div>
+                              <div>
+                                <dt className="inline font-medium text-hi">{t("templates.resultLabel")}: </dt>
+                                <dd className="inline text-med">{tr(t, `localTemplates.${tpl.id}.result`, tpl.result)}</dd>
+                              </div>
+                            </dl>
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="data text-xs text-muted uppercase">

@@ -144,6 +144,9 @@ test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and r
   await page.getByRole("link", { name: "New agent" }).first().click();
   await page.getByLabel("Name").fill("Support bot");
   await page.getByLabel("Instructions").fill("Answer from knowledge; run the Doubler when asked.");
+  // Model discovery expands the form above the checkboxes. Wait for its final list
+  // before pointer interaction so a late layout shift cannot move the click target.
+  await expect(page.getByTestId("agent-ai-route").getByRole("option").filter({ hasText: /^fake-gpt-mini/ })).toBeVisible();
   await page.getByRole("list", { name: "Knowledge sources" }).getByLabel(/Refund policy/).check();
   await page.getByRole("list", { name: "Workflow tools" }).getByLabel(/Doubler/).check(); // defaults to ASK
   await page.getByRole("button", { name: "Create agent" }).click();

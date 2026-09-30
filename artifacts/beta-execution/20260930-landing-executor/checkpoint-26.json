@@ -1,0 +1,22 @@
+{
+  "at": "2026-09-30T19:18:07.857Z",
+  "ref": "refs/checkpoints/design-v2-closeout-26",
+  "commit": "61e37849e44cc87a13ac022815923a2e0c54bd5b",
+  "tree": "4b3fd1f982ab404fcfc7d5850b623d3c58c722f9",
+  "parent": "53df9467750cadfc1e50ff73047de7e94dea9238",
+  "inputs": {
+    "src": "fea5745eb9889155832655067c4ca18271fa56bb",
+    "e2e": "e9adadc6b78ec8ed5a97fdb70304017f2eeedf14",
+    "tests": "99ede37932132280a6d4aaddc6adaf4931c9e9be",
+    "scripts": "4dd621d3985e7f36abae44fcd284f67164ab80da",
+    "worker": "fb714bff64286626764b438d81a17383f2c84c20",
+    "drizzle": "8d3601b853a3cc4e9a2a17e8c82728d7934fffb2",
+    "package.json": "805755d8f760fcc06eda6e5094840b42bb7af7db",
+    "pnpm-lock.yaml": "896d82a11f49c15c9333be7432c84603e132a798",
+    "playwright.config.ts": "971cb58d4b5ce8856295e8826126380c584eec09",
+    "next.config.ts": "035378d9718204d37b1c9784c875da20c6b444ae"
+  },
+  "realIndexUnchanged": true,
+  "branchHead": "776337cec8ed5ee823017f40020459e28cf0467a",
+  "coverage": "Frozen candidate; full sequential gate pending. No branch commit or push."
+}

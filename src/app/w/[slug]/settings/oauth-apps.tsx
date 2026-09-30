@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge, useConfirm } from "@/components/ui";
+import { Button, Card, ErrorState, Field, InlineConfirmation, Input, Skeleton, StatusBadge, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
@@ -177,7 +177,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
         </div>
       </form>
       {confirm && (
-        <div role="alertdialog" aria-labelledby={`oa-confirm-${family}`} className="mt-3 rounded-md border border-danger bg-surface p-3">
+        <InlineConfirmation labelledBy={`oa-confirm-${family}`} busy={pending === "confirm"} onCancel={() => { pendingSecret.current = undefined; setConfirm(null); }}>
           <p id={`oa-confirm-${family}`} className="text-base font-semibold">
             {confirm.kind === "remove" ? t("oauthApps.confirmRemove") : t("oauthApps.confirmSwitch")}
           </p>
@@ -198,6 +198,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
                     toast(t("oauthApps.removed", { count: r.affectedConnections }), "success");
                     setClientId("");
                   }
+                  if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById(`oa-client-${family}`)?.focus();
                   setConfirm(null);
                   await refresh();
                 })
@@ -206,6 +207,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
               {t("platformAdmin.action.confirm")}
             </Button>
             <Button
+              data-initial-focus
               onClick={() => {
                 pendingSecret.current = undefined;
                 setConfirm(null);
@@ -214,7 +216,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
               {t("platformAdmin.action.cancel")}
             </Button>
           </div>
-        </div>
+        </InlineConfirmation>
       )}
     </Card>
   );

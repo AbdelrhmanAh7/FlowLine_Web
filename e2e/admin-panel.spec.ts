@@ -115,17 +115,37 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
   // 8. Revoke + clear through the UI (explicit, confirmed actions).
   await card.getByRole("button", { name: "Revoke" }).click();
   await expect(card.getByRole("alertdialog")).toContainText("Revoking can't recall requests already in progress");
+  await expect(card.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(card.getByRole("alertdialog")).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "Revoke", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(card.getByText("Revoked", { exact: true })).toBeVisible();
+  await expect(secret).toBeFocused();
   await card.getByRole("button", { name: "Clear" }).click();
+  await expect(card.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(card.getByRole("alertdialog")).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "Clear", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(card.getByText("Not configured")).toBeVisible();
+  await expect(secret).toBeFocused();
 
   // Self-revocation must remove the cached privileged panel as well as revoke access on the server (DV2-F01).
   const self = page.getByRole("listitem").filter({ hasText: email });
-  page.once("dialog", (dialog) => dialog.accept());
+  await self.getByRole("button", { name: "Revoke admin", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(self.getByRole("alertdialog")).toBeVisible();
+  await expect(self.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(self.getByRole("alertdialog")).toHaveCount(0);
+  await expect(self.getByRole("button", { name: "Revoke admin", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
   const revokedPage = page.waitForResponse((r) => r.request().isNavigationRequest() && new URL(r.url()).pathname === "/admin");
-  await self.getByRole("button", { name: "Revoke admin", exact: true }).click();
+  await self.getByRole("button", { name: "Confirm", exact: true }).focus();
+  await page.keyboard.press("Enter");
   expect((await revokedPage).status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Platform admin", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "We couldn't find that page", exact: true })).toBeVisible();

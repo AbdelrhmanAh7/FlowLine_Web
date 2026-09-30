@@ -321,7 +321,7 @@ function StepList({ steps }: { steps: Step[] }) {
             {s.inputTokens != null && <span className="data text-muted">{t("agents.run.tokens", { input: s.inputTokens, output: s.outputTokens ?? 0 })}</span>}
             <span className="data ms-auto text-muted">{t.date(s.at, { timeStyle: "medium" })}</span>
           </p>
-          {s.error && <p className="text-danger">{stepErrorText(t, s.error)}</p>}
+          {s.error && <p className="whitespace-pre-wrap text-danger">{stepErrorText(t, s.error, { userNote: s.kind === "tool" && s.decision === "rejected" && s.error.code === "APPROVAL_REJECTED" })}</p>}
           {s.kind === "tool" && s.args != null && <pre dir="ltr" className="data mt-1 max-h-24 overflow-auto text-xs text-med">{JSON.stringify(s.args)}</pre>}
         </li>
       ))}
