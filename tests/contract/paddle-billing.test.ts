@@ -323,7 +323,8 @@ describe("webhook verification", () => {
   it("rejects a tampered body or wrong signature", async () => {
     const { payload, header } = await emit({ type: "subscription.updated", customer: "ctm_fake_1", subscription: { id: "sub_fake_1" } });
     expect(() => adapter().verifyWebhook(payload.replace("ctm_fake_1", "ctm_evil"), header, new Date())).toThrow(WebhookVerificationError);
-    expect(() => adapter().verifyWebhook(payload, header.replace(/h1=[0-9a-f]{2}/, "h1=00"), new Date())).toThrow(WebhookVerificationError);
+    // Flip the first hex digit so the signature ALWAYS differs (a fixed "h1=00" equalled the real HMAC 1 time in 256).
+    expect(() => adapter().verifyWebhook(payload, header.replace(/h1=([0-9a-f])/, (_m, c: string) => `h1=${c === "0" ? "1" : "0"}`), new Date())).toThrow(WebhookVerificationError);
     expect(() => adapter().verifyWebhook(payload, null, new Date())).toThrow(WebhookVerificationError);
     expect(() => adapter().verifyWebhook(payload, "ts=notanumber;h1=abcd", new Date())).toThrow(WebhookVerificationError);
   });

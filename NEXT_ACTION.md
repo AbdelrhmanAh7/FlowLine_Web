@@ -1,5 +1,18 @@
 # Next action
 
+## Company Builder (Milestones A–C) — feature branch `claude/company-builder-milestones-abc-pmba6v`
+
+Implemented from main 9324b1f in a Claude cloud session (2026-09-30). Report and verdicts: `docs/company-builder/REPORT.md`;
+defects: `artifacts/company-builder/20260930-51f1473/BUGS.md`. Feature flag `FLOWLINE_COMPANY_BUILDER=on` (off by default).
+NOT merged, NOT deployed; no payments, invitations or DNS/tunnel changes. Owner CLI prototype runs only on the founder's
+machine (`docs/company-builder/CLI_PROTOTYPE.md`).
+
+Next owner actions, in order: (1) run the first journey locally (`docs/company-builder/OWNER_TEST_GUIDE.md`);
+(2) real Claude/Codex CLI trials on the laptop (CLI_PROTOTYPE.md "Founder runbook"); (3) Codex independent re-test +
+real Chrome exploratory QA against this branch; (4) decide merge. Preserved blockers below (DV2-G01 WebKit timeout,
+R03, external integrations, owner MFA, Pi) are unchanged by this feature.
+
+
 ## Current main handoff — owner consolidation complete
 
 Merged design-v2 source b40cb38 into main 264e0c7 and pushed main only. See docs/implementation/MAIN_CONSOLIDATION.md and the complete docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md. The owner will continue Company Builder implementation with Claude cloud, then return for testing. Company Builder remains unimplemented; React/React DOM already19.3.0. Initial WebKit timeout stays OPEN despite final123/59/59 repeat and actual Chrome10/10 pass. No production/deployment/live-payment/invitation approval; no worktrees removed. Historical pending/paused statements below are superseded by this current handoff.

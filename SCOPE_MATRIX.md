@@ -267,28 +267,28 @@ Q01–Q14 / R01–R36 / copy ids: PENDING — reference files not supplied (see 
 
 | ID | Requirement | Brief § | Acceptance test | Status | Evidence |
 |---|---|---|---|---|---|
-| CB-01 | Feature gated by `FLOWLINE_COMPANY_BUILDER=on`; off by default | 1, 10 | API 404 + no nav when off | PLANNED | |
-| CB-02 | Reviewed question bank (id, target, condition, reason, schema, sensitivity, skip/stop) | 5 | unit question-bank | PLANNED | |
-| CB-03 | Adaptive follow-ups per department; no known fact asked twice; no fixed progress total | 5 | unit interview; e2e | PLANNED | |
-| CB-04 | Facts confirmed/inferred/contradictory/unknown with provenance + version; no silent promotion | 5 | unit facts | PLANNED | |
-| CB-05 | Save/resume, back, correction, "don't know yet" | 5 | int + e2e resume | PLANNED | |
-| CB-06 | Stop rule or honest partial plan with blockers; sample data for founders; unsupported tools disclosed | 5 | unit planner | PLANNED | |
-| CB-07 | Agency client isolation (separate workspaces, similar names) | 5, 9 | int isolation | PLANNED | |
-| CB-08 | Typed versioned BusinessProfile/InterviewSession/CompanyBlueprint/DigitalRole/TaskPlan/TemplateVersion/InstallationJob/ActivationDecision/ReviewItem | 6 | unit model; migration 0020 | PLANNED | |
-| CB-09 | Three executable packs from registered nodes; recruitment planned only | 6 | unit packs; int trials | PLANNED | |
-| CB-10 | Compile validation: types, refs, capabilities, permissions, cycles, limits, outputs; no eval | 6 | unit compile | PLANNED | |
-| CB-11 | Real draft flows/agents created and opened in the existing editor | 6 | int install; e2e | PLANNED | |
-| CB-12 | Idempotent resumable installation (refresh, double-click, crash) | 6, 9 | int install | PLANNED | |
-| CB-13 | Sample trials through the engine; provenance; structurally valid / ran / matched distinguished | 6 | int trials | PLANNED | |
-| CB-14 | Answer/template change creates a new version + diff; manual edits and history preserved | 6 | int versioning | PLANNED | |
-| CB-15 | Task states (draft…failed); one blocked department doesn't block others | 7 | unit activation | PLANNED | |
-| CB-16 | Review inbox with binding re-check (args, identity, version, membership) | 7 | int review | PLANNED | |
-| CB-17 | Dev trial entitlement separate from billing; payment never activates; reconciliation | 7 | int entitlement | PLANNED | |
-| CB-18 | CLI prototype gate: env + founder id + designated workspace + loopback; ordinary users refused | 4, 7 | int cli-gate | PLANNED | |
-| CB-19 | CLI adapter: typed envelope, fixed argv, no shell, job dirs, bounds, error classes, cleanup | 4 | unit/int cli adapter (fake CLIs) | PLANNED | |
-| CB-20 | Operator export/import path for laptop CLIs; imports validated | 4 | int import | PLANNED | |
-| CB-21 | Copy contract: every new string via i18n (ar source), required sentences present | 8 | unit copy; e2e arabic | PLANNED | |
-| CB-22 | 12-case benchmark scored per dimension | 9 | unit benchmark | PLANNED | |
-| CB-23 | Browser journey new session → … → history (Chromium/Firefox/WebKit) | 10 | e2e company-builder | PLANNED | |
-| CB-24 | Real CLI trial (Claude / Codex) on the owner's laptop | 4, 10 | owner-run | PLANNED | |
-| CB-25 | Real Chrome exploratory QA, Pi verification, human usability | 10 | owner/Codex-run | PLANNED | |
+| CB-01 | Feature gated by `FLOWLINE_COMPANY_BUILDER=on`; off by default | 1, 10 | API 404 + no nav when off | PASS | int: feature flag 404; nav gated in `src/app/w/[slug]/layout.tsx` |
+| CB-02 | Reviewed question bank (id, target, condition, reason, schema, sensitivity, skip/stop) | 5 | unit question-bank | PASS | unit: question bank; `src/company-builder/questions.ts` |
+| CB-03 | Adaptive follow-ups per department; no known fact asked twice; no fixed progress total | 5 | unit interview; e2e | PASS | unit: adaptive interview; e2e: journey |
+| CB-04 | Facts confirmed/inferred/contradictory/unknown with provenance + version; no silent promotion | 5 | unit facts | PASS | unit: inference/contradiction; bench B09 |
+| CB-05 | Save/resume, back, correction, "don't know yet" | 5 | int + e2e resume | PASS | int: persistence/409; e2e: reload + Back + correction |
+| CB-06 | Stop rule or honest partial plan with blockers; sample data for founders; unsupported tools disclosed | 5 | unit planner | PASS | unit: planner; bench B01, B04–B07, B12 |
+| CB-07 | Agency client isolation (separate workspaces, similar names) | 5, 9 | int isolation | PASS | int: agency isolation; e2e: cross-workspace 404 |
+| CB-08 | Typed versioned BusinessProfile/InterviewSession/CompanyBlueprint/DigitalRole/TaskPlan/TemplateVersion/InstallationJob/ActivationDecision/ReviewItem | 6 | unit model; migration 0020 | PASS | `src/company-builder/model.ts`; migrations 0020–0021 |
+| CB-09 | Three executable packs from registered nodes; recruitment planned only | 6 | unit packs; int trials | PASS (deterministic) | unit: packs + frozen fixtures; int: trials |
+| CB-10 | Compile validation: types, refs, capabilities, permissions, cycles, limits, outputs; no eval | 6 | unit compile | PASS | unit: validation; `src/company-builder/validate.ts` |
+| CB-11 | Real draft flows/agents created and opened in the existing editor | 6 | int install; e2e | PASS | int: real drafts; e2e: open in editor |
+| CB-12 | Idempotent resumable installation (refresh, double-click, crash) | 6, 9 | int install | PASS | int: double click / concurrent / crash + resume |
+| CB-13 | Sample trials through the engine; provenance; structurally valid / ran / matched distinguished | 6 | int trials | PASS (deterministic) | int: verdicts incl. wrong-result edit; e2e |
+| CB-14 | Answer/template change creates a new version + diff; manual edits and history preserved | 6 | int versioning | PASS | int: versioning + reuse + edited draft preserved |
+| CB-15 | Task states (draft…failed); one blocked department doesn't block others | 7 | unit activation | PASS | unit: lifecycle; int: journey |
+| CB-16 | Review inbox with binding re-check (args, identity, version, membership) | 7 | int review | PASS | int: stale/revoked/concurrent/uncertain; e2e inbox |
+| CB-17 | Dev trial entitlement separate from billing; payment never activates; reconciliation | 7 | int entitlement | PASS (billing doubles) | int: payment events never activate; reconcile; live payments NOT run |
+| CB-18 | CLI prototype gate: env + founder id + designated workspace + loopback; ordinary users refused | 4, 7 | int cli-gate | PASS (deterministic) — residual CBR-02 | int-cli gate; unit gate; see BUGS CB-BUG-01 |
+| CB-19 | CLI adapter: typed envelope, fixed argv, no shell, job dirs, bounds, error classes, cleanup | 4 | unit/int cli adapter (fake CLIs) | PASS (fake CLIs) | int-cli; real CLI BLOCKED |
+| CB-20 | Operator export/import path for laptop CLIs; imports validated | 4 | int import | PASS (fake manifest) | int-cli export/import; laptop run BLOCKED |
+| CB-21 | Copy contract: every new string via i18n (ar source), required sentences present | 8 | unit copy; e2e arabic | PASS (agent review only) | unit copy contract; COPY_REVIEW.md; human copy review NOT RUN |
+| CB-22 | 12-case benchmark scored per dimension | 9 | unit benchmark | PASS 12/12 (deterministic generator only) | bench: `artifacts/company-builder/20260930-51f1473/benchmark.json`; CLI generator BLOCKED |
+| CB-23 | Browser journey new session → … → history (Chromium/Firefox/WebKit) | 10 | e2e company-builder | see REPORT | e2e: `e2e/company-builder.spec.ts` |
+| CB-24 | Real CLI trial (Claude / Codex) on the owner's laptop | 4, 10 | owner-run | BLOCKED | owner laptop; CLI_PROTOTYPE.md |
+| CB-25 | Real Chrome exploratory QA, Pi verification, human usability | 10 | owner/Codex-run | NOT RUN / NOT TESTED | owner/Codex |
