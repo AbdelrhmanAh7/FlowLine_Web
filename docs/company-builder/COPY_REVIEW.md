@@ -53,3 +53,49 @@ Arabic default (RTL) and English (LTR) — E2E `company-builder.spec.ts` (Arabic
 URLs, JSON and task versions are rendered `dir="ltr"`; free text `dir="auto"`. Currency amounts in outputs are shown
 per currency (never summed across currencies). Dates use the existing locale formatter (`formatDate`), with the
 workspace timezone not reinterpreted.
+
+## Direction v2 pass (2026-09-30, outcome first)
+
+**Reviewers:**
+
+- Claude (the implementer): self-review of every new key.
+- A Chromium exploratory pass in Arabic. This substitutes for real Google Chrome, which the network policy blocks.
+- An independent Fable review (see `REPORT.md`).
+
+None of these is a native-speaker or human usability review; **human Arabic copy review: NOT RUN.**
+
+**Criteria added:**
+
+- Business language only outside *Advanced*. No "node", "schema", "orchestrator", "runtime" or "provider" in the main
+  path: the plan shows steps by their business names, and the kind of task, capabilities and limits sit under
+  "Technical details (advanced)". The workflow link reads "Advanced: open the workflow".
+- Never "Your company is running". This is asserted by E2E.
+- Honest states only, using the required sentences below.
+
+| Screen / state | Keys | Display condition | Notes |
+|---|---|---|---|
+| First question | `q.offering` ("What is the first result you want to improve?…") | always first | Outcome first. The "why we ask" says nothing counts as a fact until confirmed. |
+| Closest outcome | `q.first_outcome`, `opt.<department>` | always | Explains that one useful result comes first. |
+| Details / services / volume | `q.cust_details`, `q.cust_services`, `q.cust_volume`, `opt.detail_*`, `opt.under_20…` | customer outcome | Option ids that clash with other questions have their own copy ids (`optionCopyId`). |
+| Other areas | `q.other_areas` | last | Revised: "We list them as possible next improvements only. Nothing is prepared or turned on for them now." |
+| Plan sections | `planSection.*` | plan exists | The required sentences are used verbatim: "Ready to configure." / "Needs Gmail connection." (`needsConnection` {service}) / "Uses sample data until you connect your account." / "Requires approval before sending." Nothing "running". |
+| Role limits | `doesNot.*` | per role | Each role states what it never does: send without approval, quote unapproved prices, make legal commitments, move money… |
+| Who does what | `work.automated/assisted/human`, `work.item.*` | per task | "Done automatically" / "Prepared for your review" / "Stays with a person". |
+| Cost | `cost.*` | plan exists | AI: "No AI models: fixed rules only, so no AI cost." External services are the person's own account; the service's own limits and prices are "we don't know them". Runs are shown as a range from the stated volume, otherwise "unknown until you tell us". The price is on the Billing page, and no payment is needed for the sample trial. |
+| Next improvements | `next.*` | plan exists | "Not prepared or turned on. Add them later if you want." No buttons (E2E asserts 0). |
+| Result | `result.*` | completed trial | The reply is quoted with the recipient shown LTR; the details still to ask for; the hand-off reason; "treated as data only" for suspicious text; the follow-up time with an **explicit time zone**, or "No received time, so no follow-up time was set." |
+| Acceptance | `trial.acceptQuestion` ("Does this result match what you wanted?"), `acceptYes/No`, `rejectWhy`, `rejectReason.*`, `rejectConfirm`, `acceptedByYou/rejectedByYou`, `acceptNote` | ran without errors | `acceptNote`: "Your answer doesn't prove every detail is right; the checks above are independent of it." |
+| States | `reason.result_review_needed`, `reason.result_rejected`, `errors.RESULT_NOT_ACCEPTED` | objective checks passed, not accepted | Activation is refused with a plain reason. |
+| Trial finished | `trial.finished` (EN "Ran without errors. Review the result.") | trial completed | Revised from "The run finished": it now says what is true (no errors) without implying the result is correct. The Arabic source sentence "اكتمل التشغيل. راجع النتيجة." is kept verbatim (brief requirement, copy contract). |
+| Experiment (internal) | `experiment.*` | `FLOWLINE_CB_EXPERIMENT=on` only | "We measure time and steps only, not answer text or customer data. The targets are research targets, not claims." |
+
+**Found and fixed during this pass:**
+
+| ID | Problem | Fix |
+|---|---|---|
+| CB2-03 | Other-areas copy | Rewritten, see the table above. |
+| CB2-04 | Hard-coded units and currency | Moved into i18n and `Intl`. |
+| EX-01 | Raw ids on screen | Fixed; a unit test now covers every plan item. |
+| EX-03 | Broken approval line | Split into two lines. |
+
+EX-02 (mixed digit styles in interpolated numbers) is open; see `artifacts/company-builder/BUGS.md`.

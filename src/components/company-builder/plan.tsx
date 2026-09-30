@@ -104,8 +104,8 @@ function TaskDetails({ task, capabilities, onHelp }: { task: TaskPlan; capabilit
 
 /** Business label for a work item: a step id first (`node.<pack>.<id>`), then the shared work-item copy. */
 function workItem(t: Translator, packId: string | null, id: string) {
-  const nodeKey = packId ? `node.${packId}.${id}` : "";
-  return nodeKey && t.has(`companyBuilder.${nodeKey}`) ? cbt(t, nodeKey) : cbt(t, `work.item.${id}`);
+  for (const key of [packId ? `node.${packId}.${id}` : null, `work.item.${id}`, `capability.${id}`]) if (key && t.has(`companyBuilder.${key}`)) return cbt(t, key);
+  return cbt(t, `work.item.${id}`); // unreachable when the copy contract holds (unit-tested)
 }
 
 function PrimaryOutcome({ data, task, onHelp }: { data: Overview; task: TaskPlan; onHelp?: () => void }) {
@@ -232,9 +232,9 @@ function PrimaryOutcome({ data, task, onHelp }: { data: Overview; task: TaskPlan
         )}
       </Section>
       <Section name="approval" heading={t("companyBuilder.planSection.approval")}>
+        {replyType && <p className="text-sm text-med">{t("companyBuilder.planSection.approvalBeforeSending")}</p>}
         <p className="text-sm text-med">
-          {replyType && <>{t("companyBuilder.planSection.approvalBeforeSending")} </>}
-          {cbt(t, `reviewerRole.${task.reviewer}`)}
+          {t("companyBuilder.planSection.reviewer")}: {cbt(t, `reviewerRole.${task.reviewer}`)}
         </p>
       </Section>
       <Section name="unsupported" heading={t("companyBuilder.planSection.unsupported")}>

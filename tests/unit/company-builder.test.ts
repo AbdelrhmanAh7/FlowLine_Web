@@ -390,6 +390,33 @@ describe("copy contract", () => {
     const text = JSON.stringify([ar.companyBuilder, en.companyBuilder]).toLowerCase();
     for (const banned of ["unlimited", "save money", "replace your team", "replaces your staff", "fully autonomous", "غير محدود", "توفير المال"]) expect(text).not.toContain(banned);
   });
+  it("every plan item the planner produces has business copy in both languages (no raw ids on screen) — EX-01", () => {
+    const has = (cat: object, k: string) => k.split(".").reduce<unknown>((o, p) => (o && typeof o === "object" ? (o as Record<string, unknown>)[p] : undefined), cat) !== undefined;
+    const paths: [string, unknown][][] = [
+      [["first_outcome", "customer"], ["situation", "improve"], ["cust_channel", "email"], ["cust_reviewer", "owner"]],
+      [["first_outcome", "finance"], ["situation", "improve"], ["fin_location", "email"], ["fin_currency", ["SAR"]], ["fin_reviewer", "owner"]],
+      [["first_outcome", "operations"], ["situation", "improve"], ["ops_source", "spreadsheet"], ["ops_reviewer", "owner"]],
+      [["first_outcome", "sales"], ["situation", "improve"], ["lead_source", "form"], ["lead_reviewer", "owner"]],
+      [["first_outcome", "content"], ["situation", "improve"], ["content_output", ["copy_text"]], ["content_reviewer", "owner"]],
+      [["first_outcome", "recruitment"], ["situation", "improve"], ["rec_need", "scheduling"]],
+    ];
+    for (const cat of [ar.companyBuilder, en.companyBuilder]) {
+      for (const p of paths) {
+        const bp = composeBlueprint(answerAll([...p, ["other_areas", ["customer", "finance", "sales"]]]), ctx);
+        for (const task of bp.tasks) {
+          for (const s of task.steps) expect(has(cat, `node.${task.packId}.${s}`), `${task.id} step ${s}`).toBe(true);
+          for (const w of [...task.work.automated, ...task.work.assisted, ...task.work.human])
+            expect([`node.${task.packId}.${w}`, `work.item.${w}`, `capability.${w}`].some((k) => has(cat, k)), `${task.id} work ${w}`).toBe(true);
+          expect(has(cat, `task.${task.id}.name`), task.id).toBe(true);
+        }
+        for (const r of bp.roles) for (const d of r.doesNot) expect(has(cat, `doesNot.${d}`), `${r.id} doesNot ${d}`).toBe(true);
+        for (const r of bp.roles) expect(has(cat, `role.${r.id}.name`), r.id).toBe(true);
+        for (const n of bp.nextImprovements) expect(n.id.endsWith("-outcome") || has(cat, `next.${n.id}`), n.id).toBe(true);
+        for (const b of bp.blockers) expect(has(cat, `blocker.${b.code}`), b.code).toBe(true);
+      }
+    }
+  });
+
   it("every blocker, state, reason, task and capability produced by the code has copy", () => {
     const has = (obj: Record<string, unknown>, k: string) => typeof obj[k] === "string" || (typeof obj[k] === "object" && obj[k] !== null);
     for (const k of ["plan_draft", "requires_setup", "sample_verified", "live_verified", "approval_required", "active", "paused", "failed"]) expect(has(ar.companyBuilder.state, k)).toBe(true);
