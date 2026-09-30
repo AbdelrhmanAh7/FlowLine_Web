@@ -1,0 +1,7 @@
+SHA 6bade3dd26d7687010f33bac7be35d8c514cdfed
+lint exit=0 21s 
+typecheck exit=0 4s 
+check:evidence exit=0 1s 
+test exit=0 8s  Test Files 43 passed (43)  Tests 535 passed (535) 
+test:contract exit=0 26s  Test Files 22 passed (22)  Tests 467 passed (467) 
+test:integration exit=0 169s  Test Files 50 passed (50)  Tests 513 passed (513) 

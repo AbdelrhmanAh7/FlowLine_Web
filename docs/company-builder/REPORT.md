@@ -12,7 +12,7 @@ Baseline: `main` @ 9324b1fed677f03e8c044eb1373b8577167abeb5. Branch: `claude/com
 | OWNER CLI PROTOTYPE — Claude CLI | **BLOCKED** | adapter, gate, controller, export/import built and tested with deterministic fake CLIs; no real Claude CLI job was run (the only login in the container belongs to this cloud session, not the founder's laptop) |
 | OWNER CLI PROTOTYPE — Codex CLI | **BLOCKED** | Codex not installed in the container; official docs blocked by network policy; Codex flags unverified (preflight enforces them) and Codex is fail-closed until the operator verifies isolation |
 | BUSINESS-RESULT QUALITY | **12/12 — PASS for the deterministic generator only**; CLI generators **BLOCKED** | frozen benchmark `tests/fixtures/company-builder/benchmark.ts`; report `artifacts/company-builder/gates-b2a3cf8/benchmark.json`. Expectations were written by the implementer (not independent) and frozen before the first scoring run; one planner rule (plans use confirmed departments only) was changed while writing case B09, before scoring. Small set — not proof of broad reliability |
-| AUTOMATED BROWSER GATE | see "Browser results" | cloud Linux, Playwright 1.63 official image browsers |
+| AUTOMATED BROWSER GATE | **FAIL** (Chromium 126/127: one pre-existing test race, PRE-02; Firefox 62/62; WebKit 62/62; Company Builder specs pass in all three) | see "Browser results" |
 | CHROME EXPLORATORY QA | **BLOCKED** | no real Google Chrome / Codex computer-use in this container; cloud Chromium runs are automated E2E, not exploratory QA |
 | PI VERIFIED | **NOT TESTED** | no Pi access |
 | HUMAN USABILITY | **NOT RUN** | protocol ready in `OWNER_TEST_GUIDE.md` |
@@ -53,11 +53,54 @@ See `ARCHITECTURE.md`. In short:
 
 ## Tests and gates
 
-GATES_PLACEHOLDER
+Final revision `6bade3d` (`artifacts/company-builder/gates-6bade3d/non-browser-gates.txt`), run sequentially with
+the test stack stopped:
+
+| Gate | Result |
+|---|---|
+| lint | PASS |
+| typecheck | PASS |
+| check:evidence (secret scan) | PASS — 0 hits |
+| unit | **535/535** (baseline 498 + 37 Company Builder incl. the 12-case benchmark) |
+| contract | **467/467** |
+| integration (real PostgreSQL, real worker code) | **513/513** (baseline 472 + 41 Company Builder: 25 core, 16 CLI boundary) |
+| benchmark | **12/12**, 0 unauthorised actions / routing violations (deterministic generator) |
+
+Earlier failing runs are kept, not replaced:
+- Contract on `b2a3cf8` was 466/467. The failure is a pre-existing 1-in-256 flake in the webhook tamper tests
+  (PRE-01), root-caused and fixed in `f84e44b`; log in `gates-b2a3cf8/contract-first-run-1-FAILED.log`.
+- One Company Builder integration test failed from a test-scoping defect (a fixed `triggerRef` in a persistent DB),
+  fixed before commit.
+- The first Company Builder E2E attempt failed on a real UI remount race (CB-E2E-01), which is now fixed.
 
 ## Browser results
 
-BROWSER_PLACEHOLDER
+Final: revision `6bade3d`, production build `VXk5iDiRG64XnbiO2PBcX` (`next build` + `next start`, test stack,
+`FLOWLINE_ENV=test`). Browsers from the official Playwright 1.63.0 Linux image, with host networking and **one worker,
+run sequentially** (`e2e/tools/browser-docker.sh`). Retries 0. Reports: `gates-6bade3d/{chromium,firefox,webkit}-report.txt`
+and `-results.json`.
+
+| Browser | Result | Notes |
+|---|---|---|
+| Chromium (all specs) | **126/127** | 1 failure, `failures.spec.ts:97` (offline conflict). It is a pre-existing test race (PRE-02), root-caused with a DB check: no silent overwrite happened. It passed in the previous full run on the same SHA. |
+| Firefox (@critical + @cross-browser) | **62/62** | baseline 59, plus 3 Company Builder tests |
+| WebKit (@critical + @cross-browser) | **62/62** | baseline 59, plus 3 Company Builder tests |
+
+**AUTOMATED BROWSER GATE: FAIL** (strict: 1 failure in Chromium, pre-existing and unrelated to Company Builder;
+not re-run into a pass). Company Builder's own specs passed in all three browsers:
+- Chromium 4/4: journey, isolation/CLI denial, Arabic RTL, keyboard + 375 px.
+- Firefox and WebKit 3/3: the tagged tests.
+
+Earlier invalid or failed browser runs are preserved in `gates-b2a3cf8/` and `gates-6bade3d/`:
+- ENV-01: the TCP forwarder made clients non-loopback.
+- ENV-02: the reconstructed `.env.test` lacked the egress allowlist.
+- ENV-03: it also lacked the fake webhook URLs.
+- One run was 126/127 on the billing spec for that reason.
+
+These were cloud-environment problems, fixed in the runner/env, not in the product. Evidence screenshots, synthetic
+data only (Arabic/English × 1440/375): `gates-6bade3d/screens/`.
+
+The previously documented DV2-G01 (original cp28 WebKit timeout) remains OPEN. This WebKit pass does not explain it.
 
 ## Independent review
 
@@ -70,8 +113,11 @@ Codex and not a human, so a Codex re-test is still required.
 ## Environment notes (cloud container)
 
 - PostgreSQL 16.14 (local cluster on :5433) instead of the compose image 17.6; Docker daemon started in the container
-  for the code-sandbox tests and the Playwright image. `.env.test` was reconstructed with fake values (git-ignored);
-  its billing plan fixture had to match the provider doubles (documented in the gate log).
+  for the code-sandbox tests and the Playwright image. `.env.test` is not in the repository, so it was reconstructed
+  with fake values (git-ignored). It needed: the billing plans/secret matching the provider doubles,
+  `FLOWLINE_EGRESS_ALLOWLIST=127.0.0.1:4010,127.0.0.1:4011`,
+  `FAKE_STRIPE_WEBHOOK_URL`/`FAKE_PADDLE_WEBHOOK_URL=http://127.0.0.1:3100/api/billing/webhook`, and
+  `FLOWLINE_COMPANY_BUILDER=on`. Add the last line to the owner's own `.env.test` to run the new specs.
 - Baseline before any change: lint, typecheck and unit 498/498 passed; contract 467/467 passed. Integration was
   472/472 once the environment was fixed (the 17 billing failures came from my reconstructed `.env.test` and the 7
   sandbox failures from Docker not running).
@@ -85,7 +131,9 @@ DV2-G01 original WebKit timeout (cp28) stays OPEN; R03 disappearing-opener obser
 
 - CBR-02: the host gate relies on the private-bind start script; a hand-set marker defeats it (operator discipline).
 - CB-BUG-23 self-approval for non-owner reviewer roles (prototype acceptable, open for commercial path).
-- CB-BUG-25 substring flag detection in preflight.
+- CB-BUG-25 substring flag detection in preflight; CB-BUG-29 LAN-mode relay IP trust; CB-BUG-30 secret-pattern coverage.
+- UX-01 optional questions stay above the plan on mobile (P3).
+- PRE-02 pre-existing E2E race in `failures.spec.ts:97` (proposed test fix not applied here).
 - Real Gmail/Sheets bindings for the packs are not wired (trials use the local test outbox only).
 - Questions before a full plan: 5–7 typical; up to 9–12 when optional details and a second department are answered.
   The preview is available as soon as the essentials are confirmed.

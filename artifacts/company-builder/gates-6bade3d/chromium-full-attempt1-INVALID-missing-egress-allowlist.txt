@@ -1,0 +1,201 @@
+
+Running 127 tests using 1 worker
+
+[1/127] [chromium] › e2e/admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)
+[chromium] › e2e/admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+
+[2/127] [chromium] › e2e/admin-panel.spec.ts:155:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel
+[3/127] [chromium] › e2e/admin-panel.spec.ts:163:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)
+[4/127] [chromium] › e2e/keyboard-surfaces.spec.ts:17:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › inline destructive confirmations preserve focus through cancel and successful removal
+  1) [chromium] › e2e/keyboard-surfaces.spec.ts:17:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › inline destructive confirmations preserve focus through cancel and successful removal 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      74 |     expect(issued.ok()).toBe(true);
+      75 |     const { token } = await issued.json();
+    > 76 |     expect((await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Keyboard", fields: { token } } })).ok()).toBe(true);
+         |                                                                                                                                                                          ^
+      77 |     await page.goto(`${base}/integrations`);
+      78 |     // This case checks the ready catalogue's Connect target; a delayed catalogue has its own fallback test below.
+      79 |     await expect(page.locator("#connect-google_sheets")).toBeVisible();
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:76:170
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-8b4f2-ncel-and-successful-removal-chromium/error-context.md
+
+
+[5/127] [chromium] › e2e/keyboard-surfaces.spec.ts:91:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › phone navigation traps focus, nested menu consumes Escape, and returns to launcher
+[6/127] [chromium] › e2e/keyboard-surfaces.spec.ts:114:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › node drawer Escape from a text field returns to the canvas node; dock returns to launcher
+[7/127] [chromium] › e2e/keyboard-surfaces.spec.ts:134:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › OAuth switch/remove confirmations focus Cancel, allow leaving, dismiss and restore focus
+[8/127] [chromium] › e2e/keyboard-surfaces.spec.ts:160:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › connection removal keeps focus useful while the catalogue is pending
+  2) [chromium] › e2e/keyboard-surfaces.spec.ts:160:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › connection removal keeps focus useful while the catalogue is pending 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      163 |     expect(issued.ok()).toBe(true);
+      164 |     const { token } = await issued.json();
+    > 165 |     expect((await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Pending catalogue", fields: { token } } })).ok()).toBe(true);
+          |                                                                                                                                                                                   ^
+      166 |     let releaseCatalog!: () => void;
+      167 |     const pending = new Promise<void>((resolve) => { releaseCatalog = resolve; });
+      168 |     await page.route("**/api/integrations/catalog?*", async (route) => { await pending; await route.continue(); });
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:165:179
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-0b83c-le-the-catalogue-is-pending-chromium/error-context.md
+
+
+[9/127] [chromium] › e2e/keyboard-surfaces.spec.ts:182:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › desktop run details and nested rerun dialog each dismiss one layer and restore focus
+[10/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:10:5 › Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing
+[11/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:29:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID
+[12/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:46:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model
+  3) [chromium] › e2e/ai-hub-wave-b.spec.ts:46:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model 
+
+    Error: {"error":{"code":"AI_EGRESS_BLOCKED","message":"Plain http is only allowed for allowlisted hosts; use https"}}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 400
+
+       at helpers.ts:214
+
+      212 |   const key = `sk-fake-e2e-${randomUUID().replace(/-/g, "")}`;
+      213 |   const res = await req.post(`/api/workspaces/${workspaceId}/ai/connections`, { data: { provider: "openai", label: "Test double (OpenAI-compatible)", apiKey: key } });
+    > 214 |   expect(res.status(), await res.text()).toBe(201);
+          |                                          ^
+      215 |   const { connection } = (await res.json()) as { connection: { id: string } };
+      216 |   expect((await req.put(`/api/workspaces/${workspaceId}/ai/default-route`, { data: { route: { connectionId: connection.id, modelId: FAKE_AI_MODEL } } })).ok()).toBeTruthy();
+      217 |   expect((await req.put(`/api/workspaces/${workspaceId}/ai/policy`, { data: { allowUnknownCost: true } })).ok()).toBeTruthy();
+        at connectAiApi (/home/user/FlowLine_Web/e2e/helpers.ts:214:42)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:48:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[13/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:84:5 › CXQ-05: saving workspace prices refreshes the model picker without a reload
+  4) [chromium] › e2e/ai-hub-wave-b.spec.ts:84:5 › CXQ-05: saving workspace prices refreshes the model picker without a reload 
+
+    Error: {"error":{"code":"AI_EGRESS_BLOCKED","message":"Plain http is only allowed for allowlisted hosts; use https"}}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 400
+
+       at helpers.ts:214
+
+      212 |   const key = `sk-fake-e2e-${randomUUID().replace(/-/g, "")}`;
+      213 |   const res = await req.post(`/api/workspaces/${workspaceId}/ai/connections`, { data: { provider: "openai", label: "Test double (OpenAI-compatible)", apiKey: key } });
+    > 214 |   expect(res.status(), await res.text()).toBe(201);
+          |                                          ^
+      215 |   const { connection } = (await res.json()) as { connection: { id: string } };
+      216 |   expect((await req.put(`/api/workspaces/${workspaceId}/ai/default-route`, { data: { route: { connectionId: connection.id, modelId: FAKE_AI_MODEL } } })).ok()).toBeTruthy();
+      217 |   expect((await req.put(`/api/workspaces/${workspaceId}/ai/policy`, { data: { allowUnknownCost: true } })).ok()).toBeTruthy();
+        at connectAiApi (/home/user/FlowLine_Web/e2e/helpers.ts:214:42)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:86:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[14/127] [chromium] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical
+  5) [chromium] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('status').filter({ hasText: 'Connected — 5 models found' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('status').filter({ hasText: 'Connected — 5 models found' }) with timeout 10000ms
+      - waiting for getByRole('status').filter({ hasText: 'Connected — 5 models found' })
+
+
+      53 |   await expect(dialog.getByLabel("API key")).toHaveAttribute("autocomplete", "new-password");
+      54 |   await dialog.getByRole("button", { name: "Check and save" }).click();
+    > 55 |   await expect(page.getByRole("status").filter({ hasText: "Connected — 5 models found" })).toBeVisible();
+         |                                                                                            ^
+      56 |   const card = page.getByTestId("ai-connection");
+      57 |   await expect(card).toContainText("Team OpenAI");
+      58 |   await expect(card).toContainText("Connected");
+        at /home/user/FlowLine_Web/e2e/ai-hub.spec.ts:55:92
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[15/127] [chromium] › e2e/arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser
+[16/127] [chromium] › e2e/arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+[17/127] [chromium] › e2e/arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+[18/127] [chromium] › e2e/arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+[19/127] [chromium] › e2e/arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+[20/127] [chromium] › e2e/arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+[21/127] [chromium] › e2e/arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+[22/127] [chromium] › e2e/beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser
+[23/127] [chromium] › e2e/beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+[24/127] [chromium] › e2e/builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher
+[25/127] [chromium] › e2e/builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher
+[26/127] [chromium] › e2e/builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher
+[27/127] [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[28/127] [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[29/127] [chromium] › e2e/builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again
+[30/127] [chromium] › e2e/builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it
+[31/127] [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button
+[32/127] [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button
+[33/127] [chromium] › e2e/builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel
+[34/127] [chromium] › e2e/builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it
+[35/127] [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button
+[36/127] [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button
+[37/127] [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST
+[38/127] [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST
+[39/127] [chromium] › e2e/builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot
+[40/127] [chromium] › e2e/builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel
+[41/127] [chromium] › e2e/canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical
+[42/127] [chromium] › e2e/canvas.spec.ts:81:7 › canvas interactions & keyboard map › arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)
+[43/127] [chromium] › e2e/canvas.spec.ts:101:7 › canvas interactions & keyboard map › opening and selecting does not mark the flow dirty or bump its revision
+[44/127] [chromium] › e2e/canvas.spec.ts:113:7 › canvas interactions & keyboard map › drawer tabs follow the WAI-ARIA keyboard pattern
+[45/127] [chromium] › e2e/canvas.spec.ts:133:7 › canvas interactions & keyboard map › invalid connections are refused with an explanation
+[46/127] [chromium] › e2e/canvas.spec.ts:153:7 › canvas interactions & keyboard map › re-run from a step reuses upstream outputs
+[47/127] [chromium] › e2e/company-builder.spec.ts:30:5 › company builder: interview → plan → real drafts → sample trial → review → activation → history @critical

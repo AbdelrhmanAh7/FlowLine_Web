@@ -289,6 +289,6 @@ Q01–Q14 / R01–R36 / copy ids: PENDING — reference files not supplied (see 
 | CB-20 | Operator export/import path for laptop CLIs; imports validated | 4 | int import | PASS (fake manifest) | int-cli export/import; laptop run BLOCKED |
 | CB-21 | Copy contract: every new string via i18n (ar source), required sentences present | 8 | unit copy; e2e arabic | PASS (agent review only) | unit copy contract; COPY_REVIEW.md; human copy review NOT RUN |
 | CB-22 | 12-case benchmark scored per dimension | 9 | unit benchmark | PASS 12/12 (deterministic generator only) | bench: `artifacts/company-builder/20260930-51f1473/benchmark.json`; CLI generator BLOCKED |
-| CB-23 | Browser journey new session → … → history (Chromium/Firefox/WebKit) | 10 | e2e company-builder | see REPORT | e2e: `e2e/company-builder.spec.ts` |
+| CB-23 | Browser journey new session → … → history (Chromium/Firefox/WebKit) | 10 | e2e company-builder | PASS for CB specs (Chromium 4/4, Firefox 3/3, WebKit 3/3); cumulative gate FAIL — Chromium 126/127, pre-existing PRE-02 | `artifacts/company-builder/gates-6bade3d/browser-runs.txt`; REPORT.md |
 | CB-24 | Real CLI trial (Claude / Codex) on the owner's laptop | 4, 10 | owner-run | BLOCKED | owner laptop; CLI_PROTOTYPE.md |
 | CB-25 | Real Chrome exploratory QA, Pi verification, human usability | 10 | owner/Codex-run | NOT RUN / NOT TESTED | owner/Codex |
