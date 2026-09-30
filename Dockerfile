@@ -30,6 +30,7 @@ COPY --from=build --chown=node:node /app/package.json /app/next.config.ts /app/t
 COPY --from=build --chown=node:node /app/src ./src
 COPY --from=build --chown=node:node /app/worker ./worker
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --from=build --chown=node:node /app/scripts ./scripts
 USER node
 EXPOSE 3000
 CMD ["node_modules/.bin/next", "start", "-p", "3000"]

@@ -1,0 +1,17 @@
+{
+  "from": "d4da9ca354b1d3da8234c7c339b65c389dcf5d94",
+  "to": "64e825709fb79ef8cffcb19c3f0791b940bf844f",
+  "changed": [
+    "e2e/keyboard-surfaces.spec.ts",
+    "e2e/phase3.spec.ts",
+    "src/app/w/[slug]/integrations/page.tsx",
+    "src/components/builder/builder.tsx"
+  ],
+  "builderByteIdenticalToCp18": true,
+  "coverage": {
+    "unchanged": "E/F cp16",
+    "builder": "G cp18; same blob in cp20",
+    "integrations": "H cp20 English/Arabic persisted removal",
+    "automated": "targeted-webkit-cp20 28/28; final cumulative cp20 recorded separately"
+  }
+}

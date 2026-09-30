@@ -1,0 +1,9 @@
+started: 2026-09-30T21:03:13+03:00
+pid: 433 (child of this supervised command; owner: abdelrahman)
+cwd: /mnt/c/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design
+ports: 3100 (next start), 4010 (SaaS/OAuth fakes), 4011 (AI fake) on localhost
+log: artifacts/beta-execution/20260930-landing-executor/stack/stack.log (stack stdout/stderr; no secrets are printed by the stack)
+stop: pnpm stop:test   # (node scripts/stop-test-stack.mjs; kills the :3100 test stack tree)
+build_id: Zkibi65ZQDNzenE7FRDz1
+readiness: FAILED
+stopped: ports 3100/4010/4011 free at 21:03:20

@@ -13,14 +13,21 @@ import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, processRun, recoverStaleRuns } from "../../worker/runner";
 import { startFake, type Fake } from "../contract/helpers";
 import { addMember, claimAndProcess, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
+import { seedPlatformCredential } from "../fixtures/platform-seed";
 
 let fake: Fake;
 const prev = { ...process.env };
 
+/** The platform app row that issued these (fixture) OAuth connections: its immutable identity (CXH-01). */
+async function platformAppRowId() {
+  const [row] = await db.select({ id: schema.platformSecret.id }).from(schema.platformSecret).where(eq(schema.platformSecret.purpose, "integration.google"));
+  return row!.id;
+}
+
 beforeAll(async () => {
   fake = await startFake();
-  process.env.GOOGLE_OAUTH_CLIENT_ID = "fake-client";
-  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "fake-secret";
+  // Platform OAuth apps live in the admin panel's records now (never env at runtime): seed the same fake app.
+  await seedPlatformCredential("integration.google", { publicId: "fake-client", secret: "fake-secret" });
   for (let i = 0; i < 200; i++) {
     const id = await claimNextRun(db, "drain");
     if (!id) break;
@@ -282,8 +289,9 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     const affected = await flowOf(chain(trigger({}), action("m", "slack.post_message", bad.id, '{ "channel": "C1", "text": "hi" }')));
     const unaffected = await flowOf(chain(trigger({}), action("m", "slack.post_message", good.id, '{ "channel": "C1", "text": "hi" }')));
     // The token is revoked at the provider.
+    // Planted as a pre-v2 (legacy, v1) row: the legacy read path must still work for rows marked legacy.
     const enc = encryptSecret({ type: "oauth2", token: "revoked-token", settings: {} });
-    await db.update(schema.connection).set({ secretEnc: enc.ciphertext, keyId: enc.keyId }).where(eq(schema.connection.id, bad.id));
+    await db.update(schema.connection).set({ secretEnc: enc.ciphertext, keyId: enc.keyId, legacyCrypto: true }).where(eq(schema.connection.id, bad.id));
     const r = await enqueueRun(user, affected.id);
     await claimAndProcess(r.id);
     expect((await freshRun(r.id)).error?.code).toBe("CONNECTION_AUTH");
@@ -314,7 +322,7 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     const enc = encryptSecret({ type: "oauth2", token: tok.access_token, refreshToken: tok.refresh_token, settings: {} });
     const [row] = await db
       .insert(schema.connection)
-      .values({ workspaceId: ws.id, provider: "google_sheets", label: "Sheets (oauth)", authType: "oauth2", accountId: "acct", accountLabel: "acct", scopes: ["https://www.googleapis.com/auth/spreadsheets"], secretEnc: enc.ciphertext, keyId: enc.keyId, accessExpiresAt: new Date(Date.now() - 1000), createdBy: user.id })
+      .values({ workspaceId: ws.id, provider: "google_sheets", label: "Sheets (oauth)", authType: "oauth2", accountId: "acct", accountLabel: "acct", scopes: ["https://www.googleapis.com/auth/spreadsheets"], secretEnc: enc.ciphertext, keyId: enc.keyId, legacyCrypto: true, oauthAppSource: "platform", oauthClientId: "fake-client", oauthPlatformSecretId: await platformAppRowId(), accessExpiresAt: new Date(Date.now() - 1000), createdBy: user.id })
       .returning();
     const results = await Promise.all(Array.from({ length: 5 }, () => getRuntimeCredentials(db, { connectionId: row!.id, workspaceId: ws.id, providerId: "google_sheets", requiredScopes: [] })));
     expect(new Set(results.map((r) => r.creds.token)).size).toBe(1);
@@ -331,7 +339,7 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     const enc = encryptSecret({ type: "oauth2", token: "expired-token", refreshToken: "denied-refresh-token", settings: {} });
     const [row] = await db
       .insert(schema.connection)
-      .values({ workspaceId: ws.id, provider: "google_sheets", label: "Sheets (denied)", authType: "oauth2", accountId: "acct", accountLabel: "acct", scopes: ["https://www.googleapis.com/auth/spreadsheets"], secretEnc: enc.ciphertext, keyId: enc.keyId, accessExpiresAt: new Date(Date.now() - 1000), createdBy: user.id })
+      .values({ workspaceId: ws.id, provider: "google_sheets", label: "Sheets (denied)", authType: "oauth2", accountId: "acct", accountLabel: "acct", scopes: ["https://www.googleapis.com/auth/spreadsheets"], secretEnc: enc.ciphertext, keyId: enc.keyId, legacyCrypto: true, oauthAppSource: "platform", oauthClientId: "fake-client", oauthPlatformSecretId: await platformAppRowId(), accessExpiresAt: new Date(Date.now() - 1000), createdBy: user.id })
       .returning();
     const flow = await flowOf(chain(trigger({}), action("s", "google_sheets.read_range", row!.id, '{ "spreadsheetId": "sheet-1", "range": "A1:B2" }')));
     const r = await enqueueRun(user, flow.id);

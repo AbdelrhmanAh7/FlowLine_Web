@@ -1,162 +1,309 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/base.css";
+@import "../design/tokens.generated.css";
 
 /*
- * Flowline design tokens — values from the Product UI Design deck (slides 3, 4, 15).
- * Dark mode is primary; light mode is a later token remap (see DESIGN_DECISIONS.md).
+ * Flowline design system — hand-written layer.
+ * Token values (primitives, semantic per theme, radius, type, motion durations/easings) are GENERATED from
+ * src/design/tokens.ts into src/design/tokens.generated.css (run `pnpm tokens`). This file adds what a
+ * generator shouldn't own: fonts, keyframes, motion primitives (motion-*), the React Flow skin and base styles.
+ *
+ * Dark mode is the default (:root); [data-theme="light"] and [data-theme="system"] + prefers-color-scheme
+ * remap the semantic tokens. Components use ONLY semantic utilities (bg-app, text-hi, border-line, text-cat-ai…).
  */
+
 @theme {
-  --color-app: #09090b;
-  --color-surface: #111113;
-  --color-card: #18181b;
-  --color-elevated: #27272a;
-  --color-line: #27272a;
-  --color-line-strong: #3f3f46;
-  --color-hi: #fafafa;
-  --color-med: #a1a1aa;
-  --color-muted: #52525b;
-  --color-accent: #7c6cff;
-  --color-accent-hover: #8e80ff;
-  --color-accent-press: #6a5ae8;
-  --color-on-accent: #09090b;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #38bdf8;
-
-  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Latin glyphs come from Inter; Arabic glyphs (absent from Inter) fall through to IBM Plex Sans Arabic. */
+  --font-sans: "Inter Variable", "Inter", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-
-  --text-xs: 11px;
-  --text-xs--line-height: 16px;
-  --text-xs--letter-spacing: 0.4px;
-  --text-sm: 12px;
-  --text-sm--line-height: 18px;
-  --text-base: 13px;
-  --text-base--line-height: 20px;
-  --text-lg: 16px;
-  --text-lg--line-height: 24px;
-  --text-xl: 20px;
-  --text-xl--line-height: 28px;
-  --text-2xl: 26px;
-  --text-2xl--line-height: 32px;
-
-  --shadow-popover: 0 4px 16px rgb(0 0 0 / 0.45);
-  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 18px rgb(124 108 255 / 0.35);
-
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-
-  --animate-pulse-skeleton: skeleton 1600ms var(--ease-standard) infinite;
-  --animate-shake: shake 240ms var(--ease-standard) 1;
-  --animate-drawer-in: drawer-in 250ms var(--ease-out-expo);
-  --animate-sheet-in: sheet-in 250ms var(--ease-out-expo);
-  --animate-fade-in: fade-in 150ms var(--ease-standard);
 }
 
 :root {
-  --dur-press: 80ms;
-  --dur-hover: 150ms;
-  --dur-tab: 200ms;
-  --dur-drawer: 250ms;
+  /* Legacy aliases for the generated motion tokens (prefer --dur-fast/base/slow in new code). */
+  --dur-press: var(--dur-fast);
+  --dur-hover: var(--dur-base);
+  --dur-drawer: var(--dur-slow);
+  --ease-out-expo: var(--ease-emphasized);
+
   --sidebar-w: 240px;
   --rail-w: 48px;
   --drawer-w: 360px;
   --dock-h: 240px;
-  color-scheme: dark;
+  /* +1 in LTR, -1 in RTL: lets slide-in motion come from the inline-end side. */
+  --dir-sign: 1;
 }
+[dir="rtl"] { --dir-sign: -1; }
+[dir="ltr"] { --dir-sign: 1; }
 
-@keyframes skeleton {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
-}
-@keyframes shake {
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
-}
-@keyframes drawer-in {
-  from { transform: translateX(24px); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-@keyframes sheet-in {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-@keyframes fade-in {
+/* ───────── Keyframes (named m-*; consumed by the motion-* primitives below) ───────── */
+
+@keyframes m-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes check-draw {
+@keyframes m-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-exit {
+  to { opacity: 0; transform: scale(0.97); }
+}
+@keyframes m-drawer {
+  from { transform: translateX(calc(24px * var(--dir-sign))); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes m-sheet {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes m-list {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-toast-out {
+  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+@keyframes m-node-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-node-out {
+  to { opacity: 0; transform: scale(0.92); }
+}
+@keyframes m-confirm {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes m-shake {
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+/* Running glow: pulses in the node's hue (--run-hue, defaults to the accent). */
+@keyframes m-running {
+  0%, 100% { box-shadow: 0 0 0 1px var(--run-hue, var(--accent)), 0 0 8px color-mix(in oklab, var(--run-hue, var(--accent)) 25%, transparent); }
+  50% { box-shadow: 0 0 0 1px var(--run-hue, var(--accent)), 0 0 20px color-mix(in oklab, var(--run-hue, var(--accent)) 55%, transparent); }
+}
+/* Runs on the ::after of .motion-select-pulse (see there), so it can never replace the host's own animation. */
+@keyframes m-select-pulse {
+  from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
+  to { box-shadow: 0 0 0 7px transparent; }
+}
+@keyframes m-success-flash {
+  0% { border-color: var(--success); box-shadow: 0 0 0 1px var(--success), 0 0 16px color-mix(in oklab, var(--success) 45%, transparent); }
+  100% { border-color: var(--success-border); box-shadow: none; }
+}
+@keyframes m-check-draw {
   from { stroke-dashoffset: 24; }
   to { stroke-dashoffset: 0; }
 }
-@keyframes edge-flow {
+@keyframes m-shimmer {
+  from { transform: translateX(calc(-100% * var(--dir-sign))); }
+  to { transform: translateX(calc(100% * var(--dir-sign))); }
+}
+@keyframes m-edge-flow {
   to { stroke-dashoffset: -12; }
 }
+@keyframes m-edge-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ───────── Motion primitives (purpose-named; components use these, never hand-written animations) ───────── */
+
+.motion-fade { animation: m-fade var(--dur-base) var(--ease-standard); }
+.motion-enter { animation: m-enter var(--dur-base) var(--ease-standard); }
+.motion-pop { animation: m-pop var(--dur-base) var(--ease-emphasized); }
+.motion-exit { animation: m-exit var(--dur-base) var(--ease-exit) forwards; }
+.motion-drawer { animation: m-drawer var(--dur-slow) var(--ease-emphasized); }
+.motion-sheet { animation: m-sheet var(--dur-slow) var(--ease-emphasized); }
+.motion-list-in { animation: m-list var(--dur-tab) var(--ease-emphasized); }
+.motion-toast-in { animation: m-toast-in var(--dur-slow) var(--ease-emphasized); }
+.motion-toast-out { animation: m-toast-out var(--dur-tab) var(--ease-exit) forwards; }
+.motion-node-in { animation: m-node-in var(--dur-tab) var(--ease-emphasized); }
+.motion-node-out { animation: m-node-out var(--dur-base) var(--ease-exit) forwards; }
+.motion-confirm { animation: m-confirm var(--dur-tab) var(--ease-emphasized); }
+.motion-shake { animation: m-shake var(--dur-slow) var(--ease-standard) 1; }
+.motion-running { animation: m-running 1600ms var(--ease-standard) infinite; }
+/*
+ * Selection pulse: a ring that expands and fades. It is drawn by a pseudo-element, NOT by an `animation` on the host: `animation` is one
+ * property, so two classes that each set it (motion-running + motion-select-pulse on a selected running node, motion-node-in, motion-shake…)
+ * replace each other and the later rule silently wins. The host must be positioned and must not clip its overflow (the canvas node card is `relative` and unclipped).
+ */
+.motion-select-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: m-select-pulse var(--dur-max) var(--ease-emphasized);
+}
+.motion-success-flash { animation: m-success-flash var(--dur-max) var(--ease-emphasized); }
+.motion-check-draw { animation: m-check-draw var(--dur-max) var(--ease-emphasized); }
+/* Subtle button press feedback (scale down; never a hover lift). */
+.motion-press { transition: transform var(--dur-fast) var(--ease-standard); }
+.motion-press:active { transform: scale(0.97); }
+
+/* Radix overlays: enter/exit on open/closed state — Radix Presence waits for the exit animation to finish. */
+.motion-content[data-state="open"] { animation: m-pop var(--dur-base) var(--ease-emphasized); }
+.motion-content[data-state="closed"] { animation: m-exit var(--dur-base) var(--ease-exit); }
+.motion-scrim[data-state="open"] { animation: m-fade var(--dur-base) var(--ease-standard); }
+.motion-scrim[data-state="closed"] { animation: m-fade var(--dur-base) var(--ease-exit) reverse; }
+
+/* ───────── Base ───────── */
 
 html, body {
-  background: var(--color-app);
-  color: var(--color-hi);
+  background: var(--bg);
+  color: var(--text-hi);
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgb(124 108 255 / 0.35); }
+/*
+ * Arabic is cursive: letter-spacing breaks the joins between letters, and "uppercase" means nothing.
+ * Unlayered, so it wins over the tracking-* utilities used for Latin small caps.
+ */
+:lang(ar), :lang(ar) * { letter-spacing: normal; }
+/* Code, JSON and IDs keep their Latin rhythm even inside Arabic pages. */
+:lang(ar) .data, :lang(ar) [dir="ltr"], :lang(ar) [dir="ltr"] * { letter-spacing: revert-layer; }
+
+::selection { background: color-mix(in oklab, var(--accent) 35%, transparent); }
 
 /* Focus-visible: double ring — 2px background gap + 2px accent (slide 15). */
 :where(a, button, input, textarea, select, [tabindex], summary):focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-app), 0 0 0 4px var(--color-accent);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
+
+/* Directional glyphs (←/→) that point "back"/"forward" mirror in right-to-left layouts. */
+.flip-rtl { display: inline-block; }
+.flip-rtl:dir(rtl) { transform: scaleX(-1); }
 
 /* Mono for data: IDs, timestamps, payloads. */
 .data { font-family: var(--font-mono); font-feature-settings: "zero" 1; }
 
-.skeleton { background: var(--color-card); border-radius: var(--radius-md); animation: var(--animate-pulse-skeleton); }
+/* Brand gradient mark (logo swatch, avatar). One token, both themes. */
+.bg-brand { background-image: var(--gradient-brand); }
+
+/* Skeletons shimmer; the sweep direction mirrors in RTL. Never a full-screen spinner. */
+.skeleton { position: relative; overflow: hidden; background: var(--card); border-radius: var(--radius-md); }
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--text-hi) 8%, transparent) 50%, transparent 70%);
+  animation: m-shimmer 1600ms var(--ease-standard) infinite;
+}
 
 /* Scrollbars that match the surface. */
-* { scrollbar-width: thin; scrollbar-color: var(--color-elevated) transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--elevated) transparent; }
 
-/* ───── React Flow skin ───── */
-.react-flow { --xy-background-color: var(--color-app); }
+/* ───── React Flow skin (token-driven, correct in both themes) ───── */
+.react-flow { --xy-background-color: var(--bg); }
 .react-flow__pane { cursor: default; }
 .react-flow__pane.dragging { cursor: grabbing; }
-.react-flow__edge-path { stroke: var(--color-line-strong); stroke-width: 1.5; }
+.react-flow__edge-path { stroke: var(--line-strong); stroke-width: 1.5; }
 .react-flow__edge.selected .react-flow__edge-path,
-.react-flow__edge:focus-visible .react-flow__edge-path { stroke: var(--color-accent); }
-.react-flow__edge.flowing .react-flow__edge-path { stroke: var(--color-accent); stroke-dasharray: 6 6; animation: edge-flow 600ms linear infinite; }
+.react-flow__edge:focus-visible .react-flow__edge-path { stroke: var(--accent); }
+.react-flow__edge.flowing .react-flow__edge-path { stroke: var(--accent); stroke-dasharray: 6 6; animation: m-edge-flow 600ms linear infinite; }
+.react-flow__edge.drawing .react-flow__edge-path { stroke: var(--accent); stroke-dasharray: 6 6; animation: m-edge-draw var(--dur-max) var(--ease-emphasized); }
 .react-flow__edge.skipped .react-flow__edge-path { stroke-dasharray: 4 4; opacity: 0.5; }
-.react-flow__connection-path { stroke: var(--color-accent); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.react-flow__connection-path { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 6; }
 .react-flow__handle {
   width: 10px; height: 10px; border-radius: 999px;
-  background: var(--color-card); border: 1px solid var(--color-line-strong);
+  background: var(--card); border: 1px solid var(--line-strong);
   transition: width var(--dur-hover) var(--ease-standard), height var(--dur-hover) var(--ease-standard), border-color var(--dur-hover);
 }
-.react-flow__handle:hover, .react-flow__handle.connectingto { width: 14px; height: 14px; border-color: var(--color-accent); }
-.react-flow__handle.connectingto.valid { background: var(--color-accent); }
+.react-flow__handle:hover, .react-flow__handle.connectingto { width: 14px; height: 14px; border-color: var(--accent); }
+.react-flow__handle.connectingto.valid { background: var(--accent); }
+/* Flowline node types reuse React Flow built-in type names ("output"), whose default chrome (base.css: a square 1px
+   border, and a selected/focus border) would sit around our rounded card (DV2-V01). The card draws its own chrome. */
+.react-flow .react-flow__node:is(.react-flow__node-input, .react-flow__node-default, .react-flow__node-output, .react-flow__node-group) { border: 0; }
 .react-flow__node:focus-visible { outline: none; }
-.react-flow__node:focus-visible > div { box-shadow: 0 0 0 2px var(--color-app), 0 0 0 4px var(--color-accent); }
+.react-flow__node:focus-visible > div { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 .react-flow__node.dragging > div { transform: scale(1.02); box-shadow: var(--shadow-popover); }
-.react-flow__minimap { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-lg); }
+.react-flow__minimap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .react-flow__attribution { background: transparent; }
-.react-flow__attribution a { color: var(--color-muted); font-size: 10px; }
+.react-flow__attribution a { color: var(--text-muted); font-size: 10px; }
 .react-flow__panel.react-flow__attribution { bottom: 48px; }
-.react-flow__selection { background: rgb(124 108 255 / 0.08); border: 1px solid rgb(124 108 255 / 0.5); }
+.react-flow__selection { background: color-mix(in oklab, var(--accent) 8%, transparent); border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent); }
+
+/* ───────── Public pages: scroll-driven scenes (progressive enhancement, transform/opacity only) ───────── */
+
+/*
+ * Scroll reveal — JS (IntersectionObserver in landing/reveal.tsx) flips data-reveal; without JS visible.
+ * Motion budget (<= 300 ms end to end): a block fades over --dur-tab (200 ms) after at most 100 ms of stagger delay; WordReveal spreads
+ * its per-word delays over at most 100 ms (reveal.tsx: STAGGER_TOTAL_MS) and each word transitions over --dur-tab.
+ */
+.reveal { transition: opacity var(--dur-tab) var(--ease-emphasized), transform var(--dur-tab) var(--ease-emphasized); }
+.reveal[data-reveal="hidden"] { opacity: 0; transform: translateY(24px) scale(0.985); transition: none; }
+.reveal[data-reveal="shown"] { opacity: 1; transform: none; }
+.word-reveal .word { display: inline-block; transition: opacity var(--dur-tab) var(--ease-emphasized), transform var(--dur-tab) var(--ease-emphasized); transition-delay: var(--w-delay, 0ms); }
+.word-reveal[data-reveal="hidden"] .word { opacity: 0; transform: translateY(12px); transition: none; }
+/* A run of Latin words inside an RTL title (dir="ltr" on the run) is one bidi isolate, so its words keep their order. */
+.word-reveal .word-run { unicode-bidi: isolate; }
+
+/* Magnetic CTA feedback (JS sets the transform; smooth settle-back). */
+.magnetic { transition: transform var(--dur-base) var(--ease-standard); }
+
+/*
+ * Pinned hero: tall wrapper + sticky stage + a scrub animation driven by the WRAPPER's view timeline. The pin only makes sense together
+ * with its scrub, so all three live in ONE block: @supports (scroll timelines) + desktop width + no-preference. Without support, on small
+ * screens or under prefers-reduced-motion the hero is plain static content (no 70vh of dead scroll space, no transform).
+ *
+ * Why the timeline is on .hero-pin and not on .hero-scrub: .hero-scrub sits inside the sticky stage, so its own view() progress stands
+ * still while the stage is pinned and only advances at pin release. The wrapper (170vh) scrolls through the viewport the whole time, and
+ * `contain 0% .. contain 100%` maps the span in which it covers the viewport (wrapper top at the viewport top -> wrapper bottom at the
+ * viewport bottom, 70vh of scroll) to the scrub: it starts and ends inside the pinned span, so the scale/tilt plays WHILE the visual is
+ * pinned and holds its end state until the stage is released.
+ */
+.hero-pin { margin-top: 3.5rem; }
+.hero-scrub { transform-origin: 50% 0; }
+@keyframes m-hero-scrub {
+  from { transform: scale(1) rotateX(10deg); }
+  to { transform: scale(0.94) rotateX(0deg); }
+}
+@keyframes m-parallax-slow {
+  to { transform: translateY(-14vh); }
+}
+@keyframes m-parallax-slower {
+  to { transform: translateY(-7vh); }
+}
+@supports (animation-timeline: view()) {
+  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+    .hero-pin { height: 170vh; view-timeline: --hero-pin block; }
+    .hero-pin-stage { position: sticky; top: 6rem; }
+    .hero-scrub { animation: m-hero-scrub linear both; animation-timeline: --hero-pin; animation-range: contain 0% contain 100%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .parallax-slow { animation: m-parallax-slow linear both; animation-timeline: scroll(root); }
+    .parallax-slower { animation: m-parallax-slower linear both; animation-timeline: scroll(root); }
+  }
+}
+
+/* ───────── Reduced motion: non-essential motion off; running becomes a static ring ───────── */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
   }
-  .skeleton { animation: none; }
-  .react-flow__edge.flowing .react-flow__edge-path { animation: none; }
+  /* Public pages: everything is static and fully readable. Reveals never hide (also if the preference was switched on
+     after the JS hid an element), the CTA magnet is off, and the parallax/scrub animations above are already gated. */
+  .reveal[data-reveal="hidden"], .word-reveal[data-reveal="hidden"] .word { opacity: 1 !important; transform: none !important; }
+  .magnetic { transform: none !important; }
+  .motion-press:active { transform: none; }
   .react-flow__node.dragging > div { transform: none; }
+  .motion-running { box-shadow: 0 0 0 2px var(--run-hue, var(--accent)); }
 }

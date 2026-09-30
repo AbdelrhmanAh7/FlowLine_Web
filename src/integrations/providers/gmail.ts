@@ -26,8 +26,6 @@ const provider: ProviderDef = {
     ],
     pkce: true,
     extraParams: { access_type: "offline", prompt: "consent" },
-    clientIdEnv: "GOOGLE_OAUTH_CLIENT_ID",
-    clientSecretEnv: "GOOGLE_OAUTH_CLIENT_SECRET",
   },
   async identity(ctx) {
     const { data } = await ctx.http.request<{ emailAddress: string }>({
@@ -192,6 +190,7 @@ const provider: ProviderDef = {
   ],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

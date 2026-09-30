@@ -1,0 +1,107 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+← Flows
+/
+Flow name
+Saved
+● Published
+Triggers
+Publish changes
+↶
+Nothing to undo
+↷
+Nothing to redo
+History
+✦ Copilot
+Runs
+CtrlJ
+▶ Run
+
+Manual trigger
+
+TRIGGER · MANUAL
+
+0ms
+
+AI · Generate
+
+AI · TEXT
+
+✗ The AI connection "CXQ OpenAI" was disconnected. Choose another connection or reconnect it in Settings → AI Providers.
+
+Output
+
+OUTPUT · RESULT
+
+Skipped
+
+React Flow
++ Add node
+/
+−
+200%
++
+Fit
+RUNS
+#10
+FAILED
+1/2 · 33ms
+Open in inspector →
+✕
+#10
+now
+#9
+22s ago
+#8
+37s ago
+#7
+55s ago
+#6
+2m ago
+#5
+2m ago
+#4
+3m ago
+#2
+5m ago
+#1
+6m ago
+Manual trigger
+Success
+· 0ms
+→
+AI · Generate
+Failed
+· 2ms
+→
+Output
+Skipped
+
+⚠ The AI connection "CXQ OpenAI" was disconnected. Choose another connection or reconnect it in Settings → AI Providers.

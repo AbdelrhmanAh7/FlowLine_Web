@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-30T17:02:11.225Z",
+  "database": "flowline_beta_local20260930",
+  "via": "staging DB outbox -> real POST /api/email",
+  "httpStatus": 200,
+  "endpointStatus": "done",
+  "verified": true,
+  "alreadyVerified": false,
+  "externalEmailSent": false,
+  "tokenPrintedOrPersisted": false,
+  "adminRoleGranted": false
+}

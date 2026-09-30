@@ -1,0 +1,65 @@
+{
+  "surfaces": [
+    {
+      "surface": "AI Providers en 375",
+      "htmlHit": false,
+      "urlHit": false,
+      "cookieHit": false,
+      "localStorageHit": false,
+      "sessionStorageHit": false,
+      "documentCookieHit": false,
+      "databases": 0,
+      "stores": 0,
+      "records": 0,
+      "indexedDBHit": false,
+      "errors": []
+    },
+    {
+      "surface": "Usage en 375",
+      "htmlHit": false,
+      "urlHit": false,
+      "cookieHit": false,
+      "localStorageHit": false,
+      "sessionStorageHit": false,
+      "documentCookieHit": false,
+      "databases": 0,
+      "stores": 0,
+      "records": 0,
+      "indexedDBHit": false,
+      "errors": []
+    },
+    {
+      "surface": "Inspector en 1440",
+      "htmlHit": false,
+      "urlHit": false,
+      "cookieHit": false,
+      "localStorageHit": false,
+      "sessionStorageHit": false,
+      "documentCookieHit": false,
+      "databases": 0,
+      "stores": 0,
+      "records": 0,
+      "indexedDBHit": false,
+      "errors": []
+    },
+    {
+      "surface": "AI Providers ar 375",
+      "htmlHit": false,
+      "urlHit": false,
+      "cookieHit": false,
+      "localStorageHit": false,
+      "sessionStorageHit": false,
+      "documentCookieHit": false,
+      "databases": 0,
+      "stores": 0,
+      "records": 0,
+      "indexedDBHit": false,
+      "errors": []
+    }
+  ],
+  "requestUrlsChecked": 639,
+  "requestUrlHit": false,
+  "apiResponsesChecked": 122,
+  "apiResponseHit": false,
+  "consoleHit": false
+}

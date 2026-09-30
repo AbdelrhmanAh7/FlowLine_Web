@@ -9,7 +9,7 @@ type Ctx = { params: Promise<{ rid: string }> };
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { run } = await requireRun(user, (await params).rid, "flow.run");
-  checkRunRate(user.id);
+  await checkRunRate(user.id);
   const { fromNodeId, revision } = await parseBody(req, z.object({ fromNodeId: z.string().min(1).max(64), revision: z.enum(["original", "latest"]).default("original") }));
   const next = await rerunFromStep(user, run, fromNodeId, revision);
   return json({ run: next }, { status: 202 });

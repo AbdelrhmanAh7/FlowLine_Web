@@ -1,0 +1,10 @@
+started: 2026-09-30T13:09:54+03:00
+pid: 17828 (child of this supervised command; owner: Abdelrahman)
+cwd: C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design
+ports: 3100 (next start), 4010 (SaaS/OAuth fakes), 4011 (AI fake) on localhost
+log: artifacts/design-v2/chrome-qa/final-keyboard/session-b/stack.log (stack stdout/stderr; no secrets are printed by the stack)
+stop: pnpm stop:test   # (node scripts/stop-test-stack.mjs; kills the :3100 test stack tree)
+build_id: Ll3mdyUnfnqzkHG-r3wIi
+readiness: ok ({"revision":"dev","schemaVersion":20,"db":"ok","worker":"ok","workerLastSeenAt":"2026-09-30T10:10:11.407Z"})
+job exit: 1 at 13:12:39
+stopped: ports 3100/4010/4011 free at 13:12:44

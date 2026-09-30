@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-30T12:46:25.674Z",
+  "browser": "Google Chrome",
+  "version": "154.0.8037.92",
+  "headed": true,
+  "control": "local Playwright persistent context via supervised exec session",
+  "profile": "dedicated ignored setup-20260930 profile",
+  "publicDebugPort": false,
+  "recording": "none",
+  "page": "https://accounts.google.com/v3/signin/identifier",
+  "task": "owner Google test-account login; no resource creation/consent/spend"
+}

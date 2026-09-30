@@ -8,10 +8,19 @@
  *    --from's, schema version unchanged), password sign-in, flow load, manual run + signed webhook execute,
  *    and that data written by --to is still readable.
  * 4. Leaves the stack on --to (roll forward again) so staging keeps the candidate.
+ *
+ * Email verification (Phase 4): the seeded user is verified through the real endpoint (scripts/release/lib/verified-user.mjs).
+ * The token is read from the staging DB's email_outbox table (127.0.0.1:5434, password from --env, default
+ * .env.staging, never printed), so the stack must run with FLOWLINE_EMAIL_PROVIDER=outbox. A --from image that
+ * predates required verification signs the user in at sign-up and needs no token.
+ *   [--env .env.staging]   env file with STAGING_DB_PASSWORD
+ *   [--invite <code>]      beta access code when the stack runs FLOWLINE_BETA_MODE=invite_only
  */
 import { execFileSync } from "node:child_process";
 import { createHmac, randomUUID } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { parseEnvFile } from "./lib/email-token.mjs";
+import { verifiedUser } from "./lib/verified-user.mjs";
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -23,6 +32,10 @@ if (!FROM || !TO) throw new Error("--from and --to images are required");
 const OUT = arg("out", "artifacts/phase-3/rollback");
 const BASE = "http://localhost:3200";
 const PASSWORD = "Rollback-Check-Pass-1";
+const INVITE = arg("invite");
+const envFile = parseEnvFile(readFileSync(arg("env", ".env.staging"), "utf8"));
+if (!envFile.STAGING_DB_PASSWORD) throw new Error("STAGING_DB_PASSWORD missing from the env file (--env)");
+const DB_URL = `postgres://flowline:${envFile.STAGING_DB_PASSWORD}@127.0.0.1:5434/flowline`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -96,7 +109,7 @@ try {
   const fromSchema = h.schemaVersion;
   const s = new Session();
   const email = `rollback-${randomUUID().slice(0, 8)}@flowline-rollback.test`;
-  await s.ok("/api/auth/sign-up/email", { method: "POST", json: { email, password: PASSWORD, name: "Rollback" } });
+  report.seedUser = await verifiedUser({ base: BASE, session: s, email, password: PASSWORD, name: "Rollback", betaCode: INVITE, tokenSource: { dbUrl: DB_URL } });
   const { workspace } = await s.ok("/api/workspaces", { method: "POST", json: { name: `Rollback ${randomUUID().slice(0, 6)}` } });
   await s.ok("/api/onboarding", { method: "POST", json: { goal: "data", skipped: false } });
   const { flow } = await s.ok(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: { name: "Rollback flow" } });

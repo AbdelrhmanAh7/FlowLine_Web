@@ -1,0 +1,10 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nCodex QA Knowledge Agent\n\nv1 · Staging-only cited knowledge and approval check\n\nChat\nConfiguration\nRuns\n\nWhat is the Nile project support window? Search our knowledge and cite the source.\n\nAnswered\nv1 · 2 model steps · no priced usage\n\nThe support window for the Nile project is from Monday through Thursday, 09:00 to 17:00 Cairo time. [1] \n\n[1] codex-qa-knowledge.txt · part 1: Codex QA handbook. The fictional Nile project has review code PAPYRUS-42. Its support window is Monday through Thursday, 09:00 to 17:00 Cairo time. Every external action requires a human approval. This document is test data only.\n\nSOURCES\n\ncodex-qa-knowledge.txt · part 1\nShow steps (4)\nMessage the agent\nSend\nType a message\nNew conversation",
+  "buttons": [
+    "COCodex Owner",
+    "Show steps (4)",
+    "Send",
+    "New conversation"
+  ]
+}

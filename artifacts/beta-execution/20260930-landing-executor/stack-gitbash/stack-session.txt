@@ -1,0 +1,10 @@
+started: 2026-09-30T21:03:51+03:00
+pid: 2236 (child of this supervised command; owner: Abdelrahman)
+cwd: C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design
+ports: 3100 (next start), 4010 (SaaS/OAuth fakes), 4011 (AI fake) on localhost
+log: artifacts/beta-execution/20260930-landing-executor/stack-gitbash/stack.log (stack stdout/stderr; no secrets are printed by the stack)
+stop: pnpm stop:test   # (node scripts/stop-test-stack.mjs; kills the :3100 test stack tree)
+build_id: JkO_N50eWRr3bpIqSw3sj
+readiness: ok ({"revision":"2a19a2e3e14dfc692d619b6327c719cf3c434d44","schemaVersion":20,"db":"ok","worker":"ok","workerLastSeenAt":"2026-09-30T18:04:21.623Z"})
+job exit: 1 at 21:12:16
+stopped: ports 3100/4010/4011 free at 21:12:23

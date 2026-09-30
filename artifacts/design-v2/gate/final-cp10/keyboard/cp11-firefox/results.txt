@@ -1,0 +1,26 @@
+
+Running 17 tests using 1 worker
+
+(node:33556) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   1 [firefox] › e2e\builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher (1ms)
+(node:53776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   2 [firefox] › e2e\builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher (1ms)
+(node:48688) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   3 [firefox] › e2e\builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher (1ms)
+(node:61748) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   4 [firefox] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button (2ms)
+(node:62120) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   5 [firefox] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button (1ms)
+(node:38604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   6 [firefox] › e2e\builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again (1ms)
+(node:25380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   7 [firefox] › e2e\builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it (1ms)
+(node:33492) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

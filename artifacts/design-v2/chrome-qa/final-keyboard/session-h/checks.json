@@ -1,0 +1,60 @@
+[
+  {
+    "id": "integration:connect",
+    "name": "Connect Google Sheets",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "integration:reconnect",
+    "name": "Reconnect Google Sheets",
+    "mode": "modal",
+    "initial": true,
+    "tabOutside": false,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "en:integration-remove",
+    "name": "Confirm remove",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "en:integration-success-focus",
+    "result": "PASS",
+    "bodyLoss": false
+  },
+  {
+    "id": "ar:integration-remove",
+    "name": "تأكيد الإزالة",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "ar:integration-success-focus",
+    "result": "PASS",
+    "bodyLoss": false
+  }
+]

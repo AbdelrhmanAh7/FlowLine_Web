@@ -1,0 +1,227 @@
+{
+  "baseURL": "http://localhost:3200",
+  "emails": {
+    "owner": "codex-owner-202609281749@flowline-qa.test",
+    "member": "codex-member-202609281749@flowline-qa.test",
+    "outsider": "codex-outsider-202609281749@flowline-qa.test"
+  },
+  "events": [
+    {
+      "kind": "console",
+      "label": "owner",
+      "page": "http://localhost:3200/sign-up",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/integrations",
+      "status": 400,
+      "url": "http://localhost:3200/api/workspaces/0440f51c-a360-47dc-aa19-7057e16066f1/connections"
+    },
+    {
+      "kind": "console",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/integrations",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex/flows",
+      "status": 404,
+      "url": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8",
+      "status": 404,
+      "url": "http://localhost:3200/w/codex-phase-4-qa/runs"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/runs",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/runs",
+      "status": 404,
+      "url": "http://localhost:3200/w/codex-phase-4-qa/settings"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/settings",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/settings",
+      "status": 404,
+      "url": "http://localhost:3200/w/codex-phase-4-qa/agents"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex/flows",
+      "status": 404,
+      "url": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "kind": "http",
+      "label": "outsider",
+      "page": "http://localhost:3200/sign-in",
+      "status": 401,
+      "url": "http://localhost:3200/api/auth/sign-in/email"
+    },
+    {
+      "kind": "console",
+      "label": "outsider",
+      "page": "http://localhost:3200/sign-in",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+    },
+    {
+      "kind": "http",
+      "label": "member",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb",
+      "status": 503,
+      "url": "http://localhost:3200/api/health"
+    },
+    {
+      "kind": "console",
+      "label": "member",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "kind": "http",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "status": 500,
+      "url": "http://localhost:3200/api/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69/publish"
+    },
+    {
+      "kind": "console",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    },
+    {
+      "kind": "http",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "status": 503,
+      "url": "http://localhost:3200/api/health"
+    },
+    {
+      "kind": "console",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "kind": "http",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "status": 503,
+      "url": "http://localhost:3200/api/health"
+    },
+    {
+      "kind": "console",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "kind": "http",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "status": 500,
+      "url": "http://localhost:3200/api/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e/runs"
+    },
+    {
+      "kind": "console",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    },
+    {
+      "kind": "http",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "status": 500,
+      "url": "http://localhost:3200/api/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69/publish"
+    },
+    {
+      "kind": "console",
+      "label": "owner-work",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6cbe3e04-ee8c-4fcf-84b7-757926c52c69",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    },
+    {
+      "kind": "http",
+      "label": "member",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb",
+      "status": 500,
+      "url": "http://localhost:3200/api/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb/publish"
+    },
+    {
+      "kind": "console",
+      "label": "member",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/flows/6f6e172a-d81e-4c45-aebf-338345ee6ffb",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    },
+    {
+      "kind": "http",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "status": 500,
+      "url": "http://localhost:3200/api/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e/runs"
+    },
+    {
+      "kind": "console",
+      "label": "owner",
+      "page": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    }
+  ]
+}

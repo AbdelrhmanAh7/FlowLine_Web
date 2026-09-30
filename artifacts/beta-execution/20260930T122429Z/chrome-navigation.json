@@ -1,0 +1,17 @@
+{
+  "ownerInstruction": "Use computer use, open a new Chrome tab and navigate",
+  "control": "cua_repl Chrome extension browser 1",
+  "tabId": "846411866",
+  "page": "https://console.cloud.google.com/apis/dashboard?project=flowline-beta",
+  "projectId": "flowline-beta",
+  "projectName": "Flowline beta",
+  "projectState": "Existing project observed; not created by executor",
+  "accountState": "Already signed in; designated test-account confirmation still needed before configuration",
+  "actions": ["Opened new tab", "Clicked APIs & Services", "Verified loaded dashboard", "Marked tab to remain open"],
+  "configurationChanges": false,
+  "billingChanges": false,
+  "secretAccess": false,
+  "originalIsolatedBrowser": "Remains idle and uninspected; no login confirmation received for that session",
+  "merged": false,
+  "publicProductionApproved": false
+}

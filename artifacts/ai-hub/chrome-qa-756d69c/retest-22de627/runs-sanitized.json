@@ -1,0 +1,694 @@
+[
+  {
+    "run": {
+      "id": "a8c06a7b-a5cb-44cc-ae83-68d88bd996ba",
+      "workspaceId": "e7904818-0ab8-4a25-b48f-319d2d2c8e34",
+      "flowId": "c43afae0-2162-42cb-804f-4b56e1e45725",
+      "flowVersionId": "eb117eee-5e7b-410c-8172-dc84cacb1aa3",
+      "number": 1,
+      "status": "succeeded",
+      "input": {
+        "text": "Invoice 17 from Acme is overdue"
+      },
+      "output": {},
+      "error": null,
+      "rerunOfRunId": null,
+      "rerunFromNodeId": null,
+      "agentRunId": null,
+      "apiKeyId": null,
+      "triggerKind": "manual",
+      "triggerRef": "click:d86f818ea4ca4589a921c7083659f248",
+      "parentRunId": null,
+      "parentNodeId": null,
+      "cancelRequestedAt": null,
+      "cancelRequestedBy": null,
+      "deadlineAt": "2026-09-29T10:11:33.245Z",
+      "createdBy": "b4e551bf-f83e-48b2-9d19-57da76e2ea29",
+      "createdAt": "2026-09-29T09:56:33.224Z",
+      "startedAt": "2026-09-29T09:56:33.264Z",
+      "finishedAt": "2026-09-29T09:56:33.365Z",
+      "durationMs": 79,
+      "flowName": "CXQ OpenAI retest",
+      "steps": [
+        {
+          "id": "6809e46d-b5eb-496e-bcc5-35bd6f1d8d4b",
+          "runId": "a8c06a7b-a5cb-44cc-ae83-68d88bd996ba",
+          "nodeId": "n2zfg1",
+          "nodeType": "trigger.manual",
+          "nodeLabel": "Manual trigger",
+          "position": 0,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "output": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": null,
+          "log": null,
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:56:33.292Z",
+          "finishedAt": "2026-09-29T09:56:33.292Z",
+          "durationMs": 0
+        },
+        {
+          "id": "3487fe9c-7dc0-4cc5-87a5-d74f87df6edf",
+          "runId": "a8c06a7b-a5cb-44cc-ae83-68d88bd996ba",
+          "nodeId": "n40im2",
+          "nodeType": "ai.generate",
+          "nodeLabel": "AI · Generate",
+          "position": 1,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "output": {
+            "text": "Summary: Invoice 17 from Acme is overdue"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": {
+            "model": "fake-gpt-large",
+            "policy": "MANUAL",
+            "protocol": "openai-chat",
+            "provider": "openai",
+            "unpriced": false,
+            "connection": "Retest OpenAI",
+            "costMicros": 456,
+            "costSource": "estimated",
+            "inputTokens": 188,
+            "routeReason": "primary",
+            "routeSource": "node",
+            "connectionId": "6478ed58-be0b-48f4-b57c-1fe7df2d1d88",
+            "outputTokens": 10,
+            "cacheReadTokens": 0,
+            "reasoningTokens": 0,
+            "quarantinedLines": 0,
+            "structuredOutput": "none"
+          },
+          "log": null,
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:56:33.304Z",
+          "finishedAt": "2026-09-29T09:56:33.360Z",
+          "durationMs": 55
+        }
+      ],
+      "version": 1,
+      "versionReason": "run",
+      "graph": {
+        "edges": [
+          {
+            "id": "e-n2zfg1-out-n40im2",
+            "source": "n2zfg1",
+            "target": "n40im2",
+            "sourceHandle": "out",
+            "targetHandle": null
+          }
+        ],
+        "nodes": [
+          {
+            "id": "n2zfg1",
+            "data": {
+              "label": "Manual trigger",
+              "config": {
+                "samplePayload": "{\"text\":\"Invoice 17 from Acme is overdue\"}"
+              }
+            },
+            "type": "trigger.manual",
+            "position": {
+              "x": 504,
+              "y": 396
+            }
+          },
+          {
+            "id": "n40im2",
+            "data": {
+              "label": "AI · Generate",
+              "config": {
+                "model": "",
+                "route": {
+                  "modelId": "fake-gpt-large",
+                  "connectionId": "6478ed58-be0b-48f4-b57c-1fe7df2d1d88"
+                },
+                "source": "text",
+                "maxTokens": 100,
+                "instructions": "Summarise in one line"
+              }
+            },
+            "type": "ai.generate",
+            "position": {
+              "x": 540,
+              "y": 444
+            }
+          }
+        ],
+        "viewport": {
+          "x": -4,
+          "y": -11.5,
+          "zoom": 1
+        }
+      },
+      "approvals": [],
+      "events": [
+        {
+          "id": 48296,
+          "at": "2026-09-29T09:56:33.224Z",
+          "type": "queued",
+          "nodeId": null,
+          "data": {
+            "trigger": "manual",
+            "version": 1
+          }
+        },
+        {
+          "id": 48297,
+          "at": "2026-09-29T09:56:33.283Z",
+          "type": "claimed",
+          "nodeId": null,
+          "data": {
+            "worker": "1666ce",
+            "interrupted": []
+          }
+        },
+        {
+          "id": 48298,
+          "at": "2026-09-29T09:56:33.291Z",
+          "type": "step_started",
+          "nodeId": "n2zfg1",
+          "data": null
+        },
+        {
+          "id": 48299,
+          "at": "2026-09-29T09:56:33.298Z",
+          "type": "step_succeeded",
+          "nodeId": "n2zfg1",
+          "data": null
+        },
+        {
+          "id": 48300,
+          "at": "2026-09-29T09:56:33.303Z",
+          "type": "step_started",
+          "nodeId": "n40im2",
+          "data": null
+        },
+        {
+          "id": 48301,
+          "at": "2026-09-29T09:56:33.364Z",
+          "type": "step_succeeded",
+          "nodeId": "n40im2",
+          "data": null
+        },
+        {
+          "id": 48302,
+          "at": "2026-09-29T09:56:33.369Z",
+          "type": "finished",
+          "nodeId": null,
+          "data": {
+            "status": "succeeded"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "run": {
+      "id": "18bf08fb-9bb7-49b6-b41d-4956d22c6273",
+      "workspaceId": "e7904818-0ab8-4a25-b48f-319d2d2c8e34",
+      "flowId": "b28ddec3-751b-41b4-9f0b-4ad208bfd313",
+      "flowVersionId": "d29d45dc-f987-401a-85a6-a9fac471b8ee",
+      "number": 2,
+      "status": "succeeded",
+      "input": {
+        "text": "Invoice 29 from Example is paid"
+      },
+      "output": {},
+      "error": null,
+      "rerunOfRunId": null,
+      "rerunFromNodeId": null,
+      "agentRunId": null,
+      "apiKeyId": null,
+      "triggerKind": "manual",
+      "triggerRef": "click:4001c8d59bd74bae80bde27f2d1e4fd4",
+      "parentRunId": null,
+      "parentNodeId": null,
+      "cancelRequestedAt": null,
+      "cancelRequestedBy": null,
+      "deadlineAt": "2026-09-29T10:12:24.101Z",
+      "createdBy": "b4e551bf-f83e-48b2-9d19-57da76e2ea29",
+      "createdAt": "2026-09-29T09:57:24.086Z",
+      "startedAt": "2026-09-29T09:57:24.117Z",
+      "finishedAt": "2026-09-29T09:57:24.205Z",
+      "durationMs": 72,
+      "flowName": "CXQ Anthropic retest",
+      "steps": [
+        {
+          "id": "5d9e976a-bd35-4c23-8186-722d17d23069",
+          "runId": "18bf08fb-9bb7-49b6-b41d-4956d22c6273",
+          "nodeId": "n5ud21",
+          "nodeType": "trigger.manual",
+          "nodeLabel": "Manual trigger",
+          "position": 0,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 29 from Example is paid"
+          },
+          "output": {
+            "text": "Invoice 29 from Example is paid"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": null,
+          "log": null,
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:57:24.138Z",
+          "finishedAt": "2026-09-29T09:57:24.138Z",
+          "durationMs": 0
+        },
+        {
+          "id": "ea107a17-4e81-477a-9f13-88e4921592ee",
+          "runId": "18bf08fb-9bb7-49b6-b41d-4956d22c6273",
+          "nodeId": "n5uoa2",
+          "nodeType": "ai.generate",
+          "nodeLabel": "AI · Generate",
+          "position": 1,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 29 from Example is paid"
+          },
+          "output": {
+            "text": "Summary: Invoice 29 from Example is paid"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": {
+            "model": "fake-claude",
+            "policy": "MANUAL",
+            "protocol": "anthropic-messages",
+            "provider": "anthropic",
+            "unpriced": false,
+            "connection": "Retest Anthropic",
+            "costMicros": 654,
+            "costSource": "estimated",
+            "inputTokens": 188,
+            "routeReason": "primary",
+            "routeSource": "node",
+            "connectionId": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e",
+            "outputTokens": 10,
+            "cacheReadTokens": 0,
+            "quarantinedLines": 0,
+            "structuredOutput": "none"
+          },
+          "log": null,
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:57:24.147Z",
+          "finishedAt": "2026-09-29T09:57:24.200Z",
+          "durationMs": 52
+        }
+      ],
+      "version": 1,
+      "versionReason": "run",
+      "graph": {
+        "edges": [
+          {
+            "id": "e-n5ud21-out-n5uoa2",
+            "source": "n5ud21",
+            "target": "n5uoa2",
+            "sourceHandle": "out",
+            "targetHandle": null
+          }
+        ],
+        "nodes": [
+          {
+            "id": "n5ud21",
+            "data": {
+              "label": "Manual trigger",
+              "config": {
+                "samplePayload": "{\"text\":\"Invoice 29 from Example is paid\"}"
+              }
+            },
+            "type": "trigger.manual",
+            "position": {
+              "x": 504,
+              "y": 396
+            }
+          },
+          {
+            "id": "n5uoa2",
+            "data": {
+              "label": "AI · Generate",
+              "config": {
+                "model": "",
+                "route": {
+                  "modelId": "fake-claude",
+                  "connectionId": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e"
+                },
+                "source": "text",
+                "maxTokens": 100,
+                "instructions": "Summarise in one line"
+              }
+            },
+            "type": "ai.generate",
+            "position": {
+              "x": 540,
+              "y": 444
+            }
+          }
+        ],
+        "viewport": {
+          "x": -4,
+          "y": -11.5,
+          "zoom": 1
+        }
+      },
+      "approvals": [],
+      "events": [
+        {
+          "id": 48303,
+          "at": "2026-09-29T09:57:24.086Z",
+          "type": "queued",
+          "nodeId": null,
+          "data": {
+            "trigger": "manual",
+            "version": 1
+          }
+        },
+        {
+          "id": 48304,
+          "at": "2026-09-29T09:57:24.131Z",
+          "type": "claimed",
+          "nodeId": null,
+          "data": {
+            "worker": "1666ce",
+            "interrupted": []
+          }
+        },
+        {
+          "id": 48305,
+          "at": "2026-09-29T09:57:24.136Z",
+          "type": "step_started",
+          "nodeId": "n5ud21",
+          "data": null
+        },
+        {
+          "id": 48306,
+          "at": "2026-09-29T09:57:24.142Z",
+          "type": "step_succeeded",
+          "nodeId": "n5ud21",
+          "data": null
+        },
+        {
+          "id": 48307,
+          "at": "2026-09-29T09:57:24.146Z",
+          "type": "step_started",
+          "nodeId": "n5uoa2",
+          "data": null
+        },
+        {
+          "id": 48308,
+          "at": "2026-09-29T09:57:24.203Z",
+          "type": "step_succeeded",
+          "nodeId": "n5uoa2",
+          "data": null
+        },
+        {
+          "id": 48309,
+          "at": "2026-09-29T09:57:24.208Z",
+          "type": "finished",
+          "nodeId": null,
+          "data": {
+            "status": "succeeded"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "run": {
+      "id": "8933512a-e6da-47e3-9f68-10b6d0f5eae6",
+      "workspaceId": "e7904818-0ab8-4a25-b48f-319d2d2c8e34",
+      "flowId": "c43afae0-2162-42cb-804f-4b56e1e45725",
+      "flowVersionId": "3e394d92-6158-4ca6-81ef-d9d64cb9af74",
+      "number": 3,
+      "status": "succeeded",
+      "input": {
+        "text": "Invoice 17 from Acme is overdue"
+      },
+      "output": {},
+      "error": null,
+      "rerunOfRunId": null,
+      "rerunFromNodeId": null,
+      "agentRunId": null,
+      "apiKeyId": null,
+      "triggerKind": "manual",
+      "triggerRef": "click:90e0b64e3552477c8bff61e3c06924cf",
+      "parentRunId": null,
+      "parentNodeId": null,
+      "cancelRequestedAt": null,
+      "cancelRequestedBy": null,
+      "deadlineAt": "2026-09-29T10:13:12.952Z",
+      "createdBy": "b4e551bf-f83e-48b2-9d19-57da76e2ea29",
+      "createdAt": "2026-09-29T09:58:12.907Z",
+      "startedAt": "2026-09-29T09:58:12.974Z",
+      "finishedAt": "2026-09-29T09:58:13.285Z",
+      "durationMs": 293,
+      "flowName": "CXQ OpenAI retest",
+      "steps": [
+        {
+          "id": "67b4792f-1c1f-43e1-8a02-52cedc7c34a1",
+          "runId": "8933512a-e6da-47e3-9f68-10b6d0f5eae6",
+          "nodeId": "n2zfg1",
+          "nodeType": "trigger.manual",
+          "nodeLabel": "Manual trigger",
+          "position": 0,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "output": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": null,
+          "log": null,
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:58:12.999Z",
+          "finishedAt": "2026-09-29T09:58:12.999Z",
+          "durationMs": 0
+        },
+        {
+          "id": "eee6d6b7-d178-4ab7-b248-e089e8b39e70",
+          "runId": "8933512a-e6da-47e3-9f68-10b6d0f5eae6",
+          "nodeId": "n40im2",
+          "nodeType": "ai.generate",
+          "nodeLabel": "AI · Generate",
+          "position": 1,
+          "status": "succeeded",
+          "input": {
+            "text": "Invoice 17 from Acme is overdue"
+          },
+          "output": {
+            "text": "Summary: Invoice 17 from Acme is overdue"
+          },
+          "error": null,
+          "skipReason": null,
+          "attempts": 1,
+          "meta": {
+            "model": "fake-claude",
+            "policy": "FALLBACK",
+            "protocol": "anthropic-messages",
+            "provider": "anthropic",
+            "unpriced": false,
+            "connection": "Retest Anthropic",
+            "costMicros": 654,
+            "costSource": "estimated",
+            "inputTokens": 188,
+            "routeReason": "fallback #1 after AI_PROVIDER_ERROR",
+            "routeSource": "node",
+            "connectionId": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e",
+            "fallbackFrom": [
+              {
+                "code": "AI_PROVIDER_ERROR",
+                "modelId": "fake-gpt-large",
+                "provider": "openai",
+                "connectionId": "6478ed58-be0b-48f4-b57c-1fe7df2d1d88"
+              }
+            ],
+            "outputTokens": 10,
+            "cacheReadTokens": 0,
+            "quarantinedLines": 0,
+            "structuredOutput": "none"
+          },
+          "log": [
+            "attempt 1 failed (AI_PROVIDER_ERROR); retrying",
+            "attempt 2 failed (AI_PROVIDER_ERROR); retrying",
+            "AI route Retest OpenAI/fake-gpt-large failed (AI_PROVIDER_ERROR); the workspace policy moves to Retest Anthropic/fake-claude"
+          ],
+          "dataLegacy": false,
+          "startedAt": "2026-09-29T09:58:13.010Z",
+          "finishedAt": "2026-09-29T09:58:13.282Z",
+          "durationMs": 272
+        }
+      ],
+      "version": 2,
+      "versionReason": "run",
+      "graph": {
+        "edges": [
+          {
+            "id": "e-n2zfg1-out-n40im2",
+            "source": "n2zfg1",
+            "target": "n40im2",
+            "sourceHandle": "out",
+            "targetHandle": null
+          }
+        ],
+        "nodes": [
+          {
+            "id": "n2zfg1",
+            "data": {
+              "label": "Manual trigger",
+              "config": {
+                "samplePayload": "{\"text\":\"Invoice 17 from Acme is overdue\"}"
+              }
+            },
+            "type": "trigger.manual",
+            "position": {
+              "x": 504,
+              "y": 396
+            }
+          },
+          {
+            "id": "n40im2",
+            "data": {
+              "label": "AI · Generate",
+              "config": {
+                "model": "",
+                "route": {
+                  "modelId": "fake-gpt-large",
+                  "connectionId": "6478ed58-be0b-48f4-b57c-1fe7df2d1d88"
+                },
+                "source": "text",
+                "maxTokens": 100,
+                "instructions": "Summarise in one line"
+              }
+            },
+            "type": "ai.generate",
+            "position": {
+              "x": 540,
+              "y": 444
+            }
+          }
+        ],
+        "viewport": {
+          "x": -4,
+          "y": -11.5,
+          "zoom": 1
+        }
+      },
+      "approvals": [],
+      "events": [
+        {
+          "id": 48310,
+          "at": "2026-09-29T09:58:12.907Z",
+          "type": "queued",
+          "nodeId": null,
+          "data": {
+            "trigger": "manual",
+            "version": 2
+          }
+        },
+        {
+          "id": 48311,
+          "at": "2026-09-29T09:58:12.989Z",
+          "type": "claimed",
+          "nodeId": null,
+          "data": {
+            "worker": "1666ce",
+            "interrupted": []
+          }
+        },
+        {
+          "id": 48312,
+          "at": "2026-09-29T09:58:12.997Z",
+          "type": "step_started",
+          "nodeId": "n2zfg1",
+          "data": null
+        },
+        {
+          "id": 48313,
+          "at": "2026-09-29T09:58:13.004Z",
+          "type": "step_succeeded",
+          "nodeId": "n2zfg1",
+          "data": null
+        },
+        {
+          "id": 48314,
+          "at": "2026-09-29T09:58:13.008Z",
+          "type": "step_started",
+          "nodeId": "n40im2",
+          "data": null
+        },
+        {
+          "id": 48315,
+          "at": "2026-09-29T09:58:13.054Z",
+          "type": "step_retry",
+          "nodeId": "n40im2",
+          "data": {
+            "error": "AI_PROVIDER_ERROR",
+            "attempt": 1
+          }
+        },
+        {
+          "id": 48316,
+          "at": "2026-09-29T09:58:13.172Z",
+          "type": "step_retry",
+          "nodeId": "n40im2",
+          "data": {
+            "error": "AI_PROVIDER_ERROR",
+            "attempt": 2
+          }
+        },
+        {
+          "id": 48317,
+          "at": "2026-09-29T09:58:13.255Z",
+          "type": "ai_fallback",
+          "nodeId": "n40im2",
+          "data": {
+            "to": {
+              "modelId": "fake-claude",
+              "connectionId": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e"
+            },
+            "from": {
+              "modelId": "fake-gpt-large",
+              "connectionId": "6478ed58-be0b-48f4-b57c-1fe7df2d1d88"
+            },
+            "error": "AI_PROVIDER_ERROR"
+          }
+        },
+        {
+          "id": 48318,
+          "at": "2026-09-29T09:58:13.284Z",
+          "type": "step_succeeded",
+          "nodeId": "n40im2",
+          "data": null
+        },
+        {
+          "id": 48319,
+          "at": "2026-09-29T09:58:13.287Z",
+          "type": "finished",
+          "nodeId": null,
+          "data": {
+            "status": "succeeded"
+          }
+        }
+      ]
+    }
+  }
+]

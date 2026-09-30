@@ -1,0 +1,110 @@
+# Flowline PRIVATE BETA stack (not production). One host, one web instance, one worker.
+#   cp .env.beta.example .env.beta   # fill in on the server — never commit it
+#   FLOWLINE_IMAGE=flowline:<sha> docker compose -f docker-compose.beta.yml --env-file .env.beta up -d --wait
+# Public surface: ONLY Caddy on 80/443 (automatic TLS for BETA_DOMAIN). PostgreSQL, the worker and the app port are on an
+# internal network and never published. See docs/implementation/PRIVATE_BETA_RUNBOOK.md.
+name: flowline-beta
+
+x-app: &app
+  image: ${FLOWLINE_IMAGE:?set FLOWLINE_IMAGE=flowline:<sha>}
+  env_file: .env.beta
+  environment:
+    DATABASE_URL: postgres://flowline:${BETA_DB_PASSWORD:?}@db:5432/flowline
+    BETTER_AUTH_URL: https://${BETA_DOMAIN:?}
+    FLOWLINE_PUBLIC_URL: https://${BETA_DOMAIN:?}
+    FLOWLINE_ENV: beta
+  networks: [internal]
+  restart: unless-stopped
+  depends_on:
+    migrate: { condition: service_completed_successfully }
+  logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      BETA_DOMAIN: ${BETA_DOMAIN:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+    depends_on:
+      web: { condition: service_healthy }
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flowline
+      POSTGRES_PASSWORD: ${BETA_DB_PASSWORD:?}
+      POSTGRES_DB: flowline
+    volumes: [beta-pg:/var/lib/postgresql/data]
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=60"]
+    networks: [internal]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U flowline"], interval: 5s, retries: 30 }
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  migrate:
+    image: ${FLOWLINE_IMAGE:?}
+    environment:
+      DATABASE_URL: postgres://flowline:${BETA_DB_PASSWORD:?}@db:5432/flowline
+    command: ["node_modules/.bin/tsx", "src/db/migrate.ts"]
+    networks: [internal]
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+
+  web:
+    <<: *app
+    volumes: ["./backups:/backups:ro"]
+    healthcheck: { test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"], interval: 10s, retries: 30 }
+
+  worker:
+    <<: *app
+    command: ["node_modules/.bin/tsx", "worker/index.ts"]
+
+  # Polls health + /api/ops/status on the internal network; alerts to FLOWLINE_ALERT_WEBHOOK_URL (runbook §Monitoring).
+  monitor:
+    image: ${FLOWLINE_IMAGE:?}
+    env_file: .env.beta
+    environment:
+      OPS_BASE: http://web:3000
+    command: ["node", "scripts/ops/monitor.mjs"]
+    networks: [internal]
+    restart: unless-stopped
+    depends_on: { web: { condition: service_healthy } }
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  # Nightly logical backup with retention; copies can also be pushed off-host (see the runbook).
+  backup:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${BETA_DB_PASSWORD:?}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes: [./backups:/backups]
+    networks: [internal]
+    depends_on: { db: { condition: service_healthy } }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          ts=$$(date -u +%Y%m%dT%H%M%SZ)
+          if pg_dump -h db -U flowline -Fc flowline > /backups/flowline-$$ts.dump.part; then
+            mv /backups/flowline-$$ts.dump.part /backups/flowline-$$ts.dump && echo "backup ok $$ts" > /backups/LAST_OK
+          else
+            echo "backup FAILED $$ts" > /backups/LAST_FAILED; rm -f /backups/flowline-$$ts.dump.part
+          fi
+          find /backups -name 'flowline-*.dump' -mtime +$${BACKUP_RETENTION_DAYS} -delete
+          sleep 86400
+        done
+
+networks:
+  internal: {}
+volumes:
+  beta-pg:
+  caddy-data:
+  caddy-config:

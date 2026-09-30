@@ -1,0 +1,38 @@
+[
+  {
+    "id": "admin:credential-revoke",
+    "name": "Revoke GitHub?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:credential-clear",
+    "name": "Clear GitHub? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:settings:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:settings:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  }
+]

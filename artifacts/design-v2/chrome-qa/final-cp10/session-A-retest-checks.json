@@ -1,0 +1,182 @@
+[
+  {
+    "name": "Unauthenticated admin navigation rejected",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Verification endpoint succeeded",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Final candidate English signup, verification, sign-in, onboarding",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Normal Owner denied admin navigation",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Normal Owner denied admin API",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "Invalid setup code rejected",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Setup code redeemed",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Setup code reuse denied",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "Invalid enrollment OTP rejected",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "TOTP enrollment complete",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Before completion admin API denied",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "Writes locked before step-up",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Pre-step-up write rejected by server",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "OTP replay denied",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Fresh OTP unlocks changes",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Saved credential write-only after reload",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Synthetic credential revoked and cleared",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Logout deep-link blocked",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Logout admin API blocked",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "Password requires MFA before admin access",
+    "status": "PASS",
+    "details": "MFA UI visible plus corroborating API denial"
+  },
+  {
+    "name": "Invalid MFA sign-in denied",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "MFA sign-in works; old elevation not reused",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "F01 self-revocation navigates to 404",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "F01 cached privileged panel removed",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Revoked account admin API denied",
+    "status": "PASS",
+    "details": "Corroborating API check"
+  },
+  {
+    "name": "M01 final candidate Add node Escape focus",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "M02 final refetch does not steal outside focus",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "M02 panels non-modal",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "M02 nested tooltip consumes Escape first",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "M02 final proposal/diff/removals survives Escape",
+    "status": "PASS",
+    "details": "UI fixture; POST remains 1"
+  },
+  {
+    "name": "M02 final proposal/diff/removals survives X",
+    "status": "PASS",
+    "details": "UI fixture; POST remains 1"
+  },
+  {
+    "name": "M02 final Flow issues Escape focus",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Q05 final phone sheet named and modal",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Q05 final focus trap after reload",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Q05 final Escape returns row focus",
+    "status": "PASS",
+    "details": ""
+  },
+  {
+    "name": "Cleanup: disposable admin logged out and denied",
+    "status": "PASS",
+    "details": ""
+  }
+]

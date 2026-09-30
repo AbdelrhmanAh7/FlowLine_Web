@@ -134,7 +134,10 @@ describe("API keys and the invocation API", () => {
     const { key, apiKey } = await createApiKey(owner, ws.id, { name: "ci", mode: "live", scopes: ["runs:write", "runs:read", "flows:read"] });
     expect(key).toMatch(/^fl_live_[a-z0-9]{8}_[A-Za-z0-9_-]{43}$/);
     const [stored] = await db.select().from(schema.apiKey).where(eq(schema.apiKey.id, apiKey.id));
-    expect(JSON.stringify(stored)).not.toContain(key.split("_").pop()!);
+    // The secret is everything after "fl_live_<8-char id>_" (it may itself contain "_").
+    const secret = key.slice("fl_live_".length + 9);
+    expect(secret).toHaveLength(43);
+    expect(JSON.stringify(stored)).not.toContain(secret);
 
     let r = await call(v1RunPOST as never, req(`/api/v1/flows/${flow.id}/runs`, key, { method: "POST", body: "{}" }), { fid: flow.id });
     expect(r.status).toBe(409); // not published yet

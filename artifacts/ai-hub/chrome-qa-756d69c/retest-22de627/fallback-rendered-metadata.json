@@ -1,0 +1,87 @@
+[
+  {
+    "label": "model",
+    "text": "fake-claude",
+    "title": "fake-claude"
+  },
+  {
+    "label": "policy",
+    "text": "FALLBACK",
+    "title": "FALLBACK"
+  },
+  {
+    "label": "protocol",
+    "text": "anthropic-messages",
+    "title": "anthropic-messages"
+  },
+  {
+    "label": "provider",
+    "text": "anthropic",
+    "title": "anthropic"
+  },
+  {
+    "label": "unpriced",
+    "text": "false",
+    "title": "false"
+  },
+  {
+    "label": "connection",
+    "text": "Retest Anthropic",
+    "title": "Retest Anthropic"
+  },
+  {
+    "label": "Cost (USD)",
+    "text": "0.000654",
+    "title": "654"
+  },
+  {
+    "label": "costSource",
+    "text": "estimated",
+    "title": "estimated"
+  },
+  {
+    "label": "inputTokens",
+    "text": "188",
+    "title": "188"
+  },
+  {
+    "label": "routeReason",
+    "text": "fallback #1 after AI_PROVIDER_ERROR",
+    "title": "fallback #1 after AI_PROVIDER_ERROR"
+  },
+  {
+    "label": "routeSource",
+    "text": "node",
+    "title": "node"
+  },
+  {
+    "label": "connectionId",
+    "text": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e",
+    "title": "7362c2a1-79f7-4ab7-8241-4572b4ebc00e"
+  },
+  {
+    "label": "fallbackFrom",
+    "text": "[{\"code\":\"AI_PROVIDER_ERROR\",\"modelId\":\"fake-gpt-large\",\"provider\":\"openai\",\"connectionId\":\"6478ed58-be0b-48f4-b57c-1fe7df2d1d88\"}]",
+    "title": "[{\"code\":\"AI_PROVIDER_ERROR\",\"modelId\":\"fake-gpt-large\",\"provider\":\"openai\",\"connectionId\":\"6478ed58-be0b-48f4-b57c-1fe7df2d1d88\"}]"
+  },
+  {
+    "label": "outputTokens",
+    "text": "10",
+    "title": "10"
+  },
+  {
+    "label": "cacheReadTokens",
+    "text": "0",
+    "title": "0"
+  },
+  {
+    "label": "quarantinedLines",
+    "text": "0",
+    "title": "0"
+  },
+  {
+    "label": "structuredOutput",
+    "text": "none",
+    "title": "none"
+  }
+]

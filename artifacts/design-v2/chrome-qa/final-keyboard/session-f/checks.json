@@ -1,0 +1,342 @@
+[
+  {
+    "id": "admin:setup-mfa-keyboard",
+    "result": "PASS",
+    "note": "Real disposable grant/enrollment/step-up through UI keyboard; secrets memory-only, no captures."
+  },
+  {
+    "id": "admin:revoke:signin.google",
+    "name": "Revoke Google sign-in?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:signin.github",
+    "name": "Revoke GitHub sign-in?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:integration.google",
+    "name": "Revoke Google (Gmail, Sheets)?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:integration.slack",
+    "name": "Revoke Slack?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:integration.github",
+    "name": "Revoke GitHub?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:email.resend",
+    "name": "Revoke Resend?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:email.postmark",
+    "name": "Revoke Postmark?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:billing.paddle.sandbox",
+    "name": "Revoke Paddle sandbox API key?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:billing.paddle.sandbox.webhook",
+    "name": "Revoke Paddle sandbox webhook secret?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:billing.stripe.test",
+    "name": "Revoke Stripe test-mode key?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoke:billing.stripe.test.webhook",
+    "name": "Revoke Stripe test-mode webhook secret?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:signin.google",
+    "name": "Clear Google sign-in? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:signin.github",
+    "name": "Clear GitHub sign-in? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:integration.google",
+    "name": "Clear Google (Gmail, Sheets)? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:integration.slack",
+    "name": "Clear Slack? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:integration.github",
+    "name": "Clear GitHub? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:email.resend",
+    "name": "Clear Resend? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:email.postmark",
+    "name": "Clear Postmark? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:billing.paddle.sandbox",
+    "name": "Clear Paddle sandbox API key? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:billing.paddle.sandbox.webhook",
+    "name": "Clear Paddle sandbox webhook secret? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:billing.stripe.test",
+    "name": "Clear Stripe test-mode key? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:clear:billing.stripe.test.webhook",
+    "name": "Clear Stripe test-mode webhook secret? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:settings:native-select-0",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:settings:native-select-1",
+    "returned": true,
+    "cancelledWithoutChange": true,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:credential-fixture-scope",
+    "result": "PASS",
+    "note": "All eleven real credential cards exercised in configured/revoked LIST states via route fulfillment; Escape only. Actual GitHub credential mutation separately verified."
+  },
+  {
+    "id": "admin:real-revoke",
+    "name": "Revoke GitHub?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:revoked-focus",
+    "result": "PASS"
+  },
+  {
+    "id": "admin:real-clear",
+    "name": "Clear GitHub? The configuration is removed; the security log keeps the record.",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:cleared-focus",
+    "result": "PASS"
+  },
+  {
+    "id": "admin:access-revoke",
+    "name": "Revoke platform admin access for [synthetic-test-account]?",
+    "mode": "nonmodal",
+    "initial": true,
+    "tabOutside": true,
+    "nestedTooltip": 0,
+    "escape": true,
+    "returned": true,
+    "bodyLoss": false,
+    "result": "PASS"
+  },
+  {
+    "id": "admin:self-revoke",
+    "result": "PASS",
+    "note": "Keyboard confirmed self-revocation; full document navigation to ordinary 404, privileged UI gone, API404. Document navigation starts a new focus lifecycle."
+  },
+  {
+    "id": "admin:cleanup",
+    "result": "PASS",
+    "note": "Disposable credential revoked and cleared; own admin access revoked; signed out. Setup/TOTP values never recorded."
+  }
+]

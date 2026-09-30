@@ -161,8 +161,6 @@ const provider: ProviderDef = {
     revokeUrl: "https://api.github.com/applications/{client_id}/grant",
     scopes: ["repo", "read:user"],
     pkce: true,
-    clientIdEnv: "GITHUB_OAUTH_CLIENT_ID",
-    clientSecretEnv: "GITHUB_OAUTH_CLIENT_SECRET",
   },
   connectFields: [{ key: "token", label: "Personal access token", secret: true, placeholder: "ghp_…" }],
   async identity(ctx) {
@@ -172,6 +170,7 @@ const provider: ProviderDef = {
   actions: [getPullRequest, listPrFiles, createIssueComment],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

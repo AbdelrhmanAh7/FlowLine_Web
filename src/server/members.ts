@@ -5,6 +5,7 @@ import { isUuid, type CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { randomToken, sha256Hex } from "./crypto";
 import { HttpError, notFound } from "./http";
+import { checkEmailRate, sendInviteEmail } from "./email/flows";
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -16,11 +17,12 @@ export function inviteUrl(token: string) {
 
 /**
  * Creates an invitation. The raw token is returned once (for the link) and only its hash is stored.
- * There is no email delivery in this environment: the owner shares the link.
+ * Delivers the link after the invite is persisted. A failure is surfaced to the caller.
  */
-export async function createInvite(user: CurrentUser, workspaceId: string, input: { email: string; role: Role }) {
+export async function createInvite(user: CurrentUser, workspaceId: string, input: { email: string; role: Role }, request?: Request) {
   const email = normEmail(input.email);
-  return db.transaction(async (tx) => {
+  await checkEmailRate("invite", email, request);
+  const result = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ userId: schema.user.id })
       .from(schema.workspaceMember)
@@ -40,6 +42,13 @@ export async function createInvite(user: CurrentUser, workspaceId: string, input
     await audit(tx, { workspaceId, actor: userActor(user), action: "member.invited", targetType: "invite", targetId: invite!.id, data: { email, role: input.role } });
     return { invite: publicInvite(invite!), url: inviteUrl(token) };
   });
+  // The email is best-effort: the invite exists either way and the owner always gets the link. During the beta the
+  // email sandbox (the recipient allowlist platform setting) or a provider outage can refuse delivery — say so, don't fail.
+  const emailed = await sendInviteEmail(email, result.url, request).then(
+    () => true,
+    () => false,
+  );
+  return { ...result, emailed };
 }
 
 function publicInvite(i: typeof schema.workspaceInvite.$inferSelect) {

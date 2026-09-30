@@ -1,0 +1,13 @@
+{
+  "checkpoint": "2a19a2e3e14dfc692d619b6327c719cf3c434d44",
+  "buildId": "9tQqDSOGUp6DF-JCTsMFc",
+  "method": "Agent-driven Google Chrome exploratory QA via Playwright",
+  "headed": true,
+  "isolatedProfile": true,
+  "version": "154.0.8037.92",
+  "checks": [],
+  "scope": "Landing journey 1 only; no auth or provider pages; test doubles only",
+  "status": "FAIL",
+  "error": "Error: expect(received).toBeLessThan(expected)\n\nExpected: < 100\nReceived:   462.4875183105469\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate",
+  "stopped": true
+}

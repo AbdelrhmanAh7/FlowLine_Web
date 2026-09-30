@@ -1,7 +1,24 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Fake-provider URLs (and the rest of the test-stack settings) come from .env.test, like the stack itself.
+try {
+  process.loadEnvFile(".env.test");
+} catch {
+  /* no .env.test: defaults apply */
+}
+
 const PORT = 3100;
 export const BASE_URL = `http://localhost:${PORT}`;
+
+/**
+ * Flowline is Arabic-first (no `fl_locale` cookie = Arabic, RTL). The existing suites are written against the
+ * English UI, so every context starts with `fl_locale=en`; `e2e/arabic.spec.ts` clears it to test the default.
+ * Contexts created by hand with `browser.newContext()` don't inherit `use` options — pass `storageState: EN_STATE`.
+ */
+export const EN_STATE = {
+  cookies: [{ name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
+  origins: [],
+};
 
 /**
  * E2E runs against a separate test server (FLOWLINE_ENV=test, flowline_test DB,
@@ -21,6 +38,9 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     extraHTTPHeaders: { origin: BASE_URL },
+    storageState: EN_STATE,
+    // Stability: CSS/motion animations are off everywhere except the @cross-browser spec that opts back in.
+    reducedMotion: "reduce",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },

@@ -32,6 +32,19 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return { id: session.user.id, email: session.user.email, name: session.user.name };
 }
 
+/** The signed-in user plus this session's token (OAuth state binding needs the initiating session). */
+export async function getCurrentSession(): Promise<{ user: CurrentUser; sessionToken: string } | null> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
+  return { user: { id: session.user.id, email: session.user.email, name: session.user.name }, sessionToken: session.session.token };
+}
+
+export async function requireSession(): Promise<{ user: CurrentUser; sessionToken: string }> {
+  const s = await getCurrentSession();
+  if (!s) throw unauthorized();
+  return s;
+}
+
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) throw unauthorized();

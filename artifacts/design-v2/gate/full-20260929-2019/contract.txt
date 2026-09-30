@@ -1,0 +1,10 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design
+
+
+ Test Files  22 passed (22)
+      Tests  465 passed (465)
+   Start at  20:29:09
+   Duration  21.32s (tests 69%, import 27%, transform 3%)
+
+contract exit=0

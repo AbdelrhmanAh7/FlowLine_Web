@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { getAiProvider } from "@/ai/provider";
 import { listProviders } from "@/integrations/registry";
-import { requireUser } from "@/server/access";
+import { requireUser, requireWorkspace } from "@/server/access";
 import { codeSandboxAvailable } from "@/server/code-sandbox";
 import { oauthConfigured } from "@/server/connections";
 import { json, route } from "@/server/http";
@@ -17,8 +16,14 @@ function schemaOf(t: z.ZodType) {
 }
 
 /** Real catalog: counts come from the adapters that exist, with their honest verification level. */
-export const GET = route(async () => {
-  await requireUser();
+export const GET = route(async (req) => {
+  const user = await requireUser();
+  // OAuth availability is workspace-specific (a workspace may use its own OAuth app): only computed for a workspace
+  // the caller belongs to; without one it reflects Flowline's platform apps only.
+  const wid = new URL(req.url).searchParams.get("workspaceId");
+  const workspaceId = wid ? (await requireWorkspace(user, wid, "viewer")).workspace.id : null;
+  const oauthReady = new Map<string, boolean>();
+  for (const p of listProviders()) if (p.authType === "oauth2") oauthReady.set(p.id, await oauthConfigured(p, workspaceId));
   const providers = listProviders().map((p) => ({
     id: p.id,
     name: p.name,
@@ -26,7 +31,7 @@ export const GET = route(async () => {
     category: p.category,
     description: p.description,
     authType: p.authType,
-    oauthConfigured: p.authType === "oauth2" ? oauthConfigured(p) : null,
+    oauthConfigured: p.authType === "oauth2" ? (oauthReady.get(p.id) ?? false) : null,
     connectFields: (p.connectFields ?? []).map((f) => ({ key: f.key, label: f.label, secret: f.secret, placeholder: f.placeholder, help: f.help })),
     verification: p.verification,
     actions: p.actions.map((a) => ({
@@ -41,14 +46,12 @@ export const GET = route(async () => {
       inputSchema: schemaOf(a.input),
     })),
   }));
-  const ai = getAiProvider();
   const code = await codeSandboxAvailable();
   return json({
     count: providers.length,
     actionCount: providers.reduce((n, p) => n + p.actions.length, 0),
     providers,
     runtime: {
-      ai: { provider: ai.id, model: ai.model, available: ai.available, reason: ai.reason ?? null },
       codeSandbox: { available: code.ok, reason: code.reason ?? null },
     },
   });

@@ -1,0 +1,44 @@
+
+Running 20 tests using 1 worker
+
+(node:73404) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+(node:54300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:52688) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:38180) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+(node:46656) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72108) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:52616) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) (5.8s)
+  ok  2 [chromium] › e2e\admin-panel.spec.ts:135:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel (434ms)
+  ok  3 [chromium] › e2e\admin-panel.spec.ts:143:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) (1.4s)
+(node:53816) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  4 [chromium] › e2e\builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher (687ms)
+  ok  5 [chromium] › e2e\builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher (544ms)
+  ok  6 [chromium] › e2e\builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher (578ms)
+  ok  7 [chromium] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button (530ms)
+  ok  8 [chromium] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button (574ms)
+  ok  9 [chromium] › e2e\builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again (576ms)
+  ok 10 [chromium] › e2e\builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it (677ms)
+  ok 11 [chromium] › e2e\builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button (543ms)
+  ok 12 [chromium] › e2e\builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button (605ms)
+  ok 13 [chromium] › e2e\builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel (528ms)
+  ok 14 [chromium] › e2e\builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it (667ms)
+  ok 15 [chromium] › e2e\builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button (521ms)
+  ok 16 [chromium] › e2e\builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button (560ms)
+  ok 17 [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST (656ms)
+  ok 18 [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST (602ms)
+  ok 19 [chromium] › e2e\builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot (607ms)
+  ok 20 [chromium] › e2e\builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel (10.8s)
+
+  20 passed (29.4s)

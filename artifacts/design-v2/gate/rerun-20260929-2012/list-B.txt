@@ -1,0 +1,13 @@
+Listing tests:
+  [chromium] › prehydration.spec.ts:7:5 › text typed before hydration survives
+  [chromium] › prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL
+  [chromium] › reduced-motion.spec.ts:9:7 › reduced motion › the running node has no animation — a static ring marks it
+  [chromium] › run-states.spec.ts:13:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick
+  [chromium] › tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs
+  [chromium] › tenancy.spec.ts:46:5 › unauthenticated API access is rejected and app routes redirect to sign-in
+  [chromium] › tenancy.spec.ts:52:5 › sign-out clears local drafts
+  [chromium] › theme.spec.ts:6:7 › theme switch › persists across reload and appears in the server HTML
+  [chromium] › theme.spec.ts:23:7 › theme switch › system follows the OS color scheme
+  [chromium] › theme.spec.ts:33:7 › theme switch › works in Arabic (RTL)
+  [chromium] › theme.spec.ts:44:7 › theme switch › the user menu switches the theme too
+Total: 11 tests in 5 files

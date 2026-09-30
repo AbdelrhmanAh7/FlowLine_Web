@@ -1,0 +1,13 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/agents/1d4870e7-aa2b-4c66-903e-4db9973a901e",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nCodex QA Knowledge Agent\n\nv1 · Staging-only cited knowledge and approval check\n\nChat\nConfiguration\nRuns\n\n1 request from this agent is waiting for a decision.\nReview in Runs\n\nWhat is the Nile project support window? Search our knowledge and cite the source.\n\nNeeds approval\nv1 · 1 model steps · no priced usage\n\nThe agent wants to run a tool that needs a human decision (agent.knowledge_search). Expires Sep 29, 2026, 8:59 PM.\n\n{\n  \"tool\": \"knowledge_search\",\n  \"input\": null,\n  \"query\": \"Nile project support window\",\n  \"workflow\": null,\n  \"workflowId\": null,\n  \"connections\": [],\n  \"publishedVersionId\": null\n}\nApprove\nReject\nShow steps (2)\nMessage the agent\nSend\nType a message\nNew conversation",
+  "buttons": [
+    "COCodex Owner",
+    "Review in Runs",
+    "Approve",
+    "Reject",
+    "Show steps (2)",
+    "Send",
+    "New conversation"
+  ]
+}

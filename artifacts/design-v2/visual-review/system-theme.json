@@ -1,0 +1,12 @@
+[
+  {
+    "colorScheme": "light",
+    "theme": "system",
+    "background": "rgb(244, 244, 245)"
+  },
+  {
+    "colorScheme": "dark",
+    "theme": "system",
+    "background": "rgb(9, 9, 11)"
+  }
+]

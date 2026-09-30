@@ -1,0 +1,300 @@
+{
+  "summary": {
+    "provider": "ollama",
+    "model": "qwen2.5:3b",
+    "promptVersion": "p4-1",
+    "runs": 1,
+    "correct": 1,
+    "total": 12,
+    "perDimension": {
+      "structure": "2/11",
+      "nodeSelection": "8/11",
+      "order": "7/11",
+      "params": "7/11",
+      "result": "0/11",
+      "safeRefusal": "12/12"
+    },
+    "tokens": {
+      "input": 107958,
+      "output": 12752
+    },
+    "wallMs": 89571,
+    "avgMsPerCase": 7464,
+    "at": "2026-09-28T18:18:19.360Z",
+    "target": "≥10/12 correct-or-safe-refusal"
+  },
+  "results": [
+    {
+      "case": "schedule",
+      "category": "scheduled workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": true,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "dry-run",
+      "attempts": 3,
+      "ms": 8719,
+      "errors": [
+        "UNKNOWN_PARAMETER: \"expression\" isn't a parameter of Schedule trigger",
+        "INVALID_SCHEDULE: Weekly Review Reminder: Unknown time zone \"Cairo\""
+      ],
+      "warnings": []
+    },
+    {
+      "case": "webhook",
+      "category": "webhook workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "dry-run",
+      "attempts": 3,
+      "ms": 6328,
+      "errors": [
+        "UNKNOWN_PARAMETER: \"webhookUrl\" isn't a parameter of Webhook trigger",
+        "INVALID_EXPRESSION: Calculate Order Total: expression: Expected \")\", got \",\" (at character 23)",
+        "INVALID_EXPRESSION: Total Order Amount: value: Expected \")\", got \",\" (at character 23)"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "gmail",
+      "category": "Gmail workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 14941,
+      "errors": [
+        "UNKNOWN_NODE: Can't update \"n2\": no such step",
+        "UNKNOWN_NODE: Can't update \"n3\": no such step",
+        "UNKNOWN_NODE: Can't update \"n4\": no such step",
+        "UNKNOWN_PARAMETER: \"sampleHeaders\" isn't a parameter of Webhook trigger"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "sheets",
+      "category": "Google Sheets workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 14410,
+      "errors": [
+        "UNKNOWN_NODE: Can't update \"n1\": no such step",
+        "UNKNOWN_NODE: Can't update \"n2\": no such step",
+        "UNKNOWN_NODE: Can't update \"n3\": no such step",
+        "UNKNOWN_NODE: Can't update \"n4\": no such step"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "slack",
+      "category": "Slack workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 6336,
+      "errors": [
+        "UNKNOWN_PARAMETER: \"expression\" isn't a parameter of Schedule trigger"
+      ],
+      "warnings": [
+        "CONVERTED_TO_INTEGRATION",
+        "MISSING_CREDENTIAL",
+        "MISSING_CONNECTION"
+      ]
+    },
+    {
+      "case": "github",
+      "category": "GitHub workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 13993,
+      "errors": [
+        "UNKNOWN_NODE: Can't update \"n1\": no such step",
+        "UNKNOWN_PARAMETER: \"integration\" isn't a parameter of Webhook trigger",
+        "UNKNOWN_PARAMETER: \"provider\" isn't a parameter of Webhook trigger",
+        "UNKNOWN_PARAMETER: \"title\" isn't a parameter of Webhook trigger"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "transform",
+      "category": "data transform",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": true,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "dry-run",
+      "attempts": 1,
+      "ms": 2109,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case": "branch",
+      "category": "branch / condition",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": true,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "dry-run",
+      "attempts": 1,
+      "ms": 2460,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case": "classify",
+      "category": "AI classification",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 6366,
+      "errors": [
+        "UNKNOWN_PARAMETER: \"url\" isn't a parameter of Webhook trigger",
+        "UNKNOWN_PARAMETER: \"headers\" isn't a parameter of Webhook trigger",
+        "UNKNOWN_PARAMETER: \"body\" isn't a parameter of Webhook trigger",
+        "UNKNOWN_PARAMETER: \"timeoutMs\" isn't a parameter of Webhook trigger"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "multistep",
+      "category": "multi-step workflow",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 9569,
+      "errors": [
+        "UNKNOWN_NODE: Can't remove \"n2\": no such step",
+        "UNKNOWN_NODE: Can't remove \"n3\": no such step",
+        "UNKNOWN_NODE: Can't remove \"n4\": no such step",
+        "UNKNOWN_NODE: Can't update \"n1\": no such step"
+      ],
+      "warnings": [
+        "CONVERTED_TO_INTEGRATION",
+        "MISSING_CREDENTIAL",
+        "MISSING_CONNECTION"
+      ]
+    },
+    {
+      "case": "missing",
+      "category": "missing integration request",
+      "run": 1,
+      "correct": true,
+      "score": {
+        "safeRefusal": true
+      },
+      "resultCheck": "refusal",
+      "attempts": 0,
+      "ms": 1,
+      "errors": [
+        "UNKNOWN_INTEGRATION: \"Salesforce\", \"QuickBooks\" aren't available integrations in Flowline. Available: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear."
+      ],
+      "warnings": []
+    },
+    {
+      "case": "ambiguous",
+      "category": "ambiguous request (safe interpretation)",
+      "run": 1,
+      "correct": false,
+      "score": {
+        "structure": false,
+        "nodeSelection": true,
+        "order": false,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "resultCheck": "static",
+      "attempts": 3,
+      "ms": 4339,
+      "errors": [
+        "INVALID_EDGE: 50+ employees? already has an input — add a Merge node to join branches",
+        "INVALID_EXPRESSION: 50+ employees?: expression: The symbol \"&\" cannot be used as a unary operator (at character 13)",
+        "UNCONNECTED_INPUT: Validate lead isn't connected to anything upstream",
+        "INVALID_EXPRESSION: Validate lead: expression: The symbol \"=\" cannot be used as a unary operator (at character 13)"
+      ],
+      "warnings": []
+    }
+  ]
+}

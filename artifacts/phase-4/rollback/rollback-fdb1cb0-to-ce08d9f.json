@@ -1,0 +1,80 @@
+{
+  "from": {
+    "image": "flowline:ce08d9f",
+    "id": "sha256:eb536049a1898e38913b4d17d2036f40a1ff893d7743878a7b697bb53506fc3e",
+    "revision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd"
+  },
+  "to": {
+    "image": "flowline:fdb1cb0",
+    "id": "sha256:48fcac2fb5b4833d9a7e0e018b1e884b4c24c8c19ce3e9c5719898cd117a0dfd",
+    "revision": "fdb1cb00a2326303e3923478254afd5a5f1e0567"
+  },
+  "startedAt": "2026-09-28T17:43:43.876Z",
+  "deployFromMs": 7679,
+  "seedUser": {
+    "email": "rollback-9cc7bdbb@flowline-rollback.test",
+    "verification": "not-required"
+  },
+  "deployToMs": 7693,
+  "rollbackDeployMs": 7481,
+  "rollbackToHealthyMs": 9496,
+  "finishedAt": "2026-09-28T17:44:24.141Z",
+  "checks": [
+    {
+      "name": "N (known good) deployed",
+      "ok": true,
+      "detail": "rev ce08d9f schema 8"
+    },
+    {
+      "name": "N: webhook run executes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "N+1 deployed (migrations applied, expand-only)",
+      "ok": true,
+      "detail": "rev fdb1cb0 schema 12"
+    },
+    {
+      "name": "N+1: existing session, flow and webhook still work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: N serves again, DB keeps the newer schema (no down migration)",
+      "ok": true,
+      "detail": "rev ce08d9f schema 12"
+    },
+    {
+      "name": "rollback: password sign-in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "rollback: workflow loads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: data written by N+1 is readable by N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: webhook run executes on N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: run history from N and N+1 intact",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "roll forward: N+1 serves again",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pass": true
+}

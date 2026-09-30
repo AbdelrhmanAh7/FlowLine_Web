@@ -3,15 +3,15 @@ import { dirname } from "node:path";
 
 /**
  * The live/sandbox suite records an honest status per check in
- * artifacts/phase-3/live-results.json (Phase 2 results are frozen in artifacts/phase-2): PASS, FAIL, or BLOCKED (with the reason,
+ * artifacts/phase-4/live-certification/live-results.json (Phase 2 results are frozen in artifacts/phase-2): PASS, FAIL, or BLOCKED (with the reason,
  * e.g. missing sandbox credentials). BLOCKED is never reported as PASS.
  * N/A marks a check that does not exist for a provider (e.g. a write on a
  * read-only provider). Callers may pass another output file (the phase-3
- * certification suite writes artifacts/phase-3/live-results.json and, in
- * dry-run mode, artifacts/phase-3/live-dryrun-results.json).
+ * certification suite writes artifacts/phase-4/live-certification/live-results.json and, in
+ * dry-run mode, artifacts/phase-4/live-certification/live-dryrun-results.json).
  */
-// Phase 2 evidence (artifacts/phase-2/live-results.json) is frozen; runs from Phase 3 on record here.
-const FILE = "artifacts/phase-3/live-results.json";
+// Phase 2 and Phase 3 evidence is frozen (artifacts/phase-2, artifacts/phase-3); runs from Phase 4 on record here.
+const FILE = "artifacts/phase-4/live-certification/live-results.json";
 
 export type LiveStatus = "PASS" | "FAIL" | "BLOCKED" | "N/A" | "DRYRUN_PASS" | "DRYRUN_FAIL";
 

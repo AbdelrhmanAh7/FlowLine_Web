@@ -1,6 +1,6 @@
 // Runs the SaaS certification suite in dry-run mode: the same scenario code as the live
 // suite, but against the in-process provider test double (loopback only, fake tokens).
-// Results land in artifacts/phase-3/live-dryrun-results.json as DRYRUN_PASS/DRYRUN_FAIL/N/A.
+// Results land in artifacts/phase-4/live-certification/live-dryrun-results.json as DRYRUN_PASS/DRYRUN_FAIL/N/A.
 import { spawn } from "node:child_process";
 
 const env = { ...process.env, FLOWLINE_LIVE_DRYRUN: "1" };

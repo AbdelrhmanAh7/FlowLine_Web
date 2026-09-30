@@ -1,0 +1,5 @@
+{"at":"2026-09-30T12:29:16.5951663Z","task":"lint","freePhysicalKiB":8853684,"totalPhysicalKiB":32728876,"freeVirtualKiB":21850192,"totalVirtualKiB":55797548}
+{"at":"2026-09-30T12:29:29.5938350Z","task":"typecheck","freePhysicalKiB":8949124,"totalPhysicalKiB":32728876,"freeVirtualKiB":21873724,"totalVirtualKiB":55797548}
+{"at":"2026-09-30T12:29:33.1595111Z","task":"test","freePhysicalKiB":8999060,"totalPhysicalKiB":32728876,"freeVirtualKiB":21976476,"totalVirtualKiB":55797548}
+{"at":"2026-09-30T12:29:48.0695813Z","task":"test:contract","freePhysicalKiB":8916900,"totalPhysicalKiB":32728876,"freeVirtualKiB":21882028,"totalVirtualKiB":55797548}
+{"at":"2026-09-30T12:30:11.5329064Z","task":"test:integration","freePhysicalKiB":8589368,"totalPhysicalKiB":32728876,"freeVirtualKiB":21700892,"totalVirtualKiB":55797548}

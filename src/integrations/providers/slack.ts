@@ -39,8 +39,6 @@ const provider: ProviderDef = {
     revokeUrl: "https://slack.com/api/auth.revoke",
     scopes: ["chat:write", "channels:read", "channels:history"],
     pkce: false,
-    clientIdEnv: "SLACK_OAUTH_CLIENT_ID",
-    clientSecretEnv: "SLACK_OAUTH_CLIENT_SECRET",
   },
   async identity(ctx) {
     const { data } = await ctx.http.request<{
@@ -129,6 +127,7 @@ const provider: ProviderDef = {
   ],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

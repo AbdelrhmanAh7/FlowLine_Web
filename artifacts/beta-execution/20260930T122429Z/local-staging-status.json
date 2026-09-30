@@ -1,0 +1,100 @@
+{
+  "startedAt": "2026-09-30T16:33:06.283Z",
+  "supervisorPid": 72488,
+  "base": "http://localhost:3000",
+  "database": "flowline_beta_local20260930",
+  "checkpoint": "5d2a8e1dd765058ccd6b474026e5e5e5452efa89",
+  "environment": "staging",
+  "workerConcurrency": 1,
+  "externalCredentialsImported": false,
+  "billing": "sandbox only, unconfigured",
+  "spendCap": 0,
+  "phases": [
+    {
+      "at": "2026-09-30T16:33:07.382Z",
+      "phase": "candidate",
+      "state": "CP21_INPUTS_MATCH"
+    },
+    {
+      "at": "2026-09-30T16:33:07.400Z",
+      "phase": "operator-storage",
+      "state": "REUSED_OWN_DEDICATED_CONFIG"
+    },
+    {
+      "at": "2026-09-30T16:33:07.432Z",
+      "phase": "database",
+      "state": "MIGRATED_NEW_LOCAL_STAGING",
+      "schemaVersion": 20,
+      "users": 0,
+      "workspaces": 0
+    },
+    {
+      "at": "2026-09-30T16:33:07.926Z",
+      "phase": "build",
+      "state": "STARTED_NO_BROWSER_EXPLORATION"
+    },
+    {
+      "at": "2026-09-30T16:33:33.226Z",
+      "phase": "build",
+      "state": "PASS",
+      "buildId": "F6m0LaSa_-jaq5hCKtlY3"
+    },
+    {
+      "at": "2026-09-30T16:33:36.453Z",
+      "phase": "runtime",
+      "state": "READY",
+      "base": "http://localhost:3000",
+      "checkpoint": "5d2a8e1dd765058ccd6b474026e5e5e5452efa89",
+      "worker": "ok",
+      "schemaVersion": 20
+    }
+  ],
+  "processes": [
+    {
+      "label": "build",
+      "pid": 54936,
+      "startedAt": "2026-09-30T16:33:07.937Z",
+      "exitCode": 0,
+      "signal": null,
+      "endedAt": "2026-09-30T16:33:33.220Z"
+    },
+    {
+      "label": "web",
+      "pid": 17176,
+      "startedAt": "2026-09-30T16:33:33.239Z"
+    },
+    {
+      "label": "worker",
+      "pid": 59152,
+      "startedAt": "2026-09-30T16:33:33.255Z"
+    }
+  ],
+  "stopCommand": "write_stdin this supervised session with stop plus newline; only its recorded child trees are stopped",
+  "inputs": {
+    "src": "dc69022c8af7b30048b4d421d4c8efcc62061126",
+    "e2e": "a3dbeea5fe21840f9197b997d077e10c8fde739d",
+    "tests": "01d8db396afbc60b40399bc660c0918b16ac3fd4",
+    "scripts": "2decff1e9a9fbd5c08fd498609316406beef295f",
+    "worker": "fb714bff64286626764b438d81a17383f2c84c20",
+    "drizzle": "8d3601b853a3cc4e9a2a17e8c82728d7934fffb2",
+    "package.json": "805755d8f760fcc06eda6e5094840b42bb7af7db",
+    "pnpm-lock.yaml": "896d82a11f49c15c9333be7432c84603e132a798",
+    "playwright.config.ts": "971cb58d4b5ce8856295e8826126380c584eec09",
+    "next.config.ts": "035378d9718204d37b1c9784c875da20c6b444ae"
+  },
+  "head": "776337cec8ed5ee823017f40020459e28cf0467a",
+  "executionTree": "0ee305cffa25d2acd5f49929936784b404ececa1",
+  "schemaVersion": 20,
+  "initialUserCount": 0,
+  "initialWorkspaceCount": 0,
+  "tsconfigSha": "d7e8b96a8dda2bb2e4bf20521f0c572fc8b7e12e5e508f11a7f76038b71c3f01",
+  "tsconfigRestoredToPreimage": true,
+  "buildId": "F6m0LaSa_-jaq5hCKtlY3",
+  "health": {
+    "revision": "5d2a8e1dd765058ccd6b474026e5e5e5452efa89",
+    "schemaVersion": 20,
+    "db": "ok",
+    "worker": "ok",
+    "workerLastSeenAt": "2026-09-30T16:33:35.878Z"
+  }
+}

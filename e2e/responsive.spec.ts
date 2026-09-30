@@ -1,8 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
-import { injectFault, resetFaults, setupUser } from "./helpers";
+import { EN_STATE } from "../playwright.config";
+import { connectAiApi, injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
-const OUT = "artifacts/phase-3/screenshots";
+// Captures (not compared baselines). E2E_SCREENSHOT_DIR routes a gate run's captures to its own evidence folder.
+const OUT = process.env.E2E_SCREENSHOT_DIR ?? "artifacts/phase-3/screenshots";
 mkdirSync(OUT, { recursive: true });
 
 async function noHorizontalScroll(page: Page) {
@@ -145,10 +147,25 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
     await shot(page, `builder-selected-${label}`);
 
     await page.goto(`/w/${u.workspace.slug}/runs?run=${u.badRunId}`);
-    await expect(page.getByTestId("step-panel").first()).toBeVisible();
-    await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
-    await expect(page.getByTestId("step-panel").first()).toContainText(/failed/i);
-    await shot(page, `run-inspector-failed-${label}`);
+    if (w < 768) {
+      // Phone: the step panel is a modal bottom sheet (DV2-Q05), so the run list behind it is aria-hidden until it closes.
+      const sheet = page.getByRole("dialog", { name: /run #\d+/i });
+      await expect(sheet).toBeVisible(); // a named dialog...
+      await expect(sheet.getByTestId("step-panel")).toBeVisible(); // ...that holds the step panel
+      await expect(sheet.getByTestId("step-panel")).toContainText(/failed/i);
+      await expect(sheet.locator(":focus")).toHaveCount(1); // focus moved into it
+      await shot(page, `run-inspector-failed-${label}`);
+      await page.keyboard.press("Escape"); // closes it exactly like the panel's close button: `run` leaves the URL
+      await expect(sheet).toHaveCount(0);
+      await expect(page).not.toHaveURL(/[?&]run=/);
+      await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
+      await expect(page.locator(`#run-row-${u.badRunId}`)).toBeFocused(); // focus returns to the run row
+    } else {
+      await expect(page.getByTestId("step-panel").first()).toBeVisible();
+      await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
+      await expect(page.getByTestId("step-panel").first()).toContainText(/failed/i);
+      await shot(page, `run-inspector-failed-${label}`);
+    }
 
     for (const p of ["integrations", "templates", "settings"]) {
       await page.goto(`/w/${u.workspace.slug}/${p}`);
@@ -159,7 +176,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   }
 
   // Public pages (fresh, signed-out context)
-  const anon = await browser.newContext({ baseURL: "http://localhost:3100" });
+  const anon = await browser.newContext({ baseURL: "http://localhost:3100", storageState: EN_STATE });
   const ap = await anon.newPage();
   for (const [label, w, h] of sizes) {
     await ap.setViewportSize({ width: w, height: h });
@@ -172,9 +189,9 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   await anon.close();
 
   // Onboarding step 2 (goal) for a new account
-  const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" } });
+  const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: EN_STATE });
   const fp = await fresh.newPage();
-  await fp.request.post("/api/auth/sign-up/email", { data: { email: `onb-${Date.now()}@flowline-e2e.test`, password: "e2e-Passw0rd!", name: "Jules Kim" } });
+  await signUpVerified(fp.request, uniqueEmail("onb"), "Jules Kim");
   await fp.setViewportSize({ width: 1440, height: 900 });
   await fp.goto("/onboarding");
   await fp.getByRole("button", { name: "Continue" }).click();
@@ -244,7 +261,9 @@ test("capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375", async 
       await shot(page, `${p}-empty-${label}`);
     }
   }
-  // Populated: a knowledge source, an agent with a cited answer, an invite, an API key.
+  // Populated: a knowledge source, an agent with a cited answer, an invite, an API key. The agent needs an AI
+  // connection (cloud-only hub: no server-env model) — connected through the public API, as the UI does.
+  await connectAiApi(page.request, u.workspace.id);
   await page.request.post(`/api/workspaces/${u.workspace.id}/knowledge`, { data: { name: "Refund policy", text: "Refunds are available within 30 days of purchase." } });
   await expect.poll(async () => (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0]?.status, { timeout: 20_000 }).toBe("ready");
   const src = (await (await page.request.get(`/api/workspaces/${u.workspace.id}/knowledge`)).json()).sources[0];
@@ -274,7 +293,7 @@ test("capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375", async 
   // Copilot proposal diff (desktop only — Copilot is disabled on mobile, captured above via the builder).
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/w/${u.workspace.slug}/flows/${u.flowId}`);
-  await page.getByRole("button", { name: "✦ Copilot" }).click();
+  await page.getByRole("button", { name: "Copilot", exact: true }).click();
   const panel = page.getByRole("dialog", { name: "Copilot" });
   await panel.getByLabel("What should this workflow do?").fill("add a condition");
   await panel.getByRole("button", { name: "Propose" }).click();

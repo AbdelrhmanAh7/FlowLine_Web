@@ -133,8 +133,6 @@ export interface OAuthConfig {
   pkce: boolean;
   /** Extra authorize params, e.g. access_type=offline for Google. */
   extraParams?: Record<string, string>;
-  clientIdEnv: string;
-  clientSecretEnv: string;
 }
 
 export interface ConnectField {
@@ -161,5 +159,13 @@ export interface ProviderDef {
   identity(ctx: Omit<ActionContext, "idempotencyKey">): Promise<{ accountId: string; label: string }>;
   actions: ActionDef<any, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   /** Honest verification level, surfaced in the catalog. */
-  verification: { adapter: true; contractTested: boolean; live: "verified" | "blocked" | "not_run"; liveNote?: string };
+  verification: {
+    adapter: true;
+    contractTested: boolean;
+    live: "verified" | "blocked" | "not_run";
+    liveNote?: string;
+    /** Private beta scope (P4-09): "core" integrations are certified for the beta; "deferred" stay in the product but
+     *  aren't live-verified during the beta and are labelled so. */
+    betaScope: "core" | "deferred";
+  };
 }

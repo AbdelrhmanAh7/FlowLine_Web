@@ -1,0 +1,6 @@
+▲ Next.js 16.3.6
+- Local:         http://127.0.0.1:3100
+- Network:       http://127.0.0.1:3100
+✓ Ready in 163ms
+✓ Running next.config.ts took 43ms
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.

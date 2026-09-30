@@ -1,0 +1,119 @@
+Skip to content
+CXQ Retest 22de627
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CR
+CXQ Retest
+Run history
+Search flows or run number
+All runs
+Succeeded
+Failed
+Running
+Needs attention
+Cancelled
+▾
+#3
+CXQ OpenAI retest
+SUCCESS
+2/2 · 293ms
+now
+⚡ Manual trigger
+Success
+· 0ms
+→
+✦ AI · Generate
+Success
+· 272ms
+▸
+#2
+CXQ Anthropic retest
+SUCCESS
+2/2 · 72ms
+58s ago
+▸
+#1
+CXQ OpenAI retest
+SUCCESS
+2/2 · 79ms
+2m ago
+✦
+AI · Generate
+SUCCESS
+
+272ms · run #3 · v2 · ai.generate · n40im2 · 1 attempt
+
+✕
+model
+fake-claude
+policy
+FALLBACK
+protocol
+anthropic-messages
+provider
+anthropic
+unpriced
+false
+connection
+Retest Anthropic
+Cost (USD)
+0.000654
+costSource
+estimated
+inputTokens
+188
+routeReason
+fallback #1 after AI_PROVIDER_ERROR
+routeSource
+node
+connectionId
+7362c2a1-79f7-4ab7-8241-4572b4ebc00e
+fallbackFrom
+[{"code":"AI_PROVIDER_ERROR","modelId":"fake-gpt-large","provider":"openai","connectionId":"6478ed58-be0b-48f4-b57c-1fe7df2d1d88"}]
+outputTokens
+10
+cacheReadTokens
+0
+quarantinedLines
+0
+structuredOutput
+none
+Input
+Output
+Error
+Log
+{
+  "text": "Summary: Invoice 17 from Acme is overdue"
+}
+↻ Re-run from this step
+
+Shows exactly what will run again — and what might repeat an external action — before anything starts.
+
+STEPS
+
+RUN OUTPUT
+
+{}

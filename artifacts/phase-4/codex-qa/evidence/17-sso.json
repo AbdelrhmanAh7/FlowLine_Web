@@ -1,0 +1,16 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/settings",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nSettings\nMembers\nGeneral\nAPI keys\nPlan & billing\nUsage & limits\nAudit log\nSSO\nSingle sign-on (SSO)\nNOT CONFIGURED\n\nOpenID Connect sign-in for this workspace. SSO only becomes available to members after a successful test sign-in — nothing here is active until then.\n\nISSUER URL\n\nThe IdP's issuer (https). Its /.well-known/openid-configuration is fetched and checked on save.\n\nCLIENT ID\nCLIENT SECRET\n\nStored encrypted; never shown again.\n\nALLOWED EMAIL DOMAINS\n\nComma-separated. Only IdP accounts with a verified email in these domains can sign in.\n\nDEFAULT ROLE FOR NEW MEMBERS\nViewer\nEditor\nOwner\nENABLE FOR EVERYONE\nSSO enabled\n\nAvailable after a successful test sign-in.\n\nSave SSO settings\nTest sign-in\nSave the configuration first\nWorkspace settings saved\nAI defaults saved",
+  "buttons": [
+    "COCodex Owner",
+    "Members",
+    "General",
+    "API keys",
+    "Plan & billing",
+    "Usage & limits",
+    "Audit log",
+    "SSO",
+    "Save SSO settings",
+    "Test sign-in"
+  ]
+}

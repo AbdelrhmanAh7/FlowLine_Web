@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { correlationId, track, withRequestContext } from "./telemetry";
 import { safeErrorText } from "@/server/redact";
 import { ZodError, type ZodType } from "zod";
 
@@ -19,6 +20,13 @@ export const unauthorized = () => new HttpError(401, "UNAUTHORIZED", "Sign in to
 
 export function json<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
+}
+
+/** JSON for endpoints that handle secrets (AI connections): never cached by browsers or proxies. */
+export function jsonNoStore<T>(data: T, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("cache-control", "no-store");
+  return NextResponse.json(data, { ...init, headers });
 }
 
 /**
@@ -86,19 +94,29 @@ function assertSameOrigin(req: Request) {
 
 /** Wraps a route handler with consistent JSON error responses. */
 export function route<C>(handler: Handler<C>): Handler<C> {
-  return async (req, ctx) => {
-    try {
-      assertSameOrigin(req);
-      return await handler(req, ctx);
-    } catch (err) {
-      if (err instanceof HttpError) {
-        return NextResponse.json({ error: { code: err.code, message: err.message, details: err.details } }, { status: err.status });
-      }
-      if (err instanceof ZodError) {
-        return NextResponse.json({ error: { code: "VALIDATION", message: "Invalid request", details: err.issues } }, { status: 400 });
-      }
-      console.error("[api] unhandled", safeErrorText(err));
-      return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong on our side" } }, { status: 500 });
+  // Every API response carries a correlation id (X-Request-Id from the proxy, or a new one) for debugging (P4-15).
+  return (req, ctx) =>
+    withRequestContext(req.headers.get("x-request-id"), async () => {
+      const res = await handleRoute(handler, req, ctx);
+      res.headers.set("x-request-id", correlationId()!);
+      return res;
+    });
+}
+
+async function handleRoute<C>(handler: Handler<C>, req: Request, ctx: C): Promise<Response> {
+  try {
+    assertSameOrigin(req);
+    return await handler(req, ctx);
+  } catch (err) {
+    if (err instanceof HttpError) {
+      if (err.status >= 500) track("api_error", {}, { code: err.code, httpStatus: err.status });
+      return NextResponse.json({ error: { code: err.code, message: err.message, details: err.details } }, { status: err.status });
     }
-  };
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: { code: "VALIDATION", message: "Invalid request", details: err.issues } }, { status: 400 });
+    }
+    console.error("[api] unhandled", `request=${correlationId()}`, safeErrorText(err));
+    track("api_error", {}, { code: "INTERNAL", httpStatus: 500 });
+    return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong on our side", requestId: correlationId() } }, { status: 500 });
+  }
 }

@@ -1,0 +1,12 @@
+{
+  "state": "READY",
+  "checkpoint": "a8e2f87a51b3c4307bcaae309fec99f2e9bce5b5",
+  "buildId": "WL1rH4xDOxgNd7onQ9-9T",
+  "health": {
+    "revision": "a8e2f87a51b3c4307bcaae309fec99f2e9bce5b5",
+    "schemaVersion": 20,
+    "db": "ok",
+    "worker": "ok",
+    "workerLastSeenAt": "2026-09-30T19:45:03.856Z"
+  }
+}

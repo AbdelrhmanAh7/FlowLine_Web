@@ -1,13 +1,13 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { expectSaved, setupUser } from "./helpers";
+import { connectAiApi, expectSaved, setupUser } from "./helpers";
 
 /**
  * Phase 2 journeys through the real UI. Only the provider boundary is doubled:
- * SaaS APIs → e2e/fakes/provider-server.ts (:4010), AI → e2e/fakes/ai-server.ts (:4011).
+ * SaaS APIs → e2e/fakes/provider-server.ts (:4010), AI → e2e/fakes/ai-server.ts (:4011, OpenAI-compatible double).
  * Every test uses unique spreadsheet/channel ids so parallel workers never share fake state.
  */
-const FAKE = "http://127.0.0.1:4010";
+const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
 
 async function fault(req: APIRequestContext, provider: string, pathPattern: string, mode: "500" | "429" | "timeout", times: number) {
   const r = await req.post(`${FAKE}/__fake/fault`, { data: { provider, pathPattern, mode, times } });
@@ -48,9 +48,11 @@ async function openNode(page: Page, id: string) {
 /** Choose the workspace's (only) connection for this action node. */
 async function pickConnection(drawer: Locator) {
   const select = drawer.getByLabel("Connection");
-  const label = (await select.locator("option").allTextContents()).find((o) => o && !o.startsWith("Choose") && !o.startsWith("No "));
-  expect(label, "a connection is offered").toBeTruthy();
-  await select.selectOption({ label: label! });
+  // The connection list loads asynchronously: wait for a real option instead of reading the list once (TEST-04 — under
+  // full-suite load the one-shot read ran before the connections request resolved and saw only "No … connections").
+  const offered = async () => (await select.locator("option").allTextContents()).find((o) => o && !o.startsWith("Choose") && !o.startsWith("No "));
+  await expect.poll(offered, { message: "a connection is offered" }).toBeTruthy();
+  await select.selectOption({ label: (await offered())! });
 }
 async function closeDrawer(page: Page) {
   await page.keyboard.press("Escape");
@@ -80,6 +82,7 @@ async function createConn(req: APIRequestContext, wid: string, provider: string)
 test("template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates", async ({ page }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // the template's AI steps run on the workspace AI connection
   const sheetId = `sheet-e2e-${randomUUID().slice(0, 8)}`;
   const channel = `C_E2E_${randomUUID().slice(0, 8)}`;
 
@@ -239,7 +242,10 @@ test("repair a connection: revoked at the provider → only its flow pauses, ban
   const dialog = page.getByRole("dialog", { name: "Reconnect Google Sheets" });
   await expect(dialog).toContainText("same account");
   await dialog.getByRole("button", { name: "Continue to Google Sheets" }).click();
-  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/integrations`));
+  // Wait for the real OAuth round-trip (start → provider → callback → back here), not just any /integrations URL:
+  // navigating away earlier aborts it (DV2-01). The modal hides the banner while open, so also wait for it to close.
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/integrations\\?oauth=reconnected`), { timeout: 20_000 });
+  await expect(dialog).toBeHidden();
   await expect(page.getByRole("alert").filter({ hasText: "Google Sheets" })).toHaveCount(0);
 
   await page.goto(`/w/${workspace.slug}/flows`);

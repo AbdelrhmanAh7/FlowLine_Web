@@ -1,0 +1,1035 @@
+
+> flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-aihub
+> node scripts/dev-test.mjs
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[seed-platform] test platform credentials ready
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[fake-ai] listening on http://127.0.0.1:4011
+Fake provider server listening on http://127.0.0.1:4010
+Control API: POST http://127.0.0.1:4010/__fake/reset | GET http://127.0.0.1:4010/__fake/requests?provider=slack | GET http://127.0.0.1:4010/__fake/state/slack | POST http://127.0.0.1:4010/__fake/fault
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://100.73.156.121:3100
+- Environments: .env
+✓ Ready in 383ms
+✓ Running next.config.ts took 47ms
+2026-09-29T09:43:49.555Z [worker] starting LAPTOP-AGGSOJ7U-48968-1666ce
+
+ GET /api/health?require=worker 200 in 468ms (next.js: 331ms, application-code: 137ms)
+ GET /sign-in 200 in 273ms (next.js: 88ms, application-code: 185ms)
+ GET /w 404 in 48ms (next.js: 22ms, application-code: 26ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ GET /admin 404 in 301ms (next.js: 139ms, application-code: 162ms)
+ GET /api/health?require=worker 200 in 166ms (next.js: 160ms, application-code: 6ms)
+ GET /api/health?require=worker 200 in 7ms (next.js: 1.5ms, application-code: 5ms)
+ POST /api/auth/sign-in/email 200 in 962ms (next.js: 849ms, application-code: 113ms)
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+ GET /api/workspaces/d999eaa4-27ef-4a6e-97e4-38db7200fc5d/ai/connections 200 in 892ms (next.js: 861ms, application-code: 32ms)
+ POST /api/workspaces/d999eaa4-27ef-4a6e-97e4-38db7200fc5d/ai/connections/5d112619-93bf-418b-ba7d-7d6defb57469/test 200 in 854ms (next.js: 780ms, application-code: 73ms)
+ GET /w/e2e-9d08b6/settings?tab=ai 200 in 703ms (next.js: 584ms, application-code: 119ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/workspaces/d999eaa4-27ef-4a6e-97e4-38db7200fc5d/ai 200 in 826ms (next.js: 797ms, application-code: 29ms)
+ GET /api/workspaces/d999eaa4-27ef-4a6e-97e4-38db7200fc5d/ai/models 200 in 506ms
+ GET /api/health?require=worker 200 in 11ms (next.js: 6ms, application-code: 5ms)
+ GET /api/health?require=worker 200 in 6ms (next.js: 1.6ms, application-code: 4ms)
+ POST /api/auth/sign-up/email 200 in 106ms (next.js: 18ms, application-code: 88ms)
+ GET /api/test/outbox?email=e2e-d80a8a89%40flowline-e2e.test 200 in 47ms (next.js: 38ms, application-code: 9ms)
+ POST /api/email 200 in 70ms (next.js: 44ms, application-code: 26ms)
+ POST /api/auth/sign-in/email 200 in 68ms (next.js: 1.6ms, application-code: 66ms)
+ POST /api/workspaces 201 in 57ms (next.js: 39ms, application-code: 18ms)
+ POST /api/onboarding 200 in 52ms (next.js: 33ms, application-code: 20ms)
+ GET /w/e2e-279479/settings?tab=ai 200 in 69ms (next.js: 23ms, application-code: 47ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 44ms (next.js: 17ms, application-code: 27ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 40ms (next.js: 20ms, application-code: 20ms)
+ POST /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/connections 201 in 86ms (next.js: 19ms, application-code: 67ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 86ms (next.js: 18ms, application-code: 68ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 91ms (next.js: 56ms, application-code: 35ms)
+ PUT /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/default-route 200 in 944ms (next.js: 913ms, application-code: 31ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 43ms (next.js: 18ms, application-code: 26ms)
+ PATCH /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540 200 in 835ms (next.js: 812ms, application-code: 23ms)
+ POST /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/flows 201 in 829ms (next.js: 803ms, application-code: 26ms)
+ PUT /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 820ms (next.js: 790ms, application-code: 30ms)
+ GET /w/e2e-279479/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 655ms (next.js: 577ms, application-code: 79ms)
+ GET /api/health 200 in 12ms (next.js: 3ms, application-code: 8ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 44ms (next.js: 17ms, application-code: 27ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 48ms (next.js: 14ms, application-code: 33ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 33ms (next.js: 17ms, application-code: 16ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/publish 200 in 982ms (next.js: 952ms, application-code: 30ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/runs 200 in 934ms (next.js: 909ms, application-code: 25ms)
+ PUT /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 44ms (next.js: 14ms, application-code: 30ms)
+ POST /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/runs 202 in 92ms (next.js: 19ms, application-code: 73ms)
+2026-09-29T09:44:33.740Z [worker] run fe55401a-62ca-4d64-98a9-55e393ac1735 claimed
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/runs 200 in 61ms (next.js: 3ms, application-code: 58ms)
+2026-09-29T09:44:33.942Z [worker] run fe55401a-62ca-4d64-98a9-55e393ac1735 done
+ GET /api/runs/fe55401a-62ca-4d64-98a9-55e393ac1735 200 in 931ms (next.js: 902ms, application-code: 29ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/runs 200 in 31ms (next.js: 14ms, application-code: 17ms)
+ GET /w/e2e-279479/runs?run=fe55401a-62ca-4d64-98a9-55e393ac1735 200 in 632ms (next.js: 617ms, application-code: 15ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/runs?limit=25 200 in 925ms (next.js: 903ms, application-code: 22ms)
+ GET /w/e2e-279479/settings?tab=ai 200 in 57ms (next.js: 15ms, application-code: 42ms)
+ GET /api/health 200 in 10ms (next.js: 2ms, application-code: 8ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 54ms (next.js: 17ms, application-code: 37ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 42ms (next.js: 17ms, application-code: 25ms)
+ POST /api/auth/sign-out 200 in 40ms (next.js: 18ms, application-code: 23ms)
+ GET /sign-in 200 in 37ms (next.js: 6ms, application-code: 31ms)
+ GET /api/auth-config 200 in 86ms (next.js: 76ms, application-code: 10ms)
+ POST /api/auth/sign-in/email 200 in 133ms (next.js: 1.8ms, application-code: 131ms)
+ GET /w/e2e-279479/settings?tab=ai 200 in 55ms (next.js: 15ms, application-code: 40ms)
+ GET /api/health 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 51ms (next.js: 18ms, application-code: 33ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 51ms (next.js: 19ms, application-code: 32ms)
+ POST /api/auth/sign-up/email 200 in 109ms (next.js: 14ms, application-code: 95ms)
+ GET /api/test/outbox?email=ai-other-f65c0328%40flowline-e2e.test 200 in 10ms (next.js: 1.8ms, application-code: 8ms)
+ POST /api/email 200 in 27ms (next.js: 1.8ms, application-code: 25ms)
+ POST /api/auth/sign-in/email 200 in 76ms (next.js: 4ms, application-code: 72ms)
+ POST /api/workspaces 201 in 40ms (next.js: 1.6ms, application-code: 38ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/connections 404 in 34ms (next.js: 14ms, application-code: 20ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 404 in 25ms (next.js: 1.9ms, application-code: 23ms)
+ GET /w/other-ai-22/settings?tab=ai 200 in 64ms (next.js: 15ms, application-code: 49ms)
+ GET /api/health 200 in 11ms (next.js: 3ms, application-code: 8ms)
+ GET /api/workspaces/3eebc4d7-987c-4327-a5b1-2873d6829dfd/ai 200 in 41ms (next.js: 18ms, application-code: 23ms)
+ GET /api/workspaces/3eebc4d7-987c-4327-a5b1-2873d6829dfd/ai/models 200 in 36ms (next.js: 18ms, application-code: 18ms)
+ POST /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/invites 201 in 829ms (next.js: 792ms, application-code: 37ms)
+ POST /api/auth/sign-up/email 200 in 94ms (next.js: 14ms, application-code: 80ms)
+ GET /api/test/outbox?email=ai-editor-439668f0%40flowline-e2e.test 200 in 9ms (next.js: 1.9ms, application-code: 7ms)
+ POST /api/email 200 in 32ms (next.js: 1.8ms, application-code: 30ms)
+ POST /api/auth/sign-in/email 200 in 70ms (next.js: 2ms, application-code: 68ms)
+ POST /api/invites/xQGShpthSd3tgQtvVtF8mSf1lNl2HGU3CuVOOnQcaw0 200 in 803ms (next.js: 780ms, application-code: 23ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 21ms (next.js: 13ms, application-code: 8ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/connections 200 in 36ms (next.js: 14ms, application-code: 22ms)
+ POST /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/connections 403 in 23ms (next.js: 1.8ms, application-code: 21ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 41ms (next.js: 16ms, application-code: 25ms)
+ PUT /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 403 in 30ms (next.js: 1.6ms, application-code: 29ms)
+ GET /w/e2e-279479/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 67ms (next.js: 17ms, application-code: 50ms)
+ GET /api/health 200 in 9ms (next.js: 4ms, application-code: 5ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33 200 in 28ms (next.js: 3ms, application-code: 25ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/publish 200 in 74ms (next.js: 23ms, application-code: 51ms)
+ GET /api/flows/03c55d86-ff61-43b4-a45a-b8d94eb9bd33/runs 200 in 56ms (next.js: 23ms, application-code: 33ms)
+ GET /api/runs/fe55401a-62ca-4d64-98a9-55e393ac1735 200 in 55ms (next.js: 20ms, application-code: 35ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai 200 in 45ms (next.js: 16ms, application-code: 29ms)
+ GET /api/workspaces/7d449328-6807-4104-9d19-fd79467e9540/ai/models 200 in 35ms (next.js: 16ms, application-code: 19ms)
+ GET / 200 in 122ms (next.js: 54ms, application-code: 68ms)
+ GET /sign-up 200 in 40ms (next.js: 24ms, application-code: 16ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2.0ms, application-code: 6ms)
+ POST /api/auth/sign-up/email 200 in 103ms (next.js: 16ms, application-code: 87ms)
+ GET /api/test/outbox?email=arabic-c71f13f2%40flowline-e2e.test 200 in 8ms (next.js: 1.5ms, application-code: 6ms)
+ GET /verify-email?token=H1FgGeNbu4b9p72b3DCIHStjYjRaSAsFdWPE4EzVOvU&callbackURL=%2Fsign-in 200 in 41ms (next.js: 18ms, application-code: 24ms)
+ POST /api/email 200 in 33ms (next.js: 2ms, application-code: 31ms)
+ GET /sign-in 200 in 18ms (next.js: 3ms, application-code: 15ms)
+ GET /api/auth-config 200 in 10ms (next.js: 1.9ms, application-code: 8ms)
+ POST /api/auth/sign-in/email 200 in 83ms (next.js: 2ms, application-code: 81ms)
+ GET /app 200 in 96ms (next.js: 41ms, application-code: 54ms)
+ GET /app 200 in 54ms (next.js: 4ms, application-code: 51ms)
+ GET /onboarding 200 in 87ms (next.js: 54ms, application-code: 33ms)
+ GET /onboarding 200 in 101ms (next.js: 40ms, application-code: 61ms)
+ POST /api/workspaces 201 in 44ms (next.js: 1.9ms, application-code: 42ms)
+ POST /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/flows 201 in 43ms (next.js: 18ms, application-code: 25ms)
+ POST /api/onboarding 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET /w/arabic-co-20/flows/7c01aa68-83c9-473b-b083-c95fd27b6bb9 200 in 54ms (next.js: 21ms, application-code: 33ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/flows/7c01aa68-83c9-473b-b083-c95fd27b6bb9 200 in 50ms (next.js: 21ms, application-code: 29ms)
+ GET /api/flows/7c01aa68-83c9-473b-b083-c95fd27b6bb9/publish 200 in 63ms (next.js: 18ms, application-code: 45ms)
+ GET /api/flows/7c01aa68-83c9-473b-b083-c95fd27b6bb9/runs 200 in 41ms (next.js: 19ms, application-code: 22ms)
+ GET /w/arabic-co-20/flows 200 in 670ms (next.js: 610ms, application-code: 60ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/flows 200 in 147ms (next.js: 65ms, application-code: 82ms)
+ GET /w/arabic-co-20/flows 200 in 81ms (next.js: 26ms, application-code: 55ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/usage 200 in 1159ms (next.js: 1111ms, application-code: 48ms)
+ GET /w/arabic-co-20/flows 200 in 89ms (next.js: 4ms, application-code: 85ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/overview 200 in 1177ms (next.js: 1121ms, application-code: 56ms)
+ POST /api/auth/sign-out 200 in 38ms (next.js: 15ms, application-code: 22ms)
+ GET /sign-in 200 in 40ms (next.js: 4ms, application-code: 36ms)
+ GET /sign-in 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET /api/auth-config 200 in 11ms (next.js: 1.9ms, application-code: 9ms)
+ POST /api/auth/sign-in/email 200 in 83ms (next.js: 2ms, application-code: 80ms)
+ GET /app 200 in 47ms (next.js: 4ms, application-code: 43ms)
+ GET /app 200 in 35ms (next.js: 3ms, application-code: 32ms)
+ GET /w/arabic-co-20/flows 200 in 80ms (next.js: 22ms, application-code: 59ms)
+ GET /w/arabic-co-20/flows 200 in 80ms (next.js: 38ms, application-code: 42ms)
+ GET /api/health 200 in 10ms (next.js: 4ms, application-code: 5ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/flows 200 in 77ms (next.js: 36ms, application-code: 41ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/usage 200 in 78ms (next.js: 54ms, application-code: 25ms)
+ GET /api/workspaces/0319f204-236a-41d3-813a-47b9c97ecf23/overview 200 in 101ms (next.js: 17ms, application-code: 84ms)
+ GET /sign-in 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2.0ms, application-code: 6ms)
+ GET /sign-in 200 in 21ms (next.js: 4ms, application-code: 16ms)
+ GET /sign-up 200 in 29ms (next.js: 2ms, application-code: 27ms)
+ GET /api/auth-config 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ GET /sign-up 200 in 19ms (next.js: 3ms, application-code: 16ms)
+ GET /sign-in 200 in 29ms (next.js: 2ms, application-code: 26ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/auth/sign-up/email 200 in 95ms (next.js: 14ms, application-code: 81ms)
+ GET /api/test/outbox?email=arabic-rtl-c20dc05c%40flowline-e2e.test 200 in 10ms (next.js: 1.9ms, application-code: 8ms)
+ POST /api/email 200 in 24ms (next.js: 1.8ms, application-code: 22ms)
+ POST /api/auth/sign-in/email 200 in 68ms (next.js: 2.0ms, application-code: 66ms)
+ POST /api/workspaces 201 in 36ms (next.js: 1.5ms, application-code: 34ms)
+ POST /api/onboarding 200 in 20ms (next.js: 1.6ms, application-code: 19ms)
+ POST /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/flows 201 in 30ms (next.js: 15ms, application-code: 15ms)
+ GET / 200 in 50ms (next.js: 3ms, application-code: 48ms)
+ GET /sign-in 200 in 29ms (next.js: 2ms, application-code: 27ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /w/rtl-scroll-20/flows 200 in 63ms (next.js: 17ms, application-code: 46ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/flows 200 in 43ms (next.js: 36ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/usage 200 in 64ms (next.js: 36ms, application-code: 27ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/overview 200 in 64ms (next.js: 18ms, application-code: 47ms)
+ GET /w/rtl-scroll-20/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 87ms (next.js: 20ms, application-code: 67ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 32ms (next.js: 17ms, application-code: 15ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/publish 200 in 69ms (next.js: 16ms, application-code: 53ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/runs 200 in 49ms (next.js: 18ms, application-code: 31ms)
+ GET /w/rtl-scroll-20/runs 200 in 91ms (next.js: 18ms, application-code: 73ms)
+ GET /api/health 200 in 12ms (next.js: 3ms, application-code: 9ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/runs?limit=25 200 in 23ms (next.js: 20ms, application-code: 4ms)
+ GET /w/rtl-scroll-20/settings 200 in 84ms (next.js: 19ms, application-code: 65ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/invites 200 in 75ms (next.js: 20ms, application-code: 54ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/members 200 in 76ms
+ GET / 200 in 63ms (next.js: 4ms, application-code: 59ms)
+ GET /sign-in 200 in 41ms (next.js: 3ms, application-code: 38ms)
+ GET /api/auth-config 200 in 10ms (next.js: 4ms, application-code: 7ms)
+ GET /w/rtl-scroll-20/flows 200 in 65ms (next.js: 16ms, application-code: 49ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/flows 200 in 74ms (next.js: 61ms, application-code: 14ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/usage 200 in 75ms (next.js: 41ms, application-code: 34ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/overview 200 in 76ms (next.js: 19ms, application-code: 57ms)
+ GET /w/rtl-scroll-20/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 100ms (next.js: 22ms, application-code: 78ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 42ms (next.js: 19ms, application-code: 23ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/publish 200 in 68ms (next.js: 21ms, application-code: 47ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/runs 200 in 40ms (next.js: 21ms, application-code: 19ms)
+ GET /w/rtl-scroll-20/runs 200 in 70ms (next.js: 17ms, application-code: 54ms)
+ GET /api/health 200 in 10ms (next.js: 4ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/runs?limit=25 200 in 51ms (next.js: 24ms, application-code: 27ms)
+ GET /w/rtl-scroll-20/settings 200 in 77ms (next.js: 18ms, application-code: 59ms)
+ GET /api/health 200 in 11ms (next.js: 4ms, application-code: 7ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/members 200 in 64ms (next.js: 24ms, application-code: 39ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/invites 200 in 65ms (next.js: 47ms, application-code: 18ms)
+ GET / 200 in 58ms (next.js: 4ms, application-code: 54ms)
+ GET /sign-in 200 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /api/auth-config 200 in 11ms (next.js: 2ms, application-code: 9ms)
+ GET /w/rtl-scroll-20/flows 200 in 64ms (next.js: 18ms, application-code: 46ms)
+ GET /api/health 200 in 12ms (next.js: 3ms, application-code: 8ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/flows 200 in 99ms (next.js: 73ms, application-code: 26ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/usage 200 in 102ms (next.js: 47ms, application-code: 55ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/overview 200 in 139ms (next.js: 21ms, application-code: 118ms)
+ GET /w/rtl-scroll-20/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 71ms (next.js: 21ms, application-code: 50ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0 200 in 47ms (next.js: 23ms, application-code: 25ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/publish 200 in 76ms (next.js: 21ms, application-code: 55ms)
+ GET /api/flows/a765c59d-b7e7-4ba8-949b-f8baaf7c3db0/runs 200 in 48ms (next.js: 25ms, application-code: 22ms)
+ GET /w/rtl-scroll-20/runs 200 in 68ms (next.js: 19ms, application-code: 49ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/runs?limit=25 200 in 59ms (next.js: 27ms, application-code: 33ms)
+ GET /w/rtl-scroll-20/settings 200 in 100ms (next.js: 20ms, application-code: 80ms)
+ GET /api/health 200 in 11ms (next.js: 3ms, application-code: 8ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/invites 200 in 75ms (next.js: 25ms, application-code: 50ms)
+ GET /api/workspaces/bbbbde62-e63e-4acc-8321-ba0a0656570e/members 200 in 76ms (next.js: 48ms, application-code: 28ms)
+ POST /api/auth/sign-up/email 200 in 112ms (next.js: 15ms, application-code: 97ms)
+ GET /api/test/outbox?email=e2e-ff979f6a%40flowline-e2e.test 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ POST /api/email 200 in 24ms (next.js: 1.7ms, application-code: 22ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 3ms, application-code: 69ms)
+ POST /api/workspaces 201 in 21ms (next.js: 2ms, application-code: 19ms)
+ POST /api/onboarding 200 in 13ms (next.js: 1.7ms, application-code: 12ms)
+ POST /api/workspaces/400abdee-a7a2-4949-8d2f-fe0a3f1cd003/flows 201 in 30ms (next.js: 15ms, application-code: 15ms)
+ GET /w/e2e-4480e0/templates 200 in 671ms (next.js: 599ms, application-code: 72ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/400abdee-a7a2-4949-8d2f-fe0a3f1cd003/connections 200 in 64ms
+ GET /api/workspaces/400abdee-a7a2-4949-8d2f-fe0a3f1cd003/ai 200 in 64ms (next.js: 15ms, application-code: 49ms)
+ GET /w/e2e-4480e0/flows/840e02ca-47f3-458f-bff0-23d63a1293eb 200 in 63ms (next.js: 15ms, application-code: 47ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 6ms)
+ GET /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb 200 in 63ms (next.js: 19ms, application-code: 44ms)
+ GET /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb/publish 200 in 67ms (next.js: 23ms, application-code: 44ms)
+ GET /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb/runs 200 in 41ms (next.js: 21ms, application-code: 20ms)
+ GET /api/workspaces/400abdee-a7a2-4949-8d2f-fe0a3f1cd003/ai 200 in 102ms (next.js: 3ms, application-code: 99ms)
+ GET /api/integrations/catalog 200 in 239ms (next.js: 57ms, application-code: 182ms)
+2026-09-29T09:45:06.360Z [worker] run d3faf9a9-1c96-4895-b626-e77f6fe97a42 claimed
+ POST /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb/runs 202 in 70ms (next.js: 3ms, application-code: 67ms)
+ GET /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb/runs 200 in 44ms (next.js: 2ms, application-code: 41ms)
+ GET /api/runs/d3faf9a9-1c96-4895-b626-e77f6fe97a42 200 in 51ms (next.js: 18ms, application-code: 33ms)
+2026-09-29T09:45:06.439Z [worker] run d3faf9a9-1c96-4895-b626-e77f6fe97a42 done
+ GET /api/runs/d3faf9a9-1c96-4895-b626-e77f6fe97a42 200 in 32ms (next.js: 3ms, application-code: 29ms)
+ GET /api/flows/840e02ca-47f3-458f-bff0-23d63a1293eb/runs 200 in 49ms (next.js: 16ms, application-code: 33ms)
+ GET /w/e2e-4480e0/runs?run=d3faf9a9-1c96-4895-b626-e77f6fe97a42 200 in 35ms (next.js: 18ms, application-code: 16ms)
+ GET /api/workspaces/400abdee-a7a2-4949-8d2f-fe0a3f1cd003/runs?limit=25 200 in 43ms (next.js: 17ms, application-code: 26ms)
+ GET /api/runs/d3faf9a9-1c96-4895-b626-e77f6fe97a42/rerun-preview?fromNodeId=hot&revision=original 200 in 985ms (next.js: 951ms, application-code: 34ms)
+2026-09-29T09:45:09.715Z [worker] run ab5158e2-3adc-4e3d-942f-15ca06d424c3 claimed
+ POST /api/auth/sign-up/email 200 in 99ms (next.js: 15ms, application-code: 84ms)
+ GET /api/test/outbox?email=e2e-f7862fca%40flowline-e2e.test 200 in 10ms (next.js: 3ms, application-code: 7ms)
+2026-09-29T09:45:09.758Z [worker] run ab5158e2-3adc-4e3d-942f-15ca06d424c3 done
+2026-09-29T09:45:09.764Z [worker] run 0e78cc68-b33e-4832-a564-22217cd2ce16 claimed
+2026-09-29T09:45:09.770Z [worker] run a50e8566-1944-47d4-9858-046b10b38fd4 claimed
+2026-09-29T09:45:09.802Z [worker] run 0e78cc68-b33e-4832-a564-22217cd2ce16 done
+2026-09-29T09:45:09.812Z [worker] run a50e8566-1944-47d4-9858-046b10b38fd4 done
+2026-09-29T09:45:09.823Z [worker] run fef31d70-2854-4efb-b686-2a5ee4d9a027 claimed
+2026-09-29T09:45:09.829Z [worker] run 2b799e1f-17f6-4592-a059-1f48c43bbcb3 claimed
+ POST /api/email 200 in 22ms (next.js: 3ms, application-code: 19ms)
+2026-09-29T09:45:09.859Z [worker] run fef31d70-2854-4efb-b686-2a5ee4d9a027 done
+2026-09-29T09:45:09.860Z [worker] run 2b799e1f-17f6-4592-a059-1f48c43bbcb3 done
+2026-09-29T09:45:09.862Z [worker] run aaa40385-540f-47a1-ae70-3d018ec0a7f1 claimed
+2026-09-29T09:45:09.894Z [worker] run aaa40385-540f-47a1-ae70-3d018ec0a7f1 done
+2026-09-29T09:45:09.895Z [worker] run c58760c6-2861-4199-bbb5-ef1f34b1fc9a claimed
+ POST /api/auth/sign-in/email 200 in 70ms (next.js: 2ms, application-code: 68ms)
+2026-09-29T09:45:09.916Z [worker] run 8c1716c4-5d9f-43ba-a709-67ce6338723f claimed
+2026-09-29T09:45:09.923Z [worker] run c58760c6-2861-4199-bbb5-ef1f34b1fc9a done
+ POST /api/workspaces 201 in 17ms (next.js: 1.7ms, application-code: 15ms)
+2026-09-29T09:45:09.941Z [worker] run 650f1ca1-3124-4c79-a033-f4a0f352d559 claimed
+2026-09-29T09:45:09.945Z [worker] run 8c1716c4-5d9f-43ba-a709-67ce6338723f done
+2026-09-29T09:45:09.965Z [worker] run be1539c3-f911-4517-ac2e-6d5e5c69d55f claimed
+2026-09-29T09:45:09.968Z [worker] run 650f1ca1-3124-4c79-a033-f4a0f352d559 done
+ POST /api/onboarding 200 in 26ms (next.js: 1.7ms, application-code: 25ms)
+2026-09-29T09:45:09.985Z [worker] run f5729fa2-8a8a-4721-a3ec-e9c39f3568fd claimed
+2026-09-29T09:45:09.997Z [worker] run be1539c3-f911-4517-ac2e-6d5e5c69d55f done
+2026-09-29T09:45:10.010Z [worker] run 8b5430a6-da39-4b94-a5e2-7cd0da95a6d2 claimed
+2026-09-29T09:45:10.015Z [worker] run f5729fa2-8a8a-4721-a3ec-e9c39f3568fd done
+2026-09-29T09:45:10.034Z [worker] run e54e2fb9-d4f6-4e8e-bec4-80aed6da54ad claimed
+2026-09-29T09:45:10.040Z [worker] run 8b5430a6-da39-4b94-a5e2-7cd0da95a6d2 done
+ GET /w/e2e-9b5437/settings?tab=general 200 in 74ms (next.js: 17ms, application-code: 57ms)
+2026-09-29T09:45:10.058Z [worker] run 855f224d-51e6-45af-99ed-81cc624069fb claimed
+2026-09-29T09:45:10.068Z [worker] run e54e2fb9-d4f6-4e8e-bec4-80aed6da54ad done
+2026-09-29T09:45:10.086Z [worker] run 356d6938-7f58-491d-871d-4bad05891e46 claimed
+2026-09-29T09:45:10.092Z [worker] run 855f224d-51e6-45af-99ed-81cc624069fb done
+2026-09-29T09:45:10.111Z [worker] run 608f825f-0a87-4c00-aaa3-e4edff19080a claimed
+2026-09-29T09:45:10.116Z [worker] run 356d6938-7f58-491d-871d-4bad05891e46 done
+2026-09-29T09:45:10.135Z [worker] run 3829fa6e-8df9-40b9-a23d-737ce3d6dd4f claimed
+2026-09-29T09:45:10.143Z [worker] run 608f825f-0a87-4c00-aaa3-e4edff19080a done
+2026-09-29T09:45:10.162Z [worker] run f86ce029-c60a-4593-b007-7bc7765ee200 claimed
+2026-09-29T09:45:10.168Z [worker] run 3829fa6e-8df9-40b9-a23d-737ce3d6dd4f done
+2026-09-29T09:45:10.190Z [worker] run 4c4319d9-c340-4a7a-84d3-cd4e12ec2bd0 claimed
+2026-09-29T09:45:10.194Z [worker] run f86ce029-c60a-4593-b007-7bc7765ee200 done
+2026-09-29T09:45:10.217Z [worker] run caa64019-b4c8-454a-a61c-6f9e182e115d claimed
+2026-09-29T09:45:10.225Z [worker] run 4c4319d9-c340-4a7a-84d3-cd4e12ec2bd0 done
+2026-09-29T09:45:10.247Z [worker] run 53bff829-b7a4-4f36-b9b9-d459512e36a4 claimed
+2026-09-29T09:45:10.252Z [worker] run caa64019-b4c8-454a-a61c-6f9e182e115d done
+2026-09-29T09:45:10.275Z [worker] run 34371272-cffb-4ed5-a808-84a6fcbdb20b claimed
+2026-09-29T09:45:10.281Z [worker] run 53bff829-b7a4-4f36-b9b9-d459512e36a4 done
+2026-09-29T09:45:10.306Z [worker] run f3607243-aef7-4bd6-96f1-d71e10305260 claimed
+2026-09-29T09:45:10.308Z [worker] run 34371272-cffb-4ed5-a808-84a6fcbdb20b done
+2026-09-29T09:45:10.333Z [worker] run 6151fdef-f75b-468f-ac13-44f978e3843b claimed
+2026-09-29T09:45:10.339Z [worker] run f3607243-aef7-4bd6-96f1-d71e10305260 done
+2026-09-29T09:45:10.362Z [worker] run 364dcb36-268f-4575-8cea-acfc7b174457 claimed
+2026-09-29T09:45:10.366Z [worker] run 6151fdef-f75b-468f-ac13-44f978e3843b done
+2026-09-29T09:45:10.391Z [worker] run c08c6ee5-72fa-4c93-84f7-86421939ee08 claimed
+2026-09-29T09:45:10.399Z [worker] run 364dcb36-268f-4575-8cea-acfc7b174457 done
+2026-09-29T09:45:10.421Z [worker] run 1c84e18b-f286-45e8-b542-b3579f7786de claimed
+2026-09-29T09:45:10.425Z [worker] run c08c6ee5-72fa-4c93-84f7-86421939ee08 done
+2026-09-29T09:45:10.451Z [worker] run f9633423-8bc1-459b-b142-0eb278e6dfac claimed
+2026-09-29T09:45:10.456Z [worker] run 1c84e18b-f286-45e8-b542-b3579f7786de done
+2026-09-29T09:45:10.480Z [worker] run 7241d65a-e0f7-43ea-a5e6-c48f68c3111a claimed
+2026-09-29T09:45:10.490Z [worker] run f9633423-8bc1-459b-b142-0eb278e6dfac done
+2026-09-29T09:45:10.520Z [worker] run e3b45edf-b43c-4bd8-ac0f-d6b47ab0c2a0 claimed
+2026-09-29T09:45:10.523Z [worker] run 7241d65a-e0f7-43ea-a5e6-c48f68c3111a done
+2026-09-29T09:45:10.546Z [worker] run 6bbf3de9-89fb-43ab-a62e-faf63dd7129d claimed
+2026-09-29T09:45:10.553Z [worker] run e3b45edf-b43c-4bd8-ac0f-d6b47ab0c2a0 done
+2026-09-29T09:45:10.575Z [worker] run 747e6e2f-8dfb-4967-ae3b-2083b6f683f3 claimed
+2026-09-29T09:45:10.580Z [worker] run 6bbf3de9-89fb-43ab-a62e-faf63dd7129d done
+2026-09-29T09:45:10.600Z [worker] run d06717ce-d5ed-4ee0-8647-b5eac135b237 claimed
+2026-09-29T09:45:10.605Z [worker] run 747e6e2f-8dfb-4967-ae3b-2083b6f683f3 done
+ GET /api/health 200 in 7ms (next.js: 3ms, application-code: 4ms)
+2026-09-29T09:45:10.627Z [worker] run 9b6deab3-a480-4945-b1a0-d5598fa8d9d2 claimed
+2026-09-29T09:45:10.632Z [worker] run d06717ce-d5ed-4ee0-8647-b5eac135b237 done
+2026-09-29T09:45:10.650Z [worker] run b1a43ed0-f71e-454f-a06c-b1d6cdc1b14c claimed
+2026-09-29T09:45:10.657Z [worker] run 9b6deab3-a480-4945-b1a0-d5598fa8d9d2 done
+2026-09-29T09:45:10.675Z [worker] run ab3ee0b3-aa56-41a7-a31a-1f1dc0fb1a09 claimed
+2026-09-29T09:45:10.681Z [worker] run b1a43ed0-f71e-454f-a06c-b1d6cdc1b14c done
+2026-09-29T09:45:10.704Z [worker] run 6c5f1ae8-2bc5-44f0-901c-d949ea0cf07a claimed
+2026-09-29T09:45:10.710Z [worker] run ab3ee0b3-aa56-41a7-a31a-1f1dc0fb1a09 done
+2026-09-29T09:45:10.728Z [worker] run 2d96c4bf-fc29-4223-930b-845e15b53f67 claimed
+ GET /resend-verification 200 in 36ms (next.js: 23ms, application-code: 13ms)
+2026-09-29T09:45:10.734Z [worker] run 6c5f1ae8-2bc5-44f0-901c-d949ea0cf07a done
+2026-09-29T09:45:10.753Z [worker] run 63dda4d1-b35f-4962-8030-213f74cbf6fb claimed
+2026-09-29T09:45:10.759Z [worker] run 2d96c4bf-fc29-4223-930b-845e15b53f67 done
+2026-09-29T09:45:10.779Z [worker] run 982974bc-e6de-4eb3-abca-b6a08b9cdd0f claimed
+2026-09-29T09:45:10.783Z [worker] run 63dda4d1-b35f-4962-8030-213f74cbf6fb done
+2026-09-29T09:45:10.805Z [worker] run 81e34604-6fd8-4e0e-b12c-ba350058a618 claimed
+2026-09-29T09:45:10.810Z [worker] run 982974bc-e6de-4eb3-abca-b6a08b9cdd0f done
+2026-09-29T09:45:10.831Z [worker] run 193f975a-a878-43b0-a81d-e00df7ca3017 claimed
+2026-09-29T09:45:10.836Z [worker] run 81e34604-6fd8-4e0e-b12c-ba350058a618 done
+2026-09-29T09:45:10.851Z [worker] run 3d81980b-632e-4ac3-9a16-ddc0c1fe5646 claimed
+2026-09-29T09:45:10.858Z [worker] run 193f975a-a878-43b0-a81d-e00df7ca3017 done
+2026-09-29T09:45:10.873Z [worker] run 5aa65c8b-5b17-46ec-836a-bf022a392036 claimed
+2026-09-29T09:45:10.879Z [worker] run 3d81980b-632e-4ac3-9a16-ddc0c1fe5646 done
+2026-09-29T09:45:10.894Z [worker] run d0512e8d-c51b-4c61-88f1-978dc5d4a61c claimed
+2026-09-29T09:45:10.898Z [worker] run 5aa65c8b-5b17-46ec-836a-bf022a392036 done
+2026-09-29T09:45:10.917Z [worker] run ebc7e566-7013-4ca4-903d-3b89b77b4201 claimed
+2026-09-29T09:45:10.921Z [worker] run d0512e8d-c51b-4c61-88f1-978dc5d4a61c done
+2026-09-29T09:45:10.936Z [worker] run 556a135d-99a7-4788-ac35-3c7d3f2e9d8f claimed
+2026-09-29T09:45:10.941Z [worker] run ebc7e566-7013-4ca4-903d-3b89b77b4201 done
+2026-09-29T09:45:10.957Z [worker] run 1db8d71b-3cff-4176-b121-4bed788971a1 claimed
+2026-09-29T09:45:10.962Z [worker] run 556a135d-99a7-4788-ac35-3c7d3f2e9d8f done
+2026-09-29T09:45:10.978Z [worker] run ed2d2c9f-23a2-47db-95c2-5126aa747998 claimed
+2026-09-29T09:45:10.983Z [worker] run 1db8d71b-3cff-4176-b121-4bed788971a1 done
+2026-09-29T09:45:11.001Z [worker] run bcd7886f-fa4b-4285-8b1e-077ce13780fe claimed
+2026-09-29T09:45:11.006Z [worker] run ed2d2c9f-23a2-47db-95c2-5126aa747998 done
+2026-09-29T09:45:11.024Z [worker] run 1988788d-49e0-451b-8452-a96d94d9ecb0 claimed
+2026-09-29T09:45:11.029Z [worker] run bcd7886f-fa4b-4285-8b1e-077ce13780fe done
+2026-09-29T09:45:11.048Z [worker] run 8461141e-796e-485d-9982-2a5dfeeb5053 claimed
+2026-09-29T09:45:11.051Z [worker] run 1988788d-49e0-451b-8452-a96d94d9ecb0 done
+2026-09-29T09:45:11.069Z [worker] run d998dc31-2c91-4535-b746-f312e1ba6051 claimed
+2026-09-29T09:45:11.074Z [worker] run 8461141e-796e-485d-9982-2a5dfeeb5053 done
+2026-09-29T09:45:11.095Z [worker] run 80abd207-564f-4b79-9dd6-5b4ea88a965f claimed
+2026-09-29T09:45:11.102Z [worker] run d998dc31-2c91-4535-b746-f312e1ba6051 done
+2026-09-29T09:45:11.120Z [worker] run 65ade10c-341b-4473-b5ce-71bdda93253c claimed
+2026-09-29T09:45:11.125Z [worker] run 80abd207-564f-4b79-9dd6-5b4ea88a965f done
+2026-09-29T09:45:11.142Z [worker] run 022a9822-7a7d-42f4-b763-d0d5abece467 claimed
+2026-09-29T09:45:11.147Z [worker] run 65ade10c-341b-4473-b5ce-71bdda93253c done
+2026-09-29T09:45:11.164Z [worker] run c3628c13-b3a6-472f-81fb-5c7154bed60e claimed
+2026-09-29T09:45:11.169Z [worker] run 022a9822-7a7d-42f4-b763-d0d5abece467 done
+2026-09-29T09:45:11.186Z [worker] run 809de66a-0f11-4434-b209-9b9d2afd070a claimed
+2026-09-29T09:45:11.189Z [worker] run c3628c13-b3a6-472f-81fb-5c7154bed60e done
+2026-09-29T09:45:11.206Z [worker] run 9fc5c31e-57e4-4d0b-9825-deeea392a882 claimed
+2026-09-29T09:45:11.210Z [worker] run 809de66a-0f11-4434-b209-9b9d2afd070a done
+2026-09-29T09:45:11.226Z [worker] run ec7f047a-fd9b-4a34-851d-f40b97c3878f claimed
+2026-09-29T09:45:11.230Z [worker] run 9fc5c31e-57e4-4d0b-9825-deeea392a882 done
+2026-09-29T09:45:11.247Z [worker] run 64b811be-9fb3-46b0-b1c8-f11bf2560d94 claimed
+2026-09-29T09:45:11.253Z [worker] run ec7f047a-fd9b-4a34-851d-f40b97c3878f done
+2026-09-29T09:45:11.268Z [worker] run cb03dad2-2835-4d18-aa04-b25ba66f4f25 claimed
+2026-09-29T09:45:11.274Z [worker] run 64b811be-9fb3-46b0-b1c8-f11bf2560d94 done
+2026-09-29T09:45:11.288Z [worker] run 39d5c2b0-e1e6-4c43-ae4b-9b20a2518a3b claimed
+2026-09-29T09:45:11.294Z [worker] run cb03dad2-2835-4d18-aa04-b25ba66f4f25 done
+2026-09-29T09:45:11.308Z [worker] run 9eb851f1-6a02-42de-9c01-13a3be69cb6a claimed
+2026-09-29T09:45:11.313Z [worker] run 39d5c2b0-e1e6-4c43-ae4b-9b20a2518a3b done
+2026-09-29T09:45:11.329Z [worker] run 6abe2e74-e061-4b1c-9627-80cc230e3b48 claimed
+2026-09-29T09:45:11.334Z [worker] run 9eb851f1-6a02-42de-9c01-13a3be69cb6a done
+2026-09-29T09:45:11.351Z [worker] run 7aeb4fc8-df5c-48c8-9bbe-57476493eabf claimed
+2026-09-29T09:45:11.357Z [worker] run 6abe2e74-e061-4b1c-9627-80cc230e3b48 done
+2026-09-29T09:45:11.374Z [worker] run c3267f08-f21a-4c3d-a7f6-87425e00c4cc claimed
+2026-09-29T09:45:11.379Z [worker] run 7aeb4fc8-df5c-48c8-9bbe-57476493eabf done
+2026-09-29T09:45:11.397Z [worker] run f86a3f95-b08e-4c14-8c72-6e4575dedde8 claimed
+2026-09-29T09:45:11.400Z [worker] run c3267f08-f21a-4c3d-a7f6-87425e00c4cc done
+2026-09-29T09:45:11.418Z [worker] run a4e18356-9dda-4281-abfd-ff44ffee5e53 claimed
+2026-09-29T09:45:11.425Z [worker] run f86a3f95-b08e-4c14-8c72-6e4575dedde8 done
+2026-09-29T09:45:11.441Z [worker] run 5cda57aa-c16b-4f39-b730-0377ff4a6b18 claimed
+2026-09-29T09:45:11.445Z [worker] run a4e18356-9dda-4281-abfd-ff44ffee5e53 done
+2026-09-29T09:45:11.462Z [worker] run 63224bbf-2dd4-4824-b031-8b2a1f662407 claimed
+2026-09-29T09:45:11.470Z [worker] run 5cda57aa-c16b-4f39-b730-0377ff4a6b18 done
+2026-09-29T09:45:11.485Z [worker] run 055ab13c-50de-44ea-aa49-7a90615b3063 claimed
+2026-09-29T09:45:11.490Z [worker] run 63224bbf-2dd4-4824-b031-8b2a1f662407 done
+2026-09-29T09:45:11.510Z [worker] run 03d2be25-a4bc-4df1-9093-add7748c261a claimed
+2026-09-29T09:45:11.513Z [worker] run 055ab13c-50de-44ea-aa49-7a90615b3063 done
+2026-09-29T09:45:11.532Z [worker] run e14415fd-2a72-4d37-9c12-0c14c646c231 claimed
+2026-09-29T09:45:11.537Z [worker] run 03d2be25-a4bc-4df1-9093-add7748c261a done
+2026-09-29T09:45:11.554Z [worker] run bc58cf9f-0ae2-4b93-83e0-5773ada9c4bd claimed
+2026-09-29T09:45:11.562Z [worker] run e14415fd-2a72-4d37-9c12-0c14c646c231 done
+2026-09-29T09:45:11.578Z [worker] run 85a8321b-d120-4305-8f81-cbb7ae15eb3b claimed
+2026-09-29T09:45:11.581Z [worker] run bc58cf9f-0ae2-4b93-83e0-5773ada9c4bd done
+2026-09-29T09:45:11.602Z [worker] run 6c80ac4a-d1f7-4000-8fe4-f9e2324c76c9 claimed
+2026-09-29T09:45:11.608Z [worker] run 85a8321b-d120-4305-8f81-cbb7ae15eb3b done
+2026-09-29T09:45:11.627Z [worker] run cce7daf6-8805-430f-8310-7533c4ac8bca claimed
+ GET /w/e2e-9b5437/flows 200 in 65ms (next.js: 17ms, application-code: 48ms)
+2026-09-29T09:45:11.635Z [worker] run 6c80ac4a-d1f7-4000-8fe4-f9e2324c76c9 done
+2026-09-29T09:45:11.653Z [worker] run 164214e5-f900-4f6e-93eb-572e907d5542 claimed
+2026-09-29T09:45:11.659Z [worker] run cce7daf6-8805-430f-8310-7533c4ac8bca done
+2026-09-29T09:45:11.683Z [worker] run ccba2473-42df-4702-b351-b0622b8a765a claimed
+2026-09-29T09:45:11.688Z [worker] run 164214e5-f900-4f6e-93eb-572e907d5542 done
+2026-09-29T09:45:11.713Z [worker] run 4c68fde7-5417-45b6-8bb8-e75eef65439e claimed
+2026-09-29T09:45:11.716Z [worker] run ccba2473-42df-4702-b351-b0622b8a765a done
+2026-09-29T09:45:11.743Z [worker] run 7866aaa1-e005-4082-b3b4-3401981b2a8b claimed
+2026-09-29T09:45:11.749Z [worker] run 4c68fde7-5417-45b6-8bb8-e75eef65439e done
+2026-09-29T09:45:11.770Z [worker] run 5e19e5f0-b451-444a-8bbd-52a3def1284d claimed
+2026-09-29T09:45:11.775Z [worker] run 7866aaa1-e005-4082-b3b4-3401981b2a8b done
+2026-09-29T09:45:11.800Z [worker] run 2162c663-e82d-44a0-95fe-0824cc9b0ebe claimed
+2026-09-29T09:45:11.804Z [worker] run 5e19e5f0-b451-444a-8bbd-52a3def1284d done
+2026-09-29T09:45:11.830Z [worker] run c67fb54e-6c2b-4cd2-bbaf-5c7e6c436fa1 claimed
+2026-09-29T09:45:11.836Z [worker] run 2162c663-e82d-44a0-95fe-0824cc9b0ebe done
+2026-09-29T09:45:11.866Z [worker] run a763727e-c0a0-404f-9d0d-5794d5d5d735 claimed
+2026-09-29T09:45:11.876Z [worker] run c67fb54e-6c2b-4cd2-bbaf-5c7e6c436fa1 done
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+2026-09-29T09:45:11.900Z [worker] run ff540d8e-44df-4cb4-81e0-9bfd79a99129 claimed
+2026-09-29T09:45:11.903Z [worker] run a763727e-c0a0-404f-9d0d-5794d5d5d735 done
+2026-09-29T09:45:11.930Z [worker] run f3568257-d3aa-4ed1-8452-77ed62330f37 claimed
+2026-09-29T09:45:11.937Z [worker] run ff540d8e-44df-4cb4-81e0-9bfd79a99129 done
+2026-09-29T09:45:11.962Z [worker] run 88976e51-1bc4-458b-9d85-923b52fe6ecc claimed
+2026-09-29T09:45:11.969Z [worker] run f3568257-d3aa-4ed1-8452-77ed62330f37 done
+ GET /api/workspaces/f127c987-a36b-421e-ac5e-fc5ea895a937/usage 200 in 73ms (next.js: 21ms, application-code: 52ms)
+ GET /api/workspaces/f127c987-a36b-421e-ac5e-fc5ea895a937/flows 200 in 51ms (next.js: 27ms, application-code: 23ms)
+2026-09-29T09:45:11.991Z [worker] scheduler fired 90
+ GET /api/workspaces/f127c987-a36b-421e-ac5e-fc5ea895a937/overview 200 in 120ms (next.js: 21ms, application-code: 98ms)
+2026-09-29T09:45:12.003Z [worker] run 1b749fa7-31cd-4249-9749-e148ad212a01 claimed
+2026-09-29T09:45:12.009Z [worker] run 88976e51-1bc4-458b-9d85-923b52fe6ecc done
+2026-09-29T09:45:12.047Z [worker] run 1b749fa7-31cd-4249-9749-e148ad212a01 done
+ GET /account/delete 200 in 39ms (next.js: 23ms, application-code: 17ms)
+ POST /api/email 200 in 41ms (next.js: 1.8ms, application-code: 40ms)
+ GET /api/test/outbox?email=e2e-f7862fca%40flowline-e2e.test 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /account/delete?token=sy2X0gnbPPCPbUshPXiKu5xXcqErPw3mY-52UnVfoMw 200 in 30ms (next.js: 3ms, application-code: 27ms)
+ POST /api/email 200 in 80ms (next.js: 2ms, application-code: 77ms)
+ GET /api/me 401 in 43ms (next.js: 32ms, application-code: 11ms)
+ POST /api/auth/sign-up/email 200 in 99ms (next.js: 16ms, application-code: 83ms)
+ GET /api/test/outbox?email=e2e-1f80014e%40flowline-e2e.test 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ POST /api/email 200 in 21ms (next.js: 1.8ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 69ms (next.js: 2ms, application-code: 67ms)
+ POST /api/workspaces 201 in 20ms (next.js: 3ms, application-code: 18ms)
+ POST /api/onboarding 200 in 21ms (next.js: 1.8ms, application-code: 19ms)
+ GET /w/e2e-80c6b4/settings 200 in 52ms (next.js: 14ms, application-code: 38ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/members 200 in 53ms (next.js: 21ms, application-code: 33ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/invites 200 in 31ms (next.js: 17ms, application-code: 14ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/ai 200 in 40ms (next.js: 18ms, application-code: 22ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/ai/models 200 in 43ms (next.js: 18ms, application-code: 25ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/api-keys 200 in 978ms (next.js: 955ms, application-code: 24ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/billing 200 in 975ms (next.js: 942ms, application-code: 33ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe 200 in 61ms (next.js: 39ms, application-code: 22ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/usage 200 in 64ms (next.js: 19ms, application-code: 45ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/audit 200 in 951ms (next.js: 921ms, application-code: 30ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/sso 200 in 947ms (next.js: 924ms, application-code: 23ms)
+ GET /w/e2e-80c6b4/agents 200 in 656ms (next.js: 596ms, application-code: 60ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/agents 200 in 946ms (next.js: 923ms, application-code: 23ms)
+ GET /w/e2e-80c6b4/agents/new 200 in 623ms (next.js: 610ms, application-code: 13ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/ai 200 in 108ms (next.js: 15ms, application-code: 93ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/flows 200 in 87ms (next.js: 18ms, application-code: 70ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/knowledge 200 in 96ms
+ GET /w/e2e-80c6b4/knowledge 200 in 654ms (next.js: 606ms, application-code: 48ms)
+ GET /api/health 200 in 9ms (next.js: 4ms, application-code: 6ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/knowledge 200 in 46ms (next.js: 20ms, application-code: 26ms)
+ GET /w/e2e-80c6b4/integrations 200 in 642ms (next.js: 593ms, application-code: 50ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 4ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/connections 200 in 44ms (next.js: 18ms, application-code: 26ms)
+ GET /api/integrations/catalog?workspaceId=c20a75b6-5c98-44c3-8d9a-7711982b0cfe 200 in 62ms (next.js: 3ms, application-code: 59ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/oauth-apps/provenance?provider=google_sheets 200 in 638ms
+ GET /w/e2e-80c6b4/settings?tab=keys 200 in 68ms (next.js: 16ms, application-code: 51ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/api-keys 200 in 27ms (next.js: 18ms, application-code: 9ms)
+ GET /w/e2e-80c6b4/settings?tab=billing 200 in 61ms (next.js: 5ms, application-code: 57ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/usage 200 in 39ms (next.js: 16ms, application-code: 23ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe 200 in 38ms (next.js: 34ms, application-code: 4ms)
+ GET /w/e2e-80c6b4/agents/new 200 in 93ms (next.js: 21ms, application-code: 72ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/knowledge 200 in 49ms (next.js: 45ms, application-code: 3ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/flows 200 in 49ms (next.js: 30ms, application-code: 19ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/ai 200 in 50ms (next.js: 16ms, application-code: 34ms)
+ GET /w/e2e-80c6b4/knowledge 200 in 71ms (next.js: 18ms, application-code: 53ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/knowledge 200 in 22ms (next.js: 3ms, application-code: 18ms)
+ GET /w/e2e-80c6b4/integrations 200 in 63ms (next.js: 18ms, application-code: 45ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/c20a75b6-5c98-44c3-8d9a-7711982b0cfe/connections 200 in 35ms (next.js: 20ms, application-code: 15ms)
+ GET /api/integrations/catalog?workspaceId=c20a75b6-5c98-44c3-8d9a-7711982b0cfe 200 in 49ms (next.js: 3ms, application-code: 46ms)
+ POST /api/test/beta 200 in 53ms (next.js: 38ms, application-code: 16ms)
+ GET /api/auth-config 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ GET /sign-up 200 in 59ms (next.js: 3ms, application-code: 57ms)
+ GET /api/auth-config 200 in 10ms (next.js: 2ms, application-code: 8ms)
+ POST /api/beta/check 200 in 51ms (next.js: 34ms, application-code: 17ms)
+ GET /api/test/outbox?email=stranger-ba8b89bd%40flowline-e2e.test 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ POST /api/beta/check 200 in 16ms (next.js: 2ms, application-code: 13ms)
+ POST /api/beta/check 200 in 15ms (next.js: 2.0ms, application-code: 13ms)
+ POST /api/auth/sign-up/email 200 in 121ms (next.js: 19ms, application-code: 102ms)
+ GET /api/test/outbox?email=stranger-ba8b89bd%40flowline-e2e.test 200 in 7ms (next.js: 2.0ms, application-code: 5ms)
+ POST /api/beta/check 200 in 11ms (next.js: 1.7ms, application-code: 9ms)
+ POST /api/email 200 in 508ms (next.js: 2.0ms, application-code: 506ms)
+ POST /api/auth/sign-up/email 200 in 96ms (next.js: 14ms, application-code: 82ms)
+ GET /api/test/outbox?email=e2e-40ae764a%40flowline-e2e.test 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/email 200 in 21ms (next.js: 1.8ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 69ms (next.js: 1.8ms, application-code: 68ms)
+ POST /api/workspaces 201 in 39ms (next.js: 2ms, application-code: 37ms)
+ POST /api/onboarding 200 in 21ms (next.js: 1.7ms, application-code: 19ms)
+ POST /api/workspaces/e6199b70-ec3e-414c-814a-43163a17c8c4/invites 201 in 42ms (next.js: 13ms, application-code: 29ms)
+ POST /api/test/beta 200 in 5ms (next.js: 2.0ms, application-code: 3ms)
+ GET /invite/nLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 307 in 647ms (next.js: 600ms, application-code: 47ms)
+ GET /sign-in?next=invite%3AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 27ms (next.js: 2ms, application-code: 25ms)
+ GET /api/auth-config 200 in 14ms (next.js: 3ms, application-code: 11ms)
+ GET /sign-up?next=invite%3AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 15ms (next.js: 3ms, application-code: 12ms)
+ POST /api/beta/check 200 in 15ms (next.js: 2ms, application-code: 12ms)
+ POST /api/auth/sign-up/email 200 in 107ms (next.js: 15ms, application-code: 92ms)
+ GET /api/test/outbox?email=beta-invitee-e2e08c36%40flowline-e2e.test 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /verify-email?token=0_PvlYkJK8bAEIQGl4XyYDqdvqvx9m2Qj3rXxSQ1BbA&callbackURL=%2Fsign-in%3Fnext%3Dinvite%253AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 25ms (next.js: 2ms, application-code: 22ms)
+ POST /api/email 200 in 26ms (next.js: 2ms, application-code: 24ms)
+ GET /sign-in?next=invite%3AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 21ms (next.js: 4ms, application-code: 16ms)
+ GET /api/auth-config 200 in 7ms (next.js: 2.0ms, application-code: 5ms)
+ POST /api/auth/sign-in/email 200 in 80ms (next.js: 3ms, application-code: 76ms)
+ GET /app?next=invite%3AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 31ms (next.js: 4ms, application-code: 27ms)
+ GET /app?next=invite%3AnLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 35ms (next.js: 3ms, application-code: 31ms)
+ GET /invite/nLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 67ms (next.js: 20ms, application-code: 47ms)
+ GET /invite/nLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 67ms (next.js: 38ms, application-code: 28ms)
+ GET /api/invites/nLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 47ms (next.js: 30ms, application-code: 17ms)
+ POST /api/invites/nLVYbT5kTo1X9PLEmxkjQoRrHNJnHBP2efIUjr0cf0w 200 in 34ms (next.js: 2ms, application-code: 32ms)
+ GET /w/beta-invite-co-19/flows 200 in 59ms (next.js: 20ms, application-code: 39ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/e6199b70-ec3e-414c-814a-43163a17c8c4/usage 200 in 79ms (next.js: 37ms, application-code: 42ms)
+ GET /api/workspaces/e6199b70-ec3e-414c-814a-43163a17c8c4/flows 200 in 62ms (next.js: 41ms, application-code: 21ms)
+ GET /api/workspaces/e6199b70-ec3e-414c-814a-43163a17c8c4/overview 200 in 94ms (next.js: 16ms, application-code: 78ms)
+ POST /api/auth/sign-up/email 200 in 105ms (next.js: 16ms, application-code: 89ms)
+ GET /api/test/outbox?email=e2e-1bc500ac%40flowline-e2e.test 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ POST /api/email 200 in 25ms (next.js: 3ms, application-code: 22ms)
+ POST /api/auth/sign-in/email 200 in 67ms (next.js: 1.7ms, application-code: 65ms)
+ POST /api/workspaces 201 in 29ms (next.js: 1.7ms, application-code: 28ms)
+ POST /api/onboarding 200 in 24ms (next.js: 2ms, application-code: 22ms)
+ POST /api/workspaces/a4ce5eb1-1e66-49c2-83b2-a1c4dd5dcfdf/flows 201 in 30ms (next.js: 13ms, application-code: 16ms)
+ GET /w/e2e-bd55d3/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4 200 in 62ms (next.js: 15ms, application-code: 47ms)
+ GET /api/health 200 in 11ms (next.js: 4ms, application-code: 7ms)
+ GET /api/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4 200 in 47ms (next.js: 19ms, application-code: 28ms)
+ GET /api/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4/publish 200 in 91ms (next.js: 19ms, application-code: 72ms)
+ GET /api/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4/runs 200 in 73ms (next.js: 29ms, application-code: 44ms)
+ GET /api/integrations/catalog 200 in 38ms (next.js: 2ms, application-code: 36ms)
+ GET /api/workspaces/a4ce5eb1-1e66-49c2-83b2-a1c4dd5dcfdf/ai 200 in 37ms (next.js: 17ms, application-code: 20ms)
+ PUT /api/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4 200 in 55ms (next.js: 13ms, application-code: 42ms)
+ GET /api/flows/724ff4e7-5415-43f2-9f0e-3609a8c79fb4 200 in 23ms (next.js: 2ms, application-code: 21ms)
+ POST /api/auth/sign-up/email 200 in 98ms (next.js: 15ms, application-code: 83ms)
+ GET /api/test/outbox?email=e2e-b1052523%40flowline-e2e.test 200 in 9ms (next.js: 1.8ms, application-code: 7ms)
+ POST /api/email 200 in 25ms (next.js: 1.9ms, application-code: 23ms)
+ POST /api/auth/sign-in/email 200 in 71ms (next.js: 1.9ms, application-code: 70ms)
+ POST /api/workspaces 201 in 21ms (next.js: 2ms, application-code: 18ms)
+ POST /api/onboarding 200 in 11ms (next.js: 1.8ms, application-code: 9ms)
+ POST /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/flows 201 in 39ms (next.js: 13ms, application-code: 25ms)
+ GET /w/e2e-4a0b2d/flows 200 in 61ms (next.js: 14ms, application-code: 48ms)
+ GET /api/health 200 in 14ms (next.js: 4ms, application-code: 10ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/usage 200 in 64ms (next.js: 36ms, application-code: 29ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/flows 200 in 23ms (next.js: 5ms, application-code: 18ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/overview 200 in 74ms (next.js: 16ms, application-code: 59ms)
+ GET /w/e2e-4a0b2d/templates 200 in 71ms (next.js: 16ms, application-code: 55ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/connections 200 in 28ms (next.js: 14ms, application-code: 14ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/ai 200 in 48ms (next.js: 15ms, application-code: 33ms)
+ GET /w/e2e-4a0b2d/runs 200 in 61ms (next.js: 15ms, application-code: 46ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/runs?limit=25 200 in 33ms (next.js: 17ms, application-code: 15ms)
+ GET /w/e2e-4a0b2d/integrations 200 in 60ms (next.js: 15ms, application-code: 45ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/connections 200 in 37ms (next.js: 20ms, application-code: 17ms)
+ GET /api/integrations/catalog?workspaceId=375500aa-59ed-4505-9c25-657ffcdc434f 200 in 50ms (next.js: 3ms, application-code: 47ms)
+ GET /w/e2e-4a0b2d/agents 200 in 60ms (next.js: 15ms, application-code: 45ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/agents 200 in 47ms (next.js: 20ms, application-code: 26ms)
+ GET /w/e2e-4a0b2d/knowledge 200 in 60ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/knowledge 200 in 36ms (next.js: 19ms, application-code: 18ms)
+ GET /w/e2e-4a0b2d/settings 200 in 62ms (next.js: 14ms, application-code: 48ms)
+ GET /api/health 200 in 13ms (next.js: 4ms, application-code: 8ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/members 200 in 56ms (next.js: 18ms, application-code: 37ms)
+ GET /api/workspaces/375500aa-59ed-4505-9c25-657ffcdc434f/invites 200 in 36ms (next.js: 19ms, application-code: 16ms)
+ GET /w/e2e-4a0b2d/canvas 307 in 666ms (next.js: 604ms, application-code: 62ms)
+ GET /w/e2e-4a0b2d/flows/c4845b3f-a055-4d14-b4c5-1afad5fa6058 200 in 61ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 5ms)
+ GET /api/flows/c4845b3f-a055-4d14-b4c5-1afad5fa6058 200 in 49ms (next.js: 20ms, application-code: 29ms)
+ GET /api/flows/c4845b3f-a055-4d14-b4c5-1afad5fa6058/publish 200 in 73ms (next.js: 23ms, application-code: 51ms)
+ GET /api/flows/c4845b3f-a055-4d14-b4c5-1afad5fa6058/runs 200 in 48ms (next.js: 26ms, application-code: 22ms)
+ POST /api/auth/sign-up/email 200 in 97ms (next.js: 14ms, application-code: 82ms)
+ GET /api/test/outbox?email=e2e-6112d578%40flowline-e2e.test 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/email 200 in 22ms (next.js: 1.7ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 67ms (next.js: 1.8ms, application-code: 65ms)
+ POST /api/workspaces 201 in 29ms (next.js: 2ms, application-code: 27ms)
+ POST /api/onboarding 200 in 22ms (next.js: 1.8ms, application-code: 21ms)
+ POST /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/flows 201 in 31ms (next.js: 15ms, application-code: 16ms)
+ GET /w/e2e-195c5c/flows 200 in 66ms (next.js: 14ms, application-code: 52ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/usage 200 in 61ms (next.js: 37ms, application-code: 23ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/flows 200 in 17ms (next.js: 4ms, application-code: 14ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/overview 200 in 69ms (next.js: 19ms, application-code: 50ms)
+ GET /w/e2e-195c5c/templates 200 in 69ms (next.js: 16ms, application-code: 54ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/connections 200 in 25ms (next.js: 14ms, application-code: 11ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/ai 200 in 45ms (next.js: 15ms, application-code: 30ms)
+ GET /w/e2e-195c5c/runs 200 in 63ms (next.js: 17ms, application-code: 46ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/runs?limit=25 200 in 36ms (next.js: 17ms, application-code: 19ms)
+ GET /w/e2e-195c5c/integrations 200 in 68ms (next.js: 16ms, application-code: 52ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/connections 200 in 34ms (next.js: 18ms, application-code: 17ms)
+ GET /api/integrations/catalog?workspaceId=1b325f41-69a9-414b-bd0f-c627c25b95c5 200 in 52ms (next.js: 3ms, application-code: 50ms)
+ GET /w/e2e-195c5c/agents 200 in 58ms (next.js: 15ms, application-code: 43ms)
+ GET /api/health 200 in 12ms (next.js: 4ms, application-code: 7ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/agents 200 in 55ms (next.js: 19ms, application-code: 37ms)
+ GET /w/e2e-195c5c/knowledge 200 in 61ms (next.js: 15ms, application-code: 47ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/knowledge 200 in 45ms (next.js: 22ms, application-code: 23ms)
+ GET /w/e2e-195c5c/settings 200 in 58ms (next.js: 15ms, application-code: 43ms)
+ GET /api/health 200 in 13ms (next.js: 5ms, application-code: 8ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/members 200 in 53ms (next.js: 18ms, application-code: 35ms)
+ GET /api/workspaces/1b325f41-69a9-414b-bd0f-c627c25b95c5/invites 200 in 38ms (next.js: 19ms, application-code: 19ms)
+ GET /w/e2e-195c5c/canvas 307 in 81ms (next.js: 16ms, application-code: 65ms)
+ GET /w/e2e-195c5c/flows/dece3a7d-8f22-48f8-aa4f-e58df70cbbfc 200 in 68ms (next.js: 16ms, application-code: 53ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/flows/dece3a7d-8f22-48f8-aa4f-e58df70cbbfc 200 in 37ms (next.js: 19ms, application-code: 18ms)
+ GET /api/flows/dece3a7d-8f22-48f8-aa4f-e58df70cbbfc/publish 200 in 64ms (next.js: 19ms, application-code: 45ms)
+ GET /api/flows/dece3a7d-8f22-48f8-aa4f-e58df70cbbfc/runs 200 in 43ms (next.js: 20ms, application-code: 23ms)
+ POST /api/auth/sign-up/email 200 in 97ms (next.js: 14ms, application-code: 82ms)
+ GET /api/test/outbox?email=e2e-984524bc%40flowline-e2e.test 200 in 7ms (next.js: 1.7ms, application-code: 6ms)
+ POST /api/email 200 in 19ms (next.js: 2ms, application-code: 17ms)
+ POST /api/auth/sign-in/email 200 in 67ms (next.js: 1.7ms, application-code: 65ms)
+ POST /api/workspaces 201 in 25ms (next.js: 1.7ms, application-code: 23ms)
+ POST /api/onboarding 200 in 23ms (next.js: 1.7ms, application-code: 22ms)
+ POST /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/flows 201 in 28ms (next.js: 13ms, application-code: 14ms)
+ GET /w/e2e-689d3c/flows 200 in 58ms (next.js: 15ms, application-code: 43ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/usage 200 in 42ms (next.js: 17ms, application-code: 25ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/flows 200 in 24ms (next.js: 4ms, application-code: 19ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/overview 200 in 72ms (next.js: 18ms, application-code: 54ms)
+ GET /w/e2e-689d3c/templates 200 in 69ms (next.js: 15ms, application-code: 54ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/connections 200 in 43ms (next.js: 30ms, application-code: 13ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/ai 200 in 45ms (next.js: 15ms, application-code: 30ms)
+ GET /w/e2e-689d3c/runs 200 in 64ms (next.js: 16ms, application-code: 48ms)
+ GET /api/health 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/runs?limit=25 200 in 45ms (next.js: 17ms, application-code: 28ms)
+ GET /w/e2e-689d3c/integrations 200 in 56ms (next.js: 16ms, application-code: 40ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/connections 200 in 41ms (next.js: 24ms, application-code: 17ms)
+ GET /api/integrations/catalog?workspaceId=dfa94b51-ff1a-48da-a4d0-5f60414ea644 200 in 192ms (next.js: 3ms, application-code: 189ms)
+ GET /w/e2e-689d3c/agents 200 in 60ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/agents 200 in 32ms (next.js: 18ms, application-code: 14ms)
+ GET /w/e2e-689d3c/knowledge 200 in 65ms (next.js: 15ms, application-code: 49ms)
+ GET /api/health 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/knowledge 200 in 38ms (next.js: 16ms, application-code: 22ms)
+ GET /w/e2e-689d3c/settings 200 in 60ms (next.js: 16ms, application-code: 44ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/members 200 in 45ms (next.js: 16ms, application-code: 29ms)
+ GET /api/workspaces/dfa94b51-ff1a-48da-a4d0-5f60414ea644/invites 200 in 45ms (next.js: 31ms, application-code: 15ms)
+ GET /w/e2e-689d3c/canvas 307 in 73ms (next.js: 15ms, application-code: 58ms)
+ GET /w/e2e-689d3c/flows/bb229810-b329-42d6-b479-652d18efdc43 200 in 68ms (next.js: 15ms, application-code: 52ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/flows/bb229810-b329-42d6-b479-652d18efdc43 200 in 45ms (next.js: 17ms, application-code: 28ms)
+ GET /api/flows/bb229810-b329-42d6-b479-652d18efdc43/publish 200 in 60ms (next.js: 19ms, application-code: 42ms)
+ GET /api/flows/bb229810-b329-42d6-b479-652d18efdc43/runs 200 in 37ms (next.js: 19ms, application-code: 18ms)
+ GET / 200 in 52ms (next.js: 3ms, application-code: 49ms)
+ GET /sign-up 200 in 19ms (next.js: 3ms, application-code: 16ms)
+ GET /api/auth-config 200 in 7ms (next.js: 1.9ms, application-code: 5ms)
+ POST /api/auth/sign-up/email 200 in 109ms (next.js: 16ms, application-code: 93ms)
+ GET /api/me 401 in 17ms (next.js: 2ms, application-code: 15ms)
+ GET /api/test/outbox?email=journey-43947add%40flowline-e2e.test 200 in 9ms (next.js: 1.8ms, application-code: 7ms)
+ GET /verify-email?token=YGJk_RgqwBfPhDHaVtCcIBRG8UmKfjxKEB8f1ubEp6g&callbackURL=%2Fsign-in 200 in 23ms (next.js: 2ms, application-code: 21ms)
+ POST /api/email 200 in 26ms (next.js: 2ms, application-code: 24ms)
+ GET /sign-in 200 in 19ms (next.js: 3ms, application-code: 15ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/auth/sign-in/email 200 in 85ms (next.js: 3ms, application-code: 82ms)
+ GET /app 200 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /app 200 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /onboarding 200 in 72ms (next.js: 5ms, application-code: 67ms)
+ GET /onboarding 200 in 72ms (next.js: 20ms, application-code: 53ms)
+ POST /api/workspaces 201 in 58ms (next.js: 2ms, application-code: 56ms)
+ POST /api/workspaces/43acc891-2e9f-4cc8-b95f-b9e1a68c132e/flows 201 in 36ms (next.js: 17ms, application-code: 19ms)
+ POST /api/onboarding 200 in 19ms (next.js: 2.0ms, application-code: 17ms)
+ GET /w/journey-co-19/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 60ms (next.js: 20ms, application-code: 39ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 38ms (next.js: 18ms, application-code: 20ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/publish 200 in 68ms (next.js: 19ms, application-code: 49ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/runs 200 in 43ms (next.js: 23ms, application-code: 20ms)
+ GET /api/integrations/catalog 200 in 40ms (next.js: 3ms, application-code: 37ms)
+ GET /api/workspaces/43acc891-2e9f-4cc8-b95f-b9e1a68c132e/ai 200 in 43ms (next.js: 17ms, application-code: 26ms)
+ PUT /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 40ms (next.js: 14ms, application-code: 26ms)
+ GET /w/journey-co-19/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 59ms (next.js: 15ms, application-code: 44ms)
+ GET /api/health 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 30ms (next.js: 4ms, application-code: 27ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/publish 200 in 78ms (next.js: 32ms, application-code: 46ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/runs 200 in 44ms (next.js: 24ms, application-code: 20ms)
+2026-09-29T09:47:20.917Z [worker] run 0cbf2c8b-cb5f-431d-b45c-485db4ecb391 claimed
+ POST /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/runs 202 in 82ms (next.js: 3ms, application-code: 80ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/runs 200 in 41ms (next.js: 3ms, application-code: 38ms)
+2026-09-29T09:47:20.970Z [worker] run 0cbf2c8b-cb5f-431d-b45c-485db4ecb391 done
+ GET /api/runs/0cbf2c8b-cb5f-431d-b45c-485db4ecb391 200 in 44ms (next.js: 17ms, application-code: 27ms)
+ GET /w/journey-co-19/runs?run=0cbf2c8b-cb5f-431d-b45c-485db4ecb391 200 in 40ms (next.js: 22ms, application-code: 18ms)
+ GET /api/workspaces/43acc891-2e9f-4cc8-b95f-b9e1a68c132e/runs?limit=25 200 in 49ms (next.js: 17ms, application-code: 32ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5 200 in 25ms (next.js: 15ms, application-code: 11ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/runs 200 in 42ms (next.js: 14ms, application-code: 28ms)
+ GET /api/runs/0cbf2c8b-cb5f-431d-b45c-485db4ecb391 200 in 44ms (next.js: 14ms, application-code: 30ms)
+ GET /api/flows/35c4c731-a18f-47a0-9a39-15279829e3a5/versions 200 in 858ms (next.js: 839ms, application-code: 19ms)
+ POST /api/auth/sign-up/email 200 in 95ms (next.js: 14ms, application-code: 80ms)
+ GET /api/test/outbox?email=e2e-cc540299%40flowline-e2e.test 200 in 10ms (next.js: 2ms, application-code: 8ms)
+ POST /api/email 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 1.7ms, application-code: 70ms)
+ POST /api/workspaces 201 in 17ms (next.js: 2ms, application-code: 15ms)
+ POST /api/onboarding 200 in 23ms (next.js: 1.7ms, application-code: 21ms)
+ POST /api/workspaces/8e2d2fa8-5f51-4309-8f96-1f5cdb534842/flows 201 in 35ms (next.js: 15ms, application-code: 21ms)
+ POST /api/workspaces/8e2d2fa8-5f51-4309-8f96-1f5cdb534842/connections 201 in 73ms (next.js: 16ms, application-code: 58ms)
+ PUT /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9 200 in 37ms (next.js: 15ms, application-code: 22ms)
+ GET /w/e2e-49339a/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9 200 in 62ms (next.js: 16ms, application-code: 46ms)
+ GET /api/health 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9 200 in 25ms (next.js: 4ms, application-code: 22ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/publish 200 in 75ms (next.js: 24ms, application-code: 50ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 49ms (next.js: 24ms, application-code: 24ms)
+ POST /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 202 in 67ms (next.js: 3ms, application-code: 64ms)
+2026-09-29T09:47:24.670Z [worker] run f0207dab-7044-41fb-aebc-6d64e0aa2122 claimed
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 44ms (next.js: 2ms, application-code: 42ms)
+2026-09-29T09:47:24.720Z [worker] run f0207dab-7044-41fb-aebc-6d64e0aa2122 done
+ GET /api/runs/f0207dab-7044-41fb-aebc-6d64e0aa2122 200 in 49ms (next.js: 23ms, application-code: 26ms)
+ GET /w/e2e-49339a/runs?run=f0207dab-7044-41fb-aebc-6d64e0aa2122 200 in 41ms (next.js: 23ms, application-code: 17ms)
+ GET /api/workspaces/8e2d2fa8-5f51-4309-8f96-1f5cdb534842/runs?limit=25 200 in 34ms (next.js: 16ms, application-code: 18ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 51ms (next.js: 18ms, application-code: 33ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 24ms (next.js: 2ms, application-code: 21ms)
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 20ms (next.js: 3ms, application-code: 18ms)
+ POST /api/approvals/13003ede-c201-4862-8cfd-fc455f7c6c93/decide 200 in 950ms (next.js: 906ms, application-code: 44ms)
+2026-09-29T09:47:26.922Z [worker] run f0207dab-7044-41fb-aebc-6d64e0aa2122 claimed
+ GET /api/runs/f0207dab-7044-41fb-aebc-6d64e0aa2122 200 in 37ms (next.js: 17ms, application-code: 20ms)
+2026-09-29T09:47:26.991Z [worker] run f0207dab-7044-41fb-aebc-6d64e0aa2122 done
+ GET /api/flows/b5234d55-7d3f-4cb0-87e3-3910d0dc53c9/runs 200 in 50ms (next.js: 20ms, application-code: 30ms)
+ POST /api/auth/sign-up/email 200 in 99ms (next.js: 17ms, application-code: 82ms)
+ GET /api/test/outbox?email=e2e-be4394c4%40flowline-e2e.test 200 in 9ms (next.js: 2ms, application-code: 6ms)
+ POST /api/email 200 in 22ms (next.js: 2ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 76ms (next.js: 2ms, application-code: 74ms)
+ POST /api/workspaces 201 in 32ms (next.js: 2ms, application-code: 30ms)
+ POST /api/onboarding 200 in 17ms (next.js: 1.8ms, application-code: 16ms)
+ GET /w/e2e-5fdc4a/settings 200 in 58ms (next.js: 16ms, application-code: 42ms)
+ GET /api/health 200 in 12ms (next.js: 3ms, application-code: 8ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members 200 in 55ms (next.js: 21ms, application-code: 34ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 200 in 36ms (next.js: 18ms, application-code: 18ms)
+ POST /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 201 in 51ms (next.js: 5ms, application-code: 46ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members 200 in 20ms (next.js: 4ms, application-code: 16ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 200 in 21ms (next.js: 8ms, application-code: 12ms)
+ POST /api/auth/sign-up/email 200 in 99ms (next.js: 16ms, application-code: 83ms)
+ GET /api/test/outbox?email=viewer-4efffa10%40flowline-e2e.test 200 in 15ms (next.js: 3ms, application-code: 12ms)
+ POST /api/email 200 in 22ms (next.js: 1.8ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 73ms (next.js: 4ms, application-code: 70ms)
+ GET /invite/r330L9Wj06z0P07SY3SS5TckIxyHLEeH0jn61WI59ZA 200 in 51ms (next.js: 14ms, application-code: 37ms)
+ GET /api/invites/r330L9Wj06z0P07SY3SS5TckIxyHLEeH0jn61WI59ZA 200 in 48ms (next.js: 19ms, application-code: 29ms)
+ POST /api/invites/r330L9Wj06z0P07SY3SS5TckIxyHLEeH0jn61WI59ZA 200 in 32ms (next.js: 2ms, application-code: 30ms)
+ GET /w/e2e-5fdc4a/flows 200 in 53ms (next.js: 19ms, application-code: 34ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/usage 200 in 73ms (next.js: 36ms, application-code: 37ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/flows 200 in 74ms (next.js: 51ms, application-code: 23ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/overview 200 in 113ms (next.js: 18ms, application-code: 95ms)
+ POST /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/connections 201 in 51ms (next.js: 20ms, application-code: 31ms)
+ POST /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/flows 201 in 30ms (next.js: 3ms, application-code: 27ms)
+ PUT /api/flows/71f60ca0-14a4-4b31-a5a2-6d6d796e2ebb 200 in 48ms (next.js: 16ms, application-code: 32ms)
+ POST /api/flows/71f60ca0-14a4-4b31-a5a2-6d6d796e2ebb/runs 202 in 84ms (next.js: 17ms, application-code: 67ms)
+2026-09-29T09:47:30.244Z [worker] run 1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 claimed
+2026-09-29T09:47:30.283Z [worker] run 1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 done
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 43ms (next.js: 17ms, application-code: 26ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 34ms (next.js: 2ms, application-code: 32ms)
+ GET /w/e2e-5fdc4a/runs?run=1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 76ms (next.js: 17ms, application-code: 60ms)
+ GET /api/health 200 in 10ms (next.js: 4ms, application-code: 6ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/runs?limit=25 200 in 60ms (next.js: 27ms, application-code: 33ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 73ms (next.js: 32ms, application-code: 41ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/approvals 200 in 810ms (next.js: 792ms, application-code: 19ms)
+ POST /api/approvals/cc4bb6df-986f-47b9-a810-3a48fecf115c/decide 403 in 29ms (next.js: 13ms, application-code: 15ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 30ms (next.js: 14ms, application-code: 17ms)
+ GET /w/e2e-5fdc4a/settings 200 in 59ms (next.js: 15ms, application-code: 44ms)
+ GET /api/health 200 in 12ms (next.js: 4ms, application-code: 9ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members 200 in 54ms (next.js: 20ms, application-code: 34ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 200 in 54ms (next.js: 38ms, application-code: 17ms)
+ PATCH /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members/5b1a687f-ef62-4e1f-8079-8762a944a737 200 in 845ms (next.js: 821ms, application-code: 24ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members 200 in 60ms (next.js: 18ms, application-code: 43ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 200 in 62ms (next.js: 34ms, application-code: 29ms)
+ GET /w/e2e-5fdc4a/runs?run=1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 61ms (next.js: 16ms, application-code: 45ms)
+ GET /api/health 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/runs?limit=25 200 in 56ms (next.js: 20ms, application-code: 36ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 42ms (next.js: 17ms, application-code: 25ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 31ms (next.js: 3ms, application-code: 27ms)
+ POST /api/approvals/cc4bb6df-986f-47b9-a810-3a48fecf115c/decide 200 in 56ms (next.js: 15ms, application-code: 41ms)
+2026-09-29T09:47:34.310Z [worker] run 1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 claimed
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 23ms (next.js: 4ms, application-code: 19ms)
+2026-09-29T09:47:34.370Z [worker] run 1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 done
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 32ms (next.js: 3ms, application-code: 29ms)
+ DELETE /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members/5b1a687f-ef62-4e1f-8079-8762a944a737 200 in 45ms (next.js: 19ms, application-code: 26ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/members 200 in 53ms (next.js: 20ms, application-code: 32ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/invites 200 in 54ms (next.js: 38ms, application-code: 15ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/flows 404 in 37ms (next.js: 18ms, application-code: 18ms)
+ GET /api/runs/1ae6bc28-2d0f-47d7-904f-f3f003ccd0a8 200 in 21ms (next.js: 18ms, application-code: 4ms)
+ GET /api/workspaces/cffe96cf-6d9c-4607-a711-227939a659a3/audit 200 in 40ms (next.js: 22ms, application-code: 18ms)
+ POST /api/auth/sign-up/email 200 in 101ms (next.js: 16ms, application-code: 85ms)
+ GET /api/test/outbox?email=e2e-48572bc0%40flowline-e2e.test 200 in 13ms (next.js: 3ms, application-code: 9ms)
+ POST /api/email 200 in 31ms (next.js: 2ms, application-code: 29ms)
+ POST /api/auth/sign-in/email 200 in 73ms (next.js: 3ms, application-code: 70ms)
+ POST /api/workspaces 201 in 23ms (next.js: 2ms, application-code: 20ms)
+ POST /api/onboarding 200 in 23ms (next.js: 1.8ms, application-code: 21ms)
+ POST /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/flows 201 in 30ms (next.js: 15ms, application-code: 14ms)
+ GET /w/e2e-558f40/settings?tab=keys 200 in 65ms (next.js: 16ms, application-code: 49ms)
+ GET /api/health 200 in 11ms (next.js: 5ms, application-code: 6ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys 200 in 37ms (next.js: 20ms, application-code: 17ms)
+ POST /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys 201 in 25ms (next.js: 3ms, application-code: 22ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys 200 in 27ms (next.js: 3ms, application-code: 25ms)
+ GET /api/v1/flows 403 in 51ms (next.js: 42ms, application-code: 10ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/flows 200 in 40ms (next.js: 20ms, application-code: 20ms)
+ POST /api/v1/flows/d8894bbb-32c2-4cae-a6bf-a0d3cff98047/runs 202 in 907ms (next.js: 867ms, application-code: 40ms)
+2026-09-29T09:47:38.076Z [worker] run d7625c52-e3c7-4ba2-ac83-11f5c3ff712e claimed
+2026-09-29T09:47:38.119Z [worker] run d7625c52-e3c7-4ba2-ac83-11f5c3ff712e done
+ GET /w/e2e-558f40/settings?tab=keys 200 in 72ms (next.js: 18ms, application-code: 54ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys 200 in 39ms (next.js: 19ms, application-code: 20ms)
+ DELETE /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys/cceccdfb-4317-4d62-a698-2de465b33e59 200 in 904ms (next.js: 871ms, application-code: 33ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/api-keys 200 in 35ms (next.js: 17ms, application-code: 18ms)
+ GET /api/workspaces/7ee361d1-921a-4558-91a5-09be288cfc06/flows 200 in 39ms (next.js: 15ms, application-code: 24ms)
+ POST /api/v1/flows/d8894bbb-32c2-4cae-a6bf-a0d3cff98047/runs 401 in 18ms (next.js: 14ms, application-code: 5ms)
+ POST /api/auth/sign-up/email 200 in 101ms (next.js: 15ms, application-code: 86ms)
+ GET /api/test/outbox?email=e2e-624549d2%40flowline-e2e.test 200 in 13ms (next.js: 3ms, application-code: 9ms)
+ POST /api/email 200 in 23ms (next.js: 2ms, application-code: 21ms)
+ POST /api/auth/sign-in/email 200 in 76ms (next.js: 3ms, application-code: 73ms)
+ POST /api/workspaces 201 in 21ms (next.js: 2ms, application-code: 19ms)
+ POST /api/onboarding 200 in 20ms (next.js: 1.8ms, application-code: 18ms)
+ POST /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/ai/connections 201 in 62ms (next.js: 14ms, application-code: 48ms)
+ PUT /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/ai/default-route 200 in 32ms (next.js: 15ms, application-code: 18ms)
+ PUT /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/ai/policy 200 in 868ms (next.js: 842ms, application-code: 26ms)
+ POST /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/flows 201 in 30ms (next.js: 16ms, application-code: 14ms)
+ PUT /api/flows/55928745-2039-44b6-aa95-7411a09001da 200 in 80ms (next.js: 14ms, application-code: 67ms)
+ POST /api/flows/55928745-2039-44b6-aa95-7411a09001da/publish 201 in 47ms (next.js: 15ms, application-code: 31ms)
+ GET /w/e2e-10f9a3/knowledge 200 in 58ms (next.js: 14ms, application-code: 44ms)
+ GET /api/health 200 in 14ms (next.js: 4ms, application-code: 10ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/knowledge 200 in 41ms (next.js: 21ms, application-code: 19ms)
+ POST /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/knowledge 201 in 37ms (next.js: 3ms, application-code: 34ms)
+2026-09-29T09:47:42.784Z [worker] knowledge source indexed
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/knowledge 200 in 30ms (next.js: 2ms, application-code: 28ms)
+ GET /w/e2e-10f9a3/agents 200 in 66ms (next.js: 16ms, application-code: 50ms)
+ GET /api/health 200 in 10ms (next.js: 4ms, application-code: 6ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/agents 200 in 43ms (next.js: 18ms, application-code: 25ms)
+ GET /w/e2e-10f9a3/agents/new 200 in 34ms (next.js: 18ms, application-code: 16ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/flows 200 in 57ms (next.js: 37ms, application-code: 20ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/knowledge 200 in 57ms (next.js: 42ms, application-code: 16ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/ai 200 in 72ms (next.js: 18ms, application-code: 54ms)
+ GET /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/ai/models 200 in 47ms (next.js: 26ms, application-code: 21ms)
+ POST /api/workspaces/68d53e91-69b7-4ae5-a639-9d57c4b5a190/agents 201 in 40ms (next.js: 3ms, application-code: 38ms)
+ GET /w/e2e-10f9a3/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c 200 in 652ms (next.js: 638ms, application-code: 14ms)
+ GET /api/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c 200 in 994ms (next.js: 976ms, application-code: 18ms)
+ GET /api/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c/runs 200 in 917ms (next.js: 893ms, application-code: 24ms)
+ POST /api/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c/runs 202 in 478ms (next.js: 432ms, application-code: 46ms)
+2026-09-29T09:47:46.561Z [worker] agent run 18b9e605-9adf-4e15-a00f-1d7b45cc5de4 claimed
+2026-09-29T09:47:46.709Z [worker] agent run 18b9e605-9adf-4e15-a00f-1d7b45cc5de4 succeeded
+ GET /api/agent-runs/18b9e605-9adf-4e15-a00f-1d7b45cc5de4 200 in 940ms (next.js: 908ms, application-code: 32ms)
+ POST /api/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c/runs 202 in 62ms (next.js: 18ms, application-code: 43ms)
+2026-09-29T09:47:48.154Z [worker] agent run f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad claimed
+ GET /api/agent-runs/f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad 200 in 49ms (next.js: 17ms, application-code: 32ms)
+2026-09-29T09:47:48.232Z [worker] agent run f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad waiting for approval
+ GET /api/agent-runs/f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad 200 in 27ms (next.js: 14ms, application-code: 13ms)
+2026-09-29T09:47:49.533Z [worker] agent run f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad claimed
+ POST /api/approvals/d4dffc01-225c-4536-9509-d4e60a3e68fd/decide 200 in 44ms (next.js: 14ms, application-code: 29ms)
+ GET /api/agents/27af4d6a-fcbe-473f-908b-10c698a16c2c/runs 200 in 44ms (next.js: 25ms, application-code: 19ms)
+ GET /api/agent-runs/f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad 200 in 49ms (next.js: 3ms, application-code: 46ms)
+2026-09-29T09:47:49.606Z [worker] run 094b27fb-0fa5-42bf-937e-8b636494ba2a claimed
+2026-09-29T09:47:49.656Z [worker] run 094b27fb-0fa5-42bf-937e-8b636494ba2a done
+2026-09-29T09:47:50.167Z [worker] agent run f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad succeeded
+ GET /api/agent-runs/f6ddecc6-34f9-4dac-85c4-45dd2be1c6ad 200 in 42ms (next.js: 14ms, application-code: 29ms)
+ GET /api/flows/55928745-2039-44b6-aa95-7411a09001da/runs 200 in 39ms (next.js: 14ms, application-code: 25ms)
+ POST /api/auth/sign-up/email 200 in 100ms (next.js: 16ms, application-code: 84ms)
+ GET /api/test/outbox?email=e2e-2afdb428%40flowline-e2e.test 200 in 9ms (next.js: 2ms, application-code: 7ms)
+ POST /api/email 200 in 23ms (next.js: 2ms, application-code: 21ms)
+ POST /api/auth/sign-in/email 200 in 75ms (next.js: 2.0ms, application-code: 73ms)
+ POST /api/workspaces 201 in 17ms (next.js: 2ms, application-code: 15ms)
+ POST /api/onboarding 200 in 16ms (next.js: 2.0ms, application-code: 14ms)
+ POST /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/ai/connections 201 in 75ms (next.js: 15ms, application-code: 60ms)
+ PUT /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/ai/default-route 200 in 33ms (next.js: 15ms, application-code: 17ms)
+ PUT /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/ai/policy 200 in 36ms (next.js: 15ms, application-code: 21ms)
+ GET /w/e2e-600e93/flows 200 in 69ms (next.js: 16ms, application-code: 53ms)
+ GET /api/health 200 in 15ms (next.js: 4ms, application-code: 11ms)
+ GET /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/flows 200 in 71ms (next.js: 48ms, application-code: 23ms)
+ GET /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/usage 200 in 75ms (next.js: 24ms, application-code: 51ms)
+ GET /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/overview 200 in 120ms (next.js: 24ms, application-code: 96ms)
+ POST /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/copilot 201 in 1157ms (next.js: 997ms, application-code: 160ms)
+ POST /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/copilot/58b2b331-45f2-44b4-96e1-5e98d1bd86f6 200 in 943ms (next.js: 920ms, application-code: 22ms)
+ GET /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/flows 200 in 28ms (next.js: 15ms, application-code: 13ms)
+ POST /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/copilot 201 in 139ms (next.js: 17ms, application-code: 122ms)
+ POST /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/copilot/e40385cd-38b8-442c-9df9-2aaaa3efd0d0 200 in 58ms (next.js: 16ms, application-code: 42ms)
+ GET /w/e2e-600e93/flows/48ad6fa4-b330-4402-8ed1-420c0e35e5ed 200 in 36ms (next.js: 19ms, application-code: 16ms)
+ GET /api/flows/48ad6fa4-b330-4402-8ed1-420c0e35e5ed 200 in 55ms (next.js: 24ms, application-code: 30ms)
+ GET /api/flows/48ad6fa4-b330-4402-8ed1-420c0e35e5ed/publish 200 in 76ms (next.js: 20ms, application-code: 57ms)
+ GET /api/flows/48ad6fa4-b330-4402-8ed1-420c0e35e5ed/runs 200 in 53ms (next.js: 26ms, application-code: 28ms)
+ GET /api/workspaces/b334e903-bfc4-4618-afac-e06e0975524a/flows 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ GET /api/flows/48ad6fa4-b330-4402-8ed1-420c0e35e5ed/runs 200 in 25ms (next.js: 4ms, application-code: 21ms)
+ POST /api/auth/sign-up/email 200 in 107ms (next.js: 20ms, application-code: 87ms)
+ GET /api/test/outbox?email=e2e-d1d00497%40flowline-e2e.test 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ POST /api/email 200 in 26ms (next.js: 2ms, application-code: 23ms)
+ POST /api/auth/sign-in/email 200 in 75ms (next.js: 3ms, application-code: 71ms)
+ POST /api/workspaces 201 in 21ms (next.js: 3ms, application-code: 18ms)
+ POST /api/onboarding 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ POST /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/ai/connections 201 in 70ms (next.js: 15ms, application-code: 54ms)
+ PUT /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/ai/default-route 200 in 33ms (next.js: 14ms, application-code: 19ms)
+ PUT /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/ai/policy 200 in 32ms (next.js: 15ms, application-code: 17ms)
+ POST /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/flows 201 in 29ms (next.js: 16ms, application-code: 14ms)
+ PUT /api/flows/5f8d1217-362b-4d12-b1e7-0919608b50f5 200 in 51ms (next.js: 19ms, application-code: 32ms)
+ POST /api/flows/5f8d1217-362b-4d12-b1e7-0919608b50f5/publish 201 in 49ms (next.js: 15ms, application-code: 33ms)
+ POST /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/agents 201 in 53ms (next.js: 16ms, application-code: 37ms)
+ POST /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/invites 201 in 50ms (next.js: 17ms, application-code: 33ms)
+ POST /api/auth/sign-up/email 200 in 108ms (next.js: 16ms, application-code: 92ms)
+ GET /api/test/outbox?email=vw-711c0481%40flowline-e2e.test 200 in 12ms (next.js: 4ms, application-code: 8ms)
+ POST /api/email 200 in 34ms (next.js: 3ms, application-code: 30ms)
+ POST /api/auth/sign-in/email 200 in 80ms (next.js: 3ms, application-code: 77ms)
+ POST /api/invites/ZkOPR_PYnZQwV8Qk4lhQX5fyZdR7PBOd6Hh_Q3Q5wGI 200 in 49ms (next.js: 19ms, application-code: 30ms)
+ GET /w/e2e-db0490/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17 200 in 81ms (next.js: 23ms, application-code: 58ms)
+ GET /api/health 200 in 13ms (next.js: 4ms, application-code: 9ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17 200 in 49ms (next.js: 21ms, application-code: 28ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17/runs 200 in 39ms (next.js: 22ms, application-code: 17ms)
+ POST /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17/runs 202 in 60ms (next.js: 2ms, application-code: 57ms)
+2026-09-29T09:47:58.959Z [worker] agent run eaec601c-021d-48fd-916f-dd53c6562de3 claimed
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 51ms (next.js: 22ms, application-code: 29ms)
+2026-09-29T09:47:59.049Z [worker] agent run eaec601c-021d-48fd-916f-dd53c6562de3 waiting for approval
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 36ms (next.js: 16ms, application-code: 21ms)
+ GET /w/e2e-db0490/flows 200 in 58ms (next.js: 16ms, application-code: 42ms)
+ GET /api/health 200 in 11ms (next.js: 4ms, application-code: 8ms)
+ GET /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/usage 200 in 68ms (next.js: 23ms, application-code: 44ms)
+ GET /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/flows 200 in 70ms (next.js: 45ms, application-code: 25ms)
+ GET /api/workspaces/b58387c5-f6ef-43a8-9aaa-db0767fed3ec/overview 200 in 117ms (next.js: 24ms, application-code: 93ms)
+ GET /w/e2e-db0490/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17?tab=runs&run=eaec601c-021d-48fd-916f-dd53c6562de3 200 in 42ms (next.js: 22ms, application-code: 21ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17 200 in 47ms (next.js: 19ms, application-code: 28ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17/runs 200 in 50ms (next.js: 22ms, application-code: 29ms)
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 58ms (next.js: 19ms, application-code: 39ms)
+ GET /w/e2e-db0490/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17 200 in 56ms (next.js: 4ms, application-code: 52ms)
+ GET /api/health 200 in 12ms (next.js: 3ms, application-code: 9ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17 200 in 36ms (next.js: 4ms, application-code: 32ms)
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17/runs 200 in 28ms (next.js: 2ms, application-code: 26ms)
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 22ms (next.js: 1.9ms, application-code: 20ms)
+ POST /api/approvals/0066ad99-3b74-4dac-84a7-bd81de24bf2b/decide 200 in 61ms (next.js: 19ms, application-code: 42ms)
+2026-09-29T09:48:02.379Z [worker] agent run eaec601c-021d-48fd-916f-dd53c6562de3 claimed
+ GET /api/agents/cda64867-2c0b-48a6-8b54-4d1bebecdf17/runs 200 in 60ms (next.js: 42ms, application-code: 18ms)
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 66ms (next.js: 19ms, application-code: 47ms)
+2026-09-29T09:48:02.456Z [worker] run c9031519-f181-4adf-a4a2-ac2238a1eb1e claimed
+2026-09-29T09:48:02.508Z [worker] run c9031519-f181-4adf-a4a2-ac2238a1eb1e done
+2026-09-29T09:48:03.009Z [worker] agent run eaec601c-021d-48fd-916f-dd53c6562de3 succeeded
+ GET /api/agent-runs/eaec601c-021d-48fd-916f-dd53c6562de3 200 in 34ms (next.js: 15ms, application-code: 19ms)
+ GET /api/flows/5f8d1217-362b-4d12-b1e7-0919608b50f5/runs 200 in 29ms (next.js: 16ms, application-code: 13ms)
+ POST /api/auth/sign-up/email 200 in 96ms (next.js: 15ms, application-code: 81ms)
+ GET /api/test/outbox?email=e2e-f374e674%40flowline-e2e.test 200 in 7ms (next.js: 1.8ms, application-code: 6ms)
+ POST /api/email 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 75ms (next.js: 2ms, application-code: 73ms)
+ POST /api/workspaces 201 in 26ms (next.js: 2ms, application-code: 24ms)
+ POST /api/onboarding 200 in 20ms (next.js: 2.0ms, application-code: 18ms)
+ GET /w/e2e-d67237/knowledge 200 in 61ms (next.js: 15ms, application-code: 46ms)
+ GET /api/health 200 in 11ms (next.js: 2ms, application-code: 8ms)
+ GET /api/workspaces/9dbbf74d-7560-47c4-baf2-47962e7fa664/knowledge 200 in 36ms (next.js: 18ms, application-code: 18ms)
+ GET /sign-in 200 in 31ms (next.js: 2ms, application-code: 29ms)
+ GET /api/sso/start?workspace=no-such-workspace-xyz 307 in 43ms (next.js: 35ms, application-code: 8ms)
+ GET /sign-in?sso_error=SSO%20isn%27t%20set%20up%20for%20that%20workspace 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET /sign-in 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ POST /sign-in 200 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /api/auth-config 200 in 8ms (next.js: 2ms, application-code: 6ms)
+ POST /api/auth/sign-up/email 200 in 97ms (next.js: 16ms, application-code: 81ms)
+ GET /api/test/outbox?email=e2e-aa91eb13%40flowline-e2e.test 200 in 8ms (next.js: 1.8ms, application-code: 6ms)
+ POST /api/email 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ POST /api/auth/sign-in/email 200 in 72ms (next.js: 2ms, application-code: 69ms)
+ POST /api/workspaces 201 in 49ms (next.js: 1.8ms, application-code: 47ms)
+ POST /api/onboarding 200 in 20ms (next.js: 1.9ms, application-code: 18ms)
+ POST /api/workspaces/f98c3acf-89b0-4433-8dd8-f366e2b7ddbc/flows 201 in 30ms (next.js: 14ms, application-code: 16ms)
+ POST /api/auth/sign-up/email 200 in 82ms (next.js: 3ms, application-code: 79ms)
+ GET /api/test/outbox?email=e2e-76740b59%40flowline-e2e.test 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ POST /api/email 200 in 22ms (next.js: 3ms, application-code: 19ms)
+ POST /api/auth/sign-in/email 200 in 68ms (next.js: 1.9ms, application-code: 66ms)
+ POST /api/workspaces 201 in 33ms (next.js: 3ms, application-code: 30ms)
+ POST /api/onboarding 200 in 13ms (next.js: 1.9ms, application-code: 11ms)
+ POST /api/workspaces/09b75737-0c99-4a3c-b379-8476b0c69e49/flows 201 in 26ms (next.js: 3ms, application-code: 23ms)
+ POST /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495/runs 202 in 53ms (next.js: 14ms, application-code: 39ms)
+2026-09-29T09:48:18.991Z [worker] run 2380bcf4-a69c-41ee-8e86-1b9cf5678d17 claimed
+ GET /api/runs/2380bcf4-a69c-41ee-8e86-1b9cf5678d17 200 in 32ms (next.js: 15ms, application-code: 17ms)
+2026-09-29T09:48:19.039Z [worker] run 2380bcf4-a69c-41ee-8e86-1b9cf5678d17 done
+ GET /api/runs/2380bcf4-a69c-41ee-8e86-1b9cf5678d17 200 in 29ms (next.js: 3ms, application-code: 27ms)
+ GET /w/tenant-b-19/flows 200 in 58ms (next.js: 16ms, application-code: 41ms)
+ GET /api/health 200 in 12ms (next.js: 4ms, application-code: 8ms)
+ GET /api/workspaces/09b75737-0c99-4a3c-b379-8476b0c69e49/flows 200 in 61ms (next.js: 21ms, application-code: 40ms)
+ GET /api/workspaces/09b75737-0c99-4a3c-b379-8476b0c69e49/usage 200 in 63ms (next.js: 43ms, application-code: 20ms)
+ GET /api/workspaces/09b75737-0c99-4a3c-b379-8476b0c69e49/overview 200 in 100ms (next.js: 22ms, application-code: 78ms)
+ GET /w/tenant-b-19/runs 200 in 65ms (next.js: 18ms, application-code: 47ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 6ms)
+ GET /api/workspaces/09b75737-0c99-4a3c-b379-8476b0c69e49/runs?limit=25 200 in 45ms (next.js: 19ms, application-code: 26ms)
+ GET /w/tenant-a-19/flows 404 in 74ms (next.js: 20ms, application-code: 54ms)
+ GET /w/tenant-b-19/flows/ed977280-c4d8-4bf8-a81a-380ec3149495 200 in 69ms (next.js: 17ms, application-code: 52ms)
+ GET /api/health 200 in 9ms (next.js: 3ms, application-code: 7ms)
+ GET /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495 404 in 52ms (next.js: 25ms, application-code: 27ms)
+ GET /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495 404 in 26ms (next.js: 3ms, application-code: 24ms)
+ GET /api/runs/2380bcf4-a69c-41ee-8e86-1b9cf5678d17 404 in 38ms (next.js: 16ms, application-code: 21ms)
+ GET /api/workspaces/f98c3acf-89b0-4433-8dd8-f366e2b7ddbc/runs 404 in 14ms (next.js: 2ms, application-code: 11ms)
+ GET /api/workspaces/f98c3acf-89b0-4433-8dd8-f366e2b7ddbc/flows 404 in 28ms (next.js: 17ms, application-code: 11ms)
+ GET /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495/versions 404 in 28ms (next.js: 16ms, application-code: 11ms)
+ PUT /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495 404 in 29ms (next.js: 2ms, application-code: 26ms)
+ POST /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495/runs 404 in 38ms (next.js: 26ms, application-code: 12ms)
+ POST /api/runs/2380bcf4-a69c-41ee-8e86-1b9cf5678d17/rerun 404 in 872ms (next.js: 855ms, application-code: 17ms)
+ GET /api/flows/ed977280-c4d8-4bf8-a81a-380ec3149495 200 in 41ms (next.js: 14ms, application-code: 27ms)

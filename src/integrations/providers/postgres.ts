@@ -186,6 +186,7 @@ const provider: ProviderDef = {
   actions: [query, execute],
   verification: {
     adapter: true,
+    betaScope: "core",
     contractTested: true,
     live: "verified",
     liveNote: "Sandbox-live verified against a real PostgreSQL 17 server (tests/live/postgres.test.ts)",

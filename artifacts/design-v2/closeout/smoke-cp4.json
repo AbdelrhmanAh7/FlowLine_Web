@@ -1,0 +1,1129 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--project=chromium",
+      "--workers=1",
+      "--reporter=list,json",
+      "--output=artifacts/design-v2/closeout/test-results-smoke",
+      "e2e/landing.spec.ts",
+      "e2e/hydration.spec.ts",
+      "e2e/reduced-motion.spec.ts",
+      "e2e/run-states.spec.ts",
+      "e2e/ai-hub.spec.ts",
+      "e2e/ai-hub-wave-b.spec.ts",
+      "e2e/admin-panel.spec.ts",
+      "e2e/phase2.spec.ts:200"
+    ],
+    "configFile": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\playwright.config.ts",
+    "rootDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": {
+      "command": "pnpm db:migrate:test && pnpm dev:test",
+      "url": "http://localhost:3100/api/health?require=worker",
+      "reuseExistingServer": true,
+      "timeout": 180000,
+      "stdout": "pipe",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [
+    {
+      "title": "admin-panel.spec.ts",
+      "file": "admin-panel.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5220,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [
+                    {
+                      "text": "Platform setup was already completed. Use --recover (audited) or --grant to add an admin.\n"
+                    }
+                  ],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:39.236Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "399d6696af02825fcc54-e136d9c12bb9fafec9ef",
+          "file": "admin-panel.spec.ts",
+          "line": 43,
+          "column": 5
+        },
+        {
+          "title": "a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 393,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:44.900Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "399d6696af02825fcc54-1f027c88b8d84780e62e",
+          "file": "admin-panel.spec.ts",
+          "line": 125,
+          "column": 5
+        },
+        {
+          "title": "members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1298,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:45.299Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "399d6696af02825fcc54-f3d11773894a1b222f5b",
+          "file": "admin-panel.spec.ts",
+          "line": 133,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "ai-hub-wave-b.spec.ts",
+      "file": "ai-hub-wave-b.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 925,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:46.991Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "12bdf71299e440c24bd2-e0fa50c7a7286fe728a6",
+          "file": "ai-hub-wave-b.spec.ts",
+          "line": 10,
+          "column": 5
+        },
+        {
+          "title": "Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 778,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:48.027Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "12bdf71299e440c24bd2-e39e09782d78dd00adb9",
+          "file": "ai-hub-wave-b.spec.ts",
+          "line": 29,
+          "column": 5
+        },
+        {
+          "title": "routing policy: owner saves FALLBACK with one route; an agent picks its own model",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1516,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:48.810Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "12bdf71299e440c24bd2-1d99c5d3f6662e4ed717",
+          "file": "ai-hub-wave-b.spec.ts",
+          "line": 46,
+          "column": 5
+        },
+        {
+          "title": "CXQ-05: saving workspace prices refreshes the model picker without a reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 782,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:50.332Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "12bdf71299e440c24bd2-28b1628f1504ad309bd9",
+          "file": "ai-hub-wave-b.spec.ts",
+          "line": 84,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "ai-hub.spec.ts",
+      "file": "ai-hub.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles",
+          "ok": true,
+          "tags": [
+            "critical"
+          ],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6293,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:51.124Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "822ee97eb50424c5acb9-a137926d53be9a51fb79",
+          "file": "ai-hub.spec.ts",
+          "line": 28,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "hydration.spec.ts",
+      "file": "hydration.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "no hydration warnings: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5537,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:16:57.437Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTQ0MCwKICAgICJsb2NhbGUiOiAiZW4tVVMiLAogICAgInRpbWV6b25lSWQiOiAiQW1lcmljYS9OZXdfWW9yayIKICB9LAogICJzZWVuIjogW10KfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-9970e0c4e76d57c9b7c5",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5422,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:02.979Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTAyNCwKICAgICJsb2NhbGUiOiAiYXItRUciLAogICAgInRpbWV6b25lSWQiOiAiQWZyaWNhL0NhaXJvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-eb05f460818f65073117",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5240,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:08.406Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMzc1LAogICAgImxvY2FsZSI6ICJkZS1ERSIsCiAgICAidGltZXpvbmVJZCI6ICJBc2lhL1Rva3lvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-7c8b739499bbe60117eb",
+          "file": "hydration.spec.ts",
+          "line": 20,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2815,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:13.652Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTQ0MCwKICAgICJsb2NhbGUiOiAiZW4tVVMiLAogICAgInRpbWV6b25lSWQiOiAiQW1lcmljYS9OZXdfWW9yayIKICB9LAogICJzZWVuIjogW10KfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-042ad38ca7eb3ff25526",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2755,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:16.473Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMTAyNCwKICAgICJsb2NhbGUiOiAiYXItRUciLAogICAgInRpbWV6b25lSWQiOiAiQWZyaWNhL0NhaXJvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-46c0623c99f197d6b5a6",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        },
+        {
+          "title": "no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2739,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:19.232Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hydration-messages-public.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJjb250ZXh0IjogewogICAgIndpZHRoIjogMzc1LAogICAgImxvY2FsZSI6ICJkZS1ERSIsCiAgICAidGltZXpvbmVJZCI6ICJBc2lhL1Rva3lvIgogIH0sCiAgInNlZW4iOiBbXQp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "411cffca1131c6a1c771-136587b786d1d9bc1745",
+          "file": "hydration.spec.ts",
+          "line": 61,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "title": "landing.spec.ts",
+      "file": "landing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "landing scroll experience",
+          "file": "landing.spec.ts",
+          "line": 52,
+          "column": 6,
+          "specs": [
+            {
+              "title": "scrolls through every section with no console errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 998,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:21.980Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-152cdb7a8262529b44f6",
+              "file": "landing.spec.ts",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "reduced motion: scroll scenes are static",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1414,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:22.983Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-b2132bf3091cbfe97368",
+              "file": "landing.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "RTL: no horizontal scroll at 375px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1060,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:24.401Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-d8aeca1f0b57fa13ac33",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            },
+            {
+              "title": "RTL: no horizontal scroll at 1024px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 989,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:25.465Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-4a43cf4164a8aaf84612",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            },
+            {
+              "title": "RTL: no horizontal scroll at 1440px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1017,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:26.459Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-19239bf6551222dab010",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "landing scroll experience with motion allowed (desktop)",
+          "file": "landing.spec.ts",
+          "line": 111,
+          "column": 6,
+          "specs": [
+            {
+              "title": "scroll reveals end fully visible (opacity 1, none left hidden)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1881,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:27.481Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-3c2c0d2d6af339106144",
+              "file": "landing.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "hero scrub: .hero-scrub runs on the wrapper's named view timeline where the browser supports scroll timelines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 799,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:29.367Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-5a03057baa541b126edf",
+              "file": "landing.spec.ts",
+              "line": 128,
+              "column": 7
+            },
+            {
+              "title": "hero scrub: the scale/tilt plays WHILE the stage is pinned (not only at pin release)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 875,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:30.170Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-6d38041e17b38610d5d2",
+              "file": "landing.spec.ts",
+              "line": 158,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "phase2.spec.ts",
+      "file": "phase2.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2215,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:17:31.056Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e4611f7184bd5eaa3983-0337b40608ec337e4184",
+          "file": "phase2.spec.ts",
+          "line": 200,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "reduced-motion.spec.ts",
+      "file": "reduced-motion.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "reduced motion",
+          "file": "reduced-motion.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "the running node has no animation — a static ring marks it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1693,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:33.278Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b3e080842fc0b9df9031-586612abaafde20945e0",
+              "file": "reduced-motion.spec.ts",
+              "line": 17,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "run-states.spec.ts",
+      "file": "run-states.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "run visual states @cross-browser",
+          "file": "run-states.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [
+            {
+              "title": "running glows and flows, succeeded draws its tick",
+              "ok": true,
+              "tags": [
+                "cross-browser"
+              ],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10859,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T19:17:34.978Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bbd249adef9f51833666-d2b16b29895c3a27db91",
+              "file": "run-states.spec.ts",
+              "line": 21,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-29T19:16:38.645Z",
+    "duration": 67339.193,
+    "expected": 25,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

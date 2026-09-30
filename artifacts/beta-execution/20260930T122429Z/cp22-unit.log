@@ -1,0 +1,12 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design
+
+
+ Test Files  40 passed (40)
+      Tests  402 passed (402)
+   Start at  20:05:18
+   Duration  13.76s (import 60%, tests 27%, transform 11%, worker 2%)
+
+    Isolate  40 workers spawned · ~110ms startup each (spawn + environment, per file)
+             at least ~4.28s faster with isolate: false — reuses workers across files instead of one per file
+

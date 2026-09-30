@@ -1,19 +1,18 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { BASE_URL } from "../playwright.config";
-import { PASSWORD, setupUser, uniqueEmail } from "./helpers";
+import { BASE_URL, EN_STATE } from "../playwright.config";
+import { connectAiApi, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 /**
  * Phase 3 journeys through the real UI. Provider boundary only is doubled (fake SaaS :4010, fake AI :4011
  * incl. its Copilot/agent modes, fake Stripe checkout). Every test uses its own users and workspaces.
  */
-const FAKE = "http://127.0.0.1:4010";
+const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
 
 async function newUserContext(browser: Browser, email = uniqueEmail("p3")) {
-  const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL } });
+  const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
   const page = await ctx.newPage();
-  const r = await page.request.post("/api/auth/sign-up/email", { data: { email, password: PASSWORD, name: "Invitee" } });
-  expect(r.ok(), await r.text()).toBeTruthy();
+  await signUpVerified(page.request, email, "Invitee");
   return { ctx, page, email };
 }
 async function saveGraph(req: APIRequestContext, flowId: string, graph: unknown) {
@@ -126,6 +125,7 @@ test("API keys: created with a one-time reveal, work against /api/v1, stop worki
 test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once", { tag: "@critical" }, async ({ page }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
   // A published workflow the agent may run.
   const flowId = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name: "Doubler" } })).json()).flow.id as string;
   await saveGraph(page.request, flowId, {
@@ -144,6 +144,9 @@ test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and r
   await page.getByRole("link", { name: "New agent" }).first().click();
   await page.getByLabel("Name").fill("Support bot");
   await page.getByLabel("Instructions").fill("Answer from knowledge; run the Doubler when asked.");
+  // Model discovery expands the form above the checkboxes. Wait for its final list
+  // before pointer interaction so a late layout shift cannot move the click target.
+  await expect(page.getByTestId("agent-ai-route").getByRole("option").filter({ hasText: /^fake-gpt-mini/ })).toBeVisible();
   await page.getByRole("list", { name: "Knowledge sources" }).getByLabel(/Refund policy/).check();
   await page.getByRole("list", { name: "Workflow tools" }).getByLabel(/Doubler/).check(); // defaults to ASK
   await page.getByRole("button", { name: "Create agent" }).click();
@@ -169,7 +172,7 @@ test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and r
 test.describe("Copilot", () => {
   async function openCopilot(page: Page, slug: string, flowId: string) {
     await page.goto(`/w/${slug}/flows/${flowId}`);
-    await page.getByRole("button", { name: "✦ Copilot" }).click();
+    await page.getByRole("button", { name: "Copilot", exact: true }).click();
     return page.getByRole("dialog", { name: "Copilot" });
   }
   const ask = async (panel: ReturnType<Page["getByRole"]>, text: string) => {
@@ -180,6 +183,7 @@ test.describe("Copilot", () => {
 
   test("valid generation with a missing credential → approve → saved draft, nothing ran", { tag: "@critical" }, async ({ page }) => {
     const { workspace } = await setupUser(page);
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     await page.goto(`/w/${workspace.slug}/flows`);
     const flowCount = async () => ((await (await page.request.get(`/api/workspaces/${workspace.id}/flows`)).json()).flows as unknown[]).length;
     await page.getByRole("button", { name: "✦ Create with Copilot" }).click();
@@ -204,6 +208,7 @@ test.describe("Copilot", () => {
 
   test("invalid proposal and missing integration are explained and can't be applied; rejection changes nothing", async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     const panel = await openCopilot(page, workspace.slug, flowId!);
     let p = await ask(panel, "teleport the result");
     await expect(p.getByRole("alert")).toContainText("isn't a Flowline node type");
@@ -219,6 +224,7 @@ test.describe("Copilot", () => {
 
   test("patching an existing flow keeps the user's steps; removals need explicit confirmation", async ({ page }) => {
     const { workspace, flowId } = await setupUser(page, { template: "lead-qualifier" });
+    await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
     const panel = await openCopilot(page, workspace.slug, flowId!);
     const nodesBefore = await page.locator(".react-flow__node").count();
     let p = await ask(panel, "add a condition");
@@ -277,7 +283,7 @@ test("mobile: Agents and Knowledge fit a phone; Copilot and editing stay disable
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   }
   await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
-  await expect(page.getByRole("button", { name: "✦ Copilot" })).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("button", { name: "Copilot", exact: true })).toHaveAttribute("aria-disabled", "true");
 });
 
 test("SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over", async ({ page, browser }) => {
@@ -308,7 +314,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await expect(page.getByText("Enabled", { exact: true })).toBeVisible();
 
   // A new person signs in from the sign-in page and joins with the default role.
-  const fresh = await browser.newContext({ baseURL: BASE_URL });
+  const fresh = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
   const p2 = await fresh.newPage();
   const newcomer = `sso-${randomUUID().slice(0, 8)}@${domain}`;
   await idpUser(newcomer);
@@ -322,7 +328,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   // An existing password account in the domain is NOT signed in by the IdP asserting its email.
   const victim = await newUserContext(browser, `victim-${randomUUID().slice(0, 8)}@${domain}`);
   await victim.ctx.close();
-  const p3 = await (await browser.newContext({ baseURL: BASE_URL })).newPage();
+  const p3 = await (await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE })).newPage();
   await idpUser(victim.email);
   await p3.goto("/sign-in");
   await p3.getByLabel("Workspace slug").fill(workspace.slug);
@@ -343,6 +349,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
 test("a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once", { tag: "@cross-browser" }, async ({ page, browser }) => {
   test.setTimeout(150_000);
   const { workspace } = await setupUser(page);
+  await connectAiApi(page.request, workspace.id); // agents/Copilot run on the workspace AI connection
   const flowId = (await (await page.request.post(`/api/workspaces/${workspace.id}/flows`, { data: { name: "Doubler" } })).json()).flow.id as string;
   await saveGraph(page.request, flowId, {
     nodes: [manual('{ "n": 1 }'), { id: "x", type: "transform.json", position: pos(1), data: { label: "Double", config: { expression: '{ "v": n * 2 }' } } }, out(2)],

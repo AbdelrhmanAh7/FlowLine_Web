@@ -1,0 +1,92 @@
+Skip to content
+CXQ Chrome QA
+
+BUILD
+
+▦
+Flows
+⌘
+Canvas
+▤
+Templates
+
+AI
+
+✦
+Agents
+❏
+Knowledge
+
+OBSERVE
+
+◷
+Run history
+⬡
+Integrations
+⚙
+Settings
+CO
+CXQ Owner
+← Flows
+/
+Flow name
+Saved
+Not published
+Triggers
+Publish to activate webhook/schedule triggers
+Publish
+Fix 2 issues before publishing
+⚠ 2 issues
+↶
+Nothing to undo
+↷
+Nothing to redo
+History
+✦ Copilot
+Runs
+CtrlJ
+▶ Run
+Fix 2 issues before running
+
+Every Monday 09:00
+
+TRIGGER · SCHEDULE
+
+Not run yet
+
+Postgres — KPIs
+
+POSTGRES · QUERY
+
+Not run yet
+
+!
+
+Summarize changes
+
+AI · TEXT
+
+Not run yet
+
+Gmail — Email leadership
+
+GMAIL · SEND
+
+Not run yet
+
+!
+
+Sent
+
+OUTPUT · RESULT
+
+Not run yet
+
+React Flow
++ Add node
+/
+−
+77%
++
+Fit
+Flow created as a draft — nothing was run or published

@@ -11,6 +11,7 @@ import { reserveUsage } from "@/server/usage";
 import { createWorkspace, updateWorkspace } from "@/server/workspaces";
 import { claimNextRun, processRun } from "../../worker/runner";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
+import { connectAi, useAiDouble } from "./ai-helpers";
 import { claimAndProcess, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
 
 let ai: Awaited<ReturnType<typeof startFakeAi>>;
@@ -26,10 +27,8 @@ beforeAll(async () => {
   });
   await new Promise<void>((r) => slow.listen(0, "127.0.0.1", r));
   slowPort = (slow.address() as AddressInfo).port;
-  process.env.OLLAMA_BASE_URL = ai.url;
-  process.env.FLOWLINE_AI_PROVIDER = "ollama";
-  process.env.FLOWLINE_AI_MODEL = "fake-model";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `127.0.0.1:${ai.port},127.0.0.1:${slowPort}`;
+  useAiDouble(ai.url);
   for (let i = 0; i < 200; i++) {
     const id = await claimNextRun(db, "drain");
     if (!id) break;
@@ -50,6 +49,8 @@ const chain = (...nodes: FlowNode[]): FlowGraph => ({ nodes, edges: nodes.slice(
 async function flowWith(graph: FlowGraph, name = "Exec") {
   const user = await makeUser("exec");
   const ws = await createWorkspace(user, unique(name));
+  // AI runs on the workspace's own connection (owner-entered key), never on server env keys.
+  await connectAi(user, ws.id);
   const flow = await createFlow(user, ws.id, { name: unique(name) });
   await saveFlow(user, flow.id, { baseRevision: 1, graph });
   return { user, ws, flow };
@@ -63,14 +64,14 @@ describe("AI nodes (deterministic provider double)", () => {
 
   it("extracts schema-valid JSON, records provider/model/tokens and settles usage once", async () => {
     const { user, ws, flow } = await flowWith(chain(trigger({ text: invoiceText }), node("x", "ai.extract", { instructions: "Extract invoice fields", source: "text", schema: schemaText, maxTokens: 200, model: "" }, 200), node("o", "output", { key: "invoice", expression: "" }, 400)));
-    await updateWorkspace(ws.id, { prices: { "ai:ollama/fake-model": { inputPerMTok: 1, outputPerMTok: 2 } } });
+    await updateWorkspace(ws.id, { prices: { "ai:openai/fake-gpt-mini": { inputPerMTok: 1, outputPerMTok: 2 } } });
     const run = await enqueueRun(user, flow.id);
     await claimAndProcess(run.id);
     const done = await freshRun(run.id);
     expect(done.status).toBe("succeeded");
     expect(done.output).toEqual({ invoice: { vendor: "Acme Supplies", total: 1250, due_date: "2026-10-15" } });
     const [step] = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, run.id)).then((r) => r.filter((s) => s.nodeId === "x"));
-    expect(step!.meta).toMatchObject({ provider: "ollama", model: "fake-model" });
+    expect(step!.meta).toMatchObject({ provider: "openai", model: "fake-gpt-mini", routeSource: "workspace-default", costSource: "estimated" });
     expect((step!.meta as { inputTokens: number }).inputTokens).toBeGreaterThan(0);
     const usage = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.runId, run.id), eq(schema.usageEvent.kind, "ai")));
     expect(usage).toHaveLength(1);
@@ -98,7 +99,7 @@ describe("AI nodes (deterministic provider double)", () => {
 
   it("budget: a step that would exceed the monthly budget fails before calling the provider", async () => {
     const { user, ws, flow } = await flowWith(chain(trigger({ t: "x" }), node("g", "ai.generate", { instructions: "sum", source: "t", maxTokens: 400, model: "" }, 200)));
-    await updateWorkspace(ws.id, { monthlyBudget: 0.000001, prices: { "ai:ollama/fake-model": { inputPerMTok: 100, outputPerMTok: 100 } } });
+    await updateWorkspace(ws.id, { monthlyBudget: 0.000001, prices: { "ai:openai/fake-gpt-mini": { inputPerMTok: 100, outputPerMTok: 100 } } });
     const before = (await (await fetch(`${ai.url}/__fake/requests`)).json()).length;
     const run = await enqueueRun(user, flow.id);
     await claimAndProcess(run.id);

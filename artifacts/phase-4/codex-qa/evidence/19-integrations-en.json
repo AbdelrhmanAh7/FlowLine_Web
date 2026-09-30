@@ -1,0 +1,19 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/integrations",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nIntegrations\n\nConnect apps with your own test accounts. Credentials are encrypted and never shown again.\n\nCONNECTED · 0\n\n⬡\n\nNo connections yet\n\nConnect an app from the catalog below. Use sandbox or test accounts while building.\n\nCATALOG · 12 APPS · 28 ACTIONS\n\nSearch integrations\n📊\n\nGoogle Sheets\n\nSpreadsheets\n\nConnect\nGoogle Sheets uses OAuth, and no OAuth app is configured on this server. An administrator must set its client ID/secret.\n\nRead ranges and append rows in Google Sheets.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n✉️\n\nGmail\n\nEmail\n\nConnect\nGmail uses OAuth, and no OAuth app is configured on this server. An administrator must set its client ID/secret.\n\nSearch messages, fetch attachments and send email via Gmail.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n4 actions\n💬\n\nSlack\n\nMessaging\n\nConnect\nSlack uses OAuth, and no OAuth app is configured on this server. An administrator must set its client ID/secret.\n\nPost messages and list channels in a Slack workspace.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n2 actions\n🧲\n\nHubSpot\n\nCRM\n\nConnect\n\nUpsert contacts and create deals in HubSpot.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n3 actions\n🎧\n\nZendesk\n\nSupport\n\nConnect\n\nSearch tickets and update ticket fields in Zendesk.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n2 actions\n🗃️\n\nAirtable\n\nDatabase\n\nConnect\n\nList, upsert and create records in Airtable tables.\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n3 actions\n❄️\n\nSnowflake\n\nData warehouse\n\nConnect\n\nRun read-only SQL queries against a Snowflake warehouse\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n1 actions\n🐙\n\nGitHub\n\nDeveloper tools\n\nConnect\n\nRead pull requests and comment on issues in GitHub repositories\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\n3 actions\n💳\n\nStripe\n\nPayments\n\nConnect\n\nList charges and create refunds (test mode only)\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n2 actions\n📝\n\nNotion\n\nDocs\n\nConnect\n\nQuery databases and create pages in a Notion workspace\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n2 actions\n🐘\n\nPostgreSQL\n\nDatabase\n\nConnect\n\nQuery and execute SQL against a PostgreSQL database\n\n✓ adapter implemented\n✓ contract tested\n✓ live verified\n2 actions\n📐\n\nLinear\n\nProject management\n\nConnect\n\nList teams and create issues in Linear\n\n✓ adapter implemented\n✓ contract tested\nlive: blocked\nbeta: not yet verified live\n2 actions\nKey revoked — requests using it now fail",
+  "buttons": [
+    "COCodex Owner",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect",
+    "Connect"
+  ]
+}

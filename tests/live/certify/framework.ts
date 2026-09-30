@@ -10,17 +10,17 @@ import { record, type LiveStatus } from "../record";
  *
  * Two modes:
  * - real (pnpm test:live:saas): inputs come from FLOWLINE_LIVE_<PROVIDER>[...] env vars;
- *   results land in artifacts/phase-3/live-results.json as PASS / FAIL / BLOCKED / N/A.
+ *   results land in artifacts/phase-4/live-certification/live-results.json as PASS / FAIL / BLOCKED / N/A.
  * - dry-run (pnpm test:live:dryrun, FLOWLINE_LIVE_DRYRUN=1): the SAME scenario code runs
  *   against the local provider test double; results land in
- *   artifacts/phase-3/live-dryrun-results.json as DRYRUN_PASS / DRYRUN_FAIL / N/A.
+ *   artifacts/phase-4/live-certification/live-dryrun-results.json as DRYRUN_PASS / DRYRUN_FAIL / N/A.
  *   Dry-run never writes the real results file and never records PASS.
  *
  * Credential and target values are never logged or recorded — only ids, labels and
  * error messages produced by the providers.
  */
 export const DRYRUN = process.env.FLOWLINE_LIVE_DRYRUN === "1";
-export const RESULTS_FILE = DRYRUN ? "artifacts/phase-3/live-dryrun-results.json" : "artifacts/phase-3/live-results.json";
+export const RESULTS_FILE = DRYRUN ? "artifacts/phase-4/live-certification/live-dryrun-results.json" : "artifacts/phase-4/live-certification/live-results.json";
 
 type Fields = Record<string, string>;
 

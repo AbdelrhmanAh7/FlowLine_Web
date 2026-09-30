@@ -1,0 +1,80 @@
+{
+  "from": {
+    "image": "flowline:ce08d9f",
+    "id": "sha256:eb536049a1898e38913b4d17d2036f40a1ff893d7743878a7b697bb53506fc3e",
+    "revision": "ce08d9fa5ed81fd0bdc7f29919b07b5be9947bdd"
+  },
+  "to": {
+    "image": "flowline:e42667d",
+    "id": "sha256:7c92ffa662aee8fa804f3fdce64a34d9bc1d67a2b64687c8b9d248242a9ba674",
+    "revision": "e42667dfba93aa90f6df69d101d87d4ca75a10ee"
+  },
+  "startedAt": "2026-09-28T18:51:04.827Z",
+  "deployFromMs": 7668,
+  "seedUser": {
+    "email": "rollback-4b40245e@flowline-rollback.test",
+    "verification": "not-required"
+  },
+  "deployToMs": 8014,
+  "rollbackDeployMs": 8066,
+  "rollbackToHealthyMs": 10078,
+  "finishedAt": "2026-09-28T18:51:45.914Z",
+  "checks": [
+    {
+      "name": "N (known good) deployed",
+      "ok": true,
+      "detail": "rev ce08d9f schema 12"
+    },
+    {
+      "name": "N: webhook run executes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "N+1 deployed (migrations applied, expand-only)",
+      "ok": true,
+      "detail": "rev e42667d schema 12"
+    },
+    {
+      "name": "N+1: existing session, flow and webhook still work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: N serves again, DB keeps the newer schema (no down migration)",
+      "ok": true,
+      "detail": "rev ce08d9f schema 12"
+    },
+    {
+      "name": "rollback: password sign-in",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "rollback: workflow loads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: data written by N+1 is readable by N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: webhook run executes on N",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rollback: run history from N and N+1 intact",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "roll forward: N+1 serves again",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pass": true
+}

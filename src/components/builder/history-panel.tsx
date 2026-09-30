@@ -1,14 +1,17 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Skeleton, StatusBadge, cx } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
-import { timeAgo } from "@/lib/format";
-import { can, denyReason, type Role } from "@/lib/permissions";
+import { Button, Select, Skeleton, StatusBadge, cx, useSidePanel } from "@/components/ui";
+import { useT } from "@/i18n/client";
+import { denyReasonText } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
+import { api } from "@/lib/api";
+import { can, type Role } from "@/lib/permissions";
 
 interface VersionRow {
   id: string;
@@ -26,8 +29,22 @@ interface VersionDetail extends VersionRow {
  * Version history: every save/run/publish snapshot is immutable. Restoring copies an old definition
  * into the draft as a NEW revision (optionally publishing it = rollback of the live version).
  */
-export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { flowId: string; getRevision: () => number; onClose: () => void; beforeRestore: () => Promise<void> }) {
+export function HistoryPanel({
+  flowId,
+  getRevision,
+  onClose,
+  beforeRestore,
+  returnFocusTo,
+}: {
+  flowId: string;
+  getRevision: () => number;
+  onClose: () => void;
+  beforeRestore: () => Promise<void>;
+  /** Where focus goes when the panel closes and its opener can't take it back (the toolbar's History button). */
+  returnFocusTo?: () => HTMLElement | null;
+}) {
   const { role, workspaces, workspace } = useWorkspace();
+  const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState<string | null>(null);
   const pub = useQuery({ queryKey: ["publish-state", flowId], queryFn: () => api<{ publishedVersionId: string | null }>(`/api/flows/${flowId}/publish`) });
@@ -40,45 +57,52 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
       return api<{ flow: { revision: number }; published: boolean }>(`/api/flows/${flowId}/versions/${open}/restore`, { method: "POST", json: { baseRevision: getRevision(), publish } });
     },
     onSuccess: (r) => {
-      toast(r.published ? `Rolled back and published (revision ${r.flow.revision})` : `Restored as draft revision ${r.flow.revision} — history is kept`, "success");
+      toast(r.published ? t("history.rolledBack", { revision: r.flow.revision }) : t("history.restored", { revision: r.flow.revision }), "success");
       window.location.replace(window.location.pathname);
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't restore", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("history.restoreError")), "danger"),
   });
   const [target, setTarget] = useState("");
   const share = useMutation({
     mutationFn: () => api<{ flow: { id: string; workspaceSlug: string }; clearedConnections: number }>(`/api/flows/${flowId}/share`, { method: "POST", json: { targetWorkspaceId: target } }),
-    onSuccess: (r) => toast(`Copied to the other workspace${r.clearedConnections ? ` — ${r.clearedConnections} connection(s) were cleared; credentials are never shared` : ""}`, "success"),
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't share", "danger"),
+    onSuccess: (r) => toast(r.clearedConnections ? t("history.copiedCleared", { count: t.number(r.clearedConnections) }) : t("history.copied"), "success"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("history.shareError")), "danger"),
   });
-  const editReason = can(role as Role, "flow.edit") ? null : denyReason(role as Role, "flow.edit");
-  const publishReason = can(role as Role, "flow.publish") ? null : denyReason(role as Role, "flow.publish");
+  const editReason = can(role as Role, "flow.edit") ? null : denyReasonText(t, role as Role, "flow.edit");
+  const publishReason = can(role as Role, "flow.publish") ? null : denyReasonText(t, role as Role, "flow.publish");
   const targets = workspaces.filter((w) => w.id !== workspace.id && (w.role === "owner" || w.role === "editor"));
+  // Non-modal, but a dialog for the keyboard (DV2-M02): focus moves to the heading on open, Escape closes, focus returns to the
+  // History button. A restore in flight keeps the panel open (it is the only place showing its progress before the page reloads).
+  const { panelRef, onKeyDown } = useSidePanel<HTMLElement>({ onClose, busy: restore.isPending, returnFocusTo });
 
   return (
-    <aside role="dialog" aria-label="Version history" className="absolute top-0 right-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-l border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
+    // Non-modal side panel (see the Copilot panel): the toolbar stays usable, it slides in from the inline end like the drawers.
+    <aside ref={panelRef} onKeyDown={onKeyDown} role="dialog" aria-label={t("history.dialog")} className="motion-drawer absolute top-0 end-0 z-40 flex h-full w-full max-w-md flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">History</h2>
-        <button onClick={onClose} aria-label="Close history" className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
-          ✕
+        {/* tabIndex -1: focus lands here when the panel opens (a heading names where the user is; no field to start in). */}
+        <h2 tabIndex={-1} data-initial-focus className="text-lg font-semibold">
+          {t("history.title")}
+        </h2>
+        <button onClick={onClose} aria-label={t("history.close")} className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
+          <X className="size-4" aria-hidden />
         </button>
       </div>
-      <p className="text-sm text-med">Every saved, run and published version is kept unchanged. Runs always show the version they used.</p>
+      <p className="text-sm text-med">{t("history.intro")}</p>
       {versions.isPending ? (
         <Skeleton className="h-40" />
       ) : (
-        <ol className="flex flex-col gap-1" aria-label="Versions">
+        <ol className="flex flex-col gap-1" aria-label={t("history.versions")}>
           {(versions.data ?? []).map((v) => (
             <li key={v.id}>
               <button
                 onClick={() => setOpen(v.id)}
                 aria-current={open === v.id ? "true" : undefined}
-                className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
+                className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-start text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
               >
                 <span className="data text-hi">v{v.version}</span>
-                <StatusBadge tone={v.reason === "publish" ? "success" : "muted"}>{v.reason}</StatusBadge>
-                {v.id === publishedVersionId && <StatusBadge tone="accent">live</StatusBadge>}
-                <span className="data ml-auto text-muted">{timeAgo(v.createdAt)}</span>
+                <StatusBadge tone={v.reason === "publish" ? "success" : "muted"}>{t.has(`history.reason.${v.reason}`) ? t(`history.reason.${v.reason}`) : v.reason}</StatusBadge>
+                {v.id === publishedVersionId && <StatusBadge tone="accent">{t("history.live")}</StatusBadge>}
+                <span className="data ms-auto text-muted">{t.relative(v.createdAt)}</span>
               </button>
             </li>
           ))}
@@ -89,7 +113,7 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
           {detail.data ? (
             <>
               <p className="text-sm text-med">
-                v{detail.data.version} · {detail.data.graph.nodes.length} steps
+                v{detail.data.version} · {t.plural("history.steps", detail.data.graph.nodes.length)}
               </p>
               <ul className="flex flex-col gap-0.5 text-sm">
                 {detail.data.graph.nodes.map((n) => (
@@ -100,10 +124,10 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
               </ul>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" loading={restore.isPending && restore.variables === false} disabledReason={editReason} onClick={() => restore.mutate(false)}>
-                  Restore as draft
+                  {t("history.restoreDraft")}
                 </Button>
                 <Button size="sm" variant="primary" loading={restore.isPending && restore.variables === true} disabledReason={publishReason} onClick={() => restore.mutate(true)}>
-                  Restore &amp; publish (rollback)
+                  {t("history.restorePublish")}
                 </Button>
               </div>
             </>
@@ -113,27 +137,33 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
         </section>
       )}
       <section className="flex flex-col gap-2 border-t border-line pt-3">
-        <h3 className="text-base font-semibold">Share a copy</h3>
-        <p className="text-sm text-med">Copies this flow into another workspace you can edit. Connections are cleared — credentials are never shared.</p>
+        <h3 className="text-base font-semibold">{t("history.shareTitle")}</h3>
+        <p className="text-sm text-med">{t("history.shareBody")}</p>
         {targets.length === 0 ? (
           <p className="text-sm text-muted">
-            You don&apos;t edit any other workspace. <Link className="text-accent hover:underline" href="/onboarding">Create one</Link> first.
+            {t.rich("history.noTargets", {
+              create: (
+                <Link className="text-accent-text hover:underline" href="/onboarding">
+                  {t("history.createOne")}
+                </Link>
+              ),
+            })}
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
             <label htmlFor="share-target" className="sr-only">
-              Target workspace
+              {t("history.target")}
             </label>
-            <select id="share-target" className="h-8 rounded-md border border-line-strong bg-app px-2 text-base text-hi" value={target} onChange={(e) => setTarget(e.target.value)}>
-              <option value="">Choose a workspace</option>
+            <Select size="sm" id="share-target" value={target} onChange={(e) => setTarget(e.target.value)} className="w-auto">
+              <option value="">{t("history.chooseWorkspace")}</option>
               {targets.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
                 </option>
               ))}
-            </select>
-            <Button size="sm" loading={share.isPending} disabledReason={can(role as Role, "flow.share") ? (target ? null : "Choose a workspace") : denyReason(role as Role, "flow.share")} onClick={() => share.mutate()}>
-              Share copy
+            </Select>
+            <Button size="sm" loading={share.isPending} disabledReason={can(role as Role, "flow.share") ? (target ? null : t("history.chooseWorkspace")) : denyReasonText(t, role as Role, "flow.share")} onClick={() => share.mutate()}>
+              {t("history.share")}
             </Button>
           </div>
         )}

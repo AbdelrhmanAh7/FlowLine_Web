@@ -3,8 +3,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Skeleton, StatusBadge, cx } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { Button, Card, ErrorState, Skeleton, StatusBadge, UsageBar, cx } from "@/components/ui";
+import { useT } from "@/i18n/client";
+import { apiErrorMessage } from "@/i18n/errors";
+import { dataText } from "@/i18n/workspace-text";
+import { api } from "@/lib/api";
 
 interface PlanEntitlements {
   maxMonthlyExecutions: number | null;
@@ -21,7 +24,8 @@ interface BillingPlanView {
 }
 interface BillingState {
   configured: boolean;
-  testMode: boolean;
+  provider: string | null;
+  providerMode: "test" | "sandbox" | "live" | null;
   plans: BillingPlanView[];
   freePlanId: string | null;
   account: {
@@ -43,6 +47,7 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "muted" | "
   active: "success",
   trialing: "info",
   past_due: "danger",
+  paused: "muted",
   canceled: "muted",
   incomplete: "warning",
   none: "muted",
@@ -54,17 +59,16 @@ function fmtMoney(amountMinor: number, currency: string) {
 function fmtMicros(micros: number, currency = "USD") {
   return `${currency} ${(micros / 1_000_000).toFixed(4)}`;
 }
-function fmtDate(iso: string | null) {
-  return iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
-}
 
 /** "Plan & billing" settings tab: plans from configuration, real subscription state, settled usage only. */
 export function BillingPlan() {
+  const t = useT();
   const { workspace, role } = useWorkspace();
   const toast = useToast();
   const isOwner = role === "owner";
   const canView = role === "owner" || role === "editor";
-  const manageReason = (extra: string | null) => (!isOwner ? "Only workspace owners can manage billing" : extra);
+  const manageReason = (extra: string | null) => (!isOwner ? t("settings.billing.ownerOnly") : extra);
+  const fmtDate = (iso: string | null) => (iso ? t.date(iso, { year: "numeric", month: "short", day: "numeric" }) : "—");
 
   const q = useQuery({
     queryKey: ["billing", workspace.id],
@@ -73,7 +77,7 @@ export function BillingPlan() {
   });
 
   const invalidate = () => q.refetch();
-  const onError = (e: unknown) => toast(e instanceof ApiError ? e.message : "Billing request failed", "danger");
+  const onError = (e: unknown) => toast(apiErrorMessage(t, e, t("settings.billing.requestFailed")), "danger");
 
   const checkout = useMutation({
     mutationFn: (planId: string) => api<{ url: string }>(`/api/workspaces/${workspace.id}/billing/checkout`, { method: "POST", json: { planId } }),
@@ -85,7 +89,7 @@ export function BillingPlan() {
   const change = useMutation({
     mutationFn: (planId: string) => api(`/api/workspaces/${workspace.id}/billing/change`, { method: "POST", json: { planId } }),
     onSuccess: () => {
-      toast("Plan change requested — it applies when the provider confirms", "success");
+      toast(t("settings.billing.changeRequested"), "success");
       void invalidate();
     },
     onError,
@@ -93,7 +97,7 @@ export function BillingPlan() {
   const cancelM = useMutation({
     mutationFn: () => api(`/api/workspaces/${workspace.id}/billing/cancel`, { method: "POST", json: { atPeriodEnd: true } }),
     onSuccess: () => {
-      toast("Cancellation requested — it applies when the provider confirms", "success");
+      toast(t("settings.billing.cancelRequested"), "success");
       void invalidate();
     },
     onError,
@@ -102,21 +106,21 @@ export function BillingPlan() {
   if (!canView) {
     return (
       <Card className="p-5">
-        <h2 className="text-lg font-semibold">Plan &amp; billing</h2>
-        <p className="mt-1 text-base text-med">Only workspace owners and editors can view billing.</p>
+        <h2 className="text-lg font-semibold">{t("settings.billing.title")}</h2>
+        <p className="mt-1 text-base text-med">{t("settings.billing.viewOnly")}</p>
       </Card>
     );
   }
 
   if (q.isPending) return <Skeleton className="h-64" />;
-  if (q.isError) return <ErrorState title="Couldn't load billing" body={(q.error as Error).message} onRetry={() => q.refetch()} />;
+  if (q.isError) return <ErrorState title={t("settings.billing.loadError")} body={(q.error as Error).message} onRetry={() => q.refetch()} />;
   const d = q.data;
 
   if (!d.configured) {
     return (
       <Card className="p-5">
-        <h2 className="text-lg font-semibold">Plan &amp; billing</h2>
-        <p className="mt-1 text-base text-med">Billing isn&apos;t configured on this installation. Plans come from environment configuration; no payment provider key is set.</p>
+        <h2 className="text-lg font-semibold">{t("settings.billing.title")}</h2>
+        <p className="mt-1 text-base text-med">{t("settings.billing.notConfigured")}</p>
       </Card>
     );
   }
@@ -126,91 +130,104 @@ export function BillingPlan() {
   const currentPlan = d.plans.find((p) => p.id === d.planInForce);
   const planIndex = (id: string | null) => d.plans.findIndex((p) => p.id === id);
   const busy = checkout.isPending || change.isPending || cancelM.isPending;
+  const providerName = d.provider ? d.provider[0]!.toUpperCase() + d.provider.slice(1) : null;
+  const modeLabel = d.providerMode ? t(`settings.billing.mode.${d.providerMode}`) : null;
+  const modeTitle = d.providerMode === "test" || d.providerMode === "sandbox" ? t(`settings.billing.modeTitle.${d.providerMode}`) : undefined;
+  const status = account?.status ?? "none";
 
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold">Plan &amp; billing</h2>
-          {d.testMode && (
-            <span className="rounded-md border border-line px-2 py-0.5 text-xs font-medium tracking-[0.4px] text-warning uppercase" title="Payments run against a test-mode provider key; no real charges">
-              Test mode
+          <h2 className="text-lg font-semibold">{t("settings.billing.title")}</h2>
+          {d.providerMode && (
+            <span className="rounded-md border border-line px-2 py-0.5 text-xs font-medium tracking-[0.4px] text-warning uppercase" title={modeTitle}>
+              {providerName ? `${providerName} · ${modeLabel}` : modeLabel}
             </span>
           )}
         </div>
 
         {account?.status === "past_due" && (
-          <div role="alert" className="mt-4 rounded-xl border border-danger/40 bg-danger/5 p-4">
-            <p className="font-semibold text-danger">Payment failed</p>
-            <p className="mt-1 text-base text-med">The last invoice couldn&apos;t be paid. The workspace is on free-plan limits until the provider confirms a payment.</p>
+          <div role="alert" className="mt-4 rounded-xl border border-danger-border bg-danger-bg p-4">
+            <p className="font-semibold text-danger">{t("settings.billing.pastDueTitle")}</p>
+            <p className="mt-1 text-base text-med">{t("settings.billing.pastDueBody")}</p>
           </div>
         )}
 
         <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-2">
           <div className="flex items-center gap-2">
-            <dt className="text-muted">Current plan</dt>
+            <dt className="text-muted">{t("settings.billing.currentPlan")}</dt>
             <dd className="font-medium">{currentPlan?.name ?? (d.planInForce ?? "—")}</dd>
           </div>
           <div className="flex items-center gap-2">
-            <dt className="text-muted">Status</dt>
+            <dt className="text-muted">{t("settings.billing.statusLabel")}</dt>
             <dd>
-              <StatusBadge tone={STATUS_TONE[account?.status ?? "none"] ?? "muted"}>{(account?.status ?? "none").replace("_", " ")}</StatusBadge>
+              <StatusBadge tone={STATUS_TONE[status] ?? "muted"}>{dataText(t, "settings.billing.status", status, status.replace("_", " "))}</StatusBadge>
             </dd>
           </div>
           <div className="flex items-center gap-2">
-            <dt className="text-muted">{account?.cancelAtPeriodEnd ? "Ends" : "Renews"}</dt>
+            <dt className="text-muted">{account?.cancelAtPeriodEnd ? t("settings.billing.ends") : t("settings.billing.renews")}</dt>
             <dd className="data">{fmtDate(account?.currentPeriodEnd ?? null)}</dd>
           </div>
           {account?.trialEnd && (
             <div className="flex items-center gap-2">
-              <dt className="text-muted">Trial ends</dt>
+              <dt className="text-muted">{t("settings.billing.trialEnds")}</dt>
               <dd className="data">{fmtDate(account.trialEnd)}</dd>
             </div>
           )}
         </dl>
-        {account?.cancelAtPeriodEnd && <p className="mt-3 text-sm text-warning">Cancellation is scheduled — the plan stays active until {fmtDate(account.currentPeriodEnd)}.</p>}
+        {account?.cancelAtPeriodEnd && <p className="mt-3 text-sm text-warning">{t("settings.billing.cancelScheduled", { date: fmtDate(account.currentPeriodEnd) })}</p>}
         {subscribed && !account.cancelAtPeriodEnd && (
           <div className="mt-4 border-t border-line pt-4">
             <Button variant="danger-ghost" loading={cancelM.isPending} disabled={busy} disabledReason={manageReason(null)} onClick={() => cancelM.mutate()}>
-              Cancel at period end
+              {t("settings.billing.cancelAtEnd")}
             </Button>
           </div>
         )}
       </Card>
 
       <Card className="p-5">
-        <h3 className="text-base font-semibold">Plans</h3>
-        <p className="mt-1 text-sm text-muted">Plans and prices are installation configuration, shown as &quot;configured price&quot;.</p>
+        <h3 className="text-base font-semibold">{t("settings.billing.plans")}</h3>
+        <p className="mt-1 text-sm text-muted">{t("settings.billing.plansBody")}</p>
         <ul className="mt-4 flex flex-col gap-3">
           {d.plans.map((p) => {
             const isCurrent = p.id === d.planInForce;
-            const direction = planIndex(p.id) > planIndex(d.planInForce) ? "Upgrade" : "Downgrade";
+            const direction = planIndex(p.id) > planIndex(d.planInForce) ? "upgrade" : "downgrade";
             const needsCheckout = !subscribed && p.id !== d.freePlanId;
+            const e = p.entitlements;
             return (
-              <li key={p.id} className={cx("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-4", isCurrent ? "border-accent/50" : "border-line")}>
+              <li key={p.id} className={cx("motion-list-in flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-4", isCurrent ? "border-accent-border" : "border-line")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{p.name}</span>
-                    {isCurrent && <span className="rounded-md border border-line px-1.5 py-0.5 text-xs text-accent">Current</span>}
+                    {isCurrent && <span className="rounded-md border border-line px-1.5 py-0.5 text-xs text-accent-text">{t("settings.billing.current")}</span>}
                   </div>
                   <p className="mt-0.5 text-sm text-muted">
-                    {p.displayPrice ? `${fmtMoney(p.displayPrice.amountMinor, p.displayPrice.currency)} / ${p.displayPrice.interval} (configured price)` : "No configured price"}
-                    {p.trialDays ? ` · ${p.trialDays}-day trial` : ""}
+                    {p.displayPrice
+                      ? t("settings.billing.price", {
+                          price: fmtMoney(p.displayPrice.amountMinor, p.displayPrice.currency),
+                          interval: dataText(t, "settings.billing.interval", p.displayPrice.interval),
+                        })
+                      : t("settings.billing.noPrice")}
+                    {p.trialDays ? t("settings.billing.trial", { days: p.trialDays }) : ""}
                   </p>
                   <p className="mt-0.5 text-sm text-muted">
-                    {p.entitlements.maxMonthlyExecutions == null ? "Unlimited" : p.entitlements.maxMonthlyExecutions.toLocaleString()} executions/mo ·{" "}
-                    {p.entitlements.monthlyUsageCapMicros == null ? "no usage cap" : `${fmtMicros(p.entitlements.monthlyUsageCapMicros)} cap`} · {p.entitlements.maxConcurrentRuns} concurrent runs
+                    {t("settings.billing.planLimits", {
+                      executions: e.maxMonthlyExecutions == null ? t("settings.billing.unlimitedCap") : t.number(e.maxMonthlyExecutions),
+                      cap: e.monthlyUsageCapMicros == null ? t("settings.billing.noUsageCap") : t("settings.billing.cap", { amount: fmtMicros(e.monthlyUsageCapMicros) }),
+                      concurrent: e.maxConcurrentRuns,
+                    })}
                   </p>
                 </div>
                 {!isCurrent && p.id !== d.freePlanId && (
                   <Button
-                    variant={direction === "Upgrade" ? "primary" : "secondary"}
+                    variant={direction === "upgrade" ? "primary" : "secondary"}
                     loading={(needsCheckout ? checkout : change).isPending}
                     disabled={busy}
                     disabledReason={manageReason(null)}
                     onClick={() => (needsCheckout ? checkout.mutate(p.id) : change.mutate(p.id))}
                   >
-                    {needsCheckout ? "Choose" : direction}
+                    {needsCheckout ? t("settings.billing.choose") : t(`settings.billing.${direction}`)}
                   </Button>
                 )}
               </li>
@@ -220,29 +237,35 @@ export function BillingPlan() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="text-base font-semibold">Entitlements vs usage this period</h3>
-        <p className="mt-1 text-sm text-muted">Usage is the actual settled ledger total since {fmtDate(d.usage.periodStart)} — never an estimate or a projected charge.</p>
+        <h3 className="text-base font-semibold">{t("settings.billing.entitlementsTitle")}</h3>
+        <p className="mt-1 text-sm text-muted">{t("settings.billing.entitlementsBody", { date: fmtDate(d.usage.periodStart) })}</p>
         {d.entitlements ? (
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-3">
             <div>
-              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Executions</dt>
+              <dt id="billing-usage-executions" className="text-xs font-medium tracking-[0.4px] text-muted uppercase">
+                {t("settings.billing.executions")}
+              </dt>
               <dd className="data mt-0.5">
-                {d.usage.executions.toLocaleString()} / {d.entitlements.maxMonthlyExecutions == null ? "unlimited" : d.entitlements.maxMonthlyExecutions.toLocaleString()}
+                {t.number(d.usage.executions)} / {d.entitlements.maxMonthlyExecutions == null ? t("settings.billing.unlimited") : t.number(d.entitlements.maxMonthlyExecutions)}
               </dd>
+              {d.entitlements.maxMonthlyExecutions != null && <UsageBar ratio={d.usage.executions / d.entitlements.maxMonthlyExecutions} labelledBy="billing-usage-executions" className="mt-1.5" />}
             </div>
             <div>
-              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Settled cost</dt>
+              <dt id="billing-usage-cost" className="text-xs font-medium tracking-[0.4px] text-muted uppercase">
+                {t("settings.billing.settledCost")}
+              </dt>
               <dd className="data mt-0.5">
-                {fmtMicros(d.usage.costMicros)} / {d.entitlements.monthlyUsageCapMicros == null ? "no cap" : fmtMicros(d.entitlements.monthlyUsageCapMicros)}
+                {fmtMicros(d.usage.costMicros)} / {d.entitlements.monthlyUsageCapMicros == null ? t("settings.billing.noCap") : fmtMicros(d.entitlements.monthlyUsageCapMicros)}
               </dd>
+              {d.entitlements.monthlyUsageCapMicros != null && <UsageBar ratio={d.usage.costMicros / d.entitlements.monthlyUsageCapMicros} labelledBy="billing-usage-cost" className="mt-1.5" />}
             </div>
             <div>
-              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">Concurrent runs</dt>
-              <dd className="data mt-0.5">up to {d.entitlements.maxConcurrentRuns}</dd>
+              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("settings.billing.concurrentRuns")}</dt>
+              <dd className="data mt-0.5">{t("settings.billing.upTo", { count: d.entitlements.maxConcurrentRuns })}</dd>
             </div>
           </dl>
         ) : (
-          <p className="mt-4 text-base text-muted">No entitlements in force.</p>
+          <p className="mt-4 text-base text-muted">{t("settings.billing.noEntitlements")}</p>
         )}
       </Card>
     </div>

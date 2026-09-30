@@ -1,0 +1,274 @@
+
+> flowline@0.1.0 dev:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design
+> node scripts/dev-test.mjs
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[seed-platform] test platform credentials ready
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+▲ Next.js 16.3.6 (Turbopack)
+- Environments: .env
+✓ Running next.config.ts took 46ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Running TypeScript ...
+  Finished TypeScript in 12.3s ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/22) ...
+  Generating static pages using 31 workers (5/22) 
+  Generating static pages using 31 workers (10/22) 
+  Generating static pages using 31 workers (16/22) 
+✓ Generating static pages using 31 workers (22/22) in 306ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account/delete
+├ ƒ /admin
+├ ƒ /admin/setup
+├ ƒ /api/agent-runs/[rid]
+├ ƒ /api/agent-runs/[rid]/cancel
+├ ƒ /api/agents/[aid]
+├ ƒ /api/agents/[aid]/runs
+├ ƒ /api/ai/providers
+├ ƒ /api/approvals/[aid]/decide
+├ ƒ /api/auth-config
+├ ƒ /api/auth/[...all]
+├ ƒ /api/beta/check
+├ ƒ /api/billing/webhook
+├ ƒ /api/connections/[cid]
+├ ƒ /api/email
+├ ƒ /api/flows/[fid]
+├ ƒ /api/flows/[fid]/copilot
+├ ƒ /api/flows/[fid]/copilot/[pid]
+├ ƒ /api/flows/[fid]/publish
+├ ƒ /api/flows/[fid]/runs
+├ ƒ /api/flows/[fid]/share
+├ ƒ /api/flows/[fid]/versions
+├ ƒ /api/flows/[fid]/versions/[vid]
+├ ƒ /api/flows/[fid]/versions/[vid]/restore
+├ ƒ /api/flows/[fid]/webhook/rotate
+├ ƒ /api/health
+├ ƒ /api/hooks/[token]
+├ ƒ /api/integrations/catalog
+├ ƒ /api/invites/[token]
+├ ƒ /api/me
+├ ƒ /api/oauth/callback
+├ ƒ /api/oauth/start
+├ ƒ /api/onboarding
+├ ƒ /api/ops/status
+├ ƒ /api/platform/admins
+├ ƒ /api/platform/admins/[uid]/revoke
+├ ƒ /api/platform/audit
+├ ƒ /api/platform/credentials
+├ ƒ /api/platform/credentials/[purpose]
+├ ƒ /api/platform/credentials/[purpose]/clear
+├ ƒ /api/platform/credentials/[purpose]/impact
+├ ƒ /api/platform/credentials/[purpose]/import
+├ ƒ /api/platform/credentials/[purpose]/probe
+├ ƒ /api/platform/credentials/[purpose]/revoke
+├ ƒ /api/platform/me
+├ ƒ /api/platform/settings/[key]
+├ ƒ /api/platform/settings/[key]/import
+├ ƒ /api/platform/setup
+├ ƒ /api/platform/setup/complete
+├ ƒ /api/platform/setup/email
+├ ƒ /api/platform/setup/redeem
+├ ƒ /api/platform/step-up
+├ ƒ /api/runs/[rid]
+├ ƒ /api/runs/[rid]/cancel
+├ ƒ /api/runs/[rid]/rerun
+├ ƒ /api/runs/[rid]/rerun-preview
+├ ƒ /api/sso/callback
+├ ƒ /api/sso/start
+├ ƒ /api/test/beta
+├ ƒ /api/test/faults
+├ ƒ /api/test/outbox
+├ ƒ /api/v1/agent-runs/[rid]
+├ ƒ /api/v1/agents/[aid]/runs
+├ ƒ /api/v1/flows
+├ ƒ /api/v1/flows/[fid]/runs
+├ ƒ /api/v1/runs/[rid]
+├ ƒ /api/workspaces
+├ ƒ /api/workspaces/[wid]
+├ ƒ /api/workspaces/[wid]/agents
+├ ƒ /api/workspaces/[wid]/ai
+├ ƒ /api/workspaces/[wid]/ai/connections
+├ ƒ /api/workspaces/[wid]/ai/connections/[cid]
+├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/affected
+├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/models
+├ ƒ /api/workspaces/[wid]/ai/connections/[cid]/test
+├ ƒ /api/workspaces/[wid]/ai/default-route
+├ ƒ /api/workspaces/[wid]/ai/models
+├ ƒ /api/workspaces/[wid]/ai/policy
+├ ƒ /api/workspaces/[wid]/api-keys
+├ ƒ /api/workspaces/[wid]/api-keys/[kid]
+├ ƒ /api/workspaces/[wid]/approvals
+├ ƒ /api/workspaces/[wid]/audit
+├ ƒ /api/workspaces/[wid]/billing
+├ ƒ /api/workspaces/[wid]/billing/cancel
+├ ƒ /api/workspaces/[wid]/billing/change
+├ ƒ /api/workspaces/[wid]/billing/checkout
+├ ƒ /api/workspaces/[wid]/billing/reconcile
+├ ƒ /api/workspaces/[wid]/connections
+├ ƒ /api/workspaces/[wid]/copilot
+├ ƒ /api/workspaces/[wid]/copilot/[pid]
+├ ƒ /api/workspaces/[wid]/files
+├ ƒ /api/workspaces/[wid]/flows
+├ ƒ /api/workspaces/[wid]/invites
+├ ƒ /api/workspaces/[wid]/invites/[iid]
+├ ƒ /api/workspaces/[wid]/knowledge
+├ ƒ /api/workspaces/[wid]/knowledge/[sid]
+├ ƒ /api/workspaces/[wid]/knowledge/search
+├ ƒ /api/workspaces/[wid]/members
+├ ƒ /api/workspaces/[wid]/members/[uid]
+├ ƒ /api/workspaces/[wid]/oauth-apps
+├ ƒ /api/workspaces/[wid]/oauth-apps/[family]
+├ ƒ /api/workspaces/[wid]/oauth-apps/[family]/impact
+├ ƒ /api/workspaces/[wid]/oauth-apps/[family]/probe
+├ ƒ /api/workspaces/[wid]/oauth-apps/provenance
+├ ƒ /api/workspaces/[wid]/overview
+├ ƒ /api/workspaces/[wid]/runs
+├ ƒ /api/workspaces/[wid]/sso
+├ ƒ /api/workspaces/[wid]/usage
+├ ƒ /app
+├ ƒ /billing/checkout
+├ ƒ /design-system
+├ ƒ /forgot-password
+├ ƒ /invite/[token]
+├ ƒ /onboarding
+├ ƒ /resend-verification
+├ ƒ /reset-password
+├ ƒ /sign-in
+├ ƒ /sign-up
+├ ƒ /verify-email
+├ ƒ /w/[slug]/agents
+├ ƒ /w/[slug]/agents/[aid]
+├ ƒ /w/[slug]/agents/new
+├ ƒ /w/[slug]/canvas
+├ ƒ /w/[slug]/flows
+├ ƒ /w/[slug]/flows/[flowId]
+├ ƒ /w/[slug]/integrations
+├ ƒ /w/[slug]/knowledge
+├ ƒ /w/[slug]/runs
+├ ƒ /w/[slug]/settings
+└ ƒ /w/[slug]/templates
+
+
+ƒ  (Dynamic)  server-rendered on demand
+
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+[fake-ai] listening on http://127.0.0.1:4011
+Fake provider server listening on http://127.0.0.1:4010
+Control API: POST http://127.0.0.1:4010/__fake/reset | GET http://127.0.0.1:4010/__fake/requests?provider=slack | GET http://127.0.0.1:4010/__fake/state/slack | POST http://127.0.0.1:4010/__fake/fault
+▲ Next.js 16.3.6
+- Local:         http://localhost:3100
+- Network:       http://100.73.156.121:3100
+✓ Ready in 175ms
+✓ Running next.config.ts took 55ms
+2026-09-30T10:19:34.310Z [worker] starting LAPTOP-AGGSOJ7U-65856-cf5012
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+[auth] [better-auth] Cookie integration plugin "next-cookies" should be placed last in the plugins array. Plugins with `hooks.after` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the `plugins` array to avoid missing `Set-Cookie` headers.
+2026-09-30T10:19:44.470Z [worker] run 88c955b8-46f9-41b1-b640-22be8d020951 claimed
+2026-09-30T10:19:44.476Z [worker] run e3ffc698-8c9a-4353-974d-fd42ab7999d6 claimed
+2026-09-30T10:19:44.528Z [worker] run 29333172-98e6-49dd-a683-d79082cef093 claimed
+2026-09-30T10:19:44.585Z [worker] run 88c955b8-46f9-41b1-b640-22be8d020951 done
+2026-09-30T10:19:44.585Z [worker] run 2afe7b2e-c227-4a1b-9895-8280d937b8f5 claimed
+2026-09-30T10:19:44.588Z [worker] run e3ffc698-8c9a-4353-974d-fd42ab7999d6 done
+2026-09-30T10:19:44.604Z [worker] run 29333172-98e6-49dd-a683-d79082cef093 done
+2026-09-30T10:19:44.637Z [worker] run 2afe7b2e-c227-4a1b-9895-8280d937b8f5 done
+2026-09-30T10:19:44.905Z [worker] run 11f09357-b856-41a6-bca0-0f5676ad3dd9 claimed
+2026-09-30T10:19:44.910Z [worker] run 6f43d2c8-bb39-4ff0-be1f-5aab356dcd1b claimed
+2026-09-30T10:19:44.915Z [worker] run d12c4f4a-591a-4998-8827-bc632d100295 claimed
+2026-09-30T10:19:44.934Z [worker] run 11f09357-b856-41a6-bca0-0f5676ad3dd9 done
+2026-09-30T10:19:44.941Z [worker] run 6f43d2c8-bb39-4ff0-be1f-5aab356dcd1b done
+2026-09-30T10:19:44.942Z [worker] run 4e7f83dd-c923-4dc8-a111-367de2ff68ef claimed
+2026-09-30T10:19:44.947Z [worker] run 86ceb9a7-2fbf-49e4-9f73-781048fe5392 claimed
+2026-09-30T10:19:44.950Z [worker] run d12c4f4a-591a-4998-8827-bc632d100295 done
+2026-09-30T10:19:44.955Z [worker] run 965d0728-dba3-4d60-830e-e2f4e19d5503 claimed
+2026-09-30T10:19:44.976Z [worker] run 4e7f83dd-c923-4dc8-a111-367de2ff68ef done
+2026-09-30T10:19:44.982Z [worker] run 86ceb9a7-2fbf-49e4-9f73-781048fe5392 done
+2026-09-30T10:19:44.985Z [worker] run bc229a47-ae0d-4404-9fc3-3b52e950d88f claimed
+2026-09-30T10:19:44.987Z [worker] run 965d0728-dba3-4d60-830e-e2f4e19d5503 done
+2026-09-30T10:19:44.990Z [worker] run 137ec004-85a0-46fa-be7c-851620b73094 claimed
+2026-09-30T10:19:44.996Z [worker] run 68a48df2-5f22-4e03-b13c-989d00081105 claimed
+2026-09-30T10:19:45.010Z [worker] run 1f661b61-d079-445d-82d0-6325c620de47 claimed
+2026-09-30T10:19:45.022Z [worker] run bc229a47-ae0d-4404-9fc3-3b52e950d88f done
+2026-09-30T10:19:45.025Z [worker] run 137ec004-85a0-46fa-be7c-851620b73094 done
+2026-09-30T10:19:45.031Z [worker] run 68a48df2-5f22-4e03-b13c-989d00081105 done
+2026-09-30T10:19:45.031Z [worker] run 6fdacd36-6b5d-4f41-817e-4365f2766d02 claimed
+2026-09-30T10:19:45.042Z [worker] run 1f661b61-d079-445d-82d0-6325c620de47 done
+2026-09-30T10:19:45.056Z [worker] run 6fdacd36-6b5d-4f41-817e-4365f2766d02 done
+2026-09-30T10:19:45.238Z [worker] run dc74ce6d-4dfb-4914-8325-3e812f1f6b06 claimed
+2026-09-30T10:19:45.243Z [worker] run e13cf482-8d25-4c69-bc89-8d0862d99ae0 claimed
+2026-09-30T10:19:45.247Z [worker] run ab3a54c6-06bb-46dc-aa17-bb211d17a9b6 claimed
+2026-09-30T10:19:45.276Z [worker] run dc74ce6d-4dfb-4914-8325-3e812f1f6b06 done
+2026-09-30T10:19:45.282Z [worker] run ab3a54c6-06bb-46dc-aa17-bb211d17a9b6 done
+2026-09-30T10:19:45.284Z [worker] run 2aa0a612-ca32-454f-9b3d-ece3ff7392ae claimed
+2026-09-30T10:19:45.287Z [worker] run e13cf482-8d25-4c69-bc89-8d0862d99ae0 done
+2026-09-30T10:19:45.290Z [worker] run 173c8aa5-11c1-482f-a734-600931c43c36 claimed
+2026-09-30T10:19:45.294Z [worker] run 728e6773-4957-4953-98b1-6bb0a189e822 claimed
+2026-09-30T10:19:45.318Z [worker] run 2aa0a612-ca32-454f-9b3d-ece3ff7392ae done
+2026-09-30T10:19:45.322Z [worker] run 173c8aa5-11c1-482f-a734-600931c43c36 done
+2026-09-30T10:19:45.325Z [worker] run 19856e6c-1d2a-462b-b68e-b94ff7283716 claimed
+2026-09-30T10:19:45.327Z [worker] run 728e6773-4957-4953-98b1-6bb0a189e822 done
+2026-09-30T10:19:45.331Z [worker] run 90cc1fbd-1414-4b5a-8770-e2e0acb32d1d claimed
+2026-09-30T10:19:45.336Z [worker] run d82f356a-ba8f-4ac0-9a80-d5bac6637085 claimed
+2026-09-30T10:19:45.358Z [worker] run 19856e6c-1d2a-462b-b68e-b94ff7283716 done
+2026-09-30T10:19:45.363Z [worker] run 90cc1fbd-1414-4b5a-8770-e2e0acb32d1d done
+2026-09-30T10:19:45.365Z [worker] run c449730d-11c3-45d2-9042-06ea32cd672b claimed
+2026-09-30T10:19:45.370Z [worker] run d82f356a-ba8f-4ac0-9a80-d5bac6637085 done
+2026-09-30T10:19:45.393Z [worker] run c449730d-11c3-45d2-9042-06ea32cd672b done
+2026-09-30T10:19:45.495Z [worker] run b76b6722-14c4-4867-b2b3-12f7d36c8d29 claimed
+2026-09-30T10:19:45.500Z [worker] run 1bcb535a-48aa-4704-bfbd-a5db494f913f claimed
+2026-09-30T10:19:45.505Z [worker] run f907c642-ecff-4d69-95e1-e4aee4fbb0e0 claimed
+2026-09-30T10:19:45.511Z [worker] run 9eea3509-63a1-4a59-a4f7-d774783800a9 claimed
+2026-09-30T10:19:45.529Z [worker] run b76b6722-14c4-4867-b2b3-12f7d36c8d29 done
+2026-09-30T10:19:45.535Z [worker] run 1bcb535a-48aa-4704-bfbd-a5db494f913f done
+2026-09-30T10:19:45.538Z [worker] run 2e8f571e-87e4-4b7b-bb9f-fc891437a4c4 claimed
+2026-09-30T10:19:45.543Z [worker] run f907c642-ecff-4d69-95e1-e4aee4fbb0e0 done
+2026-09-30T10:19:45.547Z [worker] run 6c00a06a-d0bf-4d6e-9f9d-25d95594f41e claimed
+2026-09-30T10:19:45.551Z [worker] run 9eea3509-63a1-4a59-a4f7-d774783800a9 done
+2026-09-30T10:19:45.553Z [worker] run 0159d5ad-b355-48ad-85b5-38b1e8be9c03 claimed
+2026-09-30T10:19:45.559Z [worker] run 38c0f11a-6e9f-443b-94c9-305fef7955b8 claimed
+2026-09-30T10:19:45.576Z [worker] run 2e8f571e-87e4-4b7b-bb9f-fc891437a4c4 done
+2026-09-30T10:19:45.588Z [worker] run f0d051b0-d2d3-440f-b7e7-60976290efff claimed
+2026-09-30T10:19:45.591Z [worker] run 0159d5ad-b355-48ad-85b5-38b1e8be9c03 done
+2026-09-30T10:19:45.593Z [worker] run 6c00a06a-d0bf-4d6e-9f9d-25d95594f41e done
+2026-09-30T10:19:45.600Z [worker] run 3489b15f-44d1-4c9c-8f06-3e69a353a012 claimed
+2026-09-30T10:19:45.601Z [worker] run 38c0f11a-6e9f-443b-94c9-305fef7955b8 done
+2026-09-30T10:19:45.606Z [worker] scheduler fired 39
+2026-09-30T10:19:45.606Z [worker] run 529266a9-3bcf-4e9d-94fd-9bb683d5bd2a claimed
+2026-09-30T10:19:45.613Z [worker] run 24962719-f45b-4014-a1ad-42755d0f78b9 claimed
+2026-09-30T10:19:45.628Z [worker] run f0d051b0-d2d3-440f-b7e7-60976290efff done
+2026-09-30T10:19:45.637Z [worker] run 01b0845c-6269-4664-9403-4df8b7c699b0 claimed
+2026-09-30T10:19:45.642Z [worker] run 3489b15f-44d1-4c9c-8f06-3e69a353a012 done
+2026-09-30T10:19:45.646Z [worker] run 529266a9-3bcf-4e9d-94fd-9bb683d5bd2a done
+2026-09-30T10:19:45.651Z [worker] run 24962719-f45b-4014-a1ad-42755d0f78b9 done
+2026-09-30T10:19:45.652Z [worker] run 8a21fa8f-da08-4928-a23c-bfd26866e1e1 claimed
+2026-09-30T10:19:45.677Z [worker] run 01b0845c-6269-4664-9403-4df8b7c699b0 done
+2026-09-30T10:19:45.687Z [worker] run 8a21fa8f-da08-4928-a23c-bfd26866e1e1 done
+2026-09-30T10:20:32.412Z [worker] run dd27817b-b1ed-4a0c-bd86-efbe9cb8ede5 claimed
+2026-09-30T10:20:32.490Z [worker] run dd27817b-b1ed-4a0c-bd86-efbe9cb8ede5 done
+2026-09-30T10:20:34.429Z [worker] platform notifications sent 6
+ ELIFECYCLE  Command failed with exit code 1.
+esktop\Personal_Project\FL-wt-design
+> node scripts/stop-test-stack.mjs
+
+test stack on :3100 stopped

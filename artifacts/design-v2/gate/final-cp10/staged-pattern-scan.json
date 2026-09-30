@@ -1,0 +1,16 @@
+{
+  "scope": "Added lines of staged diff; values never emitted",
+  "patternNames": [
+    "private_key",
+    "aws_access_key",
+    "github_token",
+    "slack_token",
+    "live_stripe",
+    "jwt_value",
+    "provider_key",
+    "cookie_value"
+  ],
+  "findings": [],
+  "total": 0,
+  "binaryScope": "PNG and compressed files not scanned by text patterns; traces are excluded from staging"
+}

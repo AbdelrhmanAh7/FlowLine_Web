@@ -1,0 +1,77 @@
+{
+  "at": "2026-09-30T17:20:34.369Z",
+  "checkpoint": "77879d9db12c670914843f917c900d83ed332dda",
+  "supervisorPid": 25608,
+  "sequence": [
+    {
+      "name": "recovery-lint",
+      "startedAt": "2026-09-30T17:20:36.129Z",
+      "command": "pnpm exec eslint tests/integration/ai-review-wavec.test.ts",
+      "pid": 9456,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:20:38.885Z"
+    },
+    {
+      "name": "typecheck",
+      "startedAt": "2026-09-30T17:20:39.547Z",
+      "command": "pnpm -s typecheck",
+      "pid": 66228,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:20:43.300Z"
+    },
+    {
+      "name": "integration",
+      "startedAt": "2026-09-30T17:20:43.918Z",
+      "command": "pnpm -s test:integration --maxWorkers=1",
+      "pid": 40832,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:23:52.418Z"
+    },
+    {
+      "name": "evidence",
+      "startedAt": "2026-09-30T17:23:53.097Z",
+      "command": "pnpm -s check:evidence",
+      "pid": 18740,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:23:53.786Z"
+    }
+  ],
+  "independentReview": false,
+  "providerCalls": 0,
+  "retainedCp22Checks": [
+    {
+      "name": "lint",
+      "startedAt": "2026-09-30T17:04:46.108Z",
+      "command": "pnpm -s lint",
+      "pid": 52564,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:04:59.860Z"
+    },
+    {
+      "name": "benchmark-typecheck",
+      "startedAt": "2026-09-30T17:05:13.300Z",
+      "command": "pnpm exec tsc --noEmit --project artifacts/beta-execution/20260930T122429Z/copilot-hub-check.tsconfig.json",
+      "pid": 41776,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:05:17.270Z"
+    },
+    {
+      "name": "unit",
+      "startedAt": "2026-09-30T17:05:17.811Z",
+      "command": "pnpm -s test --maxWorkers=1",
+      "pid": 55036,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:05:32.347Z"
+    },
+    {
+      "name": "contract",
+      "startedAt": "2026-09-30T17:05:32.929Z",
+      "command": "pnpm -s test:contract --maxWorkers=1",
+      "pid": 34976,
+      "exitCode": 0,
+      "endedAt": "2026-09-30T17:05:55.078Z"
+    }
+  ],
+  "retentionReason": "cp23 differs from cp22 only in integration fixture setup; src/scripts and every unit/contract file unchanged. Targeted recovery 12/12 also passed.",
+  "status": "PASS"
+}

@@ -1,0 +1,29 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/flows/893ff1f8-0c2d-4c61-a196-4241d1ddc3b8",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\n← Flows\n/\nFlow name\nSaved\nNot published\nTriggers\nPublish to activate webhook/schedule triggers\nPublish\n↶\nNothing to undo\n↷\nNothing to redo\nHistory\n✦ Copilot\nRuns\nCtrlJ\n▶ Run\nA run is already in progress\n\nOrder batch\n\nTRIGGER · MANUAL\n\n0ms\n\nSum items\n\nTRANSFORM · JSONATA\n\n1ms\n\nOver $250?\n\nLOGIC · IF / ELSE\n\nRunning…\n\ntrue\nfalse\n\nFlag for review\n\nOUTPUT · RESULT\n\nQueued\n\nAuto-approve\n\nOUTPUT · RESULT\n\nQueued\n\nReact Flow\n+ Add node\n/\n−\n87%\n+\nFit\nRUNS\n#6\nRUNNING\n2/5 · —\nCancel run\nOpen in inspector →\n✕\n#6\nnow\n#2\n6m ago\n#1\n10m ago\nOrder batch\nSuccess\n· 0ms\n→\nSum items\nSuccess\n· 1ms\n→\nOver $250?\nRunning…\n→\nFlag for review\nQueued\n→\nAuto-approve\nQueued\n\nRunning…",
+  "buttons": [
+    "COCodex Owner",
+    "Triggers",
+    "Publish",
+    "↶",
+    "↷",
+    "History",
+    "✦ Copilot",
+    "Runs CtrlJ",
+    "▶ Run",
+    "+ Add node /",
+    "−",
+    "+",
+    "Fit",
+    "Cancel run",
+    "✕",
+    "#6now",
+    "#26m ago",
+    "#110m ago",
+    "Order batchSuccess· 0ms",
+    "Sum itemsSuccess· 1ms",
+    "Over $250?Running…",
+    "Flag for reviewQueued",
+    "Auto-approveQueued"
+  ]
+}

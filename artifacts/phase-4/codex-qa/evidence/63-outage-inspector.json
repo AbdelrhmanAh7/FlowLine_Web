@@ -1,0 +1,28 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/runs",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nRun history\nSearch flows or run number\nAll runs\nSucceeded\nFailed\nRunning\nNeeds attention\nCancelled\n▾\n#8\nCodex Interruption Probe\nFAILED\n1/2 · 21.5s\n48s ago\n⚡ Manual trigger\nSuccess\n· 0ms\n→\n✦ AI · Generate\nFailed\n· 17.2s\n⚠ AI · Generate — Failed query: update \"usage_event\" set \"status\" = $1, \"cost_micros\" = $2, \"settled_at\" = $3 where (\"usage_event\".\"idempotency_key\" = $4 and \"usage_event\".\"status\" = $5) params: [omitted]\nInspect\n▸\n#7\nLead Qualifier\nSUCCESS\n4/4 · 30ms\n3m ago\n▸\n#6\nOrder Totals Digest\nSUCCESS\n4/4 · 33ms\n5m ago\n▸\n#5\nCodex Provider Failure\nFAILED\n1/2 · 41ms\nre-run\n5m ago\n▸\n#4\nCodex Provider Failure\nFAILED\n1/2 · 70ms\n5m ago\n▸\n#3\nCodex Copilot Greeting\nSUCCESS\n3/3 · 19ms\n8m ago\n▸\n#2\nOrder Totals Digest\nSUCCESS\n4/4 · 30ms\napi\n10m ago\n▸\n#1\nOrder Totals Digest\nSUCCESS\n4/4 · 68ms\n14m ago\n✦\nAI · Generate\nFAILED\n\n17.2s · run #8 · v2 · ai.generate · n5oas2 · 1 attempt\n\n✕\nInput\nOutput\nError\nLog\n\n⚠ NODE_ERROR\n\nFailed query: update \"usage_event\" set \"status\" = $1, \"cost_micros\" = $2, \"settled_at\" = $3 where (\"usage_event\".\"idempotency_key\" = $4 and \"usage_event\".\"status\" = $5) params: [omitted]\n\nSUGGESTED FIX\n\nCheck the node configuration, then re-run from this step.\n\n↻ Re-run from this step\n\nShows exactly what will run again — and what might repeat an external action — before anything starts.\n\nSTEPS",
+  "buttons": [
+    "COCodex Owner",
+    "All runs",
+    "Succeeded",
+    "Failed",
+    "Running",
+    "Needs attention",
+    "Cancelled",
+    "▾#8Codex Interruption ProbeFailed1/2 · 21.5s48s ago",
+    "⚡ Manual triggerSuccess· 0ms",
+    "✦ AI · GenerateFailed· 17.2s",
+    "Inspect",
+    "▸#7Lead QualifierSuccess4/4 · 30ms3m ago",
+    "▸#6Order Totals DigestSuccess4/4 · 33ms5m ago",
+    "▸#5Codex Provider FailureFailed1/2 · 41msre-run5m ago",
+    "▸#4Codex Provider FailureFailed1/2 · 70ms5m ago",
+    "▸#3Codex Copilot GreetingSuccess3/3 · 19ms8m ago",
+    "▸#2Order Totals DigestSuccess4/4 · 30msapi10m ago",
+    "▸#1Order Totals DigestSuccess4/4 · 68ms14m ago",
+    "✕",
+    "↻ Re-run from this step",
+    "",
+    ""
+  ]
+}

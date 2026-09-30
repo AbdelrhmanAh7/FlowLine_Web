@@ -32,6 +32,9 @@ function defaultBase(): string {
 
 export class StripePaymentAdapter implements PaymentAdapter {
   readonly provider = "stripe";
+  readonly mode = "test" as const;
+  readonly webhookSignatureHeader = "stripe-signature";
+  readonly supportsUsageReporting = true;
   private readonly baseUrl?: string;
 
   constructor(
@@ -85,9 +88,9 @@ export class StripePaymentAdapter implements PaymentAdapter {
   }
 
   async createCustomer(workspace: WorkspaceRef): Promise<{ id: string }> {
-    const res = await this.request<{ id: string }>("POST", "/v1/customers", {
-      form: { name: workspace.name, "metadata[workspaceId]": workspace.id, "metadata[workspaceSlug]": workspace.slug },
-    });
+    const form: Record<string, string> = { name: workspace.name, "metadata[workspaceId]": workspace.id, "metadata[workspaceSlug]": workspace.slug };
+    if (workspace.email) form.email = workspace.email;
+    const res = await this.request<{ id: string }>("POST", "/v1/customers", { form });
     return { id: res.id };
   }
 
@@ -198,19 +201,31 @@ function normalizeSubscription(raw: unknown): NormalizedSubscription | undefined
   };
 }
 
+/** Maps a Stripe event type onto the provider-neutral action the service switches on. */
+function stripeAction(type: string): BillingWebhookEvent["action"] {
+  if (type === "checkout.session.completed") return "checkout_completed";
+  if (type === "customer.subscription.deleted") return "subscription_deleted";
+  if (type.startsWith("customer.subscription.")) return "subscription_upsert";
+  if (type === "invoice.payment_failed") return "payment_failed";
+  if (type === "invoice.paid") return "payment_succeeded";
+  return "other";
+}
+
 /** Maps a Stripe event payload onto the normalized shape; unknown types pass through with just id/type/created/customer. */
 export function normalizeStripeEvent(payload: Record<string, unknown>): BillingWebhookEvent {
   const obj = (payload.data as { object?: unknown } | undefined)?.object as Record<string, unknown> | undefined;
+  const type = String(payload.type ?? "");
   const event: BillingWebhookEvent = {
     id: String(payload.id ?? ""),
     provider: "stripe",
-    type: String(payload.type ?? ""),
+    type,
+    action: stripeAction(type),
     created: unixToDate(payload.created) ?? new Date(0),
     customerId: (obj?.customer as string) ?? null,
   };
-  if (event.type.startsWith("customer.subscription.")) {
+  if (type.startsWith("customer.subscription.")) {
     event.subscription = normalizeSubscription(obj);
-  } else if (event.type === "checkout.session.completed" && obj) {
+  } else if (type === "checkout.session.completed" && obj) {
     event.checkoutSession = { id: String(obj.id ?? ""), subscriptionId: (obj.subscription as string) ?? null };
   }
   return event;

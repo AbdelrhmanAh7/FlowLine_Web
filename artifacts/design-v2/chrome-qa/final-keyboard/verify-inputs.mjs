@@ -1,0 +1,16 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+const number = process.argv[2];
+const folder = 'artifacts/design-v2/gate/final-keyboard';
+const checkpoint = JSON.parse(readFileSync(`${folder}/checkpoint-${number}.json`, 'utf8'));
+const index = path.join(mkdtempSync(path.join(tmpdir(),'fl-keyboard-verify-')), 'index');
+const git = (...args) => execFileSync('git', args, {encoding:'utf8', env:{...process.env,GIT_INDEX_FILE:index}, stdio:['pipe','pipe','pipe']}).trim();
+git('read-tree','HEAD');
+git('add','--',...Object.keys(checkpoint.inputs));
+const tree = git('write-tree');
+const actual = Object.fromEntries(Object.keys(checkpoint.inputs).map(p=>[p,git('rev-parse',`${tree}:${p}`)]));
+if (JSON.stringify(actual) !== JSON.stringify(checkpoint.inputs)) throw Error('Execution-input mismatch');
+writeFileSync(`${folder}/pre-gate-input-match-cp${number}.json`,JSON.stringify({checkpoint:checkpoint.commit,inputs:actual,result:'MATCH'},null,2));
+console.log('All 10 execution inputs MATCH checkpoint '+number);

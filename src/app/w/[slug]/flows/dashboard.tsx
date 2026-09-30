@@ -3,14 +3,17 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CopilotPanel } from "@/components/builder/copilot-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, type Tone } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
-import { duration, percent, timeAgo } from "@/lib/format";
+import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, useKeepMounted, type Tone } from "@/components/ui";
+import { useT } from "@/i18n/client";
+import { stepErrorText } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
+import type { MessageKey } from "@/i18n/types";
+import { api } from "@/lib/api";
 import { useNow, useOnline, useViewport } from "@/lib/hooks";
 
 export interface FlowRow {
@@ -55,37 +58,42 @@ interface Overview {
     flowName: string;
     createdAt: string;
     durationMs: number | null;
-    error: { message: string; nodeId?: string } | null;
+    error: { code?: string; message: string; nodeId?: string } | null;
     steps: number;
     stepsDone: number;
   }[];
 }
 
-const TRIGGER_LABEL: Record<string, string> = { "trigger.manual": "Manual", "trigger.webhook": "Webhook", "trigger.schedule": "Schedule" };
+const TRIGGER_LABEL: Record<string, MessageKey> = { "trigger.manual": "flows.trigger.manual", "trigger.webhook": "flows.trigger.webhook", "trigger.schedule": "flows.trigger.schedule" };
 
-export function flowStatus(f: FlowRow): { tone: Tone; label: string } {
+type FlowStatusKey = "expired" | "paused" | "running" | "needsApproval" | "activeFailing" | "active" | "failed" | "healthy" | "draft";
+
+/** Status of a flow row; `label` is a catalogue key suffix under `flows.status`. */
+export function flowStatus(f: FlowRow): { tone: Tone; label: FlowStatusKey } {
   // A broken connection pauses only the flows that use it (pausedReason = connection:<id>:<status>).
-  if (f.pausedReason) return f.pausedReason.endsWith(":expired") ? { tone: "danger", label: "Expired" } : { tone: "warning", label: "Paused" };
-  if (f.lastRunStatus === "running" || f.lastRunStatus === "queued") return { tone: "info", label: "Running" };
-  if (f.lastRunStatus === "waiting_approval") return { tone: "warning", label: "Needs approval" };
-  if (f.publishedVersion != null && f.trigger && f.trigger !== "trigger.manual") return f.lastRunStatus === "failed" ? { tone: "danger", label: "Active · failing" } : { tone: "success", label: "Active" };
-  if (f.lastRunStatus === "failed") return { tone: "danger", label: "Failed" };
-  if (f.lastRunStatus === "succeeded") return { tone: "success", label: "Healthy" };
-  return { tone: "muted", label: "Draft" };
+  if (f.pausedReason) return f.pausedReason.endsWith(":expired") ? { tone: "danger", label: "expired" } : { tone: "warning", label: "paused" };
+  if (f.lastRunStatus === "running" || f.lastRunStatus === "queued") return { tone: "info", label: "running" };
+  if (f.lastRunStatus === "waiting_approval") return { tone: "warning", label: "needsApproval" };
+  if (f.publishedVersion != null && f.trigger && f.trigger !== "trigger.manual") return f.lastRunStatus === "failed" ? { tone: "danger", label: "activeFailing" } : { tone: "success", label: "active" };
+  if (f.lastRunStatus === "failed") return { tone: "danger", label: "failed" };
+  if (f.lastRunStatus === "succeeded") return { tone: "success", label: "healthy" };
+  return { tone: "muted", label: "draft" };
 }
 
 export function useCreateFlow() {
   const { workspace } = useWorkspace();
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   return useMutation({
     mutationFn: (body: { name?: string; templateId?: string }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
     onSuccess: ({ flow }) => router.push(`/w/${workspace.slug}/flows/${flow.id}`),
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't create the flow", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("flows.createError")), "danger"),
   });
 }
 
 export function Dashboard() {
+  const t = useT();
   const { workspace, canEdit } = useWorkspace();
   const online = useOnline();
   const now = useNow();
@@ -97,51 +105,63 @@ export function Dashboard() {
   const router = useRouter();
   // "Create with Copilot" makes no flow until a proposal is approved (no empty drafts left behind).
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const copilotButton = useRef<HTMLButtonElement>(null); // the panel gives focus back here when it closes (Escape or ×)
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
   const isMobile = useViewport() === "mobile";
   // Mobile is monitor-first: a new flow couldn't be edited (or built with Copilot) here anyway.
-  const newReason = !canEdit ? "Viewers can't create flows" : !online ? "You're offline — reconnect to create flows" : isMobile ? "Creating and editing flows is disabled on mobile — use a tablet or desktop" : null;
+  const newReason = !canEdit ? t("flows.reasons.viewer") : !online ? t("flows.reasons.offline") : isMobile ? t("flows.reasons.mobile") : null;
+  const copilotVisible = copilotOpen && !newReason;
+  const copilotMounted = useKeepMounted(copilotVisible);
+  const untitled = t("common.untitledFlow");
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Flows">
+      <PageHeader title={t("flows.title")}>
         <label className="sr-only" htmlFor="flow-search">
-          Search flows
+          {t("flows.searchLabel")}
         </label>
-        <Input id="flow-search" placeholder="Search flows…" value={q} onChange={(e) => setQ(e.target.value)} className="h-8 w-44 sm:w-60" />
-        <Button onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
-          ✦ Create with Copilot
+        <Input id="flow-search" placeholder={t("flows.searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} className="h-8 w-44 sm:w-60" />
+        <Button ref={copilotButton} onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
+          {t("flows.createWithCopilot")}
         </Button>
-        <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} loading={create.isPending} disabledReason={newReason}>
-          + New flow
+        <Button variant="primary" onClick={() => create.mutate({ name: untitled })} loading={create.isPending} disabledReason={newReason}>
+          {t("flows.newFlow")}
         </Button>
       </PageHeader>
-      {copilotOpen && !newReason && (
-        <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md">
-          <CopilotPanel target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
+      {copilotMounted && (
+        <div hidden={!copilotVisible} className="fixed inset-y-0 end-0 z-40 w-full max-w-md">
+          <CopilotPanel open={copilotVisible} target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} returnFocusTo={() => copilotButton.current} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
         </div>
       )}
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         {/* KPIs */}
-        <section aria-label="Key numbers" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section aria-label={t("flows.kpiAria")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {overview.isPending ? (
             [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[86px] rounded-xl" />)
           ) : overview.isError ? (
             <div className="col-span-full">
-              <ErrorState title="Couldn't load workspace numbers" body={(overview.error as Error).message} onRetry={() => overview.refetch()} retrying={overview.isFetching} />
+              <ErrorState title={t("flows.numbersError")} body={apiErrorMessage(t, overview.error)} onRetry={() => overview.refetch()} retrying={overview.isFetching} />
             </div>
           ) : (
             <>
-              <Kpi label="Flows" value={String(overview.data.flows)} note={`${overview.data.flowsRun24h} ran in 24h`} />
-              <Kpi label="Runs (24h)" value={overview.data.runs24h.toLocaleString()} note={overview.data.successRate24h == null ? "no finished runs" : `${percent(overview.data.successRate24h)} success`} />
+              <Kpi label={t("flows.kpi.flows")} value={t.number(overview.data.flows)} note={t.plural("flows.kpi.ranIn24h", overview.data.flowsRun24h)} />
+              <Kpi
+                label={t("flows.kpi.runs24h")}
+                value={t.number(overview.data.runs24h)}
+                note={overview.data.successRate24h == null ? t("flows.kpi.noFinished") : t("flows.kpi.successNote", { pct: t.percent(overview.data.successRate24h) })}
+              />
               <UsageKpi usage={usage.data} loading={usage.isPending} />
               {(() => {
                 const o = overview.data;
                 const n = o.failed24h + o.pendingApprovals + o.unhealthyConnections.length;
-                const parts = [o.failed24h && `${o.failed24h} failed`, o.pendingApprovals && `${o.pendingApprovals} awaiting approval`, o.unhealthyConnections.length && `${o.unhealthyConnections.length} connection${o.unhealthyConnections.length > 1 ? "s" : ""} expired`].filter(Boolean);
-                return <Kpi label="Needs attention" value={String(n)} note={parts.length ? parts.join(" · ") : "nothing needs you"} tone={n ? "danger" : undefined} />;
+                const parts = [
+                  o.failed24h && t.plural("flows.kpi.failed", o.failed24h),
+                  o.pendingApprovals && t.plural("flows.kpi.awaitingApproval", o.pendingApprovals),
+                  o.unhealthyConnections.length && t.plural("flows.kpi.connectionsExpired", o.unhealthyConnections.length),
+                ].filter(Boolean);
+                return <Kpi label={t("flows.kpi.needsAttention")} value={t.number(n)} note={parts.length ? parts.join(" · ") : t("flows.kpi.nothing")} tone={n ? "danger" : undefined} />;
               })()}
             </>
           )}
@@ -157,21 +177,21 @@ export function Dashboard() {
             </div>
           ) : flows.isError ? (
             <div className="p-4">
-              <ErrorState title="Couldn't load flows" body={(flows.error as Error).message} onRetry={() => flows.refetch()} retrying={flows.isFetching} />
+              <ErrorState title={t("flows.flowsError")} body={apiErrorMessage(t, flows.error)} onRetry={() => flows.refetch()} retrying={flows.isFetching} />
             </div>
           ) : flows.data.length === 0 ? (
             <div className="p-4">
               <EmptyState
                 icon="⚡"
-                title="Start with a trigger"
-                body="Every flow begins with an event. Create a blank flow or start from a template that runs on local nodes."
+                title={t("flows.empty.title")}
+                body={t("flows.empty.body")}
                 action={
                   <>
-                    <Button variant="primary" onClick={() => create.mutate({ name: "Untitled flow" })} disabledReason={newReason} loading={create.isPending}>
-                      + New flow
+                    <Button variant="primary" onClick={() => create.mutate({ name: untitled })} disabledReason={newReason} loading={create.isPending}>
+                      {t("flows.newFlow")}
                     </Button>
                     <ButtonLink href={`/w/${workspace.slug}/templates`} variant="ghost">
-                      or browse templates
+                      {t("flows.empty.browse")}
                     </ButtonLink>
                   </>
                 }
@@ -179,36 +199,36 @@ export function Dashboard() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-4">
-              <EmptyState icon="⌕" title="No flows match your search" body={`Nothing is named like “${q}”.`} action={<Button onClick={() => setQ("")}>Clear search</Button>} />
+              <EmptyState icon="⌕" title={t("flows.noMatch.title")} body={t("flows.noMatch.body", { q })} action={<Button onClick={() => setQ("")}>{t("flows.noMatch.clear")}</Button>} />
             </div>
           ) : (
-            <table className="w-full text-left text-base">
+            <table className="w-full text-start text-base">
               <thead className="text-xs font-medium tracking-[0.4px] text-muted uppercase">
                 <tr className="border-b border-line">
-                  <th className="px-4 py-3 font-medium">Flow</th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">Trigger</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">Last run</th>
-                  <th className="hidden px-4 py-3 font-medium lg:table-cell">Success</th>
+                  <th className="px-4 py-3 font-medium">{t("flows.table.flow")}</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">{t("flows.table.trigger")}</th>
+                  <th className="px-4 py-3 font-medium">{t("flows.table.status")}</th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">{t("flows.table.lastRun")}</th>
+                  <th className="hidden px-4 py-3 font-medium lg:table-cell">{t("flows.table.success")}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((f) => {
                   const st = flowStatus(f);
                   return (
-                    <tr key={f.id} className="group relative border-b border-line last:border-0 hover:bg-elevated/40">
+                    <tr key={f.id} className="motion-list-in group relative border-b border-line last:border-0 hover:bg-elevated/40">
                       <td className="px-4 py-3">
                         <Link href={`/w/${workspace.slug}/flows/${f.id}`} className="font-semibold after:absolute after:inset-0 group-hover:text-hi">
-                          {f.name}
+                          <bdi>{f.name}</bdi>
                         </Link>
-                        <span className="data ml-2 text-xs text-muted">{f.nodeCount} nodes</span>
+                        <span className="data ms-2 text-xs text-muted">{t.plural("flows.nodes", f.nodeCount)}</span>
                       </td>
-                      <td className="hidden px-4 py-3 text-med md:table-cell">{f.trigger ? TRIGGER_LABEL[f.trigger] ?? "Trigger" : <span className="text-muted">No trigger</span>}</td>
+                      <td className="hidden px-4 py-3 text-med md:table-cell">{f.trigger ? t(TRIGGER_LABEL[f.trigger] ?? "flows.trigger.generic") : <span className="text-muted">{t("flows.trigger.none")}</span>}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
+                        <StatusBadge tone={st.tone}>{t(`flows.status.${st.label}`)}</StatusBadge>
                       </td>
-                      <td className="data hidden px-4 py-3 text-sm text-med sm:table-cell">{timeAgo(f.lastRunAt, now)}</td>
-                      <td className="data hidden px-4 py-3 text-sm text-med lg:table-cell">{percent(f.successRate)}</td>
+                      <td className="data hidden px-4 py-3 text-sm text-med sm:table-cell">{t.relative(f.lastRunAt, now)}</td>
+                      <td className="data hidden px-4 py-3 text-sm text-med lg:table-cell">{t.percent(f.successRate)}</td>
                     </tr>
                   );
                 })}
@@ -219,7 +239,7 @@ export function Dashboard() {
 
         {/* Activity */}
         <Card className="p-4">
-          <h2 className="mb-3 text-xs font-medium tracking-[0.4px] text-muted uppercase">Recent activity</h2>
+          <h2 className="mb-3 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("flows.activity.title")}</h2>
           {overview.isPending ? (
             <div className="grid gap-2 md:grid-cols-2">
               {[0, 1].map((i) => (
@@ -227,64 +247,69 @@ export function Dashboard() {
               ))}
             </div>
           ) : overview.isError ? (
-            <p className="text-base text-med">Activity is unavailable until the numbers above load.</p>
+            <p className="text-base text-med">{t("flows.activity.unavailable")}</p>
           ) : overview.data.recent.length === 0 && overview.data.worker.online && overview.data.pendingApprovals === 0 && overview.data.unhealthyConnections.length === 0 ? (
-            <p className="text-base text-med">No runs yet. Open a flow and press Run — results show up here.</p>
+            <p className="text-base text-med">{t("flows.activity.empty")}</p>
           ) : (
             <ul className="grid gap-x-8 gap-y-2 md:grid-cols-2">
               {overview.data.unhealthyConnections.map((c) => (
-                <li key={c.id} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={c.id} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">
-                    {c.label} connection {c.status}
-                    {overview.data.pausedFlows ? ` — ${overview.data.pausedFlows} flow${overview.data.pausedFlows > 1 ? "s" : ""} paused` : ""}
+                    {t("flows.activity.connection", { label: c.label, status: c.status })}
+                    {overview.data.pausedFlows ? t.plural("flows.activity.pausedFlows", overview.data.pausedFlows) : ""}
                   </span>
-                  <Link href={`/w/${workspace.slug}/integrations`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
-                    Reconnect →
+                  <Link href={`/w/${workspace.slug}/integrations`} className="ms-auto shrink-0 text-sm text-warning hover:underline">
+                    {t("flows.activity.reconnect")}
                   </Link>
                 </li>
               ))}
               {overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length > 0 && (
-                <li className="flex min-w-0 items-center gap-2 text-base">
+                <li className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">
-                    {overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length} workflow action{overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length > 1 ? "s" : ""} waiting for approval
+                    {t.plural("flows.activity.workflowApprovals", overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length)}
                   </span>
-                  <Link href={`/w/${workspace.slug}/runs?status=waiting`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
-                    Review →
+                  <Link href={`/w/${workspace.slug}/runs?status=waiting`} className="ms-auto shrink-0 text-sm text-warning hover:underline">
+                    {t("flows.activity.review")}
                   </Link>
                 </li>
               )}
               {overview.data.pendingAgentApprovals.map((a) => (
-                <li key={a.agentRunId} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={a.agentRunId} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
-                  <span className="min-w-0 truncate text-med">Agent “{a.agentName}” is waiting for a decision</span>
-                  <Link href={`/w/${workspace.slug}/agents/${a.agentId}?tab=runs&run=${a.agentRunId}`} className="ml-auto shrink-0 text-sm text-warning hover:underline">
-                    Review →
+                  <span className="min-w-0 truncate text-med">{t("flows.activity.agentWaiting", { name: a.agentName })}</span>
+                  <Link href={`/w/${workspace.slug}/agents/${a.agentId}?tab=runs&run=${a.agentRunId}`} className="ms-auto shrink-0 text-sm text-warning hover:underline">
+                    {t("flows.activity.review")}
                   </Link>
                 </li>
               ))}
               {!overview.data.worker.online && (
-                <li className="flex items-center gap-2 text-base">
+                <li className="motion-list-in flex items-center gap-2 text-base">
                   <Dot tone="warning" />
-                  <span className="text-med">Execution worker offline{overview.data.activeRuns ? ` — ${overview.data.activeRuns} runs waiting` : ""}</span>
+                  <span className="text-med">
+                    {t("flows.activity.workerOffline")}
+                    {overview.data.activeRuns ? t.plural("flows.activity.runsWaiting", overview.data.activeRuns) : ""}
+                  </span>
                 </li>
               )}
               {overview.data.recent.map((r) => (
-                <li key={r.id} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={r.id} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone={RUN_TONE[r.status] ?? "muted"} />
                   <span className="min-w-0 truncate text-med">
-                    <span className="font-medium text-hi">Run #{r.number}</span> {r.flowName} ·{" "}
+                    <span className="font-medium text-hi">{t("flows.activity.run", { number: r.number })}</span> <bdi>{r.flowName}</bdi> ·{" "}
                     {r.status === "succeeded"
-                      ? `completed ${r.stepsDone}/${r.steps} steps in ${duration(r.durationMs)}`
+                      ? t("flows.activity.completed", { done: r.stepsDone, total: r.steps, duration: t.duration(r.durationMs) })
                       : r.status === "failed"
-                        ? `failed${r.error?.message ? ` — ${r.error.message}` : ""}`
+                        ? r.error?.message
+                          ? t("flows.activity.failedWith", { message: stepErrorText(t, r.error) })
+                          : t("flows.activity.failed")
                         : r.status === "queued"
-                          ? "queued"
-                          : `in progress · step ${r.stepsDone + 1} of ${r.steps}`}
+                          ? t("flows.activity.queued")
+                          : t("flows.activity.inProgress", { step: r.stepsDone + 1, total: r.steps })}
                   </span>
-                  <Link href={`/w/${workspace.slug}/runs?run=${r.id}`} className={`ml-auto shrink-0 text-sm hover:underline ${r.status === "failed" ? "text-danger" : "text-accent"}`}>
-                    Inspect →
+                  <Link href={`/w/${workspace.slug}/runs?run=${r.id}`} className={`ms-auto shrink-0 text-sm hover:underline ${r.status === "failed" ? "text-danger" : "text-accent-text"}`}>
+                    {t("flows.activity.inspect")}
                   </Link>
                 </li>
               ))}
@@ -297,16 +322,18 @@ export function Dashboard() {
 }
 
 function UsageKpi({ usage, loading }: { usage?: Usage; loading: boolean }) {
-  if (loading || !usage) return <Kpi label="Usage (this month)" value="…" note="loading" muted />;
-  const cost = usage.totalMicros / 1_000_000;
+  const t = useT();
+  if (loading || !usage) return <Kpi label={t("flows.kpi.usage")} value="…" note={t("flows.kpi.loading")} muted />;
+  const money = (micros: number) => t.number(micros / 1_000_000, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const tokens = usage.rows.reduce((n, r) => n + r.inputTokens + r.outputTokens, 0);
   const unpriced = usage.rows.reduce((n, r) => n + r.unpriced, 0);
-  const budget = usage.budgetMicros != null ? ` / ${(usage.budgetMicros / 1_000_000).toFixed(2)}` : "";
-  const note = [tokens ? `${tokens.toLocaleString()} AI tokens` : "no AI usage", unpriced ? `${unpriced} unpriced` : null].filter(Boolean).join(" · ");
-  return <Kpi label="Usage (this month)" value={`${usage.currency} ${cost.toFixed(2)}${budget}`} note={note} />;
+  const budget = usage.budgetMicros != null ? ` / ${money(usage.budgetMicros)}` : "";
+  const note = [tokens ? t.plural("flows.kpi.aiTokens", tokens) : t("flows.kpi.noAi"), unpriced ? t("flows.kpi.unpriced", { count: t.number(unpriced) }) : null].filter(Boolean).join(" · ");
+  // Currency code + amount read left-to-right in both languages ("USD 1.25 / 10.00").
+  return <Kpi label={t("flows.kpi.usage")} value={<bdi dir="ltr">{`${usage.currency} ${money(usage.totalMicros)}${budget}`}</bdi>} note={note} />;
 }
 
-function Kpi({ label, value, note, tone, muted }: { label: string; value: string; note: string; tone?: "danger"; muted?: boolean }) {
+function Kpi({ label, value, note, tone, muted }: { label: string; value: React.ReactNode; note: string; tone?: "danger"; muted?: boolean }) {
   return (
     <Card className="flex min-h-[86px] flex-col justify-between gap-1 px-4 py-3">
       <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{label}</p>

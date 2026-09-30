@@ -1,0 +1,7 @@
+
+Running 1 test using 1 worker
+
+  ok 1 [chromium] › e2e\phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs (2.5s)
+
+  1 passed (3.1s)
+exit=0

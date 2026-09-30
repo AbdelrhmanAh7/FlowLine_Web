@@ -1,22 +1,31 @@
+import { LOCAL_SCENARIOS } from "./local-scenarios";
 import type { FlowGraph } from "./types";
+
+export type TemplateGoal = "sales" | "support" | "data" | "engineering";
 
 export interface LocalTemplate {
   id: string;
   name: string;
   description: string;
-  category: "Sales" | "Support" | "Data ops" | "Finance" | "Marketing" | "Engineering";
-  goal: "sales" | "support" | "data" | "engineering";
+  /** What the trigger's editable sample contains (shown in the gallery). */
+  sample: string;
+  /** What a run saves as its result (shown in the gallery). */
+  result: string;
+  category: "Sales" | "Support" | "Data ops" | "Finance" | "Marketing" | "Engineering" | "Operations" | "Personal";
+  goal: TemplateGoal;
   graph: FlowGraph;
 }
 
 const X = [0, 300, 600, 900];
 
-/** Templates that run entirely on Phase 1 local nodes. */
+/** Templates that run entirely on local nodes. The first three ids are relied on by tests, scripts and saved flows. */
 export const LOCAL_TEMPLATES: LocalTemplate[] = [
   {
     id: "lead-qualifier",
     name: "Lead Qualifier",
     description: "Normalise an inbound lead, check company size, and label it hot or nurture.",
+    sample: "One inbound lead with a name, an email and the company size.",
+    result: "The lead labelled hot (50 or more employees) or nurture.",
     category: "Sales",
     goal: "sales",
     graph: {
@@ -55,6 +64,8 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
     id: "ticket-priority",
     name: "Ticket Priority Router",
     description: "Score a support ticket by keywords and route urgent ones to an escalation output.",
+    sample: "One support ticket with a subject and the customer's plan.",
+    result: "The ticket saved as escalate or standard queue. Nobody is notified.",
     category: "Support",
     goal: "support",
     graph: {
@@ -92,7 +103,9 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
   {
     id: "order-totals",
     name: "Order Totals Digest",
-    description: "Sum line items, apply a discount rule, and flag orders above a threshold.",
+    description: "Add up an order's line items and flag orders over $250 for review. No discount is applied.",
+    sample: "One order with two lines, each with a quantity and a price.",
+    result: "The order total and line count, saved as needing review or not.",
     category: "Data ops",
     goal: "data",
     graph: {
@@ -109,7 +122,7 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
         { id: "sum", type: "transform.json", position: { x: X[1], y: 120 }, data: { label: "Sum items", config: { expression: '{ "total": $sum(items.(qty * price)), "lines": $count(items) }' } } },
         { id: "big", type: "logic.condition", position: { x: X[2], y: 120 }, data: { label: "Over $250?", config: { expression: "total > 250" } } },
         { id: "flag", type: "output", position: { x: X[3], y: 36 }, data: { label: "Flag for review", config: { key: "review", expression: "" } } },
-        { id: "ok", type: "output", position: { x: X[3], y: 216 }, data: { label: "Auto-approve", config: { key: "approved", expression: "" } } },
+        { id: "ok", type: "output", position: { x: X[3], y: 216 }, data: { label: "No review needed", config: { key: "approved", expression: "" } } },
       ],
       edges: [
         { id: "e1", source: "trigger", target: "sum", sourceHandle: "out" },
@@ -119,6 +132,18 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
       ],
     },
   },
+  ...LOCAL_SCENARIOS,
 ];
+
+/** The few examples the landing page shows; the in-app gallery lists every template. */
+export const LANDING_TEMPLATE_IDS = ["low-stock-list", "quote-calculator", "expense-category-summary", "weekly-task-plan", "support-backlog-summary", "event-attendee-summary"] as const;
+
+export const LANDING_TEMPLATES: LocalTemplate[] = LANDING_TEMPLATE_IDS.map((id) => LOCAL_TEMPLATES.find((t) => t.id === id)!);
+
+/** Onboarding offers a short list: templates for the chosen goal first, topped up with others, never more than `limit`. */
+export function onboardingTemplates(goal: TemplateGoal | null, limit = 3): LocalTemplate[] {
+  const suggested = goal ? LOCAL_TEMPLATES.filter((t) => t.goal === goal) : [];
+  return [...suggested, ...LOCAL_TEMPLATES.filter((t) => !suggested.includes(t))].slice(0, limit);
+}
 
 export const BLANK_GRAPH: FlowGraph = { nodes: [], edges: [] };

@@ -1,0 +1,12 @@
+{
+  "method": "Agent-driven Google Chrome exploratory QA via Playwright",
+  "chrome": "154.0.8037.92",
+  "headed": true,
+  "isolatedProfile": true,
+  "control": "Playwright CDP connection to supervised installed Google Chrome",
+  "head": "776337cec8ed5ee823017f40020459e28cf0467a",
+  "checkpoint": "d4da9ca354b1d3da8234c7c339b65c389dcf5d94",
+  "build": "lFxzDlouBH-FqlhxQatTn",
+  "started": "2026-09-30T10:50:05.223Z",
+  "integrationScope": "test doubles only"
+}

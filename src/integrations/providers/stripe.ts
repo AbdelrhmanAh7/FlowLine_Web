@@ -108,6 +108,7 @@ const provider: ProviderDef = {
   actions: [listCharges, createRefund],
   verification: {
     adapter: true,
+    betaScope: "deferred",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

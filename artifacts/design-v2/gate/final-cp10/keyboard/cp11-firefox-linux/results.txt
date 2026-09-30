@@ -1,0 +1,24 @@
+forward 127.0.0.1:3100 → host.docker.internal:3100
+forward 127.0.0.1:4010 → host.docker.internal:4010
+forward 127.0.0.1:4011 → host.docker.internal:4011
+
+Running 17 tests using 1 worker
+
+[1/17] [firefox] › e2e/builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher
+[2/17] [firefox] › e2e/builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher
+[3/17] [firefox] › e2e/builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher
+[4/17] [firefox] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[5/17] [firefox] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+[6/17] [firefox] › e2e/builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again
+[7/17] [firefox] › e2e/builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it
+[8/17] [firefox] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button
+[9/17] [firefox] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button
+[10/17] [firefox] › e2e/builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel
+[11/17] [firefox] › e2e/builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it
+[12/17] [firefox] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button
+[13/17] [firefox] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button
+[14/17] [firefox] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST
+[15/17] [firefox] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST
+[16/17] [firefox] › e2e/builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot
+[17/17] [firefox] › e2e/builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel
+  17 passed (33.1s)

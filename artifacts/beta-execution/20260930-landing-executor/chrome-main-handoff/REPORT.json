@@ -1,0 +1,84 @@
+{
+  "at": "2026-09-30T20:45:06.509Z",
+  "checkpoint": "c1e8f5fbdcf82f991279a1dd79960b4adb554a07",
+  "buildId": "BqdPGUpmyrI4p4VDB0s0j",
+  "method": "Agent-driven Google Chrome exploratory QA via Playwright",
+  "headed": true,
+  "dedicatedProfile": true,
+  "version": "154.0.8037.92",
+  "checks": [
+    {
+      "locale": "en",
+      "section": "product",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "en",
+      "section": "templates",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "en",
+      "section": "pricing",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "plainCopy": true,
+      "overflow": false,
+      "state": "PASS"
+    },
+    {
+      "locale": "en",
+      "width": 360,
+      "plainCopy": true,
+      "overflow": false,
+      "state": "PASS"
+    },
+    {
+      "locale": "ar",
+      "section": "product",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "ar",
+      "section": "templates",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "ar",
+      "section": "pricing",
+      "keyboard": true,
+      "backForward": true,
+      "state": "PASS"
+    },
+    {
+      "locale": "ar",
+      "width": 1440,
+      "plainCopy": true,
+      "overflow": false,
+      "state": "PASS"
+    },
+    {
+      "locale": "ar",
+      "width": 360,
+      "plainCopy": true,
+      "overflow": false,
+      "state": "PASS"
+    }
+  ],
+  "state": "PASS",
+  "limits": "Public landing and account navigation only; no human usability, owner login or Company Builder acceptance.",
+  "endedAt": "2026-09-30T20:45:11.218Z"
+}

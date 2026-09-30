@@ -5,11 +5,14 @@ import { useRef, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
-import { timeAgo } from "@/lib/format";
+import { Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
+import { useT } from "@/i18n/client";
+import { denyReasonText } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
+import { dataText } from "@/i18n/workspace-text";
+import { api } from "@/lib/api";
 import { useOnline } from "@/lib/hooks";
-import { can, denyReason, type Role } from "@/lib/permissions";
+import { can, type Role } from "@/lib/permissions";
 
 export interface KnowledgeSourceDto {
   id: string;
@@ -35,12 +38,13 @@ interface Hit {
 const STATUS_TONE: Record<KnowledgeSourceDto["status"], Tone> = { pending: "muted", indexing: "info", ready: "success", failed: "danger" };
 
 export default function KnowledgePage() {
+  const t = useT();
   const { workspace, role } = useWorkspace();
   const qc = useQueryClient();
   const toast = useToast();
   const online = useOnline();
   const manage = can(role as Role, "knowledge.manage");
-  const editReason = !manage ? denyReason(role as Role, "knowledge.manage") : !online ? "You're offline" : null;
+  const editReason = !manage ? denyReasonText(t, role as Role, "knowledge.manage") : !online ? t("knowledge.offline") : null;
   const sources = useQuery({
     queryKey: ["knowledge", workspace.id],
     queryFn: () => api<{ sources: KnowledgeSourceDto[] }>(`/api/workspaces/${workspace.id}/knowledge`),
@@ -57,37 +61,38 @@ export default function KnowledgePage() {
       return api(`/api/workspaces/${workspace.id}/knowledge`, { method: "POST", body: fd });
     },
     onSuccess: () => {
-      toast("Uploaded — indexing started", "success");
+      toast(t("knowledge.uploaded"), "success");
       refresh();
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Upload failed", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("knowledge.uploadError")), "danger"),
   });
   const [textName, setTextName] = useState("");
   const [text, setText] = useState("");
   const addText = useMutation({
     mutationFn: () => api(`/api/workspaces/${workspace.id}/knowledge`, { method: "POST", json: { name: textName, text } }),
     onSuccess: () => {
-      toast("Added — indexing started", "success");
+      toast(t("knowledge.added"), "success");
       setText("");
       setTextName("");
       refresh();
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't add the text", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("knowledge.addError")), "danger"),
   });
   const patch = useMutation({
     mutationFn: (v: { id: string; body: { enabled?: boolean; reindex?: true } }) => api(`/api/workspaces/${workspace.id}/knowledge/${v.id}`, { method: "PATCH", json: v.body }),
     onSuccess: refresh,
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't update the source", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("knowledge.updateError")), "danger"),
   });
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const del = useMutation({
     mutationFn: (id: string) => api(`/api/workspaces/${workspace.id}/knowledge/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      toast("Deleted — it can no longer be retrieved", "success");
+      toast(t("knowledge.deleted"), "success");
       setConfirmDelete(null);
+      if (document.activeElement?.closest('[role="alertdialog"]')) document.getElementById("knowledge-upload")?.focus();
       refresh();
     },
-    onError: (e) => toast(e instanceof ApiError ? e.message : "Couldn't delete", "danger"),
+    onError: (e) => toast(apiErrorMessage(t, e, t("knowledge.deleteError")), "danger"),
   });
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
@@ -100,10 +105,10 @@ export default function KnowledgePage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Knowledge" sub="Documents your agents can search. Answers cite the source and passage they came from." />
+      <PageHeader title={t("knowledge.title")} sub={t("knowledge.sub")} />
       <div className="flex flex-col gap-6 p-4 sm:p-6">
         <section>
-          <SectionLabel className="mb-3">Sources · {sources.data?.length ?? "…"}</SectionLabel>
+          <SectionLabel className="mb-3">{t("knowledge.sourcesLabel", { count: sources.data?.length ?? "…" })}</SectionLabel>
           {sources.isPending ? (
             <div className="flex flex-col gap-2">
               {[0, 1, 2].map((i) => (
@@ -111,49 +116,53 @@ export default function KnowledgePage() {
               ))}
             </div>
           ) : sources.isError ? (
-            <ErrorState title="Couldn't load knowledge sources" body={(sources.error as Error).message} onRetry={() => sources.refetch()} />
+            <ErrorState title={t("knowledge.loadError")} body={(sources.error as Error).message} onRetry={() => sources.refetch()} />
           ) : sources.data.length === 0 ? (
-            <EmptyState icon="❏" title="No knowledge yet" body="Upload a PDF, CSV, JSON, Markdown or text file, or paste text below." />
+            <EmptyState icon="❏" title={t("knowledge.emptyTitle")} body={t("knowledge.emptyBody")} />
           ) : (
-            <ul className="flex flex-col gap-2" aria-label="Knowledge sources">
+            <ul className="flex flex-col gap-2" aria-label={t("knowledge.listAria")}>
               {sources.data.map((s) => (
-                <li key={s.id}>
+                <li key={s.id} className="motion-list-in">
                   <Card className={cx("flex flex-wrap items-center gap-x-3 gap-y-2 p-3", !s.enabled && "opacity-70")} data-testid={`source-${s.name}`}>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{s.name}</span>
                       <span className="data block text-sm text-muted">
-                        {s.kind} · {(s.size / 1024).toFixed(1)} KB · {s.chunkCount} chunks · added {timeAgo(s.createdAt)}
+                        {t("knowledge.meta", {
+                          kind: dataText(t, "knowledge.kind", s.kind),
+                          size: t.number(s.size / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false }),
+                          chunks: t.plural("knowledge.chunks", s.chunkCount),
+                          ago: t.relative(s.createdAt),
+                        })}
                       </span>
                       {s.status === "failed" && s.error && (
                         <span role="alert" className="block text-sm text-danger">
-                          Indexing failed: {s.error}
+                          {t("knowledge.indexingFailed", { error: s.error })}
                         </span>
                       )}
                     </span>
-                    <StatusBadge tone={STATUS_TONE[s.status]}>{s.status === "indexing" ? "Indexing…" : s.status}</StatusBadge>
-                    {!s.enabled && <StatusBadge tone="warning">disabled</StatusBadge>}
-                    <span className="flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="ghost" disabledReason={editReason ?? (s.status === "indexing" || s.status === "pending" ? "Indexing is in progress" : null)} onClick={() => patch.mutate({ id: s.id, body: { reindex: true } })}>
-                        Re-index
+                    <StatusBadge tone={STATUS_TONE[s.status]}>{dataText(t, "knowledge.status", s.status)}</StatusBadge>
+                    {!s.enabled && <StatusBadge tone="warning">{t("knowledge.disabled")}</StatusBadge>}
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="ghost" disabledReason={editReason ?? (s.status === "indexing" || s.status === "pending" ? t("knowledge.indexingInProgress") : null)} onClick={() => patch.mutate({ id: s.id, body: { reindex: true } })}>
+                        {t("knowledge.reindex")}
                       </Button>
                       <Button size="sm" variant="ghost" disabledReason={editReason} onClick={() => patch.mutate({ id: s.id, body: { enabled: !s.enabled } })}>
-                        {s.enabled ? "Disable" : "Enable"}
+                        {s.enabled ? t("knowledge.disable") : t("knowledge.enable")}
                       </Button>
-                      {confirmDelete === s.id ? (
-                        <>
+                      <Button size="sm" variant="danger-ghost" disabledReason={editReason} aria-expanded={confirmDelete === s.id} onClick={() => setConfirmDelete(s.id)}>
+                        {t("knowledge.delete")}
+                      </Button>
+                      {confirmDelete === s.id && (
+                        <InlineConfirmation label={t("knowledge.confirmDelete")} onCancel={() => setConfirmDelete(null)} busy={del.isPending} returnFocusTo={() => document.getElementById("knowledge-upload")} className="mt-0 flex gap-2">
                           <Button size="sm" variant="danger" loading={del.isPending} onClick={() => del.mutate(s.id)}>
-                            Confirm delete
+                            {t("knowledge.confirmDelete")}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
-                            Keep
+                          <Button data-initial-focus size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
+                            {t("knowledge.keep")}
                           </Button>
-                        </>
-                      ) : (
-                        <Button size="sm" variant="danger-ghost" disabledReason={editReason} onClick={() => setConfirmDelete(s.id)}>
-                          Delete
-                        </Button>
+                        </InlineConfirmation>
                       )}
-                    </span>
+                    </div>
                   </Card>
                 </li>
               ))}
@@ -163,13 +172,13 @@ export default function KnowledgePage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="flex flex-col gap-3 p-5">
-            <h2 className="text-lg font-semibold">Add a source</h2>
-            <p className="text-sm text-med">PDF (with a text layer), CSV, JSON, Markdown or text — up to 5 MB. Content is treated as data: instructions inside documents are never followed.</p>
+            <h2 className="text-lg font-semibold">{t("knowledge.addTitle")}</h2>
+            <p className="text-sm text-med">{t("knowledge.addBody")}</p>
             <input
               ref={fileRef}
               type="file"
               className="sr-only"
-              aria-label="Knowledge file"
+              aria-label={t("knowledge.fileAria")}
               accept=".pdf,.csv,.json,.md,.markdown,.txt,application/pdf,text/csv,application/json,text/plain,text/markdown"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -177,8 +186,8 @@ export default function KnowledgePage() {
                 e.target.value = "";
               }}
             />
-            <Button className="self-start" variant="primary" loading={upload.isPending} disabledReason={editReason} onClick={() => fileRef.current?.click()}>
-              Upload file
+            <Button id="knowledge-upload" className="self-start" variant="primary" loading={upload.isPending} disabledReason={editReason} onClick={() => fileRef.current?.click()}>
+              {t("knowledge.upload")}
             </Button>
             <form
               className="flex flex-col gap-2 border-t border-line pt-3"
@@ -187,20 +196,20 @@ export default function KnowledgePage() {
                 addText.mutate();
               }}
             >
-              <Field label="Title" htmlFor="kn-title">
-                <Input id="kn-title" value={textName} maxLength={120} disabled={!manage} onChange={(e) => setTextName(e.target.value)} placeholder="e.g. Refund policy" />
+              <Field label={t("knowledge.titleLabel")} htmlFor="kn-title">
+                <Input id="kn-title" value={textName} maxLength={120} disabled={!manage} onChange={(e) => setTextName(e.target.value)} placeholder={t("knowledge.titlePlaceholder")} />
               </Field>
-              <Field label="Text" htmlFor="kn-text">
+              <Field label={t("knowledge.text")} htmlFor="kn-text">
                 <Textarea id="kn-text" rows={4} value={text} disabled={!manage} onChange={(e) => setText(e.target.value)} />
               </Field>
-              <Button type="submit" className="self-start" loading={addText.isPending} disabledReason={editReason ?? (!textName.trim() || !text.trim() ? "Add a title and some text" : null)}>
-                Add text
+              <Button type="submit" className="self-start" loading={addText.isPending} disabledReason={editReason ?? (!textName.trim() || !text.trim() ? t("knowledge.addTextFirst") : null)}>
+                {t("knowledge.addText")}
               </Button>
             </form>
           </Card>
 
           <Card className="flex flex-col gap-3 p-5">
-            <h2 className="text-lg font-semibold">Test retrieval</h2>
+            <h2 className="text-lg font-semibold">{t("knowledge.testTitle")}</h2>
             <form
               className="flex gap-2"
               onSubmit={(e) => {
@@ -209,29 +218,29 @@ export default function KnowledgePage() {
               }}
             >
               <label htmlFor="kn-q" className="sr-only">
-                Search knowledge
+                {t("knowledge.searchLabel")}
               </label>
-              <Input id="kn-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about your documents…" className="h-8 flex-1" />
-              <Button type="submit" size="sm" disabledReason={q.trim() ? null : "Type a question"}>
-                Search
+              <Input id="kn-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("knowledge.searchPlaceholder")} className="h-8 flex-1" />
+              <Button type="submit" size="sm" disabledReason={q.trim() ? null : t("knowledge.typeQuestion")}>
+                {t("knowledge.search")}
               </Button>
             </form>
-            <p className="text-sm text-muted">Keyword full-text search (PostgreSQL), ranked by relevance. Only enabled, indexed sources are searched.</p>
+            <p className="text-sm text-muted">{t("knowledge.searchHint")}</p>
             {search.isFetching ? (
               <Skeleton className="h-16" />
             ) : search.isError ? (
-              <ErrorState title="Search failed" body={(search.error as Error).message} onRetry={() => search.refetch()} />
+              <ErrorState title={t("knowledge.searchFailed")} body={(search.error as Error).message} onRetry={() => search.refetch()} />
             ) : query && search.data?.length === 0 ? (
-              <p className="text-base text-med">No matching passages.</p>
+              <p className="text-base text-med">{t("knowledge.noMatches")}</p>
             ) : (
-              <ol className="flex flex-col gap-2" aria-label="Search results">
+              <ol className="flex flex-col gap-2" aria-label={t("knowledge.resultsAria")}>
                 {search.data?.map((h, i) => (
-                  <li key={`${h.sourceId}-${i}`} className="rounded-md border border-line bg-app p-2.5">
+                  <li key={`${h.sourceId}-${i}`} className="motion-list-in rounded-md border border-line bg-app p-2.5">
                     <p className="flex items-baseline justify-between gap-2 text-sm">
                       <span className="font-medium text-hi">
                         [{i + 1}] {h.label}
                       </span>
-                      <span className="data text-muted">score {h.score}</span>
+                      <span className="data text-muted">{t("knowledge.score", { score: h.score })}</span>
                     </p>
                     <p className="mt-1 line-clamp-4 text-sm text-med">{h.text}</p>
                   </li>

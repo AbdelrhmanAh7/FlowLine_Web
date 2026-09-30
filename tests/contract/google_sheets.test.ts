@@ -12,6 +12,18 @@ afterAll(async () => {
 });
 
 describe("google_sheets identity", () => {
+  it("requests userinfo identity and read/write Sheets access without unrelated permissions", () => {
+    // External contract: https://developers.google.com/identity/openid-connect/openid-connect
+    // UserInfo supplies sub through OpenID; email is optional and needs its own scope.
+    const scopes = p.oauth!.scopes;
+    expect(new Set(scopes)).toEqual(new Set(["openid", "email", "https://www.googleapis.com/auth/spreadsheets"]));
+    expect(scopes).toHaveLength(3);
+    // Identity permissions must not become requirements for executing already-authorized Sheet actions.
+    for (const action of p.actions) {
+      expect(action.requiredScopes).toEqual(["https://www.googleapis.com/auth/spreadsheets"]);
+    }
+  });
+
   it("returns the account from userinfo (via the googleapis base override)", async () => {
     const id = await p.identity(makeCtx(p, oauthCreds));
     expect(id).toEqual({ accountId: "user-alice-1", label: "alice@flowline.test" });
@@ -19,6 +31,12 @@ describe("google_sheets identity", () => {
     expect(r.method).toBe("GET");
     expect(r.path).toBe("/oauth2/v3/userinfo");
     expect(r.headers["x-auth-scheme"]).toBe("bearer");
+  });
+
+  it("keeps the stable Google subject when optional email/profile claims are withheld", async () => {
+    const ctx = makeCtx(p, oauthCreds);
+    ctx.http.request = async <T>() => ({ data: { sub: "subject-without-email" } as T, status: 200, headers: new Headers() });
+    expect(await p.identity(ctx)).toEqual({ accountId: "subject-without-email", label: "subject-without-email" });
   });
 });
 

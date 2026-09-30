@@ -19,7 +19,7 @@ const body = z.object({ input: z.record(z.string(), z.unknown()).optional() }).s
 export const POST = route(async (req, { params }: Ctx) => {
   const p = await authenticateApiKey(req);
   await requireScope(p, "runs:write");
-  checkRunRate(`apikey:${p.keyId}`);
+  await checkRunRate(`apikey:${p.keyId}`);
   const fid = (await params).fid;
   if (!isUuid(fid)) throw notFound("Flow not found");
   const [flow] = await db.select().from(schema.flow).where(and(eq(schema.flow.id, fid), eq(schema.flow.workspaceId, p.workspaceId), isNull(schema.flow.deletedAt)));

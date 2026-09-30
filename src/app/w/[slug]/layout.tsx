@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, requireWorkspaceBySlug } from "@/server/access";
 import { listWorkspaces } from "@/server/workspaces";
 import { AppShell } from "@/components/shell/app-shell";
+import { betaSupport } from "@/server/beta";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   return (
     <AppShell
       user={user}
-      workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone }}
+      workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone, currency: row.workspace.currency ?? "USD" }}
       role={row.role}
+      support={betaSupport()}
       workspaces={workspaces.map((w) => ({ id: w.id, name: w.name, slug: w.slug, role: w.role }))}
     >
       {children}

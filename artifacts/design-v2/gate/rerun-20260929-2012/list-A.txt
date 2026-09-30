@@ -1,0 +1,9 @@
+Listing tests:
+  [chromium] › phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs
+  [chromium] › phase3.spec.ts:222:7 › Copilot › patching an existing flow keeps the user's steps; removals need explicit confirmation
+  [chromium] › phase3.spec.ts:244:5 › billing sandbox: choose a test plan → fake checkout → verified webhook → plan in force
+  [chromium] › phase3.spec.ts:258:5 › history: restore an older version as a draft (rollback) — history is kept
+  [chromium] › phase3.spec.ts:274:5 › mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile
+  [chromium] › phase3.spec.ts:286:5 › SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over
+  [chromium] › phase3.spec.ts:346:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once
+Total: 7 tests in 2 files

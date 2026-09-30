@@ -1,0 +1,47 @@
+# Automatic HTTPS (Let's Encrypt) for the beta domain. Only this proxy is public.
+{$BETA_DOMAIN} {
+	encode zstd gzip
+
+	# Internal-only endpoints are never exposed through the proxy.
+	@internal path /api/test/* /api/debug/* /api/ops/* /_next/webpack-hmr*
+	respond @internal 404
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Same id the app receives (header_up below) — every response carries it, not only API routes.
+		X-Request-Id {http.request.uuid}
+		-Server
+	}
+
+	# OAuth / sign-in callbacks carry authorization codes and state in the URL; the platform admin panel handles secrets.
+	# Never leak their URLs through Referer, never cache them (CREDENTIALS_DESIGN MUST 21). `defer` makes this the
+	# final value even over the app's own headers.
+	@sensitive path /api/oauth/callback /api/auth/callback/* /api/sso/callback /admin /admin/* /api/platform/*
+	header @sensitive {
+		Referrer-Policy "no-referrer"
+		Cache-Control "no-store"
+		defer
+	}
+
+	reverse_proxy web:3000 {
+		header_up X-Request-Id {http.request.uuid}
+		# The app keys per-IP limits on X-Real-IP: always overwrite it with the real peer so a client can't spoof it.
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Email links (verify/reset/delete ?token=…), invitation links (/invite/<token>) and webhook URLs
+	# (/api/hooks/<token>) carry bearer secrets; OAuth callbacks carry `code`, `state` and provider `error*` values:
+	# redact them all from the access log, and drop Referer (same URLs).
+	log {
+		output stdout
+		format filter {
+			request>uri regexp "([?&](?:token|code|state|error|error_description|error_uri)=)[^&]*|(/invite/)[^/?]*|(/api/hooks/)[^/?]*" "${1}${2}${3}REDACTED"
+			request>headers>Referer delete
+			wrap json
+		}
+	}
+}

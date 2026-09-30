@@ -1,0 +1,17 @@
+{
+  "url": "http://localhost:3200/w/codex-phase-4-qa/settings",
+  "text": "Skip to content\nCodex Phase 4 QA\nBETA\n\nBUILD\n\n▦\nFlows\n⌘\nCanvas\n▤\nTemplates\n\nAI\n\n✦\nAgents\n❏\nKnowledge\n\nOBSERVE\n\n◷\nRun history\n⬡\nIntegrations\n⚙\nSettings\nCO\nCodex Owner\nSettings\nMembers\nGeneral\nAPI keys\nPlan & billing\nUsage & limits\nAudit log\nSSO\nMembers\n\nPeople with access to Codex Phase 4 QA. Roles are enforced on the server for every request.\n\nCodex Owner\n· codex-owner-202609281749@flowline-qa.test\n(you)\nRole of codex-owner-202609281749@flowline-qa.test\nOwner\nEditor\nViewer\nRemove\nCodex Member\n· codex-member-202609281749@flowline-qa.test\nRole of codex-member-202609281749@flowline-qa.test\nOwner\nEditor\nViewer\nRemove\nInvite a teammate\n\nFlowline emails the invitation and also shows the secure, single-use link (valid 7 days, only for that email), so you can share it yourself if the email doesn't arrive.\n\nEMAIL\nROLE\nEditor\nViewer\nOwner\nCreate invite link\nEnter an email\n\nBuild, run, publish, approve, manage integrations\n\nRole updated",
+  "buttons": [
+    "COCodex Owner",
+    "Members",
+    "General",
+    "API keys",
+    "Plan & billing",
+    "Usage & limits",
+    "Audit log",
+    "SSO",
+    "Remove",
+    "Remove",
+    "Create invite link"
+  ]
+}

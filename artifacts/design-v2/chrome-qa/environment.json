@@ -1,0 +1,74 @@
+{
+  "reviewType": "Agent-driven exploratory QA in real headed Google Chrome; not human UAT; not automated suite",
+  "startUtc": "2026-09-29T19:18:58Z",
+  "endUtc": "2026-09-29T19:48:00.695Z",
+  "cdpBrowserVersion": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.54",
+    "revision": "@ab3ecba863fd7852cc9b0fe5736187e19ed52a1c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.13"
+  },
+  "executableProductVersion": "153.0.8010.54",
+  "playwrightVersion": "1.63.0",
+  "launch": {
+    "channel": "chrome",
+    "executablePath": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "headless": false,
+    "dedicatedProfile": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/chrome-qa/.profile/retry-1790709689355"
+  },
+  "build": {
+    "checkpoint": "85516ef5dd8f4fa6b128ebf9a3a4a9e7fb97abfc",
+    "checkpointTree": "435c3db (brief snapshot)",
+    "head": "fb563e517263800062adf5d5a31af672ebcc4da3",
+    "buildId": "9GR7x_ACnOcU1IqjUYMCL"
+  },
+  "health": {
+    "before": {
+      "revision": "dev",
+      "schemaVersion": 20,
+      "db": "ok",
+      "worker": "ok"
+    },
+    "after": {
+      "revision": "dev",
+      "schemaVersion": 20,
+      "db": "ok",
+      "worker": "ok"
+    }
+  },
+  "keyChecks": {
+    "html": false,
+    "url": false,
+    "storage": false
+  },
+  "faultControls": [
+    {
+      "endpoint": "4011/__fake/openai/fault",
+      "mode": "401",
+      "times": 1,
+      "uses": 2,
+      "note": "Default path chat; second injection did not affect model-discovery validation."
+    },
+    {
+      "endpoint": "4011/__fake/openai/fault",
+      "mode": "401",
+      "times": 1,
+      "path": "models",
+      "uses": 1,
+      "note": "Confirmed invalid-key validation error."
+    },
+    {
+      "endpoint": "4010/__fake/revoke-account",
+      "account": "a",
+      "uses": 2,
+      "note": "Reconnected through fake OAuth after each test."
+    }
+  ],
+  "notes": [
+    "No live or paid provider calls. All provider coverage is TEST DOUBLE only.",
+    "The brief-authorized bootstrap wrapper loaded test configuration internally; no .env file was opened, printed, copied, or scanned by reviewer.",
+    "One-time codes and TOTP were processed only in memory and never emitted; screenshots mask secrets.",
+    "Initial browser kernel timeout destroyed initial session; retained screenshots, lost first-session console inventory. Only one Chrome session active at a time."
+  ]
+}

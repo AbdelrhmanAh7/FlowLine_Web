@@ -94,6 +94,7 @@ const provider: ProviderDef = {
   actions: [queryDatabase, createPage],
   verification: {
     adapter: true,
+    betaScope: "deferred",
     contractTested: true,
     live: "blocked",
     liveNote: "Needs a sandbox account/credentials (none configured)",

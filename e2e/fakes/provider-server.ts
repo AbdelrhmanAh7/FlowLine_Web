@@ -85,6 +85,72 @@ interface FakeCheckoutSession {
   url: string;
 }
 
+/** Fake billing primitives (Paddle-shaped) used by the Paddle billing adapter tests. */
+interface FakePaddlePrice {
+  id: string;
+  trialDays: number;
+}
+
+interface FakePaddleCustomer {
+  id: string;
+  email: string;
+  name: string | null;
+  custom_data: Record<string, unknown>;
+  status: "active";
+}
+
+interface FakePaddleTransaction {
+  id: string;
+  status: string;
+  customer_id: string;
+  subscription_id: string | null;
+  items: { price_id: string; quantity: number }[];
+  origin: string;
+  /** The app's checkout page (or the default payment link) with `_ptxn=<id>` appended, like Paddle. */
+  checkout: { url: string | null };
+  currency_code: string;
+  created_at: string;
+}
+
+interface FakePaddleSubscriptionItem {
+  status: string;
+  quantity: number;
+  recurring: boolean;
+  price: { id: string };
+  trial_dates: { starts_at: string; ends_at: string } | null;
+}
+
+interface FakePaddleSubscription {
+  id: string;
+  customer_id: string;
+  status: string;
+  currency_code: string;
+  collection_mode: "automatic";
+  items: FakePaddleSubscriptionItem[];
+  current_billing_period: { starts_at: string; ends_at: string } | null;
+  next_billed_at: string | null;
+  first_billed_at: string | null;
+  started_at: string;
+  paused_at: string | null;
+  canceled_at: string | null;
+  scheduled_change: { action: string; effective_at: string; resume_at: string | null } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FakePaddleAdjustment {
+  id: string;
+  action: string;
+  status: string;
+  transaction_id: string;
+  customer_id: string;
+  subscription_id: string | null;
+  reason: string;
+  items: unknown[];
+  created_at: string;
+  updated_at: string;
+}
+
 interface GmailMessage {
   id: string;
   threadId: string;
@@ -132,8 +198,15 @@ interface State {
   stripeSubscriptions: FakeSubscription[];
   stripeMeterEvents: Record<string, unknown>[];
   stripeWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
+  paddlePrices: FakePaddlePrice[];
+  paddleCustomers: FakePaddleCustomer[];
+  paddleTransactions: FakePaddleTransaction[];
+  paddleSubscriptions: FakePaddleSubscription[];
+  paddleAdjustments: FakePaddleAdjustment[];
+  paddleWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
+  emailMessages: { provider: "resend" | "postmark"; to: string; subject: string; html: string; text: string }[];
 }
 
 function seed(): State {
@@ -146,14 +219,31 @@ function seed(): State {
     ["sk_test_fake_billing", { account: "a", status: "active" }],
     ["rk_test_fake", { account: "a", status: "active" }],
     ["sk_test_revoked", { account: "a", status: "revoked" }],
+    ["pdl_sdbx_fake_billing", { account: "a", status: "active" }],
   ]);
-  // Stripe billing ids are stored (and deduplicated) by the app under test, so they must
-  // stay unique across fake resets within a test run: start each counter at a random offset.
-  const stripeCounters = Object.fromEntries(
-    ["stripeCustomer", "stripeCheckout", "stripeSubscription", "stripeEvent", "stripeMeter", "stripeInvoice", "stripeCheckoutEmit"].map((k) => [k, Math.floor(Math.random() * 1_000_000)]),
+  // Stripe/Paddle billing ids are stored (and deduplicated) by the app under test, and the test DB keeps them across
+  // runs — so they must stay unique across fake resets AND across runs: each counter starts at a time-based offset
+  // (ms since epoch × 1000, plus jitter). A 0–1M random start collided with earlier runs' events.
+  const billingCounters = Object.fromEntries(
+    [
+      "stripeCustomer",
+      "stripeCheckout",
+      "stripeSubscription",
+      "stripeEvent",
+      "stripeMeter",
+      "stripeInvoice",
+      "stripeCheckoutEmit",
+      "paddleCustomer",
+      "paddleTransaction",
+      "paddleSubscription",
+      "paddleEvent",
+      "paddleAdjustment",
+      "paddleCheckoutEmit",
+    ].map((k) => [k, Date.now() * 1000 + Math.floor(Math.random() * 1000)]),
   );
   return {
-    counters: stripeCounters,
+    emailMessages: [],
+    counters: billingCounters,
     tokens,
     oauthCodes: new Map(),
     oidcCodes: new Map(),
@@ -253,6 +343,12 @@ function seed(): State {
     stripeSubscriptions: [],
     stripeMeterEvents: [],
     stripeWebhooks: [],
+    paddlePrices: [],
+    paddleCustomers: [],
+    paddleTransactions: [],
+    paddleSubscriptions: [],
+    paddleAdjustments: [],
+    paddleWebhooks: [],
     notionPages: [
       {
         object: "page",
@@ -284,13 +380,15 @@ interface RecordedRequest {
   time: string;
 }
 
-type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit";
+type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
 interface Fault {
   provider: string;
   pattern: RegExp;
   mode: FaultMode;
   times: number;
   retryAfterSec?: number;
+  /** mode "delay": hold the request this long, then answer normally (race tests). */
+  delayMs?: number;
 }
 
 interface Ctx {
@@ -299,6 +397,13 @@ interface Ctx {
   faults: Fault[];
   dropAfterCommit: boolean;
   heldSockets: Set<import("node:net").Socket>;
+  /**
+   * Registered OAuth clients per provider (credential-rotation tests). When a provider has an entry, its token endpoint
+   * requires a matching client_id + one of the listed secrets, else it answers like the real provider (invalid_client).
+   */
+  oauthClients: Map<string, { clientId: string; secrets: string[] }[]>;
+  /** Forced token-endpoint errors (to prove provider error text is never reflected). */
+  oauthErrors: { provider: string; error: string; description: string; times: number }[];
   /** RSA keys for the fake OIDC IdP; stable across resets so JWKS never rotates mid-test. */
   oidc: { privateKey: KeyObject; altPrivateKey: KeyObject; publicJwk: Record<string, unknown> };
 }
@@ -374,6 +479,7 @@ function authFail(ctx: Ctx, provider: string, req: IncomingMessage, res: ServerR
   }
   if (provider === "github") return json(ctx, req, res, 401, { message: "Bad credentials" });
   if (provider === "stripe") return json(ctx, req, res, 401, { error: { type: "invalid_request_error", message: "Invalid API Key provided" } });
+  if (provider === "paddle") return json(ctx, req, res, 401, { error: { type: "request_error", code: "unauthenticated", detail: "Invalid API key" } });
   return json(ctx, req, res, 401, { message: "Unauthorized" });
 }
 
@@ -397,6 +503,22 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
   }
   if (req.method === "POST" && path === "/oauth/token") {
     const form = parseForm(rawBody);
+    const forced = ctx.oauthErrors.findIndex((e) => e.provider === provider);
+    if (forced >= 0) {
+      const f = ctx.oauthErrors[forced]!;
+      if (--f.times <= 0) ctx.oauthErrors.splice(forced, 1);
+      json(ctx, req, res, 400, { error: f.error, error_description: f.description });
+      return true;
+    }
+    const clients = ctx.oauthClients.get(provider);
+    const client = clients?.find((c) => c.clientId === form.client_id);
+    if (clients && (!client || !client.secrets.includes(form.client_secret ?? ""))) {
+      // Like the real providers: Slack answers 200 {ok:false}, GitHub 200 {error}, Google 401 invalid_client.
+      if (provider === "slack") json(ctx, req, res, 200, { ok: false, error: !client ? "invalid_client_id" : "bad_client_secret" });
+      else if (provider === "github") json(ctx, req, res, 200, { error: "incorrect_client_credentials", error_description: "The client_id and/or client_secret passed are incorrect." });
+      else json(ctx, req, res, 401, { error: "invalid_client", error_description: "The OAuth client was not found." });
+      return true;
+    }
     const issue = (account: AccountKey) => {
       const accessToken = `fake-at-${randomBytes(8).toString("hex")}`;
       const refreshToken = `fake-rt-${randomBytes(8).toString("hex")}`;
@@ -1134,6 +1256,7 @@ function subscriptionPayload(sub: FakeSubscription): Record<string, unknown> {
 
 const stripe: Handler = async (ctx, req, res, path, url, body) => {
   const s = ctx.state;
+  if (req.method === "GET" && path === "/v1/balance") return json(ctx, req, res, 200, { object: "balance", available: [], pending: [] });
   if (req.method === "GET" && path === "/v1/account") {
     return json(ctx, req, res, 200, {
       id: "acct_fake123",
@@ -1307,6 +1430,367 @@ const stripe: Handler = async (ctx, req, res, path, url, body) => {
   return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "Unrecognized request URL" } });
 };
 
+// ---------------------------------------------------------------- fake paddle billing
+
+function paddleError(code: string, detail: string) {
+  return { error: { type: "request_error", code, detail } };
+}
+
+/** Paddle notification envelope: { event_id, event_type, occurred_at, data }. */
+function paddleEvent(state: State, type: string, data: unknown, opts: { id?: string; occurredAt?: string } = {}): Record<string, unknown> {
+  return { event_id: opts.id ?? `evt_fake_${next(state, "paddleEvent")}`, event_type: type, occurred_at: opts.occurredAt ?? new Date().toISOString(), data };
+}
+
+/** Paddle signature scheme: ts=<unix>;h1=<hex HMAC-SHA256(secret, "ts:payload")>. */
+function signPaddlePayload(secret: string, payload: string, at?: number): string {
+  const ts = at ?? Math.floor(Date.now() / 1000);
+  const h1 = createHmac("sha256", secret).update(`${ts}:${payload}`, "utf8").digest("hex");
+  return `ts=${ts};h1=${h1}`;
+}
+
+function paddleSubscriptionPayload(sub: FakePaddleSubscription): Record<string, unknown> {
+  return { ...sub };
+}
+
+/**
+ * Keeps the fake's provider state consistent with an emitted event (see the Stripe
+ * twin above). Tests crafting adversarial or stale events pass `mutate: false`.
+ */
+function applyPaddleEventToState(s: State, type: string, data: unknown) {
+  const obj = data as Record<string, unknown>;
+  if (type.startsWith("subscription.")) {
+    const id = String(obj.id ?? "");
+    let sub = s.paddleSubscriptions.find((x) => x.id === id);
+    if (!sub) {
+      const nowIso = new Date().toISOString();
+      sub = {
+        id,
+        customer_id: String(obj.customer_id ?? ""),
+        status: "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: [{ status: "active", quantity: 1, recurring: true, price: { id: "pri_unknown" }, trial_dates: null }],
+        current_billing_period: { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() },
+        next_billed_at: null,
+        first_billed_at: nowIso,
+        started_at: nowIso,
+        paused_at: null,
+        canceled_at: null,
+        scheduled_change: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      s.paddleSubscriptions.push(sub);
+    }
+    if (typeof obj.status === "string") sub.status = obj.status;
+    if (obj.items) sub.items = obj.items as FakePaddleSubscription["items"];
+    if (obj.current_billing_period !== undefined) sub.current_billing_period = obj.current_billing_period as FakePaddleSubscription["current_billing_period"];
+    if (obj.scheduled_change !== undefined) sub.scheduled_change = obj.scheduled_change as FakePaddleSubscription["scheduled_change"];
+    if (typeof obj.customer_id === "string" && obj.customer_id) sub.customer_id = obj.customer_id;
+    if (type === "subscription.canceled") {
+      sub.status = "canceled";
+      sub.canceled_at = new Date().toISOString();
+      sub.scheduled_change = null;
+      sub.current_billing_period = null;
+      sub.next_billed_at = null;
+    } else if (type === "subscription.past_due") {
+      sub.status = "past_due";
+    }
+    sub.updated_at = new Date().toISOString();
+  } else if (type === "transaction.completed") {
+    const txn = s.paddleTransactions.find((x) => x.id === String(obj.id ?? ""));
+    if (txn) {
+      txn.status = "completed";
+      if (typeof obj.subscription_id === "string") txn.subscription_id = obj.subscription_id;
+    }
+  }
+}
+
+/** Records (and, when FAKE_PADDLE_WEBHOOK_URL is set, sends) a signed webhook for the app under test. */
+async function sendPaddleWebhook(ctx: Ctx, event: Record<string, unknown>): Promise<{ sent: boolean; payload: string; header: string }> {
+  const url = process.env.FAKE_PADDLE_WEBHOOK_URL || null;
+  const secret = process.env.FAKE_PADDLE_WEBHOOK_SECRET || "pdl_ntfset_fake";
+  const payload = JSON.stringify(event);
+  const header = signPaddlePayload(secret, payload);
+  const rec = { id: String(event.event_id), type: String(event.event_type), url, sent: false, payload, header, at: new Date().toISOString() };
+  if (url) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "paddle-signature": header }, body: payload });
+      rec.sent = res.ok;
+    } catch {
+      rec.sent = false;
+    }
+  }
+  ctx.state.paddleWebhooks.push(rec);
+  return { sent: rec.sent, payload, header };
+}
+
+function requestedCheckoutUrl(payload: Record<string, unknown>): string | null {
+  const url = (payload.checkout as { url?: unknown } | undefined)?.url;
+  return typeof url === "string" && url ? url : null;
+}
+
+/** Paddle appends `_ptxn=<transaction id>` to the checkout URL. */
+function withPtxn(url: string, id: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}_ptxn=${encodeURIComponent(id)}`;
+}
+
+/**
+ * Stand-in Paddle.js, served at /paddle/checkout/paddle.js for FLOWLINE_TEST_PADDLE_JS_URL (test
+ * environment only). It records what the app called (window.__fakePaddle) and opens the fake
+ * checkout page for the transaction in place of Paddle's overlay, forwarding settings.successUrl.
+ */
+function fakePaddleJs(origin: string): string {
+  return `(function () {
+  var rec = { environment: null, token: null, opened: null };
+  var callback = null;
+  window.__fakePaddle = rec;
+  window.Paddle = {
+    Environment: { set: function (e) { rec.environment = e; } },
+    Initialize: function (o) { rec.token = o && o.token; callback = (o && o.eventCallback) || null; },
+    Checkout: {
+      open: function (o) {
+        rec.opened = o;
+        var id = o && o.transactionId;
+        var success = o && o.settings && o.settings.successUrl;
+        var frame = document.createElement("iframe");
+        frame.title = "Fake Paddle checkout";
+        frame.setAttribute("data-fake-paddle", "");
+        frame.style.cssText = "position:fixed;inset:10%;width:80%;height:80%;background:#fff;border:1px solid #888;z-index:2147483647";
+        frame.src = ${JSON.stringify(origin)} + "/paddle/checkout/" + encodeURIComponent(id) + (success ? "?success_url=" + encodeURIComponent(success) : "");
+        document.body.appendChild(frame);
+        if (callback) callback({ name: "checkout.loaded", data: { transaction_id: id } });
+      },
+    },
+  };
+})();
+`;
+}
+
+const paddle: Handler = async (ctx, req, res, path, _url, body) => {
+  const s = ctx.state;
+  if (req.method === "GET" && path === "/event-types") return json(ctx, req, res, 200, { data: [] });
+  if (req.method === "GET" && path === "/checkout/paddle.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+    res.end(fakePaddleJs(`http://${req.headers.host}`));
+    return;
+  }
+  if (req.method === "POST" && path === "/customers") {
+    const payload = j(body);
+    // Paddle requires an email to create a customer.
+    if (typeof payload.email !== "string" || !payload.email) return json(ctx, req, res, 400, paddleError("bad_request", "email is required"));
+    const customer: FakePaddleCustomer = {
+      id: `ctm_fake_${next(s, "paddleCustomer")}`,
+      email: payload.email,
+      name: (payload.name as string | null) ?? null,
+      custom_data: (payload.custom_data as Record<string, unknown>) ?? {},
+      status: "active",
+    };
+    s.paddleCustomers.push(customer);
+    return json(ctx, req, res, 201, { data: customer, meta: { request_id: `req_fake_${next(s, "paddleCustomer")}` } });
+  }
+  if (req.method === "POST" && path === "/transactions") {
+    const payload = j(body);
+    const items = (payload.items as { price_id?: string; quantity?: number }[]) ?? [];
+    const priceId = items[0]?.price_id ?? "";
+    if (!s.paddlePrices.some((p) => p.id === priceId)) return json(ctx, req, res, 400, paddleError("bad_request", `No such price: '${priceId}'`));
+    if (typeof payload.customer_id !== "string" || !s.paddleCustomers.some((c) => c.id === payload.customer_id)) {
+      return json(ctx, req, res, 400, paddleError("bad_request", "customer_id must reference an existing customer"));
+    }
+    const id = `txn_fake_${next(s, "paddleTransaction")}`;
+    const txn: FakePaddleTransaction = {
+      id,
+      status: "ready",
+      customer_id: payload.customer_id,
+      subscription_id: null,
+      items: [{ price_id: priceId, quantity: items[0]?.quantity ?? 1 }],
+      origin: "web",
+      // Real Paddle: checkout.url is YOUR page (the passed approved URL, else the account's default
+      // payment link) with `_ptxn=<id>` appended; that page opens Paddle.js. The fake's own
+      // /paddle/checkout/:id page plays the default payment link here.
+      checkout: { url: withPtxn(requestedCheckoutUrl(payload) ?? `http://${req.headers.host}/paddle/checkout/${id}`, id) },
+      currency_code: "USD",
+      created_at: new Date().toISOString(),
+    };
+    s.paddleTransactions.push(txn);
+    return json(ctx, req, res, 201, { data: txn, meta: { request_id: `req_fake_${next(s, "paddleTransaction")}` } });
+  }
+  const subMatch = /^\/subscriptions\/([^/]+)(\/(cancel|pause|resume))?$/.exec(path);
+  if (subMatch && req.method === "GET" && !subMatch[3]) {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_get" } });
+  }
+  if (subMatch && req.method === "PATCH" && !subMatch[3]) {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const payload = j(body);
+    const items = payload.items as { price_id?: string; quantity?: number }[] | undefined;
+    if (items?.[0]?.price_id) {
+      if (!s.paddlePrices.some((p) => p.id === items[0]!.price_id)) return json(ctx, req, res, 400, paddleError("bad_request", `No such price: '${items[0]!.price_id}'`));
+      sub.items = [{ ...sub.items[0]!, price: { id: items[0].price_id }, quantity: items[0].quantity ?? 1 }];
+    }
+    sub.updated_at = new Date().toISOString();
+    await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_patch" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "cancel") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const effectiveFrom = String(j(body).effective_from ?? "");
+    if (effectiveFrom === "next_billing_period") {
+      sub.scheduled_change = { action: "cancel", effective_at: sub.current_billing_period?.ends_at ?? new Date().toISOString(), resume_at: null };
+      sub.updated_at = new Date().toISOString();
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    } else if (effectiveFrom === "immediately") {
+      sub.status = "canceled";
+      sub.canceled_at = new Date().toISOString();
+      sub.scheduled_change = null;
+      sub.current_billing_period = null;
+      sub.next_billed_at = null;
+      sub.items = sub.items.map((it) => ({ ...it, status: "inactive" }));
+      sub.updated_at = new Date().toISOString();
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.canceled", paddleSubscriptionPayload(sub)));
+    } else {
+      return json(ctx, req, res, 400, paddleError("bad_request", "effective_from must be next_billing_period or immediately"));
+    }
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_cancel" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "pause") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const effectiveFrom = String(j(body).effective_from ?? "next_billing_period");
+    if (effectiveFrom === "immediately") {
+      sub.status = "paused";
+      sub.paused_at = new Date().toISOString();
+      sub.current_billing_period = null;
+      sub.items = sub.items.map((it) => ({ ...it, status: "inactive" }));
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.paused", paddleSubscriptionPayload(sub)));
+    } else {
+      sub.scheduled_change = { action: "pause", effective_at: sub.current_billing_period?.ends_at ?? new Date().toISOString(), resume_at: null };
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.updated", paddleSubscriptionPayload(sub)));
+    }
+    sub.updated_at = new Date().toISOString();
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_pause" } });
+  }
+  if (subMatch && req.method === "POST" && subMatch[3] === "resume") {
+    const sub = s.paddleSubscriptions.find((x) => x.id === decodeURIComponent(subMatch[1]!));
+    if (!sub) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such subscription: '${subMatch[1]}'`));
+    const nowIso = new Date().toISOString();
+    sub.status = "active";
+    sub.paused_at = null;
+    sub.scheduled_change = null;
+    sub.current_billing_period = { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() };
+    sub.next_billed_at = sub.current_billing_period.ends_at;
+    sub.items = sub.items.map((it) => ({ ...it, status: "active" }));
+    sub.updated_at = nowIso;
+    await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.resumed", paddleSubscriptionPayload(sub)));
+    return json(ctx, req, res, 200, { data: paddleSubscriptionPayload(sub), meta: { request_id: "req_fake_resume" } });
+  }
+  if (req.method === "POST" && path === "/adjustments") {
+    const payload = j(body);
+    const txn = s.paddleTransactions.find((x) => x.id === payload.transaction_id);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", `No such transaction: '${payload.transaction_id}'`));
+    const nowIso = new Date().toISOString();
+    const adjustment: FakePaddleAdjustment = {
+      id: `adj_fake_${next(s, "paddleAdjustment")}`,
+      action: String(payload.action ?? "refund"),
+      // Sandbox auto-approves refunds (live holds most refunds for review).
+      status: "approved",
+      transaction_id: txn.id,
+      customer_id: txn.customer_id,
+      subscription_id: txn.subscription_id,
+      reason: String(payload.reason ?? ""),
+      items: (payload.items as unknown[]) ?? [],
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    s.paddleAdjustments.push(adjustment);
+    await sendPaddleWebhook(ctx, paddleEvent(s, "adjustment.created", { ...adjustment }));
+    return json(ctx, req, res, 201, { data: adjustment, meta: { request_id: "req_fake_adjustment" } });
+  }
+  // ---- stand-in for the Paddle.js checkout (unauthenticated: a browser lands here) ----
+  // Real Paddle collects payment inside the Paddle.js overlay opened on the app's page.
+  // The fake models that overlay as this page + /complete and /fail actions (tests POST
+  // there with the transaction id). `success_url` is what Paddle.Checkout.open received
+  // as settings.successUrl; without it the fake redirects back to this page.
+  const pageMatch = /^\/checkout\/([^/]+)$/.exec(path);
+  if (pageMatch && req.method === "GET") {
+    const txn = s.paddleTransactions.find((x) => x.id === pageMatch[1]);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", "No such transaction"));
+    const failed = txn.status === "past_due" ? `<p role="alert">Payment failed — try again.</p>` : "";
+    const successUrl = _url.searchParams.get("success_url");
+    const qs = successUrl ? `?success_url=${encodeURIComponent(successUrl)}` : "";
+    const html = `<!doctype html><html><head><title>Fake Paddle checkout</title></head><body>
+<h1>Fake Paddle checkout (sandbox)</h1>
+<p>Transaction ${txn.id} — ${txn.status}</p>
+${failed}
+<form method="post" action="/paddle/checkout/${txn.id}/complete${qs}"><button type="submit">Pay (test card)</button></form>
+<form method="post" action="/paddle/checkout/${txn.id}/fail${qs}"><button type="submit">Decline (test card)</button></form>
+</body></html>`;
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(html);
+    return;
+  }
+  const completeMatch = /^\/checkout\/([^/]+)\/(complete|fail)$/.exec(path);
+  if (completeMatch && req.method === "POST") {
+    const txn = s.paddleTransactions.find((x) => x.id === completeMatch[1]);
+    if (!txn) return json(ctx, req, res, 404, paddleError("entity_not_found", "No such transaction"));
+    if (completeMatch[2] === "fail") {
+      // A declined payment at checkout: the transaction goes past_due and the buyer stays on the page.
+      txn.status = "past_due";
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.payment_failed", { ...txn }));
+      const back = _url.searchParams.get("success_url");
+      res.writeHead(303, { location: `/paddle/checkout/${txn.id}${back ? `?success_url=${encodeURIComponent(back)}` : ""}` });
+      res.end();
+      return;
+    }
+    if (txn.status !== "completed") {
+      txn.status = "completed";
+      const price = s.paddlePrices.find((p) => p.id === txn.items[0]!.price_id);
+      const trialDays = price?.trialDays ?? 0;
+      const now = Date.now();
+      const nowIso = new Date(now).toISOString();
+      const trialEndIso = new Date(now + trialDays * 24 * 3600 * 1000).toISOString();
+      const periodEndIso = trialDays > 0 ? trialEndIso : new Date(now + 30 * 24 * 3600 * 1000).toISOString();
+      const sub: FakePaddleSubscription = {
+        id: `sub_fake_${next(s, "paddleSubscription")}`,
+        customer_id: txn.customer_id,
+        status: trialDays > 0 ? "trialing" : "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: [
+          {
+            status: trialDays > 0 ? "trialing" : "active",
+            quantity: txn.items[0]!.quantity,
+            recurring: true,
+            price: { id: txn.items[0]!.price_id },
+            trial_dates: trialDays > 0 ? { starts_at: nowIso, ends_at: trialEndIso } : null,
+          },
+        ],
+        current_billing_period: { starts_at: nowIso, ends_at: periodEndIso },
+        next_billed_at: periodEndIso,
+        first_billed_at: trialDays > 0 ? null : nowIso,
+        started_at: nowIso,
+        paused_at: null,
+        canceled_at: null,
+        scheduled_change: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      txn.subscription_id = sub.id;
+      s.paddleSubscriptions.push(sub);
+      await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", { ...txn }));
+      await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
+    }
+    // The redirect Paddle.js performs to settings.successUrl after payment.
+    res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
+    res.end();
+    return;
+  }
+  return json(ctx, req, res, 404, paddleError("not_found", "Unrecognized request URL"));
+};
+
 const notion: Handler = (ctx, req, res, path, _url, body) => {
   const s = ctx.state;
   if (!req.headers["notion-version"]) {
@@ -1413,6 +1897,7 @@ const HANDLERS: Record<string, Handler> = {
   snowflake,
   github,
   stripe,
+  paddle,
   notion,
   linear,
 };
@@ -1421,6 +1906,9 @@ const HANDLERS: Record<string, Handler> = {
 
 function stateDump(state: State, provider: string): unknown {
   switch (provider) {
+    case "resend":
+    case "postmark":
+      return { messages: state.emailMessages.filter((m) => m.provider === provider) };
     case "google_sheets":
       return { sheets: state.sheets };
     case "gmail":
@@ -1445,6 +1933,15 @@ function stateDump(state: State, provider: string): unknown {
         meterEvents: state.stripeMeterEvents,
         webhooks: state.stripeWebhooks,
       };
+    case "paddle":
+      return {
+        prices: state.paddlePrices,
+        customers: state.paddleCustomers,
+        transactions: state.paddleTransactions,
+        subscriptions: state.paddleSubscriptions,
+        adjustments: state.paddleAdjustments,
+        webhooks: state.paddleWebhooks,
+      };
     case "notion":
       return { pages: state.notionPages };
     case "linear":
@@ -1461,6 +1958,8 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     ctx.state = seed();
     ctx.requests.length = 0;
     ctx.faults.length = 0;
+    ctx.oauthClients.clear();
+    ctx.oauthErrors.length = 0;
     return json(ctx, req, res, 200, { ok: true }), true;
   }
   // Simulates the user revoking the app's access at the provider: every access and refresh
@@ -1498,8 +1997,23 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
   if (req.method === "GET" && m) {
     return json(ctx, req, res, 200, stateDump(ctx.state, m[1])), true;
   }
+  // Registers (or replaces) an OAuth client a provider accepts: { provider, clientId, secrets: [...] }; secrets: [] removes it.
+  if (req.method === "POST" && path === "/__fake/oauth-client") {
+    const payload = j(rawBody) as unknown as { provider: string; clientId: string; secrets: string[] };
+    const list = (ctx.oauthClients.get(payload.provider) ?? []).filter((c) => c.clientId !== payload.clientId);
+    if (payload.secrets?.length) list.push({ clientId: payload.clientId, secrets: payload.secrets });
+    if (list.length) ctx.oauthClients.set(payload.provider, list);
+    else ctx.oauthClients.delete(payload.provider);
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
+  // Forces the next token response(s) of a provider to be an error carrying `description` (reflection tests).
+  if (req.method === "POST" && path === "/__fake/oauth-error") {
+    const payload = j(rawBody) as unknown as { provider: string; error: string; description: string; times?: number };
+    ctx.oauthErrors.push({ provider: payload.provider, error: payload.error, description: payload.description, times: payload.times ?? 1 });
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
   if (req.method === "POST" && path === "/__fake/fault") {
-    const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number };
+    const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number; delayMs?: number };
     try {
       ctx.faults.push({
         provider: payload.provider,
@@ -1507,6 +2021,7 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
         mode: payload.mode,
         times: payload.times ?? 1,
         retryAfterSec: payload.retryAfterSec,
+        delayMs: payload.delayMs,
       });
     } catch (e) {
       return json(ctx, req, res, 400, { error: String(e) }), true;
@@ -1558,6 +2073,102 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     const result = await sendStripeWebhook(ctx, event);
     return json(ctx, req, res, 200, { ok: true, id: event.id, sent: result.sent, payload: result.payload, header: result.header }), true;
   }
+  // Registers a Paddle price the fake will sell (with its catalog trial period). Real
+  // Paddle trials live on the price, so tests register the prices their plans use.
+  if (req.method === "POST" && path === "/__fake/paddle/price") {
+    const body = j(rawBody) as { id?: string; trialDays?: number };
+    if (!body.id) return json(ctx, req, res, 400, { error: "id is required" }), true;
+    const existing = ctx.state.paddlePrices.find((p) => p.id === body.id);
+    if (existing) existing.trialDays = body.trialDays ?? 0;
+    else ctx.state.paddlePrices.push({ id: body.id, trialDays: body.trialDays ?? 0 });
+    return json(ctx, req, res, 200, { ok: true }), true;
+  }
+  // Builds a signed Paddle-style event WITHOUT sending it (see /__fake/stripe/emit).
+  // Optional: id, occurredAt (event time, RFC 3339), signAt (signature time), mutate.
+  if (req.method === "POST" && path === "/__fake/paddle/emit") {
+    const s = ctx.state;
+    const body = j(rawBody) as {
+      type?: string;
+      customer?: string;
+      subscription?: Record<string, unknown> & { price?: string };
+      transaction?: Record<string, unknown>;
+      adjustment?: Record<string, unknown>;
+      id?: string;
+      occurredAt?: string;
+      signAt?: number;
+      mutate?: boolean;
+    };
+    if (!body.type) return json(ctx, req, res, 400, { error: "type is required" }), true;
+    const nowIso = new Date().toISOString();
+    let data: unknown;
+    if (body.type.startsWith("subscription.")) {
+      const sub = body.subscription ?? {};
+      data = {
+        id: sub.id ?? `sub_fake_${next(s, "paddleSubscription")}`,
+        customer_id: body.customer ?? sub.customer_id ?? "",
+        status: sub.status ?? "active",
+        currency_code: "USD",
+        collection_mode: "automatic",
+        items: sub.items ?? [{ status: sub.status === "trialing" ? "trialing" : "active", quantity: 1, recurring: true, price: { id: sub.price ?? "pri_unknown" }, trial_dates: sub.trial_dates ?? null }],
+        current_billing_period: sub.current_billing_period === undefined ? { starts_at: nowIso, ends_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() } : sub.current_billing_period,
+        next_billed_at: sub.next_billed_at ?? null,
+        first_billed_at: sub.first_billed_at ?? nowIso,
+        started_at: sub.started_at ?? nowIso,
+        paused_at: sub.paused_at ?? null,
+        canceled_at: sub.canceled_at ?? null,
+        scheduled_change: sub.scheduled_change ?? null,
+        created_at: sub.created_at ?? nowIso,
+        updated_at: nowIso,
+      };
+    } else if (body.type.startsWith("transaction.")) {
+      const txn = body.transaction ?? {};
+      data = {
+        id: txn.id ?? `txn_fake_${next(s, "paddleTransaction")}`,
+        status: txn.status ?? (body.type === "transaction.completed" ? "completed" : "ready"),
+        customer_id: body.customer ?? txn.customer_id ?? "",
+        subscription_id: txn.subscription_id ?? null,
+        items: txn.items ?? [{ price_id: "pri_unknown", quantity: 1 }],
+        origin: txn.origin ?? "web",
+        checkout: txn.checkout ?? { url: null },
+        currency_code: "USD",
+        created_at: nowIso,
+      };
+    } else if (body.type.startsWith("adjustment.")) {
+      const adj = body.adjustment ?? {};
+      data = {
+        id: adj.id ?? `adj_fake_${next(s, "paddleAdjustment")}`,
+        action: adj.action ?? "refund",
+        status: adj.status ?? "approved",
+        transaction_id: adj.transaction_id ?? `txn_fake_${next(s, "paddleTransaction")}`,
+        customer_id: body.customer ?? adj.customer_id ?? "",
+        subscription_id: adj.subscription_id ?? null,
+        reason: adj.reason ?? "",
+        items: adj.items ?? [],
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+    } else {
+      data = { id: `gen_fake_${next(s, "paddleCheckoutEmit")}`, customer_id: body.customer ?? "" };
+    }
+    const event = paddleEvent(s, body.type, data, { id: body.id, occurredAt: body.occurredAt });
+    if (body.mutate !== false) applyPaddleEventToState(s, body.type, data);
+    const payload = JSON.stringify(event);
+    const header = signPaddlePayload(process.env.FAKE_PADDLE_WEBHOOK_SECRET || "pdl_ntfset_fake", payload, body.signAt);
+    return json(ctx, req, res, 200, { id: event.event_id, payload, header }), true;
+  }
+  // Sends a signed subscription.past_due webhook for a known fake subscription.
+  // Like the real provider, the failure moves the subscription to past_due first.
+  if (req.method === "POST" && path === "/__fake/paddle/fail-payment") {
+    const s = ctx.state;
+    const body = j(rawBody) as { subscription?: string };
+    const sub = s.paddleSubscriptions.find((x) => x.id === body.subscription);
+    if (!sub) return json(ctx, req, res, 404, { error: `No such subscription: '${body.subscription}'` }), true;
+    sub.status = "past_due";
+    sub.updated_at = new Date().toISOString();
+    const event = paddleEvent(s, "subscription.past_due", paddleSubscriptionPayload(sub));
+    const result = await sendPaddleWebhook(ctx, event);
+    return json(ctx, req, res, 200, { ok: true, id: event.event_id, sent: result.sent, payload: result.payload, header: result.header }), true;
+  }
   // Sets the identity the fake OIDC IdP auto-consents as (email + verified flag) for the next authorize.
   if (req.method === "POST" && path === "/__fake/oidc/user") {
     const body = j(rawBody) as { email?: string; email_verified?: boolean };
@@ -1580,7 +2191,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const { privateKey: altPrivateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const publicJwk = { ...(publicKey.export({ format: "jwk" }) as Record<string, unknown>), kid: "fake-oidc-key-1", alg: "RS256", use: "sig" };
-  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oidc: { privateKey, altPrivateKey, publicJwk } };
+  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
 
   const server: Server = createServer((req, res) => {
     void (async () => {
@@ -1596,6 +2207,33 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       const provider = seg?.[1] ?? "";
       const handler = HANDLERS[provider];
       const path = seg?.[2] ?? "/";
+
+      if (provider === "resend" || provider === "postmark") {
+        const rawBody = req.method === "POST" ? await readBody(req) : "";
+        const expected = provider === "resend" ? "/emails" : "/email";
+        // Authenticated no-op endpoints used by the admin panel's "Test" (never sends anything).
+        if (req.method === "GET" && ((provider === "resend" && path === "/domains") || (provider === "postmark" && path === "/server"))) {
+          const key = provider === "resend" ? (req.headers.authorization ?? "").replace(/^Bearer /, "") : String(req.headers["x-postmark-server-token"] ?? "");
+          if (!key || key.includes("invalid")) return json(ctx, req, res, 401, { message: "invalid key" });
+          return json(ctx, req, res, 200, provider === "resend" ? { data: [] } : { ID: 1, Name: "fake" });
+        }
+        if (req.method !== "POST" || path !== expected) return json(ctx, req, res, 404, { error: "not found" });
+        const fi = ctx.faults.findIndex((f) => f.provider === provider && f.pattern.test(path));
+        if (fi >= 0) {
+          const fault = ctx.faults[fi]!;
+          if (--fault.times <= 0) ctx.faults.splice(fi, 1);
+          if (fault.mode === "500") return json(ctx, req, res, 500, { error: "provider failure" });
+          if (fault.mode === "429") return json(ctx, req, res, 429, { error: "rate limited" });
+          if (fault.mode === "timeout") { const timer = setTimeout(() => req.socket.destroy(), 60_000); ctx.heldSockets.add(req.socket); req.socket.on("close", () => { clearTimeout(timer); ctx.heldSockets.delete(req.socket); }); return; }
+          if (fault.mode === "drop_before_commit") { req.socket.destroy(); return; }
+        }
+        const body = j(rawBody);
+        const to = provider === "resend" ? (body.to as string[] | undefined)?.[0] : body.To;
+        const subject = provider === "resend" ? body.subject : body.Subject;
+        if (!to || !subject) return json(ctx, req, res, 422, { error: "invalid email" });
+        ctx.state.emailMessages.push({ provider, to: String(to), subject: String(subject), html: String(provider === "resend" ? body.html : body.HtmlBody), text: String(provider === "resend" ? body.text : body.TextBody) });
+        return json(ctx, req, res, provider === "resend" ? 200 : 200, { id: `email-${ctx.state.emailMessages.length}`, MessageID: `email-${ctx.state.emailMessages.length}` });
+      }
 
       // The fake OIDC IdP (SSO tests): unauthenticated by design, like the OAuth endpoints.
       if (provider === "oidc") {
@@ -1647,9 +2285,26 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
           });
           return;
         }
-        ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
+        if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
+        else ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
       }
 
+      // GitHub revokes a grant with the APP's Basic auth: DELETE /applications/{client_id}/grant { access_token }.
+      const ghGrant = /^\/applications\/([^/]+)\/grant$/.exec(path);
+      if (provider === "github" && req.method === "DELETE" && ghGrant) {
+        const rawBody = await readBody(req);
+        const [id, secret] = Buffer.from((req.headers.authorization ?? "").replace(/^Basic /, ""), "base64").toString("utf8").split(":");
+        const clients = ctx.oauthClients.get("github");
+        const client = clients?.find((c) => c.clientId === id);
+        if (clients && (!client || !client.secrets.includes(secret ?? "") || decodeURIComponent(ghGrant[1]!) !== client.clientId)) return json(ctx, req, res, 401, { message: "Bad credentials" });
+        const token = String(j(rawBody).access_token ?? "");
+        const info = ctx.state.tokens.get(token);
+        if (info) info.status = "revoked";
+        for (const [t, r] of ctx.state.refreshTokens) if (info && r.account === info.account) ctx.state.refreshTokens.delete(t);
+        res.writeHead(204);
+        res.end();
+        return;
+      }
       // OAuth endpoints are unauthenticated by design.
       if (path.startsWith("/oauth/")) {
         const rawBody = req.method === "POST" ? await readBody(req) : "";
@@ -1657,8 +2312,8 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
         return json(ctx, req, res, 404, { error: "unknown oauth endpoint" });
       }
 
-      // Stripe's hosted checkout pages are reached by a browser without credentials.
-      const publicCheckoutPage = provider === "stripe" && path.startsWith("/checkout/");
+      // Stripe/Paddle hosted checkout pages are reached by a browser without credentials.
+      const publicCheckoutPage = (provider === "stripe" || provider === "paddle") && path.startsWith("/checkout/");
       let account: AccountKey = "a";
       if (!publicCheckoutPage) {
         const auth = authenticate(ctx.state, provider, req);
