@@ -1,8 +1,8 @@
 {
-  "at": "2026-09-30T20:46:08.136Z",
-  "tree": "5fcfe5828e621f3168178e0242944c3a3e7a1fda",
+  "at": "2026-09-30T21:01:19.808Z",
+  "tree": "d2d80fbbeadc644927f6c14d4e789401f11bee7b",
   "checkpoint": "c1e8f5fbdcf82f991279a1dd79960b4adb554a07",
-  "paths": 457,
+  "paths": 463,
   "mapping": {
     "src": {
       "checkpoint": "c99f5bc40086972296a801b0c47ac4c98c59d1b9",
@@ -44,6 +44,5 @@
       "checkpoint": "035378d9718204d37b1c9784c875da20c6b444ae",
       "staged": "035378d9718204d37b1c9784c875da20c6b444ae"
     }
-  },
-  "originalWebKitReliability": "OPEN"
+  }
 }

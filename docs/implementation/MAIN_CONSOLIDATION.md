@@ -38,7 +38,7 @@ The owner reports a $250 grant; applicability and measured consumption are not v
 
 Pi NOT TESTED. Human usability NOT RUN. Live services and private-beta release acceptance remain BLOCKED/PARTIAL per existing records. Owner MFA enrolment and pending external account setup are not completed by code consolidation. Earlier local staging is stopped; no working app URL is promised here.
 
-MERGED: PENDING. PUSHED MAIN: PENDING. PUBLIC PRODUCTION APPROVED: NO. WORKTREES REMOVED: NO. INVITATIONS SENT: NO.
+Historical pre-execution state: MERGED/PUSHED were PENDING; see published receipt below. PUBLIC PRODUCTION APPROVED: NO. WORKTREES REMOVED: NO. INVITATIONS SENT: NO.
 
 ## Final repeat and Chrome evidence
 
@@ -49,3 +49,13 @@ The owned per-object scan was stopped because thousands of Windows Git process l
 Final unchanged-source repeat cp28r1: Chromium123/123, Firefox59/59, WebKit59/59, all with zero unexpected/skipped/flaky and retries0, build BqdPGUpmyrI4p4VDB0s0j. One runner at a time; wrapper stopped its stack. Original cp28 timeout remains OPEN; this repeat does not establish its cause or close reliability.
 
 Actual installed Google Chrome154.0.8037.92, headed Playwright with a dedicated ignored profile and normal-motion Lenis: EN/AR Product/Templates/Pricing keyboard navigation, Sign in, Back/Forward and restored landing content passed6/6; EN/AR light layouts1440/360 passed4/4. Public-only evidence: artifacts/beta-execution/20260930-landing-executor/chrome-main-handoff/REPORT.json. No private account, owner MFA or sensitive screenshots. Public runtime stopped after the test. This is agent QA, not human usability.
+
+## Published consolidation receipt
+
+Source commit: b40cb386f6a8d6dbf7d894f4fe1ecc3e88232835. Owner-authorised main merge: 264e0c75e36f47beecc06b8c8f90cb207e05a7c6. Remote main was verified at that exact merge after pushing only refs/heads/main. Ten execution inputs match cp28 c1e8f5fbdcf82f991279a1dd79960b4adb554a07.
+
+MERGED: YES. PUSHED MAIN: YES. PUBLIC PRODUCTION APPROVED: NO. WORKTREES REMOVED: NO. INVITATIONS SENT: NO.
+
+Remaining for Claude: implement all Company Builder milestones and their evidence using the complete docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md; verify the reported $250 grant and actual CLI/cloud access; audit the existing React/React DOM19.3.0 baseline; investigate DV2-G01 original WebKit timeout without erasing its first failure; preserve R03 and external integration/owner-MFA/Pi/release blockers. Human usability NOT RUN, Pi NOT TESTED. No release readiness or Company Builder implementation is implied by this merge.
+
+Independent prepublication review identified UTF16 evidence omissions; the audit scanner now decodes supported UTF16LE/BE/BOMless text with fatal validation and rejects ambiguous NUL text. Final audit: all463/463 staged text files scanned;2331 historical text blobs;zero staged matches;23 documented local database-default matches retained as raw FAIL and separately PASS_CLASSIFIED, zero unclassified/private credential matches. Generated evidence whitespace is preserved; execution-source/docs whitespace checks pass. Public Chrome screenshots and historical screenshot overwrites are retained locally; exported report JSON provides the actual checks.
