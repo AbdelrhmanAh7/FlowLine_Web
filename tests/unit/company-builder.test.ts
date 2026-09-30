@@ -5,11 +5,12 @@ import { taskStatus } from "@/company-builder/lifecycle";
 import type { InterviewState } from "@/company-builder/model";
 import { PACKS } from "@/company-builder/packs";
 import { composeBlueprint } from "@/company-builder/planner";
-import { MAX_QUESTIONS, QUESTIONS } from "@/company-builder/questions";
+import { AFFECTS, MAX_QUESTIONS, QUESTIONS, optionCopyId } from "@/company-builder/questions";
 import { compileTask, validateBlueprint } from "@/company-builder/validate";
 import { applyProposal, blueprintProposalSchema, sanitiseText } from "@/company-builder/cli/envelope";
 import { buildArgs, childEnv, classifyFailure, parseClaude } from "@/company-builder/cli/adapter";
 import { isPrivateRequest, prototypeAccess, prototypeConfigProblem } from "@/server/company-builder/gate";
+import { memoryStore } from "../fixtures/company-builder/store-stub";
 import { ar } from "@/i18n/messages/ar";
 import { en } from "@/i18n/messages/en";
 
@@ -31,28 +32,37 @@ describe("question bank", () => {
       expect((en.companyBuilder.q as Record<string, { title: string; reason: string }>)[q.id]?.title).toBeTruthy();
     }
   });
-  it("every option has Arabic and English copy", () => {
+  it("every option has Arabic and English copy (including the question-specific ids)", () => {
     for (const q of QUESTIONS)
       for (const o of q.options ?? []) {
-        if (o === "other") continue;
-        expect((ar.companyBuilder.opt as Record<string, string>)[o], `${q.id}.${o}`).toBeTruthy();
-        expect((en.companyBuilder.opt as Record<string, string>)[o], `${q.id}.${o}`).toBeTruthy();
+        const id = optionCopyId(q.id, o);
+        expect((ar.companyBuilder.opt as Record<string, string>)[id], `${q.id}.${o}`).toBeTruthy();
+        expect((en.companyBuilder.opt as Record<string, string>)[id], `${q.id}.${o}`).toBeTruthy();
       }
+  });
+  it("every question exists because its answer changes the plan: it declares what it affects", () => {
+    for (const q of QUESTIONS) {
+      expect(q.affects.length, q.id).toBeGreaterThan(0);
+      for (const a of q.affects) expect(AFFECTS, `${q.id}.${a}`).toContain(a);
+    }
   });
 });
 
 describe("adaptive interview", () => {
-  it("starts with the business situation and only asks department follow-ups that change the plan", () => {
+  it("starts from the first result to improve and only asks follow-ups for that one outcome", () => {
     let s = emptyState();
-    expect(nextQuestion(s)!.id).toBe("situation");
-    s = answerAll([["situation", "improve"], ["offering", "We sell cleaning services to offices"], ["first_outcome", "finance"]], s);
+    expect(nextQuestion(s)!.id).toBe("offering");
+    s = answerAll([["offering", "We sell cleaning services to offices"]], s);
+    expect(nextQuestion(s)!.id).toBe("first_outcome");
+    s = answerAll([["first_outcome", "finance"], ["situation", "improve"]], s);
     const next = nextQuestion(s)!;
     expect(next.department).toBe("finance");
-    // Customer questions are never asked for a finance-only plan.
+    // Other areas' questions are never asked: they become "possible next improvements".
+    s = answerAll([["other_areas", ["customer", "content"]]], s);
     let guard = 0;
     while (nextQuestion(s) && guard++ < 30) {
       const q = nextQuestion(s)!;
-      expect(q.department === null || q.department === "finance").toBe(true);
+      expect(q.department === null || q.department === "finance", q.id).toBe(true);
       s = applyAnswer(s, q.id, q.kind === "text" ? "x" : q.kind === "multi" ? [q.options!.find((o) => o !== "none" && o !== "other")!] : q.options![0], false);
       if (q.id === "other_areas") break;
     }
@@ -142,11 +152,13 @@ describe("packs (executed by the real engine)", () => {
   for (const pack of PACKS) {
     it(`${pack.id}: sample run matches its business checks and every frozen fixture passes`, async () => {
       const graph = pack.compile(params, (id) => id);
-      const res = await executeGraph(graph, pack.sample(params));
+      // data.store is handled by the worker; unit runs use an in-memory store with the same contract.
+      const opts = { handler: memoryStore().handler };
+      const res = await executeGraph(graph, pack.sample(params), opts);
       expect(res.status).toBe("succeeded");
       expect(pack.evaluate(res.output, pack.sample(params), params).every((c) => c.passed)).toBe(true);
       for (const f of pack.fixtures(params)) {
-        const r = await executeGraph(graph, f.input);
+        const r = await executeGraph(graph, f.input, opts);
         expect(r.status, f.id).toBe("succeeded");
         expect(f.expect(r.output).every((c) => c.passed), f.id).toBe(true);
       }
@@ -159,25 +171,41 @@ describe("packs (executed by the real engine)", () => {
     expect(checks.find((c) => c.id === "totals_per_currency")!.passed).toBe(false);
   });
   it("approved information is embedded as data: quotes and JSONata syntax in it can't change the expression", async () => {
-    const pack = PACKS.find((p) => p.id === "customer-triage")!;
-    const evil = { approvedInfo: 'Price is 5 SAR." ; $eval("1") ; "\n}) ) $$ price' };
-    const { graph, issues } = compileTask({ ...composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"]]), ctx).tasks[0]!, params: evil });
+    const pack = PACKS.find((p) => p.id === "customer-follow-up")!;
+    const task = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"]]), ctx).tasks[0]!;
+    expect(task.packId).toBe("customer-follow-up");
+    const evil = { ...task.params, approvedInfo: 'Deep cleaning price is 5 SAR." ; $eval("1") ; "\n}) ) $$ price', services: ['deep cleaning" & $eval("1") & "'] };
+    const { graph, issues } = compileTask({ ...task, params: evil });
     expect(issues).toEqual([]);
-    const r = await executeGraph(graph!, { request: { from: "a@b.c", subject: "price?", body: "What is the price?" } });
+    const input = { request: { id: "r1", from: "a@b.c", received_at: "2026-10-01T09:00:00+03:00", subject: "price?", body: "What is the price for deep cleaning?" } };
+    const r = await executeGraph(graph!, input, { handler: memoryStore().handler });
     expect(r.status).toBe("succeeded");
-    expect(pack.evaluate(r.output, { request: { from: "a@b.c", body: "What is the price?" } }, evil).every((c) => c.passed)).toBe(true);
+    expect(pack.evaluate(r.output, input, evil).every((c) => c.passed)).toBe(true);
   });
 });
 
 describe("planner and validation", () => {
   const base = [["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"], ["cust_info", "Prices start at 100 SAR."]] as [string, unknown][];
 
-  it("builds roles/tasks only from registered packs, with a bounded agent where interpretation is justified", () => {
+  it("plans ONE primary outcome from registered packs: a workflow, zero agents, one role that says what it doesn't do", () => {
     const bp = composeBlueprint(answerAll(base), ctx);
     expect(validateBlueprint(bp).issues).toEqual([]);
-    expect(bp.tasks.map((t) => [t.id, t.kind])).toEqual([["customer-triage", "workflow"], ["customer-answers", "agent"]]);
-    expect(bp.tasks.find((t) => t.id === "customer-triage")!.connections[0]).toMatchObject({ provider: "gmail", status: "missing" });
+    expect(bp.goal.department).toBe("customer");
+    expect(bp.tasks.map((t) => [t.id, t.kind])).toEqual([["customer-follow-up", "workflow"]]);
+    expect(bp.tasks.filter((t) => t.kind === "agent")).toHaveLength(0);
+    expect(bp.tasks[0]!.connections[0]).toMatchObject({ provider: "gmail", status: "missing" });
+    expect(bp.roles).toHaveLength(1);
+    expect(bp.roles[0]!.doesNot.length).toBeGreaterThan(0);
+    // The agent that would answer open questions is a later improvement, never installed now.
+    expect(bp.nextImprovements.some((n) => n.kind === "agent")).toBe(true);
+    expect(bp.cost.ai).toBe("none");
     expect(bp.complete).toBe(true);
+  });
+
+  it("other areas become next improvements only; they are never installed", () => {
+    const bp = composeBlueprint(answerAll([...base, ["other_areas", ["finance", "content", "recruitment"]]]), ctx);
+    expect(bp.tasks.map((t) => t.department)).toEqual(["customer"]);
+    expect(bp.nextImprovements.map((n) => n.department)).toEqual(expect.arrayContaining(["finance", "content", "recruitment"]));
   });
 
   it("employee count never drives the number of agents; no always-on CEO agent", () => {
@@ -188,12 +216,19 @@ describe("planner and validation", () => {
   });
 
   it("discloses unsupported tools, design outputs, channels and keeps recruitment planned", () => {
-    const s = answerAll([["situation", "improve"], ["offering", "we sell on Shopify and talk on WhatsApp"], ["first_outcome", "content"], ["content_output", ["copy_text", "images"]], ["content_reviewer", "owner"], ["other_areas", ["recruitment", "customer"]], ["rec_need", "scheduling"], ["cust_channel", "chat"], ["cust_reviewer", "owner"], ["tools_other" as never, "?"]].filter(([q]) => q !== "tools_other") as [string, unknown][]);
+    const s = answerAll([["situation", "improve"], ["offering", "we sell on Shopify and talk on WhatsApp"], ["first_outcome", "content"], ["content_output", ["copy_text", "images"]], ["content_reviewer", "owner"], ["other_areas", ["recruitment", "customer"]]]);
     const bp = composeBlueprint(s, ctx);
     const codes = bp.blockers.map((b) => `${b.code}:${Object.values(b.params).join(",")}`);
-    expect(codes).toEqual(expect.arrayContaining(["content_output_not_supported:images", "tool_not_supported:shopify", "tool_not_supported:whatsapp", "channel_not_supported:chat", "recruitment_planned_only:"]));
-    expect(bp.tasks.find((t) => t.id === "recruitment-coordination")!.availability).toBe("planned");
+    expect(codes).toEqual(expect.arrayContaining(["content_output_not_supported:images", "tool_not_supported:shopify", "tool_not_supported:whatsapp"]));
     expect(bp.tasks.find((t) => t.id === "content-brief")!.unavailable).toContain("images");
+    expect(bp.tasks.some((t) => t.department === "recruitment" || t.department === "customer")).toBe(false);
+    // A chat channel for customer requests is disclosed before any trial or payment.
+    const chat = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "chat"], ["cust_reviewer", "owner"]]), ctx);
+    expect(chat.blockers.map((b) => `${b.code}:${Object.values(b.params).join(",")}`)).toContain("channel_not_supported:chat");
+    // Hiring stays planned: no autonomous candidate decisions.
+    const rec = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "recruitment"], ["rec_need", "scheduling"]]), ctx);
+    expect(rec.blockers.map((b) => b.code)).toContain("recruitment_planned_only");
+    expect(rec.tasks.every((t) => t.availability === "planned")).toBe(true);
   });
 
   it("an honest partial plan: missing essentials become blockers, currency is never guessed", () => {
@@ -211,32 +246,41 @@ describe("planner and validation", () => {
     bad.tasks[0]!.packId = "ceo-agent";
     bad.tasks[0]!.permissions.push("root.shell");
     bad.tasks[0]!.connections.push({ provider: "bank_transfer", status: "missing", connectionId: null });
-    bad.tasks[0]!.dependsOn = ["customer-answers"];
-    bad.tasks[1]!.dependsOn = ["customer-triage"];
+    bad.tasks[0]!.dependsOn = [bad.tasks[0]!.id]; // the plan has one task: a self-dependency is the cycle
     const codes = validateBlueprint(bad).issues.map((i) => i.code);
     expect(codes).toEqual(expect.arrayContaining(["UNKNOWN_PACK", "UNKNOWN_PERMISSION", "UNKNOWN_PROVIDER", "DEPENDENCY_CYCLE"]));
   });
 });
 
 describe("task lifecycle (Milestone C)", () => {
-  const bp = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"], ["cust_info", "Price 5."], ["other_areas", ["recruitment"]], ["rec_need", "scheduling"]]), ctx);
-  const triage = bp.tasks.find((t) => t.id === "customer-triage")!;
-  const recruit = bp.tasks.find((t) => t.id === "recruitment-coordination")!;
+  const bp = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"], ["cust_info", "Price 5."]]), ctx);
+  const followUp = bp.tasks.find((t) => t.id === "customer-follow-up")!;
+  const recruit = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "recruitment"], ["rec_need", "scheduling"]]), ctx).tasks[0]!;
   const ok = { structurallyValid: true, ranWithoutErrors: true, matchedOutcome: true, checks: [] };
+  const accepted = "accepted" as const;
   it("distinguishes each state, per task", () => {
-    expect(taskStatus({ task: triage, installed: false, verdict: null, activation: null }).state).toBe("plan_draft");
-    expect(taskStatus({ task: triage, installed: true, verdict: null, activation: null }).state).toBe("requires_setup");
-    expect(taskStatus({ task: triage, installed: true, verdict: ok, activation: null })).toMatchObject({ state: "sample_verified", canRequestActivation: true });
-    expect(taskStatus({ task: triage, installed: true, verdict: { ...ok, matchedOutcome: false }, activation: null }).state).toBe("failed");
-    expect(taskStatus({ task: triage, installed: true, verdict: ok, activation: "approval_required" }).state).toBe("approval_required");
-    expect(taskStatus({ task: triage, installed: true, verdict: ok, activation: "active" }).state).toBe("active");
-    expect(taskStatus({ task: triage, installed: true, verdict: ok, activation: "paused" }).state).toBe("paused");
-    expect(taskStatus({ task: triage, installed: true, verdict: ok, activation: null, liveVerified: true }).state).toBe("live_verified");
-    // A planned department doesn't block the operational one.
+    expect(taskStatus({ task: followUp, installed: false, verdict: null, activation: null }).state).toBe("plan_draft");
+    expect(taskStatus({ task: followUp, installed: true, verdict: null, activation: null }).state).toBe("requires_setup");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: null, userVerdict: accepted })).toMatchObject({ state: "sample_verified", canRequestActivation: true });
+    expect(taskStatus({ task: followUp, installed: true, verdict: { ...ok, matchedOutcome: false }, activation: null }).state).toBe("failed");
+    expect(taskStatus({ task: followUp, installed: true, verdict: { ...ok, matchedOutcome: false }, activation: null, userVerdict: accepted }).state).toBe("failed");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "approval_required", userVerdict: accepted }).state).toBe("approval_required");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "active", userVerdict: accepted }).state).toBe("active");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "paused", userVerdict: accepted }).state).toBe("paused");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: null, liveVerified: true, userVerdict: accepted }).state).toBe("live_verified");
+    // A planned department is never operational.
     expect(taskStatus({ task: recruit, installed: true, verdict: null, activation: null }).state).toBe("plan_draft");
   });
+  it("passing objective checks are not acceptance, and acceptance can't override failed checks", () => {
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: null })).toMatchObject({ state: "requires_setup", canRequestActivation: false });
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: null }).reasons).toContain("result_review_needed");
+    const rejected = taskStatus({ task: followUp, installed: true, verdict: ok, activation: null, userVerdict: "rejected" });
+    expect(rejected).toMatchObject({ state: "requires_setup", canTry: true, canRequestActivation: false });
+    expect(rejected.reasons).toContain("result_rejected");
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "paused" }).canRequestActivation).toBe(false);
+  });
   it("an unknown reviewer blocks activation but not the sample trial", () => {
-    const st = taskStatus({ task: { ...triage, reviewer: "unknown" }, installed: true, verdict: ok, activation: null });
+    const st = taskStatus({ task: { ...followUp, reviewer: "unknown" }, installed: true, verdict: ok, activation: null, userVerdict: accepted });
     expect(st).toMatchObject({ canTry: true, canRequestActivation: false });
   });
 });
@@ -247,12 +291,13 @@ describe("CLI envelope and adapter (no real CLI)", () => {
     expect(sanitiseText("mail me at a.b@example.com or +966 55 123 4567\u0007", 200)).toBe("mail me at [email] or [number]");
   });
   it("a proposal can't add tasks or change permissions; unknown ids are ignored and reported", () => {
-    const p = blueprintProposalSchema.parse({ tasks: [{ taskId: "customer-answers", include: false, params: {} }, { taskId: "ceo", include: true, params: {} }], notes: "" });
+    const p = blueprintProposalSchema.parse({ tasks: [{ taskId: "customer-answers", include: true, params: {} }, { taskId: "ceo", include: true, params: {} }], notes: "" });
     const { blueprint, ignored } = applyProposal(bp, p, "cli_claude");
-    expect(ignored).toEqual(["ceo"]);
-    expect(blueprint.tasks.map((t) => t.id)).toEqual(["customer-triage"]);
+    // The later "answers" agent is a next improvement, not a plan task: a proposal can't install it.
+    expect(ignored).toEqual(["customer-answers", "ceo"]);
+    expect(blueprint.tasks.map((t) => t.id)).toEqual(["customer-follow-up"]);
     expect(validateBlueprint(blueprint).issues).toEqual([]);
-    expect(() => blueprintProposalSchema.parse({ tasks: [{ taskId: "customer-triage", include: true, params: { permissions: ["root"] } }], notes: "" })).toThrow();
+    expect(() => blueprintProposalSchema.parse({ tasks: [{ taskId: "customer-follow-up", include: true, params: { permissions: ["root"] } }], notes: "" })).toThrow();
   });
   it("an empty currency narrowing can't switch the currency check off (re-test N2)", () => {
     const fin = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "finance"], ["fin_location", "email"], ["fin_currency", ["SAR", "USD"]], ["fin_reviewer", "owner"]]), ctx);

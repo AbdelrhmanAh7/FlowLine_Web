@@ -1,4 +1,4 @@
-import type { TaskPlan, TaskState, TrialVerdict } from "./model";
+import type { TaskPlan, TaskState, TrialVerdict, UserVerdict } from "./model";
 
 /**
  * Task state (Milestone C) — computed per task, so one blocked department never makes unrelated tasks unavailable.
@@ -12,6 +12,11 @@ export interface TaskStateInput {
   activation: "approval_required" | "active" | "paused" | "failed" | null;
   /** A real authorised service verified this task (never set by sample trials). */
   liveVerified?: boolean;
+  /**
+   * The person's own answer to "Does this result match what you wanted?" for the latest trial. Kept apart from the
+   * objective checks: acceptance is not proof that every field is correct, and passing checks are not acceptance.
+   */
+  userVerdict?: UserVerdict | null;
 }
 
 export interface TaskStatus {
@@ -39,12 +44,15 @@ export function taskStatus(i: TaskStateInput): TaskStatus {
   const setup = setupReasons(task);
   const canTry = task.kind === "workflow";
   if (i.activation === "active") return { state: "active", reasons: [], canTry, canRequestActivation: false };
-  if (i.activation === "paused") return { state: "paused", reasons: ["paused"], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) };
+  if (i.activation === "paused") return { state: "paused", reasons: ["paused"], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
   if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review"], canTry, canRequestActivation: false };
   if (i.verdict && !i.verdict.matchedOutcome) return { state: "failed", reasons: [!i.verdict.structurallyValid ? "invalid_structure" : !i.verdict.ranWithoutErrors ? "run_failed" : "outcome_not_matched"], canTry, canRequestActivation: false };
   // Setup that blocks activation (reviewer, unsupported trigger) — sample trials stay available.
   const blocking = setup.filter((r) => r === "reviewer_unknown" || r === "trigger_unsupported" || (task.kind === "agent" && r === "ai_connection_missing"));
   if (i.verdict?.matchedOutcome) {
+    // Objective checks passed; the person still has to say the result is what they wanted before activation.
+    if (i.userVerdict === "rejected") return { state: "requires_setup", reasons: [...setup, "result_rejected"], canTry, canRequestActivation: false };
+    if (i.userVerdict !== "accepted") return { state: "requires_setup", reasons: [...setup, "result_review_needed"], canTry, canRequestActivation: false };
     if (i.liveVerified) return { state: "live_verified", reasons: [], canTry, canRequestActivation: blocking.length === 0 };
     return { state: "sample_verified", reasons: setup, canTry, canRequestActivation: blocking.length === 0 };
   }

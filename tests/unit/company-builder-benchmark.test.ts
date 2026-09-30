@@ -8,13 +8,16 @@ import { composeBlueprint } from "@/company-builder/planner";
 import { compileTask, validateBlueprint } from "@/company-builder/validate";
 import { isCapability } from "@/lib/permissions";
 import { BENCHMARK, BENCHMARK_FROZEN_AT } from "../fixtures/company-builder/benchmark";
+import { memoryStore } from "../fixtures/company-builder/store-stub";
 
 /**
  * Scores the FROZEN 12-case benchmark for the DETERMINISTIC generator (rules + tested packs). This is not model
  * inference: the CLI generators' quality is measured separately, on the owner's machine (see CLI_PROTOTYPE.md).
  * Set CB_BENCH_OUT=<file> to write the scored report.
  */
-const LOCAL_NODES = new Set(["trigger.manual", "transform.json", "logic.condition", "output"]);
+// data.store (added 2026-09-30 for the follow-up record) writes only to the workspace's own namespaced store: no egress,
+// no credentials. Expectations below are UNCHANGED; v1 now under-scores by design (see benchmark v2 and REPORT.md).
+const LOCAL_NODES = new Set(["trigger.manual", "transform.json", "logic.condition", "output", "data.store"]);
 
 describe(`Company Builder benchmark (frozen ${BENCHMARK_FROZEN_AT})`, () => {
   it("scores 12 cases per dimension with zero unauthorised actions or data-routing violations", async () => {
@@ -48,7 +51,7 @@ describe(`Company Builder benchmark (frozen ${BENCHMARK_FROZEN_AT})`, () => {
         for (const n of graph.nodes) if (!LOCAL_NODES.has(n.type)) violations++;
         const pack = getPack(t.packId, t.packVersion)!;
         const sample = pack.sample(t.params);
-        const r = await executeGraph(graph, sample);
+        const r = await executeGraph(graph, sample, { handler: memoryStore().handler });
         if (r.status !== "succeeded" || !pack.evaluate(r.output, sample, t.params).every((x) => x.passed)) resultOk = false;
       }
       if (c.expect.unsupported) resultOk &&= op.length === 0 || bp.blockers.length > 0;

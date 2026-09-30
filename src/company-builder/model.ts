@@ -11,7 +11,7 @@ export const CB_SCHEMA_VERSION = 1;
 export const CB_MODES = ["DETERMINISTIC_TEST", "OWNER_CLI_PROTOTYPE", "CUSTOMER_CLOUD"] as const;
 export type CbMode = (typeof CB_MODES)[number];
 
-export const DEPARTMENTS = ["customer", "finance", "content", "recruitment"] as const;
+export const DEPARTMENTS = ["customer", "finance", "operations", "sales", "content", "recruitment"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
 /* ───────────── Facts ───────────── */
@@ -86,6 +86,12 @@ export const taskPlanSchema = z.object({
   params: z.record(z.string(), z.union([z.string().max(1500), z.number(), z.boolean(), z.array(z.string().max(300)).max(20)])),
   acceptanceFixtures: z.array(z.string().max(48)).max(10),
   dependsOn: z.array(z.string().max(48)).max(5),
+  /** Business-language steps (i18n ids `companyBuilder.node.<pack>.<step>`), in order. */
+  steps: z.array(z.string().max(48)).max(12).default([]),
+  /** Who does what: automated by Flowline, prepared for a person (assisted), or kept with a person (human only). */
+  work: z
+    .object({ automated: z.array(z.string().max(48)).max(10), assisted: z.array(z.string().max(48)).max(10), human: z.array(z.string().max(48)).max(10) })
+    .default({ automated: [], assisted: [], human: [] }),
 });
 export type TaskPlan = z.infer<typeof taskPlanSchema>;
 
@@ -95,6 +101,8 @@ export const digitalRoleSchema = z.object({
   tasks: z.array(z.string()).max(6),
   /** Knowledge scoped to this role only (cross-department ACL). */
   knowledge: z.array(z.string().max(48)).max(5),
+  /** What the role must never do (i18n ids `companyBuilder.doesNot.<id>`). A role is a responsibility, not an avatar. */
+  doesNot: z.array(z.string().max(48)).max(8).default([]),
 });
 export type DigitalRole = z.infer<typeof digitalRoleSchema>;
 
@@ -117,6 +125,22 @@ export const blueprintSchema = z.object({
   blockers: z.array(blockerSchema).max(30),
   sampleData: z.boolean(),
   complete: z.boolean(),
+  /** The ONE primary outcome this plan prepares (outcome first, not company structure). */
+  goal: z.object({ department: z.enum(DEPARTMENTS).nullable() }).default({ department: null }),
+  /** Later opportunities — shown separately, never installed or activated automatically. */
+  nextImprovements: z
+    .array(z.object({ id: z.string().max(48), department: z.enum(DEPARTMENTS).nullable(), kind: z.enum(["pack", "agent", "planned"]) }))
+    .max(10)
+    .default([]),
+  /** Cost disclosure before any trial decision or checkout. Unknowns are stated, never estimated. */
+  cost: z
+    .object({
+      ai: z.enum(["none", "byok_unknown"]),
+      externalServices: z.array(z.string().max(40)).max(8),
+      executionsPerMonth: z.tuple([z.number().int().min(0), z.number().int().min(0)]).nullable(),
+      unknown: z.array(z.string().max(48)).max(8),
+    })
+    .default({ ai: "none", externalServices: [], executionsPerMonth: null, unknown: [] }),
 });
 export type CompanyBlueprint = z.infer<typeof blueprintSchema>;
 
@@ -129,9 +153,12 @@ export type TaskState = (typeof TASK_STATES)[number];
 export const PROVENANCE = ["deterministic_calculation", "mocked_integration", "real_cli", "real_service", "imported_cli_claim"] as const;
 export type Provenance = (typeof PROVENANCE)[number];
 
+/** Four results kept apart: graph validation, execution, objective checks, and the person's own acceptance. */
 export interface TrialVerdict {
   structurallyValid: boolean;
   ranWithoutErrors: boolean;
+  /** Objective business checks (independent re-computation). */
   matchedOutcome: boolean;
   checks: { id: string; passed: boolean }[];
 }
+export type UserVerdict = "accepted" | "rejected";

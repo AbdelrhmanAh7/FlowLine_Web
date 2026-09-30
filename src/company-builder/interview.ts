@@ -71,6 +71,8 @@ const DEPT_KEYWORDS: Record<Department, string[]> = {
   customer: ["customer", "inquiry", "inquiries", "enquiry", "enquiries", "support", "order", "booking", "client request", "عملاء", "العملاء", "استفسار", "طلبات", "دعم", "حجوزات", "الطلبات"],
   finance: ["invoice", "receipt", "accounting", "bookkeeping", "expense", "ledger", "فاتورة", "فواتير", "محاسب", "مصروفات", "إيصال", "ايصال", "دفاتر"],
   content: ["content", "social media", "marketing", "social post", "copywriting", "newsletter", "محتوى", "تسويق", "منشورات", "إعلان", "اعلان"],
+  operations: ["status report", "weekly summary", "operations summary", "team updates", "team tasks", "task status", "weekly report", "ملخص أسبوعي", "ملخص عمليات", "حالة مهام", "تقرير أسبوعي", "مهام الفريق"],
+  sales: ["lead", "leads", "prospect", "prospects", "sales pipeline", "qualify", "عملاء محتملين", "عملاء محتملون", "فرص بيع"],
   recruitment: ["hiring", "hire", "recruit", "recruiting", "recruitment", "candidate", "job post", "applicant", "توظيف", "مرشحين", "وظيفة", "متقدمين"],
 };
 const TOOL_KEYWORDS: Record<string, string[]> = {
@@ -102,7 +104,14 @@ export interface Inference {
   departments: Department[];
   tools: string[];
   unsupportedTools: string[];
+  /** Where requests arrive, when the text says so (email / chat). */
+  channel: "email" | "chat" | null;
 }
+
+const CHANNEL_KEYWORDS: Record<"email" | "chat", string[]> = {
+  email: ["email", "e-mail", "emails", "inbox", "إيميل", "ايميل", "الإيميل", "الايميل", "البريد"],
+  chat: ["whatsapp", "chat", "واتساب", "واتس", "دردشة"],
+};
 
 const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Word-start match: Latin words on \b; Arabic words at a token start, allowing the attached prefixes و ف ب ل ال. */
@@ -114,7 +123,8 @@ export function inferFromText(text: string): Inference {
   const departments = (Object.keys(DEPT_KEYWORDS) as Department[]).filter((d) => hit(t, DEPT_KEYWORDS[d]));
   const tools = Object.keys(TOOL_KEYWORDS).filter((k) => hit(t, TOOL_KEYWORDS[k]!));
   const unsupportedTools = Object.keys(UNSUPPORTED_TOOL_KEYWORDS).filter((k) => hit(t, UNSUPPORTED_TOOL_KEYWORDS[k]!));
-  return { departments, tools, unsupportedTools };
+  const channel = hit(t, CHANNEL_KEYWORDS.chat) ? "chat" : hit(t, CHANNEL_KEYWORDS.email) ? "email" : null;
+  return { departments, tools, unsupportedTools, channel };
 }
 
 /** Inferences only fill facts nobody has answered; an inference never overwrites or confirms an answer. */
@@ -124,6 +134,7 @@ function applyInferences(facts: Facts, inf: Inference): Facts {
   if (inf.departments.length && free("first_outcome")) out = setFact(out, "first_outcome", inf.departments[0]!, { status: "inferred", source: "inference", questionId: "offering" });
   if (inf.departments.length > 1 && free("other_areas")) out = setFact(out, "other_areas", inf.departments.slice(1), { status: "inferred", source: "inference", questionId: "offering" });
   if (inf.tools.length && free("tools")) out = setFact(out, "tools", inf.tools, { status: "inferred", source: "inference", questionId: "offering" });
+  if (inf.channel && inf.departments[0] === "customer" && free("customer.channel")) out = setFact(out, "customer.channel", inf.channel, { status: "inferred", source: "inference", questionId: "offering" });
   if (inf.unsupportedTools.length && free("tools_mentioned_unsupported")) out = setFact(out, "tools_mentioned_unsupported", inf.unsupportedTools, { status: "inferred", source: "inference", questionId: "offering" });
   return out;
 }

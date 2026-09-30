@@ -1,13 +1,22 @@
 import { inferFromText, readiness, UNSUPPORTED_TOOL_KEYWORDS } from "./interview";
-import { activeDepartments } from "./questions";
 import { CB_SCHEMA_VERSION, type Blocker, type CompanyBlueprint, type Department, type Facts, type InterviewState, type TaskPlan } from "./model";
-import { customerTriagePack } from "./packs/customer-triage";
 import { contentBriefPack } from "./packs/content-brief";
+import { customerFollowUpPack } from "./packs/customer-follow-up";
 import { invoiceOrganiserPack } from "./packs/invoice-organiser";
+import { leadQualificationPack } from "./packs/lead-qualification";
+import { operationsSummaryPack } from "./packs/operations-summary";
+import type { TaskPack } from "./packs/types";
+import { activeDepartments } from "./questions";
 
 /**
- * Deterministic blueprint composer (DETERMINISTIC_TEST mode and the fallback for every other mode). Roles and tasks
- * come only from registered packs; everything the plan can't do is listed as a blocker or an unavailable capability.
+ * Deterministic blueprint composer — "outcome first, small verified team" (owner direction, 2026-09-30).
+ *
+ * - ONE primary outcome is prepared (the confirmed first outcome). Other areas the person mentions become "possible next
+ *   improvements": listed, never installed or activated.
+ * - The smallest useful automation: a tested workflow when the steps are fixed; ZERO agents by default. An agent is only
+ *   a later improvement where interpretation adds value (and it needs an AI connection).
+ * - A digital role exists only to group real tasks, and states what it does NOT do.
+ * - Everything the plan can't do is a blocker or an unavailable capability, disclosed before any checkout.
  */
 
 export interface PlanContext {
@@ -17,6 +26,8 @@ export interface PlanContext {
   connections: { id: string; provider: string; status: string }[];
   /** UI language of the owner (sample data + template copy language). */
   language: "ar" | "en";
+  /** Workspace timezone (IANA), used for follow-up times. */
+  timezone?: string;
 }
 
 const str = (f: Facts, k: string) => {
@@ -42,72 +53,67 @@ function connectionRef(ctx: PlanContext, provider: string): TaskPlan["connection
 
 const BASE_LIMITS = { maxItemsPerRun: 50, maxRunsPerDay: 100 };
 
-function customerTasks(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan[] {
+function stepsOf(pack: TaskPack, params: TaskPlan["params"]) {
+  return pack.compile(params, (id) => id).nodes.map((n) => n.id);
+}
+
+function packTask(pack: TaskPack, partial: Omit<TaskPlan, "packId" | "packVersion" | "department" | "inputContract" | "outputContract" | "acceptanceFixtures" | "dependsOn" | "steps" | "kind" | "justification">): TaskPlan {
+  return {
+    ...partial,
+    packId: pack.id,
+    packVersion: pack.version,
+    department: pack.department,
+    kind: "workflow",
+    justification: "fixed_steps",
+    inputContract: pack.inputContract,
+    outputContract: pack.outputContract,
+    acceptanceFixtures: pack.fixtures(partial.params).map((x) => x.id),
+    dependsOn: [],
+    steps: stepsOf(pack, partial.params),
+  };
+}
+
+/** Services the person listed ("deep cleaning, office cleaning" / one per line) → pack service aliases. */
+function servicesFrom(text: string | null): string[] {
+  if (!text) return [];
+  return text
+    .split(/[,،\n;]+/)
+    .map((s) => s.trim().toLowerCase().slice(0, 60))
+    .filter((s) => s.length > 1)
+    .slice(0, 12);
+}
+
+function customerTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan {
   const channel = str(f, "customer.channel");
   const info = str(f, "customer.approved_info") ?? "";
-  const reviewer = reviewerOf(f, "customer.reviewer");
   const trigger: TaskPlan["trigger"] =
     channel === "email" ? { kind: "email", status: "needs_connection" } : channel === "form" ? { kind: "form", status: "ready" } : channel === "chat" || channel === "phone" ? { kind: channel === "chat" ? "chat" : "unknown", status: "unsupported" } : { kind: "unknown", status: "unknown" };
-  const connections = channel === "email" ? [connectionRef(ctx, "gmail")] : [];
   const unavailable: string[] = [];
   if (trigger.status === "unsupported") {
     unavailable.push(channel === "chat" ? "chat_channel" : "phone_channel");
     blockers.push({ code: "channel_not_supported", department: "customer", params: { channel: channel ?? "" } });
   }
   if (!info.trim()) blockers.push({ code: "approved_info_missing", department: "customer", params: {} });
-  const tasks: TaskPlan[] = [
-    {
-      id: "customer-triage",
-      roleId: "customer-desk",
-      department: "customer",
-      packId: customerTriagePack.id,
-      packVersion: customerTriagePack.version,
-      kind: "workflow",
-      availability: "operational",
-      justification: "fixed_steps",
-      trigger,
-      inputContract: customerTriagePack.inputContract,
-      outputContract: customerTriagePack.outputContract,
-      reviewer,
-      permissions: ["flow.run", "approval.decide"],
-      limits: BASE_LIMITS,
-      connections,
-      unavailable,
-      usage: "none",
-      params: { approvedInfo: info.slice(0, 1200), language: ctx.language },
-      acceptanceFixtures: customerTriagePack.fixtures({}).map((x) => x.id),
-      dependsOn: [],
-    },
-  ];
-  // A bounded agent only where interpretation adds value AND there is approved knowledge to ground it.
-  if (info.trim() && str(f, "customer.next") !== "route") {
-    tasks.push({
-      id: "customer-answers",
-      roleId: "customer-desk",
-      department: "customer",
-      packId: null,
-      packVersion: null,
-      kind: "agent",
-      availability: "operational",
-      justification: "interpretation_needs_agent",
-      trigger: { kind: "manual_sample", status: "ready" },
-      inputContract: "free_text_question_v1",
-      outputContract: "answer_with_citations_v1",
-      reviewer,
-      permissions: ["agent.run"],
-      limits: { maxItemsPerRun: 1, maxRunsPerDay: 50 },
-      connections: [{ provider: "ai", status: "missing", connectionId: null }],
-      unavailable: [],
-      usage: "unknown",
-      params: { approvedInfo: info.slice(0, 1200) },
-      acceptanceFixtures: [],
-      dependsOn: [],
-    });
-  }
-  return tasks;
+  const detailsFact = f["customer.details"];
+  const details = detailsFact && detailsFact.status === "confirmed" && Array.isArray(detailsFact.value) ? detailsFact.value : ["service", "date", "phone"];
+  if (!detailsFact || detailsFact.status !== "confirmed") blockers.push({ code: "details_assumed", department: "customer", params: {} });
+  return packTask(customerFollowUpPack, {
+    id: "customer-follow-up",
+    roleId: "customer-follow-up-assistant",
+    availability: "operational",
+    trigger,
+    reviewer: reviewerOf(f, "customer.reviewer"),
+    permissions: ["flow.run", "approval.decide"],
+    limits: BASE_LIMITS,
+    connections: channel === "email" ? [connectionRef(ctx, "gmail")] : [],
+    unavailable,
+    usage: "none",
+    params: { approvedInfo: info.slice(0, 1200), services: servicesFrom(str(f, "customer.services")), requiredDetails: details, followUpHours: 24, timezone: ctx.timezone ?? "UTC", language: ctx.language },
+    work: { automated: ["extract_request_facts", "detect_missing_details", "record_follow_up"], assisted: ["draft_reply_from_approved_info"], human: ["approve_and_send_reply", "complaints", "prices_not_in_approved_info"] },
+  });
 }
 
-function financeTasks(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan[] {
+function financeTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan {
   const location = str(f, "finance.location");
   const currencies = list(f, "finance.currency").filter((c) => /^[A-Z]{3}$/.test(c));
   const unavailable: string[] = [];
@@ -129,111 +135,172 @@ function financeTasks(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan
   if (currencies.length === 0) blockers.push({ code: "currency_unknown", department: "finance", params: {} });
   if (list(f, "finance.currency").includes("other")) blockers.push({ code: "currency_other_needs_code", department: "finance", params: {} });
   if (str(f, "finance.need") === "ledger") connections.push(connectionRef(ctx, "google_sheets"));
-  return [
-    {
-      id: "invoice-organiser",
-      roleId: "finance-desk",
-      department: "finance",
-      packId: invoiceOrganiserPack.id,
-      packVersion: invoiceOrganiserPack.version,
-      kind: "workflow",
-      availability: "operational",
-      justification: "fixed_steps",
-      trigger,
-      inputContract: invoiceOrganiserPack.inputContract,
-      outputContract: invoiceOrganiserPack.outputContract,
-      reviewer: reviewerOf(f, "finance.reviewer"),
-      permissions: ["flow.run", "approval.decide"],
-      limits: BASE_LIMITS,
-      connections,
-      unavailable: [...unavailable, "tax_filing", "payments"],
-      usage: "none",
-      params: { currencies, language: ctx.language },
-      acceptanceFixtures: invoiceOrganiserPack.fixtures({}).map((x) => x.id),
-      dependsOn: [],
-    },
-  ];
+  return packTask(invoiceOrganiserPack, {
+    id: "invoice-organiser",
+    roleId: "finance-documents-assistant",
+    availability: "operational",
+    trigger,
+    reviewer: reviewerOf(f, "finance.reviewer"),
+    permissions: ["flow.run", "approval.decide"],
+    limits: BASE_LIMITS,
+    connections,
+    unavailable: [...unavailable, "tax_filing", "payments"],
+    usage: "none",
+    params: { currencies, language: ctx.language },
+    work: { automated: ["validate_document_fields", "recompute_totals", "per_currency_totals"], assisted: ["draft_ledger_rows", "flag_discrepancies"], human: ["approve_ledger_entries", "payments", "tax_filing"] },
+  });
 }
 
-function contentTasks(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan[] {
+function operationsTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan {
+  const source = str(f, "operations.source");
+  const unavailable: string[] = [];
+  const connections: TaskPlan["connections"] = [];
+  let trigger: TaskPlan["trigger"] = { kind: "manual_sample", status: "ready" };
+  if (source === "spreadsheet") connections.push(connectionRef(ctx, "google_sheets"));
+  else if (source === "project_tool") {
+    connections.push(connectionRef(ctx, "linear"));
+    blockers.push({ code: "project_tool_mapping_needed", department: "operations", params: {} });
+  } else if (source === "email_updates") {
+    unavailable.push("email_status_parsing");
+    blockers.push({ code: "email_updates_not_supported", department: "operations", params: {} });
+  } else if (source === "none") blockers.push({ code: "no_status_data_yet", department: "operations", params: {} });
+  else trigger = { kind: "unknown", status: "unknown" };
+  return packTask(operationsSummaryPack, {
+    id: "operations-summary",
+    roleId: "operations-reporting-assistant",
+    availability: "operational",
+    trigger,
+    reviewer: reviewerOf(f, "operations.reviewer"),
+    permissions: ["flow.run", "approval.decide"],
+    limits: BASE_LIMITS,
+    connections,
+    unavailable,
+    usage: "none",
+    params: { language: ctx.language },
+    work: { automated: ["deterministic_metrics", "flag_overdue"], assisted: ["summarise_changes"], human: ["approve_and_share_report", "performance_judgements"] },
+  });
+}
+
+function salesTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan {
+  const source = str(f, "sales.source");
+  const connections: TaskPlan["connections"] = [];
+  let trigger: TaskPlan["trigger"] = { kind: "form", status: "ready" };
+  if (source === "email") {
+    trigger = { kind: "email", status: "needs_connection" };
+    connections.push(connectionRef(ctx, "gmail"));
+  } else if (source === "crm") connections.push(connectionRef(ctx, "hubspot"));
+  else if (!source) trigger = { kind: "unknown", status: "unknown" };
+  const min = Number(str(f, "sales.min_size") ?? "10");
+  if (!confirmed(f, "sales.min_size")) blockers.push({ code: "lead_criteria_assumed", department: "sales", params: {} });
+  return packTask(leadQualificationPack, {
+    id: "lead-qualification",
+    roleId: "lead-qualification-assistant",
+    availability: "operational",
+    trigger,
+    reviewer: reviewerOf(f, "sales.reviewer"),
+    permissions: ["flow.run", "approval.decide"],
+    limits: BASE_LIMITS,
+    connections,
+    unavailable: ["crm_write_without_approval"],
+    usage: "none",
+    params: { minEmployees: Number.isFinite(min) && min > 0 ? min : 10, targetCountries: [], excludedDomains: [], language: ctx.language },
+    work: { automated: ["normalise_lead", "score_against_criteria"], assisted: ["explain_score", "route_for_review"], human: ["contact_lead", "decline_lead"] },
+  });
+}
+
+function contentTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan {
   const outputs = list(f, "content.output");
   const unsupported = outputs.filter((o) => o === "images" || o === "design_files" || o === "video");
   for (const o of unsupported) blockers.push({ code: "content_output_not_supported", department: "content", params: { output: o } });
   const textWanted = outputs.length === 0 || outputs.some((o) => o === "copy_text" || o === "social_posts");
-  return [
-    {
-      id: "content-brief",
-      roleId: "content-desk",
-      department: "content",
-      packId: contentBriefPack.id,
-      packVersion: contentBriefPack.version,
-      kind: "workflow",
-      availability: textWanted ? "operational" : "unsupported",
-      justification: "fixed_steps",
-      trigger: { kind: "manual_sample", status: "ready" },
-      inputContract: contentBriefPack.inputContract,
-      outputContract: contentBriefPack.outputContract,
-      reviewer: reviewerOf(f, "content.reviewer"),
-      permissions: ["flow.run"],
-      limits: BASE_LIMITS,
-      connections: [],
-      unavailable: unsupported,
-      usage: "none",
-      params: { language: ctx.language },
-      acceptanceFixtures: contentBriefPack.fixtures({}).map((x) => x.id),
-      dependsOn: [],
-    },
-  ];
+  return packTask(contentBriefPack, {
+    id: "content-brief",
+    roleId: "content-preparation-assistant",
+    availability: textWanted ? "operational" : "unsupported",
+    trigger: { kind: "manual_sample", status: "ready" },
+    reviewer: reviewerOf(f, "content.reviewer"),
+    permissions: ["flow.run"],
+    limits: BASE_LIMITS,
+    connections: [],
+    unavailable: unsupported,
+    usage: "none",
+    params: { language: ctx.language },
+    work: { automated: ["structure_brief"], assisted: ["template_copy_options"], human: ["approve_and_publish", "brand_decisions"] },
+  });
 }
 
-function recruitmentTasks(f: Facts): TaskPlan[] {
+function recruitmentTask(f: Facts): TaskPlan {
   // No verified coordination pack exists: planned, not operational. No autonomous screening or rejection, ever.
-  return [
-    {
-      id: "recruitment-coordination",
-      roleId: "recruitment-desk",
-      department: "recruitment",
-      packId: null,
-      packVersion: null,
-      kind: "workflow",
-      availability: "planned",
-      justification: "no_verified_pack",
-      trigger: { kind: "unknown", status: "unknown" },
-      inputContract: "none",
-      outputContract: "none",
-      reviewer: "owner",
-      permissions: [],
-      limits: { maxItemsPerRun: 1, maxRunsPerDay: 1 },
-      connections: [],
-      unavailable: ["autonomous_candidate_rejection", "recruitment_pack"],
-      usage: "none",
-      params: { need: str(f, "recruitment.need") ?? "unknown" },
-      acceptanceFixtures: [],
-      dependsOn: [],
-    },
-  ];
+  return {
+    id: "recruitment-coordination",
+    roleId: "recruitment-coordination-assistant",
+    department: "recruitment",
+    packId: null,
+    packVersion: null,
+    kind: "workflow",
+    availability: "planned",
+    justification: "no_verified_pack",
+    trigger: { kind: "unknown", status: "unknown" },
+    inputContract: "none",
+    outputContract: "none",
+    reviewer: "owner",
+    permissions: [],
+    limits: { maxItemsPerRun: 1, maxRunsPerDay: 1 },
+    connections: [],
+    unavailable: ["autonomous_candidate_rejection", "recruitment_pack"],
+    usage: "none",
+    params: { need: str(f, "recruitment.need") ?? "unknown" },
+    acceptanceFixtures: [],
+    dependsOn: [],
+    steps: [],
+    work: { automated: [], assisted: [], human: ["hiring_decisions", "candidate_contact"] },
+  };
 }
 
-const ROLE_OF: Record<Department, string> = { customer: "customer-desk", finance: "finance-desk", content: "content-desk", recruitment: "recruitment-desk" };
+/** What each role never does (shown on the plan; i18n `companyBuilder.doesNot.<id>`). */
+const DOES_NOT: Record<string, string[]> = {
+  "customer-follow-up-assistant": ["send_without_approval", "quote_unapproved_prices", "legal_commitments", "data_outside_sources"],
+  "finance-documents-assistant": ["move_money", "file_taxes", "post_without_review", "mix_currencies"],
+  "operations-reporting-assistant": ["judge_performance", "share_without_review", "data_outside_sources"],
+  "lead-qualification-assistant": ["contact_without_approval", "reject_automatically", "data_outside_sources"],
+  "content-preparation-assistant": ["publish_without_review", "produce_images_or_video"],
+  "recruitment-coordination-assistant": ["reject_candidates", "hiring_decisions"],
+};
+
+/** Later improvements per primary outcome (never installed now). */
+const LATER: Partial<Record<Department, CompanyBlueprint["nextImprovements"]>> = {
+  customer: [
+    { id: "customer-answers-assistant", department: "customer", kind: "agent" },
+    { id: "gmail-send-after-approval", department: "customer", kind: "pack" },
+  ],
+  finance: [{ id: "ledger-to-sheets-after-approval", department: "finance", kind: "pack" }],
+  operations: [{ id: "scheduled-weekly-report", department: "operations", kind: "pack" }],
+  sales: [{ id: "crm-update-after-approval", department: "sales", kind: "pack" }],
+};
+
+const EXECUTIONS: Record<string, [number, number]> = { under_20: [4, 90], "20_100": [80, 450], over_100: [400, 2000] };
 
 export function composeBlueprint(state: InterviewState, ctx: PlanContext): CompanyBlueprint {
   const f = state.facts;
   const ready = readiness(state);
   const blockers: Blocker[] = [];
-  // The plan is built for CONFIRMED departments only; an inferred outcome stays an assumption until answered.
+  // Confirmed outcomes only; an inferred outcome stays an assumption until answered.
   const departments = activeDepartments(Object.fromEntries(Object.entries(f).filter(([, v]) => v.status === "confirmed")));
+  const primary = departments[0] ?? null;
   const tasks: TaskPlan[] = [];
-  for (const d of departments) {
-    if (d === "customer") tasks.push(...customerTasks(f, ctx, blockers));
-    if (d === "finance") tasks.push(...financeTasks(f, ctx, blockers));
-    if (d === "content") tasks.push(...contentTasks(f, ctx, blockers));
-    if (d === "recruitment") {
-      tasks.push(...recruitmentTasks(f));
-      blockers.push({ code: "recruitment_planned_only", department: "recruitment", params: {} });
-    }
+  if (primary === "customer") tasks.push(customerTask(f, ctx, blockers));
+  if (primary === "finance") tasks.push(financeTask(f, ctx, blockers));
+  if (primary === "operations") tasks.push(operationsTask(f, ctx, blockers));
+  if (primary === "sales") tasks.push(salesTask(f, ctx, blockers));
+  if (primary === "content") tasks.push(contentTask(f, ctx, blockers));
+  if (primary === "recruitment") {
+    tasks.push(recruitmentTask(f));
+    blockers.push({ code: "recruitment_planned_only", department: "recruitment", params: {} });
   }
-  if (str(f, "first_outcome") === "other") blockers.push({ code: "outcome_not_supported", department: null, params: {} });
-  for (const key of ready.missing) blockers.push({ code: f[key]?.status === "contradictory" ? "fact_contradictory" : "fact_missing", department: null, params: { fact: key } });
+  const outcome = str(f, "first_outcome");
+  if (outcome === "other") blockers.push({ code: "outcome_not_supported", department: null, params: {} });
+  if (!primary && outcome !== "other") blockers.push({ code: "choose_first_outcome", department: null, params: {} });
+  for (const key of ready.missing) if (key !== "first_outcome") blockers.push({ code: f[key]?.status === "contradictory" ? "fact_contradictory" : "fact_missing", department: null, params: { fact: key } });
 
   // Tools named that Flowline doesn't integrate with are disclosed up front (before any checkout).
   const named = new Set([...list(f, "tools_mentioned_unsupported"), ...inferFromText([str(f, "tools_other") ?? "", str(f, "offering") ?? ""].join(" ")).unsupportedTools]);
@@ -241,9 +308,14 @@ export function composeBlueprint(state: InterviewState, ctx: PlanContext): Compa
   const otherTools = str(f, "tools_other");
   if (otherTools && named.size === 0) blockers.push({ code: "tool_unverified", department: null, params: { tool: otherTools.slice(0, 80) } });
 
-  const tools = list(f, "tools");
-  const sampleData = str(f, "situation") === "start" || tools.length === 0 || tools.includes("none");
-  const roles = departments.map((d) => ({ id: ROLE_OF[d], department: d, tasks: tasks.filter((t) => t.department === d).map((t) => t.id), knowledge: d === "customer" && tasks.some((t) => t.id === "customer-answers") ? ["approved-customer-answers"] : [] }));
+  const sampleData = true; // every trial uses labelled sample data until an account is connected and approved
+  const roles = tasks.length ? [{ id: tasks[0]!.roleId, department: primary!, tasks: tasks.map((t) => t.id), knowledge: [], doesNot: DOES_NOT[tasks[0]!.roleId] ?? [] }] : [];
+  const nextImprovements = [
+    ...(primary ? (LATER[primary] ?? []) : []),
+    ...departments.slice(1).map((d) => ({ id: `${d}-outcome`, department: d, kind: (d === "recruitment" ? "planned" : "pack") as "planned" | "pack" })),
+  ].slice(0, 10);
+  const external = [...new Set(tasks.flatMap((t) => t.connections.map((c) => c.provider)))];
+  const volume = str(f, "customer.volume");
 
   return {
     schemaVersion: CB_SCHEMA_VERSION,
@@ -252,7 +324,7 @@ export function composeBlueprint(state: InterviewState, ctx: PlanContext): Compa
     generator: "deterministic",
     situation: (str(f, "situation") as CompanyBlueprint["situation"]) ?? "improve",
     clientName: str(f, "client_name"),
-    outcomes: departments.map((d, i) => ({ department: d, primary: i === 0 })),
+    outcomes: primary ? [{ department: primary, primary: true }] : [],
     roles,
     tasks,
     assumptions: Object.entries(f)
@@ -260,7 +332,15 @@ export function composeBlueprint(state: InterviewState, ctx: PlanContext): Compa
       .map(([k, v]) => ({ fact: k, status: v.status, value: v.value })),
     blockers: dedupe(blockers),
     sampleData,
-    complete: ready.complete,
+    complete: ready.complete && Boolean(primary),
+    goal: { department: primary },
+    nextImprovements,
+    cost: {
+      ai: "none",
+      externalServices: external,
+      executionsPerMonth: primary === "customer" && volume && EXECUTIONS[volume] ? EXECUTIONS[volume]! : null,
+      unknown: [...(primary === "customer" && !volume ? ["execution_volume"] : []), ...(external.length ? ["external_service_plan"] : [])],
+    },
   };
 }
 
