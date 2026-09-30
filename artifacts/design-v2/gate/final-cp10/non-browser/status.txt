@@ -1,0 +1,13 @@
+stack stopped before suites: 2026-09-30T12:42:37+03:00
+start lint: 2026-09-30T12:42:37+03:00
+lint exit=0: 2026-09-30T12:43:09+03:00
+start typecheck: 2026-09-30T12:43:09+03:00
+typecheck exit=0: 2026-09-30T12:43:12+03:00
+start test: 2026-09-30T12:43:12+03:00
+test exit=0: 2026-09-30T12:43:16+03:00
+start test:contract: 2026-09-30T12:43:16+03:00
+test:contract exit=0: 2026-09-30T12:43:39+03:00
+start test:integration: 2026-09-30T12:43:39+03:00
+test:integration exit=0: 2026-09-30T12:46:35+03:00
+start check:evidence: 2026-09-30T12:46:35+03:00
+check:evidence exit=0: 2026-09-30T12:46:36+03:00

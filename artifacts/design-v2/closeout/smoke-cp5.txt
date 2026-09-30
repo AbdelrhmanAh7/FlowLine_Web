@@ -1,0 +1,284 @@
+
+Running 71 tests using 1 worker
+
+Platform setup was already completed. Use --recover (audited) or --grant to add an admin.
+  ok  1 [chromium] › e2e\admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) (4.9s)
+  ok  2 [chromium] › e2e\admin-panel.spec.ts:125:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel (390ms)
+  ok  3 [chromium] › e2e\admin-panel.spec.ts:133:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app) (1.3s)
+  ok  4 [chromium] › e2e\ai-hub-wave-b.spec.ts:10:5 › Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing (900ms)
+  ok  5 [chromium] › e2e\ai-hub-wave-b.spec.ts:29:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID (794ms)
+  ok  6 [chromium] › e2e\ai-hub-wave-b.spec.ts:46:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model (1.5s)
+  ok  7 [chromium] › e2e\ai-hub-wave-b.spec.ts:84:5 › CXQ-05: saving workspace prices refreshes the model picker without a reload (813ms)
+  ok  8 [chromium] › e2e\ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical (6.2s)
+  ok  9 [chromium] › e2e\arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser (3.9s)
+  ok 10 [chromium] › e2e\arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser (480ms)
+  ok 11 [chromium] › e2e\arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser (244ms)
+  ok 12 [chromium] › e2e\arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser (2.1s)
+  ok 13 [chromium] › e2e\arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser (2.4s)
+  ok 14 [chromium] › e2e\arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser (2.1s)
+  ok 15 [chromium] › e2e\arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser (2.3s)
+  ok 16 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser (5.4s)
+  ok 17 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser (5.5s)
+  ok 18 [chromium] › e2e\hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser (5.2s)
+  ok 19 [chromium] › e2e\hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser (2.8s)
+  ok 20 [chromium] › e2e\hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser (2.8s)
+  ok 21 [chromium] › e2e\hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser (2.8s)
+  ok 22 [chromium] › e2e\landing.spec.ts:53:7 › landing scroll experience › scrolls through every section with no console errors (1.0s)
+  ok 23 [chromium] › e2e\landing.spec.ts:65:7 › landing scroll experience › reduced motion: scroll scenes are static (1.4s)
+  ok 24 [chromium] › e2e\landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 375px (1.1s)
+  ok 25 [chromium] › e2e\landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1024px (986ms)
+  ok 26 [chromium] › e2e\landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1440px (984ms)
+  ok 27 [chromium] › e2e\landing.spec.ts:114:7 › landing scroll experience with motion allowed (desktop) › scroll reveals end fully visible (opacity 1, none left hidden) (1.9s)
+  ok 28 [chromium] › e2e\landing.spec.ts:128:7 › landing scroll experience with motion allowed (desktop) › hero scrub: .hero-scrub runs on the wrapper's named view timeline where the browser supports scroll timelines (799ms)
+  ok 29 [chromium] › e2e\landing.spec.ts:158:7 › landing scroll experience with motion allowed (desktop) › hero scrub: the scale/tilt plays WHILE the stage is pinned (not only at pin release) (877ms)
+  x  30 [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, light) (919ms)
+  x  31 [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, dark) (1.1s)
+  ok 32 [chromium] › e2e\landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (en) (979ms)
+  x  33 [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, light) (923ms)
+  x  34 [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, dark) (1.0s)
+  ok 35 [chromium] › e2e\landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (ar) (984ms)
+  x  36 [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 375px: theme and language can be changed from the header (848ms)
+  x  37 [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 360px: theme and language can be changed from the header (980ms)
+  ok 38 [chromium] › e2e\landing.spec.ts:336:7 › landing header: fits every width, keeps theme and language reachable › phone 375px: the preferences are keyboard operable with a visible focus ring (1.0s)
+  ok 39 [chromium] › e2e\phase2.spec.ts:82:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates (6.2s)
+  ok 40 [chromium] › e2e\phase2.spec.ts:148:5 › double-clicked Run starts one run, and Cancel stops it mid-request (11.6s)
+  ok 41 [chromium] › e2e\phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical (2.5s)
+  ok 42 [chromium] › e2e\phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs (2.2s)
+  ok 43 [chromium] › e2e\phase2.spec.ts:257:5 › mobile: Phase 2 pages fit a phone screen without horizontal scrolling (701ms)
+  ok 44 [chromium] › e2e\phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical (2.2s)
+  ok 45 [chromium] › e2e\phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical (824ms)
+  ok 46 [chromium] › e2e\phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical (6.9s)
+  ok 47 [chromium] › e2e\phase3.spec.ts:181:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical (1.1s)
+  ok 48 [chromium] › e2e\phase3.spec.ts:206:7 › Copilot › invalid proposal and missing integration are explained and can't be applied; rejection changes nothing (1.1s)
+  ok 49 [chromium] › e2e\phase3.spec.ts:222:7 › Copilot › patching an existing flow keeps the user's steps; removals need explicit confirmation (1.4s)
+  ok 50 [chromium] › e2e\phase3.spec.ts:244:5 › billing sandbox: choose a test plan → fake checkout → verified webhook → plan in force (795ms)
+  ok 51 [chromium] › e2e\phase3.spec.ts:258:5 › history: restore an older version as a draft (rollback) — history is kept (843ms)
+  ok 52 [chromium] › e2e\phase3.spec.ts:274:5 › mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile (697ms)
+  ok 53 [chromium] › e2e\phase3.spec.ts:286:5 › SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over (2.2s)
+  ok 54 [chromium] › e2e\phase3.spec.ts:346:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser (4.0s)
+  ok 55 [chromium] › e2e\reduced-motion.spec.ts:17:7 › reduced motion › the running node has no animation — a static ring marks it (1.7s)
+  ok 56 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 1440px (457ms)
+  ok 57 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 1280px (456ms)
+  ok 58 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 1279px (458ms)
+  ok 59 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 1024px (453ms)
+  ok 60 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 768px (441ms)
+  ok 61 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 767px (422ms)
+  ok 62 [chromium] › e2e\responsive.spec.ts:44:9 › breakpoints › shell at 375px (418ms)
+  ok 63 [chromium] › e2e\responsive.spec.ts:60:5 › builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile (1.2s)
+  ok 64 [chromium] › e2e\responsive.spec.ts:93:5 › mobile is monitor-only: editing disabled with a persistent banner, running still works (2.0s)
+  ok 65 [chromium] › e2e\responsive.spec.ts:125:5 › capture screens & states at 1440 / 1024 / 375 (26.2s)
+  ok 66 [chromium] › e2e\responsive.spec.ts:246:5 › capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375 (25.8s)
+  ok 67 [chromium] › e2e\run-states.spec.ts:21:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick (10.8s)
+  ok 68 [chromium] › e2e\theme.spec.ts:6:7 › theme switch › persists across reload and appears in the server HTML (473ms)
+  ok 69 [chromium] › e2e\theme.spec.ts:23:7 › theme switch › system follows the OS color scheme (318ms)
+  ok 70 [chromium] › e2e\theme.spec.ts:33:7 › theme switch › works in Arabic (RTL) (402ms)
+  ok 71 [chromium] › e2e\theme.spec.ts:44:7 › theme switch › the user menu switches the theme too (664ms)
+
+
+  1) [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, light) 
+
+    Error: en/light/360px: "Light" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:286:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, dark) 
+
+    Error: en/dark/360px: "Light" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:286:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, light) 
+
+    Error: ar/light/360px: "فاتح" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:286:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, dark) 
+
+    Error: ar/dark/360px: "فاتح" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:286:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 375px: theme and language can be changed from the header 
+
+    Error: phone 375px en: "Light" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:308:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-28b4f--be-changed-from-the-header-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-28b4f--be-changed-from-the-header-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-28b4f--be-changed-from-the-header-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-28b4f--be-changed-from-the-header-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 360px: theme and language can be changed from the header 
+
+    Error: phone 360px en: "Light" target height
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 32
+    Received:    26
+
+      255 |   for (const s of sizes) {
+      256 |     expect(s.width, `${where}: "${s.name}" target width`).toBeGreaterThanOrEqual(24);
+    > 257 |     expect(s.height, `${where}: "${s.name}" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);
+          |                                                             ^
+      258 |   }
+      259 |   const themeButtons = await theme.getByRole("button").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));
+      260 |   themeButtons.forEach((b, i) => {
+        at expectPreferences (C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:257:61)
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\landing.spec.ts:308:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-f55a2--be-changed-from-the-header-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-f55a2--be-changed-from-the-header-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-f55a2--be-changed-from-the-header-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace artifacts\design-v2\closeout\test-results-smoke-cp5\landing-landing-header-fit-f55a2--be-changed-from-the-header-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, light) 
+    [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, dark) 
+    [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, light) 
+    [chromium] › e2e\landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, dark) 
+    [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 375px: theme and language can be changed from the header 
+    [chromium] › e2e\landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 360px: theme and language can be changed from the header 
+  65 passed (3.3m)
+exit=1

@@ -1,0 +1,854 @@
+{
+  "method": "Headed Playwright installed Chrome fallback; not desktop computer use",
+  "start": {
+    "at": "2026-09-30T07:22:24.228Z",
+    "head": "fb563e517263800062adf5d5a31af672ebcc4da3",
+    "checkpoint": "a4eeabd35da560fd34d679fe3d6e9e349c43806b",
+    "tree": "be6dc87eec7effac79471e41fea67628e1ee95d0",
+    "build": "0182teFiYHLhmljkCbuL5",
+    "chrome": "154.0.8037.92",
+    "playwright": "1.63.0"
+  },
+  "end": {
+    "at": "2026-09-30T07:46:44.268Z",
+    "head": "fb563e517263800062adf5d5a31af672ebcc4da3",
+    "checkpoint": "a4eeabd35da560fd34d679fe3d6e9e349c43806b",
+    "tree": "be6dc87eec7effac79471e41fea67628e1ee95d0",
+    "build": "0182teFiYHLhmljkCbuL5"
+  },
+  "landingChecks": [
+    {
+      "slug": "landing-final-1440-en-light",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "theme": "light",
+      "dir": "ltr",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-1440-en-dark",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "theme": "dark",
+      "dir": "ltr",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-1440-ar-light",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "theme": "light",
+      "dir": "rtl",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-1440-ar-dark",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "theme": "dark",
+      "dir": "rtl",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-375-en-light",
+      "width": 375,
+      "scrollWidth": 375,
+      "theme": "light",
+      "dir": "ltr",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-375-en-dark",
+      "width": 375,
+      "scrollWidth": 375,
+      "theme": "dark",
+      "dir": "ltr",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-375-ar-light",
+      "width": 375,
+      "scrollWidth": 375,
+      "theme": "light",
+      "dir": "rtl",
+      "reduced": true
+    },
+    {
+      "slug": "landing-final-375-ar-dark",
+      "width": 375,
+      "scrollWidth": 375,
+      "theme": "dark",
+      "dir": "rtl",
+      "reduced": true
+    }
+  ],
+  "phone": {
+    "modal": "true",
+    "focusInside": true,
+    "returnFocus": {
+      "tag": "BUTTON",
+      "text": "▾#6Manual CP8 JSONataFailed5/6 · 153ms9m ago"
+    },
+    "tabContainment": [
+      {
+        "inside": true,
+        "label": "log"
+      },
+      {
+        "inside": true,
+        "label": "10:26:39 AMqueued{\"trigger\":\"manual\",\"version\":1}10:26:39 AMclaimed{\"w"
+      },
+      {
+        "inside": true,
+        "label": "↻ Re-run from this step"
+      },
+      {
+        "inside": true,
+        "label": "Manual trigger: Success"
+      },
+      {
+        "inside": true,
+        "label": "JSON transform: Success"
+      },
+      {
+        "inside": true,
+        "label": "Close"
+      },
+      {
+        "inside": true,
+        "label": "log"
+      },
+      {
+        "inside": true,
+        "label": "10:26:39 AMqueued{\"trigger\":\"manual\",\"version\":1}10:26:39 AMclaimed{\"w"
+      },
+      {
+        "inside": true,
+        "label": "↻ Re-run from this step"
+      },
+      {
+        "inside": true,
+        "label": "Manual trigger: Success"
+      },
+      {
+        "inside": true,
+        "label": "JSON transform: Success"
+      },
+      {
+        "inside": true,
+        "label": "Close"
+      }
+    ]
+  },
+  "catalog": {
+    "attrs": {
+      "role": "dialog",
+      "modal": null
+    },
+    "focus": {
+      "tag": "BUTTON",
+      "label": "Zoom out",
+      "inside": false
+    }
+  },
+  "m01": {
+    "afterEscape": {
+      "tag": "BODY",
+      "label": null
+    },
+    "nextTab": {
+      "tag": "BUTTON",
+      "label": "Zoom out",
+      "text": ""
+    }
+  },
+  "m02": {
+    "historyVisible": true,
+    "historyFocus": {
+      "tag": "BUTTON",
+      "label": "Close history"
+    }
+  },
+  "issuesKeyboard": {
+    "visible": true
+  },
+  "connectTrap": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "disconnectTrap": [
+    {
+      "inside": true,
+      "text": "Cancel"
+    },
+    {
+      "inside": true,
+      "text": "Disconnect"
+    },
+    {
+      "inside": true,
+      "text": ""
+    },
+    {
+      "inside": true,
+      "text": "Cancel"
+    },
+    {
+      "inside": true,
+      "text": "Disconnect"
+    },
+    {
+      "inside": true,
+      "text": ""
+    }
+  ],
+  "copilotKeyboard": [
+    {
+      "inside": false,
+      "tag": "BUTTON",
+      "label": "Runs CtrlJ"
+    },
+    {
+      "inside": false,
+      "tag": "BUTTON",
+      "label": "▶ Run"
+    },
+    {
+      "inside": true,
+      "tag": "BUTTON",
+      "label": "Close Copilot"
+    },
+    {
+      "inside": true,
+      "tag": "TEXTAREA",
+      "label": ""
+    },
+    {
+      "inside": true,
+      "tag": "BUTTON",
+      "label": "Propose"
+    }
+  ],
+  "keyboardScreens": [
+    {
+      "route": "flows",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "INPUT",
+          "label": ""
+        },
+        {
+          "tag": "BUTTON",
+          "label": "✦ Create with Copilot"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "+ New flow"
+        },
+        {
+          "tag": "A",
+          "label": "Manual CP8 JSONata"
+        },
+        {
+          "tag": "A",
+          "label": "Inspect →"
+        },
+        {
+          "tag": "A",
+          "label": "Inspect →"
+        },
+        {
+          "tag": "A",
+          "label": "Inspect →"
+        }
+      ]
+    },
+    {
+      "route": "templates",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "All"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Sales"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Support"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Marketing"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Data ops"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Finance"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Engineering"
+        }
+      ]
+    },
+    {
+      "route": "agents",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "A",
+          "label": "New agent"
+        },
+        {
+          "tag": "A",
+          "label": "New agent"
+        },
+        {
+          "tag": "BODY",
+          "label": "Skip to contentManual CP8 WorkspaceBuildFlowsCanvasTemplatesAIAgentsKn"
+        },
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        }
+      ]
+    },
+    {
+      "route": "knowledge",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "INPUT",
+          "label": "Knowledge file"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Upload file"
+        },
+        {
+          "tag": "INPUT",
+          "label": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": ""
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Add text"
+        },
+        {
+          "tag": "INPUT",
+          "label": ""
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Search"
+        }
+      ]
+    },
+    {
+      "route": "runs",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "INPUT",
+          "label": ""
+        },
+        {
+          "tag": "BUTTON",
+          "label": "All runs"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Succeeded"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Failed"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Running"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Needs attention"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Cancelled"
+        }
+      ]
+    },
+    {
+      "route": "integrations",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Reconnect"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Remove"
+        },
+        {
+          "tag": "INPUT",
+          "label": ""
+        },
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        }
+      ]
+    },
+    {
+      "route": "settings",
+      "stops": [
+        {
+          "tag": "A",
+          "label": "Skip to content"
+        },
+        {
+          "tag": "A",
+          "label": "Flows"
+        },
+        {
+          "tag": "A",
+          "label": "Canvas"
+        },
+        {
+          "tag": "A",
+          "label": "Templates"
+        },
+        {
+          "tag": "A",
+          "label": "Agents"
+        },
+        {
+          "tag": "A",
+          "label": "Knowledge"
+        },
+        {
+          "tag": "A",
+          "label": "Run history"
+        },
+        {
+          "tag": "A",
+          "label": "Integrations"
+        },
+        {
+          "tag": "A",
+          "label": "Settings"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "MCManual CP8 Reviewer"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Members"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "General"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "AI Providers"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "API keys"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Plan & billing"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Usage & limits"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Audit log"
+        }
+      ]
+    }
+  ],
+  "denial": [
+    {
+      "path": "/w/manual-cp8-workspace/flows/265244d0-a2cc-4e77-bd61-7f5d799d60c5",
+      "status": 404,
+      "text": "Flowline\n\n404\n\nWe couldn't find that page\n\nIt may have been moved or deleted, or it belongs to a workspace you're not a member of.\n\nGo to my workspace"
+    },
+    {
+      "path": "/w/manual-cp8-workspace/runs",
+      "status": 404,
+      "text": "Flowline\n\n404\n\nWe couldn't find that page\n\nIt may have been moved or deleted, or it belongs to a workspace you're not a member of.\n\nGo to my workspace"
+    },
+    {
+      "path": "/w/manual-cp8-workspace/settings",
+      "status": 404,
+      "text": "Flowline\n\n404\n\nWe couldn't find that page\n\nIt may have been moved or deleted, or it belongs to a workspace you're not a member of.\n\nGo to my workspace"
+    }
+  ],
+  "inspector": [
+    {
+      "tab": "input",
+      "text": "{\n  \"lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"email\": \"ada@example.com\",\n    \"employees\": 120\n  }\n}"
+    },
+    {
+      "tab": "output",
+      "text": "{\n  \"name\": \"Ada Lovelace\",\n  \"reviewed\": true,\n  \"employees\": 120\n}"
+    },
+    {
+      "tab": "log",
+      "text": "10:26:39 AM\nqueued\n{\"trigger\":\"manual\",\"version\":1}\n10:26:39 AM\nclaimed\n{\"worker\":\"18e073\",\"interrupted\":[]}\n10:26:39 AM\nstep started\n10:26:39 AM\nstep succeeded\n10:26:39 AM\nfinished\n{\"status\":\"succeeded\"}"
+    }
+  ],
+  "nodeTabs": [
+    {
+      "tab": "configure",
+      "text": "NAME\nEXPRESSION (JSONATA)\n\nEvaluated against the upstream output. $steps.<id> reads any upstream step.\n\nReshape data with a JSONata expression. `$steps.<id>` reads any upstream step."
+    },
+    {
+      "tab": "test",
+      "text": "INPUT (LATEST RUN)\n\n{\n  \"lead\": {\n    \"name\": \"Ada Lovelace\",\n    \"email\": \"ada@example.com\",\n    \"employees\": 120\n  }\n}\n\nOUTPUT (LATEST RUN)\n\n{\n  \"name\": \"Ada Lovelace\",\n  \"reviewed\": true,\n  \"employees\": 120\n}\n\nTry the current expression against the latest input. This preview runs in your browser and isn't recorded as a run.\n\nPreview expression"
+    },
+    {
+      "tab": "logs",
+      "text": "status\nsucceeded\nstarted\n2026-09-30T07:35:07.880Z\nfinished\n2026-09-30T07:35:07.880Z\nduration\n1ms"
+    }
+  ],
+  "events": [
+    {
+      "type": "http",
+      "status": 400,
+      "url": "http://localhost:3100/api/workspaces/d1ab2174-ab0a-43ae-8ef1-5006b7f2b820/ai/connections"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "url": "http://localhost:3100/admin"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "url": "http://localhost:3100/w/manual-cp8-workspace/flows/265244d0-a2cc-4e77-bd61-7f5d799d60c5"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "url": "http://localhost:3100/w/manual-cp8-workspace/runs"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "url": "http://localhost:3100/w/manual-cp8-workspace/settings"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "url": "http://localhost:3100/api/platform/setup"
+    }
+  ],
+  "faults": [
+    {
+      "target": "127.0.0.1:4011",
+      "mode": "401",
+      "times": 1,
+      "resetStatus": 200
+    },
+    {
+      "target": "127.0.0.1:4010",
+      "operation": "revoke-account a; reconnect; reset",
+      "resetStatus": 200
+    }
+  ],
+  "finalObservation": {
+    "at": "2026-09-30T07:50:04.305Z",
+    "head": "fb563e517263800062adf5d5a31af672ebcc4da3",
+    "checkpoint": "a4eeabd35da560fd34d679fe3d6e9e349c43806b",
+    "tree": "be6dc87eec7effac79471e41fea67628e1ee95d0",
+    "build": null,
+    "buildReadError": "ENOENT: .next-test/BUILD_ID missing at final handoff verification",
+    "qaChromeClosed": true
+  }
+}

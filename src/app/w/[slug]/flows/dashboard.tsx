@@ -3,13 +3,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CopilotPanel } from "@/components/builder/copilot-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, type Tone } from "@/components/ui";
+import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, useKeepMounted, type Tone } from "@/components/ui";
 import { useT } from "@/i18n/client";
+import { stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
@@ -57,7 +58,7 @@ interface Overview {
     flowName: string;
     createdAt: string;
     durationMs: number | null;
-    error: { message: string; nodeId?: string } | null;
+    error: { code?: string; message: string; nodeId?: string } | null;
     steps: number;
     stepsDone: number;
   }[];
@@ -104,11 +105,14 @@ export function Dashboard() {
   const router = useRouter();
   // "Create with Copilot" makes no flow until a proposal is approved (no empty drafts left behind).
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const copilotButton = useRef<HTMLButtonElement>(null); // the panel gives focus back here when it closes (Escape or ×)
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
   const isMobile = useViewport() === "mobile";
   // Mobile is monitor-first: a new flow couldn't be edited (or built with Copilot) here anyway.
   const newReason = !canEdit ? t("flows.reasons.viewer") : !online ? t("flows.reasons.offline") : isMobile ? t("flows.reasons.mobile") : null;
+  const copilotVisible = copilotOpen && !newReason;
+  const copilotMounted = useKeepMounted(copilotVisible);
   const untitled = t("common.untitledFlow");
 
   return (
@@ -118,16 +122,16 @@ export function Dashboard() {
           {t("flows.searchLabel")}
         </label>
         <Input id="flow-search" placeholder={t("flows.searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} className="h-8 w-44 sm:w-60" />
-        <Button onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
+        <Button ref={copilotButton} onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
           {t("flows.createWithCopilot")}
         </Button>
         <Button variant="primary" onClick={() => create.mutate({ name: untitled })} loading={create.isPending} disabledReason={newReason}>
           {t("flows.newFlow")}
         </Button>
       </PageHeader>
-      {copilotOpen && !newReason && (
-        <div className="fixed inset-y-0 end-0 z-40 w-full max-w-md">
-          <CopilotPanel target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
+      {copilotMounted && (
+        <div hidden={!copilotVisible} className="fixed inset-y-0 end-0 z-40 w-full max-w-md">
+          <CopilotPanel open={copilotVisible} target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} returnFocusTo={() => copilotButton.current} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
         </div>
       )}
 
@@ -212,10 +216,10 @@ export function Dashboard() {
                 {filtered.map((f) => {
                   const st = flowStatus(f);
                   return (
-                    <tr key={f.id} className="group relative border-b border-line last:border-0 hover:bg-elevated/40">
+                    <tr key={f.id} className="motion-list-in group relative border-b border-line last:border-0 hover:bg-elevated/40">
                       <td className="px-4 py-3">
                         <Link href={`/w/${workspace.slug}/flows/${f.id}`} className="font-semibold after:absolute after:inset-0 group-hover:text-hi">
-                          {f.name}
+                          <bdi>{f.name}</bdi>
                         </Link>
                         <span className="data ms-2 text-xs text-muted">{t.plural("flows.nodes", f.nodeCount)}</span>
                       </td>
@@ -249,7 +253,7 @@ export function Dashboard() {
           ) : (
             <ul className="grid gap-x-8 gap-y-2 md:grid-cols-2">
               {overview.data.unhealthyConnections.map((c) => (
-                <li key={c.id} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={c.id} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">
                     {t("flows.activity.connection", { label: c.label, status: c.status })}
@@ -261,7 +265,7 @@ export function Dashboard() {
                 </li>
               ))}
               {overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length > 0 && (
-                <li className="flex min-w-0 items-center gap-2 text-base">
+                <li className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">
                     {t.plural("flows.activity.workflowApprovals", overview.data.pendingApprovals - overview.data.pendingAgentApprovals.length)}
@@ -272,7 +276,7 @@ export function Dashboard() {
                 </li>
               )}
               {overview.data.pendingAgentApprovals.map((a) => (
-                <li key={a.agentRunId} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={a.agentRunId} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="min-w-0 truncate text-med">{t("flows.activity.agentWaiting", { name: a.agentName })}</span>
                   <Link href={`/w/${workspace.slug}/agents/${a.agentId}?tab=runs&run=${a.agentRunId}`} className="ms-auto shrink-0 text-sm text-warning hover:underline">
@@ -281,7 +285,7 @@ export function Dashboard() {
                 </li>
               ))}
               {!overview.data.worker.online && (
-                <li className="flex items-center gap-2 text-base">
+                <li className="motion-list-in flex items-center gap-2 text-base">
                   <Dot tone="warning" />
                   <span className="text-med">
                     {t("flows.activity.workerOffline")}
@@ -290,21 +294,21 @@ export function Dashboard() {
                 </li>
               )}
               {overview.data.recent.map((r) => (
-                <li key={r.id} className="flex min-w-0 items-center gap-2 text-base">
+                <li key={r.id} className="motion-list-in flex min-w-0 items-center gap-2 text-base">
                   <Dot tone={RUN_TONE[r.status] ?? "muted"} />
                   <span className="min-w-0 truncate text-med">
-                    <span className="font-medium text-hi">{t("flows.activity.run", { number: r.number })}</span> {r.flowName} ·{" "}
+                    <span className="font-medium text-hi">{t("flows.activity.run", { number: r.number })}</span> <bdi>{r.flowName}</bdi> ·{" "}
                     {r.status === "succeeded"
                       ? t("flows.activity.completed", { done: r.stepsDone, total: r.steps, duration: t.duration(r.durationMs) })
                       : r.status === "failed"
                         ? r.error?.message
-                          ? t("flows.activity.failedWith", { message: r.error.message })
+                          ? t("flows.activity.failedWith", { message: stepErrorText(t, r.error) })
                           : t("flows.activity.failed")
                         : r.status === "queued"
                           ? t("flows.activity.queued")
                           : t("flows.activity.inProgress", { step: r.stepsDone + 1, total: r.steps })}
                   </span>
-                  <Link href={`/w/${workspace.slug}/runs?run=${r.id}`} className={`ms-auto shrink-0 text-sm hover:underline ${r.status === "failed" ? "text-danger" : "text-accent"}`}>
+                  <Link href={`/w/${workspace.slug}/runs?run=${r.id}`} className={`ms-auto shrink-0 text-sm hover:underline ${r.status === "failed" ? "text-danger" : "text-accent-text"}`}>
                     {t("flows.activity.inspect")}
                   </Link>
                 </li>

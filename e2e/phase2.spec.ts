@@ -242,7 +242,10 @@ test("repair a connection: revoked at the provider → only its flow pauses, ban
   const dialog = page.getByRole("dialog", { name: "Reconnect Google Sheets" });
   await expect(dialog).toContainText("same account");
   await dialog.getByRole("button", { name: "Continue to Google Sheets" }).click();
-  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/integrations`));
+  // Wait for the real OAuth round-trip (start → provider → callback → back here), not just any /integrations URL:
+  // navigating away earlier aborts it (DV2-01). The modal hides the banner while open, so also wait for it to close.
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/integrations\\?oauth=reconnected`), { timeout: 20_000 });
+  await expect(dialog).toBeHidden();
   await expect(page.getByRole("alert").filter({ hasText: "Google Sheets" })).toHaveCount(0);
 
   await page.goto(`/w/${workspace.slug}/flows`);

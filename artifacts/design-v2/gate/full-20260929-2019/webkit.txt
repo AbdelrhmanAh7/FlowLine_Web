@@ -1,0 +1,33 @@
+forward 127.0.0.1:3100 → host.docker.internal:3100
+forward 127.0.0.1:4010 → host.docker.internal:4010
+forward 127.0.0.1:4011 → host.docker.internal:4011
+
+Running 25 tests using 1 worker
+
+[1/25] [webkit] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical
+[2/25] [webkit] › e2e/arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser
+[3/25] [webkit] › e2e/arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+[4/25] [webkit] › e2e/arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+[5/25] [webkit] › e2e/arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+[6/25] [webkit] › e2e/arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+[7/25] [webkit] › e2e/arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+[8/25] [webkit] › e2e/arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+[9/25] [webkit] › e2e/beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser
+[10/25] [webkit] › e2e/beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+[11/25] [webkit] › e2e/canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical
+[12/25] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser
+[13/25] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+[14/25] [webkit] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+[15/25] [webkit] › e2e/journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical
+[16/25] [webkit] › e2e/phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical
+[17/25] [webkit] › e2e/phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical
+[18/25] [webkit] › e2e/phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+[19/25] [webkit] › e2e/phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+[20/25] [webkit] › e2e/phase3.spec.ts:181:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+[21/25] [webkit] › e2e/phase3.spec.ts:346:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser
+[22/25] [webkit] › e2e/prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser
+[23/25] [webkit] › e2e/prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser
+[24/25] [webkit] › e2e/run-states.spec.ts:13:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick
+[25/25] [webkit] › e2e/tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical
+  25 passed (2.1m)
+exit=0

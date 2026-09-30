@@ -1,6 +1,7 @@
 "use client";
 
 import * as RadixMenu from "@radix-ui/react-dropdown-menu";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
@@ -71,11 +72,15 @@ export function MenuItem({
   );
 }
 
-/** Next.js Link inside a menu item (client-side navigation). */
+/**
+ * Next.js Link inside a menu item (client-side navigation). Radix Item asChild keeps role="menuitem", roving focus and
+ * typeahead; selecting it (click, Enter, Space) runs Link's own onClick (router push) and then closes the menu.
+ * Internal routes only: external URLs belong in MenuItem href.
+ */
 export function MenuLink({ children, href, danger, className }: { children: ReactNode; href: string; danger?: boolean; className?: string }) {
   return (
     <RadixMenu.Item asChild className={cn("flex h-8 w-full items-center rounded-md px-2.5 text-start text-base outline-none data-[highlighted]:bg-card", danger ? "text-danger" : "text-hi", className)}>
-      <a href={href}>{children}</a>
+      <Link href={href}>{children}</Link>
     </RadixMenu.Item>
   );
 }
@@ -99,7 +104,7 @@ export function MenuRadioItem({ value, children, className }: { value: string; c
       )}
     >
       {children}
-      <RadixMenu.ItemIndicator aria-hidden className="text-accent">
+      <RadixMenu.ItemIndicator aria-hidden className="text-accent-text">
         ✓
       </RadixMenu.ItemIndicator>
     </RadixMenu.RadioItem>

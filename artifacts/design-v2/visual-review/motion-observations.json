@@ -1,0 +1,145 @@
+[
+  {
+    "scene": "drawer-open",
+    "reducedMotion": "no-preference",
+    "animations": [
+      {
+        "name": "CSSTransition",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "CSSTransition",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "CSSTransition",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "CSSTransition",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "CSSTransition",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-check-draw",
+        "duration": 300,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-select-pulse",
+        "duration": 300,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-check-draw",
+        "duration": 300,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-check-draw",
+        "duration": 300,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-check-draw",
+        "duration": 300,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-fade",
+        "duration": 150,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      },
+      {
+        "name": "m-drawer",
+        "duration": 250,
+        "delay": 0,
+        "iterations": 1,
+        "state": "running"
+      }
+    ]
+  },
+  {
+    "scene": "landing-top",
+    "reducedMotion": "no-preference",
+    "styles": [
+      {
+        "transform": "matrix3d(1, 0, 0, 0, 0, 0.984808, 0.173648, 0, 0, -0.173648, 0.984808, 0, 0, 0, 0, 1)",
+        "opacity": "1",
+        "animation": "m-hero-scrub"
+      }
+    ]
+  },
+  {
+    "scene": "landing-scroll",
+    "reducedMotion": "no-preference",
+    "y": 528,
+    "styles": [
+      {
+        "transform": "matrix3d(0.995071, 0, 0, 0, 0, 0.982331, 0.159512, 0, 0, -0.158726, 0.987196, 0, 0, 0, 0, 1)",
+        "opacity": "1",
+        "animation": "m-hero-scrub"
+      }
+    ],
+    "activeAnimations": 4
+  },
+  {
+    "scene": "drawer-open",
+    "reducedMotion": "reduce",
+    "animations": []
+  },
+  {
+    "scene": "landing-top",
+    "reducedMotion": "reduce",
+    "styles": [
+      {
+        "transform": "none",
+        "opacity": "1",
+        "animation": "none"
+      }
+    ]
+  },
+  {
+    "scene": "landing-scroll",
+    "reducedMotion": "reduce",
+    "y": 550,
+    "styles": [
+      {
+        "transform": "none",
+        "opacity": "1",
+        "animation": "none"
+      }
+    ],
+    "activeAnimations": 0
+  }
+]

@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
-import { runLabel, stepErrorText } from "@/i18n/engine-text";
+import { approvalActionId, runLabel, stepErrorText } from "@/i18n/engine-text";
 import { pretty } from "@/lib/format";
 import { modKey, useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
@@ -53,7 +53,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
             </Button>
           )}
           {run && (
-            <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="text-sm text-accent hover:underline">
+            <Link href={`/w/${workspaceSlug}/runs?run=${run.id}`} className="text-sm text-accent-text hover:underline">
               {t("runDock.openInspector")} <span aria-hidden className="flip-rtl">→</span>
             </Link>
           )}
@@ -104,7 +104,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
                         s.status === "failed" ? "border-danger-border" : s.status === "skipped" ? "border-dashed border-line-strong opacity-60" : "border-line",
                       )}
                     >
-                      <span className="block max-w-36 truncate text-sm font-medium">{s.nodeLabel}</span>
+                      <bdi className="block max-w-36 truncate text-sm font-medium">{s.nodeLabel}</bdi>
                       {s.status === "running" ? (
                         <RunningBadge step={s} events={run.events} />
                       ) : (
@@ -120,7 +120,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               </ol>
               {run.status === "failed" && run.error && (
                 <p role="alert" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
-                  ⚠ {stepErrorText(t, run.error)}
+                  ⚠ {stepErrorText(t, run.error, { actionId: approvalActionId(run.approvals, run.error.nodeId) })}
                 </p>
               )}
               {run.status === "succeeded" && (

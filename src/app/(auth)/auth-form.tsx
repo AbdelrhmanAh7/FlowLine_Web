@@ -10,6 +10,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button, Field, Input, Logo } from "@/components/ui";
 import { useT } from "@/i18n/client";
+import { nodeText } from "@/i18n/engine-text";
 import type { Translator } from "@/i18n/translate";
 
 type Mode = "sign-in" | "sign-up";
@@ -124,11 +125,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col justify-center px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-[400px]">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Link href="/" aria-label={t("common.homeAria")}>
               <Logo />
             </Link>
-            <span className="flex items-center gap-3">
+            <span className="flex flex-wrap items-center gap-3">
               <ThemeSwitcher />
               <LanguageSwitcher />
             </span>
@@ -210,7 +211,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 {notVerified && (
                   <>
                     {" "}
-                    <Link className="text-accent underline" href="/resend-verification">
+                    <Link className="text-accent-text underline" href="/resend-verification">
                       {t("account.resend.title")}
                     </Link>
                   </>
@@ -224,7 +225,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
           {mode === "sign-in" && (
             <p className="mt-3 text-sm">
-              <Link className="text-accent hover:underline" href="/forgot-password">
+              <Link className="text-accent-text hover:underline" href="/forgot-password">
                 {t("auth.forgot")}
               </Link>
             </p>
@@ -261,14 +262,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
             {mode === "sign-up" ? (
               <>
                 {t("auth.haveAccount")}{" "}
-                <Link className="text-accent hover:underline" href={`/sign-in${next ? `?next=${next}` : ""}`}>
+                <Link className="text-accent-text hover:underline" href={`/sign-in${next ? `?next=${next}` : ""}`}>
                   {t("auth.signInLink")}
                 </Link>
               </>
             ) : (
               <>
                 {t("auth.newHere")}{" "}
-                <Link className="text-accent hover:underline" href={`/sign-up${next ? `?next=${next}` : ""}`}>
+                <Link className="text-accent-text hover:underline" href={`/sign-up${next ? `?next=${next}` : ""}`}>
                   {t("auth.createLink")}
                 </Link>
               </>
@@ -282,9 +283,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
         <div className="absolute inset-0 bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
         <div className="relative flex h-full flex-col items-center justify-center gap-5 p-12">
           {[
-            [t("auth.asideNodes.trigger"), "TRIGGER · MANUAL", "bg-success", false],
-            [t("auth.asideNodes.transform"), "TRANSFORM · JSONATA", "bg-success", true],
-            [t("auth.asideNodes.output"), "OUTPUT · RESULT", "bg-info", false],
+            [t("auth.asideNodes.trigger"), nodeText(t, "trigger.manual", "subtitle"), "bg-success", false],
+            [t("auth.asideNodes.transform"), nodeText(t, "transform.json", "subtitle"), "bg-success", true],
+            [t("auth.asideNodes.output"), nodeText(t, "output", "subtitle"), "bg-info", false],
           ].map(([t, s, dot, sel]) => (
             <div key={t as string} className={`w-64 rounded-lg border bg-card px-4 py-3 ${sel ? "border-accent shadow-[var(--shadow-glow)]" : "border-line"}`}>
               <p className="flex items-center gap-2 text-base font-semibold">
@@ -330,7 +331,7 @@ function CheckInbox({ email, callbackURL, signInHref, onBack }: { email: string;
         <Button onClick={() => void resend()} loading={state === "sending"} disabledReason={state === "sent" ? t("auth.checkInbox.resent") : null}>
           {t("auth.checkInbox.resend")}
         </Button>
-        <Link className="text-accent hover:underline" href={signInHref}>
+        <Link className="text-accent-text hover:underline" href={signInHref}>
           {t("auth.checkInbox.signIn")}
         </Link>
         <button type="button" onClick={onBack} className="text-base text-med hover:text-hi hover:underline">

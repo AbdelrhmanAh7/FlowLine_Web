@@ -7,10 +7,10 @@ import { LtrRuns } from "@/components/ai/ltr-runs";
 import { ModelPicker } from "@/components/ai/model-picker";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge, type Tone } from "@/components/ui";
+import { Button, Card, Dialog, ErrorState, Field, Input, Select, Skeleton, StatusBadge, type Tone } from "@/components/ui";
 import { providerFreeTierNote, providerNotes, providerOptionLabel, providerPrivacyNote, providerTermsNotes, providerVerdictEvidence, retiredEvidence } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
-import { denyReasonText } from "@/i18n/engine-text";
+import { denyReasonText, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { useAiOverview, usePickerModels, type AiConnectionDto, type AiOverviewDto, type AiPolicyMode, type AiProviderDto, type AiRouteRef, type PickerModelDto } from "@/lib/ai";
@@ -61,7 +61,7 @@ export function AiProviders() {
             <summary className="cursor-pointer">{t.plural("aiHub.connections.revoked", revoked.length)}</summary>
             <ul className="mt-2 flex flex-col gap-1">
               {revoked.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="motion-list-in">
                   {c.label} · {c.providerName} · {t("aiHub.status.REVOKED")} {t.relative(c.revokedAt)}
                 </li>
               ))}
@@ -96,7 +96,7 @@ function LegacyBanner({ legacy }: { legacy: AiOverviewDto["legacy"] }) {
   const t = useT();
   const { workspace } = useWorkspace();
   return (
-    <div role="status" className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm" data-testid="ai-legacy-banner">
+    <div role="status" className="rounded-lg border border-warning-border bg-warning-bg p-4 text-sm" data-testid="ai-legacy-banner">
       <p className="font-medium text-warning">{t("aiHub.legacy.title")}</p>
       <p className="mt-1 text-med">{t("aiHub.legacy.body")}</p>
       <ul className="mt-2 list-disc ps-5 text-med">
@@ -112,7 +112,7 @@ function LegacyBanner({ legacy }: { legacy: AiOverviewDto["legacy"] }) {
         {legacy.agents.map((a) => (
           <li key={a.id}>
             {t("aiHub.legacy.agent")}{" "}
-            <Link className="text-accent hover:underline" href={`/w/${workspace.slug}/agents/${a.id}`}>
+            <Link className="text-accent-text hover:underline" href={`/w/${workspace.slug}/agents/${a.id}`}>
               {a.name}
             </Link>
           </li>
@@ -120,7 +120,7 @@ function LegacyBanner({ legacy }: { legacy: AiOverviewDto["legacy"] }) {
         {legacy.flows.map((f) => (
           <li key={f.id}>
             {t("aiHub.legacy.flow")}{" "}
-            <Link className="text-accent hover:underline" href={`/w/${workspace.slug}/flows/${f.id}`}>
+            <Link className="text-accent-text hover:underline" href={`/w/${workspace.slug}/flows/${f.id}`}>
               {f.name}
             </Link>
           </li>
@@ -196,7 +196,7 @@ function RouteList({ id, label, routes, max, models, disabled, onChange }: { id:
       ) : (
         <ol className="flex flex-col gap-1">
           {routes.map((r, i) => (
-            <li key={`${r.connectionId}/${r.modelId}`} className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-card px-2 py-1 text-sm">
+            <li key={`${r.connectionId}/${r.modelId}`} className="motion-list-in flex flex-wrap items-center gap-2 rounded-md border border-line bg-card px-2 py-1 text-sm">
               <span className="text-muted">{i + 1}.</span>
               <span dir="ltr" className="data text-hi">
                 {r.modelId}
@@ -219,7 +219,7 @@ function RouteList({ id, label, routes, max, models, disabled, onChange }: { id:
       )}
       {!disabled && routes.length < max && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-accent">{t("aiHub.policy.addRoute")}</summary>
+          <summary className="cursor-pointer text-accent-text">{t("aiHub.policy.addRoute")}</summary>
           <div className="mt-2 flex flex-col gap-2">
             <ModelPicker id={`${id}-picker`} models={models} value={pick} onChange={setPick} />
             <div>
@@ -381,7 +381,7 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
       <p className="text-sm text-med">{t("aiHub.notOffered.body")}</p>
       <ul className="flex flex-col gap-2">
         {providers.map((p) => (
-          <li key={p.id} className="rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-provider-${p.id}`}>
+          <li key={p.id} className="motion-list-in rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-provider-${p.id}`}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-hi">{p.name}</span>
               <StatusBadge tone={VERDICT_TONE[p.verdict]}>{t(`aiHub.verdict.${p.verdict}`)}</StatusBadge>
@@ -397,7 +397,7 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
             )}
             <p className="mt-1 flex flex-wrap gap-x-3">
               {p.sources.map((s) => (
-                <a key={s.url} className="text-accent hover:underline" href={s.url} target="_blank" rel="noreferrer noopener">
+                <a key={s.url} className="text-accent-text hover:underline" href={s.url} target="_blank" rel="noreferrer noopener">
                   {s.label}
                 </a>
               ))}
@@ -406,7 +406,7 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
           </li>
         ))}
         {retired.map((r) => (
-          <li key={r.id} className="rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-retired-${r.id}`}>
+          <li key={r.id} className="motion-list-in rounded-lg border border-line bg-surface p-3 text-sm" data-testid={`ai-retired-${r.id}`}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-hi">{r.name}</span>
               <StatusBadge tone="muted">{t("aiHub.verdict.RETIRED")}</StatusBadge>
@@ -416,7 +416,7 @@ function NotOffered({ providers, retired }: { providers: AiProviderDto[]; retire
             </p>
             <p className="mt-1 flex flex-wrap gap-x-3">
               {r.sources.map((u) => (
-                <a key={u} dir="ltr" className="text-accent hover:underline" href={u} target="_blank" rel="noreferrer noopener">
+                <a key={u} dir="ltr" className="text-accent-text hover:underline" href={u} target="_blank" rel="noreferrer noopener">
                   {new URL(u).hostname}
                 </a>
               ))}
@@ -443,7 +443,9 @@ function fieldLabel(t: ReturnType<typeof useT>, providerId: string, f: { key: st
 
 function errorLine(t: ReturnType<typeof useT>, e: { code: string; message: string }) {
   const key = `aiHub.errors.${e.code}`;
-  return t.has(key) ? t(key as MessageKey) : e.message;
+  // A code with a short catalogue line uses it; otherwise a message of a known shape is translated with its data
+  // (provider, status…), and anything else is shown as the server wrote it.
+  return t.has(key) ? t(key as MessageKey) : stepErrorText(t, e);
 }
 
 function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; count: number; canManage: boolean; onConnect: () => void }) {
@@ -453,7 +455,7 @@ function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; co
   const terms = providerTermsNotes(t, p);
   const statusTone: Tone = p.connectable ? "success" : p.status === "UNSUITABLE" ? "muted" : "info";
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" data-testid={`ai-provider-${p.id}`}>
+    <li className="motion-list-in flex flex-col gap-2 rounded-lg border border-line bg-surface p-3" data-testid={`ai-provider-${p.id}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-hi">{p.name}</span>
         <StatusBadge tone={statusTone}>{p.connectable ? t("aiHub.providerStatus.available") : p.status === "UNSUITABLE" ? t("aiHub.providerStatus.unsuitable") : t("aiHub.providerStatus.pending")}</StatusBadge>
@@ -488,7 +490,7 @@ function ProviderCard({ p, count, canManage, onConnect }: { p: AiProviderDto; co
         </p>
       )}
       {p.sources[0] && (
-        <a className="text-sm text-accent hover:underline" href={p.sources.at(-1)!.url} target="_blank" rel="noreferrer noopener">
+        <a className="text-sm text-accent-text hover:underline" href={p.sources.at(-1)!.url} target="_blank" rel="noreferrer noopener">
           {t("aiHub.providers.docs")}
         </a>
       )}
@@ -612,15 +614,13 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
   );
 }
 
-function Modal({ titleId, onClose, children }: { titleId: string; onClose: () => void; children: React.ReactNode }) {
+/** Design-system modal: focus trap, Escape / scrim / close-button dismissal, title wired to the dialog's accessible name. */
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const t = useT();
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button aria-label={t("aiHub.dialog.close")} className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="relative max-h-[90vh] w-full max-w-md animate-fade-in overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-popover)]">
-        {children}
-      </div>
-    </div>
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={title} closeLabel={t("aiHub.dialog.close")} className="max-w-md">
+      {children}
+    </Dialog>
   );
 }
 
@@ -687,13 +687,10 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
   const invalid = provider.connectionFields.find((f) => settings[f.key]?.trim() && !new RegExp(f.pattern).test(settings[f.key]!.trim()));
   const blocked = missing ? t("aiHub.dialog.fieldRequired", { field: fieldLabel(t, provider.id, missing) }) : invalid ? t("aiHub.dialog.fieldInvalid", { field: fieldLabel(t, provider.id, invalid) }) : provider.requiresPlanAttestation && !attest ? t("aiHub.dialog.attestFirst") : null;
   return (
-    <Modal titleId="ai-connect-title" onClose={onClose}>
-      <h2 id="ai-connect-title" className="text-lg font-semibold">
-        {t("aiHub.dialog.connectTitle", { name: provider.name })}
-      </h2>
+    <Modal title={t("aiHub.dialog.connectTitle", { name: provider.name })} onClose={onClose}>
       <p className="mt-1 text-sm text-med">{t(provider.keyCheck === "none" ? "aiHub.dialog.connectBodyNoCheck" : provider.keyCheck === "public-listing" ? "aiHub.dialog.connectBodyPublic" : provider.keyCheck === "key-endpoint" ? "aiHub.dialog.connectBodyKeyEndpoint" : "aiHub.dialog.connectBody")}</p>
       {provider.planWarning && (
-        <p role="note" className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-med" data-testid="ai-plan-warning">
+        <p role="note" className="mt-3 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-med" data-testid="ai-plan-warning">
           {t.has(`aiHub.planWarning.${provider.id}` as MessageKey) ? t(`aiHub.planWarning.${provider.id}` as MessageKey) : provider.planWarning}
         </p>
       )}
@@ -734,9 +731,8 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
         {provider.connectionFields.map((f) => (
           <Field key={f.key} label={fieldLabel(t, provider.id, f)} htmlFor={`ai-field-${f.key}`} hint={f.help ? (t.has(`aiHub.fieldHelp.${provider.id}.${f.key}` as MessageKey) ? t(`aiHub.fieldHelp.${provider.id}.${f.key}` as MessageKey) : f.help) : undefined}>
             {f.options?.length ? (
-              <select
+              <Select
                 id={`ai-field-${f.key}`}
-                className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none"
                 value={settings[f.key] ?? ""}
                 onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value }))}
               >
@@ -746,7 +742,7 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
                     {providerOptionLabel(t, provider.id, f.key, o)}
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <Input id={`ai-field-${f.key}`} dir="ltr" value={settings[f.key] ?? ""} maxLength={128} spellCheck={false} onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value }))} />
             )}
@@ -821,10 +817,7 @@ function KeyChangeDialog({ conn, mode, onClose, onDone }: { conn: AiConnectionDt
   const submit = useKeySubmit();
   const base = `/api/workspaces/${workspace.id}/ai/connections/${conn.id}`;
   return (
-    <Modal titleId="ai-key-title" onClose={onClose}>
-      <h2 id="ai-key-title" className="text-lg font-semibold">
-        {mode === "replace" ? t("aiHub.dialog.replaceTitle", { label: conn.label }) : t("aiHub.dialog.disconnectTitle", { label: conn.label })}
-      </h2>
+    <Modal title={mode === "replace" ? t("aiHub.dialog.replaceTitle", { label: conn.label }) : t("aiHub.dialog.disconnectTitle", { label: conn.label })} onClose={onClose}>
       <p className="mt-1 text-sm text-med">{mode === "replace" ? t("aiHub.dialog.replaceBody") : t("aiHub.dialog.disconnectBody")}</p>
       <AffectedList conn={conn} />
       <form
@@ -877,39 +870,41 @@ function InferenceTestDialog({ conn, onClose, onDone }: { conn: AiConnectionDto;
   const own = (models.data ?? []).filter((m) => m.connectionId === conn.id && m.lifecycle === "active");
   const [model, setModel] = useState("");
   const [confirm, setConfirm] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  // A failed test is an error, not a status: it is announced assertively (role="alert") and coloured as one.
+  const [result, setResult] = useState<{ text: string; ok: boolean } | null>(null);
   const run = useMutation({
     mutationFn: () => api<{ ok: boolean; code?: string; message?: string; usage?: { inputTokens: number; outputTokens: number } }>(`/api/workspaces/${workspace.id}/ai/connections/${conn.id}/test`, { method: "POST", json: { kind: "inference", modelId: model, confirm: true } }),
     onSuccess: (r) => {
-      setResult(r.ok ? t("aiHub.paidTest.ok", { input: r.usage?.inputTokens ?? 0, output: r.usage?.outputTokens ?? 0 }) : errorLine(t, { code: r.code ?? "", message: r.message ?? "" }));
+      setResult(
+        r.ok
+          ? { text: t("aiHub.paidTest.ok", { input: r.usage?.inputTokens ?? 0, output: r.usage?.outputTokens ?? 0 }), ok: true }
+          : { text: errorLine(t, { code: r.code ?? "", message: r.message ?? "" }), ok: false },
+      );
       onDone();
     },
-    onError: (e) => setResult(apiErrorMessage(t, e)),
+    onError: (e) => setResult({ text: apiErrorMessage(t, e), ok: false }),
   });
   return (
-    <Modal titleId="ai-paid-title" onClose={onClose}>
-      <h2 id="ai-paid-title" className="text-lg font-semibold">
-        {t("aiHub.paidTest.title")}
-      </h2>
+    <Modal title={t("aiHub.paidTest.title")} onClose={onClose}>
       <p className="mt-1 text-sm text-med">{t("aiHub.paidTest.body")}</p>
       <div className="mt-4 flex flex-col gap-3">
         <Field label={t("aiHub.paidTest.model")} htmlFor="ai-paid-model">
-          <select id="ai-paid-model" dir="ltr" value={model} onChange={(e) => setModel(e.target.value)} className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi">
+          <Select id="ai-paid-model" dir="ltr" value={model} onChange={(e) => setModel(e.target.value)}>
             <option value="">—</option>
             {own.map((m) => (
               <option key={m.modelId} value={m.modelId}>
                 {m.modelId}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-1" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
           {t("aiHub.paidTest.confirm")}
         </label>
         {result && (
-          <p role="status" className="text-sm text-med">
-            {result}
+          <p role={result.ok ? "status" : "alert"} className={result.ok ? "text-sm text-med" : "rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger"}>
+            {result.text}
           </p>
         )}
         <div className="flex justify-end gap-2">

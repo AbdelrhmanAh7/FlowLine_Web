@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, Card, Dialog, EmptyState, ErrorState, Field, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
@@ -63,7 +63,7 @@ function Integrations() {
       <PageHeader title={t("integrations.title")} sub={t("integrations.sub")} />
       <div className="flex flex-col gap-6 p-4 sm:p-6">
         {unhealthy.map((c) => (
-          <div key={c.id} role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/5 px-4 py-3">
+          <div key={c.id} role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3">
             <span className="text-warning">⚠</span>
             <span className="min-w-0 flex-1 text-base">
               {t.rich("integrations.banner", {
@@ -175,7 +175,7 @@ function Verification({ v }: { v: CatalogProvider["verification"] }) {
       </span>
       <span
         title={v.liveNote}
-        className={cx("rounded-sm border px-1.5 py-0.5", v.live === "verified" ? "border-success/40 text-success" : v.live === "blocked" ? "border-warning/40 text-warning" : "border-line text-muted")}
+        className={cx("rounded-sm border px-1.5 py-0.5", v.live === "verified" ? "border-success-border text-success" : v.live === "blocked" ? "border-warning-border text-warning" : "border-line text-muted")}
       >
         {v.live === "verified" ? t("integrations.verification.liveVerified") : v.live === "blocked" ? t("integrations.verification.liveBlocked") : t("integrations.verification.liveNotRun")}
       </span>
@@ -215,7 +215,7 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   const tone = c.status === "active" ? "success" : c.status === "expired" ? "warning" : "danger";
   const viewerReason = canEdit ? null : t("integrations.viewerReason");
   return (
-    <li>
+    <li className="motion-list-in">
       <Card className="flex h-full flex-col gap-2 p-4" data-testid={`connection-${c.provider}`}>
         <div className="flex items-center gap-2">
           <span aria-hidden className="text-lg">
@@ -304,90 +304,92 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button aria-label={t("integrations.dialog.close")} className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="connect-title" className="relative w-full max-w-md animate-fade-in rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-popover)]">
-        <h2 id="connect-title" className="text-lg font-semibold">
-          {reconnect ? t("integrations.dialog.reconnectTitle", { name: provider.name }) : t("integrations.dialog.connectTitle", { name: provider.name })}
-        </h2>
-        <p className="mt-1 text-sm text-med">{reconnect ? t("integrations.dialog.reconnectBody", { account: reconnect.accountLabel }) : t("integrations.dialog.connectBody")}</p>
-        <form
-          className="mt-4 flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setError(null);
-            submit.mutate();
-          }}
-        >
-          {!oauth && !reconnect && (
-            <Field label={t("integrations.dialog.label")} htmlFor="conn-label">
-              <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} placeholder={t("integrations.dialog.labelPlaceholder", { name: provider.name })} />
+    <Dialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={
+        reconnect ? t("integrations.dialog.reconnectTitle", { name: provider.name }) : t("integrations.dialog.connectTitle", { name: provider.name })
+      }
+      closeLabel={t("integrations.dialog.close")}
+      className="max-w-md"
+    >
+      <p className="mt-1 text-sm text-med">{reconnect ? t("integrations.dialog.reconnectBody", { account: reconnect.accountLabel }) : t("integrations.dialog.connectBody")}</p>
+      <form
+        className="mt-4 flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          submit.mutate();
+        }}
+      >
+        {!oauth && !reconnect && (
+          <Field label={t("integrations.dialog.label")} htmlFor="conn-label">
+            <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} placeholder={t("integrations.dialog.labelPlaceholder", { name: provider.name })} />
+          </Field>
+        )}
+        {!oauth && !reconnect && (
+          <label className="flex items-start gap-2 text-base">
+            <input type="checkbox" className="mt-1" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
+            <span>
+              {t("integrations.dialog.private")}
+              <span className="block text-sm text-muted">{t("integrations.dialog.privateHint")}</span>
+            </span>
+          </label>
+        )}
+        {!oauth &&
+          provider.connectFields.map((f) => (
+            <Field key={f.key} label={connectFieldLabel(t, provider.id, f)} htmlFor={`f-${f.key}`} hint={connectFieldHelp(t, provider.id, f)}>
+              <Input
+                id={`f-${f.key}`}
+                type={f.secret ? "password" : "text"}
+                dir="ltr"
+                autoComplete="off"
+                placeholder={f.placeholder}
+                value={fields[f.key] ?? ""}
+                onChange={(e) => setFields((s) => ({ ...s, [f.key]: e.target.value }))}
+                required
+              />
             </Field>
-          )}
-          {!oauth && !reconnect && (
-            <label className="flex items-start gap-2 text-base">
-              <input type="checkbox" className="mt-1" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
-              <span>
-                {t("integrations.dialog.private")}
-                <span className="block text-sm text-muted">{t("integrations.dialog.privateHint")}</span>
-              </span>
-            </label>
-          )}
-          {!oauth &&
-            provider.connectFields.map((f) => (
-              <Field key={f.key} label={connectFieldLabel(t, provider.id, f)} htmlFor={`f-${f.key}`} hint={connectFieldHelp(t, provider.id, f)}>
-                <Input
-                  id={`f-${f.key}`}
-                  type={f.secret ? "password" : "text"}
-                  dir="ltr"
-                  autoComplete="off"
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={(e) => setFields((s) => ({ ...s, [f.key]: e.target.value }))}
-                  required
-                />
-              </Field>
-            ))}
-          {oauth && provenance.data?.app && (
-            <p role="note" data-testid="oauth-provenance" className={provenance.data.app.source === "workspace" ? "rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-hi" : "text-sm text-med"}>
-              {provenance.data.app.source === "workspace"
-                ? t.rich("integrations.dialog.provenanceWorkspace", {
-                    provider: provider.name,
-                    clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span>,
-                    by: <span dir="ltr">{provenance.data.app.configuredBy ?? t("integrations.dialog.provenanceUnknownOwner")}</span>,
-                  })
-                : t.rich("integrations.dialog.provenancePlatform", { provider: provider.name, clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span> })}
-              {provenance.data.app.source === "workspace" && provenance.data.app.verified === false && <span className="mt-1 block text-muted">{t("integrations.dialog.provenanceUnverified")}</span>}
-            </p>
-          )}
-          {oauth && (
-            <p className="text-sm text-med">
-              {t.rich("integrations.dialog.oauthGrant", {
-                name: provider.name,
-                scopes: (
-                  <span dir="ltr" className="data">
-                    {provider.actions
-                      .flatMap((a) => a.requiredScopes)
-                      .filter((v, i, arr) => arr.indexOf(v) === i)
-                      .join(", ")}
-                  </span>
-                ),
-              })}
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
-              {error}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button onClick={onClose}>{t("integrations.dialog.cancel")}</Button>
-            <Button type="submit" variant="primary" loading={submit.isPending} disabledReason={online ? null : t("integrations.dialog.offline")}>
-              {oauth ? t("integrations.dialog.continueTo", { name: provider.name }) : reconnect ? t("integrations.dialog.reconnect") : t("integrations.dialog.connect")}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          ))}
+        {oauth && provenance.data?.app && (
+          <p role="note" data-testid="oauth-provenance" className={provenance.data.app.source === "workspace" ? "rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-hi" : "text-sm text-med"}>
+            {provenance.data.app.source === "workspace"
+              ? t.rich("integrations.dialog.provenanceWorkspace", {
+                  provider: provider.name,
+                  clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span>,
+                  by: <span dir="ltr">{provenance.data.app.configuredBy ?? t("integrations.dialog.provenanceUnknownOwner")}</span>,
+                })
+              : t.rich("integrations.dialog.provenancePlatform", { provider: provider.name, clientId: <span dir="ltr" className="data break-all">{provenance.data.app.clientId}</span> })}
+            {provenance.data.app.source === "workspace" && provenance.data.app.verified === false && <span className="mt-1 block text-muted">{t("integrations.dialog.provenanceUnverified")}</span>}
+          </p>
+        )}
+        {oauth && (
+          <p className="text-sm text-med">
+            {t.rich("integrations.dialog.oauthGrant", {
+              name: provider.name,
+              scopes: (
+                <span dir="ltr" className="data">
+                  {provider.actions
+                    .flatMap((a) => a.requiredScopes)
+                    .filter((v, i, arr) => arr.indexOf(v) === i)
+                    .join(", ")}
+                </span>
+              ),
+            })}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose}>{t("integrations.dialog.cancel")}</Button>
+          <Button type="submit" variant="primary" loading={submit.isPending} disabledReason={online ? null : t("integrations.dialog.offline")}>
+            {oauth ? t("integrations.dialog.continueTo", { name: provider.name }) : reconnect ? t("integrations.dialog.reconnect") : t("integrations.dialog.connect")}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }

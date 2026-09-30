@@ -1,35 +1,39 @@
 "use client";
 
-import { motion, useReducedMotion, useSpring } from "motion/react";
 import { useRef, type ReactNode } from "react";
 
 /**
  * Gentle magnetic feedback on CTAs: the control drifts a few px toward the cursor and springs back.
- * Transform only; reduced motion and touch devices get the plain control.
+ * Transform only; identical markup on server and client. The drift never engages under
+ * `prefers-reduced-motion: reduce` (checked in the handler, so nothing is read during render) and
+ * globals.css also pins `.magnetic` to no transform under that media query. Touch has no hover, so it never fires.
  */
 export function Magnetic({ children }: { children: ReactNode }) {
-  const reduced = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
-  const x = useSpring(0, { stiffness: 200, damping: 18 });
-  const y = useSpring(0, { stiffness: 200, damping: 18 });
-  if (reduced) return <div className="inline-flex">{children}</div>;
+  const frame = useRef(0);
   return (
-    <motion.div
+    <div
       ref={ref}
-      className="inline-flex"
-      style={{ x, y }}
+      className="magnetic inline-flex"
       onMouseMove={(e) => {
-        const r = ref.current?.getBoundingClientRect();
-        if (!r) return;
-        x.set((e.clientX - (r.left + r.width / 2)) * 0.18);
-        y.set((e.clientY - (r.top + r.height / 2)) * 0.18);
+        const el = ref.current;
+        if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - (r.left + r.width / 2)) * 0.18;
+        const y = (e.clientY - (r.top + r.height / 2)) * 0.18;
+        cancelAnimationFrame(frame.current);
+        frame.current = requestAnimationFrame(() => {
+          el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+        });
       }}
       onMouseLeave={() => {
-        x.set(0);
-        y.set(0);
+        const el = ref.current;
+        if (!el) return;
+        cancelAnimationFrame(frame.current);
+        el.style.transform = "";
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

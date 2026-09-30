@@ -15,7 +15,7 @@ const TONE_TEXT: Record<Tone, string> = {
   danger: "text-danger",
   info: "text-info",
   muted: "text-muted",
-  accent: "text-accent",
+  accent: "text-accent-text",
 };
 const TONE_BG: Record<Tone, string> = {
   success: "bg-success",
@@ -48,7 +48,7 @@ const badgeVariants = cva("inline-flex items-center gap-1.5 whitespace-nowrap ro
       danger: "border-danger-border bg-danger-bg text-danger",
       info: "border-info-border bg-info-bg text-info",
       muted: "border-line bg-card text-med",
-      accent: "border-accent-border bg-accent-bg text-accent",
+      accent: "border-accent-border bg-accent-bg text-accent-text",
     } satisfies Record<Tone, string>,
   },
   defaultVariants: { tone: "muted" },

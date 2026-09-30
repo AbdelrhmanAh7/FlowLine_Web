@@ -52,7 +52,7 @@ export function AuditLog() {
         ) : (
           <ul className="divide-y divide-line" aria-label={t("settings.audit.listAria")}>
             {rows.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2 text-base">
+              <li key={r.id} className="motion-list-in flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2 text-base">
                 <span className="data text-sm text-muted">{t.date(r.at)}</span>
                 <code dir="ltr" className="data text-sm text-hi">
                   {r.action}

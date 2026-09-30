@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { Button, Card, Field, Input, Textarea } from "@/components/ui";
+import { Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { dataText } from "@/i18n/workspace-text";
 import { ModelPicker } from "@/components/ai/model-picker";
@@ -36,16 +36,14 @@ export const EMPTY_AGENT: AgentConfig = {
   limits: { maxSteps: 8, maxToolCalls: 6, maxCostMicros: null, timeoutMs: 120_000 },
 };
 
-const selectCls = "h-8 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none disabled:text-muted";
-
 function PermissionSelect({ id, value, onChange, disabled }: { id: string; value: Permission; onChange: (p: Permission) => void; disabled?: boolean }) {
   const t = useT();
   return (
-    <select id={id} className={selectCls} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as Permission)}>
+    <Select size="sm" id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as Permission)}>
       <option value="allow">{t("agents.form.allow")}</option>
       <option value="ask">{t("agents.form.ask")}</option>
       <option value="deny">{t("agents.form.deny")}</option>
-    </select>
+    </Select>
   );
 }
 
@@ -153,7 +151,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
             ) : (
               <ul className="mt-1 flex flex-col gap-1" aria-label={t("agents.form.sourcesAria")}>
                 {sources.data!.map((s) => (
-                  <li key={s.id}>
+                  <li key={s.id} className="motion-list-in">
                     <label className="flex items-center gap-2 text-base">
                       <input
                         type="checkbox"
@@ -175,7 +173,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
             {(flows.data ?? []).map((f) => {
               const tool = toolFor(f.id);
               return (
-                <li key={f.id} className="flex flex-wrap items-center gap-2">
+                <li key={f.id} className="motion-list-in flex flex-wrap items-center gap-2">
                   <label className="flex items-center gap-2 text-base">
                     <input type="checkbox" disabled={ro || f.publishedVersion == null} checked={Boolean(tool)} onChange={(e) => setWorkflow(f.id, e.target.checked ? "ask" : null)} />
                     {f.name}

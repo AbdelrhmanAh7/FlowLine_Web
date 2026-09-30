@@ -92,6 +92,7 @@
   0%, 100% { box-shadow: 0 0 0 1px var(--run-hue, var(--accent)), 0 0 8px color-mix(in oklab, var(--run-hue, var(--accent)) 25%, transparent); }
   50% { box-shadow: 0 0 0 1px var(--run-hue, var(--accent)), 0 0 20px color-mix(in oklab, var(--run-hue, var(--accent)) 55%, transparent); }
 }
+/* Runs on the ::after of .motion-select-pulse (see there), so it can never replace the host's own animation. */
 @keyframes m-select-pulse {
   from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
   to { box-shadow: 0 0 0 7px transparent; }
@@ -132,7 +133,19 @@
 .motion-confirm { animation: m-confirm var(--dur-tab) var(--ease-emphasized); }
 .motion-shake { animation: m-shake var(--dur-slow) var(--ease-standard) 1; }
 .motion-running { animation: m-running 1600ms var(--ease-standard) infinite; }
-.motion-select-pulse { animation: m-select-pulse var(--dur-max) var(--ease-emphasized); }
+/*
+ * Selection pulse: a ring that expands and fades. It is drawn by a pseudo-element, NOT by an `animation` on the host: `animation` is one
+ * property, so two classes that each set it (motion-running + motion-select-pulse on a selected running node, motion-node-in, motion-shake…)
+ * replace each other and the later rule silently wins. The host must be positioned and must not clip its overflow (the canvas node card is `relative` and unclipped).
+ */
+.motion-select-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: m-select-pulse var(--dur-max) var(--ease-emphasized);
+}
 .motion-success-flash { animation: m-success-flash var(--dur-max) var(--ease-emphasized); }
 .motion-check-draw { animation: m-check-draw var(--dur-max) var(--ease-emphasized); }
 /* Subtle button press feedback (scale down; never a hover lift). */
@@ -213,6 +226,9 @@ html, body {
 }
 .react-flow__handle:hover, .react-flow__handle.connectingto { width: 14px; height: 14px; border-color: var(--accent); }
 .react-flow__handle.connectingto.valid { background: var(--accent); }
+/* Flowline node types reuse React Flow built-in type names ("output"), whose default chrome (base.css: a square 1px
+   border, and a selected/focus border) would sit around our rounded card (DV2-V01). The card draws its own chrome. */
+.react-flow .react-flow__node:is(.react-flow__node-input, .react-flow__node-default, .react-flow__node-output, .react-flow__node-group) { border: 0; }
 .react-flow__node:focus-visible { outline: none; }
 .react-flow__node:focus-visible > div { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 .react-flow__node.dragging > div { transform: scale(1.02); box-shadow: var(--shadow-popover); }
@@ -222,13 +238,71 @@ html, body {
 .react-flow__panel.react-flow__attribution { bottom: 48px; }
 .react-flow__selection { background: color-mix(in oklab, var(--accent) 8%, transparent); border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent); }
 
+/* ───────── Public pages: scroll-driven scenes (progressive enhancement, transform/opacity only) ───────── */
+
+/*
+ * Scroll reveal — JS (IntersectionObserver in landing/reveal.tsx) flips data-reveal; without JS visible.
+ * Motion budget (<= 300 ms end to end): a block fades over --dur-tab (200 ms) after at most 100 ms of stagger delay; WordReveal spreads
+ * its per-word delays over at most 100 ms (reveal.tsx: STAGGER_TOTAL_MS) and each word transitions over --dur-tab.
+ */
+.reveal { transition: opacity var(--dur-tab) var(--ease-emphasized), transform var(--dur-tab) var(--ease-emphasized); }
+.reveal[data-reveal="hidden"] { opacity: 0; transform: translateY(24px) scale(0.985); transition: none; }
+.reveal[data-reveal="shown"] { opacity: 1; transform: none; }
+.word-reveal .word { display: inline-block; transition: opacity var(--dur-tab) var(--ease-emphasized), transform var(--dur-tab) var(--ease-emphasized); transition-delay: var(--w-delay, 0ms); }
+.word-reveal[data-reveal="hidden"] .word { opacity: 0; transform: translateY(12px); transition: none; }
+/* A run of Latin words inside an RTL title (dir="ltr" on the run) is one bidi isolate, so its words keep their order. */
+.word-reveal .word-run { unicode-bidi: isolate; }
+
+/* Magnetic CTA feedback (JS sets the transform; smooth settle-back). */
+.magnetic { transition: transform var(--dur-base) var(--ease-standard); }
+
+/*
+ * Pinned hero: tall wrapper + sticky stage + a scrub animation driven by the WRAPPER's view timeline. The pin only makes sense together
+ * with its scrub, so all three live in ONE block: @supports (scroll timelines) + desktop width + no-preference. Without support, on small
+ * screens or under prefers-reduced-motion the hero is plain static content (no 70vh of dead scroll space, no transform).
+ *
+ * Why the timeline is on .hero-pin and not on .hero-scrub: .hero-scrub sits inside the sticky stage, so its own view() progress stands
+ * still while the stage is pinned and only advances at pin release. The wrapper (170vh) scrolls through the viewport the whole time, and
+ * `contain 0% .. contain 100%` maps the span in which it covers the viewport (wrapper top at the viewport top -> wrapper bottom at the
+ * viewport bottom, 70vh of scroll) to the scrub: it starts and ends inside the pinned span, so the scale/tilt plays WHILE the visual is
+ * pinned and holds its end state until the stage is released.
+ */
+.hero-pin { margin-top: 3.5rem; }
+.hero-scrub { transform-origin: 50% 0; }
+@keyframes m-hero-scrub {
+  from { transform: scale(1) rotateX(10deg); }
+  to { transform: scale(0.94) rotateX(0deg); }
+}
+@keyframes m-parallax-slow {
+  to { transform: translateY(-14vh); }
+}
+@keyframes m-parallax-slower {
+  to { transform: translateY(-7vh); }
+}
+@supports (animation-timeline: view()) {
+  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+    .hero-pin { height: 170vh; view-timeline: --hero-pin block; }
+    .hero-pin-stage { position: sticky; top: 6rem; }
+    .hero-scrub { animation: m-hero-scrub linear both; animation-timeline: --hero-pin; animation-range: contain 0% contain 100%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .parallax-slow { animation: m-parallax-slow linear both; animation-timeline: scroll(root); }
+    .parallax-slower { animation: m-parallax-slower linear both; animation-timeline: scroll(root); }
+  }
+}
+
 /* ───────── Reduced motion: non-essential motion off; running becomes a static ring ───────── */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
     transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
   }
+  /* Public pages: everything is static and fully readable. Reveals never hide (also if the preference was switched on
+     after the JS hid an element), the CTA magnet is off, and the parallax/scrub animations above are already gated. */
+  .reveal[data-reveal="hidden"], .word-reveal[data-reveal="hidden"] .word { opacity: 1 !important; transform: none !important; }
+  .magnetic { transform: none !important; }
   .motion-press:active { transform: none; }
   .react-flow__node.dragging > div { transform: none; }
   .motion-running { box-shadow: 0 0 0 2px var(--run-hue, var(--accent)); }

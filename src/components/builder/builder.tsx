@@ -41,7 +41,7 @@ import { connectionReason, issueMessage, nodeTitle } from "@/i18n/engine-text";
 import type { MessageKey } from "@/i18n/types";
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
-import { Button, ConfirmCheck, ErrorState, Kbd, Popover, PopoverContent, PopoverTrigger, Skeleton, useConfirm, cx } from "../ui";
+import { Button, ConfirmCheck, ErrorState, Kbd, Popover, PopoverContent, PopoverTrigger, Skeleton, useConfirm, useKeepMounted, cx } from "../ui";
 import { CanvasStatusContext, nodeTypes } from "./flow-node";
 import { edgeId, toDomain, toRF, type RFEdge, type RFNode, type Snapshot } from "./graph-utils";
 import { NodeDrawer } from "./node-drawer";
@@ -75,7 +75,7 @@ export function Builder({ flowId }: { flowId: string }) {
           ) : (
             <ErrorState title={t("builder.loadErrorTitle")} body={t("builder.loadErrorBody", { message: apiErrorMessage(t, err, err.message) })} onRetry={() => q.refetch()} retrying={q.isFetching} />
           )}
-          <Link href={`/w/${workspace.slug}/flows`} className="mt-4 inline-block text-base text-accent hover:underline">
+          <Link href={`/w/${workspace.slug}/flows`} className="mt-4 inline-block text-base text-accent-text hover:underline">
             <span aria-hidden className="flip-rtl">←</span> {t("builder.backToFlows")}
           </Link>
         </div>
@@ -133,9 +133,15 @@ function Editor({ data }: { data: FlowResponse }) {
   // "?copilot=1" (e.g. "Create with Copilot") opens the panel; search params are the same on server and client.
   const searchParams = useSearchParams();
   const [copilotOpen, setCopilotOpen] = useState(() => searchParams.has("copilot"));
+  const copilotVisible = copilotOpen && !readOnly;
+  const copilotMounted = useKeepMounted(copilotVisible);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const paletteInput = useRef<HTMLInputElement>(null);
+  // The toolbar launchers: where focus returns when the catalogue / History / Copilot close (DV2-M01, DV2-M02).
+  const addNodeButton = useRef<HTMLButtonElement>(null);
+  const historyButton = useRef<HTMLButtonElement>(null);
+  const copilotButton = useRef<HTMLButtonElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const invalidReason = useRef<string | null>(null);
 
@@ -629,12 +635,21 @@ function Editor({ data }: { data: FlowResponse }) {
       {/* Toolbar */}
       {!readOnly && (
         <div className="absolute top-3 start-3 z-20 flex items-center gap-2">
-          <Button size="sm" onClick={() => (paletteOpen ? setPaletteOpen(false) : openPalette())} aria-expanded={paletteOpen} aria-haspopup="dialog">
+          <Button ref={addNodeButton} size="sm" onClick={() => (paletteOpen ? setPaletteOpen(false) : openPalette())} aria-expanded={paletteOpen} aria-haspopup="dialog">
             {t("builder.addNode")} <Kbd>/</Kbd>
           </Button>
         </div>
       )}
-      {paletteOpen && <NodePalette ref={paletteInput} hasTrigger={snapshot.nodes.some((n) => TRIGGER_TYPES.includes(n.type))} onAdd={(t) => addNode(t)} onClose={() => setPaletteOpen(false)} allowDrag={viewportKind === "desktop"} />}
+      {paletteOpen && (
+        <NodePalette
+          ref={paletteInput}
+          hasTrigger={snapshot.nodes.some((n) => TRIGGER_TYPES.includes(n.type))}
+          onAdd={(t) => addNode(t)}
+          onClose={() => setPaletteOpen(false)}
+          allowDrag={viewportKind === "desktop"}
+          returnFocusTo={() => addNodeButton.current}
+        />
+      )}
 
       {/* Empty canvas */}
       {nodes.length === 0 && (
@@ -745,11 +760,11 @@ function Editor({ data }: { data: FlowResponse }) {
             </span>
           )}
           {!isMobile && (
-            <Button size="sm" variant="ghost" onClick={() => { setHistoryOpen((o) => !o); setCopilotOpen(false); }} aria-pressed={historyOpen}>
+            <Button ref={historyButton} size="sm" variant="ghost" onClick={() => { setHistoryOpen((o) => !o); setCopilotOpen(false); }} aria-pressed={historyOpen}>
               {t("builder.history")}
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => { setCopilotOpen((o) => !o); setHistoryOpen(false); }} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? t("builder.readOnly")) : !online ? t("builder.copilotOffline") : null}>
+          <Button ref={copilotButton} size="sm" variant="ghost" onClick={() => { setCopilotOpen((o) => !o); setHistoryOpen(false); }} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? t("builder.readOnly")) : !online ? t("builder.copilotOffline") : null}>
             <Sparkles aria-hidden className="size-3.5 text-cat-ai" /> Copilot
           </Button>
           {!isMobile && (
@@ -768,15 +783,19 @@ function Editor({ data }: { data: FlowResponse }) {
           flowId={flow.id}
           getRevision={persistence.getRevision}
           onClose={() => setHistoryOpen(false)}
+          returnFocusTo={() => historyButton.current}
           beforeRestore={async () => {
             if (persistence.dirty && !(await persistence.saveNow())) throw new Error(t("builder.saveFirst"));
           }}
         />
       )}
-      {copilotOpen && !readOnly && (
+      {/* Mounted from its first opening on, hidden while closed: closing Copilot must not discard an unsaved proposal (see CopilotPanel). */}
+      {copilotMounted && (
         <CopilotPanel
           target={{ kind: "flow", flowId: flow.id }}
+          open={copilotVisible}
           onClose={() => setCopilotOpen(false)}
+          returnFocusTo={() => copilotButton.current}
           beforePropose={async () => {
             if (persistence.dirty && !(await persistence.saveNow())) throw new Error(t("builder.saveFirstCopilot"));
           }}
@@ -881,7 +900,7 @@ function SaveBadge({ status, onRetry, error }: { status: SaveStatus; lastSavedAt
         {t(`builder.save.${status}`)}
       </span>
       {status === "failed" && (
-        <button onClick={onRetry} className="text-accent underline">
+        <button onClick={onRetry} className="text-accent-text underline">
           {t("builder.retry")}
         </button>
       )}

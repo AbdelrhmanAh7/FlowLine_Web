@@ -184,7 +184,7 @@ function NavLink({ item, active, compact }: { item: NavItem; active: boolean; co
         active ? "border-accent-border bg-accent-bg text-hi" : "border-transparent text-med hover:bg-card hover:text-hi",
       )}
     >
-      <Icon aria-hidden className={cn("size-4 shrink-0", active && "text-accent")} />
+      <Icon aria-hidden className={cn("size-4 shrink-0", active && "text-accent-text")} />
       <span className={compact ? "sr-only xl:not-sr-only" : ""}>{item.label}</span>
     </Link>
   );

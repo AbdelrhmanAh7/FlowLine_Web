@@ -1,0 +1,138 @@
+
+Running 17 tests using 1 worker
+
+(node:49872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher (1.2s)
+  ok  2 [chromium] › e2e\builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher (624ms)
+  ok  3 [chromium] › e2e\builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher (613ms)
+  ok  4 [chromium] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button (614ms)
+  ok  5 [chromium] › e2e\builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button (637ms)
+  ok  6 [chromium] › e2e\builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again (659ms)
+  ok  7 [chromium] › e2e\builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it (802ms)
+  ok  8 [chromium] › e2e\builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button (641ms)
+  ok  9 [chromium] › e2e\builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button (697ms)
+  ok 10 [chromium] › e2e\builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel (600ms)
+  ok 11 [chromium] › e2e\builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it (741ms)
+  ok 12 [chromium] › e2e\builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button (626ms)
+  ok 13 [chromium] › e2e\builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button (689ms)
+  x  14 [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST (10.8s)
+(node:51204) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  15 [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST (10.9s)
+(node:9408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 16 [chromium] › e2e\builder-keyboard.spec.ts:261:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot (793ms)
+  ok 17 [chromium] › e2e\builder-keyboard.spec.ts:286:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel (10.9s)
+
+
+  1) [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal')
+    Timeout: 10000ms
+    - Expected  - 12
+    + Received  +  1
+
+    - Proposal — review
+    - UI test double
+    -
+    - Remove the obsolete step
+    -
+    - − Obsolete step transform
+    -
+    - edges +0 −1
+    -
+    - I understand this removes 1 existing step: Obsolete step
+    - Approve & save draft
+    - Reject
+    + Proposal — reviewUI test doubleRemove the obsolete step− Obsolete step transformedges +0 −1I understand this removes 1 existing step: Obsolete stepApprove & save draftReject
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal') with timeout 10000ms
+      - waiting for getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal')
+        24 × locator resolved to <section aria-live="polite" data-testid="copilot-proposal" class="flex flex-col gap-3 border-t border-line pt-3">…</section>
+           - unexpected value "Proposal — reviewUI test doubleRemove the obsolete step− Obsolete step transformedges +0 −1I understand this removes 1 existing step: Obsolete stepApprove & save draftReject"
+
+
+      253 |       await pressEnterOn(page, launcher);
+      254 |       await expect(request).toHaveValue("Remove the obsolete step");
+    > 255 |       await expect(proposal).toHaveText(before);
+          |                              ^
+      256 |       await expect(panel.getByRole("checkbox")).toBeChecked();
+      257 |       expect(posts).toBe(1);
+      258 |     });
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\builder-keyboard.spec.ts:255:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal')
+    Timeout: 10000ms
+    - Expected  - 12
+    + Received  +  1
+
+    - Proposal — review
+    - UI test double
+    -
+    - Remove the obsolete step
+    -
+    - − Obsolete step transform
+    -
+    - edges +0 −1
+    -
+    - I understand this removes 1 existing step: Obsolete step
+    - Approve & save draft
+    - Reject
+    + Proposal — reviewUI test doubleRemove the obsolete step− Obsolete step transformedges +0 −1I understand this removes 1 existing step: Obsolete stepApprove & save draftReject
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal') with timeout 10000ms
+      - waiting for getByRole('dialog', { name: 'Copilot' }).getByTestId('copilot-proposal')
+        23 × locator resolved to <section aria-live="polite" data-testid="copilot-proposal" class="flex flex-col gap-3 border-t border-line pt-3">…</section>
+           - unexpected value "Proposal — reviewUI test doubleRemove the obsolete step− Obsolete step transformedges +0 −1I understand this removes 1 existing step: Obsolete stepApprove & save draftReject"
+
+
+      253 |       await pressEnterOn(page, launcher);
+      254 |       await expect(request).toHaveValue("Remove the obsolete step");
+    > 255 |       await expect(proposal).toHaveText(before);
+          |                              ^
+      256 |       await expect(panel.getByRole("checkbox")).toBeChecked();
+      257 |       expect(posts).toBe(1);
+      258 |     });
+        at C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design\e2e\builder-keyboard.spec.ts:255:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace artifacts\design-v2\gate\final-cp10\keyboard\chromium-gitbash\test-results\builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST 
+    [chromium] › e2e\builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST 
+  15 passed (44.4s)

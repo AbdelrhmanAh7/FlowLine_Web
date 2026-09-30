@@ -116,6 +116,90 @@ export async function nodeIds(page: Page) {
   return page.locator(".react-flow__node").evaluateAll((els) => els.map((e) => e.getAttribute("data-id")!));
 }
 
+export const FAKE_PROVIDER = "http://127.0.0.1:4010";
+
+/**
+ * A flow whose Sheets step is held by the fake provider ("delay": answers normally after delayMs, or
+ * "timeout": hangs), so it stays "running" for a while: trigger → transform → sheets append → output.
+ */
+export async function setupStuckSheetsRun(req: APIRequestContext, workspaceId: string, opts: { mode?: "delay" | "timeout"; delayMs?: number } = {}) {
+  const mode = opts.mode ?? "delay";
+  const delayMs = opts.delayMs ?? 15_000;
+  const conn = (
+    await (
+      await req.post(`/api/workspaces/${workspaceId}/connections`, { data: { provider: "google_sheets", label: "Sheets (e2e)", fields: { token: "test-token" } } })
+    ).json()
+  ).connection.id;
+  const sheetId = `sheet-e2e-${randomUUID().slice(0, 8)}`;
+  const flow = await (await req.post(`/api/workspaces/${workspaceId}/flows`, { data: { name: "Stuck sheets E2E" } })).json();
+  const flowId = flow.flow.id as string;
+  const pos = (i: number) => ({ x: 300 * i, y: 120 });
+  const put = await req.put(`/api/flows/${flowId}`, {
+    data: {
+      baseRevision: 1,
+      graph: {
+        nodes: [
+          { id: "t", type: "trigger.manual", position: pos(0), data: { label: "Start", config: { samplePayload: '{ "name": "Ada" }' } } },
+          { id: "norm", type: "transform.json", position: pos(1), data: { label: "Normalise", config: { expression: '{ "name": name }' } } },
+          { id: "sheet", type: "integration.action", position: pos(2), data: { label: "Add row", config: { actionId: "google_sheets.append_row", connectionId: conn, inputMapping: `{ "spreadsheetId": "${sheetId}", "range": "A1", "row": [name] }`, requireApproval: false, retry: { maxAttempts: 5 } } } },
+          { id: "o", type: "output", position: pos(3), data: { label: "Done", config: { key: "done", expression: "" } } },
+        ],
+        edges: [
+          { id: "e0", source: "t", target: "norm", sourceHandle: null },
+          { id: "e1", source: "norm", target: "sheet", sourceHandle: null },
+          { id: "e2", source: "sheet", target: "o", sourceHandle: null },
+        ],
+      },
+    },
+  });
+  expect(put.ok(), await put.text()).toBeTruthy();
+  await req.post(`${FAKE_PROVIDER}/__fake/fault`, { data: { provider: "google_sheets", pathPattern: sheetId, mode, times: 1000, delayMs } });
+  const run = await (await req.post(`/api/flows/${flowId}/runs`, { data: { clientRequestId: randomUUID().replace(/-/g, "") } })).json();
+  await expect
+    .poll(
+      async () => {
+        const { run: r } = await (await req.get(`/api/runs/${run.run.id}`)).json();
+        return r.steps.some((s: { nodeId: string; status: string }) => s.nodeId === "sheet" && s.status === "running");
+      },
+      { timeout: 20_000, message: "sheet step never entered running" },
+    )
+    .toBe(true);
+  return { flowId, runId: run.run.id as string };
+}
+
+/**
+ * Resets the WHOLE fake provider (state, request log, faults, OAuth clients). The fake is one process shared by every
+ * Playwright worker, so this is only safe when nothing else is running against it; specs that merely leave their own run
+ * behind should use cancelRunQuietly instead.
+ */
+export async function resetFakeProvider(req: APIRequestContext) {
+  await req.post(`${FAKE_PROVIDER}/__fake/reset`);
+}
+
+/**
+ * Cleanup for a run a test left "running" (e.g. one held by a fake-provider delay): asks for it to be cancelled
+ * (the worker polls every second and aborts the in-flight step) and waits briefly for it to settle. Scoped to that one
+ * run, so it is safe next to other workers using the shared fake. Best effort: it never throws (the run may already be
+ * finished, which the API answers with 409, or the session may be gone).
+ */
+export async function cancelRunQuietly(req: APIRequestContext, runId: string | undefined) {
+  if (!runId) return;
+  try {
+    await req.post(`/api/runs/${runId}/cancel`);
+    await expect
+      .poll(
+        async () => {
+          const { run } = await (await req.get(`/api/runs/${runId}`)).json();
+          return run.status as string;
+        },
+        { timeout: 8_000, message: "run did not settle after cancel" },
+      )
+      .not.toMatch(/^(queued|running)$/);
+  } catch {
+    /* nothing left to clean up, or nothing we can do about it */
+  }
+}
+
 export const FAKE_AI_MODEL = "fake-gpt-mini";
 
 /**

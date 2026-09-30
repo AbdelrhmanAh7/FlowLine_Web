@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, Select, Skeleton, StatusBadge, cx, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -28,7 +29,20 @@ interface VersionDetail extends VersionRow {
  * Version history: every save/run/publish snapshot is immutable. Restoring copies an old definition
  * into the draft as a NEW revision (optionally publishing it = rollback of the live version).
  */
-export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { flowId: string; getRevision: () => number; onClose: () => void; beforeRestore: () => Promise<void> }) {
+export function HistoryPanel({
+  flowId,
+  getRevision,
+  onClose,
+  beforeRestore,
+  returnFocusTo,
+}: {
+  flowId: string;
+  getRevision: () => number;
+  onClose: () => void;
+  beforeRestore: () => Promise<void>;
+  /** Where focus goes when the panel closes and its opener can't take it back (the toolbar's History button). */
+  returnFocusTo?: () => HTMLElement | null;
+}) {
   const { role, workspaces, workspace } = useWorkspace();
   const t = useT();
   const toast = useToast();
@@ -57,13 +71,20 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
   const editReason = can(role as Role, "flow.edit") ? null : denyReasonText(t, role as Role, "flow.edit");
   const publishReason = can(role as Role, "flow.publish") ? null : denyReasonText(t, role as Role, "flow.publish");
   const targets = workspaces.filter((w) => w.id !== workspace.id && (w.role === "owner" || w.role === "editor"));
+  // Non-modal, but a dialog for the keyboard (DV2-M02): focus moves to the heading on open, Escape closes, focus returns to the
+  // History button. A restore in flight keeps the panel open (it is the only place showing its progress before the page reloads).
+  const { panelRef, onKeyDown } = useSidePanel<HTMLElement>({ onClose, busy: restore.isPending, returnFocusTo });
 
   return (
-    <aside role="dialog" aria-label={t("history.dialog")} className="absolute top-0 end-0 z-40 flex h-full w-full max-w-md animate-fade-in flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
+    // Non-modal side panel (see the Copilot panel): the toolbar stays usable, it slides in from the inline end like the drawers.
+    <aside ref={panelRef} onKeyDown={onKeyDown} role="dialog" aria-label={t("history.dialog")} className="motion-drawer absolute top-0 end-0 z-40 flex h-full w-full max-w-md flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t("history.title")}</h2>
+        {/* tabIndex -1: focus lands here when the panel opens (a heading names where the user is; no field to start in). */}
+        <h2 tabIndex={-1} data-initial-focus className="text-lg font-semibold">
+          {t("history.title")}
+        </h2>
         <button onClick={onClose} aria-label={t("history.close")} className="flex size-8 items-center justify-center rounded-md text-med hover:bg-card hover:text-hi">
-          ✕
+          <X className="size-4" aria-hidden />
         </button>
       </div>
       <p className="text-sm text-med">{t("history.intro")}</p>
@@ -122,7 +143,7 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
           <p className="text-sm text-muted">
             {t.rich("history.noTargets", {
               create: (
-                <Link className="text-accent hover:underline" href="/onboarding">
+                <Link className="text-accent-text hover:underline" href="/onboarding">
                   {t("history.createOne")}
                 </Link>
               ),
@@ -133,14 +154,14 @@ export function HistoryPanel({ flowId, getRevision, onClose, beforeRestore }: { 
             <label htmlFor="share-target" className="sr-only">
               {t("history.target")}
             </label>
-            <select id="share-target" className="h-8 rounded-md border border-line-strong bg-app px-2 text-base text-hi" value={target} onChange={(e) => setTarget(e.target.value)}>
+            <Select size="sm" id="share-target" value={target} onChange={(e) => setTarget(e.target.value)} className="w-auto">
               <option value="">{t("history.chooseWorkspace")}</option>
               {targets.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
                 </option>
               ))}
-            </select>
+            </Select>
             <Button size="sm" loading={share.isPending} disabledReason={can(role as Role, "flow.share") ? (target ? null : t("history.chooseWorkspace")) : denyReasonText(t, role as Role, "flow.share")} onClick={() => share.mutate()}>
               {t("history.share")}
             </Button>

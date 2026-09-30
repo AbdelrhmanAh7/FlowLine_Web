@@ -8,7 +8,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Card, EmptyState, ErrorState, Skeleton, StatusBadge, Textarea, cx, type Tone } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { denyReasonText } from "@/i18n/engine-text";
+import { denyReasonText, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import { dataText } from "@/i18n/workspace-text";
 import { api } from "@/lib/api";
@@ -149,7 +149,7 @@ function Chat({ agentId, role, onReview }: { agentId: string; role: Role; onRevi
   return (
     <div className="flex max-w-3xl flex-col gap-3">
       {(waiting.data ?? 0) > 0 && (
-        <p className="flex flex-wrap items-center gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning" data-testid="agent-waiting-banner">
+        <p className="flex flex-wrap items-center gap-2 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning" data-testid="agent-waiting-banner">
           {t.plural("agents.chat.waiting", waiting.data!)}
           <button className="underline" onClick={onReview}>
             {t("agents.chat.review")}
@@ -238,7 +238,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
   const pending = r.approvals.filter((a) => a.status === "pending");
   const decideReason = can(role, "approval.decide") ? null : denyReasonText(t, role, "approval.decide");
   return (
-    <li className="flex flex-col gap-2" data-testid={`agent-turn-${r.status}`}>
+    <li className="motion-list-in flex flex-col gap-2" data-testid={`agent-turn-${r.status}`}>
       <p className="self-end rounded-lg bg-card px-3 py-2 text-base whitespace-pre-wrap">{r.input}</p>
       <Card className="flex flex-col gap-2 p-3">
         <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -259,8 +259,8 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
         {active(r.status) && <p className="text-base text-info">{t("agents.run.thinking")}</p>}
         {r.output && <p className="text-base whitespace-pre-wrap">{r.output}</p>}
         {r.error && (
-          <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
-            {r.error.message}
+          <p role="alert" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+            {stepErrorText(t, r.error)}
           </p>
         )}
         {(r.citations?.length ?? 0) > 0 && (
@@ -274,7 +274,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
           </div>
         )}
         {pending.map((a) => (
-          <div key={a.id} className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3" data-testid="agent-approval">
+          <div key={a.id} className="flex flex-col gap-2 rounded-md border border-warning-border bg-warning-bg p-3" data-testid="agent-approval">
             <p className="text-sm text-hi">
               {t.rich("agents.run.approvalBody", {
                 action: (
@@ -296,7 +296,7 @@ function Turn({ runId, role }: { runId: string; role: Role }) {
             </div>
           </div>
         ))}
-        <button className="self-start text-sm text-accent hover:underline" onClick={() => setShowSteps((v) => !v)} aria-expanded={showSteps}>
+        <button className="self-start text-sm text-accent-text hover:underline" onClick={() => setShowSteps((v) => !v)} aria-expanded={showSteps}>
           {showSteps ? t("agents.run.hideSteps") : t("agents.run.showSteps", { count: r.steps.length })}
         </button>
         {showSteps && <StepList steps={r.steps} />}
@@ -310,7 +310,7 @@ function StepList({ steps }: { steps: Step[] }) {
   return (
     <ol className="flex flex-col gap-1.5" aria-label={t("agents.run.stepsAria")}>
       {steps.map((s) => (
-        <li key={s.index} className="rounded-md border border-line bg-app p-2 text-sm">
+        <li key={s.index} className="motion-list-in rounded-md border border-line bg-app p-2 text-sm">
           <p className="flex flex-wrap gap-x-2">
             <span className="data text-muted">#{s.index >= 10_000 ? s.index - 10_000 : s.index}</span>
             <span className="font-medium">{s.kind === "model" ? t("agents.run.model") : s.tool}</span>
@@ -321,7 +321,7 @@ function StepList({ steps }: { steps: Step[] }) {
             {s.inputTokens != null && <span className="data text-muted">{t("agents.run.tokens", { input: s.inputTokens, output: s.outputTokens ?? 0 })}</span>}
             <span className="data ms-auto text-muted">{t.date(s.at, { timeStyle: "medium" })}</span>
           </p>
-          {s.error && <p className="text-danger">{s.error.message}</p>}
+          {s.error && <p className="text-danger">{stepErrorText(t, s.error)}</p>}
           {s.kind === "tool" && s.args != null && <pre dir="ltr" className="data mt-1 max-h-24 overflow-auto text-xs text-med">{JSON.stringify(s.args)}</pre>}
         </li>
       ))}
@@ -347,7 +347,7 @@ function Runs({ agentId, role, initialRun }: { agentId: string; role: Role; init
     <div className="grid gap-4 lg:grid-cols-2">
       <ul className="flex flex-col gap-1.5" aria-label={t("agents.runs.listAria")}>
         {q.data.map((r) => (
-          <li key={r.id}>
+          <li key={r.id} className="motion-list-in">
             <button onClick={() => setOpen(r.id)} className={cx("flex w-full items-center gap-2 rounded-md border px-3 py-2 text-start", open === r.id ? "border-accent bg-card" : "border-line hover:bg-card")}>
               <StatusBadge tone={TONE[r.status]}>{t(`agents.run.status.${r.status}`)}</StatusBadge>
               <span className="min-w-0 flex-1 truncate text-base">{r.input}</span>

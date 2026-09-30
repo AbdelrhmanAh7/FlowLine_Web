@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Logo, Skeleton, StatusBadge, Textarea, type Tone } from "@/components/ui";
+import { Button, Card, ErrorState, Field, Input, Logo, Select, Skeleton, StatusBadge, Textarea, type Tone } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -187,7 +187,7 @@ function StepUpCard({ me, unlocked, onDone }: { me: Me; unlocked: boolean; onDon
         }}
       >
         <Field label={t("platformAdmin.stepUp.code")} htmlFor="stepup-code">
-          <input
+          <Input
             ref={ref}
             id="stepup-code"
             inputMode="numeric"
@@ -195,7 +195,7 @@ function StepUpCard({ me, unlocked, onDone }: { me: Me; unlocked: boolean; onDon
             pattern="[0-9]{6}"
             maxLength={6}
             dir="ltr"
-            className="h-9 w-32 rounded-md border border-line-strong bg-app px-3 font-mono text-base tracking-widest text-hi focus:border-accent focus:outline-none"
+            className="h-9 w-32 font-mono tracking-widest"
           />
         </Field>
         <Button type="submit" variant="primary" loading={action.pending === "stepup"}>
@@ -458,14 +458,13 @@ function SettingsCard({ settings, credentials, csrf, lockReason }: { settings: S
         {t("platformAdmin.action.import")}
       </Button>
     ) : null;
-  const select = "h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none";
 
   return (
     <Card className="flex flex-col gap-5 p-4">
       <h2 className="text-lg font-semibold">{t("platformAdmin.sections.settings")}</h2>
       <div className="flex flex-wrap items-end gap-3">
         <Field label={t("platformAdmin.settings.emailProvider")} htmlFor="set-email-provider" hint={t("platformAdmin.settings.emailNeedsKey")}>
-          <select id="set-email-provider" className={select} value={emailProvider} onChange={(e) => setEmailProvider(e.target.value)}>
+          <Select id="set-email-provider" className="w-auto" value={emailProvider} onChange={(e) => setEmailProvider(e.target.value)}>
             <option value="">{t("platformAdmin.settings.none")}</option>
             <option value="resend" disabled={!configured("email.resend")}>
               Resend
@@ -473,7 +472,7 @@ function SettingsCard({ settings, credentials, csrf, lockReason }: { settings: S
             <option value="postmark" disabled={!configured("email.postmark")}>
               Postmark
             </option>
-          </select>
+          </Select>
         </Field>
         <Button onClick={() => put("email.provider", emailProvider || null)} loading={action.pending === "email.provider"} disabledReason={lockReason}>
           {t("platformAdmin.settings.save")}
@@ -505,7 +504,7 @@ function SettingsCard({ settings, credentials, csrf, lockReason }: { settings: S
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <Field label={t("platformAdmin.settings.billingProvider")} htmlFor="set-billing-provider">
-          <select id="set-billing-provider" className={select} value={billingProvider} onChange={(e) => setBillingProvider(e.target.value)}>
+          <Select id="set-billing-provider" className="w-auto" value={billingProvider} onChange={(e) => setBillingProvider(e.target.value)}>
             <option value="">{t("platformAdmin.settings.none")}</option>
             <option value="stripe" disabled={!configured("billing.stripe.test")}>
               Stripe (test mode)
@@ -513,7 +512,7 @@ function SettingsCard({ settings, credentials, csrf, lockReason }: { settings: S
             <option value="paddle" disabled={!configured("billing.paddle.sandbox")}>
               Paddle (sandbox)
             </option>
-          </select>
+          </Select>
         </Field>
         <Button onClick={() => put("billing.provider", billingProvider || null)} loading={action.pending === "billing.provider"} disabledReason={lockReason}>
           {t("platformAdmin.settings.save")}
@@ -559,7 +558,7 @@ function AdminsCard({ csrf, lockReason, self }: { csrf: string; lockReason: stri
       <p className="mt-1 text-sm text-muted">{t("platformAdmin.admins.grantNote")}</p>
       <ul className="mt-3 flex flex-col divide-y divide-line">
         {(admins.data?.admins ?? []).map((a) => (
-          <li key={a.userId} className="flex flex-wrap items-center justify-between gap-2 py-2">
+          <li key={a.userId} className="motion-list-in flex flex-wrap items-center justify-between gap-2 py-2">
             <span dir="ltr" className="data">
               {a.email}
               {a.email === self ? ` (${t("platformAdmin.admins.you")})` : ""}
@@ -577,6 +576,12 @@ function AdminsCard({ csrf, lockReason, self }: { csrf: string; lockReason: stri
                     void action.run(a.userId, async () => {
                       try {
                         await api(`/api/platform/admins/${encodeURIComponent(a.userId)}/revoke`, { method: "POST", headers: { "x-flowline-csrf": csrf }, json: {} });
+                        if (a.email === self) {
+                          // This principal can no longer refetch admin data. Drop the cached panel and let the
+                          // server enforce the ordinary 404 instead of retaining the stale active-admin view.
+                          window.location.replace("/admin");
+                          return;
+                        }
                         await admins.refetch();
                       } catch (err) {
                         toast(apiErrorMessage(t, err), "danger");
@@ -619,7 +624,7 @@ function AuditCard() {
             </thead>
             <tbody>
               {audit.data.events.map((e) => (
-                <tr key={e.id} className="border-t border-line">
+                <tr key={e.id} className="motion-list-in border-t border-line">
                   <td className="py-1 pe-3 whitespace-nowrap">{t.date(e.at, { dateStyle: "short", timeStyle: "short" })}</td>
                   <td className="py-1 pe-3 font-mono" dir="ltr">
                     {e.action}

@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge } from "@/components/ui";
+import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
@@ -70,6 +70,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
   const [clientId, setClientId] = useState(app?.clientId ?? "");
   const [pending, setPending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | { kind: "remove" | "switch"; affected: number }>(null);
+  const savedConfirm = useConfirm();
   const base = `/api/workspaces/${workspace.id}/oauth-apps/${family}`;
   const refresh = () => qc.invalidateQueries({ queryKey: ["oauth-apps", workspace.id] });
   const run = async (id: string, fn: () => Promise<void>) => {
@@ -88,6 +89,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
     run("save", async () => {
       await api(base, { method: "PUT", json: { clientId: clientId.trim(), ...(secret !== undefined ? { secret } : {}), expectedRevision: app?.revision ?? 0 } });
       toast(t("oauthApps.saved"), "success");
+      savedConfirm.flash();
       setConfirm(null);
       await refresh();
     });
@@ -108,7 +110,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
   const statusTone = !app ? "muted" : app.status === "rejected" ? "danger" : app.verifiedCurrentRevision ? "success" : "warning";
 
   return (
-    <Card className="p-5" data-testid={`oauth-app-${family}`}>
+    <Card className="motion-list-in p-5" data-testid={`oauth-app-${family}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold">{t(`oauthApps.family.${family}`)}</h3>
         <StatusBadge tone={statusTone} upper>
@@ -141,7 +143,7 @@ function FamilyCard({ family, app, platform }: { family: Family; app: AppView | 
           </Field>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="primary" loading={pending === "save" || pending === "preview"} disabledReason={clientId.trim() ? null : t("oauthApps.clientId")}>
+          <Button type="submit" variant="primary" loading={pending === "save" || pending === "preview"} confirm={savedConfirm.confirmed} disabledReason={clientId.trim() ? null : t("oauthApps.clientId")}>
             {t("oauthApps.save")}
           </Button>
           {app && (

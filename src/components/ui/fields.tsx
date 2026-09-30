@@ -1,7 +1,8 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
-import { cloneElement, forwardRef, isValidElement, useId, useImperativeHandle, useLayoutEffect, useRef, type ChangeEvent, type ForwardedRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { ChevronDown } from "lucide-react";
+import { cloneElement, forwardRef, isValidElement, useImperativeHandle, useLayoutEffect, useRef, type ChangeEvent, type ForwardedRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "./cn";
 
 /**
@@ -42,7 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       aria-invalid={invalid || undefined}
       className={cn(
         "h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none",
-        invalid ? "border-danger" : "border-line-strong",
+        invalid ? "border-danger" : "border-line-control",
         className,
       )}
       {...rest}
@@ -64,7 +65,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
       className={cn(
         "w-full resize-y rounded-md border bg-app px-3 py-2 text-base text-hi placeholder:text-muted focus:border-accent focus:outline-none",
         mono && "data text-sm leading-5",
-        invalid ? "border-danger" : "border-line-strong",
+        invalid ? "border-danger" : "border-line-control",
         className,
       )}
       {...rest}
@@ -72,23 +73,44 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   );
 });
 
-const selectVariants = cva("w-full appearance-none rounded-md border bg-app px-2 text-base text-hi transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none disabled:text-muted", {
+const selectVariants = cva("peer block w-full appearance-none rounded-md border bg-app ps-2 pe-8 text-base text-hi transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none disabled:text-muted", {
   variants: {
     size: { sm: "h-8", md: "h-9" },
-    invalid: { true: "border-danger", false: "border-line-strong" },
+    invalid: { true: "border-danger", false: "border-line-control" },
   },
   defaultVariants: { size: "md", invalid: false },
 });
 
 /**
- * Styled native <select>. Native (not Radix) on purpose: form picks keep platform behaviour and E2E `selectOption`.
- * For menu-style picks use the Radix-based primitives (Menu/Popover).
+ * Utilities that place a control inside its parent (width, flex/grid item behaviour, margin). The chevron needs a
+ * wrapper, so these move to it and the wrapper takes the <select>'s old place in the layout; the rest styles the <select>.
  */
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & VariantProps<typeof selectVariants>>(function Select({ className, size, invalid, children, ...rest }, ref) {
+const PLACEMENT = /^-?(?:w|min-w|max-w|flex|grow|shrink|basis|self|order|col-span|col-start|col-end|justify-self|m[trblxyse]?)(?:-|$)/;
+const utility = (c: string) => c.slice(c.lastIndexOf(":") + 1);
+function splitPlacement(className: string | undefined) {
+  const placed: string[] = [];
+  const own: string[] = [];
+  for (const c of (className ?? "").split(/\s+/)) if (c) (PLACEMENT.test(utility(c)) ? placed : own).push(c);
+  return { placed, own: own.join(" ") };
+}
+
+/**
+ * Styled native <select> with a visible chevron. Native (not Radix) on purpose: form picks keep platform behaviour and
+ * E2E `selectOption`. For menu-style picks use the Radix-based primitives (Menu/Popover).
+ * The chevron sits at the inline end (left in RTL); `dir` is mirrored onto the wrapper so an LTR select in an RTL page
+ * keeps its chevron on the side its own padding reserves.
+ */
+export const Select = forwardRef<HTMLSelectElement, Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> & VariantProps<typeof selectVariants>>(function Select({ className, size, invalid, dir, children, ...rest }, ref) {
+  const { placed, own } = splitPlacement(className);
+  // An explicit width other than full (w-auto, w-40…) makes the wrapper shrink-wrap the <select>, like the bare <select> did.
+  const shrinkWrap = placed.some((c) => utility(c).startsWith("w-") && utility(c) !== "w-full");
   return (
-    <select ref={ref} aria-invalid={invalid || undefined} className={cn(selectVariants({ size, invalid }), className)} {...rest}>
-      {children}
-    </select>
+    <span dir={dir} className={cn("relative w-full", shrinkWrap ? "inline-block" : "block", placed)}>
+      <select ref={ref} dir={dir} aria-invalid={invalid || undefined} className={cn(selectVariants({ size, invalid }), own)} {...rest}>
+        {children}
+      </select>
+      <ChevronDown aria-hidden className="pointer-events-none absolute end-2 top-1/2 size-4 -translate-y-1/2 text-muted peer-disabled:opacity-50" />
+    </span>
   );
 });
 

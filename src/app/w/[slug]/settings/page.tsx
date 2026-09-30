@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
+import { Button, Card, ErrorState, Field, Input, Select, Skeleton, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
@@ -76,7 +77,7 @@ function AccountCard() {
       </h2>
       <p className="text-base text-med">{t.rich("account.settings.body", { email: <span dir="ltr" className="data">{user.email}</span> })}</p>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <Link className="text-accent hover:underline" href="/resend-verification">
+        <Link className="text-accent-text hover:underline" href="/resend-verification">
           {t("account.settings.resendVerification")}
         </Link>
         <Link className="text-danger hover:underline" href="/account/delete">
@@ -120,13 +121,13 @@ function General() {
             <Input id="ws-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
           </Field>
           <Field label={t("settings.general.timezone")} htmlFor="ws-tz" hint={t("settings.general.timezoneHint")}>
-            <select id="ws-tz" dir="ltr" value={tz} onChange={(e) => setTz(e.target.value)} className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none">
+            <Select id="ws-tz" dir="ltr" value={tz} onChange={(e) => setTz(e.target.value)}>
               {zones.map((z) => (
                 <option key={z} value={z}>
                   {z}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         </fieldset>
         <div>
@@ -228,7 +229,7 @@ function Billing() {
             </thead>
             <tbody className="data">
               {usage.data.rows.map((r, i) => (
-                <tr key={i} className="border-t border-line">
+                <tr key={i} className="motion-list-in border-t border-line">
                   <td className="px-2 py-1.5 first:ps-0 last:pe-0">{r.kind}</td>
                   <td className="px-2 py-1.5 first:ps-0 last:pe-0">{[r.provider, r.model].filter(Boolean).join(" / ") || "—"}</td>
                   <td className="px-2 py-1.5 first:ps-0 last:pe-0 text-end">{t.number(r.events)}</td>
@@ -300,13 +301,13 @@ function Billing() {
                 </p>
                 <div className="mt-2 flex flex-col gap-2">
                   {f.prices.map((p, i) => (
-                    <div key={i} className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] gap-2">
+                    <div key={i} className="motion-list-in grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] gap-2">
                       <Input aria-label={t("settings.limits.priceKey")} dir="ltr" className="data h-8" value={p.key} placeholder="ai:openai/gpt-4o-mini" onChange={(e) => setPrice(i, { key: e.target.value })} />
                       <Input aria-label={t("settings.limits.inputPerMTok")} className="data h-8" value={p.input} placeholder={t("settings.limits.inputPlaceholder")} onChange={(e) => setPrice(i, { input: e.target.value })} />
                       <Input aria-label={t("settings.limits.outputPerMTok")} className="data h-8" value={p.output} placeholder={t("settings.limits.outputPlaceholder")} onChange={(e) => setPrice(i, { output: e.target.value })} />
                       <Input aria-label={t("settings.limits.perCall")} className="data h-8" value={p.call} placeholder={t("settings.limits.perCallPlaceholder")} onChange={(e) => setPrice(i, { call: e.target.value })} />
                       <Button size="sm" variant="ghost" aria-label={t("settings.limits.removePrice")} onClick={() => setForm({ ...f, prices: f.prices.filter((_, j) => j !== i) })}>
-                        ✕
+                        <X className="size-4" aria-hidden />
                       </Button>
                     </div>
                   ))}

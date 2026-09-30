@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useToast } from "@/components/toast";
-import { Button, ButtonLink, Card, Field, Input, Logo, Skeleton, StatusBadge } from "@/components/ui";
+import { Button, ButtonLink, Card, Field, Input, Logo, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api, ApiError } from "@/lib/api";
@@ -23,7 +23,7 @@ interface SetupState {
   totpEnrolled: boolean;
 }
 
-const codeClass = "h-9 w-32 rounded-md border border-line-strong bg-app px-3 font-mono text-base tracking-widest text-hi focus:border-accent focus:outline-none";
+const codeClass = "h-9 w-32 font-mono tracking-widest";
 
 /** Every secret field here is uncontrolled and cleared right after it is read (success or failure). */
 export function SetupFlow() {
@@ -132,10 +132,10 @@ export function SetupFlow() {
                   }}
                 >
                   <Field label={t("platformAdmin.setup.provider")} htmlFor="setup-provider">
-                    <select id="setup-provider" value={provider} onChange={(e) => setProvider(e.target.value as "resend" | "postmark")} className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none">
+                    <Select id="setup-provider" value={provider} onChange={(e) => setProvider(e.target.value as "resend" | "postmark")}>
                       <option value="resend">Resend</option>
                       <option value="postmark">Postmark</option>
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={t("platformAdmin.setup.from")} htmlFor="setup-from">
                     <Input id="setup-from" dir="ltr" className="data" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Flowline <no-reply@example.com>" maxLength={300} />
@@ -229,7 +229,7 @@ export function SetupFlow() {
                     }}
                   >
                     <Field label={t("platformAdmin.setup.totpCode")} htmlFor="setup-totp-code">
-                      <input ref={totpRef} id="setup-totp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className={codeClass} />
+                      <Input ref={totpRef} id="setup-totp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className={codeClass} />
                     </Field>
                     <Button type="submit" variant="primary" loading={pending === "verify"}>
                       {t("platformAdmin.setup.verifyTotp")}
@@ -256,7 +256,7 @@ export function SetupFlow() {
                 }}
               >
                 <Field label={t("platformAdmin.setup.totpCode")} htmlFor="setup-final-code">
-                  <input ref={finalRef} id="setup-final-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className={codeClass} />
+                  <Input ref={finalRef} id="setup-final-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className={codeClass} />
                 </Field>
                 <Button type="submit" variant="primary" loading={pending === "complete"}>
                   {t("platformAdmin.setup.complete")}

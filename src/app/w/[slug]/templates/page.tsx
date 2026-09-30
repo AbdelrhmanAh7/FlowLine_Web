@@ -94,7 +94,7 @@ export default function TemplatesPage() {
                     const chain = topoOrder(tpl.graph).slice(0, 4);
                     const shown = templateText(t, "localTemplates", tpl);
                     return (
-                      <li key={tpl.id}>
+                      <li key={tpl.id} className="motion-list-in">
                         <Card className="flex h-full flex-col gap-3 p-4">
                           <Chain items={chain.map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
@@ -123,7 +123,7 @@ export default function TemplatesPage() {
                   {planned.map((tpl) => {
                     const shown = templateText(t, "designTemplates", tpl);
                     return (
-                      <li key={tpl.id}>
+                      <li key={tpl.id} className="motion-list-in">
                         <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
                           <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">

@@ -4,14 +4,12 @@ import { useMemo, useState } from "react";
 import { modelFreeNote } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
 import type { AiRouteRef, PickerModelDto } from "@/lib/ai";
-import { Input, StatusBadge, cx } from "../ui";
+import { Input, Select, StatusBadge, cx } from "../ui";
 import { LtrRuns } from "./ltr-runs";
 
 type CapFilter = "any" | "tools" | "structuredOutput";
 type CostFilter = "any" | "known" | "unknown" | "free";
 type CtxFilter = "any" | "known";
-
-const selectCls = "h-8 rounded-md border border-line-strong bg-app px-2 text-sm text-hi focus:border-accent focus:outline-none";
 
 function perM(micros: number | null) {
   return micros == null ? "?" : (micros / 1_000_000).toFixed(micros % 1_000_000 === 0 ? 0 : 2);
@@ -81,29 +79,29 @@ export function ModelPicker({
       </p>
       <Input id={id} type="search" dir="auto" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("aiHub.picker.search")} aria-label={t("aiHub.picker.search")} className="h-8" />
       <div className="flex flex-wrap gap-2" role="group" aria-label={t("aiHub.picker.filters")}>
-        <select aria-label={t("aiHub.picker.capability")} className={selectCls} value={cap} onChange={(e) => setCap(e.target.value as CapFilter)}>
+        <Select size="sm" aria-label={t("aiHub.picker.capability")} className="w-auto text-sm" value={cap} onChange={(e) => setCap(e.target.value as CapFilter)}>
           <option value="any">{t("aiHub.picker.capAny")}</option>
           <option value="tools">{t("aiHub.picker.capTools")}</option>
           <option value="structuredOutput">{t("aiHub.picker.capStructured")}</option>
-        </select>
-        <select aria-label={t("aiHub.picker.provider")} className={selectCls} value={provider} onChange={(e) => setProvider(e.target.value)}>
+        </Select>
+        <Select size="sm" aria-label={t("aiHub.picker.provider")} className="w-auto text-sm" value={provider} onChange={(e) => setProvider(e.target.value)}>
           <option value="all">{t("aiHub.picker.providerAll")}</option>
           {providers.map(([pid, name]) => (
             <option key={pid} value={pid}>
               {name}
             </option>
           ))}
-        </select>
-        <select aria-label={t("aiHub.picker.cost")} className={selectCls} value={cost} onChange={(e) => setCost(e.target.value as CostFilter)}>
+        </Select>
+        <Select size="sm" aria-label={t("aiHub.picker.cost")} className="w-auto text-sm" value={cost} onChange={(e) => setCost(e.target.value as CostFilter)}>
           <option value="any">{t("aiHub.picker.costAny")}</option>
           <option value="known">{t("aiHub.picker.costKnown")}</option>
           <option value="unknown">{t("aiHub.picker.costUnknown")}</option>
           <option value="free">{t("aiHub.picker.costFree")}</option>
-        </select>
-        <select aria-label={t("aiHub.picker.context")} className={selectCls} value={ctx} onChange={(e) => setCtx(e.target.value as CtxFilter)}>
+        </Select>
+        <Select size="sm" aria-label={t("aiHub.picker.context")} className="w-auto text-sm" value={ctx} onChange={(e) => setCtx(e.target.value as CtxFilter)}>
           <option value="any">{t("aiHub.picker.contextAny")}</option>
           <option value="known">{t("aiHub.picker.contextKnown")}</option>
-        </select>
+        </Select>
         <label className="flex items-center gap-1.5 text-sm text-med">
           <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
           {t("aiHub.picker.showRemoved")}
@@ -157,7 +155,7 @@ export function ModelPicker({
               {m.price.known && m.price.source === "catalogue" && m.price.sourceUrl && (
                 <span className="text-xs text-muted">
                   {t("aiHub.picker.priceSource", { date: m.price.verifiedAt ?? "—" })}{" "}
-                  <a dir="ltr" className="text-accent hover:underline" href={m.price.sourceUrl} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}>
+                  <a dir="ltr" className="text-accent-text hover:underline" href={m.price.sourceUrl} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}>
                     {new URL(m.price.sourceUrl).hostname}
                   </a>
                 </span>

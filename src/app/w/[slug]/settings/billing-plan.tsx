@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Button, Card, ErrorState, Skeleton, StatusBadge, UsageBar, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { dataText } from "@/i18n/workspace-text";
@@ -148,7 +148,7 @@ export function BillingPlan() {
         </div>
 
         {account?.status === "past_due" && (
-          <div role="alert" className="mt-4 rounded-xl border border-danger/40 bg-danger/5 p-4">
+          <div role="alert" className="mt-4 rounded-xl border border-danger-border bg-danger-bg p-4">
             <p className="font-semibold text-danger">{t("settings.billing.pastDueTitle")}</p>
             <p className="mt-1 text-base text-med">{t("settings.billing.pastDueBody")}</p>
           </div>
@@ -196,11 +196,11 @@ export function BillingPlan() {
             const needsCheckout = !subscribed && p.id !== d.freePlanId;
             const e = p.entitlements;
             return (
-              <li key={p.id} className={cx("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-4", isCurrent ? "border-accent/50" : "border-line")}>
+              <li key={p.id} className={cx("motion-list-in flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-4", isCurrent ? "border-accent-border" : "border-line")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{p.name}</span>
-                    {isCurrent && <span className="rounded-md border border-line px-1.5 py-0.5 text-xs text-accent">{t("settings.billing.current")}</span>}
+                    {isCurrent && <span className="rounded-md border border-line px-1.5 py-0.5 text-xs text-accent-text">{t("settings.billing.current")}</span>}
                   </div>
                   <p className="mt-0.5 text-sm text-muted">
                     {p.displayPrice
@@ -242,16 +242,22 @@ export function BillingPlan() {
         {d.entitlements ? (
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-3">
             <div>
-              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("settings.billing.executions")}</dt>
+              <dt id="billing-usage-executions" className="text-xs font-medium tracking-[0.4px] text-muted uppercase">
+                {t("settings.billing.executions")}
+              </dt>
               <dd className="data mt-0.5">
                 {t.number(d.usage.executions)} / {d.entitlements.maxMonthlyExecutions == null ? t("settings.billing.unlimited") : t.number(d.entitlements.maxMonthlyExecutions)}
               </dd>
+              {d.entitlements.maxMonthlyExecutions != null && <UsageBar ratio={d.usage.executions / d.entitlements.maxMonthlyExecutions} labelledBy="billing-usage-executions" className="mt-1.5" />}
             </div>
             <div>
-              <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("settings.billing.settledCost")}</dt>
+              <dt id="billing-usage-cost" className="text-xs font-medium tracking-[0.4px] text-muted uppercase">
+                {t("settings.billing.settledCost")}
+              </dt>
               <dd className="data mt-0.5">
                 {fmtMicros(d.usage.costMicros)} / {d.entitlements.monthlyUsageCapMicros == null ? t("settings.billing.noCap") : fmtMicros(d.entitlements.monthlyUsageCapMicros)}
               </dd>
+              {d.entitlements.monthlyUsageCapMicros != null && <UsageBar ratio={d.usage.costMicros / d.entitlements.monthlyUsageCapMicros} labelledBy="billing-usage-cost" className="mt-1.5" />}
             </div>
             <div>
               <dt className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("settings.billing.concurrentRuns")}</dt>

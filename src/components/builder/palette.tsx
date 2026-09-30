@@ -8,7 +8,7 @@ import { nodeCategoryLabel, nodeText } from "@/i18n/engine-text";
 import { useAiOverview } from "@/lib/ai";
 import { useCatalog } from "@/lib/catalog";
 import { useWorkspace } from "../shell/workspace-context";
-import { CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn } from "../ui";
+import { CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn, useReturnFocus } from "../ui";
 
 export const DRAG_MIME = "application/x-flowline-node";
 
@@ -17,11 +17,18 @@ interface Props {
   onAdd: (type: NodeType) => void;
   onClose: () => void;
   allowDrag: boolean;
+  /** The "+ Add node" button: where focus goes when the catalogue closes (Escape, or a node was added) and focus was lost (DV2-M01). */
+  returnFocusTo?: () => HTMLElement | null;
 }
 
-/** Node search/insert popover. `/` focuses the search box. */
-export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePalette({ hasTrigger, onAdd, onClose, allowDrag }, ref) {
+/**
+ * Node search/insert popover. `/` focuses the search box. Closing it (Escape, or adding a node) unmounts the search box that
+ * has focus, which would leave focus on <body>; `useReturnFocus` gives it back to the control that opened the catalogue, else
+ * to the launcher button, and only when focus was actually lost.
+ */
+export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePalette({ hasTrigger, onAdd, onClose, allowDrag, returnFocusTo }, ref) {
   const t = useT();
+  const { contentRef } = useReturnFocus<HTMLDivElement>(true, returnFocusTo);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   // Each entry in the UI language; search matches the translated text and the engine's English names alike.
@@ -55,7 +62,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
   }, [ref]);
 
   return (
-    <div role="dialog" aria-label={t("palette.dialog")} className="motion-pop absolute top-12 start-3 z-30 w-72 rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
+    <div ref={contentRef} role="dialog" aria-label={t("palette.dialog")} className="motion-pop absolute top-12 start-3 z-30 w-72 rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
       <input
         ref={ref}
         value={q}
@@ -64,7 +71,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
         aria-label={t("palette.searchLabel")}
         aria-controls="palette-list"
         aria-activedescendant={items[active] ? `palette-${items[active]!.type}` : undefined}
-        className="h-8 w-full rounded-md border border-line-strong bg-app px-2.5 text-base placeholder:text-muted focus:border-accent focus:outline-none"
+        className="h-8 w-full rounded-md border border-line-control bg-app px-2.5 text-base placeholder:text-muted focus:border-accent focus:outline-none"
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
             e.preventDefault();

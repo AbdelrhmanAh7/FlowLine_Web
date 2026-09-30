@@ -28,7 +28,7 @@ export const SecretInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes
       autoCorrect="off"
       dir="ltr"
       className={cx(
-        "h-9 w-full rounded-md border border-line-strong bg-app px-3 font-mono text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-hover)] focus:border-accent focus:outline-none",
+        "h-9 w-full rounded-md border border-line-control bg-app px-3 font-mono text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-hover)] focus:border-accent focus:outline-none",
         className,
       )}
       {...rest}

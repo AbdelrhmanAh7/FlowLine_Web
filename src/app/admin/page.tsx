@@ -34,7 +34,7 @@ export default async function AdminPage() {
         <Card className="p-5">
           <h1 className="text-lg font-semibold">{t(`platformAdmin.blocked.${blocked}Title`)}</h1>
           <p className="mt-2 text-base text-med">{t(`platformAdmin.blocked.${blocked}`)}</p>
-          <Link className="mt-4 inline-block text-accent hover:underline" href="/sign-in">
+          <Link className="mt-4 inline-block text-accent-text hover:underline" href="/sign-in">
             {t("platformAdmin.blocked.signIn")}
           </Link>
         </Card>

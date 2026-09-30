@@ -120,6 +120,16 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
   await card.getByRole("button", { name: "Clear" }).click();
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(card.getByText("Not configured")).toBeVisible();
+
+  // Self-revocation must remove the cached privileged panel as well as revoke access on the server (DV2-F01).
+  const self = page.getByRole("listitem").filter({ hasText: email });
+  page.once("dialog", (dialog) => dialog.accept());
+  const revokedPage = page.waitForResponse((r) => r.request().isNavigationRequest() && new URL(r.url()).pathname === "/admin");
+  await self.getByRole("button", { name: "Revoke admin", exact: true }).click();
+  expect((await revokedPage).status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Platform admin", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "We couldn't find that page", exact: true })).toBeVisible();
+  expect((await page.request.get("/api/platform/me")).status()).toBe(404);
 });
 
 test("a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel", async ({ page }) => {

@@ -5,6 +5,8 @@ import { useState } from "react";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
 import { api, ApiError } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
+import { WordReveal } from "@/components/landing/reveal";
 import { Button, Field, Input, Logo, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -72,9 +74,10 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
 
   return (
     <div className="flex min-h-dvh flex-col bg-app">
-      <header className="flex h-16 items-center justify-between px-4 sm:px-8">
+      <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-8">
         <Logo />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ThemeSwitcher />
           <LanguageSwitcher />
           <Button variant="ghost" onClick={skip} loading={busy === "skip"}>
             {t("onboarding.skip")}
@@ -87,7 +90,8 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
 
           {step === 1 && (
             <form
-              className="mt-8"
+              key="step-1"
+              className="motion-enter mt-8"
               onSubmit={(e) => {
                 e.preventDefault();
                 run("ws", async () => {
@@ -117,8 +121,10 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
           )}
 
           {step === 2 && (
-            <div className="mt-8">
-              <h1 className="text-xl font-semibold">{t("onboarding.step2Title")}</h1>
+            <div key="step-2" className="motion-enter mt-8">
+              <h1 className="text-xl font-semibold">
+                <WordReveal text={t("onboarding.step2Title")} />
+              </h1>
               <p className="mt-1 text-base text-med">{t("onboarding.step2Body")}</p>
               <div role="radiogroup" aria-label={t("onboarding.goalAria")} className="mt-6 flex flex-col gap-3">
                 {GOALS.map((g) => (
@@ -162,8 +168,10 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
           )}
 
           {step === 3 && (
-            <div className="mt-8">
-              <h1 className="text-xl font-semibold">{t("onboarding.step3Title")}</h1>
+            <div key="step-3" className="motion-enter mt-8">
+              <h1 className="text-xl font-semibold">
+                <WordReveal text={t("onboarding.step3Title")} />
+              </h1>
               <p className="mt-1 text-base text-med">{t("onboarding.step3Body")}</p>
               <div role="radiogroup" aria-label={t("onboarding.firstFlowAria")} className="mt-6 flex flex-col gap-3">
                 {[
@@ -190,7 +198,7 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
                       <span className="block text-base font-semibold">{o.title}</span>
                       <span className="block text-sm text-muted">{o.body}</span>
                     </span>
-                    {o.tag && <span className="text-xs font-medium tracking-[0.4px] whitespace-nowrap text-accent uppercase">{o.tag}</span>}
+                    {o.tag && <span className="text-xs font-medium tracking-[0.4px] whitespace-nowrap text-accent-text uppercase">{o.tag}</span>}
                   </button>
                 ))}
               </div>
@@ -256,7 +264,7 @@ function Progress({ step }: { step: number }) {
 function ErrorLine({ error }: { error: string | null }) {
   if (!error) return null;
   return (
-    <p role="alert" className="mt-4 rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-base text-danger">
+    <p role="alert" className="mt-4 rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-base text-danger">
       {error}
     </p>
   );

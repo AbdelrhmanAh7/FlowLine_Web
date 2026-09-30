@@ -39,6 +39,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
     extraHTTPHeaders: { origin: BASE_URL },
     storageState: EN_STATE,
+    // Stability: CSS/motion animations are off everywhere except the @cross-browser spec that opts back in.
+    reducedMotion: "reduce",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },

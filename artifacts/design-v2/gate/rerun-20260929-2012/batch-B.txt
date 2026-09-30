@@ -1,0 +1,17 @@
+
+Running 11 tests using 1 worker
+
+  ok  1 [chromium] › e2e\prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser (5.1s)
+  ok  2 [chromium] › e2e\prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser (7.8s)
+  ok  3 [chromium] › e2e\reduced-motion.spec.ts:9:7 › reduced motion › the running node has no animation — a static ring marks it (789ms)
+  ok  4 [chromium] › e2e\run-states.spec.ts:13:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick (10.9s)
+  ok  5 [chromium] › e2e\tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical (1.3s)
+  ok  6 [chromium] › e2e\tenancy.spec.ts:46:5 › unauthenticated API access is rejected and app routes redirect to sign-in (225ms)
+  ok  7 [chromium] › e2e\tenancy.spec.ts:52:5 › sign-out clears local drafts (747ms)
+  ok  8 [chromium] › e2e\theme.spec.ts:6:7 › theme switch › persists across reload and appears in the server HTML (446ms)
+  ok  9 [chromium] › e2e\theme.spec.ts:23:7 › theme switch › system follows the OS color scheme (327ms)
+  ok 10 [chromium] › e2e\theme.spec.ts:33:7 › theme switch › works in Arabic (RTL) (406ms)
+  ok 11 [chromium] › e2e\theme.spec.ts:44:7 › theme switch › the user menu switches the theme too (686ms)
+
+  11 passed (29.3s)
+exit=0

@@ -36,6 +36,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={push}>
       {children}
+      {/*
+        Keep `aria-live` on this always-mounted wrapper: Radix modals (Dialog) call aria-hidden's hideOthers(), which exempts
+        every `[aria-live]` element that exists when the modal opens. Without it, toasts fired while a dialog is open would be
+        hidden from screen readers. (Errors that belong to a dialog are still shown inline in it, with role="alert".)
+      */}
       <div aria-live="polite" className="pointer-events-none fixed bottom-4 left-1/2 z-[100] flex -translate-x-1/2 flex-col items-center gap-2">
         {/* Toasts slide in and out; MotionConfig reducedMotion="user" turns this into a plain swap. */}
         <AnimatePresence initial={false}>

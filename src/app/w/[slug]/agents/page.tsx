@@ -61,7 +61,7 @@ export default function AgentsPage() {
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label={t("agents.listAria")}>
             {q.data.map((a) => (
-              <li key={a.id}>
+              <li key={a.id} className="motion-list-in">
                 <Link href={`/w/${workspace.slug}/agents/${a.id}`} className="block h-full rounded-xl focus-visible:outline-none">
                   <Card className="flex h-full flex-col gap-2 p-4 hover:border-line-strong">
                     <p className="text-lg font-semibold">{a.name}</p>

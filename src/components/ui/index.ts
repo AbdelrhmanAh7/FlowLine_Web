@@ -4,7 +4,8 @@ export { Badge, CAT_BG, CAT_TEXT, CATEGORY_HUE, CategoryChip, Dot, RUN_TONE, Sta
 export { Card, Kbd, SectionLabel } from "./card";
 export { Field, Input, Select, Textarea } from "./fields";
 export { onTabListKeyDown, TabPanel, Tabs } from "./tabs";
-export { Dialog, Drawer } from "./dialog";
+export { Dialog, Drawer, useReturnFocus } from "./dialog";
+export { useKeepMounted, useSidePanel } from "./side-panel";
 export { Menu, MenuContent, MenuItem, MenuLabel, MenuLink, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "./menu";
 export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 export { Tooltip, TooltipProvider } from "./tooltip";

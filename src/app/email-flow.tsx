@@ -89,12 +89,12 @@ export function EmailFlow({ mode }: { mode: Mode }) {
           </form>
         )}
         {awaitingEmail && (
-          <Link href="/resend-verification" className="mt-6 inline-block text-accent hover:underline">
+          <Link href="/resend-verification" className="mt-6 inline-block text-accent-text hover:underline">
             {t("account.resend.title")}
           </Link>
         )}
         <p className="mt-6">
-          <Link href={success ? nextPath : "/sign-in"} className="text-accent hover:underline">
+          <Link href={success ? nextPath : "/sign-in"} className="text-accent-text hover:underline">
             {continueLabel}
           </Link>
         </p>

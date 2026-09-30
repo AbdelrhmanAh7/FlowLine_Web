@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, cx } from "@/components/ui";
+import { Button, Card, ErrorState, Field, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -25,8 +25,6 @@ interface Invite {
   status: "pending" | "accepted" | "revoked" | "expired";
   expiresAt: string;
 }
-
-const selectCls = "h-8 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none disabled:text-muted";
 
 export function Members() {
   const t = useT();
@@ -53,11 +51,14 @@ export function Members() {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("editor");
   const [link, setLink] = useState<{ url: string; emailed: boolean } | null>(null);
+  const invited = useConfirm();
+  const linkCopied = useConfirm();
   const invite = useMutation({
     mutationFn: () => api<{ url: string; emailed: boolean }>(`/api/workspaces/${workspace.id}/invites`, { method: "POST", json: { email, role: inviteRole } }),
     onSuccess: (r) => {
       setLink({ url: r.url, emailed: r.emailed });
       setEmail("");
+      invited.flash();
       refresh();
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.members.inviteError")), "danger"),
@@ -106,7 +107,7 @@ export function Members() {
           ) : (
             <ul className="divide-y divide-line" aria-label={t("settings.members.listAria")}>
               {members.data.map((m) => (
-                <li key={m.userId} className="flex flex-wrap items-center gap-x-2 gap-y-2 py-2.5" data-testid={`member-${m.email}`}>
+                <li key={m.userId} className="motion-list-in flex flex-wrap items-center gap-x-2 gap-y-2 py-2.5" data-testid={`member-${m.email}`}>
                   <span className="font-medium">{m.name}</span>
                   <span className="text-sm text-muted">
                     ·{" "}
@@ -119,9 +120,9 @@ export function Members() {
                     <label htmlFor={`role-${m.userId}`} className="sr-only">
                       {t("settings.members.roleOf", { email: m.email })}
                     </label>
-                    <select
+                    <Select
+                      size="sm"
                       id={`role-${m.userId}`}
-                      className={selectCls}
                       value={m.role}
                       disabled={!manage || setRole.isPending}
                       title={reason ?? t(`settings.members.roleHint.${m.role}`)}
@@ -130,7 +131,7 @@ export function Members() {
                       <option value="owner">{t("roles.owner")}</option>
                       <option value="editor">{t("roles.editor")}</option>
                       <option value="viewer">{t("roles.viewer")}</option>
-                    </select>
+                    </Select>
                     {confirmRemove === m.userId ? (
                       <>
                         <Button size="sm" variant="danger" loading={remove.isPending} onClick={() => remove.mutate(m.userId)}>
@@ -169,19 +170,19 @@ export function Members() {
             </Field>
           </div>
           <Field label={t("settings.members.role")} htmlFor="invite-role">
-            <select id="invite-role" className={selectCls} value={inviteRole} disabled={!manage} onChange={(e) => setInviteRole(e.target.value as Role)}>
+            <Select size="sm" id="invite-role" value={inviteRole} disabled={!manage} onChange={(e) => setInviteRole(e.target.value as Role)}>
               <option value="editor">{t("roles.editor")}</option>
               <option value="viewer">{t("roles.viewer")}</option>
               <option value="owner">{t("roles.owner")}</option>
-            </select>
+            </Select>
           </Field>
-          <Button type="submit" variant="primary" loading={invite.isPending} disabledReason={reason ?? (email.trim() ? null : t("settings.members.enterEmail"))}>
+          <Button type="submit" variant="primary" loading={invite.isPending} confirm={invited.confirmed} disabledReason={reason ?? (email.trim() ? null : t("settings.members.enterEmail"))}>
             {t("settings.members.createInvite")}
           </Button>
         </form>
         <p className="mt-2 text-sm text-muted">{t(`settings.members.roleHint.${inviteRole}`)}</p>
         {link && (
-          <div role="status" className="mt-3 flex flex-col gap-2 rounded-md border border-accent/40 bg-accent/5 p-3">
+          <div role="status" className="mt-3 flex flex-col gap-2 rounded-md border border-accent-border bg-accent-bg p-3">
             <p className="text-sm text-hi">{t("settings.members.linkTitle")}</p>
             <p className={link.emailed ? "text-sm text-med" : "text-sm text-warning"} data-testid="invite-email-status">
               {t(link.emailed ? "settings.members.inviteEmailed" : "settings.members.inviteNotEmailed")}
@@ -190,7 +191,16 @@ export function Members() {
               {link.url}
             </code>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => void navigator.clipboard?.writeText(link.url).then(() => toast(t("settings.members.linkCopied"), "success"))}>
+              <Button
+                size="sm"
+                confirm={linkCopied.confirmed}
+                onClick={() =>
+                  void navigator.clipboard?.writeText(link.url).then(() => {
+                    linkCopied.flash();
+                    toast(t("settings.members.linkCopied"), "success");
+                  })
+                }
+              >
                 {t("settings.members.copyLink")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setLink(null)}>
@@ -204,7 +214,7 @@ export function Members() {
             <p className="text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("settings.members.pending")}</p>
             <ul className="mt-2 flex flex-col gap-1.5" aria-label={t("settings.members.pending")}>
               {invites.data!.map((i) => (
-                <li key={i.id} className="flex flex-wrap items-center gap-2 text-base">
+                <li key={i.id} className="motion-list-in flex flex-wrap items-center gap-2 text-base">
                   <span dir="ltr" className="data">
                     {i.email}
                   </span>

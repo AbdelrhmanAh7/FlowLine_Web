@@ -103,6 +103,13 @@ const SCREENS = [
   { id: "run-inspector", auth: true, path: (s) => `/w/${s.workspace.slug}/runs?run=${s.runId}` },
   { id: "integrations", auth: true, path: (s) => `/w/${s.workspace.slug}/integrations` },
   { id: "settings", auth: true, path: (s) => `/w/${s.workspace.slug}/settings` },
+  // design-v2 additions: the style guide and the ai-hub screens (settings deep-links + the admin gate).
+  { id: "design-system", auth: false, path: () => "/design-system" },
+  { id: "settings-ai", auth: true, path: (s) => `/w/${s.workspace.slug}/settings?tab=ai` },
+  { id: "settings-oauth", auth: true, path: (s) => `/w/${s.workspace.slug}/settings?tab=oauthApps` },
+  { id: "settings-general", auth: true, path: (s) => `/w/${s.workspace.slug}/settings?tab=general` },
+  // The admin panel interior requires TOTP step-up (e2e/admin-panel.spec.ts runs with screenshots OFF by design); this captures its gate.
+  { id: "admin", auth: false, path: () => "/admin" },
 ];
 
 const s = await setup();

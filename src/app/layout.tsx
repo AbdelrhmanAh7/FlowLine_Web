@@ -47,7 +47,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={dirOf(locale)} data-theme={theme}>
       <body className="min-h-dvh bg-app text-hi antialiased">
-        <Providers locale={locale}>{children}</Providers>
+        <Providers locale={locale} theme={theme}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

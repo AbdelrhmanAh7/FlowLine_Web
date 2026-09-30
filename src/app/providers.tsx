@@ -9,8 +9,10 @@ import { ToastProvider } from "@/components/toast";
 import { TooltipProvider } from "@/components/ui";
 import { dirOf, type Locale } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/client";
+import { ServerThemeProvider } from "@/theme/client";
+import type { ThemePreference } from "@/theme/config";
 
-export function Providers({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+export function Providers({ locale, theme, children }: { locale: Locale; theme: ThemePreference; children: React.ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -30,17 +32,19 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
       }),
   );
   return (
-    <I18nProvider locale={locale}>
-      {/* reducedMotion="user": the motion library follows prefers-reduced-motion, like our CSS. */}
-      <MotionConfig reducedMotion="user">
-        <DirectionProvider dir={dirOf(locale)}>
-          <TooltipProvider delayDuration={150}>
-            <QueryClientProvider client={client}>
-              <ToastProvider>{children}</ToastProvider>
-            </QueryClientProvider>
-          </TooltipProvider>
-        </DirectionProvider>
-      </MotionConfig>
-    </I18nProvider>
+    <ServerThemeProvider theme={theme}>
+      <I18nProvider locale={locale}>
+        {/* reducedMotion="user": the motion library follows prefers-reduced-motion, like our CSS. */}
+        <MotionConfig reducedMotion="user">
+          <DirectionProvider dir={dirOf(locale)}>
+            <TooltipProvider delayDuration={150}>
+              <QueryClientProvider client={client}>
+                <ToastProvider>{children}</ToastProvider>
+              </QueryClientProvider>
+            </TooltipProvider>
+          </DirectionProvider>
+        </MotionConfig>
+      </I18nProvider>
+    </ServerThemeProvider>
   );
 }

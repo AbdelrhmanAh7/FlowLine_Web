@@ -1,0 +1,1303 @@
+{
+  "config": {
+    "argv": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--project=chromium",
+      "--workers=1",
+      "--reporter=list,json",
+      "--output=artifacts/design-v2/closeout/test-results-smoke-cp6",
+      "e2e/landing.spec.ts",
+      "e2e/theme.spec.ts",
+      "e2e/arabic.spec.ts"
+    ],
+    "configFile": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\playwright.config.ts",
+    "rootDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke-cp6",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke-cp6",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/artifacts/design-v2/closeout/test-results-smoke-cp6",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-design/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": {
+      "command": "pnpm db:migrate:test && pnpm dev:test",
+      "url": "http://localhost:3100/api/health?require=worker",
+      "reuseExistingServer": true,
+      "timeout": 180000,
+      "stdout": "pipe",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [
+    {
+      "title": "arabic.spec.ts",
+      "file": "arabic.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3900,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:20.297Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-2c7486bd07450043fc80",
+          "file": "arabic.spec.ts",
+          "line": 22,
+          "column": 5
+        },
+        {
+          "title": "auth pages switch language without signing in",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 510,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:24.308Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-dbd82b8921ab9d47594a",
+          "file": "arabic.spec.ts",
+          "line": 124,
+          "column": 5
+        },
+        {
+          "title": "an invalid locale cookie falls back to Arabic",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 262,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:24.823Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-c396f5f2851669b9b317",
+          "file": "arabic.spec.ts",
+          "line": 138,
+          "column": 5
+        },
+        {
+          "title": "no horizontal scroll in RTL at 375 / 1024 / 1440",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2161,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:25.090Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-16b9159f011698aae079",
+          "file": "arabic.spec.ts",
+          "line": 144,
+          "column": 5
+        },
+        {
+          "title": "Arabic builder: toolbar, palette, drawer, run dock and inspector are translated",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2415,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:27.256Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-aba522a134dbdf50ea6e",
+          "file": "arabic.spec.ts",
+          "line": 164,
+          "column": 5
+        },
+        {
+          "title": "account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2088,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:29.675Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-83b5527ea4b317452876",
+          "file": "arabic.spec.ts",
+          "line": 228,
+          "column": 5
+        },
+        {
+          "title": "Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll",
+          "ok": true,
+          "tags": [
+            "cross-browser"
+          ],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2322,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T20:34:31.767Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4110af4fdf9a0687fb83-9d09bbb91157e9a69be7",
+          "file": "arabic.spec.ts",
+          "line": 258,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "landing.spec.ts",
+      "file": "landing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "landing scroll experience",
+          "file": "landing.spec.ts",
+          "line": 52,
+          "column": 6,
+          "specs": [
+            {
+              "title": "scrolls through every section with no console errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1009,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:34.102Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-152cdb7a8262529b44f6",
+              "file": "landing.spec.ts",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "reduced motion: scroll scenes are static",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1463,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:35.116Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-b2132bf3091cbfe97368",
+              "file": "landing.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "RTL: no horizontal scroll at 375px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1043,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:36.583Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-d8aeca1f0b57fa13ac33",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            },
+            {
+              "title": "RTL: no horizontal scroll at 1024px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 986,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:37.631Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-4a43cf4164a8aaf84612",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            },
+            {
+              "title": "RTL: no horizontal scroll at 1440px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1000,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:38.622Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-19239bf6551222dab010",
+              "file": "landing.spec.ts",
+              "line": 99,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "landing scroll experience with motion allowed (desktop)",
+          "file": "landing.spec.ts",
+          "line": 111,
+          "column": 6,
+          "specs": [
+            {
+              "title": "scroll reveals end fully visible (opacity 1, none left hidden)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1902,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:39.627Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-3c2c0d2d6af339106144",
+              "file": "landing.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "hero scrub: .hero-scrub runs on the wrapper's named view timeline where the browser supports scroll timelines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 815,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:41.533Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-5a03057baa541b126edf",
+              "file": "landing.spec.ts",
+              "line": 128,
+              "column": 7
+            },
+            {
+              "title": "hero scrub: the scale/tilt plays WHILE the stage is pinned (not only at pin release)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 875,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:42.352Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-6d38041e17b38610d5d2",
+              "file": "landing.spec.ts",
+              "line": 158,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "landing header: fits every width, keeps theme and language reachable",
+          "file": "landing.spec.ts",
+          "line": 271,
+          "column": 6,
+          "specs": [
+            {
+              "title": "fits from 360 to 1440 without horizontal overflow (en, light)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1972,
+                      "error": {
+                        "message": "Error: en/light/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m",
+                        "stack": "Error: en/light/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11",
+                        "location": {
+                          "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                          "column": 61,
+                          "line": 257
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 255 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m s \u001b[36mof\u001b[39m sizes) {\n \u001b[90m 256 |\u001b[39m     expect(s\u001b[33m.\u001b[39mwidth\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target width`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 257 |\u001b[39m     expect(s\u001b[33m.\u001b[39mheight\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target height`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(width \u001b[33m<\u001b[39m \u001b[35m1280\u001b[39m \u001b[33m?\u001b[39m \u001b[35m32\u001b[39m \u001b[33m:\u001b[39m \u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 258 |\u001b[39m   }\n \u001b[90m 259 |\u001b[39m   \u001b[36mconst\u001b[39m themeButtons \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m theme\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m)\u001b[33m.\u001b[39mevaluateAll((els) \u001b[33m=>\u001b[39m els\u001b[33m.\u001b[39mmap((el) \u001b[33m=>\u001b[39m ({ text\u001b[33m:\u001b[39m (el \u001b[36mas\u001b[39m \u001b[33mHTMLElement\u001b[39m)\u001b[33m.\u001b[39minnerText\u001b[33m.\u001b[39mtrim()\u001b[33m,\u001b[39m width\u001b[33m:\u001b[39m el\u001b[33m.\u001b[39mgetBoundingClientRect()\u001b[33m.\u001b[39mwidth })))\u001b[33m;\u001b[39m\n \u001b[90m 260 |\u001b[39m   themeButtons\u001b[33m.\u001b[39mforEach((b\u001b[33m,\u001b[39m i) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                            "column": 61,
+                            "line": 257
+                          },
+                          "message": "Error: en/light/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n\n  255 |   for (const s of sizes) {\n  256 |     expect(s.width, `${where}: \"${s.name}\" target width`).toBeGreaterThanOrEqual(24);\n> 257 |     expect(s.height, `${where}: \"${s.name}\" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);\n      |                                                             ^\n  258 |   }\n  259 |   const themeButtons = await theme.getByRole(\"button\").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));\n  260 |   themeButtons.forEach((b, i) => {\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:43.232Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-dc7ac-rizontal-overflow-en-light--chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                        "column": 61,
+                        "line": 257
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-cdf4bedf8422fc420b47",
+              "file": "landing.spec.ts",
+              "line": 274,
+              "column": 11
+            },
+            {
+              "title": "fits from 360 to 1440 without horizontal overflow (en, dark)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2141,
+                      "error": {
+                        "message": "Error: en/dark/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m",
+                        "stack": "Error: en/dark/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11",
+                        "location": {
+                          "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                          "column": 61,
+                          "line": 257
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 255 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m s \u001b[36mof\u001b[39m sizes) {\n \u001b[90m 256 |\u001b[39m     expect(s\u001b[33m.\u001b[39mwidth\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target width`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 257 |\u001b[39m     expect(s\u001b[33m.\u001b[39mheight\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target height`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(width \u001b[33m<\u001b[39m \u001b[35m1280\u001b[39m \u001b[33m?\u001b[39m \u001b[35m32\u001b[39m \u001b[33m:\u001b[39m \u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 258 |\u001b[39m   }\n \u001b[90m 259 |\u001b[39m   \u001b[36mconst\u001b[39m themeButtons \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m theme\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m)\u001b[33m.\u001b[39mevaluateAll((els) \u001b[33m=>\u001b[39m els\u001b[33m.\u001b[39mmap((el) \u001b[33m=>\u001b[39m ({ text\u001b[33m:\u001b[39m (el \u001b[36mas\u001b[39m \u001b[33mHTMLElement\u001b[39m)\u001b[33m.\u001b[39minnerText\u001b[33m.\u001b[39mtrim()\u001b[33m,\u001b[39m width\u001b[33m:\u001b[39m el\u001b[33m.\u001b[39mgetBoundingClientRect()\u001b[33m.\u001b[39mwidth })))\u001b[33m;\u001b[39m\n \u001b[90m 260 |\u001b[39m   themeButtons\u001b[33m.\u001b[39mforEach((b\u001b[33m,\u001b[39m i) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                            "column": 61,
+                            "line": 257
+                          },
+                          "message": "Error: en/dark/1280px: \"Light\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n\n  255 |   for (const s of sizes) {\n  256 |     expect(s.width, `${where}: \"${s.name}\" target width`).toBeGreaterThanOrEqual(24);\n> 257 |     expect(s.height, `${where}: \"${s.name}\" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);\n      |                                                             ^\n  258 |   }\n  259 |   const themeButtons = await theme.getByRole(\"button\").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));\n  260 |   themeButtons.forEach((b, i) => {\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:45.671Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-1a30a-orizontal-overflow-en-dark--chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                        "column": 61,
+                        "line": 257
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-94900fdd7aac0a67a12e",
+              "file": "landing.spec.ts",
+              "line": 274,
+              "column": 11
+            },
+            {
+              "title": "768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (en)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 965,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:48.331Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-b1d596702fa41818a053",
+              "file": "landing.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "fits from 360 to 1440 without horizontal overflow (ar, light)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2077,
+                      "error": {
+                        "message": "Error: ar/light/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m",
+                        "stack": "Error: ar/light/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11",
+                        "location": {
+                          "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                          "column": 61,
+                          "line": 257
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 255 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m s \u001b[36mof\u001b[39m sizes) {\n \u001b[90m 256 |\u001b[39m     expect(s\u001b[33m.\u001b[39mwidth\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target width`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 257 |\u001b[39m     expect(s\u001b[33m.\u001b[39mheight\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target height`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(width \u001b[33m<\u001b[39m \u001b[35m1280\u001b[39m \u001b[33m?\u001b[39m \u001b[35m32\u001b[39m \u001b[33m:\u001b[39m \u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 258 |\u001b[39m   }\n \u001b[90m 259 |\u001b[39m   \u001b[36mconst\u001b[39m themeButtons \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m theme\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m)\u001b[33m.\u001b[39mevaluateAll((els) \u001b[33m=>\u001b[39m els\u001b[33m.\u001b[39mmap((el) \u001b[33m=>\u001b[39m ({ text\u001b[33m:\u001b[39m (el \u001b[36mas\u001b[39m \u001b[33mHTMLElement\u001b[39m)\u001b[33m.\u001b[39minnerText\u001b[33m.\u001b[39mtrim()\u001b[33m,\u001b[39m width\u001b[33m:\u001b[39m el\u001b[33m.\u001b[39mgetBoundingClientRect()\u001b[33m.\u001b[39mwidth })))\u001b[33m;\u001b[39m\n \u001b[90m 260 |\u001b[39m   themeButtons\u001b[33m.\u001b[39mforEach((b\u001b[33m,\u001b[39m i) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                            "column": 61,
+                            "line": 257
+                          },
+                          "message": "Error: ar/light/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n\n  255 |   for (const s of sizes) {\n  256 |     expect(s.width, `${where}: \"${s.name}\" target width`).toBeGreaterThanOrEqual(24);\n> 257 |     expect(s.height, `${where}: \"${s.name}\" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);\n      |                                                             ^\n  258 |   }\n  259 |   const themeButtons = await theme.getByRole(\"button\").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));\n  260 |   themeButtons.forEach((b, i) => {\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:49.402Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-33726-rizontal-overflow-ar-light--chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                        "column": 61,
+                        "line": 257
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-840be1093b888465043f",
+              "file": "landing.spec.ts",
+              "line": 274,
+              "column": 11
+            },
+            {
+              "title": "fits from 360 to 1440 without horizontal overflow (ar, dark)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2174,
+                      "error": {
+                        "message": "Error: ar/dark/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m",
+                        "stack": "Error: ar/dark/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11",
+                        "location": {
+                          "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                          "column": 61,
+                          "line": 257
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 255 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m s \u001b[36mof\u001b[39m sizes) {\n \u001b[90m 256 |\u001b[39m     expect(s\u001b[33m.\u001b[39mwidth\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target width`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 257 |\u001b[39m     expect(s\u001b[33m.\u001b[39mheight\u001b[33m,\u001b[39m \u001b[32m`${where}: \"${s.name}\" target height`\u001b[39m)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(width \u001b[33m<\u001b[39m \u001b[35m1280\u001b[39m \u001b[33m?\u001b[39m \u001b[35m32\u001b[39m \u001b[33m:\u001b[39m \u001b[35m24\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 258 |\u001b[39m   }\n \u001b[90m 259 |\u001b[39m   \u001b[36mconst\u001b[39m themeButtons \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m theme\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m)\u001b[33m.\u001b[39mevaluateAll((els) \u001b[33m=>\u001b[39m els\u001b[33m.\u001b[39mmap((el) \u001b[33m=>\u001b[39m ({ text\u001b[33m:\u001b[39m (el \u001b[36mas\u001b[39m \u001b[33mHTMLElement\u001b[39m)\u001b[33m.\u001b[39minnerText\u001b[33m.\u001b[39mtrim()\u001b[33m,\u001b[39m width\u001b[33m:\u001b[39m el\u001b[33m.\u001b[39mgetBoundingClientRect()\u001b[33m.\u001b[39mwidth })))\u001b[33m;\u001b[39m\n \u001b[90m 260 |\u001b[39m   themeButtons\u001b[33m.\u001b[39mforEach((b\u001b[33m,\u001b[39m i) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                            "column": 61,
+                            "line": 257
+                          },
+                          "message": "Error: ar/dark/1280px: \"فاتح\" target height\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThanOrEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: >= \u001b[32m24\u001b[39m\nReceived:    \u001b[31m22.75\u001b[39m\n\n  255 |   for (const s of sizes) {\n  256 |     expect(s.width, `${where}: \"${s.name}\" target width`).toBeGreaterThanOrEqual(24);\n> 257 |     expect(s.height, `${where}: \"${s.name}\" target height`).toBeGreaterThanOrEqual(width < 1280 ? 32 : 24);\n      |                                                             ^\n  258 |   }\n  259 |   const themeButtons = await theme.getByRole(\"button\").evaluateAll((els) => els.map((el) => ({ text: (el as HTMLElement).innerText.trim(), width: el.getBoundingClientRect().width })));\n  260 |   themeButtons.forEach((b, i) => {\n    at expectPreferences (C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:257:61)\n    at C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts:286:11"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:51.902Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\artifacts\\design-v2\\closeout\\test-results-smoke-cp6\\landing-landing-header-fit-11459-orizontal-overflow-ar-dark--chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\Abdelrahman\\Desktop\\Personal_Project\\FL-wt-design\\e2e\\landing.spec.ts",
+                        "column": 61,
+                        "line": 257
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-24a1c33296d4ca518b5d",
+              "file": "landing.spec.ts",
+              "line": 274,
+              "column": 11
+            },
+            {
+              "title": "768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (ar)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 977,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:54.605Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-b3a25ccc4ce093ab348b",
+              "file": "landing.spec.ts",
+              "line": 291,
+              "column": 9
+            },
+            {
+              "title": "phone 375px: theme and language can be changed from the header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1446,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:55.687Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-280544bdac124d4bd159",
+              "file": "landing.spec.ts",
+              "line": 302,
+              "column": 9
+            },
+            {
+              "title": "phone 360px: theme and language can be changed from the header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1443,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:57.138Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-38682dc56246881cf66e",
+              "file": "landing.spec.ts",
+              "line": 302,
+              "column": 9
+            },
+            {
+              "title": "phone 375px: the preferences are keyboard operable with a visible focus ring",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 978,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:58.586Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-7d2c397ad6ffb3592af6",
+              "file": "landing.spec.ts",
+              "line": 336,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "theme.spec.ts",
+      "file": "theme.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "theme switch",
+          "file": "theme.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "persists across reload and appears in the server HTML",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 468,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:34:59.573Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8168eb6e17e693d86faf-34c30881e31c8b711284",
+              "file": "theme.spec.ts",
+              "line": 6,
+              "column": 7
+            },
+            {
+              "title": "system follows the OS color scheme",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 340,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:35:00.047Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8168eb6e17e693d86faf-5921c1e4ffc897380089",
+              "file": "theme.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "works in Arabic (RTL)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 405,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:35:00.394Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8168eb6e17e693d86faf-2f7f31c4bb55170efdef",
+              "file": "theme.spec.ts",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "the user menu switches the theme too",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 688,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T20:35:00.804Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8168eb6e17e693d86faf-7802aa7dfb997e585541",
+              "file": "theme.spec.ts",
+              "line": 44,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-29T20:34:19.952Z",
+    "duration": 41620.362,
+    "expected": 24,
+    "skipped": 0,
+    "unexpected": 4,
+    "flaky": 0
+  }
+}

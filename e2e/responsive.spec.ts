@@ -3,7 +3,8 @@ import { mkdirSync } from "node:fs";
 import { EN_STATE } from "../playwright.config";
 import { connectAiApi, injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
-const OUT = "artifacts/phase-3/screenshots";
+// Captures (not compared baselines). E2E_SCREENSHOT_DIR routes a gate run's captures to its own evidence folder.
+const OUT = process.env.E2E_SCREENSHOT_DIR ?? "artifacts/phase-3/screenshots";
 mkdirSync(OUT, { recursive: true });
 
 async function noHorizontalScroll(page: Page) {
@@ -146,10 +147,25 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
     await shot(page, `builder-selected-${label}`);
 
     await page.goto(`/w/${u.workspace.slug}/runs?run=${u.badRunId}`);
-    await expect(page.getByTestId("step-panel").first()).toBeVisible();
-    await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
-    await expect(page.getByTestId("step-panel").first()).toContainText(/failed/i);
-    await shot(page, `run-inspector-failed-${label}`);
+    if (w < 768) {
+      // Phone: the step panel is a modal bottom sheet (DV2-Q05), so the run list behind it is aria-hidden until it closes.
+      const sheet = page.getByRole("dialog", { name: /run #\d+/i });
+      await expect(sheet).toBeVisible(); // a named dialog...
+      await expect(sheet.getByTestId("step-panel")).toBeVisible(); // ...that holds the step panel
+      await expect(sheet.getByTestId("step-panel")).toContainText(/failed/i);
+      await expect(sheet.locator(":focus")).toHaveCount(1); // focus moved into it
+      await shot(page, `run-inspector-failed-${label}`);
+      await page.keyboard.press("Escape"); // closes it exactly like the panel's close button: `run` leaves the URL
+      await expect(sheet).toHaveCount(0);
+      await expect(page).not.toHaveURL(/[?&]run=/);
+      await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
+      await expect(page.locator(`#run-row-${u.badRunId}`)).toBeFocused(); // focus returns to the run row
+    } else {
+      await expect(page.getByTestId("step-panel").first()).toBeVisible();
+      await expect(page.getByRole("list", { name: "Runs" })).toBeVisible();
+      await expect(page.getByTestId("step-panel").first()).toContainText(/failed/i);
+      await shot(page, `run-inspector-failed-${label}`);
+    }
 
     for (const p of ["integrations", "templates", "settings"]) {
       await page.goto(`/w/${u.workspace.slug}/${p}`);
@@ -277,7 +293,7 @@ test("capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375", async 
   // Copilot proposal diff (desktop only — Copilot is disabled on mobile, captured above via the builder).
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/w/${u.workspace.slug}/flows/${u.flowId}`);
-  await page.getByRole("button", { name: "✦ Copilot" }).click();
+  await page.getByRole("button", { name: "Copilot", exact: true }).click();
   const panel = page.getByRole("dialog", { name: "Copilot" });
   await panel.getByLabel("What should this workflow do?").fill("add a condition");
   await panel.getByRole("button", { name: "Propose" }).click();

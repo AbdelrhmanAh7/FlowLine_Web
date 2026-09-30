@@ -1,0 +1,54 @@
+{
+  "capturedFrom": "Recovered Chrome session onward; initial session logs lost on tool timeout",
+  "entries": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "http",
+      "status": 400,
+      "path": "/api/workspaces/eee05b90-eccc-4bfc-a3e7-97a87bfb572a/ai/connections"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "path": "/admin"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "path": "/api/platform/setup"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "path": "/w/independent-chrome-qa/flows/944a6eb4-1e3a-40c0-94ba-7f2bc1af2b7b"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "http",
+      "status": 404,
+      "path": "/w/independent-chrome-qa/flows/1804e47e-3e1a-4af3-ba72-939861ff5502"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ]
+}

@@ -169,7 +169,7 @@ test("knowledge + agent: upload, index, cite; ASK tool pauses for approval and r
 test.describe("Copilot", () => {
   async function openCopilot(page: Page, slug: string, flowId: string) {
     await page.goto(`/w/${slug}/flows/${flowId}`);
-    await page.getByRole("button", { name: "✦ Copilot" }).click();
+    await page.getByRole("button", { name: "Copilot", exact: true }).click();
     return page.getByRole("dialog", { name: "Copilot" });
   }
   const ask = async (panel: ReturnType<Page["getByRole"]>, text: string) => {
@@ -280,7 +280,7 @@ test("mobile: Agents and Knowledge fit a phone; Copilot and editing stay disable
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   }
   await page.goto(`/w/${workspace.slug}/flows/${flowId}`);
-  await expect(page.getByRole("button", { name: "✦ Copilot" })).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("button", { name: "Copilot", exact: true })).toHaveAttribute("aria-disabled", "true");
 });
 
 test("SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over", async ({ page, browser }) => {

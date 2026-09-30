@@ -40,12 +40,23 @@ export function ErrorState({ title, body, onRetry, retrying }: { title: string; 
   );
 }
 
-/** Usage meter: hue follows the ratio — emerald headroom, amber past 75%, rose past 90%. */
-export function UsageBar({ ratio, className }: { ratio: number; className?: string }) {
+/**
+ * Usage meter: hue follows the ratio — emerald headroom, amber past 75%, rose past 90%.
+ * role="meter" needs an accessible name: pass `labelledBy` (id of the visible label next to it, preferred) or `label`.
+ */
+export function UsageBar({ ratio, className, label, labelledBy }: { ratio: number; className?: string; label?: string; labelledBy?: string }) {
   const pct = Math.min(100, Math.max(0, Math.round(ratio * 100)));
   const hue = ratio >= 0.9 ? "bg-danger" : ratio >= 0.75 ? "bg-warning" : "bg-success";
   return (
-    <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className={cn("h-1.5 w-full overflow-hidden rounded-full bg-elevated", className)}>
+    <div
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={labelledBy}
+      className={cn("h-1.5 w-full overflow-hidden rounded-full bg-elevated", className)}
+    >
       <div className={cn("h-full rounded-full transition-[width] duration-[var(--dur-slow)] ease-[var(--ease-emphasized)]", hue)} style={{ width: `${pct}%` }} />
     </div>
   );

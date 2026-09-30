@@ -2,6 +2,7 @@
 
 import { TIME_ZONES } from "@/lib/timezones";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { checkExpressionSyntax } from "@/engine/expression";
@@ -17,7 +18,7 @@ import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogAction } fro
 import { useAiOverview, usePickerModels, type AiRouteRef } from "@/lib/ai";
 import { ModelPicker } from "../ai/model-picker";
 import { useWorkspace } from "../shell/workspace-context";
-import { Button, Field, Input, Textarea, cx } from "../ui";
+import { Button, Field, Input, Select as UiSelect, Textarea, cx } from "../ui";
 import type { RFNode } from "./graph-utils";
 
 type Cfg = Record<string, unknown>;
@@ -29,7 +30,6 @@ interface FormProps {
 }
 
 const s = (v: unknown) => (typeof v === "string" ? v : "");
-const selectCls = "h-9 w-full rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none disabled:text-muted";
 
 export function ExpressionField({ id, label, value, onChange, hint, allowEmpty, rows = 4 }: { id: string; label: string; value: string; onChange: (v: string) => void; hint?: React.ReactNode; allowEmpty?: boolean; rows?: number }) {
   const t = useT();
@@ -61,19 +61,19 @@ export function JsonField({ id, label, value, onChange, hint, rows = 8 }: { id: 
 function Select({ id, label, value, onChange, options, hint, disabled }: { id: string; label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string; disabled?: boolean }[]; hint?: React.ReactNode; disabled?: boolean }) {
   return (
     <Field label={label} htmlFor={id} hint={hint}>
-      <select id={id} className={selectCls} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+      <UiSelect id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => (
           <option key={o.value} value={o.value} disabled={o.disabled}>
             {o.label}
           </option>
         ))}
-      </select>
+      </UiSelect>
     </Field>
   );
 }
 
 function Notice({ tone, children }: { tone: "warning" | "info"; children: React.ReactNode }) {
-  return <p className={cx("rounded-md border px-3 py-2 text-sm", tone === "warning" ? "border-warning/40 bg-warning/5 text-warning" : "border-line bg-card text-med")}>{children}</p>;
+  return <p className={cx("rounded-md border px-3 py-2 text-sm", tone === "warning" ? "border-warning-border bg-warning-bg text-warning" : "border-line bg-card text-med")}>{children}</p>;
 }
 
 /** Type-specific configuration for the node drawer. */
@@ -254,7 +254,7 @@ function MapForm({ node, cfg, set, readOnly }: FormProps) {
             <Input aria-label={t("config.map.fieldName", { n: i + 1 })} className="data h-8" value={f.key} onChange={(e) => update(i, { key: e.target.value })} placeholder={t("config.map.fieldPlaceholder")} />
             <Input aria-label={t("config.map.fieldValue", { n: i + 1 })} className="data h-8" value={f.expression} onChange={(e) => update(i, { expression: e.target.value })} placeholder={t("config.map.expressionPlaceholder")} invalid={Boolean(err)} />
             <Button size="sm" variant="ghost" aria-label={t("config.map.remove", { n: i + 1 })} onClick={() => set({ fields: fields.filter((_, j) => j !== i) })} disabledReason={readOnly ? t("config.readOnly") : null}>
-              ✕
+              <X className="size-4" aria-hidden />
             </Button>
           </div>
         );
@@ -542,7 +542,7 @@ function ActionForm({ node, cfg, set }: FormProps) {
           onChange={(v) => set({ connectionId: v })}
           options={[{ value: "", label: conns.length ? t("config.action.chooseConnection") : t("config.action.noConnections", { provider: provider.name }) }, ...conns.map((c) => ({ value: c.id, label: `${c.label}${c.status !== "active" ? ` (${c.status})` : ""}${c.visibility === "private" ? (c.ownerId === user.id ? t("config.action.privateYours") : t("config.action.privateOther")) : ""}` }))]}
           hint={
-            <Link href={`/w/${workspace.slug}/integrations`} className="text-accent hover:underline">
+            <Link href={`/w/${workspace.slug}/integrations`} className="text-accent-text hover:underline">
               {t("config.action.manage")} <span aria-hidden className="flip-rtl">→</span>
             </Link>
           }

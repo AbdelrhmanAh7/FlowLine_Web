@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Skeleton, StatusBadge } from "@/components/ui";
+import { Button, Card, ErrorState, Field, Input, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
@@ -134,16 +134,15 @@ export function Sso() {
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t("settings.sso.defaultRole")} htmlFor="sso-role">
-                <select
+                <Select
                   id="sso-role"
                   value={f.defaultRole}
                   onChange={(e) => setForm({ ...f, defaultRole: e.target.value as SsoForm["defaultRole"] })}
-                  className="h-9 rounded-md border border-line-strong bg-app px-2 text-base text-hi focus:border-accent focus:outline-none"
                 >
                   <option value="viewer">{t("roles.viewer")}</option>
                   <option value="editor">{t("roles.editor")}</option>
                   <option value="owner">{t("roles.owner")}</option>
-                </select>
+                </Select>
               </Field>
               <Field label={t("settings.sso.enableLabel")} htmlFor="sso-enabled" hint={verified ? t("settings.sso.enableHintOn") : t("settings.sso.enableHintOff")}>
                 <label className="flex h-9 items-center gap-2 text-base text-hi">

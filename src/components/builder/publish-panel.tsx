@@ -106,7 +106,16 @@ function TriggerPanel({ flowId, open, state, secret, onSecret, onClose, canEdit 
       toast(t("publish.copied"), "info");
     });
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={t("publish.triggers")} closeLabel={t("publish.close")}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (o) return;
+        rotate.reset();
+        onClose();
+      }}
+      title={t("publish.triggers")}
+      closeLabel={t("publish.close")}
+    >
         {state?.pausedReason && (
           <p role="alert" className="mt-3 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
             {t("publish.pausedAlert")}
@@ -167,6 +176,12 @@ function TriggerPanel({ flowId, open, state, secret, onSecret, onClose, canEdit 
                   {t("publish.rotate")}
                 </Button>
               ))}
+            {/* A failed rotation used to be silent (no onError). Shown inline, next to the button, until the next attempt or the dialog closes. */}
+            {rotate.isError && (
+              <p role="alert" data-testid="rotate-error" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+                {apiErrorMessage(t, rotate.error)}
+              </p>
+            )}
             {state.webhook.recentEvents.length > 0 && (
               <div>
                 <p className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("publish.recent")}</p>

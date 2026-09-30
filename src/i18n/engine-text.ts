@@ -1,6 +1,7 @@
 import { getNodeDefinition, NODE_DEFINITIONS } from "@/engine/nodes";
 import { UNSTABLE_INPUT_MESSAGE } from "@/engine/validate";
 import { CAPABILITIES, type Capability, type Role } from "@/lib/permissions";
+import { actionTitleById } from "./integration-text";
 import type { Translator } from "./translate";
 import type { MessageKey, Vars } from "./types";
 
@@ -223,12 +224,204 @@ export function notPreviewedReason(t: Translator, reason: string): string {
   return reason;
 }
 
+/* ───────── Run and step messages ───────── */
+
 /**
- * A step/run error as shown to the user: codes with a catalogue text (`runs.errorText.<CODE>`, e.g. a platform outage)
- * are shown translated; everything else keeps the stored message (provider/engine text, see engine-text notes).
+ * The worker, the engine and the AI hub store their messages as English text next to a stable `code`
+ * (`{ code: "AI_AUTH_FAILED", message: "OpenAI rejected the API key (401). …" }`), and those rows stay in the database
+ * as written. The UI shows them in the reader's language: the code picks the sentence, and the data inside the stored
+ * message (provider, HTTP status, connection label, action title…) is read back out of it and passed to the catalogue
+ * text as variables, so no real cause is dropped. English output is unchanged: each `runs.errorShape` English text is the
+ * stored text with placeholders (pinned by tests/unit/run-messages.test.ts against the real emitters).
+ *
+ * What is not recognised (provider-supplied error text, expression errors, older stored wording) keeps the stored message.
  */
-export function stepErrorText(t: Translator, error: { code?: string | null; message?: string | null } | null | undefined): string {
+
+/** What the caller knows about a step beyond its stored error. */
+export interface RunMessageContext {
+  /** The integration action (`provider.action`) the step runs, from the run's approval record: lets its title be translated. */
+  actionId?: string | null;
+  /** The node's label: the last-resort name of an approval wait whose message can't be parsed. */
+  nodeLabel?: string | null;
+}
+
+type Shape = readonly [code: string, re: RegExp, key: MessageKey, vars?: (m: RegExpExecArray, t: Translator, ctx: RunMessageContext) => Vars];
+
+/**
+ * The integration action a step waits on or ran, from the run's approval records (a pending one first). Run lists and
+ * the dock don't carry it on the step, and it lets a generated message name the action in the UI language.
+ */
+export function approvalActionId(approvals: readonly { nodeId: string; actionId: string; status: string }[] | undefined, nodeId: string | null | undefined): string | null {
+  if (!nodeId) return null;
+  const forNode = (approvals ?? []).filter((a) => a.nodeId === nodeId);
+  return (forNode.find((a) => a.status === "pending") ?? forNode[0])?.actionId ?? null;
+}
+
+/** An action's title in the UI language when the action is known by id; otherwise the English title inside the stored message. */
+function actionName(t: Translator, ctx: RunMessageContext, stored: string): string {
+  return (ctx.actionId ? actionTitleById(t, ctx.actionId) : null) ?? stored;
+}
+
+/** Fixed reasons a connection needs reconnecting (`STATUS_REASONS` in src/server/connections.ts), by their stored English text. */
+export const CONNECTION_REASONS: Record<string, MessageKey> = {
+  "The access expired and can't be refreshed — reconnect it": "runs.errorShape.connReason.refresh_unavailable",
+  "The provider refused to refresh the access — reconnect it": "runs.errorShape.connReason.refresh_refused",
+  "Authorized before Flowline recorded its OAuth app — reconnect it": "runs.errorShape.connReason.oauth_app_unknown",
+  "The OAuth app changed — reconnect it": "runs.errorShape.connReason.oauth_app_changed",
+  "The OAuth app was revoked by an administrator — reconnect it": "runs.errorShape.connReason.oauth_app_revoked",
+  "The workspace OAuth app was removed — reconnect it": "runs.errorShape.connReason.oauth_app_deleted",
+};
+
+/** A reason inside "needs to be reconnected (…)": the known fixed ones are translated, anything else (a provider's own status text) stays. */
+const reasonText = (t: Translator, reason: string) => (CONNECTION_REASONS[reason] ? t(CONNECTION_REASONS[reason]) : reason);
+
+/** " [invalid_api_key]" after an HTTP status: the provider's documented error id, shown as data ("" when absent). */
+const withCode = (m: RegExpExecArray, i: number) => m[i] ?? "";
+
+const SHAPES: readonly Shape[] = [
+  /* Approvals and reviews (worker/handlers.ts) */
+  ["APPROVAL_REQUIRED", /^Waiting for approval to run (.+)$/s, "runs.errorShape.approvalWait", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+  ["APPROVAL_REJECTED", /^(.+?) was rejected: (.*)$/s, "runs.errorShape.approvalRejectedNote", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), note: m[2]! })],
+  ["APPROVAL_REJECTED", /^(.+) was rejected$/s, "runs.errorShape.approvalRejected", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+  ["OUTCOME_UNKNOWN", /^No response from (.+?) — the request may have been applied\. Mark it done, retry, or fail\.$/, "runs.errorShape.outcomeHttp", (m) => ({ host: m[1]! })],
+  [
+    "OUTCOME_UNKNOWN",
+    /^(.+?) may or may not have been applied by (.+?) \(lost response\)\. Check it and choose: mark done, retry, or fail\.$/,
+    "runs.errorShape.outcomeAction",
+    (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), provider: m[2]! }),
+  ],
+  ["OUTCOME_UNKNOWN", /^"(.+)" was interrupted and may have partly run steps with external effects\. Check, then mark done, retry, or fail\.$/s, "runs.errorShape.outcomeSubflow", (m) => ({ name: m[1]! })],
+  ["OUTCOME_UNKNOWN", /^The request's outcome was unknown and a reviewer failed the step$/, "runs.errorShape.outcomeFailedHttp"],
+  ["OUTCOME_UNKNOWN", /^"(.+)" was interrupted and a reviewer failed the step$/s, "runs.errorShape.outcomeFailedSubflow", (m) => ({ name: m[1]! })],
+  ["OUTCOME_UNKNOWN", /^(.+?) outcome was unknown and a reviewer failed the step$/, "runs.errorShape.outcomeFailedAction", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+  ["CANCELLED_IN_FLIGHT", /^Cancelled while (.+?) was in flight — it may have been applied$/, "runs.errorShape.cancelledInFlight", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+
+  /* AI hub (src/ai/hub/protocols/shared.ts `mapProviderError`, transport.ts, routing.ts, execute.ts, credentials.ts) */
+  ["AI_AUTH_FAILED", /^(.+?) rejected the API key \((\d+)\)\. Rotate the key in Settings → AI Providers\.$/, "runs.errorShape.aiAuthFailed", (m) => ({ provider: m[1]!, status: m[2]! })],
+  ["AI_RATE_LIMITED", /^(.+?) rate-limited the request \((\d+)\)$/, "runs.errorShape.aiRateLimited", (m) => ({ provider: m[1]!, status: m[2]! })],
+  ["AI_TIMEOUT", /^(.+?) timed out \((\d+)\)$/, "runs.errorShape.aiTimedOut", (m) => ({ provider: m[1]!, status: m[2]! })],
+  ["AI_TIMEOUT", /^(.+?) did not respond in time$/, "runs.errorShape.aiNoResponse", (m) => ({ provider: m[1]! })],
+  ["AI_OVERLOADED", /^(.+?) is overloaded \((\d+)\)$/, "runs.errorShape.aiOverloaded", (m) => ({ provider: m[1]!, status: m[2]! })],
+  ["AI_PROVIDER_ERROR", /^(.+?) had a server error \((\d+)\)$/, "runs.errorShape.aiServerError", (m) => ({ provider: m[1]!, status: m[2]! })],
+  ["AI_UNAVAILABLE", /^(.+?) is unreachable$/, "runs.errorShape.aiUnreachable", (m) => ({ provider: m[1]! })],
+  [
+    "AI_QUOTA_EXCEEDED",
+    /^(.+?) says this account has no balance or quota left \((\d+)( \[[^\]]+\])?\)\. Check the provider's billing; the call was not retried\.$/,
+    "runs.errorShape.aiQuota",
+    (m) => ({ provider: m[1]!, status: m[2]!, code: withCode(m, 3) }),
+  ],
+  ["AI_QUOTA_EXCEEDED", /^(.+?) reports a spend limit \(429 without retry-after\)\. Raise the limit in the Claude Console; the call was not retried\.$/, "runs.errorShape.aiSpendLimit", (m) => ({ provider: m[1]! })],
+  ["AI_FORBIDDEN", /^(.+?) refused access \(403\): this key may not be allowed to use (.+)\.$/, "runs.errorShape.aiForbidden", (m) => ({ provider: m[1]!, model: m[2]! })],
+  [
+    "AI_MODEL_REMOVED",
+    /^(.+?) isn't available on this (.+?) connection anymore \((\d+)\)\. Pick another model, or refresh the model list\.$/,
+    "runs.errorShape.aiModelRemoved",
+    (m) => ({ model: m[1]!, provider: m[2]!, status: m[3]! }),
+  ],
+  [
+    "AI_BAD_REQUEST",
+    /^(.+?) rejected the request \((\d+)\)( \[[^\]]+\])?\. Check the step settings \(model, output schema, max tokens\)\.$/,
+    "runs.errorShape.aiBadRequest",
+    (m) => ({ provider: m[1]!, status: m[2]!, code: withCode(m, 3) }),
+  ],
+  [
+    "AI_SAFETY_REFUSAL",
+    /^(.+?) blocked this request with its content moderation \((\d+)( \[[^\]]+\])?\)\. Nothing was retried or sent elsewhere\.$/,
+    "runs.errorShape.aiBlocked",
+    (m) => ({ provider: m[1]!, status: m[2]!, code: withCode(m, 3) }),
+  ],
+  ["AI_SAFETY_REFUSAL", /^(.+?) refused to answer \((.+?)\)\. Nothing was retried or sent elsewhere\.$/, "runs.errorShape.aiRefused", (m) => ({ provider: m[1]!, reason: m[2]! })],
+  [
+    "AI_COST_UNKNOWN",
+    /^The price of (.+?) is unknown and this workspace has a spending cap, so the call was not sent\. Add its price in Settings → Usage \((ai:.+?)\) or allow unknown-cost calls\.$/,
+    "runs.errorShape.aiCostWorkspace",
+    (m) => ({ model: m[1]!, route: m[2]! }),
+  ],
+  [
+    "AI_COST_UNKNOWN",
+    /^The price of (.+?) is unknown and this agent has a cost limit, so the call was not sent\. Add its price in Settings → Usage \((ai:.+?)\), or let this agent make unknown-price calls outside its limit\.$/,
+    "runs.errorShape.aiCostAgent",
+    (m) => ({ model: m[1]!, route: m[2]! }),
+  ],
+  ["AI_CONNECTION_REVOKED", /^The AI connection "(.+)" was disconnected\. Choose another connection or reconnect it in Settings → AI Providers\.$/s, "runs.errorShape.aiConnectionRevoked", (m) => ({ label: m[1]! })],
+  ["AI_CONNECTION_MISSING", /^The AI connection this uses no longer exists in this workspace\. Pick another model\.$/, "runs.errorShape.aiConnectionMissing"],
+  [
+    "AI_ROUTE_FORBIDDEN",
+    /^The person this runs for isn't allowed to use the AI connection "(.+)"\. An owner can allow their role in Settings → AI Providers\.$/s,
+    "runs.errorShape.aiRouteForbidden",
+    (m) => ({ label: m[1]! }),
+  ],
+  ["BUDGET_EXCEEDED", /^Monthly budget reached \((.+?) of (.+?) used; this step needs up to (.+?)\)$/, "runs.errorShape.budget", (m) => ({ spent: m[1]!, budget: m[2]!, need: m[3]! })],
+
+  /* App connections (src/server/connections.ts, worker/handlers.ts) */
+  ["CONNECTION_REVOKED", /^(.+) was revoked — reconnect it$/s, "runs.errorShape.connRevoked", (m) => ({ label: m[1]! })],
+  ["CONNECTION_EXPIRED", /^(.+?) needs to be reconnected \((.+)\)$/s, "runs.errorShape.connExpired", (m, t) => ({ label: m[1]!, reason: reasonText(t, m[2]!) })],
+  ["CONNECTION_EXPIRED", new RegExp(`^(.+?): (${Object.keys(CONNECTION_REASONS).map(esc).join("|")})$`, "s"), "runs.errorShape.connExpiredReason", (m, t) => ({ label: m[1]!, reason: reasonText(t, m[2]!) })],
+  ["CONNECTION_EXPIRED", /^(.+) changed while refreshing — try again$/s, "runs.errorShape.connChanged", (m) => ({ label: m[1]! })],
+  ["CONNECTION_SCOPE", /^(.+?) is missing permission: (.+)$/s, "runs.errorShape.connScope", (m) => ({ label: m[1]!, scopes: m[2]! })],
+  ["CONNECTION_AUTH", /^(.+?) rejected the connection \((.+)\)\. Flows using it are paused until it's reconnected\.$/s, "runs.errorShape.connAuth", (m) => ({ provider: m[1]!, detail: m[2]! })],
+  ["CONNECTION_MISSING", /^The connection used by this step no longer exists$/, "runs.errorShape.connMissing"],
+  ["CONNECTION_PRIVATE", /^(.+) is a private connection of another member — use your own connection$/s, "runs.errorShape.connPrivate", (m) => ({ label: m[1]! })],
+
+  /* Runs and the engine */
+  ["WORKER_LOST", /^The worker stopped responding (\d+) times$/, "runs.errorShape.workerLost", (m) => ({ count: m[1]! })],
+  ["RUN_TIMEOUT", /^The run exceeded its time budget$/, "runs.errorShape.runTimeout"],
+  ["RUN_TIMEOUT", /^The run exceeded its (\d+) minute time budget$/, "runs.errorShape.runTimeoutMinutes", (m) => ({ minutes: m[1]! })],
+  ["CANCELLED", /^Run was cancelled$/, "runs.errorShape.runCancelled"],
+  ["CANCELLED", /^Cancelled$/, "runs.errorShape.cancelled"],
+  ["LOOP_LIMIT", /^(\d+) items exceeds this loop's limit of (\d+) — raise it or filter first$/, "runs.errorShape.loopLimit", (m) => ({ count: m[1]!, max: m[2]! })],
+  ["PROVIDER_TIMEOUT", /^(.+?) kept failing to respond$/, "runs.errorShape.providerTimeout", (m) => ({ provider: m[1]! })],
+  ["PROVIDER_CONTRACT", /^(.+?) returned an unexpected response shape$/, "runs.errorShape.providerContract", (m) => ({ provider: m[1]! })],
+];
+
+const SHAPES_BY_CODE = new Map<string, Shape[]>();
+for (const shape of SHAPES) SHAPES_BY_CODE.set(shape[0], [...(SHAPES_BY_CODE.get(shape[0]) ?? []), shape]);
+
+/**
+ * A step/run error as shown to the user, in the UI language. Order: a stored message of a known shape is translated with
+ * its data (provider, status, label…); a code with a fixed catalogue text (`runs.errorText.<CODE>`, e.g. a platform
+ * outage) is shown translated; anything else keeps the stored message (provider/engine text), so nothing is hidden.
+ */
+export function stepErrorText(t: Translator, error: { code?: string | null; message?: string | null } | null | undefined, ctx: RunMessageContext = {}): string {
   if (!error) return "";
-  const key = `runs.errorText.${error.code ?? ""}`;
-  return error.code && t.has(key) ? t(key as MessageKey) : (error.message ?? "");
+  const { code } = error;
+  const text = error.message ?? "";
+  if (code) {
+    for (const [, re, key, vars] of SHAPES_BY_CODE.get(code) ?? []) {
+      const m = re.exec(text);
+      if (m) return t(key, vars?.(m, t, ctx));
+    }
+    if (code === "APPROVAL_REQUIRED") {
+      // Not the worker's wording (an older run, say): the wait is still known by its code. Name it from what the caller has.
+      const title = (ctx.actionId ? actionTitleById(t, ctx.actionId) : null) ?? ctx.nodeLabel;
+      if (title) return t("runs.errorShape.approvalWait", { title });
+    }
+    if (code === "APPROVAL_UNSTABLE_INPUT") {
+      const detail = detailText(t, text);
+      if (detail !== text) return detail;
+    }
+    const key = `runs.errorText.${code}`;
+    if (t.has(key)) return t(key as MessageKey);
+  }
+  return text;
+}
+
+/** Why a step was skipped (engine `skipReason`). */
+const SKIP_SHAPES: readonly (readonly [RegExp, MessageKey, ((m: RegExpExecArray) => Vars)?])[] = [
+  [/^Not reached$/, "runs.skipReason.notReached"],
+  [/^Run was cancelled$/, "runs.skipReason.runCancelled"],
+  [/^Run ended$/, "runs.skipReason.runEnded"],
+  [/^Upstream step "(.+)" failed$/s, "runs.skipReason.upstreamFailed", (m) => ({ label: m[1]! })],
+  [/^Upstream step "(.+)" was cancelled$/s, "runs.skipReason.upstreamCancelled", (m) => ({ label: m[1]! })],
+  [/^Upstream step "(.+)" was skipped$/s, "runs.skipReason.upstreamSkipped", (m) => ({ label: m[1]! })],
+  [/^Condition "(.+)" took the (\S+) branch$/s, "runs.skipReason.conditionBranch", (m) => ({ label: m[1]!, branch: m[2]! })],
+];
+
+/** A step's skip reason in the UI language; unknown text is returned unchanged. */
+export function skipReasonText(t: Translator, reason: string): string {
+  for (const [re, key, vars] of SKIP_SHAPES) {
+    const m = re.exec(reason);
+    if (m) return t(key, vars?.(m));
+  }
+  return reason;
 }

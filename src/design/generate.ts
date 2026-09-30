@@ -19,8 +19,15 @@ function semanticColorKeys(theme: SemanticTheme): string[] {
   return Object.keys(theme).filter((k) => !k.startsWith("shadow-"));
 }
 
-/** Tokens that get derived -bg / -border tint utilities. */
-const TINTED = ["accent", "success", "warning", "danger", "info", "cat-trigger", "cat-logic", "cat-ai", "cat-app", "cat-output"] as const;
+/** Tokens that get derived -bg / -border tint utilities (tests/unit/design-system.test.ts checks AA for each one). */
+export const TINTED = ["accent", "success", "warning", "danger", "info", "cat-trigger", "cat-logic", "cat-ai", "cat-app", "cat-output"] as const;
+
+/**
+ * Tinted tokens whose TEXT colour is a separate semantic token: the accent fill is the deck's brand colour, which is too
+ * light/dark to be plain text on its own tint in one theme or the other, so accent-coloured text uses `accent-text`
+ * (`text-accent-text`). Every other tinted token is its own text colour.
+ */
+export const TINT_TEXT: Partial<Record<(typeof TINTED)[number], keyof SemanticTheme>> = { accent: "accent-text" };
 
 /** Semantic tokens whose value is a raw string, not a primitive reference. */
 const RAW_VALUE = new Set(["minimap-mask", "scrim"]);
@@ -32,9 +39,18 @@ function themeVars(name: ThemeName, indent: string): string {
     const resolved = RAW_VALUE.has(k) ? v : `var(--color-${(v as PrimitiveRef).replace(".", "-")})`;
     return `${indent}--${k}: ${resolved};`;
   });
+  /*
+   * The -bg / -border tints are declared in EVERY theme block, next to the base tokens they derive from. A custom property that
+   * reads var(--accent) is resolved on the element that declares it, so a tint declared only on :root would freeze the ROOT
+   * theme's tint and a nested [data-theme] panel (the /design-system guide, an embedded preview) would inherit the wrong one.
+   */
+  for (const k of TINTED) {
+    lines.push(`${indent}--${k}-bg: color-mix(in oklab, var(--${k}) ${TINTS.bg}%, transparent);`);
+    lines.push(`${indent}--${k}-border: color-mix(in oklab, var(--${k}) ${TINTS.border}%, transparent);`);
+  }
   lines.push(`${indent}--shadow-popover: ${t["shadow-popover"]};`);
   lines.push(`${indent}--shadow-glow: ${t["shadow-glow"]};`);
-  lines.push(`${indent}--gradient-brand: linear-gradient(135deg, var(--${name === "dark" ? "accent" : "accent"}), var(--color-sky-${name === "dark" ? "400" : "600"}));`);
+  lines.push(`${indent}--gradient-brand: linear-gradient(135deg, var(--accent), var(--color-sky-${name === "dark" ? "400" : "600"}));`);
   lines.push(`${indent}color-scheme: ${name};`);
   return lines.join("\n");
 }
@@ -66,13 +82,14 @@ export function generateCss(): string {
   }
   out.push("}");
 
-  /* ── Semantic values per theme (:root = dark, the default) ── */
-  out.push(":root {");
+  /*
+   * ── Semantic values per theme ──
+   * Dark is the default: it applies on :root and on an explicit [data-theme="dark"] (a nested panel inside a light page needs the
+   * selector, :root alone only matches <html>) and on [data-theme="system"] until the OS says light. Every block is complete
+   * (base tokens AND derived tints), so nesting any theme inside any other resolves correctly.
+   */
+  out.push(':root, [data-theme="dark"], [data-theme="system"] {');
   out.push(themeVars("dark", "  "));
-  for (const k of TINTED) {
-    out.push(`  --${k}-bg: color-mix(in oklab, var(--${k}) ${TINTS.bg}%, transparent);`);
-    out.push(`  --${k}-border: color-mix(in oklab, var(--${k}) ${TINTS.border}%, transparent);`);
-  }
   out.push("}");
   out.push('[data-theme="light"] {');
   out.push(themeVars("light", "  "));

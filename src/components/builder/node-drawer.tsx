@@ -6,7 +6,7 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { evaluateExpression } from "@/engine/expression";
 import type { NodeType } from "@/engine/types";
 import { useT } from "@/i18n/client";
-import { nodeText, runLabel, statusWord, stepErrorText } from "@/i18n/engine-text";
+import { nodeText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { pretty } from "@/lib/format";
 import { modKey } from "@/lib/hooks";
 import type { RunStepDto } from "@/lib/types";
@@ -100,7 +100,7 @@ export function NodeDrawer({ node, step, runNumber, readOnly, readOnlyReason, is
           <TestTab node={node} step={step} />
         </TabPanel>
         <TabPanel value="logs" className="px-5 py-4">
-          <LogsTab step={step} />
+          <LogsTab step={step} nodeLabel={node.data.label} />
         </TabPanel>
       </Tabs>
 
@@ -160,7 +160,7 @@ function TestTab({ node, step }: { node: RFNode; step?: RunStepDto }) {
     return <p className="text-base text-med">{t("drawer.notRun")}</p>;
   }
   if (step.status === "skipped") {
-    return <p className="text-base text-med">{t("drawer.skipped", { reason: step.skipReason ?? t("drawer.skippedDefault") })}</p>;
+    return <p className="text-base text-med">{t("drawer.skipped", { reason: step.skipReason ? skipReasonText(t, step.skipReason) : t("drawer.skippedDefault") })}</p>;
   }
   return (
     <div className="flex flex-col gap-4">
@@ -190,7 +190,7 @@ function TestTab({ node, step }: { node: RFNode; step?: RunStepDto }) {
   );
 }
 
-function LogsTab({ step }: { step?: RunStepDto }) {
+function LogsTab({ step, nodeLabel }: { step?: RunStepDto; nodeLabel: string }) {
   const t = useT();
   if (!step) return <p className="text-base text-med">{t("drawer.noLogs")}</p>;
   const rows: ["status" | "started" | "finished" | "duration" | "skipReason" | "error", string][] = [
@@ -199,8 +199,8 @@ function LogsTab({ step }: { step?: RunStepDto }) {
     ["finished", step.finishedAt ?? "—"],
     ["duration", t.duration(step.durationMs)],
   ];
-  if (step.skipReason) rows.push(["skipReason", step.skipReason]);
-  if (step.error) rows.push(["error", `${step.error.code}: ${stepErrorText(t, step.error)}`]);
+  if (step.skipReason) rows.push(["skipReason", skipReasonText(t, step.skipReason)]);
+  if (step.error) rows.push(["error", `${step.error.code}: ${stepErrorText(t, step.error, { nodeLabel })}`]);
   return (
     <dl className="data grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-sm">
       {rows.map(([k, v]) => (

@@ -19,3 +19,9 @@ deploy/beta/backups/
 
 # raw helper-agent transcripts (reports are kept, transcripts are not evidence)
 artifacts/**/codex-stderr*.txt
+# helper CLI output (Kimi, OpenCode, Command Code, Codex stdout) is collected here, never committed (DV2-02)
+artifacts/**/helper-logs/
+# throwaway browser profiles used by QA reviewers
+artifacts/**/.profile/
+# per-run Playwright output (traces are zips the evidence scanner cannot read)
+artifacts/**/test-results*/

@@ -2,7 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import Link from "next/link";
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode, useId } from "react";
 import { cn } from "./cn";
 import { Tooltip } from "./tooltip";
 
@@ -39,24 +39,28 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
-  /** Server-confirmed success: swaps the label for an animated check until the parent clears it. */
+  /** Server-confirmed success: draws an animated check over the label until the parent clears it (the label keeps the button's width and accessible name). */
   confirm?: boolean;
-  /** When set, the button is disabled and explains why (tooltip + accessible description). */
+  /** When set, the button is disabled and explains why (tooltip on hover/focus/tap + accessible description). */
   disabledReason?: string | null;
   tooltipSide?: "top" | "bottom";
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "secondary", size = "md", loading, confirm, disabledReason, tooltipSide = "bottom", className, children, onClick, disabled, type = "button", ...rest },
+  { variant = "secondary", size = "md", loading, confirm, disabledReason, tooltipSide = "bottom", className, children, onClick, disabled, type = "button", "aria-describedby": describedByProp, ...rest },
   ref,
 ) {
   const blocked = Boolean(disabledReason) || disabled || loading;
+  const reasonId = useId();
+  // The reason is the button's accessible description, always in the DOM (the Radix tooltip mounts only while open).
+  const describedBy = [describedByProp, disabledReason ? reasonId : null].filter(Boolean).join(" ") || undefined;
   const btn = (
     <button
       ref={ref}
       type={type}
       aria-disabled={blocked || undefined}
       aria-busy={loading || undefined}
+      aria-describedby={describedBy}
       disabled={disabled && !disabledReason}
       onClick={(e) => {
         if (blocked) {
@@ -65,18 +69,35 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         }
         onClick?.(e);
       }}
-      className={cn(buttonVariants({ variant, size }), blocked && "cursor-not-allowed opacity-50 hover:bg-[unset]", className)}
+      className={cn(buttonVariants({ variant, size }), confirm && "relative", blocked && "cursor-not-allowed opacity-50 hover:bg-[unset]", className)}
       {...rest}
     >
       {loading && <Spinner />}
-      {confirm ? <ConfirmCheck /> : children}
+      {confirm ? (
+        <>
+          {/* The label stays in place (accessible name, no layout shift: the button keeps its width); the check is drawn over it. */}
+          <span className="inline-flex items-center gap-[inherit] opacity-0">{children}</span>
+          <span aria-hidden className="absolute inset-0 flex items-center justify-center">
+            <ConfirmCheck />
+          </span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
   if (!disabledReason) return btn;
   return (
-    <Tooltip content={disabledReason} side={tooltipSide}>
-      {/* A span keeps hover/focus events flowing to the tooltip while the button is inert. */}
-      <span className="inline-flex">{btn}</span>
+    // openOnTap: Radix never opens a tooltip on touch, so a tap on the blocked button shows the reason.
+    <Tooltip content={disabledReason} side={tooltipSide} openOnTap>
+      {/* A span keeps hover/focus events flowing to the tooltip while the button is inert. The reason stays outside the
+          button so it describes it without becoming part of its name. */}
+      <span className="inline-flex">
+        {btn}
+        <span id={reasonId} className="sr-only">
+          {disabledReason}
+        </span>
+      </span>
     </Tooltip>
   );
 });

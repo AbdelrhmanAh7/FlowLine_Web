@@ -121,7 +121,7 @@ export default function KnowledgePage() {
           ) : (
             <ul className="flex flex-col gap-2" aria-label={t("knowledge.listAria")}>
               {sources.data.map((s) => (
-                <li key={s.id}>
+                <li key={s.id} className="motion-list-in">
                   <Card className={cx("flex flex-wrap items-center gap-x-3 gap-y-2 p-3", !s.enabled && "opacity-70")} data-testid={`source-${s.name}`}>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{s.name}</span>
@@ -235,7 +235,7 @@ export default function KnowledgePage() {
             ) : (
               <ol className="flex flex-col gap-2" aria-label={t("knowledge.resultsAria")}>
                 {search.data?.map((h, i) => (
-                  <li key={`${h.sourceId}-${i}`} className="rounded-md border border-line bg-app p-2.5">
+                  <li key={`${h.sourceId}-${i}`} className="motion-list-in rounded-md border border-line bg-app p-2.5">
                     <p className="flex items-baseline justify-between gap-2 text-sm">
                       <span className="font-medium text-hi">
                         [{i + 1}] {h.label}

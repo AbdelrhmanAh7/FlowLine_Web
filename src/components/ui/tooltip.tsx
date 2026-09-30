@@ -1,14 +1,47 @@
 "use client";
 
 import * as RadixTooltip from "@radix-ui/react-tooltip";
-import type { ReactNode } from "react";
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "./cn";
 
-/** Accessible tooltip (Radix): hover/focus shows it, Escape dismisses. Motion via data-state in globals.css. */
-export function Tooltip({ content, side = "bottom", children }: { content: ReactNode; side?: "top" | "bottom" | "left" | "right"; children: ReactNode }) {
+/**
+ * Accessible tooltip (Radix): hover/focus shows it, Escape dismisses. Motion via data-state in globals.css.
+ *
+ * Radix never opens a tooltip on touch (focus that follows a pointer-down is ignored, touch pointer-moves are
+ * ignored). `openOnTap` makes a tap on the trigger toggle it, so a "why is this disabled?" reason is reachable on a
+ * phone; a tap elsewhere dismisses it (Radix outside-press). Use it only on controls whose tap does nothing else.
+ */
+export function Tooltip({
+  content,
+  side = "bottom",
+  openOnTap = false,
+  children,
+}: {
+  content: ReactNode;
+  side?: "top" | "bottom" | "left" | "right";
+  openOnTap?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  // Radix closes an open tooltip on pointer-down, before the click: remember whether this tap started on an open one.
+  const openAtPointerDown = useRef(false);
+  const tap = openOnTap
+    ? {
+        onPointerDown: () => {
+          openAtPointerDown.current = open;
+        },
+        onClick: (e: MouseEvent) => {
+          e.preventDefault(); // Radix closes the tooltip on click unless the click is default-prevented
+          setOpen(!openAtPointerDown.current);
+          openAtPointerDown.current = false;
+        },
+      }
+    : undefined;
   return (
-    <RadixTooltip.Root>
-      <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+    <RadixTooltip.Root open={openOnTap ? open : undefined} onOpenChange={openOnTap ? setOpen : undefined}>
+      <RadixTooltip.Trigger asChild {...tap}>
+        {children}
+      </RadixTooltip.Trigger>
       <RadixTooltip.Portal>
         <RadixTooltip.Content
           side={side}

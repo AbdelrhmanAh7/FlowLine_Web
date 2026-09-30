@@ -1,27 +1,19 @@
-"use client";
-
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { useRef, type ReactNode } from "react";
-
 /**
- * Pinned hero: the wrapper is taller than the viewport, the inner stage sticks, and the product visual
- * scales, tilts and settles as you scroll through it. Transform/opacity only. Without JS, with reduced
- * motion, or on small screens this is a plain static section (CSS sticky only kicks in at lg).
+ * Pinned hero: the wrapper (`.hero-pin`) is taller than the viewport and the inner stage sticks; the product visual
+ * scales, tilts and settles while the stage is pinned. Pure CSS: sticky + a scroll-driven animation where supported.
+ * The scrub (`.hero-scrub`) is driven by the WRAPPER's named view timeline (`view-timeline: --hero-pin`), not by a
+ * `view()` on itself: an element inside a sticky stage does not move relative to the viewport while pinned, so its own
+ * view progress would only advance at pin release. Static, fully visible everywhere else — no JS, small screens,
+ * no scroll-timeline support, prefers-reduced-motion: the 170vh pin, the sticky stage, the timeline and the scrub are all
+ * declared in globals.css inside ONE `@supports (animation-timeline: view())` + `(min-width: 1024px)` +
+ * `(prefers-reduced-motion: no-preference)` block, so the fallback has no dead scroll space. The markup is the same in
+ * every case. Transform only, no layout shift.
  */
-export function HeroPin({ children }: { children: ReactNode }) {
-  const reduced = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const p = useSpring(scrollYProgress, { stiffness: 90, damping: 24 });
-  const scale = useTransform(p, [0, 0.7], [1, 0.94]);
-  const rotateX = useTransform(p, [0, 0.7], [10, 0]);
-  const y = useTransform(p, [0, 0.7], [0, -16]);
-
-  if (reduced) return <div className="mt-14 w-full max-w-4xl">{children}</div>;
+export function HeroPin({ children }: { children: React.ReactNode }) {
   return (
-    <div ref={ref} className="w-full max-w-4xl lg:h-[170vh]">
-      <div className="mt-14 lg:sticky lg:top-24" style={{ perspective: 900 }}>
-        <motion.div style={{ scale, rotateX, y, transformStyle: "preserve-3d" }}>{children}</motion.div>
+    <div className="hero-pin w-full max-w-4xl">
+      <div className="hero-pin-stage" style={{ perspective: 900 }}>
+        <div className="hero-scrub">{children}</div>
       </div>
     </div>
   );
