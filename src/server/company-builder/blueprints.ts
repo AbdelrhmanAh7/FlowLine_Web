@@ -89,7 +89,8 @@ export async function storeBlueprint(user: CurrentUser, workspaceId: string, ses
 export async function generateDeterministic(user: CurrentUser, workspaceId: string, sessionId: string, language: "ar" | "en") {
   await requireSession(workspaceId, sessionId);
   const { profile, session } = await snapshotProfile(user, workspaceId, sessionId);
-  const body = composeBlueprint(stateOf(session), { sessionId, profileVersion: profile.version, connections: await workspaceConnections(workspaceId), language });
+  const [ws] = await db.select({ timezone: schema.workspace.timezone }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
+  const body = composeBlueprint(stateOf(session), { sessionId, profileVersion: profile.version, connections: await workspaceConnections(workspaceId), language, timezone: ws?.timezone ?? "UTC" });
   return storeBlueprint(user, workspaceId, sessionId, body, "deterministic");
 }
 

@@ -67,7 +67,7 @@ export const companyBuilderAr = {
     hiring: { title: "هل توظف الآن؟", reason: "نميّز بين التوظيف الفعلي وحاجتك إلى الأتمتة." },
     content_output: { title: "ما نوع المحتوى الذي تحتاجه؟", reason: "ننتج نصوصًا فقط؛ الصور والتصاميم والفيديو غير مدعومة." },
     content_reviewer: { title: "من يراجع المحتوى قبل نشره؟", reason: "لا يُنشر أي محتوى دون مراجعة." },
-    other_areas: { title: "هل توجد مجالات أخرى تريد تجهيزها لاحقًا؟", reason: "نضيفها إلى الخطة بأسئلتها الخاصة فقط إن اخترتها." },
+    other_areas: { title: "هل توجد مجالات أخرى تريد تجهيزها لاحقًا؟", reason: "نعرضها كتحسينات لاحقة محتملة فقط. لا نجهّز أو نشغّل شيئًا منها الآن." },
   },
 
   opt: {
@@ -352,6 +352,8 @@ export const companyBuilderAr = {
     acceptedByYou: "قلت إن النتيجة تطابق ما تريد.",
     rejectedByYou: "قلت إن النتيجة لا تطابق ما تريد. عدّل الإجابات أو المسار ثم جرّب مرة أخرى.",
     acceptNote: "رأيك لا يثبت أن كل تفصيل صحيح؛ الفحوص أعلاه مستقلة عنه.",
+    rejectWhy: "لماذا لا تطابق؟",
+    rejectConfirm: "أرسل إجابتي",
     rejectReason: { wrong_details: "تفاصيل خاطئة", invented_content: "محتوى غير معتمد", missing_info: "معلومة ناقصة", wrong_tone: "الأسلوب غير مناسب", something_else: "سبب آخر" },
     technical: "تفاصيل تقنية (متقدم)",
     runFailed: "لم يكتمل التشغيل. راجع السجل.",
@@ -603,6 +605,7 @@ export const companyBuilderAr = {
     notYet: "لم يحدث بعد",
     logSupport: "سجّل وقت دعم",
     minutes: "دقائق",
+    duration: "{m} د {s} ث",
     save: "حفظ",
   },
   errors: {

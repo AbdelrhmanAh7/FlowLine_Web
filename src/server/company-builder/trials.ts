@@ -1,10 +1,11 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import type { CompanyBlueprint, Provenance, TrialVerdict } from "@/company-builder/model";
+import type { CompanyBlueprint, Provenance, TrialVerdict, UserVerdict } from "@/company-builder/model";
 import { getPack } from "@/company-builder/packs";
 import type { FlowGraph } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "@/server/access";
+import { audit, userActor } from "@/server/audit";
 import { HttpError, notFound } from "@/server/http";
 import { enqueueRunEx } from "@/server/runs";
 import { requireInstallation } from "./install";
@@ -105,4 +106,24 @@ export async function trialOutput(trial: typeof schema.cbTrial.$inferSelect) {
   if (!trial.runId) return null;
   const [run] = await db.select({ output: schema.run.output, input: schema.run.input, status: schema.run.status, number: schema.run.number, flowVersionId: schema.run.flowVersionId }).from(schema.run).where(eq(schema.run.id, trial.runId));
   return run ?? null;
+}
+
+export const REJECT_REASONS = ["wrong_details", "invented_content", "missing_info", "wrong_tone", "something_else"] as const;
+
+/**
+ * The person's answer to "Does this result match what you wanted?" for a finished trial. Stored apart from the
+ * objective checks: accepting never turns failed checks into a verified result (the lifecycle requires both), and a
+ * later answer replaces the earlier one (history is kept in the audit log and experiment events).
+ */
+export async function recordUserVerdict(user: CurrentUser, workspaceId: string, trialId: string, verdict: UserVerdict, reason: (typeof REJECT_REASONS)[number] | null) {
+  const trial = await refreshTrial(workspaceId, trialId);
+  if (trial.status !== "completed") throw new HttpError(409, "TRIAL_NOT_FINISHED", "Wait for the result before judging it");
+  if (verdict === "rejected" && !reason) throw new HttpError(400, "VALIDATION", "Tell us what's wrong with the result");
+  const [updated] = await db
+    .update(schema.cbTrial)
+    .set({ userVerdict: verdict, userVerdictReason: verdict === "rejected" ? reason : null, userVerdictAt: new Date(), userVerdictBy: user.id })
+    .where(and(eq(schema.cbTrial.id, trial.id), eq(schema.cbTrial.workspaceId, workspaceId)))
+    .returning();
+  await audit(db, { workspaceId, actor: userActor(user), action: "company_builder.result_judged", targetType: "cb_trial", targetId: trial.id, data: { taskId: trial.taskId, verdict, reason: verdict === "rejected" ? reason : null } });
+  return updated!;
 }

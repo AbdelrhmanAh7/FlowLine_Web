@@ -19,7 +19,7 @@ export interface TaskView {
   capabilities: string[];
   flow: { id: string; name: string; edited: boolean; published: boolean; origin: string } | null;
   agent: { id: string; name: string; origin: string } | null;
-  trial: { id: string; status: string; provenance: string; verdict: TrialVerdict | null; runId: string | null; runNumber: number | null; runStatus: string | null; output: Record<string, unknown> | null } | null;
+  trial: { id: string; status: string; provenance: string; verdict: TrialVerdict | null; runId: string | null; runNumber: number | null; userVerdict: "accepted" | "rejected" | null; userVerdictReason: string | null; runStatus: string | null; output: Record<string, unknown> | null } | null;
   activation: { state: string; reason: string | null } | null;
 }
 
@@ -61,6 +61,10 @@ export interface Overview {
   outbox: { id: string; reviewItemId: string; payload: Record<string, unknown>; provenance: string; createdAt: string }[];
   entitlement: { effective: { source: string; expiresAt: string | null } | null; devTrial: { status: string; expiresAt: string } | null; devTrialAllowed: boolean; billing: { status: string; planId: string | null } };
   prototype: { allowed: boolean; reason: string | null };
+  /** Workspace IANA time zone (explicit zone for displayed dates). */
+  timezone: string;
+  /** Internal experiment mode (metrics panel + activity tracking). */
+  experiment: boolean;
 }
 
 export interface CliJobDto {

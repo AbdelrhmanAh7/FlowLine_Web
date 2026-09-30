@@ -11,7 +11,8 @@ import { cancelInstallation, install } from "./install";
 import { sessionOverview, workspaceSessions } from "./overview";
 import { decideReview, listReviewItems, pauseTask, requestActivation, requestSampleAction, verifyUncertain } from "./reviews";
 import { answer, createSession, deleteSession, requireSession, stateOf } from "./sessions";
-import { refreshTrial, startTrial } from "./trials";
+import { clientEventBody, effortBody, experimentMetrics, recordClientEvent, recordEffort } from "./experiment";
+import { REJECT_REASONS, recordUserVerdict, refreshTrial, startTrial } from "./trials";
 
 /**
  * Router for /api/workspaces/[wid]/company-builder/[...path]. Every endpoint: feature gate → signed-in user →
@@ -38,6 +39,7 @@ const answerBody = z.object({ questionId: z.string().max(64), value: z.unknown()
 const trialBody = z.object({ trialKey: z.string().min(8).max(64), input: z.record(z.string(), z.unknown()).optional() });
 const decideBody = z.object({ decision: z.enum(["approve", "reject"]), note: z.string().max(500).optional() });
 const jobBody = z.object({ cli: z.enum(CLI_KINDS), kind: z.enum(["blueprint", "text_trial"]), requestKey: z.string().min(8).max(64), text: z.string().max(4000).optional() });
+const verdictBody = z.object({ verdict: z.enum(["accepted", "rejected"]), reason: z.enum(REJECT_REASONS).optional() });
 const entBody = z.object({ action: z.enum(["grant_dev_trial", "cancel_dev_trial"]) });
 
 const language = async () => ((await getLocale()) === "ar" ? "ar" : "en") as "ar" | "en";
@@ -114,6 +116,16 @@ const ROUTES: RouteDef[] = [
     },
   },
   { method: "GET", pattern: ["trials", ":trid"], need: "flow.view", handle: async (c) => json({ trial: await refreshTrial(c.workspaceId, c.params[0]!) }) },
+  {
+    method: "POST",
+    pattern: ["trials", ":trid", "verdict"],
+    need: "flow.run",
+    handle: async (c) => {
+      const b = await parseBody(c.req, verdictBody);
+      const t = await recordUserVerdict(c.user, c.workspaceId, c.params[0]!, b.verdict, b.reason ?? null);
+      return json({ trial: { id: t.id, userVerdict: t.userVerdict, userVerdictReason: t.userVerdictReason } });
+    },
+  },
   { method: "POST", pattern: ["trials", ":trid", "review"], need: "flow.run", handle: async (c) => json({ reviewItem: await requestSampleAction(c.user, c.workspaceId, c.params[0]!) }) },
   { method: "GET", pattern: ["reviews"], need: "flow.view", handle: async (c) => json({ items: await listReviewItems(c.workspaceId, new URL(c.req.url).searchParams.get("status") ?? undefined) }) },
   {
@@ -136,6 +148,26 @@ const ROUTES: RouteDef[] = [
       else await cancelDevTrial(c.user, c.workspaceId);
       await reconcileEntitlement(c.workspaceId);
       return json({ ok: true });
+    },
+  },
+  // ─── Experiment mode (404 unless FLOWLINE_CB_EXPERIMENT=on) ───
+  { method: "GET", pattern: ["sessions", ":sid", "experiment"], need: "flow.view", handle: async (c) => json({ metrics: await experimentMetrics(c.workspaceId, c.params[0]!) }) },
+  {
+    method: "POST",
+    pattern: ["sessions", ":sid", "experiment", "events"],
+    need: "flow.view",
+    handle: async (c) => {
+      await recordClientEvent(c.user, c.workspaceId, c.params[0]!, await parseBody(c.req, clientEventBody));
+      return json({ ok: true }, { status: 202 });
+    },
+  },
+  {
+    method: "POST",
+    pattern: ["sessions", ":sid", "experiment", "effort"],
+    need: "flow.edit",
+    handle: async (c) => {
+      await recordEffort(c.user, c.workspaceId, c.params[0]!, await parseBody(c.req, effortBody));
+      return json({ ok: true }, { status: 201 });
     },
   },
   // ─── OWNER_CLI_PROTOTYPE (founder + designated workspace + private host) ───
@@ -175,9 +207,10 @@ const ROUTES: RouteDef[] = [
       if (job.kind !== "text_trial" || job.status !== "completed" || !job.result) throw new HttpError(409, "JOB_NOT_READY", "This job has no validated result");
       const env = job.envelope as Envelope;
       const imported = (job.reported as { source?: string } | null)?.source === "imported_claim";
-      const r = await startTrial(c.user, c.workspaceId, b.installationId, env.kind === "text_trial" ? env.taskId : "customer-triage", {
+      const r = await startTrial(c.user, c.workspaceId, b.installationId, env.kind === "text_trial" ? env.taskId : "customer-follow-up", {
         trialKey: b.trialKey,
-        input: { request: { ...(job.result as object), channel: "email", sample: true } },
+        // A stable id (per job) keeps the follow-up record keyed; no timestamp is invented (no follow-up time is set).
+        input: { request: { ...(job.result as object), id: `cli-${job.id.slice(0, 8)}`, channel: "email", sample: true } },
         provenance: imported ? "imported_cli_claim" : "real_cli",
       });
       return json({ trialId: r.trial.id, duplicate: r.duplicate });

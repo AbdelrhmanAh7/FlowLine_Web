@@ -1634,6 +1634,13 @@ export const cbTrial = pgTable(
     status: text("status").notNull().default("running"),
     provenance: text("provenance").notNull(),
     verdict: jsonb("verdict"),
+    /** The person's own answer to "Does this result match what you wanted?" (accepted | rejected). Kept apart from the
+     * objective checks in `verdict`: acceptance is not proof that every field is correct. */
+    userVerdict: text("user_verdict"),
+    /** Rejection reason id (wrong_details | invented_content | missing_info | wrong_tone | something_else). */
+    userVerdictReason: text("user_verdict_reason"),
+    userVerdictAt: ts("user_verdict_at"),
+    userVerdictBy: text("user_verdict_by").references(() => user.id, { onDelete: "set null" }),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: ts("created_at").notNull().defaultNow(),
     completedAt: ts("completed_at"),
@@ -1766,4 +1773,26 @@ export const cbCliJob = pgTable(
     finishedAt: ts("finished_at"),
   },
   (t) => [uniqueIndex("cb_cli_job_request").on(t.workspaceId, t.requestKey), index("cb_cli_job_queue_idx").on(t.status, t.createdAt)],
+);
+
+/**
+ * Experiment mode (FLOWLINE_CB_EXPERIMENT=on): timing and effort events for one interview. `data` holds only small
+ * numbers and enum ids (validated on write) — never answers, request text, recipients or outputs.
+ */
+export const cbExperimentEvent = pgTable(
+  "cb_experiment_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cbSession.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    data: jsonb("data").notNull().default({}),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    at: ts("at").notNull().defaultNow(),
+  },
+  (t) => [index("cb_experiment_event_session_idx").on(t.sessionId, t.at)],
 );

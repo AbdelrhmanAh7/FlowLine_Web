@@ -1,5 +1,5 @@
 import type { FlowGraph } from "@/engine/types";
-import { lit, type PackCheck, type PackParams, type TaskPack } from "./types";
+import { lit, sameJson, type PackCheck, type PackParams, type TaskPack } from "./types";
 
 /**
  * Pack — Team Operations Summary: collect status items → deterministic metrics → a weekly summary drafted from a
@@ -214,7 +214,7 @@ function analyse(input: unknown, params: PackParams) {
   return { rows, ok, reason, malformed, metrics, late, blocked, known };
 }
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const same = sameJson;
 
 /* ───────────── pack ───────────── */
 

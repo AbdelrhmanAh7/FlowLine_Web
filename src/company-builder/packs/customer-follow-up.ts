@@ -1,5 +1,5 @@
 import type { FlowGraph } from "@/engine/types";
-import { lit, type PackCheck, type PackFixture, type PackParams, type TaskPack } from "./types";
+import { lit, sameJson, type PackCheck, type PackFixture, type PackParams, type TaskPack } from "./types";
 
 /**
  * Pack — Customer Request Follow-up (first vertical slice).
@@ -203,7 +203,7 @@ export const customerFollowUpPack: TaskPack = {
     checks.push({ id: "follow_up_recorded", passed: Boolean(record) && record!.request_id === String(req?.id ?? "") && record!.key === `${req?.sample ? "sample:" : ""}${String(req?.id ?? "")}` });
     checks.push({ id: "record_status_consistent", passed: Boolean(record) && record!.status === (reply ? "awaiting_review" : "needs_person") });
     // Extraction re-computed independently in TypeScript (not by reading the flow's own claims).
-    checks.push({ id: "details_extracted_correctly", passed: Boolean(record) && JSON.stringify((record as { detected?: unknown }).detected) === JSON.stringify(expected.detected) && JSON.stringify(record!.missing ?? []) === JSON.stringify(expected.missing) });
+    checks.push({ id: "details_extracted_correctly", passed: Boolean(record) && sameJson((record as { detected?: unknown }).detected, expected.detected) && sameJson(record!.missing ?? [], expected.missing) });
     if (reply) {
       const body = String(reply.body ?? "");
       // Numbers may only come from the OWNER's approved information, never from the reply's own claims.
@@ -212,7 +212,7 @@ export const customerFollowUpPack: TaskPack = {
       checks.push({ id: "reply_only_approved_info", passed: (reply.used_lines ?? []).every((l) => approved.has(l)) });
       checks.push({ id: "no_invented_numbers", passed: (body.match(/\d+/g) ?? []).every((n) => allowedDigits.has(n)) });
       checks.push({ id: "request_text_not_echoed", passed: !req?.body || req.body.trim().length < 12 || !body.includes(req.body.trim()) });
-      checks.push({ id: "asks_for_missing_details", passed: JSON.stringify(reply.asked_for ?? []) === JSON.stringify(expected.missing) });
+      checks.push({ id: "asks_for_missing_details", passed: sameJson(reply.asked_for ?? [], expected.missing) });
       checks.push({ id: "review_required", passed: reply.status === "awaiting_review" });
     }
     if (person) checks.push({ id: "handoff_has_reason", passed: typeof person.reason === "string" && person.reason.length > 0 });

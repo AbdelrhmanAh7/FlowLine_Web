@@ -150,7 +150,8 @@ describe("controller + adapter with fake CLIs", () => {
     const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
     expect(bp).toMatchObject({ generator: "cli_claude", status: "review_required" });
     expect(job.result).toEqual({ ignoredTaskIds: ["invented-ceo-agent"] }); // an invented task is ignored, never added
-    expect((bp!.body as CompanyBlueprint).tasks.map((t) => t.id)).toEqual(["customer-triage", "customer-answers"]);
+    // Outcome first: the proposal can only tune the one planned task; it can't add an agent or another department.
+    expect((bp!.body as CompanyBlueprint).tasks.map((t) => t.id)).toEqual(["customer-follow-up"]);
     expect(readdirSync(jobRoot)).toEqual([]); // job directories are removed
   });
 
@@ -201,10 +202,10 @@ describe("controller + adapter with fake CLIs", () => {
     const job = await runWith(fakeBin("malicious"));
     expect(job.status).toBe("review_required");
     const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
-    const triage = (bp!.body as CompanyBlueprint).tasks.find((t) => t.id === "customer-triage")!;
-    expect(triage.params.modelNote).toContain("rm -rf"); // shown labelled as unverified model text, never executed
-    expect(triage.params.approvedInfo).toBe("Our monthly plan price is 250 SAR."); // the owner's text is untouched
-    expect(triage.params.currencies).toBeUndefined(); // a param the task doesn't take is dropped
+    const followUp = (bp!.body as CompanyBlueprint).tasks.find((t) => t.id === "customer-follow-up")!;
+    expect(followUp.params.modelNote).toContain("rm -rf"); // shown labelled as unverified model text, never executed
+    expect(followUp.params.approvedInfo).toBe("Our monthly plan price is 250 SAR."); // the owner's text is untouched
+    expect(followUp.params.currencies).toBeUndefined(); // a param the task doesn't take is dropped
   });
 
   it("a model can't rewrite the owner's approved information, and secret-looking output is rejected", async () => {
@@ -258,7 +259,7 @@ describe("operator export / import (laptop path)", () => {
     const exported = await exportJob(wsId, job.id);
     expect(exported.format).toBe("flowline-cb-envelope");
     await expectHttpError(importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: "someone-else", output: {} }), 422, "MANIFEST_INVALID");
-    const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-answers", include: false, note: "", params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
+    const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-follow-up", include: true, note: "Imported from the owner's laptop", params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
     expect(bp).toMatchObject({ generator: "cli_import", status: "review_required" });
     const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
     expect(after!.reported).toEqual({ cliVersion: "2.1.286", source: "imported_claim" }); // unknown keys dropped

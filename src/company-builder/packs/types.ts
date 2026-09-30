@@ -40,3 +40,10 @@ export interface TaskPack {
 
 /** Serialises data as a JSONata literal (JSON string/array/object literals are valid JSONata). */
 export const lit = (v: unknown) => JSON.stringify(v);
+
+/** Canonical JSON (object keys sorted, array order kept): stored run output is Postgres jsonb, which reorders keys. */
+export const canonical = (v: unknown): string =>
+  JSON.stringify(v, (_k, x: unknown) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x));
+
+/** Deep equality for evaluator checks, independent of object key order. */
+export const sameJson = (a: unknown, b: unknown) => canonical(a) === canonical(b);

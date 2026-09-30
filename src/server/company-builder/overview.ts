@@ -2,13 +2,14 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { isRouteRef } from "@/ai/hub/routing";
 import { taskStatus } from "@/company-builder/lifecycle";
-import type { CompanyBlueprint, TrialVerdict } from "@/company-builder/model";
+import type { CompanyBlueprint, TrialVerdict, UserVerdict } from "@/company-builder/model";
 import { getPack } from "@/company-builder/packs";
 import { latestBlueprint, listBlueprints } from "./blueprints";
 import { billingStatus, devTrialAllowed, effectiveEntitlement, reconcileEntitlement } from "./entitlement";
 import { installedItems } from "./install";
 import { listReviewItems, sampleOutbox } from "./reviews";
 import { requireSession, sessionView } from "./sessions";
+import { experimentEnabled } from "./experiment";
 import { latestTrials, refreshTrial, trialOutput } from "./trials";
 
 /** Everything the Company Builder page shows for one interview, computed on the server (the UI holds no rules). */
@@ -45,7 +46,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
   const body = bp ? (bp.body as CompanyBlueprint) : null;
   const taskBody = instBp ? (instBp.body as CompanyBlueprint) : body;
   // The AI connection status is the workspace's CURRENT default route (the plan only recorded it as needed).
-  const [ws] = await db.select({ route: schema.workspace.aiDefaultRoute }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
+  const [ws] = await db.select({ route: schema.workspace.aiDefaultRoute, timezone: schema.workspace.timezone }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId));
   const aiReady = isRouteRef(ws?.route);
 
   const tasks = await Promise.all(
@@ -60,7 +61,8 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
       const verdict = (trial?.verdict ?? null) as TrialVerdict | null;
       const act = activations.find((a) => a.taskId === task.id);
       const installed = inst?.status === "installed" && Boolean(flowItem || agentItem);
-      const status = taskStatus({ task, installed, verdict, activation: (act?.state as "active" | "paused" | "approval_required" | "failed" | undefined) ?? null });
+      const userVerdict = (trial?.userVerdict ?? null) as UserVerdict | null;
+      const status = taskStatus({ task, installed, verdict, userVerdict, activation: (act?.state as "active" | "paused" | "approval_required" | "failed" | undefined) ?? null });
       const run = trial ? await trialOutput(trial) : null;
       const pack = getPack(task.packId, task.packVersion);
       return {
@@ -69,7 +71,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
         capabilities: pack?.capabilities ?? [],
         flow: flow && !flow.deletedAt ? { id: flow.id, name: flow.name, edited: flowItem?.baseRevision != null && flow.revision > flowItem.baseRevision, published: Boolean(flow.publishedVersionId), origin: flowItem!.origin } : null,
         agent: agent && !agent.deletedAt ? { id: agent.id, name: agent.name, origin: agentItem!.origin } : null,
-        trial: trial ? { id: trial.id, status: trial.status, provenance: trial.provenance, verdict, runId: trial.runId, runNumber: run?.number ?? null, runStatus: run?.status ?? null, output: trial.status === "completed" ? (run?.output ?? null) : null } : null,
+        trial: trial ? { id: trial.id, status: trial.status, provenance: trial.provenance, verdict, userVerdict, userVerdictReason: trial.userVerdictReason ?? null, runId: trial.runId, runNumber: run?.number ?? null, runStatus: run?.status ?? null, output: trial.status === "completed" ? (run?.output ?? null) : null } : null,
         activation: act ? { state: act.state, reason: act.reason } : null,
       };
     }),
@@ -83,6 +85,9 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
     /** The latest plan version's own installation (drives the plan panel's create/cancel buttons). */
     planInstallation: latestInst ? { id: latestInst.id, status: latestInst.status, error: latestInst.error, blueprintId: latestInst.blueprintId } : null,
     tasks,
+    /** Follow-up times are shown in this zone, with the zone named (never an implicit local time). */
+    timezone: ws?.timezone ?? "UTC",
+    experiment: experimentEnabled(),
     reviews,
     outbox: await sampleOutbox(workspaceId),
     entitlement: { effective: ent, devTrial: devTrial ? { status: devTrial.status, expiresAt: devTrial.expiresAt } : null, devTrialAllowed: devTrialAllowed(), billing: await billingStatus(workspaceId) },

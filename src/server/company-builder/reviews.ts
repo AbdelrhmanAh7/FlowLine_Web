@@ -40,7 +40,7 @@ export class UncertainOutcomeError extends HttpError {
 
 /** The proposed test action for a task's trial output (null = nothing to send, e.g. a hand-off to a person). */
 export function proposalFor(task: TaskPlan, output: Record<string, unknown>): { proposed: Record<string, unknown>; recipient: string } | null {
-  if (task.packId === "customer-triage") {
+  if (task.packId === "customer-follow-up" || task.packId === "customer-triage") {
     const r = output.reply_draft as { to?: string; subject?: string; body?: string } | undefined;
     if (!r?.body) return null;
     return { proposed: { kind: "email_reply", to: r.to ?? null, subject: r.subject ?? null, body: r.body }, recipient: String(r.to ?? "") };
@@ -113,6 +113,8 @@ async function currentParts(item: Pick<ReviewRow, "workspaceId" | "installationI
   if (current.nodes.some((n) => n.type === "trigger.webhook" || n.type === "trigger.schedule")) return { stale: "not_manual_trigger" };
   const [trial] = await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, task.id))).orderBy(desc(schema.cbTrial.createdAt)).limit(1);
   if (!(trial?.verdict as { matchedOutcome?: boolean } | null)?.matchedOutcome) return { stale: "sample_not_verified" };
+  // Objective checks are not enough: the person must also have said the result is what they wanted.
+  if (trial!.userVerdict !== "accepted") return { stale: "result_not_accepted" };
   const run = await trialOutput(trial!);
   const [verified] = run ? await db.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, run.flowVersionId)) : [];
   if (!verified || graphHash(verified.graph as FlowGraph) !== graphHash(current)) return { stale: "draft_changed_since_trial" };
@@ -280,6 +282,7 @@ export async function requestActivation(user: CurrentUser, workspaceId: string, 
   if (task.reviewer === "unknown" || task.trigger.status === "unsupported") throw new HttpError(409, "REQUIRES_SETUP", "This task still needs setup before activation");
   const parts = await currentParts({ workspaceId, installationId, taskId, kind: "activation", trialId: null });
   if ("stale" in parts) {
+    if (parts.stale === "result_not_accepted") throw new HttpError(409, "RESULT_NOT_ACCEPTED", "Tell us the sample result matches what you wanted before activating");
     if (parts.stale === "sample_not_verified" || parts.stale === "draft_changed_since_trial") throw new HttpError(409, "SAMPLE_NOT_VERIFIED", "Run a sample trial of the current draft that matches the expected result first", { reason: parts.stale });
     throw new HttpError(409, "NOT_ACTIVATABLE", "This task can't be activated now", { reason: parts.stale });
   }

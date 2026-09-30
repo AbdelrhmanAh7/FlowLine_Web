@@ -10,6 +10,7 @@ import { Button, ErrorState, InlineConfirmation, Skeleton } from "@/components/u
 import { useT } from "@/i18n/client";
 import { api, ApiError } from "@/lib/api";
 import { can, type Role } from "@/lib/permissions";
+import { ExperimentPanel, ExperimentTracker, reportHelp, type HelpTopic } from "./experiment";
 import { FactsPanel } from "./facts";
 import { InterviewCard } from "./interview";
 import { PlanPanel, TaskCard } from "./plan";
@@ -86,6 +87,9 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
   const canEdit = can(r, "flow.edit");
   const canRun = can(r, "flow.run");
   const installed = data.installation?.status === "installed";
+  const helpEvent = (topic: HelpTopic) => {
+    if (data.experiment) reportHelp(base, sessionId, topic);
+  };
 
   return (
     <div className="flex flex-col">
@@ -147,6 +151,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
             onGenerate={() => run("generate", () => api(`${base}/sessions/${sessionId}/blueprint`, { method: "POST", json: {} }), () => focusHeading("cb-plan-heading"))}
             onApprove={() => run("approve", () => api(`${base}/blueprints/${data.blueprint!.id}/approve`, { method: "POST", json: {} }))}
             onInstall={() => run("install", () => api(`${base}/blueprints/${data.blueprint!.id}/install`, { method: "POST", json: {} }))}
+            onHelp={(topic) => helpEvent(topic)}
             onCancelInstall={() => run("cancelInstall", () => api(`${base}/installations/${data.planInstallation!.id}/cancel`, { method: "POST", json: {} }))}
           />
           {installed && (
@@ -161,6 +166,9 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
                     canRun={canRun}
                     canPublish={can(r, "flow.publish")}
                     busy={busy}
+                    timezone={data.timezone}
+                    onHelp={helpEvent}
+                    onVerdict={(trialId, verdict, reason) => run(`verdict:${v.task.id}`, () => api(`${base}/trials/${trialId}/verdict`, { method: "POST", json: reason ? { verdict, reason } : { verdict } }))}
                     onTry={() => run(`try:${v.task.id}`, () => api(`${base}/installations/${data.installation!.id}/tasks/${v.task.id}/trial`, { method: "POST", json: { trialKey: clickKey() } }))}
                     onSendForReview={(trialId) => run(`review:${trialId}`, () => api(`${base}/trials/${trialId}/review`, { method: "POST", json: {} }), () => focusHeading("cb-inbox-heading"))}
                     onActivate={() => run(`activate:${v.task.id}`, () => api(`${base}/installations/${data.installation!.id}/tasks/${v.task.id}/activate`, { method: "POST", json: {} }), () => focusHeading("cb-inbox-heading"))}
@@ -190,6 +198,12 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
           </Link>
         </div>
       </div>
+      {data.experiment && (
+        <div className="mx-auto w-full max-w-6xl p-4 pt-0 sm:p-6 sm:pt-0">
+          <ExperimentPanel base={base} sessionId={sessionId} refreshKey={`${data.session.revision}:${data.tasks.map((x) => `${x.trial?.id ?? ""}${x.trial?.userVerdict ?? ""}${x.trial?.status ?? ""}`).join(",")}:${data.blueprint?.version ?? 0}`} />
+        </div>
+      )}
+      <ExperimentTracker base={base} sessionId={sessionId} enabled={data.experiment === true} />
     </div>
   );
 }

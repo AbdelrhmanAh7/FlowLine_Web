@@ -33,7 +33,7 @@ export async function enqueueJob(user: CurrentUser, workspaceId: string, input: 
   } else {
     const text = sanitiseText(input.text, 2000);
     if (!text) throw new HttpError(422, "VALIDATION", "Enter a synthetic request to process");
-    envelope = envelopeSchema.parse({ v: 1, kind: "text_trial", jobId, cli: input.cli, taskId: "customer-triage", text });
+    envelope = envelopeSchema.parse({ v: 1, kind: "text_trial", jobId, cli: input.cli, taskId: "customer-follow-up", text });
   }
   // Refresh/retry with the same request key returns the same job (never a duplicate).
   await db

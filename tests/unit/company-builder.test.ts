@@ -164,6 +164,15 @@ describe("packs (executed by the real engine)", () => {
       }
     });
   }
+  it("evaluators don't depend on object key order (stored run output is jsonb, which reorders keys) — BUG CB2-01", async () => {
+    const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a.length - b.length) || a.localeCompare(b)).map(([k, x]) => [k, sortKeys(x)])) : v);
+    for (const pack of PACKS) {
+      const graph = pack.compile(params, (id) => id);
+      const res = await executeGraph(graph, pack.sample(params), { handler: memoryStore().handler });
+      // Postgres jsonb orders keys by length, then bytes.
+      expect(pack.evaluate(sortKeys(res.output) as Record<string, unknown>, pack.sample(params), params).filter((c) => !c.passed), pack.id).toEqual([]);
+    }
+  });
   it("correct JSON with the wrong business result fails the outcome check", () => {
     const pack = PACKS.find((p) => p.id === "invoice-organiser")!;
     const wrong = { ledger_draft: { ledger_rows: [{ amount: 100, currency: "SAR" }, { amount: 50, currency: "USD" }], totals_by_currency: [{ currency: "SAR", total: 150 }] } };

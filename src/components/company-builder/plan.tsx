@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import type { MessageKey } from "@/i18n/types";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
 import { Badge, Button, Card, StatusBadge, type Tone } from "@/components/ui";
 import { useLocale, useT } from "@/i18n/client";
 import type { Translator } from "@/i18n/translate";
+import { FollowUpResult } from "./result";
 import { cbt, fieldLabel } from "./text";
 import type { Overview, TaskView } from "./types";
 
@@ -20,58 +23,246 @@ export function blockerText(t: Translator, b: CompanyBlueprint["blockers"][numbe
   return cbt(t, `blocker.${b.code}`, params);
 }
 
-function TaskDetails({ task, capabilities }: { task: TaskPlan; capabilities: string[] }) {
+const SETUP_OUT = /not_supported|unverified|planned_only|needs_digital_copy/;
+const isSetupBlocker = (b: CompanyBlueprint["blockers"][number]) => !SETUP_OUT.test(b.code);
+
+const Section = ({ name, heading, children }: { name: string; heading: string; children: React.ReactNode }) => (
+  <section aria-label={heading} className="flex flex-col gap-1" data-testid={`cb-plan-section-${name}`}>
+    <h3 className="text-sm font-semibold text-hi">{heading}</h3>
+    {children}
+  </section>
+);
+
+function TechnicalDetails({ task, capabilities, onHelp }: { task: TaskPlan; capabilities: string[]; onHelp?: () => void }) {
+  const t = useT();
+  return (
+    <details className="text-sm" onToggle={(e) => e.currentTarget.open && onHelp?.()} data-testid={`cb-technical-${task.id}`}>
+      <summary className="cursor-pointer text-accent-text">{t("companyBuilder.trial.technical")}</summary>
+      <dl className="mt-1 grid gap-x-4 gap-y-1 sm:grid-cols-[max-content_1fr]">
+        <dt className="text-muted">{t("companyBuilder.label.kind")}</dt>
+        <dd>
+          {task.kind === "agent" ? t("companyBuilder.label.agent") : t("companyBuilder.label.workflow")} — {cbt(t, `justification.${task.justification}`)}
+        </dd>
+        <dt className="text-muted">{t("companyBuilder.label.usage")}</dt>
+        <dd>{cbt(t, `usage.${task.usage}`)}</dd>
+        {capabilities.length > 0 && (
+          <>
+            <dt className="text-muted">{t("companyBuilder.label.capabilities")}</dt>
+            <dd>{capabilities.map((c) => cbt(t, `capability.${c}`)).join(" · ")}</dd>
+          </>
+        )}
+        {typeof task.params.modelNote === "string" && task.params.modelNote && (
+          <>
+            <dt className="text-muted">{t("companyBuilder.label.modelNote")}</dt>
+            <dd dir="auto" className="text-med italic">
+              {task.params.modelNote}
+            </dd>
+          </>
+        )}
+        <dt className="text-muted" />
+        <dd className="text-muted">{t("companyBuilder.label.limits", { items: task.limits.maxItemsPerRun, runs: task.limits.maxRunsPerDay })}</dd>
+      </dl>
+    </details>
+  );
+}
+
+function TaskDetails({ task, capabilities, onHelp }: { task: TaskPlan; capabilities: string[]; onHelp?: () => void }) {
   const t = useT();
   const taskName = cbt(t, `task.${task.id}.name`);
   return (
-    <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
-      <dt className="text-muted">{t("companyBuilder.label.does")}</dt>
-      <dd>{cbt(t, `task.${task.id}.does`)}</dd>
-      <dt className="text-muted">{t("companyBuilder.label.kind")}</dt>
-      <dd>
-        {task.kind === "agent" ? t("companyBuilder.label.agent") : t("companyBuilder.label.workflow")} — {cbt(t, `justification.${task.justification}`)}
-      </dd>
-      <dt className="text-muted">{t("companyBuilder.label.trigger")}</dt>
-      <dd>
-        {cbt(t, `triggerKind.${task.trigger.kind}`)} · {cbt(t, `triggerStatus.${task.trigger.status}`)}
-      </dd>
-      <dt className="text-muted">{t("companyBuilder.label.access")}</dt>
-      <dd>
-        {task.connections.length === 0
-          ? "—"
-          : task.connections.map((c) => (
-              <span key={c.provider} className="block">
-                {c.status === "connected" ? t("companyBuilder.connectionConnected", { service: SERVICE[c.provider] ?? c.provider }) : t("companyBuilder.connectionNeeded", { service: SERVICE[c.provider] ?? c.provider, task: taskName })}
-              </span>
+    <div className="flex flex-col gap-2">
+      <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
+        <dt className="text-muted">{t("companyBuilder.label.does")}</dt>
+        <dd>{cbt(t, `task.${task.id}.does`)}</dd>
+        <dt className="text-muted">{t("companyBuilder.label.trigger")}</dt>
+        <dd>
+          {cbt(t, `triggerKind.${task.trigger.kind}`)} · {cbt(t, `triggerStatus.${task.trigger.status}`)}
+        </dd>
+        <dt className="text-muted">{t("companyBuilder.label.access")}</dt>
+        <dd>
+          {task.connections.length === 0
+            ? "—"
+            : task.connections.map((c) => (
+                <span key={c.provider} className="block">
+                  {c.status === "connected" ? t("companyBuilder.connectionConnected", { service: SERVICE[c.provider] ?? c.provider }) : t("companyBuilder.connectionNeeded", { service: SERVICE[c.provider] ?? c.provider, task: taskName })}
+                </span>
+              ))}
+        </dd>
+        <dt className="text-muted">{t("companyBuilder.label.reviewer")}</dt>
+        <dd>{cbt(t, `reviewerRole.${task.reviewer}`)}</dd>
+        {task.unavailable.length > 0 && (
+          <>
+            <dt className="text-muted">{t("companyBuilder.label.unavailable")}</dt>
+            <dd>{task.unavailable.map((c) => cbt(t, `unavailableCap.${c}`)).join(" · ")}</dd>
+          </>
+        )}
+      </dl>
+      <TechnicalDetails task={task} capabilities={capabilities} onHelp={onHelp} />
+    </div>
+  );
+}
+
+/** Business label for a work item: a step id first (`node.<pack>.<id>`), then the shared work-item copy. */
+function workItem(t: Translator, packId: string | null, id: string) {
+  const nodeKey = packId ? `node.${packId}.${id}` : "";
+  return nodeKey && t.has(`companyBuilder.${nodeKey}`) ? cbt(t, nodeKey) : cbt(t, `work.item.${id}`);
+}
+
+function PrimaryOutcome({ data, task, onHelp }: { data: Overview; task: TaskPlan; onHelp?: () => void }) {
+  const t = useT();
+  const body = data.blueprint!.body;
+  const pack = task.packId;
+  const services = (p: string) => SERVICE[p] ?? p;
+  const missing = task.connections.filter((c) => c.status === "missing");
+  const setupBlockers = body.blockers.filter(isSetupBlocker);
+  const operational = task.availability === "operational";
+  const replyType = /reply|draft/.test(task.outputContract) || task.id.startsWith("customer-");
+  const cost = body.cost;
+  const roles = body.roles.filter((r) => r.tasks.includes(task.id));
+  const reqKey = pack ? `node.${pack}.request` : "";
+  const list = (items: string[]) => (
+    <ul className="list-disc ps-5 text-sm text-med">
+      {items.map((x) => (
+        <li key={x}>{workItem(t, pack, x)}</li>
+      ))}
+    </ul>
+  );
+  return (
+    <div className="flex flex-col gap-3" data-testid="cb-primary-outcome" data-primary-task={task.id}>
+      <Section name="goal" heading={t("companyBuilder.planSection.goal")}>
+        <p className="text-sm font-medium text-hi">{cbt(t, `task.${task.id}.name`)}</p>
+        <p className="text-sm text-med">{cbt(t, `task.${task.id}.does`)}</p>
+      </Section>
+      <Section name="trigger" heading={t("companyBuilder.planSection.trigger")}>
+        <p className="text-sm text-med">
+          {cbt(t, `triggerKind.${task.trigger.kind}`)} · {cbt(t, `triggerStatus.${task.trigger.status}`)}
+        </p>
+      </Section>
+      <Section name="inputData" heading={t("companyBuilder.planSection.inputData")}>
+        <p className="text-sm text-med">{reqKey && t.has(`companyBuilder.${reqKey}`) ? cbt(t, reqKey) : "—"}</p>
+      </Section>
+      <Section name="steps" heading={t("companyBuilder.planSection.steps")}>
+        {task.steps.length === 0 ? (
+          <p className="text-sm text-muted">—</p>
+        ) : (
+          <ol className="list-decimal ps-5 text-sm text-med">
+            {task.steps.map((s) => (
+              <li key={s}>{pack ? cbt(t, `node.${pack}.${s}`) : s}</li>
             ))}
-      </dd>
-      <dt className="text-muted">{t("companyBuilder.label.reviewer")}</dt>
-      <dd>{cbt(t, `reviewerRole.${task.reviewer}`)}</dd>
-      <dt className="text-muted">{t("companyBuilder.label.usage")}</dt>
-      <dd>{cbt(t, `usage.${task.usage}`)}</dd>
-      {capabilities.length > 0 && (
-        <>
-          <dt className="text-muted">{t("companyBuilder.label.capabilities")}</dt>
-          <dd>{capabilities.map((c) => cbt(t, `capability.${c}`)).join(" · ")}</dd>
-        </>
-      )}
-      {task.unavailable.length > 0 && (
-        <>
-          <dt className="text-muted">{t("companyBuilder.label.unavailable")}</dt>
-          <dd>{task.unavailable.map((c) => cbt(t, `unavailableCap.${c}`)).join(" · ")}</dd>
-        </>
-      )}
-      {typeof task.params.modelNote === "string" && task.params.modelNote && (
-        <>
-          <dt className="text-muted">{t("companyBuilder.label.modelNote")}</dt>
-          <dd dir="auto" className="text-med italic">
-            {task.params.modelNote}
-          </dd>
-        </>
-      )}
-      <dt className="text-muted" />
-      <dd className="text-muted">{t("companyBuilder.label.limits", { items: task.limits.maxItemsPerRun, runs: task.limits.maxRunsPerDay })}</dd>
-    </dl>
+          </ol>
+        )}
+      </Section>
+      <Section name="integrations" heading={t("companyBuilder.planSection.integrations")}>
+        {task.connections.length === 0 ? (
+          <p className="text-sm text-muted">—</p>
+        ) : (
+          <ul className="text-sm text-med">
+            {task.connections.map((c) => (
+              <li key={c.provider} data-connection={c.provider} data-status={c.status}>
+                {c.status === "connected" ? t("companyBuilder.connectionConnected", { service: services(c.provider) }) : t("companyBuilder.planSection.needsConnection", { service: services(c.provider) })}
+              </li>
+            ))}
+          </ul>
+        )}
+        {body.sampleData && <p className="text-sm text-med">{t("companyBuilder.planSection.sampleUntilConnected")}</p>}
+      </Section>
+      <Section name="team" heading={t("companyBuilder.planSection.team")}>
+        {roles.map((role) => (
+          <div key={role.id} className="text-sm" data-role={role.id}>
+            <p className="font-medium text-hi">{cbt(t, `role.${role.id}.name`)}</p>
+            <ul className="text-med">
+              {role.tasks.map((x) => (
+                <li key={x} data-task={x}>
+                  {cbt(t, `task.${x}.name`)}
+                </li>
+              ))}
+            </ul>
+            {role.doesNot.length > 0 && (
+              <>
+                <p className="mt-1 text-muted">{t("companyBuilder.planSection.doesNot")}</p>
+                <ul className="list-disc ps-5 text-med">
+                  {role.doesNot.map((d) => (
+                    <li key={d}>{cbt(t, `doesNot.${d}`)}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        ))}
+      </Section>
+      <Section name="reviewer" heading={t("companyBuilder.planSection.reviewer")}>
+        <p className="text-sm text-med">{cbt(t, `reviewerRole.${task.reviewer}`)}</p>
+      </Section>
+      <Section name="expectedOutput" heading={t("companyBuilder.planSection.expectedOutput")}>
+        <p className="text-sm text-med">{cbt(t, `task.${task.id}.output`, undefined, cbt(t, `task.${task.id}.does`))}</p>
+      </Section>
+      <Section name="automatic" heading={t("companyBuilder.planSection.automatic")}>
+        {task.work.automated.length + task.work.assisted.length + task.work.human.length === 0 && <p className="text-sm text-muted">—</p>}
+        {task.work.automated.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-hi">{t("companyBuilder.work.automated")}</h4>
+            {list(task.work.automated)}
+          </div>
+        )}
+        {task.work.assisted.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-hi">{t("companyBuilder.work.assisted")}</h4>
+            {list(task.work.assisted)}
+          </div>
+        )}
+        {task.work.human.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium text-hi">{t("companyBuilder.work.human")}</h4>
+            {list(task.work.human)}
+          </div>
+        )}
+      </Section>
+      <Section name="setup" heading={t("companyBuilder.planSection.setup")}>
+        {setupBlockers.length + missing.length === 0 ? (
+          <p className="text-sm text-med">{operational ? t("companyBuilder.planSection.readyToConfigure") : t("companyBuilder.planSection.noSetup")}</p>
+        ) : (
+          <ul className="list-disc ps-5 text-sm text-med">
+            {setupBlockers.map((b, i) => (
+              <li key={`b${i}`}>{blockerText(t, b)}</li>
+            ))}
+            {missing.map((c) => (
+              <li key={c.provider}>{t("companyBuilder.planSection.needsConnection", { service: services(c.provider) })}</li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section name="approval" heading={t("companyBuilder.planSection.approval")}>
+        <p className="text-sm text-med">
+          {replyType && <>{t("companyBuilder.planSection.approvalBeforeSending")} </>}
+          {cbt(t, `reviewerRole.${task.reviewer}`)}
+        </p>
+      </Section>
+      <Section name="unsupported" heading={t("companyBuilder.planSection.unsupported")}>
+        {body.blockers.length === 0 ? (
+          <p className="text-sm text-med">{t("companyBuilder.planSection.nothingUnsupported")}</p>
+        ) : (
+          <ul className="list-disc space-y-1 ps-5 text-sm text-med" data-testid="cb-blockers">
+            {body.blockers.map((b, i) => (
+              <li key={i} data-blocker={b.code}>
+                {blockerText(t, b)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section name="cost" heading={t("companyBuilder.planSection.cost")}>
+        <ul className="list-disc space-y-1 ps-5 text-sm text-med" data-testid="cb-cost">
+          {cost.ai === "none" && <li>{t("companyBuilder.cost.aiNone")}</li>}
+          {cost.externalServices.map((s) => (
+            <li key={s}>{t("companyBuilder.cost.external", { service: services(s) })}</li>
+          ))}
+          <li>{cost.executionsPerMonth ? t("companyBuilder.cost.executions", { min: cost.executionsPerMonth[0], max: cost.executionsPerMonth[1] }) : t("companyBuilder.cost.unknownVolume")}</li>
+          {cost.unknown.includes("external_service_plan") && <li>{t("companyBuilder.cost.unknownExternal")}</li>}
+          <li>{t("companyBuilder.cost.price")}</li>
+        </ul>
+      </Section>
+      <TechnicalDetails task={task} capabilities={data.tasks.find((x) => x.task.id === task.id)?.capabilities ?? []} onHelp={onHelp} />
+    </div>
   );
 }
 
@@ -83,6 +274,7 @@ export function PlanPanel({
   onApprove,
   onInstall,
   onCancelInstall,
+  onHelp,
 }: {
   data: Overview;
   canEdit: boolean;
@@ -91,6 +283,7 @@ export function PlanPanel({
   onApprove: () => void;
   onInstall: () => void;
   onCancelInstall: () => void;
+  onHelp?: (topic: "question_reason" | "plan_cost" | "result_checks" | "advanced") => void;
 }) {
   const t = useT();
   const sep = useLocale() === "ar" ? "، " : ", ";
@@ -138,46 +331,65 @@ export function PlanPanel({
         </div>
       )}
 
-      {body.blockers.length > 0 && (
-        <section aria-labelledby="cb-blockers">
-          <h3 id="cb-blockers" className="text-base font-semibold text-hi">
-            {t("companyBuilder.plan.blockersHeading")}
-          </h3>
-          <ul className="mt-1 list-disc space-y-1 ps-5 text-sm text-med" data-testid="cb-blockers">
-            {body.blockers.map((b, i) => (
-              <li key={i} data-blocker={b.code}>
-                {blockerText(t, b)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section aria-labelledby="cb-roles" className="flex flex-col gap-3">
-        <h3 id="cb-roles" className="text-base font-semibold text-hi">
-          {t("companyBuilder.plan.rolesHeading")}
-        </h3>
-        {body.roles.length === 0 && <p className="text-sm text-muted">{t("companyBuilder.plan.noTasks")}</p>}
-        {body.roles.map((role) => (
-          <div key={role.id} className="rounded-lg border border-line p-3" data-role={role.id}>
-            <p className="font-semibold">{cbt(t, `role.${role.id}.name`)}</p>
-            <ul className="mt-2 flex flex-col gap-3">
-              {role.tasks.map((tid) => {
-                const task = body.tasks.find((x) => x.id === tid)!;
-                return (
-                  <li key={tid} className="flex flex-col gap-2" data-task={tid}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-hi">{cbt(t, `task.${tid}.name`)}</span>
-                      {task.availability !== "operational" && <StatusBadge tone="muted">{cbt(t, task.availability === "planned" ? "reason.planned_not_operational" : "reason.not_supported")}</StatusBadge>}
-                    </div>
-                    <TaskDetails task={task} capabilities={data.tasks.find((x) => x.task.id === tid)?.capabilities ?? []} />
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </section>
+      {(() => {
+        const primary = operational.find((x) => x.department === body.goal.department) ?? operational[0] ?? body.tasks[0] ?? null;
+        const others = body.tasks.filter((x) => x.id !== primary?.id);
+        return (
+          <>
+            <section aria-label={t("companyBuilder.planSection.understood")} className="flex flex-col gap-1" data-testid="cb-plan-section-understood">
+              <p className="text-sm text-hi">{t("companyBuilder.planSection.understood")}</p>
+              <a href="#cb-facts-heading" className="text-sm text-accent-text hover:underline">
+                {t("companyBuilder.facts.heading")}
+              </a>
+            </section>
+            <section aria-label={t("companyBuilder.planSection.firstOutcome")} className="flex flex-col gap-3" data-testid="cb-plan-section-firstOutcome">
+              <h3 className="text-base font-semibold text-hi" id="cb-roles">
+                {t("companyBuilder.planSection.firstOutcome")}
+              </h3>
+              {body.goal.department && <p className="text-sm font-medium text-hi">{cbt(t, `opt.${body.goal.department}`)}</p>}
+              {primary ? <PrimaryOutcome data={data} task={primary} onHelp={() => onHelp?.("advanced")} /> : <p className="text-sm text-muted">{t("companyBuilder.plan.noTasks")}</p>}
+              {body.blockers.length > 0 && !primary && (
+                <ul className="list-disc space-y-1 ps-5 text-sm text-med" data-testid="cb-blockers">
+                  {body.blockers.map((b, i) => (
+                    <li key={i} data-blocker={b.code}>
+                      {blockerText(t, b)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            {others.length > 0 && (
+              <section aria-label={t("companyBuilder.plan.rolesHeading")} className="flex flex-col gap-2">
+                <h3 className="text-base font-semibold text-hi">{t("companyBuilder.plan.rolesHeading")}</h3>
+                <ul className="flex flex-col gap-3">
+                  {others.map((task) => (
+                    <li key={task.id} className="flex flex-col gap-2 rounded-lg border border-line p-3" data-task-other={task.id}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-hi">{cbt(t, `task.${task.id}.name`)}</span>
+                        {task.availability !== "operational" && <StatusBadge tone="muted">{cbt(t, task.availability === "planned" ? "reason.planned_not_operational" : "reason.not_supported")}</StatusBadge>}
+                      </div>
+                      <TaskDetails task={task} capabilities={data.tasks.find((x) => x.task.id === task.id)?.capabilities ?? []} onHelp={() => onHelp?.("advanced")} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <section aria-label={t("companyBuilder.next.heading")} className="flex flex-col gap-1" data-testid="cb-next-improvements">
+              <h3 className="text-base font-semibold text-hi">{t("companyBuilder.next.heading")}</h3>
+              <p className="text-sm text-muted">{t("companyBuilder.next.note")}</p>
+              {body.nextImprovements.length > 0 && (
+                <ul className="list-disc ps-5 text-sm text-med">
+                  {body.nextImprovements.map((n) => (
+                    <li key={n.id} data-next={n.id}>
+                      {n.id.endsWith("-outcome") ? t("companyBuilder.next.outcome", { area: cbt(t, `opt.${n.department ?? n.id.replace(/-outcome$/, "")}`) }) : cbt(t, `next.${n.id}`)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        );
+      })()}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" onClick={onGenerate} loading={busy === "generate"} disabledReason={viewOnly} data-testid="cb-regenerate">
@@ -208,7 +420,51 @@ export function PlanPanel({
   );
 }
 
-export function TaskCard({ view, slug, canRun, canPublish, busy, onTry, onSendForReview, onActivate, onPause }: { view: TaskView; slug: string; canRun: boolean; canPublish: boolean; busy: string | null; onTry: () => void; onSendForReview: (trialId: string) => void; onActivate: () => void; onPause: () => void }) {
+const REJECT_REASONS = ["wrong_details", "invented_content", "missing_info", "wrong_tone", "something_else"] as const;
+
+function AcceptBox({ taskId, trial, busy, canRun, onVerdict }: { taskId: string; trial: NonNullable<TaskView["trial"]>; busy: boolean; canRun: boolean; onVerdict: (trialId: string, verdict: "accepted" | "rejected", reason?: string) => void }) {
+  const t = useT();
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState<string>("");
+  const disabled = canRun ? null : t("companyBuilder.errors.FORBIDDEN");
+  const uv = trial.userVerdict;
+  return (
+    <div className="flex flex-col gap-2 border-t border-line pt-2">
+      <p className="text-sm font-medium text-hi">{t("companyBuilder.trial.acceptQuestion")}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant={uv === "accepted" ? "primary" : "secondary"} aria-pressed={uv === "accepted"} onClick={() => { setRejecting(false); onVerdict(trial.id, "accepted"); }} loading={busy} disabledReason={disabled} data-testid={`cb-accept-yes-${taskId}`}>
+          {t("companyBuilder.trial.acceptYes")}
+        </Button>
+        <Button size="sm" variant={uv === "rejected" || rejecting ? "primary" : "secondary"} aria-pressed={uv === "rejected"} aria-expanded={rejecting} onClick={() => setRejecting(true)} disabledReason={disabled} data-testid={`cb-accept-no-${taskId}`}>
+          {t("companyBuilder.trial.acceptNo")}
+        </Button>
+      </div>
+      {rejecting && (
+        <fieldset className="flex flex-col gap-1 text-sm" data-testid={`cb-reject-reason-${taskId}`}>
+          <legend className="font-medium text-hi">{t("companyBuilder.trial.rejectWhy")}</legend>
+          {REJECT_REASONS.map((r) => (
+            <label key={r} className="flex items-center gap-2">
+              <input type="radio" name={`cb-reject-reason-${taskId}`} value={r} checked={reason === r} onChange={() => setReason(r)} />
+              {t(`companyBuilder.trial.rejectReason.${r}` as MessageKey)}
+            </label>
+          ))}
+          <div>
+            <Button size="sm" variant="secondary" onClick={() => { onVerdict(trial.id, "rejected", reason); setRejecting(false); }} loading={busy} disabledReason={disabled ?? (reason ? null : t("companyBuilder.trial.rejectWhy"))} data-testid={`cb-reject-confirm-${taskId}`}>
+              {t("companyBuilder.trial.rejectConfirm")}
+            </Button>
+          </div>
+        </fieldset>
+      )}
+      <p aria-live="polite" className="text-sm" data-testid={`cb-user-verdict-${taskId}`} data-verdict={uv ?? ""}>
+        {uv === "accepted" && <span className="text-success">{t("companyBuilder.trial.acceptedByYou")}</span>}
+        {uv === "rejected" && <span className="text-warning">{t("companyBuilder.trial.rejectedByYou")}{trial.userVerdictReason ? ` (${cbt(t, `trial.rejectReason.${trial.userVerdictReason}`)})` : ""}</span>}
+      </p>
+      <p className="text-xs text-muted">{t("companyBuilder.trial.acceptNote")}</p>
+    </div>
+  );
+}
+
+export function TaskCard({ view, slug, canRun, canPublish, busy, timezone, onTry, onSendForReview, onVerdict, onActivate, onPause, onHelp }: { view: TaskView; slug: string; canRun: boolean; canPublish: boolean; busy: string | null; timezone: string; onTry: () => void; onSendForReview: (trialId: string) => void; onVerdict: (trialId: string, verdict: "accepted" | "rejected", reason?: string) => void; onActivate: () => void; onPause: () => void; onHelp?: (topic: "result_checks" | "advanced") => void }) {
   const t = useT();
   const { task, status, trial } = view;
   const v = trial?.verdict ?? null;
@@ -225,7 +481,7 @@ export function TaskCard({ view, slug, canRun, canPublish, busy, onTry, onSendFo
       <div className="flex flex-wrap gap-3 text-sm">
         {view.flow && (
           <Link href={`/w/${slug}/flows/${view.flow.id}`} className="text-accent-text hover:underline" data-testid={`cb-open-flow-${task.id}`}>
-            {t("companyBuilder.open.flow")}
+            {t("companyBuilder.open.advanced")}
           </Link>
         )}
         {view.agent && (
@@ -250,6 +506,7 @@ export function TaskCard({ view, slug, canRun, canPublish, busy, onTry, onSendFo
               {t("companyBuilder.trial.running")}
             </p>
           )}
+          {trial && !v && trial.status === "failed" && <p className="text-sm text-danger">{t("companyBuilder.trial.runFailed")}</p>}
           {trial && v && (
             <div className="flex flex-col gap-2 rounded-lg border border-line p-3" data-testid={`cb-trial-${task.id}`} data-matched={String(v.matchedOutcome)}>
               <p className="text-sm font-medium text-hi" aria-live="polite">
@@ -267,27 +524,32 @@ export function TaskCard({ view, slug, canRun, canPublish, busy, onTry, onSendFo
                 </li>
               </ul>
               {!v.matchedOutcome && <p className="text-sm text-danger">{t("companyBuilder.trial.notMatched")}</p>}
-              <ul className="flex flex-col gap-0.5 text-xs text-med">
-                {v.checks.map((c) => (
-                  <li key={c.id}>
-                    {c.passed ? "✓" : "✗"} {cbt(t, `trial.check.${c.id}`)}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted">{cbt(t, `trial.provenance.${trial.provenance}`)}</p>
-              {output && (
-                <details className="text-sm">
-                  <summary className="cursor-pointer text-accent-text">{t("companyBuilder.trial.output")}</summary>
-                  <pre dir="ltr" className="mt-1 max-h-64 overflow-auto rounded-md bg-app p-2 text-xs whitespace-pre-wrap">
-                    {JSON.stringify(output, null, 2)}
-                  </pre>
-                </details>
-              )}
+              {output && trial.status === "completed" && task.packId === "customer-follow-up" && <FollowUpResult taskId={task.id} output={output} timezone={timezone} />}
+              <details className="text-sm" onToggle={(e) => e.currentTarget.open && onHelp?.("result_checks")} data-testid={`cb-trial-technical-${task.id}`}>
+                <summary className="cursor-pointer text-accent-text">{t("companyBuilder.trial.technical")}</summary>
+                <ul className="mt-1 flex flex-col gap-0.5 text-xs text-med">
+                  {v.checks.map((c) => (
+                    <li key={c.id}>
+                      {c.passed ? "✓" : "✗"} {cbt(t, `trial.check.${c.id}`)}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-xs text-muted">{cbt(t, `trial.provenance.${trial.provenance}`)}</p>
+                {output && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-accent-text">{t("companyBuilder.trial.output")}</summary>
+                    <pre dir="ltr" className="mt-1 max-h-64 overflow-auto rounded-md bg-app p-2 text-xs whitespace-pre-wrap">
+                      {JSON.stringify(output, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </details>
               {trial.runId && (
                 <Link href={`/w/${slug}/runs?run=${trial.runId}`} className="text-sm text-accent-text hover:underline">
                   {trial.runNumber != null ? t("companyBuilder.trial.run", { number: trial.runNumber }) : t("companyBuilder.trial.openRun")}
                 </Link>
               )}
+              {trial.status === "completed" && v.ranWithoutErrors && <AcceptBox taskId={task.id} trial={trial} busy={busy === `verdict:${task.id}`} canRun={canRun} onVerdict={onVerdict} />}
               {v.ranWithoutErrors &&
                 (hasProposal ? (
                   <Button size="sm" variant="secondary" onClick={() => onSendForReview(trial.id)} loading={busy === `review:${trial.id}`} disabledReason={canRun ? null : t("companyBuilder.errors.FORBIDDEN")} data-testid={`cb-send-review-${task.id}`}>

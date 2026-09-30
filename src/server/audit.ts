@@ -57,7 +57,8 @@ export type AuditAction =
   | "company_builder.review_decided"
   | "company_builder.activation_changed"
   | "company_builder.entitlement_changed"
-  | "company_builder.cli_job";
+  | "company_builder.cli_job"
+  | "company_builder.result_judged";
 
 export async function audit(db: DbOrTx, e: { workspaceId: string; actor: Actor; action: AuditAction; targetType?: string; targetId?: string; data?: unknown }) {
   await db.insert(schema.auditEvent).values({

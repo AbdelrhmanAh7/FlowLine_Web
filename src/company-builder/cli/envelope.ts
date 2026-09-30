@@ -54,7 +54,7 @@ export const envelopeSchema = z.discriminatedUnion("kind", [
     kind: z.literal("text_trial"),
     jobId: z.string().uuid(),
     cli: z.enum(CLI_KINDS),
-    taskId: z.literal("customer-triage"),
+    taskId: z.enum(["customer-follow-up", "customer-triage"]),
     /** Synthetic, owner-supplied request text (sanitised). */
     text: z.string().min(1).max(2000),
   }),

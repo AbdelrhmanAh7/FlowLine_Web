@@ -67,7 +67,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     hiring: { title: "Are you hiring now?", reason: "We keep actual hiring apart from your automation needs." },
     content_output: { title: "What kind of content do you need?", reason: "We produce text only; images, design files and video aren't supported." },
     content_reviewer: { title: "Who reviews content before it's published?", reason: "No content is published without review." },
-    other_areas: { title: "Any other areas you want to set up later?", reason: "We add them to the plan — with their own questions — only if you pick them." },
+    other_areas: { title: "Any other areas you want to set up later?", reason: "We list them as possible next improvements only. Nothing is prepared or turned on for them now." },
   },
 
   opt: {
@@ -352,6 +352,8 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     acceptedByYou: "You said the result matches what you wanted.",
     rejectedByYou: "You said the result doesn't match. Adjust the answers or the workflow and try again.",
     acceptNote: "Your answer doesn't prove every detail is right; the checks above are independent of it.",
+    rejectWhy: "Why doesn't it match?",
+    rejectConfirm: "Send my answer",
     rejectReason: { wrong_details: "Wrong details", invented_content: "Content that isn't approved", missing_info: "Missing information", wrong_tone: "Wrong tone", something_else: "Something else" },
     technical: "Technical details (advanced)",
     runFailed: "The run didn't finish. Check the log.",
@@ -603,6 +605,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     notYet: "Not yet",
     logSupport: "Log support time",
     minutes: "minutes",
+    duration: "{m}m {s}s",
     save: "Save",
   },
   errors: {
