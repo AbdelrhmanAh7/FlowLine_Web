@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, isAbsolute, join, sep } from "node:path";
+import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import { DEFAULT_TIMEOUT_MS, MAX_OUTPUT_BYTES, PROPOSAL_JSON_SCHEMA, TEXT_TRIAL_JSON_SCHEMA, type CliKind, type Envelope } from "./envelope";
 
 /**
@@ -178,7 +178,9 @@ export function createJobDir(jobRoot: string, jobId: string): string {
 
 /** Reads a file the CLI wrote inside the job dir; refuses symlinks and anything outside the dir, caps the size. */
 export function readJobFile(jobDir: string, name: string, maxBytes: number): string | null {
-  const p = join(jobDir, name);
+  const p = resolvePath(jobDir, name);
+  // Containment first: a name that escapes the job directory is refused whether or not the target exists.
+  if (!p.startsWith(realpathSync(jobDir) + sep)) throw new CliError("ISOLATION_UNVERIFIED");
   if (!existsSync(p)) return null;
   const st = lstatSync(p);
   if (st.isSymbolicLink() || !st.isFile()) throw new CliError("ISOLATION_UNVERIFIED");

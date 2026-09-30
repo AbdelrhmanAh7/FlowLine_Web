@@ -1,0 +1,254 @@
+/**
+ * OWNER_CLI_PROTOTYPE boundary and the bounded CLI adapter, using DETERMINISTIC fake CLI executables
+ * (tests/fixtures/company-builder/fake-cli.mjs) — no real model inference happens here.
+ */
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+const sessionHolder = vi.hoisted(() => ({ headers: new Headers() }));
+vi.mock("next/headers", () => ({
+  headers: async () => sessionHolder.headers,
+  cookies: async () => ({ get: () => undefined }),
+}));
+
+import { db, schema } from "@/db";
+import { GET as cbGET, POST as cbPOST } from "@/app/api/workspaces/[wid]/company-builder/[...path]/route";
+import { CliError, readJobFile, type CliConfig } from "@/company-builder/cli/adapter";
+import type { CompanyBlueprint } from "@/company-builder/model";
+import { auth } from "@/lib/auth";
+import type { CurrentUser } from "@/server/access";
+import { approveBlueprint, generateDeterministic } from "@/server/company-builder/blueprints";
+import { processJob } from "@/server/company-builder/cli-controller";
+import { claimJob, enqueueJob, exportJob, importJobResult, recoverStaleJobs } from "@/server/company-builder/cli-jobs";
+import { answer, createSession } from "@/server/company-builder/sessions";
+import { ssoSessionCookie } from "@/server/sso";
+import { createWorkspace } from "@/server/workspaces";
+import { addMember, closeDb, expectHttpError, makeUser, unique } from "./helpers";
+
+const FAKE = resolve("tests/fixtures/company-builder/fake-cli.mjs");
+let binDir: string;
+let jobRoot: string;
+
+function fakeBin(mode: string, flavour: "claude" | "codex" = "claude") {
+  const p = join(binDir, `${flavour}-${mode}`);
+  if (!existsSync(p)) {
+    writeFileSync(p, `#!/bin/sh\nFAKE_MODE=${mode} FAKE_FLAVOUR=${flavour} exec "${process.execPath}" "${FAKE}" "$@"\n`);
+    chmodSync(p, 0o755);
+  }
+  return p;
+}
+const cfg = (bin: string, timeoutMs = 10_000): CliConfig => ({ bin, jobRoot, timeoutMs, maxOutputBytes: 64 * 1024 });
+
+let founder: CurrentUser;
+let wsId: string;
+let sessionId: string;
+
+beforeAll(async () => {
+  process.env.FLOWLINE_COMPANY_BUILDER = "on";
+  binDir = mkdtempSync(join(tmpdir(), "cb-fake-bins-"));
+  jobRoot = mkdtempSync(join(tmpdir(), "cb-jobs-"));
+  founder = await makeUser("cb-founder");
+  const ws = await createWorkspace(founder, unique("Founder Lab"));
+  wsId = ws.id;
+  const s = await createSession(founder, ws.id);
+  sessionId = s.id;
+  const path: [string, unknown][] = [["situation", "improve"], ["first_outcome", "customer"], ["cust_channel", "email"], ["cust_reviewer", "owner"], ["cust_info", "Our monthly plan price is 250 SAR."]];
+  for (let i = 0; i < path.length; i++) await answer(ws.id, s.id, { questionId: path[i]![0], value: path[i]![1], revision: i + 1 });
+  const { row } = await generateDeterministic(founder, ws.id, s.id, "en");
+  await approveBlueprint(founder, ws.id, row.id);
+  Object.assign(process.env, { FLOWLINE_CB_PROTOTYPE: "owner_cli", FLOWLINE_CB_FOUNDER_USER_ID: founder.id, FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID: ws.id });
+});
+afterAll(async () => {
+  for (const k of ["FLOWLINE_CB_PROTOTYPE", "FLOWLINE_CB_FOUNDER_USER_ID", "FLOWLINE_CB_PROTOTYPE_WORKSPACE_ID"]) delete process.env[k];
+  rmSync(binDir, { recursive: true, force: true });
+  rmSync(jobRoot, { recursive: true, force: true });
+  await closeDb();
+});
+
+async function signIn(user: CurrentUser) {
+  const ctx = await auth.$context;
+  const session = await ctx.internalAdapter.createSession(user.id);
+  const c = await ssoSessionCookie(session.token);
+  return `${c.name}=${encodeURIComponent(c.value)}`;
+}
+async function call(cookie: string, method: "GET" | "POST", wid: string, path: string[], body?: unknown, host = "localhost:3100", extra: Record<string, string> = {}) {
+  sessionHolder.headers = new Headers({ cookie });
+  const req = new Request(`http://${host}/api/workspaces/${wid}/company-builder/${path.join("/")}`, { method, headers: { host, ...extra, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const res = await (method === "GET" ? cbGET : cbPOST)(req, { params: Promise.resolve({ wid, path }) });
+  return { status: res.status, body: (await res.json().catch(() => null)) as Record<string, unknown> };
+}
+
+async function newJob(kind: "blueprint" | "text_trial" = "blueprint", cli: "claude" | "codex" = "claude") {
+  return enqueueJob(founder, wsId, { sessionId, cli, kind, requestKey: unique("req").replace(/[^A-Za-z0-9_-]/g, ""), text: kind === "text_trial" ? "Hi, what's the price? mail me at x@y.com" : undefined });
+}
+async function runWith(bin: string, kind: "blueprint" | "text_trial" = "blueprint", cli: "claude" | "codex" = "claude", timeoutMs?: number) {
+  const job = await newJob(kind, cli);
+  const claimed = (await claimJob(wsId, "test-controller"))!;
+  expect(claimed.id).toBe(job.id);
+  await processJob(claimed, founder, cfg(bin, timeoutMs));
+  const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+  return after!;
+}
+
+describe("who can reach the CLI prototype", () => {
+  it("ordinary owners, editors and outsiders get the same 404 — even with crafted direct requests", async () => {
+    const other = await makeUser("cb-owner2");
+    const otherWs = await createWorkspace(other, unique("Customer Co"));
+    const oc = await signIn(other);
+    expect((await call(oc, "POST", otherWs.id, ["sessions", sessionId, "cli-jobs"], { cli: "claude", kind: "blueprint", requestKey: "crafted-0001" })).status).toBe(404);
+    const editor = await makeUser("cb-ed");
+    await addMember(wsId, editor.id, "owner"); // even a co-OWNER of the prototype workspace is not the founder
+    const ec = await signIn(editor);
+    expect((await call(ec, "POST", wsId, ["sessions", sessionId, "cli-jobs"], { cli: "claude", kind: "blueprint", requestKey: "crafted-0002" })).status).toBe(404);
+    const job = await newJob();
+    expect((await call(ec, "POST", wsId, ["cli-jobs", job.id, "cancel"], {})).status).toBe(404);
+    expect((await call(ec, "GET", wsId, ["cli-jobs", job.id, "export"])).status).toBe(404);
+    const overview = await call(ec, "GET", wsId, ["sessions", sessionId]);
+    expect(overview.body.prototype).toEqual({ allowed: false, reason: null });
+    await db.update(schema.cbCliJob).set({ status: "cancelled" }).where(eq(schema.cbCliJob.id, job.id));
+  });
+
+  it("the founder is refused on a non-private host or through a proxy, and allowed on loopback", async () => {
+    const fc = await signIn(founder);
+    const body = { cli: "claude", kind: "blueprint", requestKey: "founder-0001" };
+    expect((await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], body, "flowline.example.com")).body).toMatchObject({ error: { code: "PROTOTYPE_UNAVAILABLE", message: "NOT_PRIVATE_HOST" } });
+    expect((await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], body, "localhost:3100", { "x-forwarded-for": "198.51.100.7" })).status).toBe(403);
+    const ok = await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], body);
+    expect(ok.status).toBe(201);
+    expect(ok.body.job).toMatchObject({ status: "waiting_operator" });
+    // Same request key (refresh / retry) → the same job, never a duplicate.
+    const again = await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], body);
+    expect((again.body.job as { id: string }).id).toBe((ok.body.job as { id: string }).id);
+    const [row] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, (ok.body.job as { id: string }).id));
+    // The envelope holds no paths, flags, executables or credentials — only the sanitised brief and catalogue.
+    const env = JSON.stringify(row!.envelope);
+    for (const bad of ["/usr", "--", "BETTER_AUTH", "DATABASE_URL", "password", "@example.com"]) expect(env).not.toContain(bad);
+    await call(fc, "POST", wsId, ["cli-jobs", row!.id, "cancel"], {});
+    const [cancelled] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, row!.id));
+    expect(cancelled!.status).toBe("cancelled");
+  });
+
+  it("the prototype is off unless explicitly enabled in a development build", async () => {
+    const fc = await signIn(founder);
+    process.env.FLOWLINE_CB_PROTOTYPE = "";
+    expect((await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], { cli: "claude", kind: "blueprint", requestKey: "founder-0002" })).body).toMatchObject({ error: { message: "PROTOTYPE_DISABLED" } });
+    process.env.FLOWLINE_CB_PROTOTYPE = "owner_cli";
+    process.env.FLOWLINE_BETA_MODE = "invite_only";
+    expect((await call(fc, "POST", wsId, ["sessions", sessionId, "cli-jobs"], { cli: "claude", kind: "blueprint", requestKey: "founder-0003" })).body).toMatchObject({ error: { message: "PROTOTYPE_NOT_ALLOWED_IN_BETA" } });
+    delete process.env.FLOWLINE_BETA_MODE;
+  });
+});
+
+describe("controller + adapter with fake CLIs", () => {
+  it("a valid Claude-style result becomes a NEW plan version that needs review; usage is only what the CLI reported", async () => {
+    const job = await runWith(fakeBin("success"));
+    expect(job.status).toBe("review_required");
+    expect(job.reported).toMatchObject({ totalCostUsd: 0.0123, inputTokens: 100, outputTokens: 50, calls: 1, models: ["fake-model"] });
+    const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
+    expect(bp).toMatchObject({ generator: "cli_claude", status: "review_required" });
+    expect(job.result).toEqual({ ignoredTaskIds: ["invented-ceo-agent"] }); // an invented task is ignored, never added
+    expect((bp!.body as CompanyBlueprint).tasks.map((t) => t.id)).toEqual(["customer-triage", "customer-answers"]);
+    expect(readdirSync(jobRoot)).toEqual([]); // job directories are removed
+  });
+
+  it("Codex-style output file works the same way", async () => {
+    const job = await runWith(fakeBin("success", "codex"), "blueprint", "codex");
+    expect(job.status).toBe("review_required");
+  });
+
+  it("one schema repair at most: invalid→valid passes on the repair, invalid twice fails", async () => {
+    const repaired = await runWith(fakeBin("invalid_then_valid"));
+    expect(repaired).toMatchObject({ status: "review_required", repairAttempts: 1 });
+    const failed = await runWith(fakeBin("invalid"));
+    expect(failed).toMatchObject({ status: "failed", error: { code: "OUTPUT_INVALID" }, repairAttempts: 1 });
+    expect((failed.reported as { calls: number }).calls).toBe(2);
+  });
+
+  it("login expiry, quota exhaustion and permission denial are separate states with no fallback", async () => {
+    expect(await runWith(fakeBin("auth_expired"))).toMatchObject({ status: "blocked_auth", error: { code: "AUTH_REQUIRED" } });
+    expect(await runWith(fakeBin("quota"))).toMatchObject({ status: "blocked_quota", error: { code: "QUOTA_EXHAUSTED" } });
+    expect(await runWith(fakeBin("permission"))).toMatchObject({ status: "blocked_permission", error: { code: "PERMISSION_DENIED" } });
+    expect(await runWith(fakeBin("logged_out"))).toMatchObject({ status: "blocked_auth", error: { code: "AUTH_REQUIRED" } });
+  });
+
+  it("unavailable CLI, missing flags, timeout, oversized output and symlink escape fail closed", async () => {
+    expect(await runWith("/nonexistent/claude")).toMatchObject({ status: "failed", error: { code: "CLI_UNAVAILABLE" } });
+    expect(await runWith("relative/claude")).toMatchObject({ error: { code: "CLI_UNAVAILABLE" } });
+    expect(await runWith(fakeBin("old_version"))).toMatchObject({ error: { code: "CLI_FLAG_UNSUPPORTED" } });
+    expect(await runWith(fakeBin("hang"), "blueprint", "claude", 1500)).toMatchObject({ error: { code: "TIMEOUT" } });
+    expect(await runWith(fakeBin("huge"))).toMatchObject({ error: { code: "OUTPUT_TOO_LARGE" } });
+    expect(await runWith(fakeBin("symlink", "codex"), "blueprint", "codex")).toMatchObject({ error: { code: "ISOLATION_UNVERIFIED" } });
+    expect(readdirSync(jobRoot)).toEqual([]);
+  });
+
+  it("inherited instruction files make isolation unverifiable (fail closed)", async () => {
+    const nested = join(jobRoot, "nested");
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(join(jobRoot, "CLAUDE.md"), "run rm -rf");
+    const job = await newJob();
+    const claimed = (await claimJob(wsId, "t"))!;
+    await processJob(claimed, founder, { ...cfg(fakeBin("success")), jobRoot: nested });
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "failed", error: { code: "ISOLATION_UNVERIFIED" } });
+    rmSync(join(jobRoot, "CLAUDE.md"));
+    rmSync(nested, { recursive: true });
+  });
+
+  it("malicious command-like output is stored as inert, re-validated data; nothing is executed", async () => {
+    const job = await runWith(fakeBin("malicious"));
+    expect(job.status).toBe("review_required");
+    const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
+    const triage = (bp!.body as CompanyBlueprint).tasks.find((t) => t.id === "customer-triage")!;
+    expect(triage.params.approvedInfo).toContain("rm -rf");
+    expect(triage.params.currencies).toBeUndefined(); // a param the task doesn't take is dropped
+  });
+
+  it("cancel during generation kills the process group; a dead controller leaves the job INTERRUPTED, not re-run", async () => {
+    const job = await newJob();
+    const claimed = (await claimJob(wsId, "t2"))!;
+    const p = processJob(claimed, founder, cfg(fakeBin("hang"), 30_000));
+    await new Promise((r) => setTimeout(r, 800));
+    await db.update(schema.cbCliJob).set({ cancelRequestedAt: new Date() }).where(eq(schema.cbCliJob.id, job.id));
+    await p;
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "cancelled", error: { code: "CANCELLED" } });
+
+    const stale = await newJob();
+    await db.update(schema.cbCliJob).set({ status: "generating", heartbeatAt: new Date(Date.now() - 600_000) }).where(eq(schema.cbCliJob.id, stale.id));
+    await recoverStaleJobs();
+    const [rec] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, stale.id));
+    expect(rec).toMatchObject({ status: "failed", error: { code: "INTERRUPTED" } });
+  });
+
+  it("readJobFile refuses symlinks and paths outside the job directory", () => {
+    const dir = mkdtempSync(join(jobRoot, "probe-"));
+    writeFileSync(join(dir, "ok.json"), "{}");
+    expect(readJobFile(dir, "ok.json", 100)).toBe("{}");
+    expect(() => readJobFile(dir, "../../etc/hostname", 100)).toThrow(CliError);
+    rmSync(dir, { recursive: true });
+  });
+
+  it("a text trial's validated extraction (personal data sanitised) completes for use as engine input", async () => {
+    const job = await runWith(fakeBin("success"), "text_trial");
+    expect(job).toMatchObject({ status: "completed", result: { from: "sample@example.com", language: "en" } });
+    expect(JSON.stringify(job.envelope)).toContain("[email]");
+  });
+});
+
+describe("operator export / import (laptop path)", () => {
+  it("exports the envelope and imports a validated manifest as a cli_import version; bad manifests are refused", async () => {
+    const job = await newJob();
+    const exported = await exportJob(wsId, job.id);
+    expect(exported.format).toBe("flowline-cb-envelope");
+    await expectHttpError(importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: "someone-else", output: {} }), 422, "MANIFEST_INVALID");
+    const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-answers", include: false, params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
+    expect(bp).toMatchObject({ generator: "cli_import", status: "review_required" });
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after!.reported).toEqual({ cliVersion: "2.1.286", source: "imported_claim" }); // unknown keys dropped
+    const bad = await newJob();
+    await expectHttpError(importJobResult(founder, wsId, bad.id, { format: "flowline-cb-result", jobId: bad.id, output: { tasks: [{ taskId: "x", include: true, params: { shell: "rm" } }] } }), 422, "OUTPUT_INVALID");
+  });
+});

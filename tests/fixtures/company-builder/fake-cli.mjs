@@ -2,7 +2,6 @@
 // DETERMINISTIC_TEST double for the Claude/Codex CLIs (no model, no network). Behaviour comes from FAKE_MODE, which
 // the per-mode wrapper scripts set (the adapter passes the child a minimal environment, so env vars can't reach it).
 import { writeFileSync, symlinkSync } from "node:fs";
-import { join } from "node:path";
 
 const mode = process.env.FAKE_MODE ?? "success";
 const flavour = process.env.FAKE_FLAVOUR ?? "claude";
