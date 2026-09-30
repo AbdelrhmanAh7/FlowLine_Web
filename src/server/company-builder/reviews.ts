@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
 import type { FlowGraph } from "@/engine/types";
@@ -122,6 +122,12 @@ async function currentParts(item: Pick<ReviewRow, "workspaceId" | "installationI
 async function openItem(user: CurrentUser, parts: BindingParts, trialId: string | null) {
   const bindingHash = reviewBinding(parts);
   const same = and(eq(schema.cbReviewItem.installationId, parts.installationId), eq(schema.cbReviewItem.taskId, parts.taskId), eq(schema.cbReviewItem.kind, parts.kind), eq(schema.cbReviewItem.bindingHash, bindingHash));
+  // Side-effect dedupe: the same test action (identical binding) that was already sent, is being sent, or whose outcome
+  // is uncertain is returned as it is — it is never opened for approval (and sent) a second time.
+  if (parts.kind === "send_sample") {
+    const [done] = await db.select().from(schema.cbReviewItem).where(and(same, inArray(schema.cbReviewItem.status, ["approved", "executed", "uncertain"]))).orderBy(desc(schema.cbReviewItem.createdAt)).limit(1);
+    if (done) return done;
+  }
   // An expired pending item is retired so a new request can be opened (only ONE pending item per binding).
   await db.update(schema.cbReviewItem).set({ status: "invalidated", note: "expired" }).where(and(same, eq(schema.cbReviewItem.status, "pending"), sql`${schema.cbReviewItem.expiresAt} < now()`));
   await db
@@ -268,6 +274,8 @@ export async function requestActivation(user: CurrentUser, workspaceId: string, 
   if (!UUID.test(installationId)) throw notFound("Installation not found");
   const [owned] = await db.select({ id: schema.cbInstallation.id }).from(schema.cbInstallation).where(and(eq(schema.cbInstallation.id, installationId), eq(schema.cbInstallation.workspaceId, workspaceId)));
   if (!owned) throw notFound("Installation not found");
+  const [current] = await db.select({ state: schema.cbActivation.state }).from(schema.cbActivation).where(and(eq(schema.cbActivation.installationId, installationId), eq(schema.cbActivation.taskId, taskId)));
+  if (current?.state === "active") throw new HttpError(409, "ALREADY_ACTIVE", "This task is already active — pause it first to change it");
   const { task } = await taskOf(installationId, taskId);
   if (task.reviewer === "unknown" || task.trigger.status === "unsupported") throw new HttpError(409, "REQUIRES_SETUP", "This task still needs setup before activation");
   const parts = await currentParts({ workspaceId, installationId, taskId, kind: "activation", trialId: null });
@@ -294,6 +302,7 @@ async function activate(user: CurrentUser, item: ReviewRow) {
   if (graphHash(g) !== source.graphHash || published.trigger !== "trigger.manual") {
     // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published.
     await unpublishFlow(source.flowId);
+    await setActivation(db, item, "paused", "draft_changed_during_activation", user.id); // explicit: nothing is published
     throw new HttpError(409, "REVIEW_INVALIDATED", "The draft changed while it was being activated — request a new review", { reason: "draft_changed_during_activation" });
   }
   await setActivation(db, item, "active", null, user.id);

@@ -166,7 +166,9 @@ export function applyProposal(base: CompanyBlueprint, proposal: BlueprintProposa
     // Only a subset of the owner-confirmed currencies (a model can't introduce one).
     if (p?.params.currencies && Array.isArray(t.params.currencies)) {
       const confirmed = t.params.currencies as string[];
-      params.currencies = p.params.currencies.filter((c) => confirmed.includes(c));
+      const narrowed = p.params.currencies.filter((c) => confirmed.includes(c));
+      // An empty list would disable the unexpected-currency check: keep the confirmed list instead.
+      if (narrowed.length > 0) params.currencies = narrowed;
     }
     if (p?.note) params.modelNote = sanitiseText(p.note, 200);
     tasks.push({ ...t, params });

@@ -1,0 +1,3183 @@
+
+Running 127 tests using 1 worker
+
+[1/127] [chromium] › e2e/admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)
+[chromium] › e2e/admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)
+connect ECONNREFUSED 127.0.0.1:5433
+
+connect ECONNREFUSED 127.0.0.1:5433
+
+  1) [chromium] › e2e/admin-panel.spec.ts:43:5 › platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks) 
+
+    Error: Command failed: node scripts/with-env.mjs .env.test npx tsx scripts/admin/bootstrap.mts --email platform-admin-ac050200@flowline-e2e.test --grant
+    connect ECONNREFUSED 127.0.0.1:5433
+
+
+      18 | /** Runs the operator CLI on the test stack's DB and returns the printed one-time code. */
+      19 | function issueSetupCode(email: string): string {
+    > 20 |   const run = (flag: string) => execSync(`node scripts/with-env.mjs .env.test npx tsx scripts/admin/bootstrap.mts --email ${email}${flag}`, { encoding: "utf8", env: { ...process.env, FLOWLINE_ENV: "test" } });
+         |                                         ^
+      21 |   let out: string;
+      22 |   try {
+      23 |     out = run("");
+        at run (/home/user/FlowLine_Web/e2e/admin-panel.spec.ts:20:41)
+        at issueSetupCode (/home/user/FlowLine_Web/e2e/admin-panel.spec.ts:25:11)
+        at /home/user/FlowLine_Web/e2e/admin-panel.spec.ts:47:17
+
+    Error Context: ../../../tmp/pw-out/admin-panel-platform-admin-373de-dential-canary-never-leaks--chromium/error-context.md
+
+
+[2/127] [chromium] › e2e/admin-panel.spec.ts:155:5 › a non-admin visiting /admin sees the ordinary 404 page, not a redirect that reveals the panel
+[3/127] [chromium] › e2e/admin-panel.spec.ts:163:5 › members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)
+[4/127] [chromium] › e2e/keyboard-surfaces.spec.ts:17:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › inline destructive confirmations preserve focus through cancel and successful removal
+  2) [chromium] › e2e/keyboard-surfaces.spec.ts:17:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › inline destructive confirmations preserve focus through cancel and successful removal 
+
+    Error: apiRequestContext.post: socket hang up
+    Call log:
+      - → POST http://127.0.0.1:4010/__fake/issue-token
+        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.8010.12 Safari/537.36
+        - accept: */*
+        - accept-encoding: gzip,deflate,br
+        - origin: http://localhost:3100
+        - content-type: application/json
+        - content-length: 15
+
+
+      71 |
+      72 |     // Removal revokes the provider token: never revoke the shared test-token used by later specs.
+    > 73 |     const issued = await page.request.post("http://127.0.0.1:4010/__fake/issue-token", { data: { account: "a" } });
+         |                                       ^
+      74 |     expect(issued.ok()).toBe(true);
+      75 |     const { token } = await issued.json();
+      76 |     expect((await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Keyboard", fields: { token } } })).ok()).toBe(true);
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:73:39
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-8b4f2-ncel-and-successful-removal-chromium/error-context.md
+
+
+[5/127] [chromium] › e2e/keyboard-surfaces.spec.ts:91:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › phone navigation traps focus, nested menu consumes Escape, and returns to launcher
+  3) [chromium] › e2e/keyboard-surfaces.spec.ts:91:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › phone navigation traps focus, nested menu consumes Escape, and returns to launcher 
+
+    Error: no verify email for e2e-a7f8ce11@flowline-e2e.test
+
+    no verify email for e2e-a7f8ce11@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:92:27
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-78b38-ape-and-returns-to-launcher-chromium/error-context.md
+
+
+[6/127] [chromium] › e2e/keyboard-surfaces.spec.ts:114:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › node drawer Escape from a text field returns to the canvas node; dock returns to launcher
+  4) [chromium] › e2e/keyboard-surfaces.spec.ts:114:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › node drawer Escape from a text field returns to the canvas node; dock returns to launcher 
+
+    Error: no verify email for e2e-caa2830d@flowline-e2e.test
+
+    no verify email for e2e-caa2830d@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:115:35
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-befd1-de-dock-returns-to-launcher-chromium/error-context.md
+
+
+[7/127] [chromium] › e2e/keyboard-surfaces.spec.ts:134:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › OAuth switch/remove confirmations focus Cancel, allow leaving, dismiss and restore focus
+  5) [chromium] › e2e/keyboard-surfaces.spec.ts:134:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › OAuth switch/remove confirmations focus Cancel, allow leaving, dismiss and restore focus 
+
+    Error: no verify email for e2e-ac604360@flowline-e2e.test
+
+    no verify email for e2e-ac604360@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:136:27
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-53821-g-dismiss-and-restore-focus-chromium/error-context.md
+
+
+[8/127] [chromium] › e2e/keyboard-surfaces.spec.ts:160:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › connection removal keeps focus useful while the catalogue is pending
+  6) [chromium] › e2e/keyboard-surfaces.spec.ts:160:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › connection removal keeps focus useful while the catalogue is pending 
+
+    Error: no verify email for e2e-7071b625@flowline-e2e.test
+
+    no verify email for e2e-7071b625@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:161:27
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-0b83c-le-the-catalogue-is-pending-chromium/error-context.md
+
+
+[9/127] [chromium] › e2e/keyboard-surfaces.spec.ts:182:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › desktop run details and nested rerun dialog each dismiss one layer and restore focus
+  7) [chromium] › e2e/keyboard-surfaces.spec.ts:182:7 › @cross-browser remaining keyboard surfaces (DV2-K01–K05) › desktop run details and nested rerun dialog each dismiss one layer and restore focus 
+
+    Error: no verify email for e2e-9dabda1f@flowline-e2e.test
+
+    no verify email for e2e-9dabda1f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/keyboard-surfaces.spec.ts:183:35
+
+    Error Context: ../../../tmp/pw-out/keyboard-surfaces--cross-b-0d869-one-layer-and-restore-focus-chromium/error-context.md
+
+
+[10/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:10:5 › Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing
+  8) [chromium] › e2e/ai-hub-wave-b.spec.ts:10:5 › Z.ai connect dialog: provider warning, required attestation, key can't be checked by listing 
+
+    Error: no verify email for e2e-db287bb3@flowline-e2e.test
+
+    no verify email for e2e-db287bb3@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:11:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-Z-ai-connect-c7909-can-t-be-checked-by-listing-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-Z-ai-connect-c7909-can-t-be-checked-by-listing-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-Z-ai-connect-c7909-can-t-be-checked-by-listing-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-Z-ai-connect-c7909-can-t-be-checked-by-listing-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[11/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:29:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID
+  9) [chromium] › e2e/ai-hub-wave-b.spec.ts:29:5 › Alibaba connect dialog shows region + workspace ID fields and blocks an invalid workspace ID 
+
+    Error: no verify email for e2e-13bc2a4f@flowline-e2e.test
+
+    no verify email for e2e-13bc2a4f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:30:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-Alibaba-conn-62f18-cks-an-invalid-workspace-ID-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[12/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:46:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model
+  10) [chromium] › e2e/ai-hub-wave-b.spec.ts:46:5 › routing policy: owner saves FALLBACK with one route; an agent picks its own model 
+
+    Error: no verify email for e2e-d8209feb@flowline-e2e.test
+
+    no verify email for e2e-d8209feb@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:47:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-routing-poli-c662f-n-agent-picks-its-own-model-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[13/127] [chromium] › e2e/ai-hub-wave-b.spec.ts:84:5 › CXQ-05: saving workspace prices refreshes the model picker without a reload
+  11) [chromium] › e2e/ai-hub-wave-b.spec.ts:84:5 › CXQ-05: saving workspace prices refreshes the model picker without a reload 
+
+    Error: no verify email for e2e-0c4bb8a8@flowline-e2e.test
+
+    no verify email for e2e-0c4bb8a8@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/ai-hub-wave-b.spec.ts:85:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-wave-b-CXQ-05-savin-d9ba9-del-picker-without-a-reload-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[14/127] [chromium] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical
+  12) [chromium] › e2e/ai-hub.spec.ts:28:5 › owner connects a provider in the UI → discover → pick a model on an AI step → run → inspect; isolation + use roles @critical 
+
+    Error: no verify email for e2e-256f5e10@flowline-e2e.test
+
+    no verify email for e2e-256f5e10@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/ai-hub.spec.ts:31:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/ai-hub-owner-connects-a-pr-2a091-inspect-isolation-use-roles-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[15/127] [chromium] › e2e/arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser
+  13) [chromium] › e2e/arabic.spec.ts:22:5 › Arabic by default: sign-up → onboarding → Flows, sign-in, language switch, LTR code fields @cross-browser 
+
+    Error: no verify email for arabic-b497131c@flowline-e2e.test
+
+    no verify email for arabic-b497131c@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at /home/user/FlowLine_Web/e2e/arabic.spec.ts:49:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-by-default-s-0fce8-uage-switch-LTR-code-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/arabic-Arabic-by-default-s-0fce8-uage-switch-LTR-code-fields-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-by-default-s-0fce8-uage-switch-LTR-code-fields-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/arabic-Arabic-by-default-s-0fce8-uage-switch-LTR-code-fields-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[16/127] [chromium] › e2e/arabic.spec.ts:124:5 › auth pages switch language without signing in @cross-browser
+[17/127] [chromium] › e2e/arabic.spec.ts:138:5 › an invalid locale cookie falls back to Arabic @cross-browser
+[18/127] [chromium] › e2e/arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser
+  14) [chromium] › e2e/arabic.spec.ts:144:5 › no horizontal scroll in RTL at 375 / 1024 / 1440 @cross-browser 
+
+    Error: no verify email for arabic-rtl-364e7c0b@flowline-e2e.test
+
+    no verify email for arabic-rtl-364e7c0b@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at /home/user/FlowLine_Web/e2e/arabic.spec.ts:148:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-no-horizontal-scroll-in-RTL-at-375-1024-1440-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/arabic-no-horizontal-scroll-in-RTL-at-375-1024-1440-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-no-horizontal-scroll-in-RTL-at-375-1024-1440-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/arabic-no-horizontal-scroll-in-RTL-at-375-1024-1440-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[19/127] [chromium] › e2e/arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser
+  15) [chromium] › e2e/arabic.spec.ts:164:5 › Arabic builder: toolbar, palette, drawer, run dock and inspector are translated @cross-browser 
+
+    Error: no verify email for e2e-baa25c7e@flowline-e2e.test
+
+    no verify email for e2e-baa25c7e@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/arabic.spec.ts:166:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-builder-tool-76618-nd-inspector-are-translated-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/arabic-Arabic-builder-tool-76618-nd-inspector-are-translated-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-builder-tool-76618-nd-inspector-are-translated-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/arabic-Arabic-builder-tool-76618-nd-inspector-are-translated-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[20/127] [chromium] › e2e/arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser
+  16) [chromium] › e2e/arabic.spec.ts:228:5 › account actions in Arabic: user menu and settings reach resend-verification and a confirmed account deletion @cross-browser 
+
+    Error: no verify email for e2e-a004eb56@flowline-e2e.test
+
+    no verify email for e2e-a004eb56@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/arabic.spec.ts:230:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-account-actions-in--e2eff--confirmed-account-deletion-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/arabic-account-actions-in--e2eff--confirmed-account-deletion-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-account-actions-in--e2eff--confirmed-account-deletion-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/arabic-account-actions-in--e2eff--confirmed-account-deletion-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[21/127] [chromium] › e2e/arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser
+  17) [chromium] › e2e/arabic.spec.ts:258:5 › Arabic settings, agents, knowledge and integrations: every tab and page is translated, RTL, no horizontal scroll @cross-browser 
+
+    Error: no verify email for e2e-debb7624@flowline-e2e.test
+
+    no verify email for e2e-debb7624@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/arabic.spec.ts:260:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-settings-age-dac87-ed-RTL-no-horizontal-scroll-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/arabic-Arabic-settings-age-dac87-ed-RTL-no-horizontal-scroll-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/arabic-Arabic-settings-age-dac87-ed-RTL-no-horizontal-scroll-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/arabic-Arabic-settings-age-dac87-ed-RTL-no-horizontal-scroll-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[22/127] [chromium] › e2e/beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser
+  18) [chromium] › e2e/beta.spec.ts:20:5 › private beta: an uninvited email is refused with a clear reason (no fake 'check your email'); a beta code admits @cross-browser 
+
+    Error: no verify email for stranger-56b12e0b@flowline-e2e.test
+
+    no verify email for stranger-56b12e0b@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at /home/user/FlowLine_Web/e2e/beta.spec.ts:44:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/beta-private-beta-an-uninv-6e304-ur-email-a-beta-code-admits-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/beta-private-beta-an-uninv-6e304-ur-email-a-beta-code-admits-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/beta-private-beta-an-uninv-6e304-ur-email-a-beta-code-admits-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/beta-private-beta-an-uninv-6e304-ur-email-a-beta-code-admits-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[23/127] [chromium] › e2e/beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical
+  19) [chromium] › e2e/beta.spec.ts:55:5 › private beta: invitation link → sign up with the invited email → verify → sign in → accept @critical 
+
+    Error: no verify email for e2e-d8a8961f@flowline-e2e.test
+
+    no verify email for e2e-d8a8961f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/beta.spec.ts:57:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/beta-private-beta-invitati-876ad-→-verify-→-sign-in-→-accept-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/beta-private-beta-invitati-876ad-→-verify-→-sign-in-→-accept-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/beta-private-beta-invitati-876ad-→-verify-→-sign-in-→-accept-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/beta-private-beta-invitati-876ad-→-verify-→-sign-in-→-accept-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[24/127] [chromium] › e2e/builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher
+  20) [chromium] › e2e/builder-keyboard.spec.ts:31:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: Enter opens the catalogue, Escape closes it, focus is back on the launcher 
+
+    Error: no verify email for e2e-808dc3eb@flowline-e2e.test
+
+    no verify email for e2e-808dc3eb@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:32:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-3f522-cus-is-back-on-the-launcher-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-3f522-cus-is-back-on-the-launcher-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-3f522-cus-is-back-on-the-launcher-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-3f522-cus-is-back-on-the-launcher-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[25/127] [chromium] › e2e/builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher
+  21) [chromium] › e2e/builder-keyboard.spec.ts:48:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: opened with the / shortcut from the page, Escape still lands on the launcher 
+
+    Error: no verify email for e2e-5366b10e@flowline-e2e.test
+
+    no verify email for e2e-5366b10e@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:49:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-81a30-still-lands-on-the-launcher-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-81a30-still-lands-on-the-launcher-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-81a30-still-lands-on-the-launcher-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-81a30-still-lands-on-the-launcher-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[26/127] [chromium] › e2e/builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher
+  22) [chromium] › e2e/builder-keyboard.spec.ts:62:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Add node: adding a node with Enter also closes the catalogue onto the launcher 
+
+    Error: no verify email for e2e-ca7f322a@flowline-e2e.test
+
+    no verify email for e2e-ca7f322a@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:63:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-59992-catalogue-onto-the-launcher-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-59992-catalogue-onto-the-launcher-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-59992-catalogue-onto-the-launcher-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-59992-catalogue-onto-the-launcher-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[27/127] [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+  23) [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the Copilot button 
+
+    Error: no verify email for e2e-2b61699f@flowline-e2e.test
+
+    no verify email for e2e-2b61699f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:77:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-2e245-turns-to-the-Copilot-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-2e245-turns-to-the-Copilot-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-2e245-turns-to-the-Copilot-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-2e245-turns-to-the-Copilot-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[28/127] [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button
+  24) [chromium] › e2e/builder-keyboard.spec.ts:76:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the Copilot button 
+
+    Error: no verify email for e2e-6291d78c@flowline-e2e.test
+
+    no verify email for e2e-6291d78c@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:77:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-34d0c-turns-to-the-Copilot-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-34d0c-turns-to-the-Copilot-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-34d0c-turns-to-the-Copilot-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-34d0c-turns-to-the-Copilot-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[29/127] [chromium] › e2e/builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again
+  25) [chromium] › e2e/builder-keyboard.spec.ts:97:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape from the close button closes it too, and the panel can be reopened and closed again 
+
+    Error: no verify email for e2e-25c3a13b@flowline-e2e.test
+
+    no verify email for e2e-25c3a13b@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:98:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-ee879-e-reopened-and-closed-again-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-ee879-e-reopened-and-closed-again-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-ee879-e-reopened-and-closed-again-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-ee879-e-reopened-and-closed-again-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[30/127] [chromium] › e2e/builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it
+  26) [chromium] › e2e/builder-keyboard.spec.ts:116:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Copilot: Escape does not close the panel while a request is in flight (the proposal would be lost), then closes it 
+
+    Error: no verify email for e2e-072656a0@flowline-e2e.test
+
+    no verify email for e2e-072656a0@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:117:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-9be1b-ould-be-lost-then-closes-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-9be1b-ould-be-lost-then-closes-it-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-9be1b-ould-be-lost-then-closes-it-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-9be1b-ould-be-lost-then-closes-it-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[31/127] [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button
+  27) [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by keyboard): focus moves into the panel, Escape closes it, focus returns to the History button 
+
+    Error: no verify email for e2e-1c605830@flowline-e2e.test
+
+    no verify email for e2e-1c605830@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:151:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-17af4-turns-to-the-History-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-17af4-turns-to-the-History-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-17af4-turns-to-the-History-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-17af4-turns-to-the-History-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[32/127] [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button
+  28) [chromium] › e2e/builder-keyboard.spec.ts:150:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History (opened by mouse): focus moves into the panel, Escape closes it, focus returns to the History button 
+
+    Error: no verify email for e2e-8d8fa662@flowline-e2e.test
+
+    no verify email for e2e-8d8fa662@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:151:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-1d911-turns-to-the-History-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-1d911-turns-to-the-History-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-1d911-turns-to-the-History-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-1d911-turns-to-the-History-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[33/127] [chromium] › e2e/builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel
+  29) [chromium] › e2e/builder-keyboard.spec.ts:168:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History: Tab reaches the close button inside the panel first, and Escape from it closes the panel 
+
+    Error: no verify email for e2e-17cb769f@flowline-e2e.test
+
+    no verify email for e2e-17cb769f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:169:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-e9aee-pe-from-it-closes-the-panel-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-e9aee-pe-from-it-closes-the-panel-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-e9aee-pe-from-it-closes-the-panel-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-e9aee-pe-from-it-closes-the-panel-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[34/127] [chromium] › e2e/builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it
+  30) [chromium] › e2e/builder-keyboard.spec.ts:183:7 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › History and Copilot swap without stealing focus back: the one that opens keeps it 
+
+    Error: no verify email for e2e-e418d2e7@flowline-e2e.test
+
+    no verify email for e2e-e418d2e7@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:184:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-7e791-the-one-that-opens-keeps-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-7e791-the-one-that-opens-keeps-it-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-7e791-the-one-that-opens-keeps-it-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-7e791-the-one-that-opens-keeps-it-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[35/127] [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button
+  31) [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by keyboard): on an invalid flow Escape closes it and focus returns to the issues button 
+
+    Error: no verify email for e2e-53a5dd8a@flowline-e2e.test
+
+    no verify email for e2e-53a5dd8a@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:204:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-92474-eturns-to-the-issues-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-92474-eturns-to-the-issues-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-92474-eturns-to-the-issues-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-92474-eturns-to-the-issues-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[36/127] [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button
+  32) [chromium] › e2e/builder-keyboard.spec.ts:203:9 › @cross-browser builder keyboard lifecycle (DV2-M01 / DV2-M02) › Flow issues (opened by mouse): on an invalid flow Escape closes it and focus returns to the issues button 
+
+    Error: no verify email for e2e-8af9eb59@flowline-e2e.test
+
+    no verify email for e2e-8af9eb59@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:204:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-dd7e3-eturns-to-the-issues-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-dd7e3-eturns-to-the-issues-button-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-dd7e3-eturns-to-the-issues-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-dd7e3-eturns-to-the-issues-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[37/127] [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST
+  33) [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive Escape and reopening without another POST 
+
+    Error: no verify email for e2e-84476103@flowline-e2e.test
+
+    no verify email for e2e-84476103@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:226:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-95c60-pening-without-another-POST-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[38/127] [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST
+  34) [chromium] › e2e/builder-keyboard.spec.ts:225:9 › @cross-browser Copilot preservation and panel refetch › proposal, request, diff and removals choice survive X and reopening without another POST 
+
+    Error: no verify email for e2e-e082ec0f@flowline-e2e.test
+
+    no verify email for e2e-e082ec0f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:226:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-c350c-pening-without-another-POST-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[39/127] [chromium] › e2e/builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot
+  35) [chromium] › e2e/builder-keyboard.spec.ts:262:7 › @cross-browser Copilot preservation and panel refetch › a nested tooltip consumes Escape before Copilot 
+
+    Error: no verify email for e2e-e5339e3a@flowline-e2e.test
+
+    no verify email for e2e-e5339e3a@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:263:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-956c4-sumes-Escape-before-Copilot-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-956c4-sumes-Escape-before-Copilot-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-956c4-sumes-Escape-before-Copilot-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-956c4-sumes-Escape-before-Copilot-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[40/127] [chromium] › e2e/builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel
+  36) [chromium] › e2e/builder-keyboard.spec.ts:287:7 › @cross-browser Copilot preservation and panel refetch › History refetch does not steal focus inside or outside the non-modal panel 
+
+    Error: no verify email for e2e-9be56b3b@flowline-e2e.test
+
+    no verify email for e2e-9be56b3b@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at openBlankBuilder (/home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:14:33)
+        at /home/user/FlowLine_Web/e2e/builder-keyboard.spec.ts:288:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-cfa52-outside-the-non-modal-panel-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/builder-keyboard--cross-br-cfa52-outside-the-non-modal-panel-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/builder-keyboard--cross-br-cfa52-outside-the-non-modal-panel-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/builder-keyboard--cross-br-cfa52-outside-the-non-modal-panel-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[41/127] [chromium] › e2e/canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical
+  37) [chromium] › e2e/canvas.spec.ts:5:7 › canvas interactions & keyboard map › select, duplicate, nudge, delete, undo/redo, Esc, and typing guards @critical 
+
+    Error: no verify email for e2e-c00938a9@flowline-e2e.test
+
+    no verify email for e2e-c00938a9@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:6:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-0bab0--redo-Esc-and-typing-guards-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-0bab0--redo-Esc-and-typing-guards-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-0bab0--redo-Esc-and-typing-guards-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-0bab0--redo-Esc-and-typing-guards-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[42/127] [chromium] › e2e/canvas.spec.ts:81:7 › canvas interactions & keyboard map › arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01)
+  38) [chromium] › e2e/canvas.spec.ts:81:7 › canvas interactions & keyboard map › arrow nudge is exactly 12px (Shift 1px) when the node itself has focus (regression: Codex CR-01) 
+
+    Error: no verify email for e2e-a4fb2d9f@flowline-e2e.test
+
+    no verify email for e2e-a4fb2d9f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:82:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-2ecf8-cus-regression-Codex-CR-01--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-2ecf8-cus-regression-Codex-CR-01--chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-2ecf8-cus-regression-Codex-CR-01--chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-2ecf8-cus-regression-Codex-CR-01--chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[43/127] [chromium] › e2e/canvas.spec.ts:101:7 › canvas interactions & keyboard map › opening and selecting does not mark the flow dirty or bump its revision
+  39) [chromium] › e2e/canvas.spec.ts:101:7 › canvas interactions & keyboard map › opening and selecting does not mark the flow dirty or bump its revision 
+
+    Error: no verify email for e2e-5f281cb5@flowline-e2e.test
+
+    no verify email for e2e-5f281cb5@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:102:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-342e7--dirty-or-bump-its-revision-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-342e7--dirty-or-bump-its-revision-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-342e7--dirty-or-bump-its-revision-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-342e7--dirty-or-bump-its-revision-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[44/127] [chromium] › e2e/canvas.spec.ts:113:7 › canvas interactions & keyboard map › drawer tabs follow the WAI-ARIA keyboard pattern
+  40) [chromium] › e2e/canvas.spec.ts:113:7 › canvas interactions & keyboard map › drawer tabs follow the WAI-ARIA keyboard pattern 
+
+    Error: no verify email for e2e-117ce9ea@flowline-e2e.test
+
+    no verify email for e2e-117ce9ea@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:114:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-93808-e-WAI-ARIA-keyboard-pattern-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-93808-e-WAI-ARIA-keyboard-pattern-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-93808-e-WAI-ARIA-keyboard-pattern-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-93808-e-WAI-ARIA-keyboard-pattern-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[45/127] [chromium] › e2e/canvas.spec.ts:133:7 › canvas interactions & keyboard map › invalid connections are refused with an explanation
+  41) [chromium] › e2e/canvas.spec.ts:133:7 › canvas interactions & keyboard map › invalid connections are refused with an explanation 
+
+    Error: no verify email for e2e-f9162313@flowline-e2e.test
+
+    no verify email for e2e-f9162313@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:134:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-722d4-refused-with-an-explanation-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-722d4-refused-with-an-explanation-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-722d4-refused-with-an-explanation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-722d4-refused-with-an-explanation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[46/127] [chromium] › e2e/canvas.spec.ts:153:7 › canvas interactions & keyboard map › re-run from a step reuses upstream outputs
+  42) [chromium] › e2e/canvas.spec.ts:153:7 › canvas interactions & keyboard map › re-run from a step reuses upstream outputs 
+
+    Error: no verify email for e2e-d2cb82c7@flowline-e2e.test
+
+    no verify email for e2e-d2cb82c7@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/canvas.spec.ts:154:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-56853-tep-reuses-upstream-outputs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/canvas-canvas-interactions-56853-tep-reuses-upstream-outputs-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/canvas-canvas-interactions-56853-tep-reuses-upstream-outputs-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/canvas-canvas-interactions-56853-tep-reuses-upstream-outputs-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[47/127] [chromium] › e2e/company-builder.spec.ts:30:5 › company builder: interview → plan → real drafts → sample trial → review → activation → history @critical
+  43) [chromium] › e2e/company-builder.spec.ts:30:5 › company builder: interview → plan → real drafts → sample trial → review → activation → history @critical 
+
+    Error: no verify email for e2e-20405277@flowline-e2e.test
+
+    no verify email for e2e-20405277@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/company-builder.spec.ts:32:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-842da-view-→-activation-→-history-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/company-builder-company-bu-842da-view-→-activation-→-history-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-842da-view-→-activation-→-history-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/company-builder-company-bu-842da-view-→-activation-→-history-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[48/127] [chromium] › e2e/company-builder.spec.ts:129:5 › company builder: another workspace's member gets 404; nobody but the founder reaches the CLI prototype @critical
+  44) [chromium] › e2e/company-builder.spec.ts:129:5 › company builder: another workspace's member gets 404; nobody but the founder reaches the CLI prototype @critical 
+
+    Error: no verify email for e2e-415f74ba@flowline-e2e.test
+
+    no verify email for e2e-415f74ba@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/company-builder.spec.ts:134:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-1e2f6-r-reaches-the-CLI-prototype-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-1e2f6-r-reaches-the-CLI-prototype-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/company-builder-company-bu-1e2f6-r-reaches-the-CLI-prototype-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-1e2f6-r-reaches-the-CLI-prototype-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/company-builder-company-bu-1e2f6-r-reaches-the-CLI-prototype-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[49/127] [chromium] › e2e/company-builder.spec.ts:150:5 › company builder: Arabic is the default, right-to-left, with the reviewed promise @cross-browser
+  45) [chromium] › e2e/company-builder.spec.ts:150:5 › company builder: Arabic is the default, right-to-left, with the reviewed promise @cross-browser 
+
+    Error: no verify email for e2e-9fb97bd4@flowline-e2e.test
+
+    no verify email for e2e-9fb97bd4@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/company-builder.spec.ts:153:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-2aef0-t-with-the-reviewed-promise-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/company-builder-company-bu-2aef0-t-with-the-reviewed-promise-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-2aef0-t-with-the-reviewed-promise-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/company-builder-company-bu-2aef0-t-with-the-reviewed-promise-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[50/127] [chromium] › e2e/company-builder.spec.ts:164:5 › company builder: keyboard-only answering; mobile width has no horizontal scroll
+  46) [chromium] › e2e/company-builder.spec.ts:164:5 › company builder: keyboard-only answering; mobile width has no horizontal scroll 
+
+    Error: no verify email for e2e-95e039b2@flowline-e2e.test
+
+    no verify email for e2e-95e039b2@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/company-builder.spec.ts:165:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-9c86f-th-has-no-horizontal-scroll-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/company-builder-company-bu-9c86f-th-has-no-horizontal-scroll-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/company-builder-company-bu-9c86f-th-has-no-horizontal-scroll-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/company-builder-company-bu-9c86f-th-has-no-horizontal-scroll-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[51/127] [chromium] › e2e/failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses
+  47) [chromium] › e2e/failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses 
+
+    Error: no verify email for e2e-74e84a69@flowline-e2e.test
+
+    no verify email for e2e-74e84a69@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/failures.spec.ts:9:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-invalid-flow-run--90196-lds-show-errors-API-refuses-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/failures-invalid-flow-run--90196-lds-show-errors-API-refuses-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-invalid-flow-run--90196-lds-show-errors-API-refuses-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/failures-invalid-flow-run--90196-lds-show-errors-API-refuses-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[52/127] [chromium] › e2e/failures.spec.ts:39:5 › save failure: silent retries then recovery, and manual retry after repeated failures
+  48) [chromium] › e2e/failures.spec.ts:39:5 › save failure: silent retries then recovery, and manual retry after repeated failures 
+
+    Error: no verify email for e2e-31ccdbe2@flowline-e2e.test
+
+    no verify email for e2e-31ccdbe2@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/failures.spec.ts:40:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-save-failure-sile-81945-try-after-repeated-failures-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/failures-save-failure-sile-81945-try-after-repeated-failures-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-save-failure-sile-81945-try-after-repeated-failures-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/failures-save-failure-sile-81945-try-after-repeated-failures-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[53/127] [chromium] › e2e/failures.spec.ts:63:5 › load failure: the canvas shows an error with a working Retry
+  49) [chromium] › e2e/failures.spec.ts:63:5 › load failure: the canvas shows an error with a working Retry 
+
+    Error: no verify email for e2e-fc8cfddf@flowline-e2e.test
+
+    no verify email for e2e-fc8cfddf@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/failures.spec.ts:64:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-load-failure-the--c52b1--error-with-a-working-Retry-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/failures-load-failure-the--c52b1--error-with-a-working-Retry-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-load-failure-the--c52b1--error-with-a-working-Retry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/failures-load-failure-the--c52b1--error-with-a-working-Retry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[54/127] [chromium] › e2e/failures.spec.ts:74:5 › offline: edits kept locally, run disabled, reconciled on reconnect
+  50) [chromium] › e2e/failures.spec.ts:74:5 › offline: edits kept locally, run disabled, reconciled on reconnect 
+
+    Error: no verify email for e2e-a64e9a64@flowline-e2e.test
+
+    no verify email for e2e-a64e9a64@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/failures.spec.ts:75:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-offline-edits-kep-c5022-led-reconciled-on-reconnect-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/failures-offline-edits-kep-c5022-led-reconciled-on-reconnect-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-offline-edits-kep-c5022-led-reconciled-on-reconnect-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/failures-offline-edits-kep-c5022-led-reconciled-on-reconnect-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[55/127] [chromium] › e2e/failures.spec.ts:97:5 › offline conflict: newer server copy is never silently overwritten
+  51) [chromium] › e2e/failures.spec.ts:97:5 › offline conflict: newer server copy is never silently overwritten 
+
+    Error: no verify email for e2e-338ec424@flowline-e2e.test
+
+    no verify email for e2e-338ec424@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/failures.spec.ts:98:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-offline-conflict--7026e--never-silently-overwritten-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/failures-offline-conflict--7026e--never-silently-overwritten-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/failures-offline-conflict--7026e--never-silently-overwritten-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/failures-offline-conflict--7026e--never-silently-overwritten-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[56/127] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser
+  52) [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser 
+
+    Error: no verify email for e2e-ae0b51d0@flowline-e2e.test
+
+    no verify email for e2e-ae0b51d0@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:25:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-3944c-40px-en-US-America-New-York-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-war-3944c-40px-en-US-America-New-York-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-3944c-40px-en-US-America-New-York-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-war-3944c-40px-en-US-America-New-York-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[57/127] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+  53) [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser 
+
+    Error: no verify email for e2e-004e6c5c@flowline-e2e.test
+
+    no verify email for e2e-004e6c5c@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:25:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-warnings-1024px-ar-EG-Africa-Cairo-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-warnings-1024px-ar-EG-Africa-Cairo-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-warnings-1024px-ar-EG-Africa-Cairo-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-warnings-1024px-ar-EG-Africa-Cairo-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[58/127] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+  54) [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser 
+
+    Error: no verify email for e2e-106fe3da@flowline-e2e.test
+
+    no verify email for e2e-106fe3da@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:25:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-warnings-375px-de-DE-Asia-Tokyo-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-warnings-375px-de-DE-Asia-Tokyo-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-warnings-375px-de-DE-Asia-Tokyo-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-warnings-375px-de-DE-Asia-Tokyo-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[59/127] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser
+  55) [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser 
+
+    Error: no verify email for hydration-c27d158f@flowline-e2e.test
+
+    no verify email for hydration-c27d158f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:84:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-19308-40px-en-US-America-New-York-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-war-19308-40px-en-US-America-New-York-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-19308-40px-en-US-America-New-York-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-war-19308-40px-en-US-America-New-York-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[60/127] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser
+  56) [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser 
+
+    Error: no verify email for hydration-991105d2@flowline-e2e.test
+
+    no verify email for hydration-991105d2@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:84:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-87033-t-1024px-ar-EG-Africa-Cairo-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-war-87033-t-1024px-ar-EG-Africa-Cairo-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-87033-t-1024px-ar-EG-Africa-Cairo-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-war-87033-t-1024px-ar-EG-Africa-Cairo-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[61/127] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser
+  57) [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser 
+
+    Error: no verify email for hydration-11a2fadd@flowline-e2e.test
+
+    no verify email for hydration-11a2fadd@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at /home/user/FlowLine_Web/e2e/hydration.spec.ts:84:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-8be3c-ight-375px-de-DE-Asia-Tokyo-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/hydration-no-hydration-war-8be3c-ight-375px-de-DE-Asia-Tokyo-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/hydration-no-hydration-war-8be3c-ight-375px-de-DE-Asia-Tokyo-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/hydration-no-hydration-war-8be3c-ight-375px-de-DE-Asia-Tokyo-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[62/127] [chromium] › e2e/journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical
+  58) [chromium] › e2e/journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical 
+
+    Error: no verify email for journey-4dfbd674@flowline-e2e.test
+
+    no verify email for journey-4dfbd674@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at /home/user/FlowLine_Web/e2e/journey.spec.ts:33:41
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[63/127] [chromium] › e2e/landing.spec.ts:53:7 › landing scroll experience › scrolls through every section with no console errors
+[64/127] [chromium] › e2e/landing.spec.ts:65:7 › landing scroll experience › reduced motion: scroll scenes are static
+[65/127] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 375px
+[66/127] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1024px
+[67/127] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1440px
+[68/127] [chromium] › e2e/landing.spec.ts:114:7 › landing scroll experience with motion allowed (desktop) › scroll reveals end fully visible (opacity 1, none left hidden)
+[69/127] [chromium] › e2e/landing.spec.ts:128:7 › landing scroll experience with motion allowed (desktop) › hero scrub: .hero-scrub runs on the wrapper's named view timeline where the browser supports scroll timelines
+[70/127] [chromium] › e2e/landing.spec.ts:158:7 › landing scroll experience with motion allowed (desktop) › hero scrub: the scale/tilt plays WHILE the stage is pinned (not only at pin release)
+[71/127] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, light)
+[72/127] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, dark)
+[73/127] [chromium] › e2e/landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (en)
+[74/127] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, light)
+[75/127] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, dark)
+[76/127] [chromium] › e2e/landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (ar)
+[77/127] [chromium] › e2e/landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 375px: theme and language can be changed from the header
+[78/127] [chromium] › e2e/landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 360px: theme and language can be changed from the header
+[79/127] [chromium] › e2e/landing.spec.ts:336:7 › landing header: fits every width, keeps theme and language reachable › phone 375px: the preferences are keyboard operable with a visible focus ring
+[80/127] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › en/light: readable illustrations at 360, 768, 1024 and 1440
+[81/127] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › en/dark: readable illustrations at 360, 768, 1024 and 1440
+[82/127] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › ar/light: readable illustrations at 360, 768, 1024 and 1440
+[83/127] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › ar/dark: readable illustrations at 360, 768, 1024 and 1440
+[84/127] [chromium] › e2e/landing.spec.ts:401:7 › @cross-browser en: section links preserve landing content through account-route Back and Forward
+[85/127] [chromium] › e2e/landing.spec.ts:401:7 › @cross-browser ar: section links preserve landing content through account-route Back and Forward
+[86/127] [chromium] › e2e/library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements
+  59) [chromium] › e2e/library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements 
+
+    Error: no verify email for e2e-ab31193e@flowline-e2e.test
+
+    no verify email for e2e-ab31193e@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/library.spec.ts:5:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/library-templates-a-local--6758b-ist-their-real-requirements-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/library-templates-a-local--6758b-ist-their-real-requirements-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/library-templates-a-local--6758b-ist-their-real-requirements-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/library-templates-a-local--6758b-ist-their-real-requirements-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[87/127] [chromium] › e2e/library.spec.ts:25:5 › settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves
+  60) [chromium] › e2e/library.spec.ts:25:5 › settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves 
+
+    Error: no verify email for e2e-9c09c72f@flowline-e2e.test
+
+    no verify email for e2e-9c09c72f@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/library.spec.ts:26:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/library-settings-owner-ren-1e3c0-features-explain-themselves-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/library-settings-owner-ren-1e3c0-features-explain-themselves-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/library-settings-owner-ren-1e3c0-features-explain-themselves-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/library-settings-owner-ren-1e3c0-features-explain-themselves-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[88/127] [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › en: filter, search, create and run a quote from the gallery
+  61) [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › en: filter, search, create and run a quote from the gallery 
+
+    Error: no verify email for e2e-a6de3af2@flowline-e2e.test
+
+    no verify email for e2e-a6de3af2@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/local-scenarios.spec.ts:7:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/local-scenarios--cross-bro-38e17-un-a-quote-from-the-gallery-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/local-scenarios--cross-bro-38e17-un-a-quote-from-the-gallery-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/local-scenarios--cross-bro-38e17-un-a-quote-from-the-gallery-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/local-scenarios--cross-bro-38e17-un-a-quote-from-the-gallery-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[89/127] [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › ar: filter, search, create and run a quote from the gallery
+  62) [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › ar: filter, search, create and run a quote from the gallery 
+
+    Error: no verify email for e2e-cfc26231@flowline-e2e.test
+
+    no verify email for e2e-cfc26231@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/local-scenarios.spec.ts:7:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/local-scenarios--cross-bro-d7292-un-a-quote-from-the-gallery-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/local-scenarios--cross-bro-d7292-un-a-quote-from-the-gallery-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/local-scenarios--cross-bro-d7292-un-a-quote-from-the-gallery-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/local-scenarios--cross-bro-d7292-un-a-quote-from-the-gallery-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[90/127] [chromium] › e2e/phase2.spec.ts:82:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates
+  63) [chromium] › e2e/phase2.spec.ts:82:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates 
+
+    Error: no verify email for e2e-bf1ec619@flowline-e2e.test
+
+    no verify email for e2e-bf1ec619@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase2.spec.ts:84:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-template-journey-co-e9c7d-hat-step-without-duplicates-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase2-template-journey-co-e9c7d-hat-step-without-duplicates-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-template-journey-co-e9c7d-hat-step-without-duplicates-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase2-template-journey-co-e9c7d-hat-step-without-duplicates-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[91/127] [chromium] › e2e/phase2.spec.ts:148:5 › double-clicked Run starts one run, and Cancel stops it mid-request
+  64) [chromium] › e2e/phase2.spec.ts:148:5 › double-clicked Run starts one run, and Cancel stops it mid-request 
+
+    Error: no verify email for e2e-0c1e17e4@flowline-e2e.test
+
+    no verify email for e2e-0c1e17e4@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase2.spec.ts:149:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-double-clicked-Run--b051b-Cancel-stops-it-mid-request-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase2-double-clicked-Run--b051b-Cancel-stops-it-mid-request-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-double-clicked-Run--b051b-Cancel-stops-it-mid-request-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase2-double-clicked-Run--b051b-Cancel-stops-it-mid-request-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[92/127] [chromium] › e2e/phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical
+  65) [chromium] › e2e/phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical 
+
+    Error: no verify email for e2e-7c7e53af@flowline-e2e.test
+
+    no verify email for e2e-7c7e53af@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase2.spec.ts:177:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-approval-a-gated-Sl-b5625-ctor-and-posts-exactly-once-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase2-approval-a-gated-Sl-b5625-ctor-and-posts-exactly-once-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-approval-a-gated-Sl-b5625-ctor-and-posts-exactly-once-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase2-approval-a-gated-Sl-b5625-ctor-and-posts-exactly-once-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[93/127] [chromium] › e2e/phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs
+  66) [chromium] › e2e/phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs 
+
+    Error: no verify email for e2e-d877bb8c@flowline-e2e.test
+
+    no verify email for e2e-d877bb8c@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase2.spec.ts:202:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-repair-a-connection-f12b2-via-OAuth-nothing-auto-runs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase2-repair-a-connection-f12b2-via-OAuth-nothing-auto-runs-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-repair-a-connection-f12b2-via-OAuth-nothing-auto-runs-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase2-repair-a-connection-f12b2-via-OAuth-nothing-auto-runs-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[94/127] [chromium] › e2e/phase2.spec.ts:257:5 › mobile: Phase 2 pages fit a phone screen without horizontal scrolling
+  67) [chromium] › e2e/phase2.spec.ts:257:5 › mobile: Phase 2 pages fit a phone screen without horizontal scrolling 
+
+    Error: no verify email for e2e-1ade5641@flowline-e2e.test
+
+    no verify email for e2e-1ade5641@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase2.spec.ts:259:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-mobile-Phase-2-page-302fe-ithout-horizontal-scrolling-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase2-mobile-Phase-2-page-302fe-ithout-horizontal-scrolling-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase2-mobile-Phase-2-page-302fe-ithout-horizontal-scrolling-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase2-mobile-Phase-2-page-302fe-ithout-horizontal-scrolling-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[95/127] [chromium] › e2e/phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical
+  68) [chromium] › e2e/phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical 
+
+    Error: no verify email for e2e-ccd1bfb8@flowline-e2e.test
+
+    no verify email for e2e-ccd1bfb8@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase3.spec.ts:44:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-members-invite-link-3e58a-s-it-removal-revokes-access-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase3-members-invite-link-3e58a-s-it-removal-revokes-access-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-members-invite-link-3e58a-s-it-removal-revokes-access-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase3-members-invite-link-3e58a-s-it-removal-revokes-access-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[96/127] [chromium] › e2e/phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+  69) [chromium] › e2e/phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical 
+
+    Error: no verify email for e2e-2ad7e575@flowline-e2e.test
+
+    no verify email for e2e-2ad7e575@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase3.spec.ts:103:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-API-keys-created-wi-f1f40-1-stop-working-when-revoked-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase3-API-keys-created-wi-f1f40-1-stop-working-when-revoked-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-API-keys-created-wi-f1f40-1-stop-working-when-revoked-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase3-API-keys-created-wi-f1f40-1-stop-working-when-revoked-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[97/127] [chromium] › e2e/phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+  70) [chromium] › e2e/phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical 
+
+    Error: no verify email for e2e-45060124@flowline-e2e.test
+
+    no verify email for e2e-45060124@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase3.spec.ts:127:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-knowledge-agent-upl-461ba-the-published-workflow-once-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase3-knowledge-agent-upl-461ba-the-published-workflow-once-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-knowledge-agent-upl-461ba-the-published-workflow-once-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase3-knowledge-agent-upl-461ba-the-published-workflow-once-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[98/127] [chromium] › e2e/phase3.spec.ts:184:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+  71) [chromium] › e2e/phase3.spec.ts:184:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical 
+
+    Error: no verify email for e2e-69474856@flowline-e2e.test
+
+    no verify email for e2e-69474856@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase3.spec.ts:185:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-Copilot-valid-gener-5b838-e-→-saved-draft-nothing-ran-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase3-Copilot-valid-gener-5b838-e-→-saved-draft-nothing-ran-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-Copilot-valid-gener-5b838-e-→-saved-draft-nothing-ran-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase3-Copilot-valid-gener-5b838-e-→-saved-draft-nothing-ran-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[99/127] [chromium] › e2e/phase3.spec.ts:209:7 › Copilot › invalid proposal and missing integration are explained and can't be applied; rejection changes nothing
+  72) [chromium] › e2e/phase3.spec.ts:209:7 › Copilot › invalid proposal and missing integration are explained and can't be applied; rejection changes nothing 
+
+    Error: no verify email for e2e-36c7644e@flowline-e2e.test
+
+    no verify email for e2e-36c7644e@flowline-e2e.test
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at helpers.ts:34
+
+      32 |       { timeout: 10_000, message: `no ${purpose ?? ""} email for ${email}` },
+      33 |     )
+    > 34 |     .toBe(true);
+         |      ^
+      35 |   return found!;
+      36 | }
+      37 |
+        at latestEmail (/home/user/FlowLine_Web/e2e/helpers.ts:34:6)
+        at verificationLink (/home/user/FlowLine_Web/e2e/helpers.ts:40:23)
+        at signUpVerified (/home/user/FlowLine_Web/e2e/helpers.ts:54:31)
+        at setupUser (/home/user/FlowLine_Web/e2e/helpers.ts:70:3)
+        at /home/user/FlowLine_Web/e2e/phase3.spec.ts:210:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-Copilot-invalid-pro-89a41-d-rejection-changes-nothing-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../tmp/pw-out/phase3-Copilot-invalid-pro-89a41-d-rejection-changes-nothing-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../tmp/pw-out/phase3-Copilot-invalid-pro-89a41-d-rejection-changes-nothing-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../tmp/pw-out/phase3-Copilot-invalid-pro-89a41-d-rejection-changes-nothing-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[100/127] [chromium] › e2e/phase3.spec.ts:225:7 › Copilot › patching an existing flow keeps the user's steps; removals need explicit confirmation

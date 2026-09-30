@@ -443,6 +443,7 @@ export const companyBuilderAr = {
     OUTCOME_UNCERTAIN: "لم نتمكن من تأكيد الإرسال. نتحقق قبل إعادة المحاولة.",
     FORBIDDEN: "ليست لديك صلاحية لهذا الإجراء.",
     REQUIRES_SETUP: "المهمة تحتاج إعدادًا قبل التفعيل.",
+    ALREADY_ACTIVE: "المهمة مفعّلة بالفعل. أوقفها أولًا لتغييرها.",
   },
 
   node: {

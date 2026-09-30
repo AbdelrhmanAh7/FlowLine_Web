@@ -254,6 +254,13 @@ describe("CLI envelope and adapter (no real CLI)", () => {
     expect(validateBlueprint(blueprint).issues).toEqual([]);
     expect(() => blueprintProposalSchema.parse({ tasks: [{ taskId: "customer-triage", include: true, params: { permissions: ["root"] } }], notes: "" })).toThrow();
   });
+  it("an empty currency narrowing can't switch the currency check off (re-test N2)", () => {
+    const fin = composeBlueprint(answerAll([["situation", "improve"], ["first_outcome", "finance"], ["fin_location", "email"], ["fin_currency", ["SAR", "USD"]], ["fin_reviewer", "owner"]]), ctx);
+    const empty = applyProposal(fin, blueprintProposalSchema.parse({ tasks: [{ taskId: "invoice-organiser", include: true, params: { currencies: [] } }], notes: "" }), "cli_codex");
+    expect(empty.blueprint.tasks[0]!.params.currencies).toEqual(["SAR", "USD"]);
+    const narrowed = applyProposal(fin, blueprintProposalSchema.parse({ tasks: [{ taskId: "invoice-organiser", include: true, params: { currencies: ["USD", "EUR"] } }], notes: "" }), "cli_codex");
+    expect(narrowed.blueprint.tasks[0]!.params.currencies).toEqual(["USD"]); // EUR was never confirmed
+  });
   it("argument arrays are fixed: no shell, all tools disabled, no MCP, no fallback model; prompt only via stdin", () => {
     const env = { v: 1 as const, kind: "text_trial" as const, jobId: SID, cli: "claude" as const, taskId: "customer-triage" as const, text: "hi; rm -rf ~ $(whoami)" };
     const args = buildArgs("claude", env, "/tmp/job", {});

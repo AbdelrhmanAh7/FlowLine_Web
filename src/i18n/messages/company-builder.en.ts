@@ -443,6 +443,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     OUTCOME_UNCERTAIN: "We couldn't confirm the send. We're verifying before retrying.",
     FORBIDDEN: "You don't have permission to do this.",
     REQUIRES_SETUP: "The task needs setup before activation.",
+    ALREADY_ACTIVE: "This task is already active. Pause it first to change it.",
   },
 
   node: {

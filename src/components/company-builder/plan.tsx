@@ -96,7 +96,7 @@ export function PlanPanel({
   const sep = useLocale() === "ar" ? "، " : ", ";
   const bp = data.blueprint;
   // Installation state of THIS plan version (an older installed version keeps running and is shown in the task cards).
-  const inst = data.installation && data.installation.blueprintId === bp?.id ? data.installation : null;
+  const inst = data.planInstallation;
   const viewOnly = canEdit ? null : t("companyBuilder.disabledViewer");
   if (!bp) {
     return (

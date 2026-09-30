@@ -41,7 +41,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
     // Poll only while something is in flight (a trial run, an installation).
     refetchInterval: (query) => {
       const d = query.state.data;
-      return d && (d.tasks.some((x) => x.trial?.status === "running") || d.installation?.status === "installing") ? 1500 : false;
+      return d && (d.tasks.some((x) => x.trial?.status === "running") || d.planInstallation?.status === "installing") ? 1500 : false;
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["cb-session", sessionId] });
@@ -147,7 +147,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
             onGenerate={() => run("generate", () => api(`${base}/sessions/${sessionId}/blueprint`, { method: "POST", json: {} }), () => focusHeading("cb-plan-heading"))}
             onApprove={() => run("approve", () => api(`${base}/blueprints/${data.blueprint!.id}/approve`, { method: "POST", json: {} }))}
             onInstall={() => run("install", () => api(`${base}/blueprints/${data.blueprint!.id}/install`, { method: "POST", json: {} }))}
-            onCancelInstall={() => run("cancelInstall", () => api(`${base}/installations/${data.installation!.id}/cancel`, { method: "POST", json: {} }))}
+            onCancelInstall={() => run("cancelInstall", () => api(`${base}/installations/${data.planInstallation!.id}/cancel`, { method: "POST", json: {} }))}
           />
           {installed && (
             <section aria-label={t("companyBuilder.plan.rolesHeading")} className="flex flex-col gap-3" data-testid="cb-tasks">

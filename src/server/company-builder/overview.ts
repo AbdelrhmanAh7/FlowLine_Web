@@ -20,7 +20,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
   // The installation shown: the latest plan's, else the most recent INSTALLED one of this interview (a newer plan
   // version — e.g. a CLI proposal awaiting review — never hides tasks that are installed or active).
   const [latestInst] = bp ? await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.blueprintId, bp.id)).orderBy(desc(schema.cbInstallation.createdAt)).limit(1) : [];
-  const [liveInst] = latestInst
+  const [liveInst] = latestInst?.status === "installed"
     ? []
     : await db
         .select({ inst: schema.cbInstallation })
@@ -29,7 +29,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
         .where(and(eq(schema.cbBlueprint.sessionId, sessionId), eq(schema.cbInstallation.status, "installed")))
         .orderBy(desc(schema.cbInstallation.createdAt))
         .limit(1);
-  const inst = latestInst ?? liveInst?.inst;
+  const inst = latestInst?.status === "installed" ? latestInst : (liveInst?.inst ?? latestInst);
   const [instBp] = inst && inst.blueprintId !== bp?.id ? await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, inst.blueprintId)) : [];
   const items = inst ? await installedItems(inst.id) : [];
   const flowIds = items.filter((i) => i.kind === "flow").map((i) => i.refId);
@@ -80,6 +80,8 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
     blueprint: bp ? { id: bp.id, version: bp.version, status: bp.status, generator: bp.generator, diff: bp.diff, body, createdAt: bp.createdAt } : null,
     versions,
     installation: inst ? { id: inst.id, status: inst.status, error: inst.error, blueprintId: inst.blueprintId, blueprintVersion: instBp?.version ?? bp?.version ?? null } : null,
+    /** The latest plan version's own installation (drives the plan panel's create/cancel buttons). */
+    planInstallation: latestInst ? { id: latestInst.id, status: latestInst.status, error: latestInst.error, blueprintId: latestInst.blueprintId } : null,
     tasks,
     reviews,
     outbox: await sampleOutbox(workspaceId),

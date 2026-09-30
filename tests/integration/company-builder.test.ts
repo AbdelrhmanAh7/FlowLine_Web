@@ -524,6 +524,20 @@ describe("independent-review fixes (P1/P2 regressions)", () => {
     await expectHttpError(startTrial(owner, ws.id, installation.id, "customer-triage", { trialKey: "unsafe-0001" }), 409, "TRIAL_NOT_SAMPLE_SAFE");
   });
 
+  it("re-test N1: an already-sent test action is never opened (or sent) again; N3: activating an active task is refused", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const trial = await runTrial(owner, ws.id, installation.id, "customer-triage");
+    const item = await requestSampleAction(owner, ws.id, trial.id);
+    await decideReview(owner, ws.id, item.id, "approve");
+    const again = await requestSampleAction(owner, ws.id, trial.id);
+    expect(again).toMatchObject({ id: item.id, status: "executed" });
+    expect(await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id))).toHaveLength(1);
+    await grantDevTrial(owner, ws.id);
+    const act = await requestActivation(owner, ws.id, installation.id, "customer-triage");
+    await decideReview(owner, ws.id, act.id, "approve");
+    await expectHttpError(requestActivation(owner, ws.id, installation.id, "customer-triage"), 409, "ALREADY_ACTIVE");
+  });
+
   it("P3: malformed ids are 404, not 500", async () => {
     const { owner, ws } = await installedCompany();
     await expectHttpError(decideReview(owner, ws.id, "not-a-uuid", "approve"), 404);
