@@ -27,7 +27,7 @@ const config = [
       ],
     },
   },
-  { ignores: [".next/**", ".next-test/**", "node_modules/**", "artifacts/**", "playwright-report/**", "test-results/**", "drizzle/**", "next-env.d.ts"] },
+  { ignores: [".next/**", ".next-test/**", "node_modules/**", "artifacts/**", "playwright-report/**", "test-results/**", "drizzle/**", "next-env.d.ts", ".claude/**"] },
 ];
 
 export default config;

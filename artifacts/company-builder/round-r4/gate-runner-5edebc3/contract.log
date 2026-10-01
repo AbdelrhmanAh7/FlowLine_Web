@@ -1,0 +1,14 @@
+$ pnpm test:contract
+
+> flowline@0.1.0 test:contract /home/user/FlowLine_Web
+> vitest run --project contract
+
+
+ RUN  v5.0.2 /home/user/FlowLine_Web
+
+
+ Test Files  22 passed (22)
+      Tests  467 passed (467)
+   Start at  10:31:05
+   Duration  27.99s (tests 69%, import 24%, transform 7%)
+

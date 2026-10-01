@@ -1,0 +1,5 @@
+$ pnpm typecheck
+
+> flowline@0.1.0 typecheck /home/user/FlowLine_Web
+> tsc --noEmit
+
