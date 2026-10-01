@@ -66,3 +66,29 @@ This is the running log for the direction-v2 change (`816f342..HEAD`). Phase-1 f
 | VO-05 | P3 | VP-06 asks for a phone number before a cancellation; the packet lists phone as required "before booking". Unscored. | separate reviewer | OBSERVATION | Same root cause as VO-02. |
 | VO-06 | P3 | The record's `topic: "refund"` labels a cancellation request (cancellations share the refund topic). | separate reviewer | OBSERVATION (cosmetic) | — |
 
+### Fable bug review of the final candidate `29db174` (read-only, run in parallel with the final gate)
+
+| ID | Sev | Finding | Status | Fix proposal |
+|---|---|---|---|---|
+| FB2-01 | P1 | **Long approved information breaks plan generation.** The draft step embeds the approved text plus fixed literals; the expression passes `EXPRESSION_MAX_LENGTH` (4000) at about 1,050 characters of approved info. The interview allows 1,200, so the plan fails (422 BLUEPRINT_INVALID, shown as "Something went wrong") with no hint. **Confirmed by measurement:** 1,000 chars → 3,973; 1,100 → 4,086; 1,200 → 4,200. | CONFIRMED, OPEN (next round) | Move the approved lines out of the draft expression into a separate data step, or cap `cust_info` at a length proven to compile, with a clear message. Add a unit test compiling with 1,200 chars. |
+| FB2-02 | P2 | **Rejecting a stale activation request "pauses" an ACTIVE task while its flow stays published.** Two activation requests from two accepted trials: approve the second (active, published), then reject the first → activation becomes `paused/activation_rejected` without unpublishing. Reconcile and delete then miss it. | REPORTED (code-read repro), OPEN | On reject, never change an active task (`ne(state,"active")`), or act only when `reviewItemId` matches. Invalidate other pending activation items on approval. Add an integration test. |
+| FB2-03 | P3 | A numeric alias from "24/7 …" (`"24"`) matches dates and phone numbers → wrong service detected, and the evaluator agrees. | REPORTED, OPEN | Aliases must contain a letter; detect services on word starts in date-free text. |
+| FB2-04 | P3 | The forced sample flag is bypassed when client input has no `request` object (`{}`, `{request:"x"}`). | REPORTED, OPEN | Reject trial input whose `request` isn't an object. |
+| FB2-05 | P3 | The same trial key submitted concurrently can enqueue an orphan second run (the trial row is deduplicated, the run isn't). The existing test asserts on `cb_trial` only. | REPORTED, OPEN | Insert the trial row (or take an advisory lock) before enqueueing. Add a test asserting on `run`. |
+| FB2-06 | P3 | Six follow-up check ids (and the operations/lead pack ids) have no copy, so raw `trial.check.*` keys show under Technical details (same class as EX-01). | REPORTED, OPEN | Add AR/EN copy; extend the copy-coverage unit test to every pack check id. |
+| FB2-07 | P3 | "Uses sample data until you connect your account" sits right above the VF-03 notice and still implies that connecting enables live handling. | REPORTED, OPEN | Reword: "Uses sample data." |
+| FB2-08 | P3 | `pauseTask` returns 500 for a malformed installation id (missing UUID guard). | REPORTED, OPEN | Add the UUID guard → 404. |
+| FB2-09 | P3 | An expired pending review still shows "Waiting for a decision" with no action or reason. | REPORTED, OPEN | Show an "expired" state. |
+| FB2-10 | P3 | The Refine button's disabled reason uses generic error text; interview delete has no busy/error handling (a double click causes an unhandled 404). | REPORTED, OPEN | Specific disabled reason; busy state on delete. |
+
+Confirmed OK by the reviewer:
+
+- prototype gate (404 for non-founders; LAN fails closed);
+- non-member 404;
+- reviewer-only judgement;
+- review binding and dedupe;
+- install idempotency;
+- no Arabic-Indic digits in the catalogue;
+- AR/EN key parity;
+- migrations 0020–0022 match `schema.ts`.
+
