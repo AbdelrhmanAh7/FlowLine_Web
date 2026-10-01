@@ -78,7 +78,8 @@ function servicesFrom(text: string | null): string[] {
   if (!text) return [];
   return text
     .split(/[,،\n;]+/)
-    .map((s) => s.trim().toLowerCase().slice(0, 60))
+    // "office cleaning / تنظيف مكاتب": other names for the SAME service (aliases), stored as "a|b" for the pack.
+    .map((s) => s.split(/[/|]/).map((a) => a.trim().toLowerCase()).filter((a) => a.length > 1).join("|").slice(0, 60))
     .filter((s) => s.length > 1)
     .slice(0, 12);
 }

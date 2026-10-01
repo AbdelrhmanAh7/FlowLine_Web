@@ -73,13 +73,30 @@ export function fuApprovedIndex(info: string): { lines: string[]; topics: Record
   // Each approved line belongs to its FIRST matching topic only (e.g. "free cancellation up to 24 hours" is about
   // cancellations, not opening hours), so a reply never picks a line about another subject.
   lines.forEach((line, i) => {
-    const t = fuTopicOf(normDigits(line).toLowerCase());
+    const low = normDigits(line).toLowerCase();
+    let t = fuTopicOf(low);
+    // A line stating an amount with a currency is a price even without a price word ("starts at 900 EGP") — VF-01.
+    if (t === "other" && PRICE_AMOUNT_RE.test(low)) t = "pricing";
     if (t !== "other") (topics[t] ??= []).push(i);
   });
   return { lines, topics };
 }
 
-function servicesOf(params: PackParams): string[][] {
+const PRICE_AMOUNT_RE = /[0-9][0-9.,]*\s*(egp|sar|aed|usd|eur|kwd|qar|omr|bhd|jod|جنيه|ريال|درهم|دينار)|(\$|€|£)\s*[0-9]/;
+
+/**
+ * For each approved line, the service groups it mentions (word-start match on any alias). A reply quotes a topic line
+ * only if it mentions the service the customer asked about, or no service at all — never another service's price.
+ */
+function lineServices(lines: string[], params: PackParams): number[][] {
+  const groups = servicesOf(params);
+  return lines.map((line) => {
+    const tokens = fuTokens(normDigits(line).toLowerCase());
+    return groups.flatMap((aliases, gi) => (fuHasWord(tokens, aliases) ? [gi] : []));
+  });
+}
+
+export function servicesOf(params: PackParams): string[][] {
   const raw = Array.isArray(params.services) ? params.services : [];
   return raw
     .map((s) => String(s).split("|").map((a) => a.trim().toLowerCase()).filter(Boolean).slice(0, 4))
@@ -165,7 +182,10 @@ function draftExpression(params: PackParams) {
   $all := $approved.lines;
   $d := detected;
   $missing := $append([], $filter($required, function($k) { $not($exists($lookup($d, $k))) or $lookup($d, $k) = null }));
-  $lines := empty or topic = "complaint" ? [] : $append([], $map($append([], $lookup($approved.topics, topic)), function($i) { $all[$i] }));
+  $ls := ${lit(lineServices(info.lines, params))};
+  $si := ${lit(Object.fromEntries(servicesOf(params).map((g, i) => [g[0], i])))};
+  $sx := $d.service = null ? null : $lookup($si, $d.service);
+  $lines := empty or topic = "complaint" ? [] : $append([], $map($filter($append([], $lookup($approved.topics, topic)), function($i) { $count($ls[$i]) = 0 or $sx = null or $sx in $ls[$i] }), function($i) { $all[$i] }));
   $lang := language;
   $handoff := empty ? "empty_request" : topic = "complaint" ? "complaint_needs_person" : ($d.service = null and $count($lines) = 0) ? "no_approved_information" : null;
   $asks := $handoff = null ? $append([], $map($missing, function($k) { $lookup($lookup($ask, $lang), $k) })) : [];
@@ -214,7 +234,9 @@ export function recomputeFollowUp(input: unknown, params: PackParams) {
   const lang: "ar" | "en" = /[\u0600-\u06FF]/.test(d.raw) ? "ar" : "en";
   const empty = req.body == null || String(req.body).trim().length === 0;
   const topic = fuTopicOf(d.low);
-  const lines = empty || topic === "complaint" ? [] : (info.topics[topic] ?? []).map((i) => info.lines[i]!);
+  const ls = lineServices(info.lines, params);
+  const sx = d.detected.service === null ? -1 : servicesOf(params).findIndex((g) => g[0] === d.detected.service);
+  const lines = empty || topic === "complaint" ? [] : (info.topics[topic] ?? []).filter((i) => ls[i]!.length === 0 || sx < 0 || ls[i]!.includes(sx)).map((i) => info.lines[i]!);
   const handoff = empty ? "empty_request" : topic === "complaint" ? "complaint_needs_person" : d.detected.service === null && lines.length === 0 ? "no_approved_information" : null;
   const asks = handoff === null ? d.missing.map((k) => ASK[lang][k as (typeof FU_DETAILS)[number]]) : [];
   const consequential = topic === "refund" ? ("refund_or_cancellation" as const) : null;

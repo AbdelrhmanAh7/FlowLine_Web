@@ -211,6 +211,11 @@ describe("planner and validation", () => {
     expect(bp.complete).toBe(true);
   });
 
+  it("service names typed with a slash are aliases of one service (VF-01)", () => {
+    const bp = composeBlueprint(answerAll([...base, ["cust_services", "office cleaning / تنظيف مكاتب, Deep cleaning|تنظيف عميق, carpet cleaning"]]), ctx);
+    expect(bp.tasks[0]!.params.services).toEqual(["office cleaning|تنظيف مكاتب", "deep cleaning|تنظيف عميق", "carpet cleaning"]);
+  });
+
   it("other areas become next improvements only; they are never installed", () => {
     const bp = composeBlueprint(answerAll([...base, ["other_areas", ["finance", "content", "recruitment"]]]), ctx);
     expect(bp.tasks.map((t) => t.department)).toEqual(["customer"]);

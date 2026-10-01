@@ -40,7 +40,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
 
   q: {
     cust_details: { title: "Which details do you need from a customer before you can reply?", reason: "We ask for the missing ones in the reply and record them in the follow-up." },
-    cust_services: { title: "Which services do customers usually ask about? (separate them with commas)", reason: "We use them to recognise the service in a request. We never guess others." },
+    cust_services: { title: "Which services do customers usually ask about? Separate services with commas; add another name for the same service after a slash (e.g. office cleaning / تنظيف مكاتب).", reason: "We use them to recognise the service in a request. We never guess others." },
     cust_volume: { title: "About how many requests arrive per week?", reason: "To estimate monthly runs before any cost decision." },
     ops_source: { title: "Where do you track your team's task status today?", reason: "That is the data the report is built from." },
     ops_reviewer: { title: "Who reviews the report before it's shared?", reason: "No report is shared without a person reviewing it." },

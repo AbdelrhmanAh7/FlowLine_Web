@@ -256,3 +256,33 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
     });
   });
 });
+
+describe("validation finding VF-01 — quote the price of the service asked about, never another service's", () => {
+  const p = {
+    approvedInfo: "Deep cleaning for a 2-bedroom apartment costs 1500 EGP.\nOffice cleaning starts at 900 EGP per visit.\nWe work Saturday to Thursday, 9:00 to 18:00.",
+    services: ["deep cleaning|تنظيف عميق", "office cleaning|تنظيف مكاتب"],
+    requiredDetails: ["service", "date", "phone"],
+    followUpHours: 24,
+    timezone: "Africa/Cairo",
+    language: "ar",
+  };
+  const g = pack.compile(p, (id) => id);
+  const ask = async (body: string) => {
+    const input = { request: { id: "vf", from: "vf@example.com", received_at: "2026-10-01T11:00:00+03:00", subject: "طلب", body } };
+    const r = await executeGraph(g, input, { handler: memoryStore().handler });
+    const o = r.output as Record<string, Record<string, unknown>>;
+    return { body: String(o.reply_draft?.body ?? ""), failed: pack.evaluate(o, input, p).filter((c) => !c.passed).map((c) => c.id) };
+  };
+  it("an amount with a currency makes a line a price line; an Arabic office-price question gets the office price only", async () => {
+    const r = await ask("أحتاج تنظيف مكاتب يوم 2026-10-09، رقمي 01123456789، كم السعر؟");
+    expect(r.body).toContain("Office cleaning starts at 900 EGP per visit.");
+    expect(r.body).not.toContain("1500");
+    expect(r.failed).toEqual([]);
+  });
+  it("a price question naming no service still gets every approved price line", async () => {
+    const r = await ask("How much do you charge?");
+    expect(r.body).toContain("1500 EGP");
+    expect(r.body).toContain("900 EGP");
+    expect(r.failed).toEqual([]);
+  });
+});
