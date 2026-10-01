@@ -2,10 +2,11 @@
 // (:3100) with Playwright's browsers:  node e2e/tools/cb-screens.mjs <outDir>
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import testStackEnv from "../../scripts/test-stack.cjs";
 
 const out = process.argv[2] ?? "test-results/cb-screens";
 mkdirSync(out, { recursive: true });
-const base = "http://localhost:3100";
+const base = testStackEnv.testStack().baseUrl; // FLOWLINE_TEST_PORT picks another stack
 const browser = await chromium.launch();
 const req = await (await browser.newContext({ baseURL: base, extraHTTPHeaders: { origin: base } })).request;
 const email = `cb-shot-${Date.now()}@flowline-test.local`;

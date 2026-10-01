@@ -357,6 +357,14 @@ describe("cost policy and usage records", () => {
 
 describe("legacy local configuration", () => {
   it("is preserved, listed for migration, and refused at execution with AI_LOCAL_MIGRATION_REQUIRED — never converted", async () => {
+    // Agent runs other files left queued in this database would be claimed by the loop below and call the AI double;
+    // process them first so the "no chat call" assertion is about this test only (order-independent, shard-safe).
+    for (let i = 0; i < 200; i++) {
+      const id = await claimNextAgentRun(db, "w-legacy-pre");
+      if (!id) break;
+      await processAgentRun(db, id, "w-legacy-pre");
+    }
+    await fetch(`${ai.url}/__fake/reset`, { method: "POST" });
     const { owner, ws } = await tenant("Legacy", { connect: false });
     await db.update(schema.workspace).set({ aiProvider: "ollama", aiModel: "qwen2.5:3b" }).where(eq(schema.workspace.id, ws.id));
     const flow = await aiFlow(owner, ws.id, { model: "qwen2.5:3b" });

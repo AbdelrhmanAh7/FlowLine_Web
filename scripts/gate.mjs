@@ -1,40 +1,38 @@
-// Fast gate runner: the full pre-commit gate (AGENTS.md "Gates before commit") with only the SAFE parts run in parallel.
+// Gate runner: the pre-commit gate (AGENTS.md "Gates before commit") with everything that can safely run at once in
+// parallel. Two tiers:
 //
-//   pnpm gate [--only=a,b] [--skip=a,b] [--out=<dir>] [--browsers=sequential|parallel] [--fail-fast]
+//   pnpm gate        (--tier=fast, every commit; ≈3–4 min on a 4-CPU machine)
+//   pnpm gate:full   (--tier=full, before merging to main; adds every Chromium spec, Firefox and WebKit)
+//   options: [--only=a,b] [--skip=a,b] [--out=<dir>] [--stacks=K (max(3, CPUs/2), ≤6)] [--shards=N (4)]
+//            [--browsers=sequential|parallel] [--fail-fast]
 //
 // Steps (names for --only/--skip), by phase:
-//   1. lint, typecheck, evidence, unit, contract — in parallel. None of them touch the flowline_test DB or a fixed port:
-//      contract tests start the fake provider on an ephemeral port (tests/contract/helpers.ts) and use no DB; the
-//      :3100/:4010 strings in some of them are only expected URL values.
-//   2. integration + build — in parallel, after `pnpm stop:test` (integration refuses to run beside a test-stack worker).
-//      `build` is the test stack's production build (`next build` into .next-test with .env.test's env). It does not
-//      seed or migrate the DB; integration owns flowline_test during this phase.
-//   3. stack — `pnpm db:migrate:test`, then scripts/dev-test.mjs with FLOWLINE_TEST_NEXT=start, reusing this run's build
-//      (FLOWLINE_TEST_SKIP_BUILD=1, only when `build` passed in this run; otherwise dev-test builds). Waits for
-//      /api/health?require=worker. Started only after integration has finished (the stack's worker would claim its runs).
-//   4. chromium, firefox, webkit — `bash e2e/tools/browser-docker.sh <project>` against that stack.
-//      --browsers=sequential (default) runs chromium → firefox → webkit, as the repo requires today.
-//      --browsers=parallel runs the three projects at once against the one stack. OPT-IN until proven stable: the specs
-//      share the stack's fake-provider state (:4010/:4011) and the test DB, and Playwright's config assumes one run
-//      (fullyParallel: false).
-// Selecting any browser implies `stack` unless it is skipped explicitly (--skip=stack: use a stack that is already up).
-// A step whose prerequisite failed (build → stack → browsers) is reported as "blocked", not run.
+//   1. lint (cached), typecheck, evidence, unit, contract — in parallel; none uses a database or a fixed port (contract
+//      tests start their fakes on ephemeral ports).
+//   2. integration — scripts/test-integration-sharded.mjs: N vitest shards at once, each on its own database
+//      (flowline_test_s<i>). In parallel: build (the stacks' production build into .next-test, no DB), then stack —
+//      K isolated test stacks on that build, each with its own app/fake ports and database (scripts/test-stack.cjs):
+//      stack 1 = 3100/4010/4011 + flowline_test, stack k = 3k00/4k10/4k11 + flowline_test_e<k>.
+//   3. chromium, firefox, webkit — each project runs as Playwright shards at once (--shard=i/n), one per stack, via
+//      e2e/tools/browser-docker.sh. Fast tier: Chromium's @critical/@cross-browser specs on K stacks. Full tier: all
+//      Chromium specs on K stacks, Firefox and WebKit on ceil(K/2) each, all three projects at once on disjoint stacks
+//      on machines with ≥8 CPUs; below that (or --browsers=sequential) the projects run one after another on stacks 1..K.
+//      Measured on 4 CPUs: fast ≈3m20s; full ≈9m45s sequential (all-at-once ≈8m40s but load-flaky there).
+// Selecting any browser implies `stack`. A step whose prerequisite failed (build → stack → browsers) is "blocked".
 //
-// Not fail-fast by default: every selected step runs and all results are reported; --fail-fast stops after the first
-// phase with a failure. The test stack is always stopped at the end (`pnpm stop:test`), and artifacts/phase-3/screenshots
-// is restored (`git checkout`) after browser runs.
-//
-// Output (default artifacts/gates/<short sha>-<UTC timestamp>): <step>.log per step, progress.log (UTC start/end/rc per
-// step), summary.json (sha, dirty flag, node/pnpm versions, per-step status/rc/duration and parsed test totals).
+// Not fail-fast by default. All stacks are stopped at the end, and artifacts/phase-3/screenshots is restored.
+// Output (default artifacts/gates/<short sha>-<UTC timestamp>, git-ignored): <step>.log, per-shard logs,
+// progress.log, summary.json (sha, dirty flag, tier, per-step status/rc/duration and summed test totals).
 // Exit code: 0 only when every selected step passed.
 import { execSync, spawn } from "node:child_process";
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { parseEnv } from "node:util";
+import testStackEnv from "./test-stack.cjs";
 
 const BROWSERS = ["chromium", "firefox", "webkit"];
 const ALL = ["lint", "typecheck", "evidence", "unit", "contract", "integration", "build", "stack", ...BROWSERS];
-const STACK_URL = "http://localhost:3100/api/health?require=worker";
 const STACK_TIMEOUT_MS = 180_000;
 
 // ---- options ----
@@ -49,7 +47,7 @@ const args = Object.fromEntries(
   }),
 );
 for (const k of Object.keys(args)) {
-  if (!["only", "skip", "out", "browsers", "fail-fast"].includes(k)) {
+  if (!["only", "skip", "out", "browsers", "fail-fast", "tier", "stacks", "shards"].includes(k)) {
     console.error(`unknown option --${k}`);
     process.exit(2);
   }
@@ -63,13 +61,41 @@ for (const n of [...only, ...skip]) {
     process.exit(2);
   }
 }
-const browsersMode = args.browsers ?? "sequential";
+// The three projects at once need ~2 CPUs per browser container + stack: on 4 CPUs it was load-flaky (a 10 s wait timed
+// out in 1 of 2 runs), so it is the default only from 8 CPUs; below that the projects run one after another (each still
+// split across the stacks).
+const browsersMode = args.browsers ?? (args.tier === "full" && availableParallelism() >= 8 ? "parallel" : "sequential");
 if (!["sequential", "parallel"].includes(browsersMode)) {
   console.error("--browsers must be sequential or parallel");
   process.exit(2);
 }
 const failFast = args["fail-fast"] === true;
-const selected = new Set(ALL.filter((n) => (only.length === 0 || only.includes(n)) && !skip.includes(n)));
+const tier = args.tier ?? "fast";
+if (!["fast", "full"].includes(tier)) {
+  console.error("--tier must be fast or full");
+  process.exit(2);
+}
+const intNum = (v, d, max) => {
+  if (v === undefined) return d;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > max) {
+    console.error(`expected an integer 1..${max}, got ${v}`);
+    process.exit(2);
+  }
+  return n;
+};
+// K isolated stacks (own app/fake ports and database each) and N integration shards (own database each).
+// Default: 3 stacks per project on a 4-CPU machine, more on bigger ones (each stack + browser container needs ~1 CPU).
+const STACKS = intNum(args.stacks, Math.min(6, Math.max(3, Math.floor(availableParallelism() / 2))), 6);
+const INT_SHARDS = intNum(args.shards, 4, 16);
+// Fast tier (every commit): Chromium's @critical/@cross-browser specs only. Full tier (before merging to main): every
+// Chromium spec plus Firefox and WebKit. An explicit --only=firefox still runs Firefox in the fast tier.
+const FAST_GREP = "@critical|@cross-browser";
+const selected = new Set(
+  ALL.filter((n) => (only.length === 0 || only.includes(n)) && !skip.includes(n)).filter(
+    (n) => tier === "full" || only.includes(n) || !["firefox", "webkit"].includes(n),
+  ),
+);
 if (BROWSERS.some((b) => selected.has(b)) && !skip.includes("stack")) selected.add("stack");
 
 // ---- identity ----
@@ -88,18 +114,47 @@ const out = typeof args.out === "string" ? args.out : join("artifacts", "gates",
 mkdirSync(out, { recursive: true });
 const identity = { sha, shortSha, dirty: dirtyCount > 0, dirtyCount, node: process.version, pnpm: sh("pnpm --version") || "unknown" };
 console.log(`gate: ${sha}${identity.dirty ? ` (dirty: ${dirtyCount} changed)` : ""} · node ${identity.node} · pnpm ${identity.pnpm}`);
-console.log(`gate: steps ${[...selected].join(", ") || "(none)"} · browsers ${browsersMode} · out ${out}`);
+console.log(`gate: tier ${tier} · steps ${[...selected].join(", ") || "(none)"} · ${STACKS} stack(s) per project · ${INT_SHARDS} integration shard(s) · browsers ${browsersMode} · out ${out}`);
 
 const progress = join(out, "progress.log");
 const logLine = (s) => appendFileSync(progress, `${new Date().toISOString()} ${s}\n`);
-logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} steps=${[...selected].join(",")} browsers=${browsersMode}`);
+logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} tier=${tier} stacks=${STACKS} intShards=${INT_SHARDS} steps=${[...selected].join(",")} browsers=${browsersMode}`);
+
+// Stack 1 is the default stack (3100/4010/4011, flowline_test); stack k>1 uses app 3100+10(k-1), fakes 4500+10(k-1)
+// and +1, database flowline_test_e<k>.
+// Sequential browsers share stacks 1..K. Parallel browsers get disjoint stacks per project so two projects never share a
+// database or fake-provider state: Chromium (the largest, 128 specs) gets K, Firefox and WebKit (62 each) ceil(K/2) each.
+const parallelProjects = browsersMode === "parallel" ? BROWSERS.filter((b) => selected.has(b)) : [];
+const stackCount = parallelProjects.length > 1 ? parallelProjects.reduce((n, b) => n + (b === "chromium" ? STACKS : Math.ceil(STACKS / 2)), 0) : STACKS;
+// Each stack holds two pools (next + worker) plus a LISTEN connection; keep the total under Postgres' default
+// max_connections (100), leaving room for the integration shards.
+const POOL_MAX = stackCount > 8 ? "3" : stackCount > 3 ? "4" : undefined;
+const makeStack = (k) => {
+  const env = k === 1 ? { FLOWLINE_TEST_SHARD: "1" } : { FLOWLINE_TEST_SHARD: String(k), FLOWLINE_TEST_PORT: String(3100 + 10 * (k - 1)), FLOWLINE_TEST_FAKE_PORT: String(4500 + 10 * (k - 1)), FLOWLINE_TEST_AI_PORT: String(4501 + 10 * (k - 1)), FLOWLINE_TEST_DB: `flowline_test_e${k}` };
+  if (POOL_MAX) env.FLOWLINE_DB_POOL_MAX = POOL_MAX;
+  const base = { ...(existsSync(".env.test") ? parseEnv(readFileSync(".env.test", "utf8")) : {}), ...process.env, ...env };
+  if (k === 1) for (const v of ["FLOWLINE_TEST_PORT", "FLOWLINE_TEST_FAKE_PORT", "FLOWLINE_TEST_AI_PORT", "FLOWLINE_TEST_DB"]) delete base[v];
+  const st = testStackEnv.testStack(base);
+  return { k, env, port: st.port, fakePort: st.fakePort, aiPort: st.aiPort, healthUrl: st.healthUrl };
+};
+const stackDefs = Array.from({ length: stackCount }, (_, i) => makeStack(i + 1));
+const stacksFor = new Map();
+if (parallelProjects.length > 1) {
+  let next = 0;
+  for (const b of parallelProjects) {
+    const n = b === "chromium" ? STACKS : Math.ceil(STACKS / 2);
+    stacksFor.set(b, stackDefs.slice(next, next + n));
+    next += n;
+  }
+} else for (const b of BROWSERS) stacksFor.set(b, stackDefs);
+const shellEnv = (env) => Object.entries(env).map(([k, v]) => `${k}=${v}`).join(" ");
 
 // ---- env for the test-stack build: the same env scripts/dev-test.mjs gives `next build` (keep the two in sync) ----
 // .env.test is parsed into a copy (not loaded into this process) so the other steps keep the caller's env.
 const testEnv = () => {
   const env = { ...parseEnv(readFileSync(".env.test", "utf8")), ...process.env }; // like loadEnvFile: set vars win
   env.NEXT_DIST_DIR = ".next-test";
-  env.FLOWLINE_AI_TEST_OVERRIDE ??= "http://127.0.0.1:4011";
+  testStackEnv.applyTestStackEnv(env); // ports, URLs, database: exactly as dev-test.mjs
   for (const k of ["FLOWLINE_AI_PROVIDER", "FLOWLINE_AI_MODEL", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "OPENAI_API_KEY"]) delete env[k];
   return env;
 };
@@ -145,7 +200,7 @@ const readText = (f) => {
 };
 // vitest: "Tests  3 failed | 120 passed | 2 skipped (125)"; playwright line reporter: "  12 passed (3.4m)", "  1 flaky".
 function parseTotals(name, log) {
-  if (["unit", "contract", "integration"].includes(name)) {
+  if (["unit", "contract"].includes(name)) {
     const line = readText(log).match(/^\s*Tests\s+(.+)$/m)?.[1];
     if (!line) return null;
     const t = {};
@@ -153,10 +208,19 @@ function parseTotals(name, log) {
     return t;
   }
   if (BROWSERS.includes(name)) {
-    const report = existsSync(`test-results/${name}-report.txt`) ? `test-results/${name}-report.txt` : log;
     const t = {};
-    for (const m of readText(report).matchAll(/^\s*(\d+) (passed|failed|flaky|skipped|interrupted|did not run)\b/gm)) t[m[2]] = Number(m[1]);
+    for (const d of stacksFor.get(name) ?? []) {
+      const report = `test-results/${name}-${d.k}-report.txt`;
+      for (const m of readText(report).matchAll(/^\s*(\d+) (passed|failed|flaky|skipped|interrupted|did not run)\b/gm)) t[m[2]] = (t[m[2]] ?? 0) + Number(m[1]);
+    }
     return Object.keys(t).length ? t : null;
+  }
+  if (name === "integration") {
+    const line = readText(log).match(/TOTAL tests: (.+?);/)?.[1];
+    if (!line) return null;
+    const t = {};
+    for (const m of line.matchAll(/(\d+) (passed|failed|skipped)/g)) t[m[2]] = Number(m[1]);
+    return t;
   }
   return null;
 }
@@ -167,18 +231,24 @@ const stopFailFast = (phase, names) => {
   for (const n of ALL) if (selected.has(n) && !results.has(n)) mark(n, phase + 1, "skipped", "--fail-fast after a failure");
   return true;
 };
+// Non-default stacks first (each frees only its own ports/processes), the default stack last (its stop sweeps).
 const stopStack = () => {
-  logLine("STOP test stack");
+  logLine("STOP test stacks");
+  for (const d of stackDefs.slice(1)) sh(`node scripts/stop-test-stack.mjs --port=${d.port} --fake-port=${d.fakePort} --ai-port=${d.aiPort}`);
   sh("pnpm stop:test");
 };
 
-let stackProc = null;
-async function startStack() {
+const stackProcs = [];
+// Starts every stack on this run's build (dev-test creates and migrates each stack's database) and waits until all are
+// healthy. One step ("stack") for all of them; each stack logs to stack-<k>.log.
+async function startStacks() {
   const name = "stack";
   const log = join(out, `${name}.log`);
   const t0 = Date.now();
   logLine(`START ${name}`);
-  console.log(`▶ ${name}`);
+  console.log(`▶ ${name} (${stackDefs.length})`);
+  const reuse = results.get("build")?.status === "pass";
+  writeFileSync(log, `${stackDefs.length} stack(s), ${reuse ? "reusing this run's build" : "dev-test builds"}\n`);
   const fail = (rc, why) => {
     appendFileSync(log, `\n[gate] ${why}\n`);
     const r = { name, phase: 3, status: "fail", rc, durationMs: Date.now() - t0, log, totals: null, note: why };
@@ -187,48 +257,48 @@ async function startStack() {
     console.log(`✗ ${name} rc=${rc}: ${why}`);
     return r;
   };
-  writeFileSync(log, "$ pnpm db:migrate:test\n");
-  const migrate = await new Promise((resolve) => {
-    const fd = openSync(log, "a");
-    const c = spawn("pnpm db:migrate:test", { shell: true, stdio: ["ignore", fd, fd] });
-    c.on("error", () => (closeSync(fd), resolve(127)));
-    c.on("exit", (code) => (closeSync(fd), resolve(code ?? 1)));
-  });
-  if (migrate !== 0) return fail(migrate, "db:migrate:test failed");
-
-  const reuse = results.get("build")?.status === "pass";
-  const env = { ...process.env, FLOWLINE_TEST_NEXT: "start", ...(reuse ? { FLOWLINE_TEST_SKIP_BUILD: "1" } : {}) };
-  appendFileSync(log, `$ FLOWLINE_TEST_NEXT=start${reuse ? " FLOWLINE_TEST_SKIP_BUILD=1" : ""} node scripts/dev-test.mjs\n`);
-  const fd = openSync(log, "a");
-  // Own process group so the whole tree (shell, next, worker, fakes) can be signalled at the end.
-  stackProc = spawn("node scripts/dev-test.mjs", { shell: true, env, detached: true, stdio: ["ignore", fd, fd] });
-  closeSync(fd);
-  let exited = null;
-  stackProc.on("exit", (code) => (exited = code ?? 1));
-  const deadline = Date.now() + STACK_TIMEOUT_MS + (reuse ? 0 : 600_000); // a fresh build takes longer
-  while (Date.now() < deadline) {
-    if (exited !== null) return fail(exited, `dev-test exited (rc=${exited}) before the stack was healthy`);
-    try {
-      const res = await fetch(STACK_URL, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const r = { name, phase: 3, status: "pass", rc: 0, durationMs: Date.now() - t0, log, totals: null, note: reuse ? "reused this run's build" : "dev-test built" };
-        results.set(name, r);
-        logLine(`END ${name} rc=0 ${(r.durationMs / 1000).toFixed(1)}s`);
-        console.log(`✓ ${name} healthy ${(r.durationMs / 1000).toFixed(1)}s`);
-        return r;
-      }
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 2000));
+  if (!reuse && stackDefs.length > 1) return fail(1, "several stacks need this run's build (next build must not run twice at once)");
+  const exited = new Map();
+  for (const d of stackDefs) {
+    const env = { ...process.env, ...d.env, FLOWLINE_TEST_NEXT: "start", ...(reuse ? { FLOWLINE_TEST_SKIP_BUILD: "1" } : {}) };
+    if (d.k === 1) for (const v of ["FLOWLINE_TEST_PORT", "FLOWLINE_TEST_FAKE_PORT", "FLOWLINE_TEST_AI_PORT", "FLOWLINE_TEST_DB"]) delete env[v];
+    appendFileSync(log, `stack ${d.k}: app :${d.port}, fakes :${d.fakePort}/:${d.aiPort}, ${d.env.FLOWLINE_TEST_DB ?? "flowline_test"}\n`);
+    const fd = openSync(join(out, `stack-${d.k}.log`), "w");
+    // Own process group so the whole tree (shell, next, worker, fakes) can be signalled at the end.
+    const p = spawn("node scripts/dev-test.mjs", { shell: true, env, detached: true, stdio: ["ignore", fd, fd] });
+    closeSync(fd);
+    p.on("exit", (code) => exited.set(d.k, code ?? 1));
+    stackProcs.push(p);
   }
-  return fail(124, `stack not healthy at ${STACK_URL} within the deadline`);
+  const deadline = Date.now() + STACK_TIMEOUT_MS + (reuse ? 0 : 600_000); // a fresh build takes longer
+  const healthy = new Set();
+  while (Date.now() < deadline) {
+    for (const [k, code] of exited) if (!healthy.has(k)) return fail(code, `stack ${k} exited (rc=${code}) before it was healthy (stack-${k}.log)`);
+    for (const d of stackDefs) {
+      if (healthy.has(d.k)) continue;
+      try {
+        if ((await fetch(d.healthUrl, { signal: AbortSignal.timeout(5000) })).ok) healthy.add(d.k);
+      } catch {
+        /* not up yet */
+      }
+    }
+    if (healthy.size === stackDefs.length) {
+      const r = { name, phase: 3, status: "pass", rc: 0, durationMs: Date.now() - t0, log, totals: null, note: `${stackDefs.length} stack(s)${reuse ? " on this run's build" : ""}` };
+      results.set(name, r);
+      logLine(`END ${name} rc=0 ${(r.durationMs / 1000).toFixed(1)}s`);
+      console.log(`✓ ${name} ${stackDefs.length} healthy ${(r.durationMs / 1000).toFixed(1)}s`);
+      return r;
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return fail(124, `not every stack was healthy within the deadline (${stackDefs.filter((d) => !healthy.has(d.k)).map((d) => d.port).join(", ")})`);
 }
 
 const cleanup = () => {
-  if (stackProc?.pid && stackProc.exitCode === null) {
+  for (const p of stackProcs) {
+    if (!p.pid || p.exitCode !== null) continue;
     try {
-      process.kill(-stackProc.pid, "SIGTERM");
+      process.kill(-p.pid, "SIGTERM");
     } catch {
       /* already gone */
     }
@@ -258,37 +328,46 @@ main: {
   await Promise.all(p1.map((n) => run(n, 1, cmd1[n])));
   if (stopFailFast(1, p1)) break main;
 
-  // Phase 2: integration (owns flowline_test) beside the stack's production build (no DB).
+  // Phase 2: integration, sharded over its own databases (flowline_test_s<i>), beside the stacks' production build and
+  // then the stacks themselves (flowline_test / flowline_test_e<k>). No step shares a database or a port with another.
   const p2 = sel(["integration", "build"]);
   if (p2.length || selected.has("stack")) stopStack();
-  await Promise.all(
-    p2.map((n) => (n === "integration" ? run(n, 2, "pnpm test:integration") : run(n, 2, "npx next build", testEnv()))),
-  );
-  if (stopFailFast(2, p2)) break main;
+  const integration = selected.has("integration") ? run("integration", 2, `node scripts/test-integration-sharded.mjs --shards=${INT_SHARDS} --log-dir=${join(out, "integration")}`) : null;
+  const buildAndStacks = (async () => {
+    if (selected.has("build")) await run("build", 2, "npx next build", testEnv());
+    if (stopFailFast(2, sel(["build"]))) return;
+    if (selected.has("stack")) {
+      if (results.get("build")?.status === "fail") mark("stack", 3, "blocked", "build failed");
+      else await startStacks();
+    }
+  })();
+  // Integration and the browsers could share the machine (no database or port in common), but on a 4-CPU machine the
+  // overlap pushed a browser wait past its timeout; the browsers start after integration so results stay reliable.
+  await Promise.all([integration, buildAndStacks]);
+  if (stopFailFast(3, sel(["integration", "build", "stack"]))) break main;
 
-  // Phase 3: the stack, once integration is done.
-  if (selected.has("stack")) {
-    if (results.get("build")?.status === "fail") mark("stack", 3, "blocked", "build failed");
-    else await startStack();
-  }
-  if (stopFailFast(3, sel(["stack"]))) break main;
-
-  // Phase 4: browsers.
+  // Phase 3: browsers. Each project runs as one Playwright shard per stack, all shards at once (--shard=k/K).
   const p4 = sel(BROWSERS);
   if (p4.length) {
     const stack = results.get("stack");
     if (stack && stack.status !== "pass") {
-      for (const b of p4) mark(b, 4, "blocked", "test stack did not start");
+      for (const b of p4) mark(b, 4, "blocked", "test stacks did not start");
     } else if (!existsSync("e2e/tools/browser-docker.sh")) {
       for (const b of p4) mark(b, 4, "blocked", "e2e/tools/browser-docker.sh not found");
     } else {
       const runBrowser = (b) => {
-        rmSync(`test-results/${b}-report.txt`, { force: true }); // never parse a previous run's totals
-        return run(b, 4, `bash e2e/tools/browser-docker.sh ${b}`);
+        const grep = tier === "fast" && b === "chromium" ? ` --grep="${FAST_GREP}"` : "";
+        const mine = stacksFor.get(b);
+        const parts = mine.map((d, i) => {
+          rmSync(`test-results/${b}-${d.k}-report.txt`, { force: true }); // never parse a previous run's totals
+          const shotDir = `/tmp/pw-shots-${b}-${d.k}`; // keep the committed screenshots untouched; shards never share a dir
+          return `(${shellEnv(d.env)} E2E_SCREENSHOT_DIR=${shotDir} bash e2e/tools/browser-docker.sh ${b}${grep} --shard=${i + 1}/${mine.length} > ${join(out, `${b}-${d.k}.log`)} 2>&1) & p${d.k}=$!`;
+        });
+        const waits = mine.map((d) => `wait $p${d.k} || rc=1`).join("; ");
+        return run(b, 4, `rc=0; ${parts.join("; ")}; ${waits}; exit $rc`);
       };
       if (browsersMode === "parallel") await Promise.all(p4.map(runBrowser));
       else for (const b of p4) await runBrowser(b);
-      // e2e/responsive.spec.ts rewrites the committed screenshots; the gate must leave the tree as it found it.
       sh("git checkout -- artifacts/phase-3/screenshots");
       logLine("RESTORED artifacts/phase-3/screenshots");
     }
@@ -303,7 +382,7 @@ const ok = steps.length > 0 && steps.every((s) => s.status === "pass");
 const finishedAt = new Date().toISOString();
 writeFileSync(
   join(out, "summary.json"),
-  `${JSON.stringify({ ...identity, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
+  `${JSON.stringify({ ...identity, tier, stacks: STACKS, integrationShards: INT_SHARDS, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
 );
 logLine(`GATE ${ok ? "PASS" : "FAIL"}`);
 

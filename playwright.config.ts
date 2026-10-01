@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { applyTestStackEnv } from "./scripts/test-stack.cjs";
 
 // Fake-provider URLs (and the rest of the test-stack settings) come from .env.test, like the stack itself.
 try {
@@ -6,9 +7,14 @@ try {
 } catch {
   /* no .env.test: defaults apply */
 }
-
-const PORT = 3100;
-export const BASE_URL = `http://localhost:${PORT}`;
+// Which stack this run targets: FLOWLINE_TEST_PORT / _FAKE_PORT / _AI_PORT / _DB (defaults 3100 / 4010 / 4011 /
+// flowline_test), derived exactly as scripts/dev-test.mjs does. Applied to process.env so the webServer command and
+// scripts that specs shell out to (e.g. admin-panel's bootstrap) use this stack's database and URLs. Specs read the
+// values from e2e/stack.ts.
+const STACK = applyTestStackEnv(process.env);
+export const BASE_URL = STACK.baseUrl;
+// A sharded run (FLOWLINE_TEST_SHARD) keeps its outputs apart from the other shards' (Playwright empties outputDir).
+const OUT_SUFFIX = STACK.shard ? `-${STACK.shard}` : "";
 
 /**
  * Flowline is Arabic-first (no `fl_locale` cookie = Arabic, RTL). The existing suites are written against the
@@ -32,7 +38,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 2,
   retries: 0,
-  reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }], ["json", { outputFile: "test-results/results.json" }]],
+  ...(STACK.shard ? { outputDir: `test-results/shard${OUT_SUFFIX}` } : {}),
+  reporter: [["list"], ["html", { outputFolder: `playwright-report${OUT_SUFFIX}`, open: "never" }], ["json", { outputFile: `test-results/results${OUT_SUFFIX}.json` }]],
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",
@@ -49,8 +56,9 @@ export default defineConfig({
     { name: "webkit", grep: /@critical|@cross-browser/, use: { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
-    command: "pnpm db:migrate:test && pnpm dev:test",
-    url: `${BASE_URL}/api/health?require=worker`,
+    // dev-test.mjs creates (when missing) and migrates the stack's database before seeding it.
+    command: "pnpm dev:test",
+    url: STACK.healthUrl,
     reuseExistingServer: true,
     timeout: 180_000,
     // "pipe", not "ignore": on Windows an ignored stdout kills the worker on its first log line.

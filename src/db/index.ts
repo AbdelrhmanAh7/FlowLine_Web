@@ -9,7 +9,8 @@ function createPool() {
   if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env.");
   const p = new Pool({
     connectionString: url,
-    max: 8,
+    // FLOWLINE_DB_POOL_MAX lets the gate run many isolated test stacks under Postgres' connection limit.
+    max: Number(process.env.FLOWLINE_DB_POOL_MAX) || 8,
     // Fail fast and recover instead of hanging when a connection is silently dropped
     // (e.g. a Docker port-proxy reset): detect dead sockets, bound connect and query time.
     keepAlive: true,

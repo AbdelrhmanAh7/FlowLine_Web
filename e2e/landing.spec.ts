@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { BASE_URL } from "./stack";
 
 /**
  * The landing page scroll experience: every section reachable by scrolling, no console errors, and
@@ -98,7 +99,7 @@ test.describe("landing scroll experience", () => {
   for (const width of [375, 1024, 1440]) {
     test(`RTL: no horizontal scroll at ${width}px`, async ({ page, context }) => {
       await page.setViewportSize({ width, height: 812 });
-      await context.addCookies([{ name: "fl_locale", value: "ar", url: "http://localhost:3100" }]);
+      await context.addCookies([{ name: "fl_locale", value: "ar", url: BASE_URL }]);
       await page.goto("/", { waitUntil: "networkidle" });
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       await scrollThrough(page);
@@ -192,7 +193,7 @@ test.describe("landing scroll experience with motion allowed (desktop)", () => {
  * "Start free", no document-level horizontal scroll), and a phone visitor must be able to change theme and language from it. Layout: one row
  * from lg (1024) up; below lg two rows, the second one holding the preferences (`data-testid="landing-preferences"`).
  */
-const BASE = "http://localhost:3100";
+const BASE = BASE_URL;
 type HeaderLocale = "en" | "ar";
 const HEADER = {
   en: { theme: "Theme", language: "Language", modes: ["Light", "Dark", "System"], startFree: "Start free" },
@@ -399,7 +400,7 @@ test.describe("landing copy and illustration contrast @cross-browser", () => {
 
 for (const locale of ["en", "ar"] as const) {
   test(`@cross-browser ${locale}: section links preserve landing content through account-route Back and Forward`, async ({ page, context }) => {
-    await context.addCookies([{ name: "fl_locale", value: locale, url: "http://localhost:3100" }]);
+    await context.addCookies([{ name: "fl_locale", value: locale, url: BASE_URL }]);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     const nav = page.getByRole("navigation", { name: locale === "ar" ? "روابط الموقع" : "Site navigation" });

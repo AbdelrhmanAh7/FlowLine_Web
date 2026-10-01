@@ -1,13 +1,14 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { connectAiApi, expectSaved, setupUser } from "./helpers";
+import { FAKE_PROVIDER } from "./stack";
 
 /**
  * Phase 2 journeys through the real UI. Only the provider boundary is doubled:
  * SaaS APIs → e2e/fakes/provider-server.ts (:4010), AI → e2e/fakes/ai-server.ts (:4011, OpenAI-compatible double).
  * Every test uses unique spreadsheet/channel ids so parallel workers never share fake state.
  */
-const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
+const FAKE = FAKE_PROVIDER;
 
 async function fault(req: APIRequestContext, provider: string, pathPattern: string, mode: "500" | "429" | "timeout", times: number) {
   const r = await req.post(`${FAKE}/__fake/fault`, { data: { provider, pathPattern, mode, times } });
