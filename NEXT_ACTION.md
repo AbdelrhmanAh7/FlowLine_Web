@@ -4,7 +4,7 @@
 
 **Where things stand:**
 
-- Branch: `claude/company-builder-milestones-abc-pmba6v`; the pushed head is REMOTE_SHA_PLACEHOLDER. The final tested
+- Branch: `claude/company-builder-milestones-abc-pmba6v`; the pushed evidence/docs head is `9e44d77c270f9efcf3e5cafbf49782d2cfa661c8`, and the next commit after it only fills in this SHA, so `git log -1` shows that docs commit. The final tested
   candidate is **`29db174`**; the commits after it are evidence/docs only, with the execution tree verified equal.
 - **MERGE TO MAIN: NO** (owner decision). **PRODUCTION DEPLOYMENT: NO.** No live payments.
 - First slice: **COMPLETE — SAMPLE DATA / RULES-ONLY / LOCAL OUTBOX.** Overall Company Builder: **INCOMPLETE.**
@@ -17,7 +17,7 @@
 ```bash
 git fetch origin claude/company-builder-milestones-abc-pmba6v
 git checkout -B claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
-git log -1 --format=%H        # must equal the pushed head above
+git log -2 --format="%H %s"    # HEAD = this docs-only commit; HEAD~1 = 9e44d77c270f9efcf3e5cafbf49782d2cfa661c8
 git diff --quiet 29db174 HEAD -- . ':!*.md' ':!artifacts/**' && echo "exec tree == tested candidate 29db174"
 pnpm install --frozen-lockfile
 # Postgres 16 on :5433 with DBs flowline + flowline_test; then create the git-ignored .env.test from
