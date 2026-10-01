@@ -76,7 +76,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
       <p className="text-sm text-warning">{t("companyBuilder.prototype.labels")}</p>
       <div className="flex flex-wrap gap-2">
         {(["claude", "codex"] as const).map((cli) => (
-          <Button key={cli} size="sm" loading={enqueue.isPending && enqueue.variables?.cli === cli && enqueue.variables.kind === "blueprint"} disabled={enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "blueprint" })} disabledReason={data.blueprint ? null : t("companyBuilder.errors.generic")} data-testid={`cb-cli-refine-${cli}`}>
+          <Button key={cli} size="sm" loading={enqueue.isPending && enqueue.variables?.cli === cli && enqueue.variables.kind === "blueprint"} disabled={enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "blueprint" })} disabledReason={data.blueprint ? null : t("companyBuilder.prototype.refineNeedsPlan")} data-testid={`cb-cli-refine-${cli}`}>
             {t("companyBuilder.prototype.refine", { cli: cli === "claude" ? "Claude" : "Codex" })}
           </Button>
         ))}

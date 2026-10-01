@@ -45,7 +45,9 @@ export function taskStatus(i: TaskStateInput): TaskStatus {
   // VF-03 state contract: in this build no Company Builder task reads or sends through an account, connected or not.
   // Every installed state of a task that needs one says it runs on sample data only (active never implies live email).
   const sampleOnly = task.connections.some((c) => c.provider !== "ai" && c.status !== "not_needed") ? ["sample_only_not_live"] : [];
-  const setup = [...setupReasons(task), ...sampleOnly];
+  // When the sample-only reason applies, "needs a service connection" would wrongly suggest connecting enables live
+  // use, so it is replaced by the sample-only reason (AI connections for agents are real and stay).
+  const setup = [...setupReasons(task).filter((r) => !(sampleOnly.length && r === "connection_missing")), ...sampleOnly];
   if (i.activation === "active") return { state: "active", reasons: sampleOnly, canTry, canRequestActivation: false };
   if (i.activation === "paused") return { state: "paused", reasons: ["paused", ...sampleOnly], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
   if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review", ...sampleOnly], canTry, canRequestActivation: false };

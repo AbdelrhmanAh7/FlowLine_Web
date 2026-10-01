@@ -3,10 +3,10 @@
 import { Button, Card, StatusBadge, type Tone } from "@/components/ui";
 import { useLocale, useT } from "@/i18n/client";
 import { formatDate } from "@/i18n/format";
-import { cbt } from "./text";
+import { cbt, reviewState } from "./text";
 import type { Overview, ReviewItemDto } from "./types";
 
-const TONE: Record<string, Tone> = { pending: "warning", approved: "info", rejected: "muted", invalidated: "danger", executed: "success", uncertain: "warning" };
+const TONE: Record<string, Tone> = { pending: "warning", approved: "info", rejected: "muted", invalidated: "danger", executed: "success", uncertain: "warning", expired: "muted" };
 
 /** Proposed content shown as data (LTR for addresses/JSON, escaped by React). */
 function Proposed({ item }: { item: ReviewItemDto }) {
@@ -44,12 +44,13 @@ export function ReviewInbox({ data, canDecide, isOwner, busy, onDecide, onVerify
         {items.map((it) => {
           const ownerOnly = it.reviewerRole === "owner" && !isOwner;
           const reason = !canDecide ? t("companyBuilder.errors.FORBIDDEN") : ownerOnly ? t("companyBuilder.review.ownerOnly") : null;
+          const state = reviewState(it);
           return (
-            <li key={it.id} className="flex flex-col gap-2 rounded-lg border border-line p-3" data-testid={`cb-review-${it.kind}-${it.taskId}`} data-status={it.status}>
+            <li key={it.id} className="flex flex-col gap-2 rounded-lg border border-line p-3" data-testid={`cb-review-${it.kind}-${it.taskId}`} data-status={state}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-hi">{cbt(t, `review.kind.${it.kind}`)}</span>
                 <span className="text-sm text-med">— {cbt(t, `task.${it.taskId}.name`)}</span>
-                <StatusBadge tone={TONE[it.status] ?? "muted"}>{cbt(t, `review.status.${it.status}`)}</StatusBadge>
+                <StatusBadge tone={TONE[state] ?? "muted"}>{cbt(t, `review.status.${state}`)}</StatusBadge>
                 <span className="ms-auto text-xs text-muted">{formatDate(locale, it.createdAt)}</span>
               </div>
               {it.proposed.consequential === "refund_or_cancellation" && (
@@ -81,12 +82,18 @@ export function ReviewInbox({ data, canDecide, isOwner, busy, onDecide, onVerify
                   {it.taskVersion} · plan v{it.blueprintVersion}
                 </dd>
               </dl>
-              {it.status === "invalidated" && <p className="text-sm text-danger">{t("companyBuilder.review.invalidated")}</p>}
+              {state === "invalidated" && <p className="text-sm text-danger">{t("companyBuilder.review.invalidated")}</p>}
+              {state === "expired" && (
+                <p className="text-sm text-muted" data-testid={`cb-review-expired-${it.taskId}`}>
+                  {t("companyBuilder.review.expired")}
+                </p>
+              )}
               {it.status === "uncertain" && (
                 <div className="flex flex-wrap items-center gap-2">
                   <p role="alert" className="text-sm text-warning">
                     {t("companyBuilder.review.uncertain")}
                   </p>
+                  <p className="text-sm text-muted">{t("companyBuilder.review.uncertainSampleOnly")}</p>
                   <Button size="sm" onClick={() => onVerify(it.id)} loading={busy === `verify:${it.id}`} disabledReason={reason} data-testid={`cb-verify-${it.taskId}`}>
                     {t("companyBuilder.review.verify")}
                   </Button>

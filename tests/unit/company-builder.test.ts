@@ -13,6 +13,7 @@ import { isPrivateRequest, prototypeAccess, prototypeConfigProblem } from "@/ser
 import { memoryStore } from "../fixtures/company-builder/store-stub";
 import { ar } from "@/i18n/messages/ar";
 import { en } from "@/i18n/messages/en";
+import { reviewState } from "@/components/company-builder/text";
 
 const SID = "00000000-0000-4000-8000-000000000001";
 const ctx = { sessionId: SID, profileVersion: 1, connections: [], language: "en" as const };
@@ -445,6 +446,20 @@ describe("copy contract", () => {
     }
   });
 
+  it("FB2-06: every objective check id any pack can produce has copy in both languages (no raw keys under Technical details)", async () => {
+    const ids = new Set<string>(["has_output"]);
+    const params = { approvedInfo: "Our monthly plan price is 300 SAR.\nDelivery is free inside Riyadh.", currencies: ["SAR"], language: "en", services: ["deep cleaning"] };
+    for (const p of PACKS) {
+      const g = p.compile(params, (x) => x);
+      for (const inp of [p.sample(params), ...p.fixtures(params).map((f) => f.input)]) {
+        const r = await executeGraph(g, inp, { handler: memoryStore().handler });
+        for (const c of [...p.evaluate((r.output ?? {}) as Record<string, unknown>, inp, params), ...p.evaluate({}, inp, params)]) ids.add(c.id);
+      }
+    }
+    expect(ids.size).toBeGreaterThan(20);
+    for (const cat of [ar.companyBuilder.trial.check, en.companyBuilder.trial.check] as Record<string, string>[]) for (const id of ids) expect(cat[id], id).toBeTruthy();
+  });
+
   it("every blocker, state, reason, task and capability produced by the code has copy", () => {
     const has = (obj: Record<string, unknown>, k: string) => typeof obj[k] === "string" || (typeof obj[k] === "object" && obj[k] !== null);
     for (const k of ["plan_draft", "requires_setup", "sample_verified", "live_verified", "approval_required", "active", "paused", "failed"]) expect(has(ar.companyBuilder.state, k)).toBe(true);
@@ -452,6 +467,23 @@ describe("copy contract", () => {
     for (const p of PACKS) {
       const g = p.compile({}, (id) => id);
       for (const n of g.nodes) expect(has((ar.companyBuilder.node as Record<string, Record<string, string>>)[p.id]!, n.id), `${p.id}.${n.id}`).toBe(true);
+    }
+  });
+});
+
+describe("FB2-09 — an expired review never reads as waiting", () => {
+  it("pending past expiry and server-retired expiries show 'expired'; other states are unchanged", () => {
+    expect(reviewState({ status: "pending", expired: true, note: null })).toBe("expired");
+    expect(reviewState({ status: "invalidated", expired: false, note: "expired" })).toBe("expired");
+    expect(reviewState({ status: "pending", expired: false, note: null })).toBe("pending");
+    expect(reviewState({ status: "invalidated", expired: false, note: "superseded" })).toBe("invalidated");
+    for (const s of ["approved", "rejected", "executed", "uncertain"]) expect(reviewState({ status: s, expired: false, note: null })).toBe(s);
+  });
+  it("the expired state has its own label and explanation in both languages", () => {
+    for (const c of [ar.companyBuilder, en.companyBuilder]) {
+      expect(c.review.status.expired).toBeTruthy();
+      expect(c.review.expired).toBeTruthy();
+      expect(c.review.status.expired).not.toBe(c.review.status.pending);
     }
   });
 });

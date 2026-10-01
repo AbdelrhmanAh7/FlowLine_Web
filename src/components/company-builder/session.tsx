@@ -80,6 +80,16 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
     },
   });
 
+  // FB2-10: one delete in flight at a time; an interview that is already gone (another tab, a double click) counts
+  // as deleted, and any other failure is shown instead of being swallowed.
+  const remove = useMutation({
+    mutationFn: () => api(`${base}/sessions/${sessionId}`, { method: "DELETE" }),
+    onSuccess: () => router.push(`/w/${workspace.slug}/company`),
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 404) router.push(`/w/${workspace.slug}/company`);
+    },
+  });
+
   if (q.isPending) return <Skeleton className="m-6 h-64 rounded-xl" />;
   if (q.isError) return <ErrorState title={t("companyBuilder.loadError")} onRetry={() => q.refetch()} />;
   const data = q.data;
@@ -107,20 +117,18 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
         <InlineConfirmation label={t("companyBuilder.deleteInterview")} onCancel={() => setDeleting(false)} className="mx-4 mt-4 sm:mx-6">
           <p className="text-sm text-med">{t("companyBuilder.deleteConfirm")}</p>
           <div className="mt-2 flex gap-2">
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={async () => {
-                await api(`${base}/sessions/${sessionId}`, { method: "DELETE" });
-                router.push(`/w/${workspace.slug}/company`);
-              }}
-            >
+            <Button size="sm" variant="danger" loading={remove.isPending} disabled={remove.isPending} onClick={() => remove.mutate()} data-testid="cb-delete-confirm">
               {t("companyBuilder.deleteInterview")}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setDeleting(false)}>
+            <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => setDeleting(false)}>
               {t("common.cancel")}
             </Button>
           </div>
+          {remove.isError && !(remove.error instanceof ApiError && remove.error.status === 404) && (
+            <p role="alert" className="mt-2 text-sm text-danger" data-testid="cb-delete-error">
+              {errorText(remove.error)}
+            </p>
+          )}
         </InlineConfirmation>
       )}
       <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

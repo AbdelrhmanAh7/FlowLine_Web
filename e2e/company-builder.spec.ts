@@ -85,7 +85,8 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await expect(plan.getByTestId("cb-primary-outcome")).toHaveAttribute("data-primary-task", "customer-follow-up");
   await expect(plan.getByTestId("cb-plan-section-goal")).toContainText("Prepare and track customer follow-ups");
   await expect(plan.getByTestId("cb-plan-section-integrations")).toContainText("Needs Gmail connection.");
-  await expect(plan.getByTestId("cb-plan-section-integrations")).toContainText("Uses sample data until you connect your account.");
+  await expect(plan.getByTestId("cb-plan-section-integrations")).not.toContainText("until you connect");
+  await expect(plan.getByTestId("cb-plan-section-integrations")).toContainText("Uses sample data only. Connecting your account doesn't change that in this version.");
   await expect(plan.getByTestId("cb-plan-section-approval")).toContainText("Requires approval before sending.");
   await expect(plan.getByTestId("cb-plan-section-team").locator("[data-role]")).toHaveCount(1);
   await expect(plan.getByTestId("cb-plan-section-team")).toContainText("Never sends a reply without approval");
@@ -241,4 +242,27 @@ test("company builder: keyboard-only answering; mobile width has no horizontal s
   await expect(page.getByTestId("cb-question")).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("company builder: deleting an interview shows a failure instead of swallowing it, and a double click is harmless (FB2-10)", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  const pageErrors: string[] = [];
+  page.on("pageerror", (e) => pageErrors.push(e.message));
+  await page.goto(`/w/${workspace.slug}/company`);
+  await page.getByTestId("cb-start").click();
+  await expect(page).toHaveURL(/\/company\/[0-9a-f-]{36}$/);
+  const sessionUrl = page.url();
+  // A failing delete keeps the person on the interview and says so.
+  const failDelete = (r: import("@playwright/test").Route) =>
+    r.request().method() === "DELETE" ? r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "INTERNAL", message: "boom" } }) }) : r.fallback();
+  await page.route("**/company-builder/sessions/*", failDelete);
+  await page.getByTestId("cb-delete").click();
+  await page.getByTestId("cb-delete-confirm").click();
+  await expect(page.getByTestId("cb-delete-error")).toBeVisible();
+  expect(page.url()).toBe(sessionUrl);
+  await page.unroute("**/company-builder/sessions/*", failDelete);
+  // A double click deletes once and lands on the Company Builder start page, with no unhandled error.
+  await page.getByTestId("cb-delete-confirm").dblclick();
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/company$`));
+  expect(pageErrors).toEqual([]);
 });

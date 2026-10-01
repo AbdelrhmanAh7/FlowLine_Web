@@ -489,6 +489,18 @@ describe("tenancy, feature gate and the HTTP surface", () => {
     // Drafts are user data and stay after the interview is deleted.
     expect(await db.select().from(schema.flow).where(eq(schema.flow.workspaceId, ws.id))).toHaveLength(1);
   });
+
+  it("FB2-08: pausing with a malformed or unknown installation id is a 404, never a 500", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const cookie = await signIn(owner);
+    for (const iid of ["not-a-uuid", "123", "00000000-0000-0000-0000-00000000000g", "00000000-0000-4000-8000-000000000000"]) {
+      const r = await call(cookie, "POST", ws.id, ["installations", iid, "tasks", FU, "pause"]);
+      expect(r.status, iid).toBe(404);
+    }
+    // The real installation with an inactive task is also a 404 (nothing to pause), not a crash.
+    expect((await call(cookie, "POST", ws.id, ["installations", installation.id, "tasks", FU, "pause"])).status).toBe(404);
+    await expectHttpError(pauseTask(owner, ws.id, "not-a-uuid", FU), 404, "NOT_FOUND");
+  });
 });
 
 describe("independent-review fixes (P1/P2 regressions)", () => {

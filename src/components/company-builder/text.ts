@@ -23,3 +23,12 @@ export function factText(t: Translator, key: string, fact: Fact | undefined | nu
 }
 
 export const fieldLabel = (t: Translator, key: string) => cbt(t, `facts.field.${key}`, undefined, key);
+
+/**
+ * FB2-09: the state a review item shows. A pending item past its expiry (and one the server already retired as
+ * expired) reads "expired" with its own explanation, never "Waiting for a decision" with no action.
+ */
+export function reviewState(it: { status: string; expired?: boolean; note: string | null }): string {
+  if ((it.status === "pending" && it.expired) || (it.status === "invalidated" && it.note === "expired")) return "expired";
+  return it.status;
+}

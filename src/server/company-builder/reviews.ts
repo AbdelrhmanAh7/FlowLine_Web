@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
 import type { FlowGraph } from "@/engine/types";
-import type { CurrentUser } from "@/server/access";
+import { isUuid, type CurrentUser } from "@/server/access";
 import { audit, userActor } from "@/server/audit";
 import { canonicalJson, sha256Hex } from "@/server/crypto";
 import { consumeFault } from "@/server/faults";
@@ -321,6 +321,7 @@ async function activate(user: CurrentUser, item: ReviewRow) {
 }
 
 export async function pauseTask(user: CurrentUser, workspaceId: string, installationId: string, taskId: string, reason = "paused_by_owner") {
+  if (!isUuid(installationId)) throw notFound("Task is not active");
   const [act] = await db.select().from(schema.cbActivation).where(and(eq(schema.cbActivation.installationId, installationId), eq(schema.cbActivation.taskId, taskId), eq(schema.cbActivation.workspaceId, workspaceId)));
   if (!act) throw notFound("Task is not active");
   const [flowItem] = await db.select().from(schema.cbInstalledItem).where(and(eq(schema.cbInstalledItem.installationId, installationId), eq(schema.cbInstalledItem.taskId, taskId), eq(schema.cbInstalledItem.kind, "flow")));

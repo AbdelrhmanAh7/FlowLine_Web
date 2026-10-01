@@ -85,6 +85,7 @@ function TaskDetails({ task, capabilities, onHelp }: { task: TaskPlan; capabilit
             : task.connections.map((c) => (
                 <span key={c.provider} className="block">
                   {c.status === "connected" ? t("companyBuilder.connectionConnected", { service: SERVICE[c.provider] ?? c.provider }) : t("companyBuilder.connectionNeeded", { service: SERVICE[c.provider] ?? c.provider, task: taskName })}
+                  {c.provider !== "ai" && <span className="block text-muted">{t("companyBuilder.connectionSampleOnly")}</span>}
                 </span>
               ))}
         </dd>
