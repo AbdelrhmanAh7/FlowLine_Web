@@ -97,6 +97,25 @@ result, never with the flow's own claims:
 - **E2E (Chromium, Firefox):** the full journey including rejection with a reason, then acceptance, a refresh, the
   test action and activation.
 
+
+**Owner decisions 2026-10-01 (in `1fe3d31`)**
+
+- **Refunds and cancellations always need a person.** The pack:
+  - identifies the request (topic `refund`: refund, cancel, cancellation, استرداد, إلغاء…);
+  - quotes only the approved policy lines and adds a fixed no-promise note;
+  - flags the draft and the record `consequential: "refund_or_cancellation"` / `requires_human_decision: true`;
+  - leaves the draft `awaiting_review`.
+
+  The review inbox labels the item, and approving it only puts the draft text in the outbox. No refund or payment step
+  exists in the flow; the node types are local only, and trials refuse anything else.
+
+  Check `consequential_needs_person`. Tests: unit REF-* (AR/EN refund and cancellation, tampering, no promise) and
+  integration REF (an editor can't approve, nothing is sent before the owner approves, billing is unchanged).
+- **Phone numbers as written.** Groups separated by spaces, dots, dashes or parentheses are joined for comparison only
+  when they start with "+" or 0 and give 9–13 digits; no country code is guessed. `phone_display` keeps the written form.
+- **Records per interview.** The storage key is `<session id>/<sample:>request id` (`recordScope`), so two interviews
+  in one workspace never overwrite each other, and retries or new plan versions update the same record.
+
 **Limits** (shown honestly in the plan):
 
 - The Gmail connection is *needed*, not connected; the trial uses sample data.
