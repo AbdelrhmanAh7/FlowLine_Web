@@ -103,9 +103,9 @@ test("offline conflict: newer server copy is never silently overwritten", async 
   await page.getByLabel("Flow name").fill("Mine (offline)");
   await expect(page.getByTestId("save-status")).toHaveAttribute("data-status", "offline");
 
-  // Someone else saves meanwhile (server-side change through the API with the same account).
-  await context.setOffline(false);
-  await context.setOffline(true);
+  // Someone else saves meanwhile (server-side change through the API with the same account). The other context is
+  // independent, so this page stays offline throughout: a brief online blip here let autosave legitimately save
+  // "Mine" first (no conflict to show) — PRE-02, 2/20 failures with the blip.
   const other = await context.browser()!.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: await context.storageState() });
   const current = (await (await other.request.get(`/api/flows/${flowId}`)).json()).flow;
   const put = await other.request.put(`/api/flows/${flowId}`, { data: { name: "Theirs (server)", baseRevision: current.revision } });
