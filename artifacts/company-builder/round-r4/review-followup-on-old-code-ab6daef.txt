@@ -1,0 +1,11 @@
+# Review follow-up (expired activation request / per-step limit): new tests run with src/ = ab6daef (before the fix)
+fb209-old.txt:     × time passing alone: the task can be requested again and says why; the inbox count ignores it 512ms
+fb209-old.txt:     × deciding an expired request releases the activation record it owns (never an active one) 247ms
+fb209-old.txt:⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+fb209-old.txt:AssertionError: expected 'approval_required' not to be 'approval_required' // Object.is equality
+fb209-old.txt:AssertionError: expected { …(10) } to match object { state: 'failed', …(2) }
+fb209-old.txt:      Tests  2 failed | 44 skipped (46)
+fb201b-old.txt:     × one line whose escaped form can't fit a single step (6-character escapes via the API) is refused with the specific code 5ms
+fb201b-old.txt:⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+fb201b-old.txt:AssertionError: expected [] to include 'APPROVED_INFO_TOO_COMPLEX'
+fb201b-old.txt:      Tests  1 failed | 20 passed (21)
