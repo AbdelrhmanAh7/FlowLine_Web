@@ -335,6 +335,7 @@ export const companyBuilderAr = {
     not_installed: "لم تُنشأ المسودة بعد",
     reviewer_unknown: "حدّد من يراجع هذه المهمة",
     trigger_unsupported: "مصدر البيانات غير مدعوم",
+    sample_only_not_live: "يعمل عند الطلب ببيانات نموذجية فقط: لا تُقرأ أو تُرسل رسائل من حسابك في هذا الإصدار",
     connection_missing: "يحتاج ربط خدمة",
     ai_connection_missing: "يحتاج اتصال ذكاء اصطناعي في الإعدادات",
     sample_trial_needed: "جرّبها ببيانات نموذجية أولًا",

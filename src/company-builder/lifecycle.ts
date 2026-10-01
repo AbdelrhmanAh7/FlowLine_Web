@@ -43,7 +43,9 @@ export function taskStatus(i: TaskStateInput): TaskStatus {
   if (!i.installed) return { state: "plan_draft", reasons: ["not_installed"], canTry: false, canRequestActivation: false };
   const setup = setupReasons(task);
   const canTry = task.kind === "workflow";
-  if (i.activation === "active") return { state: "active", reasons: [], canTry, canRequestActivation: false };
+  // VF-03: "active" never implies live email handling. In this build no Company Builder task reads or sends through an
+  // account (connected or not): a task that needs one runs on demand with sample data only, and says so.
+  if (i.activation === "active") return { state: "active", reasons: task.connections.some((c) => c.status !== "not_needed") ? ["sample_only_not_live"] : [], canTry, canRequestActivation: false };
   if (i.activation === "paused") return { state: "paused", reasons: ["paused"], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
   if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review"], canTry, canRequestActivation: false };
   if (i.verdict && !i.verdict.matchedOutcome) return { state: "failed", reasons: [!i.verdict.structurallyValid ? "invalid_structure" : !i.verdict.ranWithoutErrors ? "run_failed" : "outcome_not_matched"], canTry, canRequestActivation: false };

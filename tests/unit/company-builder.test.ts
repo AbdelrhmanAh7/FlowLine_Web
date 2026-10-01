@@ -293,6 +293,12 @@ describe("task lifecycle (Milestone C)", () => {
     expect(rejected.reasons).toContain("result_rejected");
     expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "paused" }).canRequestActivation).toBe(false);
   });
+  it("VF-03: an active task that needs an account says it runs on sample data only (no live email claim)", () => {
+    expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "active", userVerdict: accepted }).reasons).toEqual(["sample_only_not_live"]);
+    const connected = { ...followUp, connections: followUp.connections.map((c) => ({ ...c, status: "connected" as const })) };
+    expect(taskStatus({ task: connected, installed: true, verdict: ok, activation: "active", userVerdict: accepted }).reasons).toEqual(["sample_only_not_live"]);
+    expect(taskStatus({ task: { ...followUp, connections: [] }, installed: true, verdict: ok, activation: "active", userVerdict: accepted }).reasons).toEqual([]);
+  });
   it("an unknown reviewer blocks activation but not the sample trial", () => {
     const st = taskStatus({ task: { ...followUp, reviewer: "unknown" }, installed: true, verdict: ok, activation: null, userVerdict: accepted });
     expect(st).toMatchObject({ canTry: true, canRequestActivation: false });

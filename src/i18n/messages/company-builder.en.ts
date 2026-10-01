@@ -335,6 +335,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     not_installed: "Draft not created yet",
     reviewer_unknown: "Choose who reviews this task",
     trigger_unsupported: "The data source isn't supported",
+    sample_only_not_live: "Runs on demand with sample data only: no emails are read or sent from your account in this version",
     connection_missing: "Needs a service connection",
     ai_connection_missing: "Needs an AI connection in Settings",
     sample_trial_needed: "Try it with sample data first",
