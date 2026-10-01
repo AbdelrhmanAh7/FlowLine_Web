@@ -54,7 +54,8 @@ function connectionRef(ctx: PlanContext, provider: string): TaskPlan["connection
 const BASE_LIMITS = { maxItemsPerRun: 50, maxRunsPerDay: 100 };
 
 function stepsOf(pack: TaskPack, params: TaskPlan["params"]) {
-  return pack.compile(params, (id) => id).nodes.map((n) => n.id);
+  // Repeated data steps ("facts", "facts-2", …) are one business step in the plan.
+  return [...new Set(pack.compile(params, (id) => id).nodes.map((n) => n.id.replace(/^(facts)-\d+$/, "$1")))];
 }
 
 function packTask(pack: TaskPack, partial: Omit<TaskPlan, "packId" | "packVersion" | "department" | "inputContract" | "outputContract" | "acceptanceFixtures" | "dependsOn" | "steps" | "kind" | "justification">): TaskPlan {
@@ -79,7 +80,9 @@ function servicesFrom(text: string | null): string[] {
   return text
     .split(/[,،\n;]+/)
     // "office cleaning / تنظيف مكاتب": other names for the SAME service (aliases), stored as "a|b" for the pack.
-    .map((s) => s.split(/[/|]/).map((a) => a.trim().toLowerCase()).filter((a) => a.length > 1).join("|").slice(0, 60))
+    // Other names for the same service are separated by a SPACED slash or "|" ("office cleaning / تنظيف مكاتب");
+    // a bare slash stays part of the name ("24/7 emergency plumbing", FB2-03). Each name must contain a letter.
+    .map((s) => s.split(/\s+\/\s+|\|/).map((a) => a.trim().toLowerCase()).filter((a) => a.length > 1 && /\p{L}/u.test(a)).join("|").slice(0, 60))
     .filter((s) => s.length > 1)
     .slice(0, 12);
 }

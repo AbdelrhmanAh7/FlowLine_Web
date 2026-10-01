@@ -43,6 +43,9 @@ export interface StartTrialInput {
 
 export async function startTrial(user: CurrentUser, workspaceId: string, installationId: string, taskId: string, input: StartTrialInput) {
   if (!TRIAL_KEY.test(input.trialKey)) throw new HttpError(400, "VALIDATION", "Invalid trial key");
+  // FB2-04: client-supplied input must carry a request OBJECT; anything else is refused before anything is enqueued.
+  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+  if (input.input !== undefined && (!isObject(input.input) || !isObject(input.input.request))) throw new HttpError(400, "VALIDATION", "A trial input needs a request object");
   const { inst, task, item } = await taskContext(workspaceId, installationId, taskId);
   if (inst.status !== "installed") throw new HttpError(409, "NOT_INSTALLED", "Create the drafts before trying them");
   if (task.kind !== "workflow" || !item) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "This task has no workflow to try");
@@ -63,11 +66,7 @@ export async function startTrial(user: CurrentUser, workspaceId: string, install
   if ((flow.graph as FlowGraph).nodes.some((n) => !pack.nodeTypes.includes(n.type))) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft now has steps that could reach real accounts — run it from the editor instead");
   // A sample trial is ALWAYS labelled sample (records go under a "sample:" key), whatever the client sent.
   const given = input.input;
-  const sample = given
-    ? given.request && typeof given.request === "object" && !Array.isArray(given.request)
-      ? { ...given, request: { ...(given.request as Record<string, unknown>), sample: true } }
-      : given
-    : (pack.sample(task.params) as Record<string, unknown>);
+  const sample = given ? { ...given, request: { ...(given.request as Record<string, unknown>), sample: true } } : (pack.sample(task.params) as Record<string, unknown>);
   const { run } = await enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` });
   const [trial] = await db
     .insert(schema.cbTrial)

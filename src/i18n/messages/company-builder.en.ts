@@ -633,7 +633,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
   },
 
   node: {
-    "customer-follow-up": { request: "Customer request (sample)", extract: "Extract request details", draft: "Reply from approved information, ask for missing details", record: "Save the follow-up record", "follow-up": "Follow-up record", "has-reply": "Reply ready?", reply: "Reply for review", person: "Needs a person" },
+    "customer-follow-up": { facts: "Your approved information and services", request: "Customer request (sample)", extract: "Extract request details", draft: "Reply from approved information, ask for missing details", record: "Save the follow-up record", "follow-up": "Follow-up record", "has-reply": "Reply ready?", reply: "Reply for review", person: "Needs a person" },
     "operations-summary": { status: "Task status (sample)", normalise: "Check the data", metrics: "Calculate the numbers", summarise: "Write the summary from a template", "has-input": "Enough data?", summary: "Summary for review", "needs-input": "Needs data" },
     "lead-qualification": { lead: "Inbound lead (sample)", normalise: "Tidy up the details", score: "Check against criteria", "meets-criteria": "Meets the criteria?", qualified: "Qualified, for review", person: "Needs a person" },
     "customer-triage": { request: "Customer request (sample)", extract: "Extract request details", draft: "Reply from approved information", "has-answer": "Approved answer found?", reply: "Reply for review", person: "Needs a person" },

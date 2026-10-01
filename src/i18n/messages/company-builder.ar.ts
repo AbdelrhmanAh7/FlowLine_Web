@@ -633,7 +633,7 @@ export const companyBuilderAr = {
   },
 
   node: {
-    "customer-follow-up": { request: "طلب عميل (نموذجي)", extract: "استخراج تفاصيل الطلب", draft: "رد من المعلومات المعتمدة وطلب الناقص", record: "حفظ سجل المتابعة", "follow-up": "سجل المتابعة", "has-reply": "يوجد رد جاهز؟", reply: "رد للمراجعة", person: "يحتاج شخصًا" },
+    "customer-follow-up": { facts: "معلوماتك المعتمدة وخدماتك", request: "طلب عميل (نموذجي)", extract: "استخراج تفاصيل الطلب", draft: "رد من المعلومات المعتمدة وطلب الناقص", record: "حفظ سجل المتابعة", "follow-up": "سجل المتابعة", "has-reply": "يوجد رد جاهز؟", reply: "رد للمراجعة", person: "يحتاج شخصًا" },
     "operations-summary": { status: "حالة المهام (نموذجية)", normalise: "التحقق من البيانات", metrics: "حساب الأرقام", summarise: "كتابة الملخص من قالب", "has-input": "البيانات كافية؟", summary: "ملخص للمراجعة", "needs-input": "يحتاج بيانات" },
     "lead-qualification": { lead: "عميل محتمل (نموذجي)", normalise: "توحيد البيانات", score: "القياس على المعايير", "meets-criteria": "يطابق المعايير؟", qualified: "مؤهل للمراجعة", person: "يحتاج شخصًا" },
     "customer-triage": { request: "طلب عميل (نموذجي)", extract: "استخراج بيانات الطلب", draft: "رد من المعلومات المعتمدة", "has-answer": "يوجد جواب معتمد؟", reply: "رد للمراجعة", person: "يحتاج شخصًا" },

@@ -187,7 +187,7 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
     }
     if (decision === "reject") {
       const [r] = await tx.update(schema.cbReviewItem).set({ status: "rejected", decidedBy: user.id, decidedAt: new Date(), note: note?.slice(0, 500) ?? null }).where(eq(schema.cbReviewItem.id, it.id)).returning();
-      if (it.kind === "activation") await setActivation(tx, it, "paused", "activation_rejected", user.id);
+      if (it.kind === "activation") await setActivation(tx, it, "paused", "activation_rejected", user.id, { ownedOnly: true });
       return r!;
     }
     const parts = await currentParts(it);
@@ -195,7 +195,7 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
     if (requesterGone || "stale" in parts || reviewBinding(parts) !== it.bindingHash) {
       const reason = requesterGone ? "requester_not_member" : "stale" in parts ? parts.stale : "binding_changed";
       await tx.update(schema.cbReviewItem).set({ status: "invalidated", note: reason }).where(eq(schema.cbReviewItem.id, it.id));
-      if (it.kind === "activation") await setActivation(tx, it, "failed", reason, user.id);
+      if (it.kind === "activation") await setActivation(tx, it, "failed", reason, user.id, { ownedOnly: true });
       return { ...it, status: "invalidated", note: reason };
     }
     const [r] = await tx.update(schema.cbReviewItem).set({ status: "approved", decidedBy: user.id, decidedAt: new Date(), note: note?.slice(0, 500) ?? null }).where(eq(schema.cbReviewItem.id, it.id)).returning();
@@ -210,7 +210,7 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
     // A definite failure (not an unknown outcome) never leaves the item stuck in "approved".
     if (!(e instanceof UncertainOutcomeError)) {
       await db.update(schema.cbReviewItem).set({ status: "invalidated", note: e instanceof HttpError ? e.code : "EXECUTION_FAILED" }).where(and(eq(schema.cbReviewItem.id, item.id), eq(schema.cbReviewItem.status, "approved")));
-      if (item.kind === "activation") await setActivation(db, item, "failed", e instanceof HttpError ? e.code : "EXECUTION_FAILED", user.id);
+      if (item.kind === "activation") await setActivation(db, item, "failed", e instanceof HttpError ? e.code : "EXECUTION_FAILED", user.id, { ownedOnly: true });
     }
     throw e;
   }
@@ -252,7 +252,7 @@ export async function verifyUncertain(user: CurrentUser, workspaceId: string, it
 
 /* ───────────── Activation ───────────── */
 
-async function setActivation(tx: Tx | typeof db, it: Pick<ReviewRow, "workspaceId" | "installationId" | "taskId" | "id" | "bindingHash">, state: "approval_required" | "active" | "paused" | "failed", reason: string | null, userId: string) {
+async function setActivation(tx: Tx | typeof db, it: Pick<ReviewRow, "workspaceId" | "installationId" | "taskId" | "id" | "bindingHash">, state: "approval_required" | "active" | "paused" | "failed", reason: string | null, userId: string, opts: { ownedOnly?: boolean } = {}) {
   await tx
     .insert(schema.cbActivation)
     .values({ workspaceId: it.workspaceId, installationId: it.installationId, taskId: it.taskId, state, reason, bindingHash: it.bindingHash, reviewItemId: it.id, decidedBy: userId })
@@ -260,7 +260,13 @@ async function setActivation(tx: Tx | typeof db, it: Pick<ReviewRow, "workspaceI
       target: [schema.cbActivation.installationId, schema.cbActivation.taskId],
       set: { state, reason, bindingHash: it.bindingHash, reviewItemId: it.id, decidedBy: userId, updatedAt: new Date() },
       // Only an actual activation/pause changes an ACTIVE task; a rejected or stale re-request leaves it as it is.
-      setWhere: state === "active" || state === "paused" ? undefined : ne(schema.cbActivation.state, "active"),
+      // FB2-02: a decision on a request that no longer owns the activation record (a newer request was opened or
+      // approved since) never changes it.
+      setWhere: opts.ownedOnly
+        ? and(ne(schema.cbActivation.state, "active"), eq(schema.cbActivation.reviewItemId, it.id))
+        : state === "active" || state === "paused"
+          ? undefined
+          : ne(schema.cbActivation.state, "active"),
     });
 }
 
@@ -304,6 +310,11 @@ async function activate(user: CurrentUser, item: ReviewRow) {
     throw new HttpError(409, "REVIEW_INVALIDATED", "The draft changed while it was being activated — request a new review", { reason: "draft_changed_during_activation" });
   }
   await setActivation(db, item, "active", null, user.id);
+  // Older pending activation requests for this task can't apply any more: mark them superseded (history kept).
+  await db
+    .update(schema.cbReviewItem)
+    .set({ status: "invalidated", note: "superseded" })
+    .where(and(eq(schema.cbReviewItem.installationId, item.installationId), eq(schema.cbReviewItem.taskId, item.taskId), eq(schema.cbReviewItem.kind, "activation"), eq(schema.cbReviewItem.status, "pending"), ne(schema.cbReviewItem.id, item.id)));
   await audit(db, { workspaceId: item.workspaceId, actor: userActor(user), action: "company_builder.activation_changed", targetType: "cb_task", targetId: item.taskId, data: { state: "active", source: ent.source } });
   const [done] = await db.update(schema.cbReviewItem).set({ status: "executed", executedAt: new Date() }).where(eq(schema.cbReviewItem.id, item.id)).returning();
   return done!;

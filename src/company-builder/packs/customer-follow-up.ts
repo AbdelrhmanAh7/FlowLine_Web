@@ -1,4 +1,5 @@
-import type { FlowGraph } from "@/engine/types";
+import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
+import type { FlowGraph, FlowNode } from "@/engine/types";
 import { lit, sameJson, type PackCheck, type PackFixture, type PackParams, type TaskPack } from "./types";
 
 /**
@@ -64,10 +65,11 @@ const ISO_TS_RE = new RegExp(ISO_TS);
 
 /** Approved information is split into lines (one fact per line), never inside a sentence (abbreviations stay whole). */
 export function fuApprovedIndex(info: string): { lines: string[]; topics: Record<string, number[]> } {
+  // Never truncated: the interview limits the whole text (MAX_APPROVED UTF-16 units) and validation refuses anything
+  // longer from other sources (FB2-01), so every approved line is kept exactly as written.
   const lines = info
-    .slice(0, MAX_APPROVED)
     .split(/\r?\n/)
-    .map((l) => l.trim().slice(0, 300))
+    .map((l) => l.trim())
     .filter((l) => l.length > 0);
   const topics: Record<string, number[]> = {};
   // Each approved line belongs to its FIRST matching topic only (e.g. "free cancellation up to 24 hours" is about
@@ -92,17 +94,26 @@ function lineServices(lines: string[], params: PackParams): number[][] {
   const groups = servicesOf(params);
   return lines.map((line) => {
     const tokens = fuTokens(normDigits(line).toLowerCase());
-    return groups.flatMap((aliases, gi) => (fuHasWord(tokens, aliases) ? [gi] : []));
+    return groups.flatMap((aliases, gi) => (matchesService(tokens, aliases) ? [gi] : []));
   });
 }
 
+/**
+ * Service groups: aliases separated by "|" (the planner turns "name / other name" into that). An alias must contain a
+ * letter (FB2-03: "24" from "24/7" must never match a date or phone), and is matched at WORD STARTS on the same
+ * tokenisation as the request text. Group[0] is the canonical (display) name.
+ */
+const HAS_LETTER = /\p{L}/u;
 export function servicesOf(params: PackParams): string[][] {
   const raw = Array.isArray(params.services) ? params.services : [];
   return raw
-    .map((s) => String(s).split("|").map((a) => a.trim().toLowerCase()).filter(Boolean).slice(0, 4))
+    .map((s) => String(s).split("|").map((a) => a.trim().toLowerCase()).filter((a) => a.length > 1 && HAS_LETTER.test(a)).slice(0, 4))
     .filter((a) => a.length > 0)
     .slice(0, 12);
 }
+/** Aliases in the token form used for matching (punctuation → spaces), e.g. "24/7 plumbing" → "24 7 plumbing". */
+const aliasTokens = (aliases: string[]) => aliases.map((a) => fuTokens(normDigits(a)).trim()).filter((a) => a.length > 0);
+const matchesService = (tokens: string, aliases: string[]) => aliasTokens(aliases).some((a) => tokens.includes(` ${a}`));
 
 function requiredOf(params: PackParams): string[] {
   const raw = Array.isArray(params.requiredDetails) ? params.requiredDetails : FU_DETAILS;
@@ -134,6 +145,58 @@ export function fuPhone(textNoDates: string): { phone: string | null; display: s
 
 export const normDigits = (s: string) => s.replace(/[٠-٩۰-۹]/g, (d) => String(Math.max(DIGITS.indexOf(d), PERSIAN_DIGITS.indexOf(d))));
 
+/**
+ * FB2-01: business data (approved lines with their topic and the services they mention, and the service groups) is
+ * carried by a chain of small `transform.json` data steps — each a JSON literal merged into the passing object and kept
+ * under EXPRESSION_MAX_LENGTH — instead of being embedded in the extraction/draft logic. The logic expressions stay
+ * constant-sized whatever the length of the approved information; nothing is truncated and the limit is unchanged.
+ */
+export const FACT_STEP_LIMIT = EXPRESSION_MAX_LENGTH - 50;
+export const MAX_FACT_STEPS = 24;
+/**
+ * Packs the data into as few steps as possible: each step is `$merge([$, { "<key>": [...], … }])` under
+ * FACT_STEP_LIMIT; a list too long for one step continues under the next key of the same series (fs1, fs2… /
+ * fa1, fa2…). Empty data still yields one step, so the graph shape is stable.
+ */
+interface FactPlan {
+  steps: string[];
+  serviceKeys: string[];
+  approvedKeys: string[];
+}
+export function factSteps(params: PackParams): FactPlan {
+  const groups = servicesOf(params);
+  const info = fuApprovedIndex(String(params.approvedInfo ?? ""));
+  const ls = lineServices(info.lines, params);
+  const topicOf = new Map<number, string>();
+  for (const [t, idx] of Object.entries(info.topics)) for (const i of idx) topicOf.set(i, t);
+  const series: [string, unknown[]][] = [
+    ["fs", groups.map((g) => ({ n: g[0], a: aliasTokens(g) }))],
+    ["fa", info.lines.map((t, i) => ({ t, p: topicOf.get(i) ?? "other", s: ls[i]!.map((gi) => groups[gi]![0]) }))],
+  ];
+  const expr = (obj: Record<string, unknown[]>) => `$merge([$, ${lit(obj)}])`;
+  const steps: Record<string, unknown[]>[] = [{}];
+  const keys: Record<string, string[]> = { fs: [], fa: [] };
+  for (const [prefix, items] of series) {
+    let key = `${prefix}1`;
+    keys[prefix]!.push(key);
+    steps.at(-1)![key] = [];
+    for (const it of items) {
+      const cur = steps.at(-1)!;
+      if (cur[key]!.length > 0 && expr({ ...cur, [key]: [...cur[key]!, it] }).length > FACT_STEP_LIMIT) {
+        key = `${prefix}${keys[prefix]!.length + 1}`;
+        keys[prefix]!.push(key);
+        steps.push({ [key]: [] });
+      } else if (cur[key]!.length === 0 && Object.keys(cur).length > 1 && expr({ ...cur, [key]: [it] }).length > FACT_STEP_LIMIT) {
+        delete cur[key];
+        steps.push({ [key]: [] });
+      }
+      steps.at(-1)![key]!.push(it);
+    }
+  }
+  return { steps: steps.map(expr), serviceKeys: keys.fs!, approvedKeys: keys.fa! };
+}
+const appendAll = (keys: string[]) => keys.reduce((acc, k) => `$append(${acc}, ${k})`, "[]");
+
 function extractExpression(params: PackParams) {
   const norm = [...DIGITS, ...PERSIAN_DIGITS].reduce((acc, d, i) => `$replace(${acc}, ${lit(d)}, "${i % 10}")`, "$raw");
   const topicExpr = FU_TOPICS.map((t) => `$has(${lit(FU_TOPIC_KEYWORDS[t])}) ? ${lit(t)}`).join(" : ");
@@ -144,8 +207,8 @@ function extractExpression(params: PackParams) {
   $tok := " " & $replace($low, /${NON_WORD}/, " ") & " ";
   $has := function($words) { $count($filter($words, function($w) { $contains($tok, " " & $w) })) > 0 };
   $hasRaw := function($words) { $count($filter($words, function($w) { $contains($low, $w) })) > 0 };
-  $services := ${lit(servicesOf(params))};
-  $svc := $filter($services, function($aliases) { $count($filter($aliases, function($a) { $contains($low, $a) })) > 0 });
+  $services := ${appendAll(factSteps(params).serviceKeys)};
+  $svc := $filter($services, function($g) { $count($filter($g.a, function($a) { $contains($tok, " " & $a) })) > 0 });
   $noDates := $replace($text, /[0-9]{4}-[0-9]{2}-[0-9]{2}/, " ");
   $compact := $replace($noDates, /${PHONE_SPACED}/, function($m) { ($c := $replace($m.match, /[^0-9+]/, ""); $n := $length($replace($c, "+", "")); $n >= 9 and $n <= 13 ? $c : $m.match) });
   $phone := $match($compact, /\\+?[0-9]{9,14}/);
@@ -160,8 +223,9 @@ function extractExpression(params: PackParams) {
     "suspicious": $hasRaw(${lit(FU_INJECTION)}),
     "empty": $not($exists(request.body)) or $length($trim($string(request.body))) = 0,
     "phone_display": $pv = null ? null : $exists($shown) ? $trim($shown[0].match) : $pv,
+    "approved": ${appendAll(factSteps(params).approvedKeys)},
     "detected": {
-      "service": $count($svc) > 0 ? $svc[0][0] : null,
+      "service": $count($svc) > 0 ? $svc[0].n : null,
       "phone": $pv,
       "date": $exists($date) ? $date[0].match : null
     }
@@ -173,19 +237,13 @@ function extractExpression(params: PackParams) {
 const scopeOf = (params: PackParams) => (typeof params.recordScope === "string" && /^[A-Za-z0-9-]{1,64}$/.test(params.recordScope) ? params.recordScope : "");
 
 function draftExpression(params: PackParams) {
-  const info = fuApprovedIndex(String(params.approvedInfo ?? ""));
   const hours = typeof params.followUpHours === "number" && params.followUpHours > 0 && params.followUpHours <= 720 ? params.followUpHours : 24;
   return `(
-  $approved := ${lit(info)};
   $ask := ${lit(ASK)};
   $required := ${lit(requiredOf(params))};
-  $all := $approved.lines;
   $d := detected;
   $missing := $append([], $filter($required, function($k) { $not($exists($lookup($d, $k))) or $lookup($d, $k) = null }));
-  $ls := ${lit(lineServices(info.lines, params))};
-  $si := ${lit(Object.fromEntries(servicesOf(params).map((g, i) => [g[0], i])))};
-  $sx := $d.service = null ? null : $lookup($si, $d.service);
-  $lines := empty or topic = "complaint" ? [] : $append([], $map($filter($append([], $lookup($approved.topics, topic)), function($i) { $count($ls[$i]) = 0 or $sx = null or $sx in $ls[$i] }), function($i) { $all[$i] }));
+  $lines := empty or topic = "complaint" ? [] : $append([], $map($filter($append([], approved), function($e) { $e.p = topic and ($count($e.s) = 0 or $d.service = null or $d.service in $e.s) }), function($e) { $e.t }));
   $lang := language;
   $handoff := empty ? "empty_request" : topic = "complaint" ? "complaint_needs_person" : ($d.service = null and $count($lines) = 0) ? "no_approved_information" : null;
   $asks := $handoff = null ? $append([], $map($missing, function($k) { $lookup($lookup($ask, $lang), $k) })) : [];
@@ -215,7 +273,8 @@ export function recomputeDetails(input: unknown, params: PackParams) {
   const raw = `${r.subject == null ? "" : String(r.subject)} ${r.body == null ? "" : String(r.body)}`;
   const text = normDigits(raw);
   const low = text.toLowerCase();
-  const svc = servicesOf(params).find((aliases) => aliases.some((a) => low.includes(a)));
+  const tokens = fuTokens(low);
+  const svc = servicesOf(params).find((aliases) => matchesService(tokens, aliases));
   const date = /[0-9]{4}-[0-9]{2}-[0-9]{2}/.exec(text)?.[0] ?? null;
   const ph = fuPhone(text.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/g, " "));
   const detected = { service: svc?.[0] ?? null, phone: ph.phone, date };
@@ -278,9 +337,19 @@ export const customerFollowUpPack: TaskPack = {
   outputKeys: ["reply_draft", "needs_person"],
 
   compile(params: PackParams, label): FlowGraph {
+    // Data steps: ids "facts", "facts-2", … (one label/copy key), each under the expression limit (FB2-01).
+    const fs = factSteps(params);
+    const facts: FlowNode[] = fs.steps.map((expression, i) => ({
+      id: i === 0 ? "facts" : `facts-${i + 1}`,
+      type: "transform.json",
+      position: { x: X[0]! + 140 * i, y: 320 },
+      data: { label: i === 0 ? label("facts") : `${label("facts")} (${i + 1})`, config: { expression } },
+    })) as FlowNode[];
+    const chain = facts.map((n) => n.id);
     return {
       nodes: [
         { id: "request", type: "trigger.manual", position: { x: X[0]!, y: 160 }, data: { label: label("request"), config: { samplePayload: JSON.stringify(this.sample(params), null, 2) } } },
+        ...facts,
         { id: "extract", type: "transform.json", position: { x: X[1]!, y: 160 }, data: { label: label("extract"), config: { expression: extractExpression(params) } } },
         { id: "draft", type: "transform.json", position: { x: X[2]!, y: 160 }, data: { label: label("draft"), config: { expression: draftExpression(params) } } },
         { id: "record", type: "data.store", position: { x: X[3]!, y: 300 }, data: { label: label("record"), config: { op: "set", namespace: "cb_customer_follow_ups", key: "record.store_key", value: "record" } } },
@@ -295,7 +364,8 @@ export const customerFollowUpPack: TaskPack = {
         { id: "person", type: "output", position: { x: X[4]!, y: 120 }, data: { label: label("person"), config: { key: "needs_person", expression: '{ "from": from, "subject": subject, "topic": topic, "language": language, "suspicious": suspicious, "reason": handoff }' } } },
       ],
       edges: [
-        { id: "e1", source: "request", target: "extract", sourceHandle: "out" },
+        // request → facts → facts-2 → … → extract
+        ...["request", ...chain].map((source, i) => ({ id: i === 0 ? "e1" : `ef${i}`, source, target: [...chain, "extract"][i]!, sourceHandle: "out" })),
         { id: "e2", source: "extract", target: "draft", sourceHandle: "out" },
         { id: "e3", source: "draft", target: "record", sourceHandle: "out" },
         { id: "e4", source: "record", target: "follow-up", sourceHandle: "out" },
@@ -352,6 +422,16 @@ export const customerFollowUpPack: TaskPack = {
     });
     if (person) checks.push({ id: "handoff_has_reason", passed: typeof person.reason === "string" && person.reason === exp.handoff });
     return checks;
+  },
+
+  paramIssues(params) {
+    const info = String(params.approvedInfo ?? "");
+    const fs = factSteps(params);
+    const issues: string[] = [];
+    // Refused, never trimmed: the interview limit is MAX_APPROVED UTF-16 units (FB2-01).
+    if (info.length > MAX_APPROVED) issues.push("APPROVED_INFO_TOO_LONG");
+    if (fs.steps.length > MAX_FACT_STEPS) issues.push("APPROVED_INFO_TOO_COMPLEX");
+    return issues;
   },
 
   fixtures(params): PackFixture[] {

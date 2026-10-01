@@ -828,3 +828,168 @@ describe("VF-03 state contract — Company Builder never claims live email (no c
   });
 });
 
+
+describe("FB2-02 — a stale activation decision never changes the newer approved version", () => {
+  async function twoRequests() {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const older = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU); // a newer accepted trial → a new binding
+    const newer = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    expect(newer.id).not.toBe(older.id);
+    const flow = async () => {
+      const [fi] = (await installedItems(c.installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+      return (await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId)))[0]!;
+    };
+    const activation = async () => (await db.select().from(schema.cbActivation).where(and(eq(schema.cbActivation.installationId, c.installation.id), eq(schema.cbActivation.taskId, FU))))[0]!;
+    const item = async (id: string) => (await db.select().from(schema.cbReviewItem).where(eq(schema.cbReviewItem.id, id)))[0]!;
+    return { ...c, older, newer, flow, activation, item };
+  }
+
+  it("core defect: approve newer, then try to reject older — the task must stay ACTIVE and its flow published", async () => {
+    const t = await twoRequests();
+    await decideReview(t.owner, t.ws.id, t.newer.id, "approve");
+    await decideReview(t.owner, t.ws.id, t.older.id, "reject").catch(() => undefined); // refused or recorded, either way
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+    expect((await t.flow()).publishedVersionId).not.toBeNull();
+  });
+
+  it("approve newer, then reject older: the task stays active and published; the older request is superseded (history kept)", async () => {
+    const t = await twoRequests();
+    expect((await decideReview(t.owner, t.ws.id, t.newer.id, "approve")).status).toBe("executed");
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+    const oldItem = await t.item(t.older.id);
+    expect(oldItem).toMatchObject({ status: "invalidated", note: "superseded" });
+    await expectHttpError(decideReview(t.owner, t.ws.id, t.older.id, "reject"), 409, "ALREADY_DECIDED");
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+    expect((await t.flow()).publishedVersionId).not.toBeNull();
+    // Refresh/resume and the worker-visible path: the entitlement reconciler still sees an ACTIVE task and withdraws it.
+    for (let i = 0; i < 2; i++) expect((await sessionOverview(t.ws.id, t.session.id, null)).tasks[0]!.status.state).toBe("active");
+    await cancelDevTrial(t.owner, t.ws.id);
+    expect(await t.activation()).toMatchObject({ state: "paused", reason: "entitlement_lapsed" });
+    expect((await t.flow()).publishedVersionId).toBeNull();
+  });
+
+  it("reject older FIRST, then approve newer: active with the newer binding", async () => {
+    const t = await twoRequests();
+    expect((await decideReview(t.owner, t.ws.id, t.older.id, "reject")).status).toBe("rejected");
+    expect((await decideReview(t.owner, t.ws.id, t.newer.id, "approve")).status).toBe("executed");
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+  });
+
+  it("a stale APPROVAL of the older request is refused and leaves the active task untouched", async () => {
+    const t = await twoRequests();
+    await decideReview(t.owner, t.ws.id, t.newer.id, "approve");
+    await expectHttpError(decideReview(t.owner, t.ws.id, t.older.id, "approve"), 409, "ALREADY_DECIDED");
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+  });
+
+  it("duplicate and concurrent decisions: one publication, never paused by the stale request", async () => {
+    const t = await twoRequests();
+    const settled = await Promise.allSettled([decideReview(t.owner, t.ws.id, t.newer.id, "approve"), decideReview(t.owner, t.ws.id, t.older.id, "reject"), decideReview(t.owner, t.ws.id, t.newer.id, "approve")]);
+    expect(settled.filter((s) => s.status === "fulfilled" && (s.value as { status: string }).status === "executed")).toHaveLength(1);
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+    expect((await t.flow()).publishedVersionId).not.toBeNull();
+    const f = await t.flow();
+    const versions = await db.select().from(schema.flowVersion).where(eq(schema.flowVersion.flowId, f.id));
+    expect(versions.filter((v) => v.id === f.publishedVersionId)).toHaveLength(1);
+  });
+
+  it("an expired older request can't change anything", async () => {
+    const t = await twoRequests();
+    await decideReview(t.owner, t.ws.id, t.newer.id, "approve");
+    await db.update(schema.cbReviewItem).set({ status: "pending", expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.cbReviewItem.id, t.older.id));
+    const e = await expectHttpError(decideReview(t.owner, t.ws.id, t.older.id, "reject"), 409, "REVIEW_INVALIDATED");
+    expect(e.details).toEqual({ reason: "expired" });
+    expect(await t.item(t.older.id)).toMatchObject({ status: "invalidated", note: "expired" });
+    expect(await t.activation()).toMatchObject({ state: "active", reviewItemId: t.newer.id });
+  });
+
+  it("rejecting the request that owns a pending activation still records the rejection (legitimate path kept)", async () => {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const req = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    await decideReview(c.owner, c.ws.id, req.id, "reject");
+    const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
+    expect(a).toMatchObject({ state: "paused", reason: "activation_rejected", reviewItemId: req.id });
+  });
+});
+
+describe("FB2-04 / FB2-05 — trial input validation and same-key deduplication", () => {
+  const counts = async (wsId: string, flowId: string, key: string) => ({
+    trials: (await db.select().from(schema.cbTrial).where(and(eq(schema.cbTrial.workspaceId, wsId), eq(schema.cbTrial.trialKey, key)))).length,
+    runs: (await db.select().from(schema.run).where(and(eq(schema.run.flowId, flowId), eq(schema.run.triggerRef, `cb-trial:${key}`)))).length,
+  });
+
+  it("FB2-04: a missing, null, string, array or malformed request is refused BEFORE anything is enqueued", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const [fi] = (await installedItems(installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+    const bad: unknown[] = [{}, { request: null }, { request: "x" }, { request: [] }, { request: [{ body: "hi" }] }, { request: 5 }, { other: { body: "hi" } }];
+    for (const [i, input] of bad.entries()) {
+      const key = `bad-input-${i}-key`;
+      await expectHttpError(startTrial(owner, ws.id, installation.id, FU, { trialKey: key, input: input as Record<string, unknown> }), 400, "VALIDATION");
+      expect(await counts(ws.id, fi!.refId, key), JSON.stringify(input)).toEqual({ trials: 0, runs: 0 });
+    }
+    expect(await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id))).toHaveLength(0);
+    // A valid request is accepted and still forced to the sample boundary.
+    const { trial } = await startTrial(owner, ws.id, installation.id, FU, { trialKey: "good-input-key", input: { request: { id: "g1", from: "a@example.com", body: "carpet?", sample: false } } });
+    await claimAndProcess(trial.runId!);
+    const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId!));
+    expect((run!.input as { request: { sample: boolean } }).request.sample).toBe(true);
+  });
+
+  it("FB2-05: the same trial key submitted concurrently → 1 trial, 1 run, 1 execution, 1 record, 0 sends, 1 usage event", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const [fi] = (await installedItems(installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+    const key = "concurrent-same-key-01";
+    const usageBefore = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).length;
+    const settled = await Promise.allSettled(Array.from({ length: 6 }, () => startTrial(owner, ws.id, installation.id, FU, { trialKey: key })));
+    expect(settled.map((x) => x.status)).toEqual(Array(6).fill("fulfilled")); // every caller gets the same operation back
+    const ok = settled.map((x) => (x as PromiseFulfilledResult<Awaited<ReturnType<typeof startTrial>>>).value);
+    expect(new Set(ok.map((x) => x.trial.id)).size).toBe(1);
+    expect(new Set(ok.map((x) => x.trial.runId)).size).toBe(1);
+    expect(await counts(ws.id, fi!.refId, key)).toEqual({ trials: 1, runs: 1 });
+    await claimAndProcess(ok[0]!.trial.runId!);
+    // Retry after completion returns the existing operation; nothing new is enqueued.
+    const again = await startTrial(owner, ws.id, installation.id, FU, { trialKey: key });
+    expect(again).toMatchObject({ duplicate: true });
+    expect(again.trial.id).toBe(ok[0]!.trial.id);
+    expect(await counts(ws.id, fi!.refId, key)).toEqual({ trials: 1, runs: 1 });
+    const steps = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, ok[0]!.trial.runId!));
+    expect(steps.filter((st) => st.nodeId === "draft")).toHaveLength(1); // executed once
+    expect(await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id))).toHaveLength(1);
+    expect(await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id))).toHaveLength(0);
+    const usageAfter = (await db.select().from(schema.usageEvent).where(eq(schema.usageEvent.workspaceId, ws.id))).length;
+    expect(usageAfter - usageBefore).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("FB2-01 — approved information at the accepted maximum through the real services", () => {
+  it("1200 units (Arabic + English + quotes): plan stored, refresh/resume reuses it, install + trial through the worker", async () => {
+    const owner = await makeUser("cb-long");
+    const ws = await createWorkspace(owner, unique("Long Co"));
+    const s = await createSession(owner, ws.id);
+    const line = (i: number) => `سطر ${i}: Delivery is free "inside" Cairo \\ القاهرة.`;
+    let approved = "";
+    for (let i = 0; approved.length < 1150; i++) approved += `${line(i)}\n`;
+    approved += "Carpet cleaning costs 333 EGP.";
+    approved = `${"z".repeat(1200 - approved.length - 1)}\n${approved}`;
+    expect(approved.length).toBe(1200);
+    await answerPath(ws.id, s.id, [...CUSTOMER_PATH.filter(([q]) => q !== "cust_info" && q !== "cust_services"), ["cust_services", "carpet cleaning / تنظيف سجاد"], ["cust_info", approved]]);
+    const first = await generateDeterministic(owner, ws.id, s.id, "en");
+    const again = await generateDeterministic(owner, ws.id, s.id, "en"); // refresh / resume
+    expect(again.row.id).toBe(first.row.id);
+    expect(again.created).toBe(false);
+    expect((first.row.body as CompanyBlueprint).tasks[0]!.params.approvedInfo).toBe(approved);
+    await approveBlueprint(owner, ws.id, first.row.id);
+    const { installation } = await install(owner, ws.id, first.row.id, { locale: "en" });
+    const { trial } = await startTrial(owner, ws.id, installation.id, FU, { trialKey: "long-info-key", input: { request: { id: "L1", from: "l@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Price", body: "How much is carpet cleaning?" } } });
+    await claimAndProcess(trial.runId!);
+    const done = await refreshTrial(ws.id, trial.id);
+    expect(done.verdict).toMatchObject({ structurallyValid: true, ranWithoutErrors: true, matchedOutcome: true });
+    const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId!));
+    expect((run!.output as { reply_draft: { body: string } }).reply_draft.body).toContain("Carpet cleaning costs 333 EGP.");
+  });
+});

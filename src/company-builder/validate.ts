@@ -17,8 +17,9 @@ export function compileTask(task: TaskPlan, label: (nodeId: string) => string = 
   const pack = getPack(task.packId, task.packVersion);
   if (!pack) return { graph: null, issues: [{ code: "UNKNOWN_PACK", taskId: task.id }] };
   if (pack.department !== task.department) return { graph: null, issues: [{ code: "PACK_DEPARTMENT_MISMATCH", taskId: task.id }] };
+  const issues: BlueprintIssue[] = (pack.paramIssues?.(task.params) ?? []).map((code) => ({ code, taskId: task.id }));
+  if (issues.length) return { graph: null, issues };
   const graph = pack.compile(task.params, label);
-  const issues: BlueprintIssue[] = [];
   for (const n of graph.nodes) {
     if (!(NODE_TYPES as readonly string[]).includes(n.type) || !pack.nodeTypes.includes(n.type)) issues.push({ code: "NODE_NOT_ALLOWED", taskId: task.id, detail: n.type });
     const cfg = n.data.config as unknown as Record<string, unknown>;

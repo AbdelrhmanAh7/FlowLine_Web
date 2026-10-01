@@ -36,6 +36,8 @@ export interface TaskPack {
   sample(params: PackParams): unknown;
   evaluate(output: Record<string, unknown>, input: unknown, params: PackParams): PackCheck[];
   fixtures(params: PackParams): PackFixture[];
+  /** Parameter problems that must be refused (never silently trimmed), reported as blueprint issues. */
+  paramIssues?(params: PackParams): string[];
 }
 
 /** Serialises data as a JSONata literal (JSON string/array/object literals are valid JSONata). */
