@@ -323,11 +323,16 @@ export function PlanPanel({
           {bp.diff.addedTasks.length > 0 && <p>{t("companyBuilder.plan.diffAdded", { list: bp.diff.addedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
           {bp.diff.removedTasks.length > 0 && <p>{t("companyBuilder.plan.diffRemoved", { list: bp.diff.removedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
           {bp.diff.changedTasks.length > 0 && <p>{t("companyBuilder.plan.diffChanged", { list: bp.diff.changedTasks.map((x) => cbt(t, `task.${x}.name`)).join(sep) })}</p>}
-          {Object.entries(bp.diff.changedFields ?? {}).map(([task, fields]) => (
-            <p key={task} className="text-xs" dir="ltr">
-              {task}: {fields.join(", ")}
-            </p>
-          ))}
+          {Object.keys(bp.diff.changedFields ?? {}).length > 0 && (
+            <details className="text-xs">
+              <summary className="cursor-pointer text-accent-text">{t("companyBuilder.trial.technical")}</summary>
+              {Object.entries(bp.diff.changedFields ?? {}).map(([task, fields]) => (
+                <p key={task} dir="ltr">
+                  {task}: {fields.join(", ")}
+                </p>
+              ))}
+            </details>
+          )}
         </div>
       )}
 

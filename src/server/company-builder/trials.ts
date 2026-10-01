@@ -9,6 +9,7 @@ import { audit, userActor } from "@/server/audit";
 import { HttpError, notFound } from "@/server/http";
 import { enqueueRunEx } from "@/server/runs";
 import { requireInstallation } from "./install";
+import { reviewerAllowed } from "./reviewer";
 
 /**
  * Sample trials: the installed draft flow runs through the EXISTING engine/worker (manual trigger, sample input), and
@@ -60,7 +61,13 @@ export async function startTrial(user: CurrentUser, workspaceId: string, install
   const [flow] = await db.select({ graph: schema.flow.graph, deletedAt: schema.flow.deletedAt }).from(schema.flow).where(eq(schema.flow.id, item.refId));
   if (!flow || flow.deletedAt) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "The draft was deleted");
   if ((flow.graph as FlowGraph).nodes.some((n) => !pack.nodeTypes.includes(n.type))) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft now has steps that could reach real accounts — run it from the editor instead");
-  const sample = input.input ?? (pack.sample(task.params) as Record<string, unknown>);
+  // A sample trial is ALWAYS labelled sample (records go under a "sample:" key), whatever the client sent.
+  const given = input.input;
+  const sample = given
+    ? given.request && typeof given.request === "object" && !Array.isArray(given.request)
+      ? { ...given, request: { ...(given.request as Record<string, unknown>), sample: true } }
+      : given
+    : (pack.sample(task.params) as Record<string, unknown>);
   const { run } = await enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` });
   const [trial] = await db
     .insert(schema.cbTrial)
@@ -119,6 +126,9 @@ export async function recordUserVerdict(user: CurrentUser, workspaceId: string, 
   const trial = await refreshTrial(workspaceId, trialId);
   if (trial.status !== "completed") throw new HttpError(409, "TRIAL_NOT_FINISHED", "Wait for the result before judging it");
   if (verdict === "rejected" && !reason) throw new HttpError(400, "VALIDATION", "Tell us what's wrong with the result");
+  // "Does this result match what you wanted?" is the named reviewer's judgement (as for activation approval).
+  const { task } = await taskContext(workspaceId, trial.installationId, trial.taskId);
+  if (!(await reviewerAllowed(workspaceId, user.id, task.reviewer))) throw new HttpError(403, "FORBIDDEN", task.reviewer === "owner" ? "The plan names the workspace owner as reviewer for this task" : "Only workspace owners and editors can judge results");
   const [updated] = await db
     .update(schema.cbTrial)
     .set({ userVerdict: verdict, userVerdictReason: verdict === "rejected" ? reason : null, userVerdictAt: new Date(), userVerdictBy: user.id })

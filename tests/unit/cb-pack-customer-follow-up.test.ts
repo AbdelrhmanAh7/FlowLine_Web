@@ -78,3 +78,74 @@ describe("Customer Request Follow-up — frozen acceptance fixtures (first verti
     }
   });
 });
+
+describe("Customer Request Follow-up — independent review regressions (Fable, FB-*)", () => {
+  const graph = pack.compile(params, (id) => id);
+  const run = async (request: Record<string, unknown>, p: Record<string, unknown> = params) => {
+    const g = p === params ? graph : pack.compile(p as never, (id) => id);
+    const r = await executeGraph(g, { request }, { handler: memoryStore().handler });
+    return { r, o: r.output as Record<string, Record<string, unknown>> };
+  };
+  const base = { id: "rv-1", from: "rv@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Request", body: "How much does deep cleaning cost? 2026-10-05, 0551234567" };
+  const failing = (o: Record<string, unknown>, request: Record<string, unknown>) => pack.evaluate(o, { request }, params).filter((c) => !c.passed).map((c) => c.id);
+  const tamper = async (patch: (o: Record<string, Record<string, unknown>>) => void, request: Record<string, unknown> = base) => {
+    const { o } = await run(request);
+    expect(failing(o, request)).toEqual([]); // the untouched result passes
+    const bad = structuredClone(o);
+    patch(bad);
+    return failing(bad, request);
+  };
+
+  it("FB-01: an invented commitment with no claimed lines fails (the reply text is recomputed, not trusted)", async () => {
+    expect(await tamper((o) => Object.assign(o.reply_draft!, { body: "Hello,\n\nWe guarantee a full refund and free carpet cleaning forever.\n\nThanks", used_lines: [] }))).toContain("reply_only_approved_info");
+  });
+  it("FB-01: an invented price made of digits that appear elsewhere in the approved info fails", async () => {
+    const f = await tamper((o) => Object.assign(o.reply_draft!, { body: "Carpet cleaning costs 8 SAR per 2 metres." }));
+    expect(f).toEqual(expect.arrayContaining(["reply_only_approved_info", "no_invented_numbers"]));
+  });
+  it("FB-01: an approved line from another topic fails", async () => {
+    expect(await tamper((o) => Object.assign(o.reply_draft!, { body: `${o.reply_draft!.body}\n\nWe serve Riyadh and Diriyah only.` }))).toContain("reply_only_approved_info");
+  });
+  it("FB-01: an invented Arabic-Indic price fails the number check", async () => {
+    expect(await tamper((o) => Object.assign(o.reply_draft!, { body: `${o.reply_draft!.body} السعر ٩٩ ريال` }))).toContain("no_invented_numbers");
+  });
+  it("FB-01: a wrong follow-up time or customer in the record fails", async () => {
+    expect(await tamper((o) => Object.assign(o.follow_up_record!, { next_follow_up_at: "1999-01-01T00:00:00.000Z" }))).toContain("follow_up_recorded");
+    expect(await tamper((o) => Object.assign(o.follow_up_record!, { customer: "someone@else.example" }))).toContain("follow_up_recorded");
+  });
+  it("FB-01: a reply where a hand-off is expected (or the wrong hand-off reason) fails", async () => {
+    const complaint = { ...base, body: "Your team damaged my desk and I am angry." };
+    expect(await tamper((o) => Object.assign(o.needs_person!, { reason: "no_approved_information" }), complaint)).toContain("handoff_has_reason");
+  });
+  it("FB-05: a reply with no recipient fails reply_to_sender", async () => {
+    const req = { ...base, from: undefined };
+    const { o } = await run(req);
+    expect(failing(o, req)).toContain("reply_to_sender");
+  });
+  it("FB-02: approved information is split per line only; abbreviations never cut a sentence", async () => {
+    const p = { ...params, approvedInfo: "We work 8 a.m. to 6 p.m. Saturday to Thursday.\nPrices incl. VAT start at 450 SAR." };
+    const { o } = await run({ ...base, body: "What are your working hours for deep cleaning?" }, p);
+    expect(String(o.reply_draft!.body)).toContain("We work 8 a.m. to 6 p.m. Saturday to Thursday.");
+  });
+  it("FB-03: a non-ISO received time never crashes the run; no follow-up time is invented", async () => {
+    for (const received_at of ["garbage", 5, "Wed, 1 Oct 2026 09:00:00 +0300"]) {
+      const req = { ...base, received_at };
+      const { r, o } = await run(req);
+      expect(r.status, String(received_at)).toBe("succeeded");
+      expect(o.follow_up_record!.next_follow_up_at ?? null).toBeNull();
+      expect(failing(o, req)).toEqual([]);
+    }
+  });
+  it("FB-06: keywords match at word starts only (Arabic and English)", async () => {
+    const { o } = await run({ ...base, body: "أبغى تنظيف سجاد الحين" });
+    expect(o.follow_up_record!.topic).not.toBe("coverage");
+    const { o: o2 } = await run({ ...base, body: "I discover your deep cleaning is great, can I book?" });
+    expect(o2.follow_up_record!.topic).not.toBe("coverage");
+  });
+  it("FB-07: Persian digits are normalised like Arabic-Indic digits", async () => {
+    const req = { ...base, body: "deep cleaning ۲۰۲۶-۱۰-۰۵ رقمي ۰۵۵۱۲۳۴۵۶۷" };
+    const { o } = await run(req);
+    expect(o.follow_up_record!.detected).toEqual({ service: "deep cleaning", phone: "0551234567", date: "2026-10-05" });
+    expect(failing(o, req)).toEqual([]);
+  });
+});

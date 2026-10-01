@@ -17,8 +17,8 @@ export const FU_TOPIC_KEYWORDS: Record<FuTopic, string[]> = {
   complaint: ["complain", "broke", "broken", "damaged", "angry", "terrible", "unacceptable", "شكوى", "كسر", "تالف", "سيء", "سيئة", "زعلان"],
   refund: ["refund", "cancel", "cancellation", "money back", "استرجاع", "استرداد", "إلغاء", "الغاء"],
   pricing: ["price", "cost", "how much", "quote", "سعر", "السعر", "أسعار", "اسعار", "تكلفة", "بكم", "كم سعر"],
-  coverage: ["serve", "area", "areas", "location", "cover", "منطقة", "مناطق", "تخدمون", "حي"],
-  hours: ["hours", "opening", "working hours", "we work", "saturday", "sunday", "am to", "مواعيد", "دوام", "ساعات العمل", "تفتحون", "نعمل"],
+  coverage: ["serve", "area", "areas", "location", "cover", "منطقة", "مناطق", "تخدمون"],
+  hours: ["hours", "opening", "working hours", "saturday", "sunday", "مواعيد", "دوام", "ساعات العمل", "تفتحون", "نعمل"],
   delivery: ["deliver", "delivery", "shipping", "توصيل", "شحن"],
 };
 
@@ -35,19 +35,37 @@ const ASK: Record<"en" | "ar", Record<(typeof FU_DETAILS)[number], string>> = {
 const GREETING = { en: "Hello,", ar: "مرحبًا،" };
 const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
 
+/**
+ * Keyword matching at WORD STARTS only (no substring hits such as "discover" → "cover" or "الحين" → "حي"): punctuation
+ * becomes spaces and a keyword must follow a space. The same rule is compiled into the flow (JSONata) and used by the
+ * independent evaluator.
+ */
+const NON_WORD = "[^a-z0-9\u0621-\u065f\u0671-\u06d3]+";
+const NON_WORD_RE = new RegExp(NON_WORD, "g");
+export const fuTokens = (low: string) => ` ${low.replace(NON_WORD_RE, " ")} `;
+export const fuHasWord = (tokens: string, words: readonly string[]) => words.some((w) => tokens.includes(` ${w}`));
+export const fuTopicOf = (low: string): FuTopic | "other" => {
+  const tokens = fuTokens(low);
+  return FU_TOPICS.find((t) => fuHasWord(tokens, FU_TOPIC_KEYWORDS[t])) ?? "other";
+};
+
+/** Received time → follow-up time. Only a full ISO-8601 timestamp is used; anything else gives no follow-up time. */
+const ISO_TS = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:[0-9]{2})$";
+const ISO_TS_RE = new RegExp(ISO_TS);
+
+/** Approved information is split into lines (one fact per line), never inside a sentence (abbreviations stay whole). */
 export function fuApprovedIndex(info: string): { lines: string[]; topics: Record<string, number[]> } {
   const lines = info
     .slice(0, MAX_APPROVED)
-    .split(/\r?\n|(?<=[.!؟?])\s+/)
+    .split(/\r?\n/)
     .map((l) => l.trim().slice(0, 300))
     .filter((l) => l.length > 0);
   const topics: Record<string, number[]> = {};
   // Each approved line belongs to its FIRST matching topic only (e.g. "free cancellation up to 24 hours" is about
   // cancellations, not opening hours), so a reply never picks a line about another subject.
   lines.forEach((line, i) => {
-    const low = line.toLowerCase();
-    const t = FU_TOPICS.find((x) => FU_TOPIC_KEYWORDS[x].some((k) => low.includes(k)));
-    if (t) (topics[t] ??= []).push(i);
+    const t = fuTopicOf(normDigits(line).toLowerCase());
+    if (t !== "other") (topics[t] ??= []).push(i);
   });
   return { lines, topics };
 }
@@ -66,15 +84,20 @@ function requiredOf(params: PackParams): string[] {
 }
 
 const DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+const PERSIAN_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+/** Arabic-Indic and Persian digits → ASCII (the same mapping is compiled into the flow). */
+export const normDigits = (s: string) => s.replace(/[٠-٩۰-۹]/g, (d) => String(Math.max(DIGITS.indexOf(d), PERSIAN_DIGITS.indexOf(d))));
 
 function extractExpression(params: PackParams) {
-  const norm = DIGITS.reduce((acc, d, i) => `$replace(${acc}, ${lit(d)}, "${i}")`, "$raw");
+  const norm = [...DIGITS, ...PERSIAN_DIGITS].reduce((acc, d, i) => `$replace(${acc}, ${lit(d)}, "${i % 10}")`, "$raw");
   const topicExpr = FU_TOPICS.map((t) => `$has(${lit(FU_TOPIC_KEYWORDS[t])}) ? ${lit(t)}`).join(" : ");
   return `(
   $raw := $string(request.subject) & " " & $string(request.body);
   $text := ${norm};
   $low := $lowercase($text);
-  $has := function($words) { $count($filter($words, function($w) { $contains($low, $w) })) > 0 };
+  $tok := " " & $replace($low, /${NON_WORD}/, " ") & " ";
+  $has := function($words) { $count($filter($words, function($w) { $contains($tok, " " & $w) })) > 0 };
+  $hasRaw := function($words) { $count($filter($words, function($w) { $contains($low, $w) })) > 0 };
   $services := ${lit(servicesOf(params))};
   $svc := $filter($services, function($aliases) { $count($filter($aliases, function($a) { $contains($low, $a) })) > 0 });
   $noDates := $replace($text, /[0-9]{4}-[0-9]{2}-[0-9]{2}/, " ");
@@ -85,7 +108,7 @@ function extractExpression(params: PackParams) {
     "sample": request.sample = true,
     "topic": ${topicExpr} : "other",
     "language": $contains($raw, /[\\u0600-\\u06FF]/) ? "ar" : "en",
-    "suspicious": $has(${lit(FU_INJECTION)}),
+    "suspicious": $hasRaw(${lit(FU_INJECTION)}),
     "empty": $not($exists(request.body)) or $length($trim($string(request.body))) = 0,
     "detected": {
       "service": $count($svc) > 0 ? $svc[0][0] : null,
@@ -119,7 +142,7 @@ function draftExpression(params: PackParams) {
       "request_id": id, "customer": from, "sample": sample,
       "status": $handoff = null ? "awaiting_review" : "needs_person",
       "reason": $handoff, "missing": $missing, "detected": $d, "topic": topic,
-      "next_follow_up_at": $exists(received_at) and received_at != null ? $fromMillis($toMillis(received_at) + ${hours} * 3600000) : null,
+      "next_follow_up_at": $type(received_at) = "string" and $contains(received_at, /${ISO_TS}/) ? $fromMillis($toMillis(received_at) + ${hours} * 3600000) : null,
       "timezone": ${lit(typeof params.timezone === "string" ? params.timezone : "UTC")}
     }
   }
@@ -130,13 +153,49 @@ function draftExpression(params: PackParams) {
 export function recomputeDetails(input: unknown, params: PackParams) {
   const r = (input as { request?: { subject?: unknown; body?: unknown } } | null)?.request ?? {};
   const raw = `${r.subject == null ? "" : String(r.subject)} ${r.body == null ? "" : String(r.body)}`;
-  const text = raw.replace(/[٠-٩]/g, (d) => String(DIGITS.indexOf(d)));
+  const text = normDigits(raw);
   const low = text.toLowerCase();
   const svc = servicesOf(params).find((aliases) => aliases.some((a) => low.includes(a)));
   const date = /[0-9]{4}-[0-9]{2}-[0-9]{2}/.exec(text)?.[0] ?? null;
   const phone = /\+?[0-9]{9,14}/.exec(text.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/g, " "))?.[0] ?? null;
   const detected = { service: svc?.[0] ?? null, phone, date };
-  return { detected, missing: requiredOf(params).filter((k) => detected[k as keyof typeof detected] === null) };
+  return { raw, low, detected, missing: requiredOf(params).filter((k) => detected[k as keyof typeof detected] === null) };
+}
+
+/**
+ * The COMPLETE expected result, recomputed in TypeScript from the request and the owner's parameters only (never from
+ * the flow's output): outcome, hand-off reason, the exact approved lines, the exact reply text, and the follow-up
+ * record. Every check compares the flow's output with this.
+ */
+export function recomputeFollowUp(input: unknown, params: PackParams) {
+  const req = (input as { request?: Record<string, unknown> } | null)?.request ?? {};
+  const d = recomputeDetails(input, params);
+  const info = fuApprovedIndex(String(params.approvedInfo ?? ""));
+  const lang: "ar" | "en" = /[\u0600-\u06FF]/.test(d.raw) ? "ar" : "en";
+  const empty = req.body == null || String(req.body).trim().length === 0;
+  const topic = fuTopicOf(d.low);
+  const lines = empty || topic === "complaint" ? [] : (info.topics[topic] ?? []).map((i) => info.lines[i]!);
+  const handoff = empty ? "empty_request" : topic === "complaint" ? "complaint_needs_person" : d.detected.service === null && lines.length === 0 ? "no_approved_information" : null;
+  const asks = handoff === null ? d.missing.map((k) => ASK[lang][k as (typeof FU_DETAILS)[number]]) : [];
+  const body = handoff === null ? [GREETING[lang], ...lines, ...asks, CLOSING[lang]].join("\n\n") : null;
+  const hours = typeof params.followUpHours === "number" && params.followUpHours > 0 && params.followUpHours <= 720 ? params.followUpHours : 24;
+  const received = typeof req.received_at === "string" && ISO_TS_RE.test(req.received_at) ? Date.parse(req.received_at) : NaN;
+  const sample = req.sample === true;
+  const id = req.id == null ? "" : typeof req.id === "string" ? req.id : JSON.stringify(req.id);
+  return {
+    handoff,
+    lines,
+    asks: handoff === null ? d.missing : [],
+    body,
+    detected: d.detected,
+    missing: d.missing,
+    record: {
+      key: `${sample ? "sample:" : ""}${id}`,
+      request_id: id,
+      status: handoff === null ? "awaiting_review" : "needs_person",
+      next_follow_up_at: Number.isFinite(received) ? new Date(received + hours * 3600_000).toISOString() : null,
+    },
+  };
 }
 
 const X = [0, 280, 560, 840, 1120, 1400];
@@ -192,30 +251,34 @@ export const customerFollowUpPack: TaskPack = {
   },
 
   evaluate(output, input, params): PackCheck[] {
-    const info = fuApprovedIndex(String(params.approvedInfo ?? ""));
-    const approved = new Set(info.lines);
-    const expected = recomputeDetails(input, params);
-    const reply = output.reply_draft as { to?: string; body?: string; used_lines?: string[]; asked_for?: string[]; status?: string } | undefined;
+    const exp = recomputeFollowUp(input, params);
+    const reply = output.reply_draft as { to?: unknown; body?: string; used_lines?: string[]; asked_for?: string[]; status?: string } | undefined;
     const person = output.needs_person as { reason?: string } | undefined;
-    const record = output.follow_up_record as { key?: string; request_id?: string; status?: string; missing?: string[] } | undefined;
-    const req = (input as { request?: { id?: unknown; from?: string; body?: string; sample?: boolean } } | null)?.request;
-    const checks: PackCheck[] = [{ id: "one_outcome", passed: Boolean(reply) !== Boolean(person) }];
-    checks.push({ id: "follow_up_recorded", passed: Boolean(record) && record!.request_id === String(req?.id ?? "") && record!.key === `${req?.sample ? "sample:" : ""}${String(req?.id ?? "")}` });
-    checks.push({ id: "record_status_consistent", passed: Boolean(record) && record!.status === (reply ? "awaiting_review" : "needs_person") });
-    // Extraction re-computed independently in TypeScript (not by reading the flow's own claims).
-    checks.push({ id: "details_extracted_correctly", passed: Boolean(record) && sameJson((record as { detected?: unknown }).detected, expected.detected) && sameJson(record!.missing ?? [], expected.missing) });
+    const record = output.follow_up_record as { key?: string; request_id?: string; customer?: unknown; status?: string; missing?: string[]; detected?: unknown; next_follow_up_at?: unknown } | undefined;
+    const req = (input as { request?: { from?: unknown; body?: unknown } } | null)?.request;
+    const sender = typeof req?.from === "string" && req.from.length > 0 ? req.from : null;
+    // Exactly the expected outcome (reply vs hand-off), not just "one of them".
+    const checks: PackCheck[] = [{ id: "one_outcome", passed: Boolean(reply) !== Boolean(person) && Boolean(reply) === (exp.handoff === null) }];
+    checks.push({
+      id: "follow_up_recorded",
+      passed: Boolean(record) && record!.key === exp.record.key && record!.request_id === exp.record.request_id && (record!.customer ?? null) === (req?.from ?? null) && record!.next_follow_up_at === exp.record.next_follow_up_at,
+    });
+    checks.push({ id: "record_status_consistent", passed: Boolean(record) && record!.status === exp.record.status && record!.status === (reply ? "awaiting_review" : "needs_person") });
+    checks.push({ id: "details_extracted_correctly", passed: Boolean(record) && sameJson(record!.detected, exp.detected) && sameJson(record!.missing ?? [], exp.missing) });
     if (reply) {
       const body = String(reply.body ?? "");
-      // Numbers may only come from the OWNER's approved information, never from the reply's own claims.
-      const allowedDigits = new Set(info.lines.join(" ").match(/\d+/g) ?? []);
-      checks.push({ id: "reply_to_sender", passed: reply.to === req?.from });
-      checks.push({ id: "reply_only_approved_info", passed: (reply.used_lines ?? []).every((l) => approved.has(l)) });
-      checks.push({ id: "no_invented_numbers", passed: (body.match(/\d+/g) ?? []).every((n) => allowedDigits.has(n)) });
-      checks.push({ id: "request_text_not_echoed", passed: !req?.body || req.body.trim().length < 12 || !body.includes(req.body.trim()) });
-      checks.push({ id: "asks_for_missing_details", passed: sameJson(reply.asked_for ?? [], expected.missing) });
+      // Numbers may only come from the approved lines actually used (Arabic-Indic/Persian digits normalised first).
+      const allowed = new Set(normDigits(exp.lines.join(" ")).match(/\d+/g) ?? []);
+      checks.push({ id: "reply_to_sender", passed: sender !== null && reply.to === sender });
+      // The reply text must be exactly: greeting + the approved lines for this topic + approved questions + closing.
+      checks.push({ id: "reply_only_approved_info", passed: sameJson(reply.used_lines ?? [], exp.lines) && exp.body !== null && body === exp.body });
+      checks.push({ id: "no_invented_numbers", passed: (normDigits(body).match(/\d+/g) ?? []).every((n) => allowed.has(n)) });
+      const reqBody = typeof req?.body === "string" ? req.body.trim() : "";
+      checks.push({ id: "request_text_not_echoed", passed: reqBody.length < 12 || !body.includes(reqBody) });
+      checks.push({ id: "asks_for_missing_details", passed: sameJson(reply.asked_for ?? [], exp.asks) });
       checks.push({ id: "review_required", passed: reply.status === "awaiting_review" });
     }
-    if (person) checks.push({ id: "handoff_has_reason", passed: typeof person.reason === "string" && person.reason.length > 0 });
+    if (person) checks.push({ id: "handoff_has_reason", passed: typeof person.reason === "string" && person.reason === exp.handoff });
     return checks;
   },
 

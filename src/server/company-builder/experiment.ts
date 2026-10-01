@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, notLike, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notLike, or } from "drizzle-orm";
 import type { z } from "zod";
 import { db, schema } from "@/db";
 import { clientEventBody, computeMetrics, effortBody } from "@/company-builder/experiment-metrics";
@@ -17,6 +17,9 @@ import { requireSession, stateOf } from "./sessions";
 
 export { clientEventBody, effortBody };
 
+/** The client sends a slice every 30 s; anything faster is ignored. */
+export const ACTIVE_SLICE_MIN_GAP_S = 25;
+
 export const experimentEnabled = () => process.env.FLOWLINE_CB_EXPERIMENT === "on";
 
 export function assertExperimentEnabled() {
@@ -26,8 +29,19 @@ export function assertExperimentEnabled() {
 export async function recordClientEvent(user: CurrentUser, workspaceId: string, sessionId: string, e: z.infer<typeof clientEventBody>) {
   assertExperimentEnabled();
   await requireSession(workspaceId, sessionId);
+  if (e.kind === "active_time") {
+    // At most one active-time slice per person per ACTIVE_SLICE_MIN_GAP_S: repeated calls can't inflate the metric.
+    const [last] = await db
+      .select({ at: schema.cbExperimentEvent.at })
+      .from(schema.cbExperimentEvent)
+      .where(and(eq(schema.cbExperimentEvent.sessionId, sessionId), eq(schema.cbExperimentEvent.kind, "active_time"), eq(schema.cbExperimentEvent.userId, user.id)))
+      .orderBy(desc(schema.cbExperimentEvent.at))
+      .limit(1);
+    if (last && Date.now() - last.at.getTime() < ACTIVE_SLICE_MIN_GAP_S * 1000) return { stored: false };
+  }
   const data = e.kind === "active_time" ? { seconds: e.seconds } : { topic: e.topic };
   await db.insert(schema.cbExperimentEvent).values({ workspaceId, sessionId, kind: e.kind, data, userId: user.id });
+  return { stored: true };
 }
 
 export async function recordEffort(user: CurrentUser, workspaceId: string, sessionId: string, e: z.infer<typeof effortBody>) {

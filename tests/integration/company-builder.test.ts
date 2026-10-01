@@ -638,6 +638,21 @@ describe("direction v2 — the person's acceptance and experiment mode", () => {
     expect(audited).toBeDefined();
   });
 
+  it("only the named reviewer judges the result; client-supplied trial input is always labelled sample (FB-04, FB-08)", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const editor = await makeUser("cb-judge-editor");
+    await addMember(ws.id, editor.id, "editor");
+    const { trial } = await startTrial(editor, ws.id, installation.id, FU, { trialKey: "editor-trial-01", input: { request: { id: "real-123", from: "a@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Q", body: "How much does office cleaning cost?", sample: false } } });
+    await claimAndProcess(trial.runId!);
+    const done = await refreshTrial(ws.id, trial.id);
+    expect(done.verdict).toMatchObject({ matchedOutcome: true });
+    const keys = (await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id))).map((r) => r.key);
+    expect(keys).toEqual(["sample:real-123"]); // never mixed with real follow-ups
+    // The plan names the owner as reviewer: an editor can run trials but can't say the result matches.
+    await expectHttpError(recordUserVerdict(editor, ws.id, done.id, "accepted", null), 403, "FORBIDDEN");
+    expect((await recordUserVerdict(owner, ws.id, done.id, "accepted", null)).userVerdict).toBe("accepted");
+  });
+
   it("experiment mode is 404 unless enabled; it stores numbers and enum ids only and computes metrics on read", async () => {
     const owner = await makeUser("cb-exp");
     const ws = await createWorkspace(owner, unique("Exp Co"));
@@ -661,6 +676,8 @@ describe("direction v2 — the person's acceptance and experiment mode", () => {
       await answerPath(ws.id, s.id, CUSTOMER_PATH.slice(0, 6));
       await generateDeterministic(owner, ws.id, s.id, "en");
       expect((await call("POST", ["sessions", s.id, "experiment", "events"], { kind: "active_time", seconds: 30 })).status).toBe(202);
+      // Repeated slices within the minimum gap are ignored (the metric can't be inflated by replaying requests).
+      expect((await call("POST", ["sessions", s.id, "experiment", "events"], { kind: "active_time", seconds: 60 })).status).toBe(202);
       expect((await call("POST", ["sessions", s.id, "experiment", "events"], { kind: "help_opened", topic: "advanced" })).status).toBe(202);
       expect((await call("POST", ["sessions", s.id, "experiment", "events"], { kind: "active_time", seconds: 600 })).status).toBe(400);
       expect((await call("POST", ["sessions", s.id, "experiment", "events"], { kind: "note", text: "customer phone 0551234567" })).status).toBe(400);

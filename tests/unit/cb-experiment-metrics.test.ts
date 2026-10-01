@@ -15,6 +15,7 @@ function base(over: Partial<MetricInputs> = {}): MetricInputs {
       { questionId: "first_outcome", value: "customer", unknown: false, at: at(20).toISOString() },
       { questionId: "cust_channel", value: "email", unknown: false, at: at(30).toISOString() },
       { questionId: "cust_channel", value: "form", unknown: false, at: at(200).toISOString() }, // edit after preview
+      { questionId: "cust_volume", value: "under_20", unknown: false, at: at(210).toISOString() }, // first answer after preview: not an edit
     ],
     plans: [{ createdAt: at(60), body: plan(["gmail"]) }],
     trials: [

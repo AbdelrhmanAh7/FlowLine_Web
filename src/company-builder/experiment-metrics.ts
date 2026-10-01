@@ -42,8 +42,10 @@ export function computeMetrics(i: MetricInputs) {
   const accepted = i.trials.filter((t) => t.userVerdict === "accepted" && t.userVerdictAt);
   const firstVerified = accepted.filter((t) => t.verdict?.matchedOutcome).sort((a, b) => a.userVerdictAt!.getTime() - b.userVerdictAt!.getTime())[0] ?? null;
   const firstAcceptedAt = accepted.map((t) => t.userVerdictAt!).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
-  // Edits: answers changed after the first plan preview, up to the first accepted result (or now).
-  const editsBeforeAccepted = firstPlan ? i.answers.filter((a) => new Date(a.at) > firstPlan.createdAt && (!firstAcceptedAt || new Date(a.at) <= firstAcceptedAt)).length : null;
+  // An "edit" is a CHANGE to a question already answered earlier (a first answer to a later question isn't an edit).
+  const editsBeforeAccepted = firstPlan
+    ? i.answers.filter((a, idx) => new Date(a.at) > firstPlan.createdAt && (!firstAcceptedAt || new Date(a.at) <= firstAcceptedAt) && i.answers.slice(0, idx).some((p) => p.questionId === a.questionId)).length
+    : null;
   const latest = i.plans.at(-1)?.body ?? null;
   const connectionsRequired = latest ? new Set(latest.tasks.flatMap((t) => t.connections.filter((c) => c.status === "missing").map((c) => c.provider))).size : null;
   const sum = (kind: string, field: string) => i.events.filter((e) => e.kind === kind).reduce((n, e) => n + (Number(e.data[field]) || 0), 0);

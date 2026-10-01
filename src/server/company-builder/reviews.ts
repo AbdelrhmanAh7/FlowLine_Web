@@ -3,13 +3,13 @@ import { db, schema } from "@/db";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
 import type { FlowGraph } from "@/engine/types";
 import type { CurrentUser } from "@/server/access";
-import { canDecide } from "@/server/approvals";
 import { audit, userActor } from "@/server/audit";
 import { canonicalJson, sha256Hex } from "@/server/crypto";
 import { consumeFault } from "@/server/faults";
 import { HttpError, notFound } from "@/server/http";
 import { publishFlow, unpublishFlow } from "@/server/publish";
 import { effectiveEntitlement } from "./entitlement";
+import { reviewerAllowed } from "./reviewer";
 import { refreshTrial, trialOutput } from "./trials";
 
 /**
@@ -168,12 +168,6 @@ export async function requestSampleAction(user: CurrentUser, workspaceId: string
   return openItem(user, parts, trial.id);
 }
 
-async function reviewerAllowed(workspaceId: string, userId: string, reviewerRole: string) {
-  if (!(await canDecide(db, workspaceId, userId))) return false;
-  if (reviewerRole !== "owner") return true;
-  const [m] = await db.select({ role: schema.workspaceMember.role }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, userId)));
-  return m?.role === "owner";
-}
 
 /**
  * Approve / reject. Approval re-checks the reviewer's CURRENT membership and the binding, then executes immediately
