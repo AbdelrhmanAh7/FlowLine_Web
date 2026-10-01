@@ -98,6 +98,16 @@ Old-code regression output: `artifacts/company-builder/round-r4/` (each test was
 | FB2-09 | **FIXED** | P3 | Pending-past-expiry and server-retired expired items show "Expired" with their own explanation. | Unit `reviewState` + AR/EN copy. Not exercised in E2E (needs clock control). |
 | FB2-10 | **FIXED** | P3 | Refine shows "Finish the interview and prepare the plan first"; delete has a busy state, shows failures, and treats 404 as already deleted. | New E2E (failing delete shown, double click harmless, no page errors). The E2E is new, so it has no old-code run. |
 
+**Independent read-only review of the R4 diff (`203fd88..79565e1`, a Fable subagent, given no preferred conclusion).** It found no P1 and confirmed that the FB2-01/02/03/04/08/10 fixes do what they claim. Its findings:
+
+| ID | Sev | Finding | Status | Evidence |
+|---|---|---|---|---|
+| R4-RV-01 | P2 | An activation request that expired without a decision left the task in "Approval required" with no Request or Pause button. The inbox said "Expired", but the task card couldn't reach a new request. | **FIXED `f74285c`** | The task shows `activation_request_expired` and can be requested again. Deciding or re-requesting releases the activation record the expired item owns (`failed/review_expired`, owned-only, never an active one). 2 integration tests; old code (`ab6daef`): 2 failed (`round-r4/review-followup-on-old-code-ab6daef.txt`). |
+| R4-RV-02 | P3 | The pending-review count included expired items. | **FIXED `f74285c`** | Covered by the integration test above (count 1 → 0 after expiry). |
+| R4-RV-03 | P3 | `paramIssues` didn't check each facts step. One line of 6-character escapes, sent through the API, produced a generic expression error instead of `APPROVED_INFO_TOO_COMPLEX`. | **FIXED `f74285c`** | Unit test; failed on old code. |
+| R4-RV-04 | P3 | The `connection_missing` suppression is provider-blind. It is correct for current packs (Gmail only), but a future task with two non-AI providers would lose the setup hint. | OPEN (latent; no current pack affected) | Filter per connection in `setupReasons` when a second provider pack exists. |
+| R4-RV-05 | note | `input: null` on a trial is now a 400 (it used to fall back to the pack sample), as FB2-04 intends. Installations compiled before R4 keep their old `draft` expression until they are reinstalled (`packVersion` unchanged). | RECORDED | Runbook note: reinstall to get the FB2-01 layout. |
+
 Confirmed OK by the reviewer:
 
 - prototype gate (404 for non-founders; LAN fails closed);
