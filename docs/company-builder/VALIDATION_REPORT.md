@@ -28,7 +28,8 @@ on `d224cfb` with 0 hits. The `1fe3d31` gates therefore apply to `d224cfb`'s exe
 |---|---|---|---|
 | R1 | `ec35061` (= `d224cfb` code + frozen packet) | — | the `1fe3d31` gates, by proven equivalence |
 | R2 | `dd9984f` | VF-01 (price of the requested service) | full gate re-run, §6 |
-| R3 | see §6 | VF-03 (honest "active" state) | affected gates re-run, §6 |
+| R3 (superseded) | `20e4370` | VF-03, first part (active state only) | partial: lint/typecheck, unit 616, integration 520. Superseded before its browser gates; logs kept in `gates-20e4370/` (SUPERSEDED) |
+| **Final** | **`29db174`** (frozen; `c8792d3` and later add evidence/docs only, with an identical execution tree) | VF-03 state contract completed | **one final sequential gate**, §6 |
 
 Results from different rounds are reported separately and never combined.
 
@@ -45,6 +46,14 @@ Results from different rounds are reported separately and never combined.
 | Action | **Insert into `cb_sample_outbox`** (mocked integration; nothing leaves Flowline) | `reviews.ts` `execute` (via `decideReview`) |
 | Follow-up record | `data.store` → workspace `kv_entry`, keyed `<session>/<sample:>request id` | worker `data.store` handler |
 | Activation | Publishes the manual-trigger draft. No schedule, no webhook, no account access | `reviews.ts` `activate` |
+
+**State contract (VF-03, final candidate):**
+
+- Every installed state of a task that needs an account says "Sample data only: Company Builder doesn't read or send
+  email in this version, and connecting Gmail alone won't change that".
+- The plan, the activation control and the test outbox say the same: "No email was sent".
+- A connected Gmail marker and no connection behave identically: sample trial, follow-up record, local outbox, a
+  manual workflow with no integration step. This is covered by unit, integration and E2E tests.
 
 **Gap: live read/send is NOT wired into Company Builder.** Flowline has a general Gmail integration
 (`src/integrations/providers/gmail.ts`: `gmail.search_messages`, `gmail.get_message`, `gmail.send`, used by other
@@ -99,6 +108,16 @@ Flowline was set up only from participant fields. The expectations are read only
 |---|---|---|---|---|
 | R1 | `ec35061` | **8/10** | VP-03: quoted the *deep-cleaning* price for an Arabic office-price question (**VF-01**, real defect). VP-06: literal hint "cancelled" matches the approved policy line (**VF-02**, packet ambiguity). | Yes — Flowline's own checks passed all 10, including the wrong VP-03 |
 | R2 | `dd9984f` | **9/10** | VP-06 (VF-02, kept as FAIL) | No |
+| Final | `29db174` | FIELD_FINAL_PLACEHOLDER | | |
+
+**Honesty notes on the field result:**
+
+- Runs 2 and Final **reused the same frozen packet** after a defect found by that packet was fixed. They are **not** a
+  fresh held-out evaluation, and not customer validation.
+- **VP-06 is a disputed fixture expectation.** A separate reviewer (a Fable subagent in this session, read-only, given
+  no preferred conclusion) judged it **FAIL under the scoring rule as written** and the expectation itself
+  **ambiguous/defective**. That reviewer is not a human or an external party. The strict score keeps it as FAIL.
+- Participant input and evaluator-only answers are kept in separate files. No product was given the evaluator file.
 
 Other observations:
 
@@ -133,7 +152,7 @@ Other observations:
 
 | Track | Status | Exact reason / owner action |
 |---|---|---|
-| **B. Live integration (Gmail)** | **BLOCKED** | (1) Company Builder has no live read/send wiring (§2). (2) No dedicated test Gmail account or operator OAuth client is available to the agent; credentials must not be collected or injected. **Owner action:** decide on the §2 proposal; enter the integration OAuth client in Flowline's admin panel; give one consolidated approval naming the dedicated sender, the allowlisted recipients, the test marker label, the max outbound count, the read scope (marker-labelled messages only) and the cleanup actions. |
+| **B. Live integration (Gmail)** | **BLOCKED** — three separate conditions: **(a) capability:** Company Builder has no live read/send wiring (§2); **(b) prerequisites:** no dedicated test Gmail account and no operator OAuth client available to the agent (credentials must not be collected or injected; the owner's personal Gmail connector was not used); **(c) verification:** therefore not run |  **Owner action:** decide on the §2 proposal; enter the integration OAuth client in Flowline's admin panel; give one consolidated approval naming the dedicated sender, the allowlisted recipients, the test marker label, the max outbound count, the read scope (marker-labelled messages only) and the cleanup actions. |
 | **C. AI / owner CLI** | **NOT EXERCISED** (real CLI BLOCKED as before) | No real CLI or model run was authorised or available. |
 | **Real Google Chrome QA** | **BLOCKED** | No Google Chrome binary in this container or in the Playwright image (only Chromium/Firefox/WebKit builds). `dl.google.com` is refused (403) here, and a fresh container in the same and only environment got no response. Not retried further and not substituted. **Owner action:** allow `dl.google.com` for the environment and confirm a fresh container reaches it, or run the QA on a laptop with Chrome. The Chromium screenshots under `v2-first-slice/exploratory/` and `flowline-field/` are automated evidence, **not Chrome QA**. |
 | **Competitors** | **BLOCKED / NOT TESTED** | See `COMPETITOR_RESULTS.md`: hosts unreachable from two containers; no authorised accounts. |
