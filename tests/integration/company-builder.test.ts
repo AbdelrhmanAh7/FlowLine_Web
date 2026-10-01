@@ -22,7 +22,7 @@ import { approveBlueprint, generateDeterministic } from "@/server/company-builde
 import { cancelDevTrial, effectiveEntitlement, grantDevTrial, reconcileEntitlement } from "@/server/company-builder/entitlement";
 import { cancelInstallation, install, installedItems } from "@/server/company-builder/install";
 import { sessionOverview } from "@/server/company-builder/overview";
-import { decideReview, pauseTask, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
+import { decideReview, pauseTask, pendingReviewCount, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
 import { reconcileActiveEntitlements } from "@/server/company-builder/entitlement";
 import { deleteSession } from "@/server/company-builder/sessions";
 import { answer, createSession } from "@/server/company-builder/sessions";
@@ -926,6 +926,47 @@ describe("FB2-02 — a stale activation decision never changes the newer approve
     await decideReview(c.owner, c.ws.id, req.id, "reject");
     const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
     expect(a).toMatchObject({ state: "paused", reason: "activation_rejected", reviewItemId: req.id });
+  });
+});
+
+describe("FB2-09 (review follow-up) — an expired activation request never leaves the task stuck", () => {
+  const taskOf = async (c: Awaited<ReturnType<typeof installedCompany>>) => (await sessionOverview(c.ws.id, c.session.id, null)).tasks.find((x) => x.task.id === FU)!;
+  const expire = (id: string) => db.update(schema.cbReviewItem).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.cbReviewItem.id, id));
+
+  it("time passing alone: the task can be requested again and says why; the inbox count ignores it", async () => {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const req = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    expect((await taskOf(c)).status).toMatchObject({ state: "approval_required", canRequestActivation: false });
+    expect(await pendingReviewCount(c.ws.id)).toBe(1);
+    await expire(req.id);
+    const st = (await taskOf(c)).status;
+    expect(st.state).not.toBe("approval_required");
+    expect(st.reasons[0]).toBe("activation_request_expired");
+    expect(st.canRequestActivation).toBe(true);
+    expect(await pendingReviewCount(c.ws.id)).toBe(0);
+    // A new request is opened (the expired one is retired, history kept) and approving it activates the task.
+    const again = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    expect(again.id).not.toBe(req.id);
+    const [old] = await db.select().from(schema.cbReviewItem).where(eq(schema.cbReviewItem.id, req.id));
+    expect(old).toMatchObject({ status: "invalidated", note: "expired" });
+    expect((await decideReview(c.owner, c.ws.id, again.id, "approve")).status).toBe("executed");
+    expect((await taskOf(c)).status.state).toBe("active");
+  });
+
+  it("deciding an expired request releases the activation record it owns (never an active one)", async () => {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const req = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    await expire(req.id);
+    await expectHttpError(decideReview(c.owner, c.ws.id, req.id, "approve"), 409, "REVIEW_INVALIDATED");
+    const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
+    expect(a).toMatchObject({ state: "failed", reason: "review_expired", reviewItemId: req.id });
+    const st = (await taskOf(c)).status;
+    expect(st.reasons[0]).toBe("activation_request_expired");
+    expect(st.canRequestActivation).toBe(true);
   });
 });
 

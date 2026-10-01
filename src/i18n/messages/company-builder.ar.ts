@@ -342,6 +342,7 @@ export const companyBuilderAr = {
     sample_trial_needed: "جرّبها ببيانات نموذجية أولًا",
     paused: "أوقفتها",
     awaiting_review: "طلب التفعيل في صندوق المراجعة",
+    activation_request_expired: "انتهت مهلة طلب التفعيل الأخير دون قرار. يمكنك طلبه مجددًا",
     invalid_structure: "البنية غير صالحة",
     run_failed: "فشل التشغيل",
     outcome_not_matched: "النتيجة لا تطابق المطلوب",

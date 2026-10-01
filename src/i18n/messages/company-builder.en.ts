@@ -342,6 +342,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     sample_trial_needed: "Try it with sample data first",
     paused: "You paused it",
     awaiting_review: "The activation request is in the review inbox",
+    activation_request_expired: "The last activation request expired without a decision. You can request it again",
     invalid_structure: "The structure isn't valid",
     run_failed: "The run failed",
     outcome_not_matched: "The result doesn't match what was asked",

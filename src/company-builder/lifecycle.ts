@@ -10,6 +10,11 @@ export interface TaskStateInput {
   verdict: TrialVerdict | null;
   /** Stored ActivationDecision state, if any. */
   activation: "approval_required" | "active" | "paused" | "failed" | null;
+  /**
+   * FB2-09: the activation request that owns the activation record expired without a decision. The task is then shown
+   * as if no request were open (so a new one can be made), with the reason why.
+   */
+  activationRequestExpired?: boolean;
   /** A real authorised service verified this task (never set by sample trials). */
   liveVerified?: boolean;
   /**
@@ -48,6 +53,10 @@ export function taskStatus(i: TaskStateInput): TaskStatus {
   // When the sample-only reason applies, "needs a service connection" would wrongly suggest connecting enables live
   // use, so it is replaced by the sample-only reason (AI connections for agents are real and stay).
   const setup = [...setupReasons(task).filter((r) => !(sampleOnly.length && r === "connection_missing")), ...sampleOnly];
+  if (i.activationRequestExpired && (i.activation === "approval_required" || i.activation === "failed")) {
+    const s = taskStatus({ ...i, activation: null, activationRequestExpired: false });
+    return { ...s, reasons: ["activation_request_expired", ...s.reasons] };
+  }
   if (i.activation === "active") return { state: "active", reasons: sampleOnly, canTry, canRequestActivation: false };
   if (i.activation === "paused") return { state: "paused", reasons: ["paused", ...sampleOnly], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
   if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review", ...sampleOnly], canTry, canRequestActivation: false };

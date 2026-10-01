@@ -132,7 +132,8 @@ async function openItem(user: CurrentUser, parts: BindingParts, trialId: string 
     if (done) return done;
   }
   // An expired pending item is retired so a new request can be opened (only ONE pending item per binding).
-  await db.update(schema.cbReviewItem).set({ status: "invalidated", note: "expired" }).where(and(same, eq(schema.cbReviewItem.status, "pending"), sql`${schema.cbReviewItem.expiresAt} < now()`));
+  const retired = await db.update(schema.cbReviewItem).set({ status: "invalidated", note: "expired" }).where(and(same, eq(schema.cbReviewItem.status, "pending"), sql`${schema.cbReviewItem.expiresAt} < now()`)).returning();
+  for (const it of retired) if (it.kind === "activation") await setActivation(db, it, "failed", "review_expired", user.id, { ownedOnly: true });
   await db
     .insert(schema.cbReviewItem)
     .values({
@@ -183,6 +184,8 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
     if (!(await reviewerAllowed(workspaceId, user.id, it.reviewerRole))) throw new HttpError(403, "FORBIDDEN", it.reviewerRole === "owner" ? "The plan names the workspace owner as reviewer for this task" : "Only workspace owners and editors can decide reviews");
     if (it.expiresAt < new Date()) {
       await tx.update(schema.cbReviewItem).set({ status: "invalidated", note: "expired" }).where(eq(schema.cbReviewItem.id, it.id));
+      // FB2-09: an expired activation request releases the activation record it owns (never an active one).
+      if (it.kind === "activation") await setActivation(tx, it, "failed", "review_expired", user.id, { ownedOnly: true });
       return { ...it, status: "invalidated", note: "expired" };
     }
     if (decision === "reject") {
@@ -346,6 +349,6 @@ export async function sampleOutbox(workspaceId: string) {
 }
 
 export async function pendingReviewCount(workspaceId: string) {
-  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.cbReviewItem).where(and(eq(schema.cbReviewItem.workspaceId, workspaceId), eq(schema.cbReviewItem.status, "pending")));
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.cbReviewItem).where(and(eq(schema.cbReviewItem.workspaceId, workspaceId), eq(schema.cbReviewItem.status, "pending"), sql`${schema.cbReviewItem.expiresAt} >= now()`));
   return r?.n ?? 0;
 }

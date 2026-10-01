@@ -430,7 +430,9 @@ export const customerFollowUpPack: TaskPack = {
     const issues: string[] = [];
     // Refused, never trimmed: the interview limit is MAX_APPROVED UTF-16 units (FB2-01).
     if (info.length > MAX_APPROVED) issues.push("APPROVED_INFO_TOO_LONG");
-    if (fs.steps.length > MAX_FACT_STEPS) issues.push("APPROVED_INFO_TOO_COMPLEX");
+    // A single line whose escaped form can't fit one step (e.g. 6-character escapes sent through the API) is refused
+    // with the same specific code, never a generic expression error.
+    if (fs.steps.length > MAX_FACT_STEPS || fs.steps.some((x) => x.length > FACT_STEP_LIMIT)) issues.push("APPROVED_INFO_TOO_COMPLEX");
     return issues;
   },
 

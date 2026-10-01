@@ -116,6 +116,10 @@ describe("FB2-01 — data steps: bounded, complete, ordered (property and worst 
       expect(r.status, JSON.stringify(r.error)).toBe("succeeded");
     }
   });
+  it("one line whose escaped form can't fit a single step (6-character escapes via the API) is refused with the specific code", () => {
+    const params = { approvedInfo: "\uD800".repeat(MAX), services: svc, requiredDetails: ["service"], followUpHours: 24, timezone: "UTC", language: "en" };
+    expect(pack.paramIssues!(params)).toContain("APPROVED_INFO_TOO_COMPLEX");
+  });
   it("text longer than the accepted maximum from any other source is refused, never trimmed", () => {
     expect(pack.paramIssues!({ approvedInfo: "x".repeat(MAX + 1) })).toContain("APPROVED_INFO_TOO_LONG");
   });

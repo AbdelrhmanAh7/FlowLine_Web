@@ -62,7 +62,9 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
       const act = activations.find((a) => a.taskId === task.id);
       const installed = inst?.status === "installed" && Boolean(flowItem || agentItem);
       const userVerdict = (trial?.userVerdict ?? null) as UserVerdict | null;
-      const status = taskStatus({ task, installed, verdict, userVerdict, activation: (act?.state as "active" | "paused" | "approval_required" | "failed" | undefined) ?? null });
+      const owning = act?.reviewItemId ? reviews.find((r) => r.id === act.reviewItemId) : undefined;
+      const activationRequestExpired = Boolean(owning && (owning.expired || (owning.status === "invalidated" && owning.note === "expired")));
+      const status = taskStatus({ task, installed, verdict, userVerdict, activationRequestExpired, activation: (act?.state as "active" | "paused" | "approval_required" | "failed" | undefined) ?? null });
       const run = trial ? await trialOutput(trial) : null;
       const pack = getPack(task.packId, task.packVersion);
       return {
