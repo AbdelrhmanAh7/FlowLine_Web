@@ -158,6 +158,8 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await expect(act).toHaveAttribute("data-status", "pending");
   await act.getByTestId("cb-approve-activation-customer-follow-up").click();
   await expect(task).toHaveAttribute("data-state", "active");
+  // Honest state (VF-03): "active" never implies live email handling in this version.
+  await expect(task).toContainText("Runs on demand with sample data only: no emails are read or sent from your account in this version");
 
   // History: the trial run is in the run log.
   await page.goto(flowHref!);
