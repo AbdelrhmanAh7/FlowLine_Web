@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Button, Card } from "@/components/ui";
+import { intlLocale } from "@/i18n/config";
 import { useLocale, useT } from "@/i18n/client";
 import { api } from "@/lib/api";
 
@@ -63,7 +64,7 @@ export function ExperimentPanel({ base, sessionId, refreshKey }: { base: string;
   const t = useT();
   const locale = useLocale();
   const qc = useQueryClient();
-  const nf = new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-nu-arab" : "en-GB");
+  const nf = new Intl.NumberFormat(intlLocale(locale));
   const [minutes, setMinutes] = useState("");
   const [saving, setSaving] = useState(false);
   const q = useQuery({ queryKey: ["cb-experiment", sessionId, refreshKey], queryFn: () => api<{ metrics: Metrics }>(`${base}/sessions/${sessionId}/experiment`) });
@@ -89,7 +90,7 @@ export function ExperimentPanel({ base, sessionId, refreshKey }: { base: string;
         [t("companyBuilder.experiment.waiting"), dur(m.systemWaitingTimeS)],
         [t("companyBuilder.experiment.external"), mins(m.externalOnboardingDelayMin)],
         [t("companyBuilder.experiment.support"), mins(m.supportTimeMin)],
-        [t("companyBuilder.experiment.cost"), new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-nu-arab" : "en-GB", { style: "currency", currency: "USD", maximumFractionDigits: 4 }).format(m.cost.aiReportedUsd)],
+        [t("companyBuilder.experiment.cost"), new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD", maximumFractionDigits: 4 }).format(m.cost.aiReportedUsd)],
         [t("companyBuilder.experiment.acceptance"), `${nf.format(m.results.accepted)} / ${nf.format(m.results.rejected)}`],
         [t("companyBuilder.experiment.reuse"), reuse],
       ]

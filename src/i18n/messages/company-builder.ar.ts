@@ -379,6 +379,7 @@ export const companyBuilderAr = {
       imported_cli_claim: "نص مستورد من جهاز المالك (لم نتحقق من مصدره هنا)",
     },
     check: {
+      consequential_needs_person: "طلبات الاسترداد والإلغاء مُعلَّمة ليقرر فيها شخص",
       has_output: "توجد نتيجة",
       one_outcome: "نتيجة واحدة واضحة",
       reply_not_empty: "الرد ليس فارغًا",
@@ -426,6 +427,7 @@ export const companyBuilderAr = {
   },
 
   review: {
+    consequential: "طلب استرداد أو إلغاء: الموافقة ترسل نص هذه المسودة فقط. لا يجري Flowline أي استرداد أو إلغاء.",
     inbox: "صندوق المراجعة",
     empty: "لا توجد عناصر للمراجعة.",
     source: "المصدر",
@@ -504,6 +506,7 @@ export const companyBuilderAr = {
   },
 
   doesNot: {
+    issue_refunds: "لا يصدر أو يعد باسترداد أو إلغاء أبدًا",
     send_without_approval: "لا يرسل أي رد دون موافقة",
     quote_unapproved_prices: "لا يذكر أسعارًا غير معتمدة",
     legal_commitments: "لا يقدم التزامات قانونية",
@@ -526,6 +529,7 @@ export const companyBuilderAr = {
     assisted: "يجهّزه لك للمراجعة",
     human: "يبقى مع شخص",
     item: {
+      refund_and_cancellation_decisions: "قرارات الاسترداد والإلغاء",
       approve_and_send_reply: "الموافقة على الرد وإرساله", complaints: "الشكاوى", prices_not_in_approved_info: "أي سعر غير معتمد",
       approve_ledger_entries: "اعتماد القيود", payments: "الدفعات", tax_filing: "الإقرارات الضريبية",
       approve_and_share_report: "اعتماد التقرير ومشاركته", performance_judgements: "تقييم الأداء",
@@ -577,6 +581,7 @@ export const companyBuilderAr = {
     price: "سعر خطة Flowline يظهر في صفحة الفوترة. لا دفع مطلوب للتجربة ببيانات نموذجية.",
   },
   result: {
+    consequential: "طلب استرداد أو إلغاء: يقرر فيه شخص. المسودة تقتبس سياستك المعتمدة فقط ولا تعد بشيء.",
     reply: "رد جاهز لمراجعتك",
     asks: "نطلب من العميل: {list}",
     handoff: "حُوّل لشخص: {reason}",

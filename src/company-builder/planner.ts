@@ -108,8 +108,9 @@ function customerTask(f: Facts, ctx: PlanContext, blockers: Blocker[]): TaskPlan
     connections: channel === "email" ? [connectionRef(ctx, "gmail")] : [],
     unavailable,
     usage: "none",
-    params: { approvedInfo: info.slice(0, 1200), services: servicesFrom(str(f, "customer.services")), requiredDetails: details, followUpHours: 24, timezone: ctx.timezone ?? "UTC", language: ctx.language },
-    work: { automated: ["extract_request_facts", "detect_missing_details", "record_follow_up"], assisted: ["draft_reply_from_approved_info"], human: ["approve_and_send_reply", "complaints", "prices_not_in_approved_info"] },
+    // recordScope: follow-up records belong to THIS interview, so two interviews in one workspace never overwrite each other.
+    params: { approvedInfo: info.slice(0, 1200), services: servicesFrom(str(f, "customer.services")), requiredDetails: details, followUpHours: 24, timezone: ctx.timezone ?? "UTC", language: ctx.language, recordScope: ctx.sessionId },
+    work: { automated: ["extract_request_facts", "detect_missing_details", "record_follow_up"], assisted: ["draft_reply_from_approved_info"], human: ["approve_and_send_reply", "complaints", "refund_and_cancellation_decisions", "prices_not_in_approved_info"] },
   });
 }
 
@@ -259,7 +260,7 @@ function recruitmentTask(f: Facts): TaskPlan {
 
 /** What each role never does (shown on the plan; i18n `companyBuilder.doesNot.<id>`). */
 const DOES_NOT: Record<string, string[]> = {
-  "customer-follow-up-assistant": ["send_without_approval", "quote_unapproved_prices", "legal_commitments", "data_outside_sources"],
+  "customer-follow-up-assistant": ["send_without_approval", "quote_unapproved_prices", "legal_commitments", "issue_refunds", "data_outside_sources"],
   "finance-documents-assistant": ["move_money", "file_taxes", "post_without_review", "mix_currencies"],
   "operations-reporting-assistant": ["judge_performance", "share_without_review", "data_outside_sources"],
   "lead-qualification-assistant": ["contact_without_approval", "reject_automatically", "data_outside_sources"],

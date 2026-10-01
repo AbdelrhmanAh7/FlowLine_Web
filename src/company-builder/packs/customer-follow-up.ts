@@ -33,6 +33,15 @@ const ASK: Record<"en" | "ar", Record<(typeof FU_DETAILS)[number], string>> = {
   ar: { service: "ما الخدمة التي تحتاجها؟", date: "ما التاريخ المناسب لك؟", phone: "ما رقم الجوال المناسب للتواصل معك؟" },
 };
 const GREETING = { en: "Hello,", ar: "مرحبًا،" };
+/**
+ * Refund / cancellation requests are CONSEQUENTIAL (owner decision 2026-10-01): Flowline may identify them, quote the
+ * approved policy lines and prepare a draft, but a person always decides. This fixed sentence (no numbers, no promise)
+ * is added to every such draft; the draft itself still waits for the named reviewer like every reply.
+ */
+export const REFUND_NOTE = {
+  en: "A member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.",
+  ar: "سيراجع أحد أفراد فريقنا طلبك ويؤكد لك الخطوة التالية. لم يتم أي استرداد أو إلغاء حتى الآن.",
+};
 const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
 
 /**
@@ -86,6 +95,26 @@ function requiredOf(params: PackParams): string[] {
 const DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 const PERSIAN_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
 /** Arabic-Indic and Persian digits → ASCII (the same mapping is compiled into the flow). */
+/**
+ * Phone numbers as people type them ("+20 10 1234 5678", "010 1234 5678", "(055) 123-4567"): groups separated by
+ * spaces, dots or dashes are joined for comparison. Only sequences that START like a phone number (a "+" country code
+ * or a leading 0) are joined, and only when the result has 9–13 digits; nothing else is merged and no country code
+ * is ever added or guessed. The same rule is compiled into the flow.
+ */
+export const PHONE_SPACED = "(?:\\+[0-9]{1,3}|\\(?(?<![0-9])0[0-9]{1,4}\\)?)(?:[ .\\-]?\\(?[0-9]{2,4}\\)?){2,4}(?![0-9])";
+const PHONE_SPACED_RE = new RegExp(PHONE_SPACED, "g");
+const compactPhone = (m: string) => {
+  const c = m.replace(/[^0-9+]/g, "");
+  const n = c.replace("+", "").length;
+  return n >= 9 && n <= 13 ? c : m;
+};
+export function fuPhone(textNoDates: string): { phone: string | null; display: string | null } {
+  const phone = /\+?[0-9]{9,14}/.exec(textNoDates.replace(PHONE_SPACED_RE, compactPhone))?.[0] ?? null;
+  if (!phone) return { phone: null, display: null };
+  const shown = [...textNoDates.matchAll(PHONE_SPACED_RE)].map((x) => x[0]).find((x) => x.replace(/[^0-9+]/g, "") === phone);
+  return { phone, display: shown ? shown.trim() : phone };
+}
+
 export const normDigits = (s: string) => s.replace(/[٠-٩۰-۹]/g, (d) => String(Math.max(DIGITS.indexOf(d), PERSIAN_DIGITS.indexOf(d))));
 
 function extractExpression(params: PackParams) {
@@ -101,7 +130,10 @@ function extractExpression(params: PackParams) {
   $services := ${lit(servicesOf(params))};
   $svc := $filter($services, function($aliases) { $count($filter($aliases, function($a) { $contains($low, $a) })) > 0 });
   $noDates := $replace($text, /[0-9]{4}-[0-9]{2}-[0-9]{2}/, " ");
-  $phone := $match($noDates, /\\+?[0-9]{9,14}/);
+  $compact := $replace($noDates, /${PHONE_SPACED}/, function($m) { ($c := $replace($m.match, /[^0-9+]/, ""); $n := $length($replace($c, "+", "")); $n >= 9 and $n <= 13 ? $c : $m.match) });
+  $phone := $match($compact, /\\+?[0-9]{9,14}/);
+  $pv := $exists($phone) ? $phone[0].match : null;
+  $shown := $filter($match($noDates, /${PHONE_SPACED}/), function($c) { $replace($c.match, /[^0-9+]/, "") = $pv });
   $date := $match($text, /[0-9]{4}-[0-9]{2}-[0-9]{2}/);
   {
     "id": $string(request.id), "from": request.from, "subject": request.subject, "received_at": request.received_at,
@@ -110,14 +142,18 @@ function extractExpression(params: PackParams) {
     "language": $contains($raw, /[\\u0600-\\u06FF]/) ? "ar" : "en",
     "suspicious": $hasRaw(${lit(FU_INJECTION)}),
     "empty": $not($exists(request.body)) or $length($trim($string(request.body))) = 0,
+    "phone_display": $pv = null ? null : $exists($shown) ? $trim($shown[0].match) : $pv,
     "detected": {
       "service": $count($svc) > 0 ? $svc[0][0] : null,
-      "phone": $exists($phone) ? $phone[0].match : null,
+      "phone": $pv,
       "date": $exists($date) ? $date[0].match : null
     }
   }
 )`;
 }
+
+/** Follow-up records are scoped to the interview (session) that planned them, never just to the workspace. */
+const scopeOf = (params: PackParams) => (typeof params.recordScope === "string" && /^[A-Za-z0-9-]{1,64}$/.test(params.recordScope) ? params.recordScope : "");
 
 function draftExpression(params: PackParams) {
   const info = fuApprovedIndex(String(params.approvedInfo ?? ""));
@@ -133,12 +169,16 @@ function draftExpression(params: PackParams) {
   $lang := language;
   $handoff := empty ? "empty_request" : topic = "complaint" ? "complaint_needs_person" : ($d.service = null and $count($lines) = 0) ? "no_approved_information" : null;
   $asks := $handoff = null ? $append([], $map($missing, function($k) { $lookup($lookup($ask, $lang), $k) })) : [];
-  $reply := $handoff = null ? $join($append($append([${lit(GREETING)}.$lookup($, $lang)], $append($lines, $asks)), [${lit(CLOSING)}.$lookup($, $lang)]), "\\n\\n") : null;
+  $cons := topic = "refund" ? "refund_or_cancellation" : null;
+  $note := $cons and $handoff = null ? [${lit(REFUND_NOTE)}.$lookup($, $lang)] : [];
+  $reply := $handoff = null ? $join($append($append([${lit(GREETING)}.$lookup($, $lang)], $append($append($lines, $asks), $note)), [${lit(CLOSING)}.$lookup($, $lang)]), "\\n\\n") : null;
   {
     "from": from, "subject": subject, "topic": topic, "language": language, "suspicious": suspicious,
-    "reply": $reply, "used_lines": $lines, "asked_for": $handoff = null ? $missing : [], "handoff": $handoff,
+    "reply": $reply, "used_lines": $lines, "asked_for": $handoff = null ? $missing : [], "handoff": $handoff, "consequential": $cons,
     "record": {
       "key": (sample ? "sample:" : "") & id,
+      "store_key": ${lit(scopeOf(params) ? `${scopeOf(params)}/` : "")} & (sample ? "sample:" : "") & id,
+      "consequential": $cons, "requires_human_decision": $cons != null, "phone_display": phone_display,
       "request_id": id, "customer": from, "sample": sample,
       "status": $handoff = null ? "awaiting_review" : "needs_person",
       "reason": $handoff, "missing": $missing, "detected": $d, "topic": topic,
@@ -157,9 +197,9 @@ export function recomputeDetails(input: unknown, params: PackParams) {
   const low = text.toLowerCase();
   const svc = servicesOf(params).find((aliases) => aliases.some((a) => low.includes(a)));
   const date = /[0-9]{4}-[0-9]{2}-[0-9]{2}/.exec(text)?.[0] ?? null;
-  const phone = /\+?[0-9]{9,14}/.exec(text.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/g, " "))?.[0] ?? null;
-  const detected = { service: svc?.[0] ?? null, phone, date };
-  return { raw, low, detected, missing: requiredOf(params).filter((k) => detected[k as keyof typeof detected] === null) };
+  const ph = fuPhone(text.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/g, " "));
+  const detected = { service: svc?.[0] ?? null, phone: ph.phone, date };
+  return { raw, low, phoneDisplay: ph.display, detected, missing: requiredOf(params).filter((k) => detected[k as keyof typeof detected] === null) };
 }
 
 /**
@@ -177,7 +217,9 @@ export function recomputeFollowUp(input: unknown, params: PackParams) {
   const lines = empty || topic === "complaint" ? [] : (info.topics[topic] ?? []).map((i) => info.lines[i]!);
   const handoff = empty ? "empty_request" : topic === "complaint" ? "complaint_needs_person" : d.detected.service === null && lines.length === 0 ? "no_approved_information" : null;
   const asks = handoff === null ? d.missing.map((k) => ASK[lang][k as (typeof FU_DETAILS)[number]]) : [];
-  const body = handoff === null ? [GREETING[lang], ...lines, ...asks, CLOSING[lang]].join("\n\n") : null;
+  const consequential = topic === "refund" ? ("refund_or_cancellation" as const) : null;
+  const note = consequential && handoff === null ? [REFUND_NOTE[lang]] : [];
+  const body = handoff === null ? [GREETING[lang], ...lines, ...asks, ...note, CLOSING[lang]].join("\n\n") : null;
   const hours = typeof params.followUpHours === "number" && params.followUpHours > 0 && params.followUpHours <= 720 ? params.followUpHours : 24;
   const received = typeof req.received_at === "string" && ISO_TS_RE.test(req.received_at) ? Date.parse(req.received_at) : NaN;
   const sample = req.sample === true;
@@ -187,10 +229,13 @@ export function recomputeFollowUp(input: unknown, params: PackParams) {
     lines,
     asks: handoff === null ? d.missing : [],
     body,
+    consequential,
     detected: d.detected,
     missing: d.missing,
     record: {
       key: `${sample ? "sample:" : ""}${id}`,
+      store_key: `${scopeOf(params) ? `${scopeOf(params)}/` : ""}${sample ? "sample:" : ""}${id}`,
+      phone_display: d.phoneDisplay,
       request_id: id,
       status: handoff === null ? "awaiting_review" : "needs_person",
       next_follow_up_at: Number.isFinite(received) ? new Date(received + hours * 3600_000).toISOString() : null,
@@ -216,14 +261,14 @@ export const customerFollowUpPack: TaskPack = {
         { id: "request", type: "trigger.manual", position: { x: X[0]!, y: 160 }, data: { label: label("request"), config: { samplePayload: JSON.stringify(this.sample(params), null, 2) } } },
         { id: "extract", type: "transform.json", position: { x: X[1]!, y: 160 }, data: { label: label("extract"), config: { expression: extractExpression(params) } } },
         { id: "draft", type: "transform.json", position: { x: X[2]!, y: 160 }, data: { label: label("draft"), config: { expression: draftExpression(params) } } },
-        { id: "record", type: "data.store", position: { x: X[3]!, y: 300 }, data: { label: label("record"), config: { op: "set", namespace: "cb_customer_follow_ups", key: "record.key", value: "record" } } },
+        { id: "record", type: "data.store", position: { x: X[3]!, y: 300 }, data: { label: label("record"), config: { op: "set", namespace: "cb_customer_follow_ups", key: "record.store_key", value: "record" } } },
         { id: "follow-up", type: "output", position: { x: X[4]!, y: 300 }, data: { label: label("follow-up"), config: { key: "follow_up_record", expression: "value" } } },
         { id: "has-reply", type: "logic.condition", position: { x: X[3]!, y: 60 }, data: { label: label("has-reply"), config: { expression: "$exists(reply) and reply != null" } } },
         {
           id: "reply",
           type: "output",
           position: { x: X[4]!, y: 0 },
-          data: { label: label("reply"), config: { key: "reply_draft", expression: '{ "to": from, "subject": "Re: " & $string(subject), "body": reply, "topic": topic, "language": language, "suspicious": suspicious, "used_lines": used_lines, "asked_for": asked_for, "status": "awaiting_review" }' } },
+          data: { label: label("reply"), config: { key: "reply_draft", expression: '{ "to": from, "subject": "Re: " & $string(subject), "body": reply, "topic": topic, "language": language, "suspicious": suspicious, "used_lines": used_lines, "asked_for": asked_for, "consequential": consequential, "status": "awaiting_review" }' } },
         },
         { id: "person", type: "output", position: { x: X[4]!, y: 120 }, data: { label: label("person"), config: { key: "needs_person", expression: '{ "from": from, "subject": subject, "topic": topic, "language": language, "suspicious": suspicious, "reason": handoff }' } } },
       ],
@@ -252,16 +297,16 @@ export const customerFollowUpPack: TaskPack = {
 
   evaluate(output, input, params): PackCheck[] {
     const exp = recomputeFollowUp(input, params);
-    const reply = output.reply_draft as { to?: unknown; body?: string; used_lines?: string[]; asked_for?: string[]; status?: string } | undefined;
+    const reply = output.reply_draft as { to?: unknown; body?: string; used_lines?: string[]; asked_for?: string[]; status?: string; consequential?: unknown } | undefined;
     const person = output.needs_person as { reason?: string } | undefined;
-    const record = output.follow_up_record as { key?: string; request_id?: string; customer?: unknown; status?: string; missing?: string[]; detected?: unknown; next_follow_up_at?: unknown } | undefined;
+    const record = output.follow_up_record as { key?: string; store_key?: string; request_id?: string; customer?: unknown; status?: string; missing?: string[]; detected?: unknown; next_follow_up_at?: unknown; consequential?: unknown; requires_human_decision?: unknown; phone_display?: unknown } | undefined;
     const req = (input as { request?: { from?: unknown; body?: unknown } } | null)?.request;
     const sender = typeof req?.from === "string" && req.from.length > 0 ? req.from : null;
     // Exactly the expected outcome (reply vs hand-off), not just "one of them".
     const checks: PackCheck[] = [{ id: "one_outcome", passed: Boolean(reply) !== Boolean(person) && Boolean(reply) === (exp.handoff === null) }];
     checks.push({
       id: "follow_up_recorded",
-      passed: Boolean(record) && record!.key === exp.record.key && record!.request_id === exp.record.request_id && (record!.customer ?? null) === (req?.from ?? null) && record!.next_follow_up_at === exp.record.next_follow_up_at,
+      passed: Boolean(record) && record!.key === exp.record.key && record!.store_key === exp.record.store_key && (record!.phone_display ?? null) === exp.record.phone_display && record!.request_id === exp.record.request_id && (record!.customer ?? null) === (req?.from ?? null) && record!.next_follow_up_at === exp.record.next_follow_up_at,
     });
     checks.push({ id: "record_status_consistent", passed: Boolean(record) && record!.status === exp.record.status && record!.status === (reply ? "awaiting_review" : "needs_person") });
     checks.push({ id: "details_extracted_correctly", passed: Boolean(record) && sameJson(record!.detected, exp.detected) && sameJson(record!.missing ?? [], exp.missing) });
@@ -278,6 +323,11 @@ export const customerFollowUpPack: TaskPack = {
       checks.push({ id: "asks_for_missing_details", passed: sameJson(reply.asked_for ?? [], exp.asks) });
       checks.push({ id: "review_required", passed: reply.status === "awaiting_review" });
     }
+    // Refunds and cancellations: flagged for a person's decision on the record (and on the draft, when there is one).
+    checks.push({
+      id: "consequential_needs_person",
+      passed: Boolean(record) && (record!.consequential ?? null) === exp.consequential && record!.requires_human_decision === (exp.consequential !== null) && (!reply || ((reply.consequential ?? null) === exp.consequential && reply.status === "awaiting_review")),
+    });
     if (person) checks.push({ id: "handoff_has_reason", passed: typeof person.reason === "string" && person.reason === exp.handoff });
     return checks;
   },

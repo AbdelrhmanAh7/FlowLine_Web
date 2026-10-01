@@ -8,11 +8,12 @@ describe("follow-up time formatting (explicit time zone) — BUG CB2-05", () => 
     expect(formatDue(iso, "en", "Asia/Riyadh")).toMatch(/09:00/);
     expect(formatDue(iso, "en", "Asia/Riyadh")).toMatch(/GMT\+3|AST/);
   });
-  it("uses Arabic-Indic digits and the Gregorian calendar in Arabic", () => {
+  it("Arabic keeps Arabic text but uses digits 0–9 and the Gregorian calendar (owner decision 2026-10-01)", () => {
     const ar = formatDue(iso, "ar", "Asia/Riyadh");
-    expect(ar).toMatch(/[٠-٩]/);
-    expect(ar).toContain("٢٠٢٦");
-    expect(ar).not.toMatch(/[0-9]/);
+    expect(ar).toMatch(/[\u0621-\u064a]/); // Arabic month name
+    expect(ar).toContain("2026");
+    expect(ar).toContain("09:00");
+    expect(ar).not.toMatch(/[\u0660-\u0669\u06f0-\u06f9]/);
   });
   it("never throws: unknown zones fall back to UTC, invalid dates to the raw value", () => {
     expect(formatDue(iso, "en", "Mars/Olympus")).toMatch(/UTC/);

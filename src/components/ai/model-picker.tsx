@@ -150,7 +150,7 @@ export function ModelPicker({
               <span className="text-muted">
                 {m.providerName} · {m.connectionLabel} ·{" "}
                 {m.price.known ? t("aiHub.picker.price", { input: perM(m.price.inputPerMTokMicros), output: perM(m.price.outputPerMTokMicros) }) : t("aiHub.picker.priceUnknown")} ·{" "}
-                {m.contextWindow != null ? t("aiHub.picker.contextSize", { n: m.contextWindow.toLocaleString() }) : t("aiHub.picker.contextUnknown")}
+                {m.contextWindow != null ? t("aiHub.picker.contextSize", { n: t.number(m.contextWindow) }) : t("aiHub.picker.contextUnknown")}
               </span>
               {m.price.known && m.price.source === "catalogue" && m.price.sourceUrl && (
                 <span className="text-xs text-muted">

@@ -10,6 +10,7 @@ interface ReplyDraft {
   body?: string;
   suspicious?: boolean;
   asked_for?: string[];
+  consequential?: string | null;
 }
 interface NeedsPerson {
   from?: string;
@@ -50,6 +51,11 @@ export function FollowUpResult({ taskId, output, timezone }: { taskId: string; o
         </div>
       )}
       {person && <p className="text-med">{t("companyBuilder.result.handoff", { reason: person.reason ? cbt(t, `result.handoffReason.${person.reason}`, undefined, person.reason) : "—" })}</p>}
+      {reply?.consequential === "refund_or_cancellation" && (
+        <p className="text-warning" data-testid={`cb-result-consequential-${taskId}`}>
+          {t("companyBuilder.result.consequential")}
+        </p>
+      )}
       {suspicious && <p className="text-warning">{t("companyBuilder.result.suspicious")}</p>}
       {due !== undefined && <p className="text-med">{due ? t("companyBuilder.result.followUpDue", { date: formatDue(due, locale, timezone) }) : t("companyBuilder.result.noTimestamp")}</p>}
     </div>

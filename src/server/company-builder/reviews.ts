@@ -41,9 +41,10 @@ export class UncertainOutcomeError extends HttpError {
 /** The proposed test action for a task's trial output (null = nothing to send, e.g. a hand-off to a person). */
 export function proposalFor(task: TaskPlan, output: Record<string, unknown>): { proposed: Record<string, unknown>; recipient: string } | null {
   if (task.packId === "customer-follow-up" || task.packId === "customer-triage") {
-    const r = output.reply_draft as { to?: string; subject?: string; body?: string } | undefined;
+    const r = output.reply_draft as { to?: string; subject?: string; body?: string; consequential?: string | null } | undefined;
     if (!r?.body) return null;
-    return { proposed: { kind: "email_reply", to: r.to ?? null, subject: r.subject ?? null, body: r.body }, recipient: String(r.to ?? "") };
+    // A refund/cancellation draft is labelled so the reviewer sees that approving sends ONLY the text (no refund action).
+    return { proposed: { kind: "email_reply", to: r.to ?? null, subject: r.subject ?? null, body: r.body, ...(r.consequential ? { consequential: r.consequential } : {}) }, recipient: String(r.to ?? "") };
   }
   if (task.packId === "invoice-organiser") {
     const r = (output.ledger_draft ?? output.discrepancy_review) as { ledger_rows?: unknown[]; totals_by_currency?: unknown[] } | undefined;

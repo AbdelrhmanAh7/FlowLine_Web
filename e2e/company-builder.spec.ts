@@ -200,6 +200,9 @@ test("company builder: Arabic is the default, right-to-left, with the reviewed p
   await answerText(page, "offering", "طلبات العملاء تصل على الإيميل Gmail والمتابعة غير منتظمة");
   await expect(page.getByTestId("cb-question")).toHaveAttribute("data-question", "first_outcome");
   await expect(page.getByTestId("cb-question").getByRole("radio", { name: "متابعة طلبات العملاء" })).toBeChecked();
+  // Product rule: Arabic text, RTL, but digits 0–9 only (owner decision 2026-10-01).
+  await expect(page.getByText("أجبت عن سؤال واحد")).toBeVisible();
+  expect(await page.locator("body").innerText()).not.toMatch(/[\u0660-\u0669\u06f0-\u06f9]/);
   await ctx.close();
 });
 

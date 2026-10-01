@@ -163,7 +163,8 @@ describe("Milestone B — real drafts, idempotent installation, sample trials", 
     const trial = await runTrial(owner, ws.id, installation.id, FU);
     expect(trial.verdict).toMatchObject({ structurallyValid: true, ranWithoutErrors: true, matchedOutcome: true });
     const rows = await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id));
-    expect(rows.map((r) => `${r.namespace}/${r.key}`)).toEqual(["cb_customer_follow_ups/sample:sample-request-1"]);
+    // Scoped to THIS interview (owner decision 2026-10-01: never workspace-wide).
+    expect(rows.map((r) => `${r.namespace}/${r.key}`)).toEqual([`cb_customer_follow_ups/${s.id}/sample:sample-request-1`]);
     expect(rows[0]!.value).toMatchObject({ status: "awaiting_review", sample: true, next_follow_up_at: "2026-10-02T06:00:00.000Z", timezone: "Asia/Riyadh" });
     // Running the same sample again updates the same record (no duplicate follow-ups).
     await runTrial(owner, ws.id, installation.id, FU);
@@ -639,7 +640,7 @@ describe("direction v2 — the person's acceptance and experiment mode", () => {
   });
 
   it("only the named reviewer judges the result; client-supplied trial input is always labelled sample (FB-04, FB-08)", async () => {
-    const { owner, ws, installation } = await installedCompany();
+    const { owner, ws, session, installation } = await installedCompany();
     const editor = await makeUser("cb-judge-editor");
     await addMember(ws.id, editor.id, "editor");
     const { trial } = await startTrial(editor, ws.id, installation.id, FU, { trialKey: "editor-trial-01", input: { request: { id: "real-123", from: "a@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Q", body: "How much does office cleaning cost?", sample: false } } });
@@ -647,7 +648,7 @@ describe("direction v2 — the person's acceptance and experiment mode", () => {
     const done = await refreshTrial(ws.id, trial.id);
     expect(done.verdict).toMatchObject({ matchedOutcome: true });
     const keys = (await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id))).map((r) => r.key);
-    expect(keys).toEqual(["sample:real-123"]); // never mixed with real follow-ups
+    expect(keys).toEqual([`${session.id}/sample:real-123`]); // never mixed with real follow-ups
     // The plan names the owner as reviewer: an editor can run trials but can't say the result matches.
     await expectHttpError(recordUserVerdict(editor, ws.id, done.id, "accepted", null), 403, "FORBIDDEN");
     expect((await recordUserVerdict(owner, ws.id, done.id, "accepted", null)).userVerdict).toBe("accepted");
@@ -699,3 +700,88 @@ describe("direction v2 — the person's acceptance and experiment mode", () => {
     }
   });
 });
+
+describe("owner decisions 2026-10-01 — refunds need a person, spaced phone numbers, follow-ups scoped per interview", () => {
+  const followUps = async (workspaceId: string) => (await db.select().from(schema.kvEntry).where(and(eq(schema.kvEntry.workspaceId, workspaceId), eq(schema.kvEntry.namespace, "cb_customer_follow_ups")))).map((r) => r.key).sort();
+
+  it("REF: a refund/cancellation draft can't bypass the named reviewer; approving sends only the text; no money action exists", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const editor = await makeUser("cb-ref-editor");
+    await addMember(ws.id, editor.id, "editor");
+    const { trial } = await startTrial(owner, ws.id, installation.id, FU, { trialKey: "refund-trial-01", input: { request: { id: "r-1", from: "c@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Refund", body: "Please cancel my office cleaning and refund my payment" } } });
+    await claimAndProcess(trial.runId!);
+    const done = await refreshTrial(ws.id, trial.id);
+    expect(done.verdict).toMatchObject({ matchedOutcome: true });
+    const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId!));
+    const out = run!.output as { reply_draft: { consequential: string; status: string; body: string } };
+    expect(out.reply_draft).toMatchObject({ consequential: "refund_or_cancellation", status: "awaiting_review" });
+    // The draft only becomes a reviewed test action; nothing is sent or refunded by itself.
+    const item = await requestSampleAction(owner, ws.id, trial.id);
+    expect(item).toMatchObject({ status: "pending", reviewerRole: "owner" });
+    expect((item.proposed as { consequential?: string }).consequential).toBe("refund_or_cancellation");
+    expect(await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id))).toHaveLength(0);
+    // Someone who isn't the named reviewer can't approve it.
+    await expectHttpError(decideReview(editor, ws.id, item.id, "approve"), 403);
+    expect(await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id))).toHaveLength(0);
+    // The reviewer approves: only the draft text lands in the local outbox; no billing/payment state changes.
+    const billingBefore = await db.select().from(schema.billingAccount).where(eq(schema.billingAccount.workspaceId, ws.id));
+    expect((await decideReview(owner, ws.id, item.id, "approve")).status).toBe("executed");
+    const [sent] = await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id));
+    expect((sent!.payload as { proposed: { body: string; consequential: string } }).proposed).toMatchObject({ body: out.reply_draft.body, consequential: "refund_or_cancellation" });
+    expect(await db.select().from(schema.billingAccount).where(eq(schema.billingAccount.workspaceId, ws.id))).toEqual(billingBefore);
+    // Even activated, the workflow has no step that could move money or reach an account.
+    const [fi] = (await installedItems(installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+    const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId));
+    expect(f!.graph.nodes.every((n) => ["trigger.manual", "transform.json", "logic.condition", "data.store", "output"].includes(n.type))).toBe(true);
+  });
+
+  it("PH: a phone number written with spaces is recognised through the real worker, display kept as written", async () => {
+    const { owner, ws, installation } = await installedCompany();
+    const { trial } = await startTrial(owner, ws.id, installation.id, FU, { trialKey: "phone-trial-01", input: { request: { id: "p-1", from: "c@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Booking", body: "I need office cleaning on 2026-10-05, my number is +20 10 1234 5678" } } });
+    await claimAndProcess(trial.runId!);
+    const done = await refreshTrial(ws.id, trial.id);
+    expect(done.verdict).toMatchObject({ matchedOutcome: true });
+    const [run] = await db.select().from(schema.run).where(eq(schema.run.id, trial.runId!));
+    const rec = (run!.output as { follow_up_record: { detected: { phone: string }; phone_display: string; missing: string[] } }).follow_up_record;
+    expect(rec).toMatchObject({ detected: { phone: "+201012345678" }, phone_display: "+20 10 1234 5678", missing: [] });
+  });
+
+  it("KEY (beta blocker): two interviews in one workspace — resume, retry, concurrent trials — never overwrite or duplicate follow-ups", async () => {
+    const owner = await makeUser("cb-two");
+    const ws = await createWorkspace(owner, unique("Two Co"));
+    const setup = async () => {
+      const s = await createSession(owner, ws.id);
+      await answerPath(ws.id, s.id, CUSTOMER_PATH);
+      const { row: bp } = await generateDeterministic(owner, ws.id, s.id, "en");
+      await approveBlueprint(owner, ws.id, bp.id);
+      const { installation } = await install(owner, ws.id, bp.id, { locale: "en" });
+      return { s, installation };
+    };
+    const [a, b] = [await setup(), await setup()];
+    // Concurrent sample trials in both interviews (same sample request id in each).
+    const started = await Promise.all([a, b, a, b].map((x, i) => startTrial(owner, ws.id, x.installation.id, FU, { trialKey: `concurrent-key-${i}` })));
+    // The claim helper processes queued runs in its own order: claim only runs that are still queued.
+    for (const st of started) if ((await db.select({ status: schema.run.status }).from(schema.run).where(eq(schema.run.id, st.trial.runId!)))[0]!.status === "queued") await claimAndProcess(st.trial.runId!);
+    for (const st of started) expect((await refreshTrial(ws.id, st.trial.id)).verdict).toMatchObject({ matchedOutcome: true });
+    expect(await followUps(ws.id)).toEqual([`${a.s.id}/sample:sample-request-1`, `${b.s.id}/sample:sample-request-1`].sort());
+    // Retry (same key) returns the same trial; refresh/resume re-reads it — no new record.
+    const again = await startTrial(owner, ws.id, a.installation.id, FU, { trialKey: "concurrent-key-0" });
+    expect(again.duplicate).toBe(true);
+    await sessionOverview(ws.id, a.s.id, null);
+    // A changed answer → a new plan version of the SAME interview keeps writing the same follow-up record.
+    const [row] = await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, a.s.id));
+    await answer(ws.id, a.s.id, { questionId: "cust_info", value: "Our monthly plan price is 350 SAR.", revision: row!.revision, mode: "correction" });
+    const { row: v2 } = await generateDeterministic(owner, ws.id, a.s.id, "en");
+    await approveBlueprint(owner, ws.id, v2.id);
+    const { installation: a2 } = await install(owner, ws.id, v2.id, { locale: "en" });
+    await runTrial(owner, ws.id, a2.id, FU);
+    expect(await followUps(ws.id)).toEqual([`${a.s.id}/sample:sample-request-1`, `${b.s.id}/sample:sample-request-1`].sort());
+    // Each interview's record is its own (B's record wasn't touched by A's new version).
+    const [recA] = await db.select().from(schema.kvEntry).where(and(eq(schema.kvEntry.workspaceId, ws.id), eq(schema.kvEntry.key, `${a.s.id}/sample:sample-request-1`)));
+    const [recB] = await db.select().from(schema.kvEntry).where(and(eq(schema.kvEntry.workspaceId, ws.id), eq(schema.kvEntry.key, `${b.s.id}/sample:sample-request-1`)));
+    expect((recA!.value as { store_key: string }).store_key).toContain(a.s.id);
+    expect((recB!.value as { store_key: string }).store_key).toContain(b.s.id);
+    expect(recA!.updatedAt.getTime()).toBeGreaterThanOrEqual(recB!.updatedAt.getTime());
+  });
+});
+

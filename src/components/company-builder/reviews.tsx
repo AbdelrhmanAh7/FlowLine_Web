@@ -52,6 +52,11 @@ export function ReviewInbox({ data, canDecide, isOwner, busy, onDecide, onVerify
                 <StatusBadge tone={TONE[it.status] ?? "muted"}>{cbt(t, `review.status.${it.status}`)}</StatusBadge>
                 <span className="ms-auto text-xs text-muted">{formatDate(locale, it.createdAt)}</span>
               </div>
+              {it.proposed.consequential === "refund_or_cancellation" && (
+                <p className="rounded-md bg-elevated px-3 py-2 text-sm text-warning" data-testid={`cb-review-consequential-${it.taskId}`}>
+                  {t("companyBuilder.review.consequential")}
+                </p>
+              )}
               <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
                 <dt className="text-muted">{t("companyBuilder.review.source")}</dt>
                 <dd dir="ltr" className="text-start text-xs">

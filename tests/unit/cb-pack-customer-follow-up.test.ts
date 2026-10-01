@@ -60,7 +60,8 @@ describe("Customer Request Follow-up — frozen acceptance fixtures (first verti
     const f = FOLLOW_UP_FIXTURES[1]!;
     const wrong = { reply_draft: { to: "someone-else@example.com", body: "Hello, carpet cleaning costs 99 SAR.", used_lines: ["Carpet cleaning costs 99 SAR."], asked_for: [], status: "sent" } };
     const failed = pack.evaluate(wrong, f.input, params).filter((c) => !c.passed).map((c) => c.id).sort();
-    expect(failed).toEqual(["asks_for_missing_details", "details_extracted_correctly", "follow_up_recorded", "no_invented_numbers", "record_status_consistent", "reply_only_approved_info", "reply_to_sender", "review_required"].sort());
+    // consequential_needs_person added 2026-10-01 (refund/cancellation rule): it also fails because there is no record.
+    expect(failed).toEqual(["asks_for_missing_details", "consequential_needs_person", "details_extracted_correctly", "follow_up_recorded", "no_invented_numbers", "record_status_consistent", "reply_only_approved_info", "reply_to_sender", "review_required"].sort());
   });
 
   it("the generic per-business fixtures also pass, with other params (Arabic, no approved info)", async () => {
@@ -147,5 +148,111 @@ describe("Customer Request Follow-up — independent review regressions (Fable, 
     const { o } = await run(req);
     expect(o.follow_up_record!.detected).toEqual({ service: "deep cleaning", phone: "0551234567", date: "2026-10-05" });
     expect(failing(o, req)).toEqual([]);
+  });
+});
+
+describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
+  const scoped = { ...params, recordScope: "11111111-2222-4333-8444-555555555555" };
+  const graph = pack.compile(scoped, (id) => id);
+  const run = async (request: Record<string, unknown>, p: Record<string, unknown> = scoped, store = memoryStore()) => {
+    const g = p === scoped ? graph : pack.compile(p as never, (id) => id);
+    const r = await executeGraph(g, { request }, { handler: store.handler });
+    return { r, o: r.output as Record<string, Record<string, unknown>>, store };
+  };
+  const base = { id: "od-1", from: "od@example.com", received_at: "2026-10-01T09:00:00+03:00", subject: "Request" };
+  const failing = (o: Record<string, unknown>, request: Record<string, unknown>, p: Record<string, unknown> = scoped) => pack.evaluate(o, { request }, p as never).filter((c) => !c.passed).map((c) => c.id);
+
+  describe("refund and cancellation requests always need a person (REF-*)", () => {
+    for (const [name, body] of [
+      ["English refund", "I want a refund for my deep cleaning booking"],
+      ["English cancellation", "Please cancel my deep cleaning visit"],
+      ["Arabic refund", "أريد استرداد المبلغ لحجز تنظيف عميق"],
+      ["Arabic cancellation", "أرغب في إلغاء موعد تنظيف عميق"],
+    ] as const) {
+      it(`${name}: flagged for a person, approved policy only, no promise, waits for review`, async () => {
+        const req = { ...base, body };
+        const { r, o } = await run(req);
+        expect(r.status).toBe("succeeded");
+        const reply = o.reply_draft!;
+        expect(reply.consequential).toBe("refund_or_cancellation");
+        expect(reply.status).toBe("awaiting_review");
+        expect(o.follow_up_record).toMatchObject({ consequential: "refund_or_cancellation", requires_human_decision: true, status: "awaiting_review" });
+        const text = String(reply.body);
+        expect(text).toContain("Cancellations are free up to 24 hours before the visit."); // approved policy line only
+        expect(text).toMatch(/Nothing has been refunded or cancelled yet|لم يتم أي استرداد أو إلغاء حتى الآن/);
+        for (const promise of [/we (will|have) refund/i, /refund (has been|was) (issued|processed|made)/i, /you will (get|receive) your money/i, /تم (الاسترداد|استرداد المبلغ|إلغاء)/]) expect(text).not.toMatch(promise);
+        expect(failing(o, req)).toEqual([]);
+      });
+    }
+    it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
+      for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);
+    });
+    it("a tampered draft that drops the flag or promises a refund fails the objective checks", async () => {
+      const req = { ...base, body: "I want a refund please" };
+      const { o } = await run(req);
+      const dropped = structuredClone(o);
+      dropped.reply_draft!.consequential = null;
+      dropped.follow_up_record!.requires_human_decision = false;
+      expect(failing(dropped, req)).toContain("consequential_needs_person");
+      const promised = structuredClone(o);
+      promised.reply_draft!.body = "Hello,\n\nWe have refunded your payment.\n\nThank you — we'll confirm the details with you.";
+      expect(failing(promised, req)).toContain("reply_only_approved_info");
+      const skipped = structuredClone(o);
+      skipped.reply_draft!.status = "approved";
+      expect(failing(skipped, req)).toEqual(expect.arrayContaining(["review_required", "consequential_needs_person"]));
+    });
+    it("a non-refund request is not flagged", async () => {
+      const req = { ...base, body: "How much does deep cleaning cost?" };
+      const { o } = await run(req);
+      expect(o.follow_up_record).toMatchObject({ consequential: null, requires_human_decision: false });
+      expect(failing(o, req)).toEqual([]);
+    });
+  });
+
+  describe("phone numbers as people write them (PH-*)", () => {
+    for (const [written, phone] of [
+      ["+20 10 1234 5678", "+201012345678"],
+      ["010 1234 5678", "01012345678"],
+      ["+966 55 123 4567", "+966551234567"],
+      ["055-123-4567", "0551234567"],
+      ["(055) 123 4567", "0551234567"],
+      ["+٢٠ ١٠ ١٢٣٤ ٥٦٧٨", "+201012345678"],
+    ] as const) {
+      it(`"${written}" → ${phone} (display kept as written)`, async () => {
+        const req = { ...base, body: `deep cleaning on 2026-10-05, call me on ${written} thanks` };
+        const { o } = await run(req);
+        expect((o.follow_up_record!.detected as { phone: string }).phone).toBe(phone);
+        expect(o.follow_up_record!.phone_display).toBe(written.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/^\(/, "(").trim());
+        expect(failing(o, req)).toEqual([]);
+      });
+    }
+    it("nothing unrelated is merged and no country code is guessed", async () => {
+      for (const body of ["2 bedrooms, 3 bathrooms, 450 SAR, deep cleaning", "deep cleaning at 08:00 to 12:30 please", "deep cleaning, order 12 34 56", "deep cleaning 1012345678"]) {
+        const req = { ...base, body };
+        const { o } = await run(req);
+        const phone = (o.follow_up_record!.detected as { phone: string | null }).phone;
+        if (body.endsWith("1012345678")) expect(phone).toBe("1012345678"); // as written: no "+20" or "0" added
+        else expect(phone, body).toBeNull();
+        expect(failing(o, req), body).toEqual([]);
+      }
+    });
+  });
+
+  describe("follow-up records are scoped to the interview (KEY-*)", () => {
+    it("two interviews in one workspace never overwrite each other; retries update the same record", async () => {
+      const store = memoryStore();
+      const a = { ...params, recordScope: "aaaaaaaa-0000-4000-8000-000000000001" };
+      const b = { ...params, recordScope: "bbbbbbbb-0000-4000-8000-000000000002" };
+      const req = { ...base, body: "How much does deep cleaning cost?", sample: true };
+      for (const p of [a, b, a, b]) await run(req, p, store); // two trials each (retry/refresh)
+      expect([...store.entries.keys()].sort()).toEqual(["cb_customer_follow_ups/aaaaaaaa-0000-4000-8000-000000000001/sample:od-1", "cb_customer_follow_ups/bbbbbbbb-0000-4000-8000-000000000002/sample:od-1"]);
+    });
+    it("an unsafe scope is ignored rather than embedded", async () => {
+      const p = { ...params, recordScope: 'x"; $eval("1") ; "' };
+      const req = { ...base, body: "How much does deep cleaning cost?" };
+      const { o, store } = await run(req, p);
+      expect([...store.entries.keys()]).toEqual(["cb_customer_follow_ups/od-1"]);
+      expect(failing(o, req, p)).toEqual([]);
+    });
   });
 });

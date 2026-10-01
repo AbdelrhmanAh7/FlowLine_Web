@@ -379,6 +379,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
       imported_cli_claim: "Text imported from the owner's machine (source not verified here)",
     },
     check: {
+      consequential_needs_person: "Refunds and cancellations are flagged for a person to decide",
       has_output: "There is a result",
       one_outcome: "One clear outcome",
       reply_not_empty: "The reply isn't empty",
@@ -426,6 +427,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
   },
 
   review: {
+    consequential: "Refund or cancellation request: approving sends only this draft text. No refund or cancellation is made by Flowline.",
     inbox: "Review inbox",
     empty: "Nothing to review.",
     source: "Source",
@@ -504,6 +506,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
   },
 
   doesNot: {
+    issue_refunds: "Never issues or promises a refund or cancellation",
     send_without_approval: "Never sends a reply without approval",
     quote_unapproved_prices: "Never quotes prices that aren't approved",
     legal_commitments: "Never makes legal commitments",
@@ -526,6 +529,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     assisted: "Prepared for your review",
     human: "Stays with a person",
     item: {
+      refund_and_cancellation_decisions: "Refund and cancellation decisions",
       approve_and_send_reply: "Approving and sending the reply", complaints: "Complaints", prices_not_in_approved_info: "Any price that isn't approved",
       approve_ledger_entries: "Approving entries", payments: "Payments", tax_filing: "Tax filing",
       approve_and_share_report: "Approving and sharing the report", performance_judgements: "Performance judgements",
@@ -577,6 +581,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     price: "Your Flowline plan price is on the Billing page. No payment is needed for the sample trial.",
   },
   result: {
+    consequential: "Refund or cancellation: a person decides. The draft quotes your approved policy only and promises nothing.",
     reply: "Reply ready for your review",
     asks: "We ask the customer for: {list}",
     handoff: "Passed to a person: {reason}",
