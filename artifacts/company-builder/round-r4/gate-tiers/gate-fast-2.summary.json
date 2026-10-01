@@ -1,0 +1,112 @@
+{
+  "sha": "90602b02a869168783c6fb66141bacac4fff9f2c",
+  "shortSha": "90602b0",
+  "dirty": true,
+  "dirtyCount": 28,
+  "node": "v22.22.0",
+  "pnpm": "10.32.1",
+  "tier": "fast",
+  "stacks": 3,
+  "integrationShards": 4,
+  "startedAt": "2026-10-01T11:47:38.836Z",
+  "finishedAt": "2026-10-01T11:50:53.822Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "/tmp/claude-0/gate-fast-2",
+  "ok": false,
+  "steps": [
+    {
+      "name": "lint",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 4085,
+      "log": "/tmp/claude-0/gate-fast-2/lint.log",
+      "totals": null
+    },
+    {
+      "name": "typecheck",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 7986,
+      "log": "/tmp/claude-0/gate-fast-2/typecheck.log",
+      "totals": null
+    },
+    {
+      "name": "evidence",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 827,
+      "log": "/tmp/claude-0/gate-fast-2/evidence.log",
+      "totals": null
+    },
+    {
+      "name": "unit",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 13025,
+      "log": "/tmp/claude-0/gate-fast-2/unit.log",
+      "totals": {
+        "passed": 646
+      }
+    },
+    {
+      "name": "contract",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 28161,
+      "log": "/tmp/claude-0/gate-fast-2/contract.log",
+      "totals": {
+        "passed": 467
+      }
+    },
+    {
+      "name": "integration",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 79092,
+      "log": "/tmp/claude-0/gate-fast-2/integration.log",
+      "totals": {
+        "passed": 534,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "build",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 15873,
+      "log": "/tmp/claude-0/gate-fast-2/build.log",
+      "totals": null
+    },
+    {
+      "name": "stack",
+      "phase": 3,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 9546,
+      "log": "/tmp/claude-0/gate-fast-2/stack.log",
+      "totals": null,
+      "note": "3 stack(s) on this run's build"
+    },
+    {
+      "name": "chromium",
+      "phase": 4,
+      "status": "fail",
+      "rc": 1,
+      "durationMs": 85347,
+      "log": "/tmp/claude-0/gate-fast-2/chromium.log",
+      "totals": {
+        "failed": 1,
+        "passed": 61
+      }
+    }
+  ]
+}

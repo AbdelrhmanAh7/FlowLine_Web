@@ -1,0 +1,11 @@
+2026-10-01T11:54:49.840Z GATE sha=90602b02a869168783c6fb66141bacac4fff9f2c dirty=28 node=v22.22.0 pnpm=10.32.1 tier=fast stacks=3 intShards=4 steps=build,stack,chromium browsers=sequential
+2026-10-01T11:54:49.844Z STOP test stacks
+2026-10-01T11:54:51.108Z START build
+2026-10-01T11:55:00.714Z END build rc=0 9.6s
+2026-10-01T11:55:00.715Z START stack
+2026-10-01T11:55:08.062Z END stack rc=0 7.3s
+2026-10-01T11:55:08.065Z START chromium
+2026-10-01T11:56:33.540Z END chromium rc=0 85.5s
+2026-10-01T11:56:33.551Z RESTORED artifacts/phase-3/screenshots
+2026-10-01T11:56:33.552Z STOP test stacks
+2026-10-01T11:56:34.825Z GATE PASS

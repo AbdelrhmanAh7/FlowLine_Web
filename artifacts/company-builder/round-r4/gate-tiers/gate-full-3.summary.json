@@ -1,0 +1,134 @@
+{
+  "sha": "90602b02a869168783c6fb66141bacac4fff9f2c",
+  "shortSha": "90602b0",
+  "dirty": true,
+  "dirtyCount": 28,
+  "node": "v22.22.0",
+  "pnpm": "10.32.1",
+  "tier": "full",
+  "stacks": 2,
+  "integrationShards": 4,
+  "startedAt": "2026-10-01T11:29:19.818Z",
+  "finishedAt": "2026-10-01T11:37:55.920Z",
+  "browsersMode": "parallel",
+  "failFast": false,
+  "out": "/tmp/claude-0/gate-full-3",
+  "ok": false,
+  "steps": [
+    {
+      "name": "lint",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 3600,
+      "log": "/tmp/claude-0/gate-full-3/lint.log",
+      "totals": null
+    },
+    {
+      "name": "typecheck",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 7997,
+      "log": "/tmp/claude-0/gate-full-3/typecheck.log",
+      "totals": null
+    },
+    {
+      "name": "evidence",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 790,
+      "log": "/tmp/claude-0/gate-full-3/evidence.log",
+      "totals": null
+    },
+    {
+      "name": "unit",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 13015,
+      "log": "/tmp/claude-0/gate-full-3/unit.log",
+      "totals": {
+        "passed": 646
+      }
+    },
+    {
+      "name": "contract",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 29305,
+      "log": "/tmp/claude-0/gate-full-3/contract.log",
+      "totals": {
+        "passed": 467
+      }
+    },
+    {
+      "name": "integration",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 157359,
+      "log": "/tmp/claude-0/gate-full-3/integration.log",
+      "totals": {
+        "passed": 534,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "build",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 16580,
+      "log": "/tmp/claude-0/gate-full-3/build.log",
+      "totals": null
+    },
+    {
+      "name": "stack",
+      "phase": 3,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 11631,
+      "log": "/tmp/claude-0/gate-full-3/stack.log",
+      "totals": null,
+      "note": "4 stack(s) on this run's build"
+    },
+    {
+      "name": "chromium",
+      "phase": 4,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 373762,
+      "log": "/tmp/claude-0/gate-full-3/chromium.log",
+      "totals": {
+        "passed": 128
+      }
+    },
+    {
+      "name": "firefox",
+      "phase": 4,
+      "status": "fail",
+      "rc": 1,
+      "durationMs": 393549,
+      "log": "/tmp/claude-0/gate-full-3/firefox.log",
+      "totals": {
+        "failed": 1,
+        "passed": 61
+      }
+    },
+    {
+      "name": "webkit",
+      "phase": 4,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 455792,
+      "log": "/tmp/claude-0/gate-full-3/webkit.log",
+      "totals": {
+        "passed": 62
+      }
+    }
+  ]
+}

@@ -120,3 +120,25 @@ Confirmed OK by the reviewer:
 - AR/EN key parity;
 - migrations 0020–0022 match `schema.ts`.
 
+
+### Gate tooling — `pnpm gate` / `pnpm gate:full` (owner decision 2026-10-01: two tiers)
+
+Measured on this 4-CPU cloud container (summaries in `round-r4/gate-tiers/`):
+
+| Run | Config | Wall | Result |
+|---|---|---|---|
+| sequential gate (old way) | one step at a time | ≈20 min | (see `gates-final-f74285c/`) |
+| `pnpm gate` (fast) | static ∥, integration 4 shards ∥ build → 3 stacks, Chromium `@critical`/`@cross-browser` 3 shards | **3m17s** | PASS (62/62) |
+| `pnpm gate` (fast) | same | 3m16s | FAIL: 1 `ECONNRESET` on sign-in (GATE-01) |
+| fast browsers only ×4 | build, stack, Chromium | 85–87 s each | 4/4 PASS |
+| `pnpm gate:full`, projects sequential, shared 3 stacks | — | 9m45s | PASS (128 + 62 + 62) |
+| `pnpm gate:full`, 3 projects at once on 7 disjoint stacks | — | 8m41s | PASS |
+| same, again | — | 8m38s | FAIL: Company Builder journey 10 s wait timed out (load) |
+| same + integration overlapping browsers, 4 stacks | — | 8m37s | FAIL: same journey in Firefox (load) |
+
+| ID | Sev | Finding | Status |
+|---|---|---|---|
+| GATE-01 | P3 | One `ECONNRESET` on `POST /api/auth/sign-in/email` (e2e/ai-hub.spec.ts:28) on the default stack while 3 stacks ran Chromium shards. The stack logged no error. Seen 1 time in 7 fast-tier browser runs. Suspected keep-alive socket reuse racing the server's idle close under load; not root-caused. | OPEN — a flaky run is a failing gate; rerunning to green is not a fix |
+| GATE-02 | — | Running all three browser projects at once on 4 CPUs is load-flaky (10 s waits time out). | DESIGN: `gate:full` runs projects at once only on ≥8 CPUs; below that, one after another (each split over stacks). |
+
+Integration sharding also exposed a test-order dependency (`tests/integration/ai-hub.test.ts`, "legacy local configuration"): its claim loop processed agent runs other files had left queued, which called the AI double. Fixed test-side by processing those runs and resetting the double first; the "no chat call" assertion is unchanged. Sharded integration: 534/534 in 66–93 s (was 190 s).
