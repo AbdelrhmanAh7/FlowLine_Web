@@ -300,6 +300,9 @@ Q01–Q14 / R01–R36 / copy ids: PENDING — reference files not supplied (see 
 | CB-31 | Packs B–D (invoice, operations summary, lead qualification) | v2 §7 | unit packs | PASS (unit only) — no browser journey | `tests/unit/cb-pack-*.test.ts` |
 | CB-32 | Experiment mode metrics without sensitive payloads; defined metrics; no double counting | v2 §12 | unit metrics; int experiment | PASS (instrumentation only; no study run) | `src/company-builder/experiment-metrics.ts`; COMPETITIVE_TEST_PROTOCOL.md |
 | CB-33 | Competitive test protocol + dataset | v2 §13 | — | READY; all rows NOT TESTED; edge NOT YET PROVEN | `docs/company-builder/competitive-dataset.json` |
-| CB-34 | Arabic operational (RTL, mixed input, Arabic/Persian digits, explicit time zone) | v2 §10 | e2e Arabic; exploratory (Chromium substitute); unit format | PASS with open P3 EX-02 (mixed digit display) | BUGS.md EX-02 |
-| CB-35 | Real Chrome exploratory QA; live Gmail; human usability; real CLI trials | v2 §14 | owner-run | BLOCKED / NOT TESTED | real Chrome download blocked by network policy; no credentials |
+| CB-34 | Arabic operational (RTL, mixed input, Arabic/Persian digit input, explicit time zone); digits 0–9 in all product formatting (owner decision 2026-10-01) | v2 §10 | e2e Arabic; unit latin-digits + format | PASS | `tests/unit/latin-digits.test.ts`; BUGS.md EX-02 FIXED |
+| CB-35 | Real Chrome exploratory QA; live Gmail; human usability; real CLI trials | v2 §14 | owner-run | BLOCKED / NOT TESTED | `dl.google.com` still 403 in this container after the owner's change; no credentials |
+| CB-36 | Refund/cancellation always needs a person; draft can't bypass the reviewer; no money action | owner 2026-10-01 §3 | unit REF-*; int REF | PASS | BUGS.md FB-11 |
+| CB-37 | Phone numbers with separators recognised; display kept; no country-code guessing | owner §5A | unit PH-*; int PH | PASS | BUGS.md FB-07 |
+| CB-38 | Follow-up records scoped per interview: no cross-session overwrite, no duplicates (beta blocker) | owner §5B | unit KEY-*; int KEY | PASS | BUGS.md FB-12 |
 

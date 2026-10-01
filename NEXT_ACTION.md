@@ -1,32 +1,27 @@
 # Next action
 
-## Company Builder — direction v2 (outcome first), 2026-10-01
+## Company Builder — direction v2 + owner decisions, 2026-10-01
 
 **Status:**
 
-- **HYPOTHESIS READY TO TEST.** The competitive edge is NOT YET PROVEN.
-- **First vertical slice (Customer Request Follow-up): COMPLETE** in DETERMINISTIC_TEST mode with sample data.
-- **Overall Company Builder scope: NOT COMPLETE.**
-- Verdicts and gates: `docs/company-builder/REPORT.md` (top section). Findings: `artifacts/company-builder/BUGS.md`.
+- HYPOTHESIS READY TO TEST — COMPETITIVE EDGE NOT YET PROVEN.
+- First vertical slice: COMPLETE (DETERMINISTIC_TEST, sample data). Overall Company Builder: NOT COMPLETE.
+- The automated browser gate passes on `1fe3d31`.
+- Real Chrome exploratory QA: BLOCKED. `dl.google.com` was still 403 in this container.
+- Live Gmail: NOT TESTED.
 
-The commits on branch `claude/company-builder-milestones-abc-pmba6v` after `816f342` are **local only**, because the
-amendment authorises no push. The cloud container is ephemeral: the owner must approve a push or the work is lost.
+Report: `docs/company-builder/REPORT.md` (top). Findings: `artifacts/company-builder/BUGS.md`. The branch is pushed for
+preservation only: no merge, deploy, invitations, live payments or force push.
 
-**Next owner actions, in order:**
+**Next owner actions:**
 
-1. Approve pushing the branch.
-2. Run the first-slice journey locally (`OWNER_TEST_GUIDE.md`, with the plan and acceptance steps of
-   `TASK_PACKS.md` §A).
-3. Real Chrome exploratory QA. Real Chrome is blocked in the cloud container.
-4. Decide the open product questions:
-   - FB-11: route refund requests to a person?
-   - EX-02: Arabic digit style in interpolated numbers.
-5. Run the competitive protocol (`COMPETITIVE_TEST_PROTOCOL.md`).
-6. Real CLI trials on the laptop.
-7. Codex re-test.
-
-**Tooling note ENV-04:** `pnpm stop:test` does not stop a `FLOWLINE_TEST_NEXT=start` stack. Kill the listeners on
-ports 3100, 4010 and 4011 before restarting, or E2E silently runs against the old build.
+1. In a NEW cloud session (with `dl.google.com` allowed), install Google Chrome and run the real-Chrome exploratory
+   QA against this branch. Keep the Chromium substitute evidence as historical.
+2. Run the first-slice journey locally (`OWNER_TEST_GUIDE.md`).
+3. Run the competitive protocol.
+4. Real CLI trials on the laptop.
+5. Codex re-test.
+6. Decide merge.
 
 ## Company Builder (Milestones A–C) — feature branch `claude/company-builder-milestones-abc-pmba6v`
 

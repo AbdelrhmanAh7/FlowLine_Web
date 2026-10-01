@@ -4,6 +4,58 @@ Session: Claude Code cloud session, 2026-09-30. Brief: `docs/company-builder/CLO
 Baseline: `main` @ 9324b1fed677f03e8c044eb1373b8577167abeb5. Branch: `claude/company-builder-milestones-abc-pmba6v`
 (pushed to origin as a feature branch only — **not merged, no PR, not deployed**).
 
+## Owner decisions 2026-10-01 — current status (candidate `1fe3d31` + docs)
+
+The branch was pushed for preservation only (approved 2026-10-01; first push `8439f6f`, remote = local verified).
+**No merge, deploy, production, invitations, live payments or force push.**
+
+### Verdicts
+
+| Verdict | Status | Basis |
+|---|---|---|
+| FIRST VERTICAL SLICE | **COMPLETE**, DETERMINISTIC_TEST with sample data | See the changes and gates below. |
+| OVERALL COMPANY BUILDER | **NOT COMPLETE** | Packs B–D are unit-level only. Real Chrome QA, live Gmail, real CLI runs, human usability and the competitive test have not run. |
+| BUSINESS RESULT QUALITY | Frozen fixtures **10/10**; follow-up pack tests **41/41**; benchmark v2 **12/12**; benchmark v1 **7/12** (direction change) | Deterministic generator only. The benchmarks were written by the implementer. Real customer requests: NOT TESTED. |
+| AUTOMATED BROWSER GATE | **PASS**: Chromium **127/127** → Firefox **62/62** → WebKit **62/62** (sequential, one worker) | `artifacts/company-builder/gates-v3/e2e-*.txt` |
+| REAL CHROME EXPLORATORY QA | **BLOCKED / NOT RUN** | `dl.google.com` was still refused by the proxy (403) after the owner's settings change, re-checked twice in this container. It probably applies to new containers only. The Chromium substitute evidence (`v2-first-slice/exploratory/`) is kept as **historical evidence and is not Chrome QA**. |
+| LIVE GMAIL VERIFICATION | **NOT TESTED** | No connection or credentials; local sample outbox only. |
+| COMPETITIVE HYPOTHESIS | **HYPOTHESIS READY TO TEST — COMPETITIVE EDGE NOT YET PROVEN** | Protocol ready; all 36 competitor rows NOT_TESTED. |
+
+### Changes made for the owner decisions (`1fe3d31`)
+
+1. **Refunds and cancellations always need a person.**
+   - The draft quotes only the approved policy, adds a fixed no-promise note, and is flagged `refund_or_cancellation`.
+   - The draft waits for the named reviewer; an editor gets 403.
+   - Approving only puts the text in the local outbox. Billing is unchanged, and no money or account step exists.
+   - Tests: unit REF-* (8) and integration REF.
+2. **Digits 0–9 everywhere, Arabic UI included.** Formatters use `ar-EG-u-nu-latn`. Product-wide regression
+   `latin-digits.test.ts`; the E2E Arabic page body is checked. Typed text is quoted as written.
+3. **Phone numbers as written.**
+   - Separators are joined only for "+" or leading-0 sequences of 9–13 digits; no country code is guessed.
+   - The display form is kept as written.
+   - Tests: unit PH-* (7) and integration PH through the real worker.
+4. **Follow-up records per interview (beta blocker): FIXED and verified.** The key is
+   `<session>/<sample:>request id`. The integration test covers two interviews, concurrent trials, retry, refresh and a
+   new plan version: no overwrite and no duplicates.
+5. **`pnpm stop:test`** now stops the stack in production mode too (ENV-04). It was verified to free :3100, :4010 and
+   :4011.
+6. **PRE-02** (phase-1 intermittent failure) did not reproduce in either full Chromium run (127/127 twice). It stays
+   recorded and is **not claimed fixed**.
+
+### Gates on `1fe3d31` (sequential)
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Lint | ✓ | — |
+| Typecheck | ✓ | — |
+| Evidence-secrets check | 0 hits | — |
+| Unit | **612/612** | `gates-v3/unit.txt` |
+| Contract | **467/467** | `gates-v3/contract.txt` |
+| Integration | **520/520**, stack stopped | `gates-v3/integration.txt` |
+| E2E | as above | — |
+
+---
+
 ## Direction v2 — outcome first (2026-09-30 → 2026-10-01): **HYPOTHESIS READY TO TEST**
 
 This direction follows the owner's product-direction amendment and its review correction. Commits are **local only**
