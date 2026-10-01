@@ -1,7 +1,7 @@
 # Company Builder — question model (bank v2)
 
 Source: `src/company-builder/questions.ts` (`QUESTION_BANK_VERSION = 2`). Copy (title + "why we ask") is in
-`src/i18n/messages/company-builder.{ar,en}.ts` under `companyBuilder.q.<id>`.
+`src/i18n/messages/{ar,en}.json` under `companyBuilder.q.<id>`.
 
 ## Rules
 

@@ -38,6 +38,10 @@ export type ButtonSize = NonNullable<ButtonVariantProps["size"]>;
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Decorative icon placed before the label (inline start, so it mirrors in RTL). */
+  startIcon?: ReactNode;
+  /** Decorative icon placed after the label (inline end, so it mirrors in RTL). */
+  endIcon?: ReactNode;
   loading?: boolean;
   /** Server-confirmed success: draws an animated check over the label until the parent clears it (the label keeps the button's width and accessible name). */
   confirm?: boolean;
@@ -47,7 +51,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "secondary", size = "md", loading, confirm, disabledReason, tooltipSide = "bottom", className, children, onClick, disabled, type = "button", "aria-describedby": describedByProp, ...rest },
+  { variant = "secondary", size = "md", startIcon, endIcon, loading, confirm, disabledReason, tooltipSide = "bottom", className, children, onClick, disabled, type = "button", "aria-describedby": describedByProp, ...rest },
   ref,
 ) {
   const blocked = Boolean(disabledReason) || disabled || loading;
@@ -76,13 +80,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {confirm ? (
         <>
           {/* The label stays in place (accessible name, no layout shift: the button keeps its width); the check is drawn over it. */}
-          <span className="inline-flex items-center gap-[inherit] opacity-0">{children}</span>
+          <span className="inline-flex items-center gap-[inherit] opacity-0">{startIcon ? <span aria-hidden="true" className="inline-flex items-center">{startIcon}</span> : null}{children}{endIcon ? <span aria-hidden="true" className="inline-flex items-center">{endIcon}</span> : null}</span>
           <span aria-hidden className="absolute inset-0 flex items-center justify-center">
             <ConfirmCheck />
           </span>
         </>
       ) : (
-        children
+        <>
+          {startIcon ? <span aria-hidden="true" className="inline-flex shrink-0 items-center">{startIcon}</span> : null}
+          {children}
+          {endIcon ? <span aria-hidden="true" className="inline-flex shrink-0 items-center">{endIcon}</span> : null}
+        </>
       )}
     </button>
   );

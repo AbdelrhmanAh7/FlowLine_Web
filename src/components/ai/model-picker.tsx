@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { modelFreeNote } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
 import type { AiRouteRef, PickerModelDto } from "@/lib/ai";
-import { Input, Select, StatusBadge, cx } from "../ui";
+import { Checkbox, Input, Select, StatusBadge, cx } from "../ui";
 import { LtrRuns } from "./ltr-runs";
 
 type CapFilter = "any" | "tools" | "structuredOutput";
@@ -103,7 +103,7 @@ export function ModelPicker({
           <option value="known">{t("aiHub.picker.contextKnown")}</option>
         </Select>
         <label className="flex items-center gap-1.5 text-sm text-med">
-          <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
+          <Checkbox checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
           {t("aiHub.picker.showRemoved")}
         </label>
       </div>

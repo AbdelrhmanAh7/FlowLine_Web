@@ -83,7 +83,7 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
 
   return (
     <WorkspaceContext.Provider value={{ user, workspace, role, canEdit: role !== "viewer", workspaces }}>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[200] focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-on-accent">
+      <a href="?section=main" data-section-focus="true" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[200] focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-on-accent">
         {t("shell.skipToContent")}
       </a>
       <div className="flex h-dvh overflow-hidden bg-app">

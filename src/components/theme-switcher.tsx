@@ -41,7 +41,7 @@ export function ThemeSwitcher({ className, onChange, compact = false }: { classN
             aria-label={compact ? label : undefined}
             title={label}
             onClick={() => {
-              if (p !== theme) setTheme(p);
+              setTheme(p);
               onChange?.();
             }}
             className={cn(

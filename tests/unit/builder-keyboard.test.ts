@@ -50,6 +50,16 @@ describe("side panel hook (ui/side-panel.ts)", () => {
     expect(src).toContain('if (action === "close") onClose();');
   });
 
+  it("handles a lost-focus Escape only when it targets the page root, without moving focus", () => {
+    expect(src).toContain('if (!rootTarget || document.activeElement !== document.body) return;');
+    expect(src).toContain('const rootTarget = e.target === document.body || e.target === document.documentElement;');
+    expect(src).toContain('document.addEventListener("keydown", onRootEscape);');
+    expect(src).toContain('document.removeEventListener("keydown", onRootEscape)');
+    const handler = src.slice(src.indexOf("const onRootEscape ="), src.indexOf('document.addEventListener("keydown", onRootEscape);'));
+    expect(handler).toContain("panelEscapeAction(");
+    expect(handler).not.toContain(".focus(");
+  });
+
   it("stays non-modal: no focus trap, no aria-modal, nothing hidden behind it", () => {
     expect(src).not.toMatch(/FocusScope|aria-modal|aria-hidden|inert|RadixDialog|Popover/);
   });
@@ -66,7 +76,7 @@ describe("Copilot panel (DV2-M02)", () => {
 
   it("is a dialog for the keyboard: request field takes focus, Escape closes, focus returns to the launcher", () => {
     expect(src).toContain("useSidePanel<HTMLElement>({ open, onClose, busy: ask.isPending || decide.isPending, returnFocusTo })");
-    expect(src).toMatch(/<aside ref=\{panelRef\} hidden=\{!open\} onKeyDown=\{onKeyDown\} role="dialog" aria-label="Copilot"/);
+    expect(src).toMatch(/<aside ref=\{panelRef\} hidden=\{!open\} onKeyDown=\{onKeyDown\} role="dialog" aria-label=\{t\("copilot.title"\)\}/);
     expect(src).toMatch(/<Textarea id="copilot-request" data-initial-focus /);
   });
 

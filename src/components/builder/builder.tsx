@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Minus, Plus, Redo2, Sparkles, TriangleAlert, Undo2, Zap } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createNode, newNodeId } from "@/engine/nodes";
+import { createNode, newNodeId, NODE_DEFINITIONS } from "@/engine/nodes";
 import { TRIGGER_TYPES, type FlowGraph, type NodeType } from "@/engine/types";
 import { checkConnection, validateGraph } from "@/engine/validate";
 import { api, ApiError } from "@/lib/api";
@@ -41,11 +41,11 @@ import { connectionReason, issueMessage, nodeTitle } from "@/i18n/engine-text";
 import type { MessageKey } from "@/i18n/types";
 import { useWorkspace } from "../shell/workspace-context";
 import { useToast } from "../toast";
-import { Button, ConfirmCheck, ErrorState, Kbd, Popover, PopoverContent, PopoverTrigger, Skeleton, useConfirm, useKeepMounted, cx } from "../ui";
+import { Button, ConfirmCheck, ErrorState, Input, Kbd, Popover, PopoverContent, PopoverTrigger, Skeleton, useConfirm, useKeepMounted, cx } from "../ui";
 import { CanvasStatusContext, nodeTypes } from "./flow-node";
 import { edgeId, toDomain, toRF, type RFEdge, type RFNode, type Snapshot } from "./graph-utils";
 import { NodeDrawer } from "./node-drawer";
-import { DRAG_MIME, NodePalette } from "./palette";
+import { DRAG_MIME, DRAG_TEXT_PREFIX, NodePalette } from "./palette";
 import { useSearchParams } from "next/navigation";
 import { CopilotPanel } from "./copilot-panel";
 import { HistoryPanel } from "./history-panel";
@@ -585,13 +585,15 @@ function Editor({ data }: { data: FlowResponse }) {
         if (d) nudge(d[0], d[1]);
       }}
       onDragOver={(e) => {
-      if (e.dataTransfer.types.includes(DRAG_MIME)) {
+      if (e.dataTransfer.types.includes(DRAG_MIME) || e.dataTransfer.types.includes("text/plain")) {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
       }
     }} onDrop={(e) => {
-      const type = e.dataTransfer.getData(DRAG_MIME) as NodeType;
-      if (!type) return;
+      const text = e.dataTransfer.getData("text/plain");
+      const rawType = e.dataTransfer.getData(DRAG_MIME) || (text.startsWith(DRAG_TEXT_PREFIX) ? text.slice(DRAG_TEXT_PREFIX.length) : "");
+      if (!Object.hasOwn(NODE_DEFINITIONS, rawType)) return;
+      const type = rawType as NodeType;
       e.preventDefault();
       const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
       addNode(type, { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 });
@@ -714,7 +716,7 @@ function Editor({ data }: { data: FlowResponse }) {
           <label htmlFor="flow-name" className="sr-only">
             {t("builder.flowName")}
           </label>
-          <input
+          <Input
             id="flow-name"
             value={name}
             readOnly={readOnly}
@@ -724,7 +726,7 @@ function Editor({ data }: { data: FlowResponse }) {
               setName(e.target.value);
             }}
             onBlur={() => !name.trim() && setName(flow.name)}
-            className="min-w-0 rounded-sm bg-transparent px-1 font-semibold text-hi focus:bg-card focus:outline-none"
+            className="h-auto w-auto min-w-0 rounded-sm border-0 bg-transparent px-1 py-0 text-[inherit] font-semibold text-hi focus:border-transparent focus:bg-card focus:outline-none"
             style={{ width: `${Math.min(Math.max(name.length, 8), 40) + 1}ch` }}
           />
         </nav>
@@ -778,7 +780,7 @@ function Editor({ data }: { data: FlowResponse }) {
             </Button>
           )}
           <Button ref={copilotButton} size="sm" variant="ghost" onClick={() => { setCopilotOpen((o) => !o); setHistoryOpen(false); }} aria-pressed={copilotOpen} disabledReason={readOnly ? (readOnlyReason ?? t("builder.readOnly")) : !online ? t("builder.copilotOffline") : null}>
-            <Sparkles aria-hidden className="size-3.5 text-cat-ai" /> Copilot
+            <Sparkles aria-hidden className="size-3.5 text-cat-ai" /> {t("copilot.title")}
           </Button>
           {!isMobile && (
             <Button size="sm" variant="ghost" onClick={() => setDockOpen((o) => !o)} aria-pressed={dockOpen} title={t("builder.toggleDock", { shortcut: `${modKey()}J` })}>

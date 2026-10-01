@@ -2,6 +2,7 @@
 // DETERMINISTIC_TEST double for the Claude/Codex CLIs (no model, no network). Behaviour comes from FAKE_MODE, which
 // the per-mode wrapper scripts set (the adapter passes the child a minimal environment, so env vars can't reach it).
 import { writeFileSync, symlinkSync } from "node:fs";
+import { dirname } from "node:path";
 
 const mode = process.env.FAKE_MODE ?? "success";
 const flavour = process.env.FAKE_FLAVOUR ?? "claude";
@@ -79,7 +80,10 @@ switch (mode) {
     break;
   case "symlink": {
     const i = args.indexOf("--output-last-message");
-    symlinkSync("/etc/hostname", args[i + 1]);
+    // Windows junctions exercise the same outside-job symlink refusal without requiring
+    // administrator privileges for file symlinks. The target is never read or removed.
+    if (process.platform === "win32") symlinkSync(dirname(process.cwd()), args[i + 1], "junction");
+    else symlinkSync("/etc/hostname", args[i + 1]);
     break;
   }
   case "malicious":

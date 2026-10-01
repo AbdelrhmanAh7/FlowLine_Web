@@ -2,7 +2,7 @@
  * Company Builder — Milestones A–C against real PostgreSQL and the real worker code (engine runs claimed and
  * processed by worker/runner). DETERMINISTIC_TEST mode: no model, no CLI, no external service.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sessionHolder = vi.hoisted(() => ({ headers: new Headers() }));
@@ -26,6 +26,7 @@ import { decideReview, pauseTask, pendingReviewCount, requestActivation, request
 import { reconcileActiveEntitlements } from "@/server/company-builder/entitlement";
 import { deleteSession } from "@/server/company-builder/sessions";
 import { answer, createSession } from "@/server/company-builder/sessions";
+import { recordClientEvent } from "@/server/company-builder/experiment";
 import { recordUserVerdict, refreshTrial, startTrial } from "@/server/company-builder/trials";
 import { resetFaults, setFault } from "@/server/faults";
 import { saveFlow } from "@/server/flows";
@@ -133,6 +134,28 @@ describe("Milestone A — interview persistence", () => {
   });
 });
 
+describe("Company Builder experiment event concurrency", () => {
+  it("stores only one concurrent active-time slice per participant and session", async () => {
+    const previous = process.env.FLOWLINE_CB_EXPERIMENT;
+    process.env.FLOWLINE_CB_EXPERIMENT = "on";
+    try {
+      const { owner, ws, session } = await installedCompany();
+      const outcomes = await Promise.all(Array.from({ length: 8 }, () => recordClientEvent(owner, ws.id, session.id, { kind: "active_time", seconds: 30 })));
+      expect(outcomes.filter((x) => x.stored)).toHaveLength(1);
+      expect(outcomes.filter((x) => !x.stored)).toHaveLength(7);
+      const events = await db
+        .select()
+        .from(schema.cbExperimentEvent)
+        .where(and(eq(schema.cbExperimentEvent.sessionId, session.id), eq(schema.cbExperimentEvent.userId, owner.id), eq(schema.cbExperimentEvent.kind, "active_time")));
+      expect(events).toHaveLength(1);
+      await expect(recordClientEvent(owner, ws.id, session.id, { kind: "active_time", seconds: 30 })).resolves.toEqual({ stored: false });
+    } finally {
+      if (previous === undefined) delete process.env.FLOWLINE_CB_EXPERIMENT;
+      else process.env.FLOWLINE_CB_EXPERIMENT = previous;
+    }
+  });
+});
+
 describe("Milestone B — real drafts, idempotent installation, sample trials", () => {
   it("creates ONE real draft flow for the primary outcome — no agent, no knowledge, other areas not installed — nothing published or scheduled", async () => {
     const { ws, bp, installation } = await installedCompany();
@@ -200,7 +223,23 @@ describe("Milestone B — real drafts, idempotent installation, sample trials", 
     await approveBlueprint(owner, ws.id, bp.id);
     await expect(install(owner, ws.id, bp.id, { locale: "en", crashAfterItems: 1 })).rejects.toThrow();
     const [inst] = await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.blueprintId, bp.id));
-    await cancelInstallation(ws.id, inst!.id);
+    let unlock!: () => void;
+    let acquired!: () => void;
+    const held = new Promise<void>((resolve) => { unlock = resolve; });
+    const locked = new Promise<void>((resolve) => { acquired = resolve; });
+    const holder = db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`cb-install:${inst!.id}`}))`);
+      acquired();
+      await held;
+    });
+    await locked;
+    let cancelSettled = false;
+    const cancelling = cancelInstallation(ws.id, inst!.id).finally(() => { cancelSettled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(cancelSettled).toBe(false); // cancellation waits for the same per-installation critical section as a step
+    unlock();
+    await holder;
+    await cancelling;
     await expectHttpError(install(owner, ws.id, bp.id, { locale: "en" }), 409, "INSTALLATION_CANCELLED");
     expect(await installedItems(inst!.id)).toHaveLength(1);
   });

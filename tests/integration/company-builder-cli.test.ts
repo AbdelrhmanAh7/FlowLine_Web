@@ -5,14 +5,52 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import type { SpawnOptions, SpawnSyncOptions } from "node:child_process";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const sessionHolder = vi.hoisted(() => ({ headers: new Headers() }));
+const fakeExecutables = vi.hoisted(() => new Map<string, { script: string; mode: string; flavour: string }>());
+// Windows cannot execute a Unix shebang with shell:false. Keep real child processes, stdin,
+// timeouts and output handling; translate only this suite's registered fixture executables.
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  const fixtureArgs = (command: string, args: readonly string[], options: SpawnOptions | SpawnSyncOptions) => {
+    const fixture = fakeExecutables.get(command);
+    return fixture
+      ? { command: process.execPath, args: [fixture.script, ...args], options: { ...options, env: { ...options.env, FAKE_MODE: fixture.mode, FAKE_FLAVOUR: fixture.flavour } } }
+      : { command, args, options };
+  };
+  return {
+    ...actual,
+    spawn: (command: string, args: readonly string[] = [], options: SpawnOptions = {}) => {
+      const f = fixtureArgs(command, args, options);
+      return actual.spawn(f.command, f.args, f.options as SpawnOptions);
+    },
+    spawnSync: (command: string, args: readonly string[] = [], options: SpawnSyncOptions = {}) => {
+      const f = fixtureArgs(command, args, options);
+      return actual.spawnSync(f.command, f.args, f.options as SpawnSyncOptions);
+    },
+  };
+});
 vi.mock("next/headers", () => ({
   headers: async () => sessionHolder.headers,
   cookies: async () => ({ get: () => undefined }),
 }));
+vi.mock("@/company-builder/cli/adapter", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/company-builder/cli/adapter")>();
+  return {
+    ...actual,
+    // Deterministic fixtures must inspect fixture configuration, never the laptop owner's CLI home.
+    // The real preflight and its inherited-instruction checks still run.
+    preflight: (cli: "claude" | "codex", config: CliConfig) => {
+      const result = actual.preflight(cli, config, {
+        ...process.env, HOME: config.jobRoot, CODEX_HOME: join(config.jobRoot, ".codex"),
+      });
+      return result;
+    },
+  };
+});
 
 import { db, schema } from "@/db";
 import { GET as cbGET, POST as cbPOST } from "@/app/api/workspaces/[wid]/company-builder/[...path]/route";
@@ -22,7 +60,7 @@ import { auth } from "@/lib/auth";
 import type { CurrentUser } from "@/server/access";
 import { approveBlueprint, generateDeterministic } from "@/server/company-builder/blueprints";
 import { processJob } from "@/server/company-builder/cli-controller";
-import { claimJob, enqueueJob, exportJob, importJobResult, recoverStaleJobs } from "@/server/company-builder/cli-jobs";
+import { applyJobResult, cancelJob, claimJob, enqueueJob, exportJob, importJobResult, recoverStaleJobs } from "@/server/company-builder/cli-jobs";
 import { answer, createSession } from "@/server/company-builder/sessions";
 import { ssoSessionCookie } from "@/server/sso";
 import { createWorkspace } from "@/server/workspaces";
@@ -38,6 +76,7 @@ function fakeBin(mode: string, flavour: "claude" | "codex" = "claude") {
     writeFileSync(p, `#!/bin/sh\nFAKE_MODE=${mode} FAKE_FLAVOUR=${flavour} exec "${process.execPath}" "${FAKE}" "$@"\n`);
     chmodSync(p, 0o755);
   }
+  if (process.platform === "win32") fakeExecutables.set(p, { script: FAKE, mode, flavour });
   return p;
 }
 const cfg = (bin: string, timeoutMs = 10_000): CliConfig => ({ bin, jobRoot, timeoutMs, maxOutputBytes: 64 * 1024 });
@@ -48,8 +87,12 @@ let sessionId: string;
 
 beforeAll(async () => {
   process.env.FLOWLINE_COMPANY_BUILDER = "on";
-  binDir = mkdtempSync(join(tmpdir(), "cb-fake-bins-"));
-  jobRoot = mkdtempSync(join(tmpdir(), "cb-jobs-"));
+  // Claude can set TEMP beneath ~/.claude; that would inherit the owner's CLAUDE.md.
+  // Use the standard Windows scratch directory for deterministic isolation fixtures.
+  const scratch = process.platform === "win32" && process.env.SystemRoot ? join(process.env.SystemRoot, "Temp") : tmpdir();
+  mkdirSync(scratch, { recursive: true });
+  binDir = mkdtempSync(join(scratch, "cb-fake-bins-"));
+  jobRoot = mkdtempSync(join(scratch, "cb-jobs-"));
   founder = await makeUser("cb-founder");
   const ws = await createWorkspace(founder, unique("Founder Lab"));
   wsId = ws.id;
@@ -145,7 +188,7 @@ describe("who can reach the CLI prototype", () => {
 describe("controller + adapter with fake CLIs", () => {
   it("a valid Claude-style result becomes a NEW plan version that needs review; usage is only what the CLI reported", async () => {
     const job = await runWith(fakeBin("success"));
-    expect(job.status).toBe("review_required");
+    expect(job.status, JSON.stringify({ error: job.error, reported: job.reported })).toBe("review_required");
     expect(job.reported).toMatchObject({ totalCostUsd: 0.0123, inputTokens: 100, outputTokens: 50, calls: 1, models: ["fake-model"] });
     const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
     expect(bp).toMatchObject({ generator: "cli_claude", status: "review_required" });
@@ -238,6 +281,31 @@ describe("controller + adapter with fake CLIs", () => {
     expect(rec).toMatchObject({ status: "failed", error: { code: "INTERRUPTED" } });
   });
 
+  it("does not apply a CLI proposal after its base plan has been superseded", async () => {
+    const job = await newJob();
+    const before = (await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).length;
+    const [currentSession] = await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, sessionId));
+    await answer(wsId, sessionId, { questionId: "cust_info", value: "Updated after the CLI job was queued.", revision: currentSession!.revision, mode: "correction" });
+    const newer = await generateDeterministic(founder, wsId, sessionId, "en");
+    const claimed = (await claimJob(wsId, "superseded-controller"))!;
+    await processJob(claimed, founder, cfg(fakeBin("success")));
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "failed", error: { code: "PLAN_SUPERSEDED" }, resultBlueprintId: null });
+    expect((await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId)))).toHaveLength(before + 1);
+    expect((await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, newer.row.id))).length).toBe(1);
+  });
+
+  it("rechecks a cancellation in the same transaction that would apply a validated proposal", async () => {
+    const job = await newJob();
+    const before = (await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).length;
+    await db.update(schema.cbCliJob).set({ status: "validating" }).where(eq(schema.cbCliJob.id, job.id));
+    await cancelJob(founder, wsId, job.id);
+    await expectHttpError(applyJobResult(founder, job, { tasks: [{ taskId: "customer-follow-up", include: true, note: "Cancelled", params: {} }], notes: "" }, "cli_claude"), 409, "JOB_CANCELLED");
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "validating", cancelRequestedAt: expect.any(Date), resultBlueprintId: null });
+    expect(await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).toHaveLength(before);
+  });
+
   it("readJobFile refuses symlinks and paths outside the job directory", () => {
     const dir = mkdtempSync(join(jobRoot, "probe-"));
     writeFileSync(join(dir, "ok.json"), "{}");
@@ -258,6 +326,7 @@ describe("operator export / import (laptop path)", () => {
     const job = await newJob();
     const exported = await exportJob(wsId, job.id);
     expect(exported.format).toBe("flowline-cb-envelope");
+    expect(exported.envelope).not.toHaveProperty("baseBlueprint");
     await expectHttpError(importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: "someone-else", output: {} }), 422, "MANIFEST_INVALID");
     const bp = await importJobResult(founder, wsId, job.id, { format: "flowline-cb-result", jobId: job.id, output: { tasks: [{ taskId: "customer-follow-up", include: true, note: "Imported from the owner's laptop", params: {} }], notes: "" }, reported: { cliVersion: "2.1.286", secret: "x".repeat(10) } });
     expect(bp).toMatchObject({ generator: "cli_import", status: "review_required" });

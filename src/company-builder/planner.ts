@@ -328,7 +328,7 @@ export function composeBlueprint(state: InterviewState, ctx: PlanContext): Compa
     profileVersion: ctx.profileVersion,
     generator: "deterministic",
     situation: (str(f, "situation") as CompanyBlueprint["situation"]) ?? "improve",
-    clientName: str(f, "client_name"),
+    clientName: str(f, "situation") === "client" ? str(f, "client_name") : null,
     outcomes: primary ? [{ department: primary, primary: true }] : [],
     roles,
     tasks,

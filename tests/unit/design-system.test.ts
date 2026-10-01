@@ -160,13 +160,13 @@ describe("token guard", () => {
 /* ───────── Theme cookie resolution ───────── */
 
 describe("fl_theme resolution", () => {
-  it("falls back to dark when the cookie is absent or unknown", () => {
+  it("falls back to light when the cookie is absent or unknown (owner's Arabic/light default)", () => {
     expect(resolveTheme(undefined)).toBe(DEFAULT_THEME);
     expect(resolveTheme(null)).toBe(DEFAULT_THEME);
     expect(resolveTheme("")).toBe(DEFAULT_THEME);
     expect(resolveTheme("purple")).toBe(DEFAULT_THEME);
     expect(resolveTheme("DARK")).toBe(DEFAULT_THEME);
-    expect(DEFAULT_THEME).toBe("dark");
+    expect(DEFAULT_THEME).toBe("light");
   });
   it("accepts exactly the three preferences", () => {
     for (const p of THEME_PREFERENCES) expect(resolveTheme(p)).toBe(p);
@@ -470,8 +470,8 @@ describe("public pages: reduced motion is static and readable", () => {
     }
     expect(Object.keys(ar.landing.heroNodes)).toEqual(Object.keys(en.landing.heroNodes));
     expect(Object.keys(ar.landing.flowNodes)).toEqual(Object.keys(en.landing.flowNodes));
-    expect(page).toContain("var(--canvas-dot)");
-    expect(page).toContain("bg-elevated");
+    expect(readFileSync("src/components/landing/hero-pin.tsx", "utf8")).toContain("var(--canvas-dot)");
+    expect(readFileSync("src/components/landing/flow-illustration.tsx", "utf8")).toContain("bg-elevated");
     expect(readFileSync("src/components/landing/flow-scene.tsx", "utf8")).toContain("var(--canvas-dot)");
   });
 
@@ -484,7 +484,7 @@ describe("public pages: reduced motion is static and readable", () => {
   });
 
   it("the landing hero dots use each node's real category hue, not hand-picked colours", () => {
-    const page = readFileSync("src/app/page.tsx", "utf8");
+    const page = readFileSync("src/components/landing/flow-illustration.tsx", "utf8");
     expect(page).toMatch(/CATEGORY_HUE\[NODE_DEFINITIONS\[/);
     expect(page).not.toMatch(/hue: "(trigger|logic|ai|app|output)" as const/);
   });
@@ -496,9 +496,11 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(readFileSync("src/app/page.tsx", "utf8")).toContain('badge: t("copilot.beta")');
   });
 
-  it("Lenis ships its recommended stylesheet and handles #anchor links", () => {
+  it("Lenis ships its recommended stylesheet and handles query section links", () => {
     const root = readFileSync("src/components/landing/scroll-root.tsx", "utf8");
     expect(root).toContain('import "lenis/dist/lenis.css";');
-    expect(root).toMatch(/new Lenis\(\{[^}]*anchors:\s*true/);
+    expect(root).toMatch(/new Lenis\(\{[^}]*anchors:\s*false/);
+    expect(root).toContain("flowline:section-scroll");
+    expect(root).toContain("lenis.scrollTo(target");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Button, Card, Textarea } from "@/components/ui";
+import { Radio, Checkbox, Button, Card, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { cbt, optionLabel } from "./text";
 import type { QuestionDto } from "./types";
@@ -76,7 +76,7 @@ export function InterviewCard({
             <div role="radiogroup" aria-labelledby={titleId} className="flex flex-col gap-2">
               {question.options!.map((o) => (
                 <label key={o} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border border-line bg-card px-3 py-2 text-base has-[:checked]:border-accent has-[:checked]:bg-elevated">
-                  <input type="radio" name={question.id} value={o} checked={single === o} onChange={() => setSingle(o)} className="size-4 accent-[var(--color-accent)]" />
+                  <Radio name={question.id} value={o} checked={single === o} onChange={() => setSingle(o)} className="size-4 accent-[var(--color-accent)]" />
                   {optionLabel(t, question.id, o)}
                 </label>
               ))}
@@ -86,7 +86,7 @@ export function InterviewCard({
             <div className="flex flex-col gap-2">
               {question.options!.map((o) => (
                 <label key={o} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border border-line bg-card px-3 py-2 text-base has-[:checked]:border-accent has-[:checked]:bg-elevated">
-                  <input type="checkbox" value={o} checked={multi.includes(o)} onChange={(e) => setMulti((m) => (e.target.checked ? [...m, o] : m.filter((x) => x !== o)))} className="size-4 accent-[var(--color-accent)]" />
+                  <Checkbox value={o} checked={multi.includes(o)} onChange={(e) => setMulti((m) => (e.target.checked ? [...m, o] : m.filter((x) => x !== o)))} className="size-4 accent-[var(--color-accent)]" />
                   {optionLabel(t, question.id, o)}
                 </label>
               ))}

@@ -1,16 +1,18 @@
 "use client";
 
+import { AuthWalkthrough } from "@/components/auth/auth-walkthrough";
+
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { KeyRound, LockKeyhole, LogIn, Mail, UserPlus, UserRound } from "lucide-react";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button, Field, Input, Logo } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { nodeText } from "@/i18n/engine-text";
 import type { Translator } from "@/i18n/translate";
 
 type Mode = "sign-in" | "sign-up";
@@ -32,7 +34,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [notVerified, setNotVerified] = useState(false);
   // Sign-up never signs in: the account is activated from the emailed link. This holds the address we sent it to.
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean; betaMode?: "open" | "invite_only" }>("/api/auth-config") });
+  const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean; zitadel: boolean; betaMode?: "open" | "invite_only" }>("/api/auth-config") });
   const inviteOnly = mode === "sign-up" && config.data?.betaMode === "invite_only";
   const invited = next?.startsWith("invite:") ?? false;
   // Where the verification link continues to: sign-in, keeping `next` (e.g. an invitation) intact.
@@ -114,7 +116,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     router.refresh();
   }
 
-  async function social(provider: "google" | "github") {
+  async function social(provider: "google" | "github" | "zitadel") {
     await authClient.signIn.social({ provider, callbackURL: destination });
   }
 
@@ -166,6 +168,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </p>
           )}
           <div className="mt-8 flex flex-col gap-3">
+            {config.data?.zitadel && (
+              <Button size="lg" className="w-full" onClick={() => social("zitadel")}>
+                {t("auth.zitadel")}
+              </Button>
+            )}
             <Button size="lg" className="w-full" disabledReason={oauthReason("Google", config.data?.google)} onClick={() => social("google")}>
               <span aria-hidden className="font-semibold">G</span> {t("auth.google")}
             </Button>
@@ -182,15 +189,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <form method="post" onSubmit={submit} noValidate className="flex flex-col gap-4">
             {mode === "sign-up" && (
               <Field label={t("auth.name")} htmlFor="name">
-                <Input id="name" autoComplete="name" placeholder={t("auth.namePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+                <Input id="name" startIcon={<UserRound className="size-4" />} autoComplete="name" placeholder={t("auth.namePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
               </Field>
             )}
             <Field label={t("auth.email")} htmlFor="email">
-              <Input id="email" type="email" dir="ltr" autoComplete="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input id="email" startIcon={<Mail className="size-4" />} type="email" dir="ltr" autoComplete="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
             <Field label={t("auth.password")} htmlFor="password" hint={mode === "sign-up" ? t("auth.passwordHint") : undefined}>
               <Input
                 id="password"
+                startIcon={<LockKeyhole className="size-4" />}
                 type="password"
                 dir="ltr"
                 autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
@@ -202,7 +210,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </Field>
             {inviteOnly && (
               <Field label={t("auth.betaCode")} htmlFor="beta-code" hint={t("auth.betaCodeHint")}>
-                <Input id="beta-code" dir="ltr" className="data" autoComplete="off" spellCheck={false} placeholder="FL-XXXXXXXX" value={betaCode} onChange={(e) => setBetaCode(e.target.value)} maxLength={64} />
+                <Input id="beta-code" startIcon={<KeyRound className="size-4" />} dir="ltr" className="data" autoComplete="off" spellCheck={false} placeholder="FL-XXXXXXXX" value={betaCode} onChange={(e) => setBetaCode(e.target.value)} maxLength={64} />
               </Field>
             )}
             {error && (
@@ -218,7 +226,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 )}
               </p>
             )}
-            <Button type="submit" variant="primary" size="lg" className="mt-1 w-full" loading={pending}>
+            <Button type="submit" startIcon={mode === "sign-up" ? <UserPlus className="size-4" /> : <LogIn className="size-4" />} variant="primary" size="lg" className="mt-1 w-full" loading={pending}>
               {mode === "sign-up" ? t("auth.createAccount") : t("auth.signIn")}
             </Button>
           </form>
@@ -279,25 +287,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           )}
         </div>
       </div>
-      <aside aria-hidden className="relative hidden overflow-hidden border-s border-line bg-surface lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(var(--color-elevated)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
-        <div className="relative flex h-full flex-col items-center justify-center gap-5 p-12">
-          {[
-            [t("auth.asideNodes.trigger"), nodeText(t, "trigger.manual", "subtitle"), "bg-success", false],
-            [t("auth.asideNodes.transform"), nodeText(t, "transform.json", "subtitle"), "bg-success", true],
-            [t("auth.asideNodes.output"), nodeText(t, "output", "subtitle"), "bg-info", false],
-          ].map(([t, s, dot, sel]) => (
-            <div key={t as string} className={`w-64 rounded-lg border bg-card px-4 py-3 ${sel ? "border-accent shadow-[var(--shadow-glow)]" : "border-line"}`}>
-              <p className="flex items-center gap-2 text-base font-semibold">
-                <span className={`size-2 rounded-full ${dot}`} />
-                {t}
-              </p>
-              <p className="data mt-0.5 text-xs text-muted">{s}</p>
-            </div>
-          ))}
-          <p className="mt-4 max-w-xs text-center text-base text-med">{t("auth.asideCaption")}</p>
-        </div>
-      </aside>
+      <AuthWalkthrough />
     </div>
   );
 }

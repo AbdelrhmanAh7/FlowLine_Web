@@ -66,7 +66,7 @@ test.describe("landing scroll experience", () => {
   test("reduced motion: scroll scenes are static", async ({ page }) => {
     await page.goto("/", { waitUntil: "networkidle" });
     // Hero visual: no transform, no animation (the pin/scrub markup is not even rendered).
-    const hero = page.getByRole("img", { name: /illustration of a flow/i });
+    const hero = page.getByRole("group", { name: /illustration of a flow/i });
     await expect(hero).toBeVisible();
     const heroStyles = await hero.evaluate((el) => {
       const cs = getComputedStyle(el);
@@ -308,10 +308,10 @@ test.describe("landing header: fits every width, keeps theme and language reacha
       await expectHeaderFits(page, "en", `phone ${width}px en`);
       await expectPreferences(page, "en", width, `phone ${width}px en`);
 
-      // Theme: default is dark; every choice is applied by the server (data-theme) and stored in the cookie.
+      // Theme: default is light; every choice is applied by the server (data-theme) and stored in the cookie.
       const prefs = page.getByTestId("landing-preferences");
       const theme = prefs.getByRole("group", { name: "Theme" });
-      await expect(theme.getByRole("button", { name: "Dark", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(theme.getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
       for (const [mode, label] of [["light", "Light"], ["system", "System"], ["dark", "Dark"]] as const) {
         await theme.getByRole("button", { name: label, exact: true }).click();
         await expect(html).toHaveAttribute("data-theme", mode);
@@ -367,7 +367,7 @@ test.describe("landing copy and illustration contrast @cross-browser", () => {
         await page.goto("/", { waitUntil: "networkidle" });
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await expect(page.locator("html")).toHaveAttribute("lang", locale);
-        const hero = page.getByRole("img");
+        const hero = page.getByTestId("landing-hero-scene").getByRole("group");
         await expect(hero).toContainText(locale === "en" ? "Starts the flow" : "يبدأ سير العمل");
         await expect(hero).not.toContainText(/JSONATA|JSON|IF \/ ELSE|TRIGGER ·/);
         for (const width of [360, 768, 1024, 1440]) {
@@ -408,13 +408,13 @@ for (const locale of ["en", "ar"] as const) {
     const heroText = (await hero.textContent())!;
     for (const [name, id] of (locale === "ar" ? [["المنتج", "product"], ["القوالب", "templates"], ["الأسعار", "pricing"]] : [["Product", "product"], ["Templates", "templates"], ["Pricing", "pricing"]])) {
       await nav.getByRole("link", { name, exact: true }).press("Enter");
-      await expect(page).toHaveURL(new RegExp(`#${id}$`));
+      await expect(page).toHaveURL(new RegExp(`[?]section=${id}$`));
       await expect(page.locator(`#${id}`)).toBeInViewport();
       await page.getByRole("link", { name: locale === "ar" ? "تسجيل الدخول" : "Sign in", exact: true }).press("Enter");
       await expect(page).toHaveURL(/\/sign-in$/);
       await expect(page.getByRole("textbox", { name: locale === "ar" ? "البريد الإلكتروني" : "Email", exact: true })).toBeVisible();
       await page.goBack();
-      await expect(page).toHaveURL(new RegExp(`#${id}$`));
+      await expect(page).toHaveURL(new RegExp(`[?]section=${id}$`));
       await expect(hero).toHaveText(heroText);
       await expect(nav).toBeVisible();
       await page.goForward();

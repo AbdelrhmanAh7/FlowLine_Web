@@ -1,5 +1,5 @@
 import type { FlowGraph } from "@/engine/types";
-import { lit, type PackCheck, type TaskPack } from "./types";
+import { lit, sameJson, type PackCheck, type PackParams, type TaskPack } from "./types";
 
 /**
  * Pack 2 — invoice/document organisation: supported extraction (structured rows from CSV/JSON/text the existing file
@@ -14,7 +14,7 @@ const VALIDATE = (currencies: string[]) => `(
   $docs := $type(documents) = "array" ? documents : ($exists(documents) ? [documents] : []);
   $append([], $map($docs, function($d) {(
     $ok := $filter($append([], $d.lines), function($l) { $type($l.qty) = "number" and $type($l.unit_price) = "number" });
-    $computed := $round($sum($map($append([], $ok), function($l) { $l.qty * $l.unit_price })), 2);
+    $computed := $count($ok) = 0 ? 0 : $round($sum($map($append([], $ok), function($l) { $l.qty * $l.unit_price })), 2);
     {
       "file": $d.file, "vendor": $d.vendor, "invoice_number": $d.invoice_number, "date": $d.date, "currency": $d.currency,
       "computed_total": $computed,
@@ -39,6 +39,63 @@ const ORGANISE = `(
     "ledger_rows": $append([], $rows[$not($bad($))].{ "date": date, "vendor": vendor, "reference": invoice_number, "currency": currency, "amount": computed_total })
   }
 )`;
+
+/** JSONata's `$round` (half to even, shifting the decimal point through the exponent), reimplemented for the evaluator. */
+export function roundHalfEven(arg: number, precision: number): number {
+  let parts = arg.toString().split("e");
+  const shifted = +(parts[0] + "e" + (parts[1] ? +parts[1] + precision : precision));
+  let r = Math.round(shifted);
+  if (Math.abs(r - shifted) === 0.5 && Math.abs(r % 2) === 1) r -= 1;
+  parts = r.toString().split("e");
+  r = +(parts[0] + "e" + (parts[1] ? +parts[1] - precision : -precision));
+  return Object.is(r, -0) ? 0 : r;
+}
+
+const fieldOf = (v: unknown, k: string): unknown => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>)[k] : undefined);
+/** Drops undefined values, as a JSONata object constructor does. */
+const defined = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+
+/**
+ * What the pack must produce for this input and these params, computed in TypeScript from the documents themselves
+ * (same rules as VALIDATE/ORGANISE: half-even rounding to 2 places, per-currency totals over clean documents only).
+ */
+export function expectedInvoiceResult(input: unknown, params: PackParams) {
+  const allowed = Array.isArray(params.currencies) ? params.currencies.filter((c) => /^[A-Z]{3}$/.test(c)) : [];
+  const raw = fieldOf(input, "documents");
+  const docs: unknown[] = Array.isArray(raw) ? raw : raw === undefined ? [] : [raw];
+  const rows = docs.map((d) => {
+    const lv = fieldOf(d, "lines");
+    const lines: unknown[] = lv === undefined ? [] : Array.isArray(lv) ? lv : [lv];
+    const ok = lines.filter((l) => typeof fieldOf(l, "qty") === "number" && typeof fieldOf(l, "unit_price") === "number");
+    const computed = roundHalfEven(ok.reduce<number>((s, l) => s + (fieldOf(l, "qty") as number) * (fieldOf(l, "unit_price") as number), 0), 2);
+    const stated = fieldOf(d, "stated_total");
+    const currency = fieldOf(d, "currency");
+    const missing = ["vendor", "invoice_number", "date", "currency", "lines", "stated_total"].filter((k) => fieldOf(d, k) === undefined);
+    const malformed = lines.length - ok.length;
+    const mismatch = typeof stated === "number" ? Math.abs(computed - stated) > 0.01 : stated !== undefined;
+    const unexpected = currency !== undefined && allowed.length > 0 && !allowed.includes(currency as string);
+    return {
+      bad: mismatch || missing.length > 0 || malformed > 0 || unexpected,
+      row: defined({
+        file: fieldOf(d, "file"), vendor: fieldOf(d, "vendor"), invoice_number: fieldOf(d, "invoice_number"), date: fieldOf(d, "date"), currency,
+        computed_total: computed, stated_total: stated, malformed_lines: malformed, mismatch, missing, unexpected_currency: unexpected,
+      }),
+    };
+  });
+  const clean = rows.filter((r) => !r.bad).map((r) => r.row);
+  const discrepancies = rows.filter((r) => r.bad).map((r) => r.row);
+  const currencies = [...new Set(clean.map((r) => r.currency))];
+  const totals = currencies.map((c) => {
+    const of = clean.filter((r) => r.currency === c);
+    return { currency: c, total: roundHalfEven(of.reduce<number>((s, r) => s + (r.computed_total as number), 0), 2), count: of.length };
+  });
+  const ledgerRows = clean.map((r) => defined({ date: r.date, vendor: r.vendor, reference: r.invoice_number, currency: r.currency, amount: r.computed_total }));
+  const review = docs.length === 0 || discrepancies.length > 0;
+  const output: Record<string, unknown> = review
+    ? { documents: docs.length, empty: docs.length === 0, discrepancies, ledger_rows: ledgerRows, totals_by_currency: totals }
+    : { documents: docs.length, ledger_rows: ledgerRows, totals_by_currency: totals };
+  return { key: review ? ("discrepancy_review" as const) : ("ledger_draft" as const), documents: docs.length, output };
+}
 
 export const invoiceOrganiserPack: TaskPack = {
   id: "invoice-organiser",
@@ -82,21 +139,24 @@ export const invoiceOrganiserPack: TaskPack = {
     };
   },
 
-  evaluate(output, input): PackCheck[] {
-    const res = (output.ledger_draft ?? output.discrepancy_review) as { ledger_rows?: { amount: number; currency: string }[]; totals_by_currency?: { currency: string; total: number }[]; discrepancies?: unknown[]; empty?: boolean } | undefined;
-    const raw = (input as { documents?: unknown } | null)?.documents;
-    const docs = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    const checks: PackCheck[] = [{ id: "one_outcome", passed: Boolean(output.ledger_draft) !== Boolean(output.discrepancy_review) }];
+  evaluate(output, input, params): PackCheck[] {
+    // The expected result is derived from the trial INPUT and params (never from the run's own rows): an edited flow
+    // that invents rows, drops discrepancies or empties the totals must not pass.
+    const exp = expectedInvoiceResult(input, params);
+    const actualKey = output.ledger_draft != null ? "ledger_draft" : output.discrepancy_review != null ? "discrepancy_review" : null;
+    const res = (actualKey ? output[actualKey] : undefined) as { documents?: unknown; ledger_rows?: unknown[]; totals_by_currency?: unknown[]; discrepancies?: unknown[]; empty?: unknown } | undefined;
+    const checks: PackCheck[] = [
+      { id: "one_outcome", passed: Boolean(output.ledger_draft) !== Boolean(output.discrepancy_review) },
+      { id: "correct_outcome", passed: actualKey === exp.key },
+    ];
     if (!res) return checks;
-    checks.push({ id: "not_empty", passed: docs.length > 0 && !res.empty });
-    const rows = res.ledger_rows ?? [];
-    const totals = res.totals_by_currency ?? [];
-    checks.push({ id: "every_document_accounted", passed: rows.length + (res.discrepancies?.length ?? 0) === docs.length });
-    // Totals per currency must equal the sum of that currency's ledger rows (no cross-currency addition).
-    checks.push({
-      id: "totals_per_currency",
-      passed: totals.every((t) => Math.abs(t.total - rows.filter((r) => r.currency === t.currency).reduce((s, r) => s + r.amount, 0)) < 0.005) && new Set(totals.map((t) => t.currency)).size === totals.length,
-    });
+    checks.push({ id: "not_empty", passed: exp.documents > 0 && res.empty !== true });
+    checks.push({ id: "every_document_accounted", passed: res.documents === exp.documents && (res.ledger_rows?.length ?? 0) + (res.discrepancies?.length ?? 0) === exp.documents });
+    checks.push({ id: "ledger_rows_exact", passed: sameJson(res.ledger_rows, exp.output.ledger_rows) });
+    checks.push({ id: "discrepancies_exact", passed: sameJson(res.discrepancies, exp.output.discrepancies) });
+    // Totals are per currency (never added across currencies) and must cover exactly the clean documents' amounts.
+    checks.push({ id: "totals_per_currency", passed: sameJson(res.totals_by_currency, exp.output.totals_by_currency) });
+    checks.push({ id: "exact_output", passed: sameJson(res, exp.output) });
     return checks;
   },
 

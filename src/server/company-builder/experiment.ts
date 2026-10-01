@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, notLike, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notLike, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db, schema } from "@/db";
 import { clientEventBody, computeMetrics, effortBody } from "@/company-builder/experiment-metrics";
@@ -30,16 +30,21 @@ export async function recordClientEvent(user: CurrentUser, workspaceId: string, 
   assertExperimentEnabled();
   await requireSession(workspaceId, sessionId);
   if (e.kind === "active_time") {
-    // At most one active-time slice per person per ACTIVE_SLICE_MIN_GAP_S: repeated calls can't inflate the metric.
-    const [last] = await db
-      .select({ at: schema.cbExperimentEvent.at })
-      .from(schema.cbExperimentEvent)
-      .where(and(eq(schema.cbExperimentEvent.sessionId, sessionId), eq(schema.cbExperimentEvent.kind, "active_time"), eq(schema.cbExperimentEvent.userId, user.id)))
-      .orderBy(desc(schema.cbExperimentEvent.at))
-      .limit(1);
-    if (last && Date.now() - last.at.getTime() < ACTIVE_SLICE_MIN_GAP_S * 1000) return { stored: false };
+    // Serialize by participant and session so concurrent tabs cannot both pass the dedupe check.
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`cb-active-time:${sessionId}:${user.id}`}))`);
+      const [last] = await tx
+        .select({ at: schema.cbExperimentEvent.at })
+        .from(schema.cbExperimentEvent)
+        .where(and(eq(schema.cbExperimentEvent.sessionId, sessionId), eq(schema.cbExperimentEvent.kind, "active_time"), eq(schema.cbExperimentEvent.userId, user.id)))
+        .orderBy(desc(schema.cbExperimentEvent.at))
+        .limit(1);
+      if (last && Date.now() - last.at.getTime() < ACTIVE_SLICE_MIN_GAP_S * 1000) return { stored: false };
+      await tx.insert(schema.cbExperimentEvent).values({ workspaceId, sessionId, kind: e.kind, data: { seconds: e.seconds }, userId: user.id });
+      return { stored: true };
+    });
   }
-  const data = e.kind === "active_time" ? { seconds: e.seconds } : { topic: e.topic };
+  const data = { topic: e.topic };
   await db.insert(schema.cbExperimentEvent).values({ workspaceId, sessionId, kind: e.kind, data, userId: user.id });
   return { stored: true };
 }

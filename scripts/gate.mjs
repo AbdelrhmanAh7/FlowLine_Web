@@ -4,7 +4,10 @@
 //   pnpm gate        (--tier=fast, every commit; ≈3–4 min on a 4-CPU machine)
 //   pnpm gate:full   (--tier=full, before merging to main; adds every Chromium spec, Firefox and WebKit)
 //   options: [--only=a,b] [--skip=a,b] [--out=<dir>] [--stacks=K (max(3, CPUs/2), ≤6)] [--shards=N (4)]
-//            [--browsers=sequential|parallel] [--fail-fast]
+//            [--browsers=sequential|parallel] [--fail-fast] [--group=product,auth,editor,platform] [--list-groups]
+//   Small gates: --only=static (lint,typecheck,evidence) | unit | contract | integration | build; browser groups with
+//   --group (implies --only=chromium; name other projects with --only). Groups run every test of concrete spec files
+//   from scripts/gate-groups.mjs (validated: each e2e/*.spec.ts in exactly one group). See docs/implementation/SMALL_GATES.md.
 //
 // Steps (names for --only/--skip), by phase:
 //   1. lint (cached), typecheck, evidence, unit, contract — in parallel; none uses a database or a fixed port (contract
@@ -20,20 +23,24 @@
 //      Measured on 4 CPUs: fast ≈3m20s; full ≈9m45s sequential (all-at-once ≈8m40s but load-flaky there).
 // Selecting any browser implies `stack`. A step whose prerequisite failed (build → stack → browsers) is "blocked".
 //
-// Not fail-fast by default. All stacks are stopped at the end, and artifacts/phase-3/screenshots is restored.
+// Not fail-fast by default. All test stacks stop at the end; screenshots use isolated artifact directories.
 // Output (default artifacts/gates/<short sha>-<UTC timestamp>, git-ignored): <step>.log, per-shard logs,
 // progress.log, summary.json (sha, dirty flag, tier, per-step status/rc/duration and summed test totals).
 // Exit code: 0 only when every selected step passed.
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { parseEnv } from "node:util";
 import testStackEnv from "./test-stack.cjs";
+import { GROUPS, checkManifest, expandSteps, resolveGroups } from "./gate-groups.mjs";
 
 const BROWSERS = ["chromium", "firefox", "webkit"];
 const ALL = ["lint", "typecheck", "evidence", "unit", "contract", "integration", "build", "stack", ...BROWSERS];
 const STACK_TIMEOUT_MS = 180_000;
+// Company-builder browser coverage requires its test feature flag. This process only launches isolated test stacks;
+// never rely on the private development .env to decide which shipped feature the gate exercises.
+process.env.FLOWLINE_COMPANY_BUILDER ??= "on";
 
 // ---- options ----
 const args = Object.fromEntries(
@@ -47,20 +54,46 @@ const args = Object.fromEntries(
   }),
 );
 for (const k of Object.keys(args)) {
-  if (!["only", "skip", "out", "browsers", "fail-fast", "tier", "stacks", "shards"].includes(k)) {
+  if (!["only", "skip", "out", "browsers", "fail-fast", "tier", "stacks", "shards", "group", "list-groups"].includes(k)) {
     console.error(`unknown option --${k}`);
     process.exit(2);
   }
 }
 const list = (v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : []);
-const only = list(args.only);
-const skip = list(args.skip);
-for (const n of [...only, ...skip]) {
-  if (!ALL.includes(n)) {
-    console.error(`unknown step "${n}" (steps: ${ALL.join(", ")})`);
+const manifestProblems = checkManifest();
+if (manifestProblems.length) {
+  console.error(`browser group manifest is inconsistent:\n  ${manifestProblems.join("\n  ")}`);
+  process.exit(2);
+}
+if (args["list-groups"]) {
+  for (const [name, g] of Object.entries(GROUPS)) console.log(`${name} (${g.specs.length} specs): ${g.description}\n  ${g.specs.join(", ")}`);
+  process.exit(0);
+}
+// --group=a,b narrows the browser steps to those groups' spec files. Without --only it implies --only=chromium (the
+// other projects run only when named, e.g. --only=chromium,firefox --group=auth).
+let groupSel = null;
+if (args.group !== undefined) {
+  try {
+    groupSel = resolveGroups(list(args.group));
+  } catch (e) {
+    console.error(e.message);
     process.exit(2);
   }
 }
+const only = expandSteps(list(args.only));
+const skip = expandSteps(list(args.skip));
+for (const n of [...only, ...skip]) {
+  if (!ALL.includes(n)) {
+    console.error(`unknown step "${n}" (steps: ${ALL.join(", ")}, static)`);
+    process.exit(2);
+  }
+}
+if (groupSel && only.length === 0) only.push("chromium");
+if (groupSel && !only.some((n) => BROWSERS.includes(n))) {
+  console.error("--group selects browser specs, but --only names no browser project (chromium, firefox, webkit)");
+  process.exit(2);
+}
+const groupFilesList = groupSel?.files ?? [];
 // The three projects at once need ~2 CPUs per browser container + stack: on 4 CPUs it was load-flaky (a 10 s wait timed
 // out in 1 of 2 runs), so it is the default only from 8 CPUs; below that the projects run one after another (each still
 // split across the stacks).
@@ -86,7 +119,9 @@ const intNum = (v, d, max) => {
 };
 // K isolated stacks (own app/fake ports and database each) and N integration shards (own database each).
 // Default: 3 stacks per project on a 4-CPU machine, more on bigger ones (each stack + browser container needs ~1 CPU).
+// A group run never starts more stacks than it has spec files (a shard with no files would fail with "no tests found").
 const STACKS = intNum(args.stacks, Math.min(6, Math.max(3, Math.floor(availableParallelism() / 2))), 6);
+const BROWSER_STACKS = groupSel ? Math.min(STACKS, groupFilesList.length) : STACKS;
 const INT_SHARDS = intNum(args.shards, 4, 16);
 // Fast tier (every commit): Chromium's @critical/@cross-browser specs only. Full tier (before merging to main): every
 // Chromium spec plus Firefox and WebKit. An explicit --only=firefox still runs Firefox in the fast tier.
@@ -108,24 +143,25 @@ const sh = (cmd) => {
 };
 const sha = sh("git rev-parse HEAD") || "unknown";
 const shortSha = sha.slice(0, 7);
-const dirtyCount = sh("git status --porcelain").split("\n").filter(Boolean).length;
+const dirtyCount =sh("git status --porcelain").split("\n").filter(Boolean).length;
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
 const out = typeof args.out === "string" ? args.out : join("artifacts", "gates", `${shortSha}-${stamp}`);
 mkdirSync(out, { recursive: true });
 const identity = { sha, shortSha, dirty: dirtyCount > 0, dirtyCount, node: process.version, pnpm: sh("pnpm --version") || "unknown" };
 console.log(`gate: ${sha}${identity.dirty ? ` (dirty: ${dirtyCount} changed)` : ""} · node ${identity.node} · pnpm ${identity.pnpm}`);
-console.log(`gate: tier ${tier} · steps ${[...selected].join(", ") || "(none)"} · ${STACKS} stack(s) per project · ${INT_SHARDS} integration shard(s) · browsers ${browsersMode} · out ${out}`);
+console.log(`gate: tier ${tier} · steps ${[...selected].join(", ") || "(none)"} · ${BROWSER_STACKS} stack(s) per project · ${INT_SHARDS} integration shard(s) · browsers ${browsersMode} · out ${out}`);
+if (groupSel) console.log(`gate: browser group(s) ${groupSel.groups.join(", ")} · ${groupFilesList.length} spec file(s): ${groupFilesList.join(" ")}`);
 
 const progress = join(out, "progress.log");
 const logLine = (s) => appendFileSync(progress, `${new Date().toISOString()} ${s}\n`);
-logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} tier=${tier} stacks=${STACKS} intShards=${INT_SHARDS} steps=${[...selected].join(",")} browsers=${browsersMode}`);
+logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} tier=${tier} stacks=${BROWSER_STACKS} intShards=${INT_SHARDS} steps=${[...selected].join(",")} browsers=${browsersMode} groups=${groupSel?.groups.join(",") ?? "all"}`);
 
 // Stack 1 is the default stack (3100/4010/4011, flowline_test); stack k>1 uses app 3100+10(k-1), fakes 4500+10(k-1)
 // and +1, database flowline_test_e<k>.
 // Sequential browsers share stacks 1..K. Parallel browsers get disjoint stacks per project so two projects never share a
 // database or fake-provider state: Chromium (the largest, 128 specs) gets K, Firefox and WebKit (62 each) ceil(K/2) each.
 const parallelProjects = browsersMode === "parallel" ? BROWSERS.filter((b) => selected.has(b)) : [];
-const stackCount = parallelProjects.length > 1 ? parallelProjects.reduce((n, b) => n + (b === "chromium" ? STACKS : Math.ceil(STACKS / 2)), 0) : STACKS;
+const stackCount = parallelProjects.length > 1 ? parallelProjects.reduce((n, b) => n + (b === "chromium" ? BROWSER_STACKS : Math.ceil(BROWSER_STACKS / 2)), 0) : BROWSER_STACKS;
 // Each stack holds two pools (next + worker) plus a LISTEN connection; keep the total under Postgres' default
 // max_connections (100), leaving room for the integration shards.
 const POOL_MAX = stackCount > 8 ? "3" : stackCount > 3 ? "4" : undefined;
@@ -142,7 +178,7 @@ const stacksFor = new Map();
 if (parallelProjects.length > 1) {
   let next = 0;
   for (const b of parallelProjects) {
-    const n = b === "chromium" ? STACKS : Math.ceil(STACKS / 2);
+    const n = b === "chromium" ? BROWSER_STACKS : Math.ceil(BROWSER_STACKS / 2);
     stacksFor.set(b, stackDefs.slice(next, next + n));
     next += n;
   }
@@ -298,7 +334,8 @@ const cleanup = () => {
   for (const p of stackProcs) {
     if (!p.pid || p.exitCode !== null) continue;
     try {
-      process.kill(-p.pid, "SIGTERM");
+      if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(p.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+      else process.kill(-p.pid, "SIGTERM");
     } catch {
       /* already gone */
     }
@@ -356,8 +393,18 @@ main: {
       for (const b of p4) mark(b, 4, "blocked", "e2e/tools/browser-docker.sh not found");
     } else {
       const runBrowser = (b) => {
-        const grep = tier === "fast" && b === "chromium" ? ` --grep="${FAST_GREP}"` : "";
+        // A group run executes every test in the group's concrete files (no grep); otherwise the tier decides as before.
+        const grep = groupSel ? ` ${groupFilesList.join(" ")}` : tier === "fast" && b === "chromium" ? ` --grep="${FAST_GREP}"` : "";
         const mine = stacksFor.get(b);
+        // Cloud Docker mounts cannot use Windows pnpm symlinks. Run the installed native
+        // Playwright browsers here; keep identical projects, shards, reporters and zero retries.
+        if (process.platform === "win32") {
+          return run(b, 4, `node scripts/gate-browser-native.mjs ${b}${grep}`, {
+            ...process.env,
+            FLOWLINE_GATE_STACKS: JSON.stringify(mine),
+            FLOWLINE_GATE_OUT: out,
+          });
+        }
         const parts = mine.map((d, i) => {
           rmSync(`test-results/${b}-${d.k}-report.txt`, { force: true }); // never parse a previous run's totals
           const shotDir = `/tmp/pw-shots-${b}-${d.k}`; // keep the committed screenshots untouched; shards never share a dir
@@ -368,8 +415,7 @@ main: {
       };
       if (browsersMode === "parallel") await Promise.all(p4.map(runBrowser));
       else for (const b of p4) await runBrowser(b);
-      sh("git checkout -- artifacts/phase-3/screenshots");
-      logLine("RESTORED artifacts/phase-3/screenshots");
+      // Both browser runners isolate screenshots; never reset tracked files during verification.
     }
   }
 }
@@ -382,12 +428,12 @@ const ok = steps.length > 0 && steps.every((s) => s.status === "pass");
 const finishedAt = new Date().toISOString();
 writeFileSync(
   join(out, "summary.json"),
-  `${JSON.stringify({ ...identity, tier, stacks: STACKS, integrationShards: INT_SHARDS, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
+  `${JSON.stringify({ ...identity, tier, group: groupSel ? { groups: groupSel.groups, files: groupFilesList } : null, stacks: BROWSER_STACKS, integrationShards: INT_SHARDS, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
 );
 logLine(`GATE ${ok ? "PASS" : "FAIL"}`);
 
 const fmtTotals = (t) => (t ? Object.entries(t).map(([k, v]) => `${v} ${k}`).join(", ") : "");
-const rows = steps.map((s) => [s.name, s.status, s.rc ?? "-", s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : "-", fmtTotals(s.totals) || s.note || ""]);
+const rows = steps.map((s) => [s.name, s.status, s.rc ?? "-", s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : "-", [fmtTotals(s.totals) || s.note || "", groupSel && BROWSERS.includes(s.name) ? `[group ${groupSel.groups.join("+")}: ${groupFilesList.length} files]` : ""].filter(Boolean).join(" ")]);
 const head = ["step", "status", "rc", "time", "totals"];
 const w = head.map((h, i) => Math.max(h.length, ...rows.map((r) => String(r[i]).length)));
 const fmt = (r) => r.map((c, i) => String(c).padEnd(w[i])).join("  ").trimEnd();

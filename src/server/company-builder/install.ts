@@ -92,7 +92,18 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
   const [inst] = await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.installKey, key));
   if (inst!.status === "installed") return { installation: inst!, created: 0, reused: 0 };
   if (inst!.status === "cancelled") throw new HttpError(409, "INSTALLATION_CANCELLED", "This installation was cancelled");
-  if (inst!.status === "failed") await db.update(schema.cbInstallation).set({ status: "installing", error: null, updatedAt: new Date() }).where(eq(schema.cbInstallation.id, inst!.id));
+  if (inst!.status === "failed") {
+    const [restarted] = await db
+      .update(schema.cbInstallation)
+      .set({ status: "installing", error: null, updatedAt: new Date() })
+      .where(and(eq(schema.cbInstallation.id, inst!.id), eq(schema.cbInstallation.status, "failed")))
+      .returning();
+    if (!restarted) {
+      const [current] = await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.id, inst!.id));
+      if (current?.status === "cancelled") throw new HttpError(409, "INSTALLATION_CANCELLED", "This installation was cancelled");
+      if (current?.status === "installed") return { installation: current, created: 0, reused: 0 };
+    }
+  }
 
   const t = createTranslator(opts.locale);
   let created = 0;
@@ -172,11 +183,21 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
     await db.update(schema.cbInstallation).set({ status: code === "INSTALLATION_CANCELLED" ? "cancelled" : "failed", error: { code }, updatedAt: new Date() }).where(and(eq(schema.cbInstallation.id, inst!.id), inArray(schema.cbInstallation.status, ["installing", "failed"])));
     throw e;
   }
-  const [done] = await db
-    .update(schema.cbInstallation)
-    .set({ status: "installed", updatedAt: new Date(), finishedAt: new Date() })
-    .where(and(eq(schema.cbInstallation.id, inst!.id), eq(schema.cbInstallation.status, "installing")))
-    .returning();
+  const done = await db.transaction(async (tx) => {
+    await lockInstallation(tx, inst!.id);
+    const [row] = await tx
+      .update(schema.cbInstallation)
+      .set({ status: "installed", updatedAt: new Date(), finishedAt: new Date() })
+      .where(and(eq(schema.cbInstallation.id, inst!.id), eq(schema.cbInstallation.status, "installing")))
+      .returning();
+    if (!row) {
+      const [current] = await tx.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.id, inst!.id));
+      if (current?.status === "cancelled") throw new HttpError(409, "INSTALLATION_CANCELLED", "This installation was cancelled");
+      return current;
+    }
+    return row;
+  });
+  if (!done) throw new HttpError(409, "INSTALLATION_FINISHED", "The installation is no longer running");
   await audit(db, { workspaceId, actor: userActor(user), action: "company_builder.installed", targetType: "cb_installation", targetId: inst!.id, data: { blueprintVersion: bpRow.version, created, reused } });
   return { installation: done ?? inst!, created, reused };
 }
@@ -184,11 +205,15 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
 /** Cancels an installation that is still running: already-created drafts stay (listed), nothing else is created. */
 export async function cancelInstallation(workspaceId: string, installationId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(installationId)) throw notFound("Installation not found");
-  const [row] = await db
-    .update(schema.cbInstallation)
-    .set({ status: "cancelled", updatedAt: new Date(), finishedAt: new Date() })
-    .where(and(eq(schema.cbInstallation.id, installationId), eq(schema.cbInstallation.workspaceId, workspaceId), inArray(schema.cbInstallation.status, ["installing", "failed"])))
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    await lockInstallation(tx, installationId);
+    const [cancelled] = await tx
+      .update(schema.cbInstallation)
+      .set({ status: "cancelled", updatedAt: new Date(), finishedAt: new Date() })
+      .where(and(eq(schema.cbInstallation.id, installationId), eq(schema.cbInstallation.workspaceId, workspaceId), inArray(schema.cbInstallation.status, ["installing", "failed"])))
+      .returning();
+    return cancelled;
+  });
   if (!row) {
     const [exists] = await db.select({ status: schema.cbInstallation.status }).from(schema.cbInstallation).where(and(eq(schema.cbInstallation.id, installationId), eq(schema.cbInstallation.workspaceId, workspaceId)));
     if (!exists) throw notFound("Installation not found");

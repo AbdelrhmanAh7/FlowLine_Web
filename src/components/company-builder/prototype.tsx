@@ -7,6 +7,7 @@ import { useT } from "@/i18n/client";
 import { api } from "@/lib/api";
 import { cbt } from "./text";
 import type { CliJobDto, Overview } from "./types";
+import { createCliRequestKeys, type CliRequest } from "./cli-request-keys";
 
 const key = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
 const ACTIVE = new Set(["waiting_operator", "generating", "validating"]);
@@ -31,15 +32,11 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
   };
   // One request key per intended job: a double click or a retry after a network error re-sends the SAME key (the
   // server returns the same job); a new key is minted only after a job was created.
-  const pendingKeys = useRef(new Map<string, string>());
-  const keyFor = (k: string) => {
-    if (!pendingKeys.current.has(k)) pendingKeys.current.set(k, key());
-    return pendingKeys.current.get(k)!;
-  };
+  const pendingKeys = useRef(createCliRequestKeys(key));
   const enqueue = useMutation({
-    mutationFn: (b: { cli: "claude" | "codex"; kind: "blueprint" | "text_trial" }) => api(`${base}/sessions/${sid}/cli-jobs`, { method: "POST", json: { ...b, requestKey: keyFor(`${b.cli}:${b.kind}:${b.kind === "text_trial" ? text : ""}`), text: b.kind === "text_trial" ? text : undefined } }),
+    mutationFn: (b: CliRequest) => api(`${base}/sessions/${sid}/cli-jobs`, { method: "POST", json: { ...b, requestKey: pendingKeys.current.get(b) } }),
     onSuccess: (_d, b) => {
-      pendingKeys.current.delete(`${b.cli}:${b.kind}:${b.kind === "text_trial" ? text : ""}`);
+      pendingKeys.current.complete(b);
       refresh();
     },
     onError: () => setError(t("companyBuilder.errors.generic")),
@@ -84,7 +81,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
       <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={2000} placeholder={t("companyBuilder.prototype.textPlaceholder")} aria-label={t("companyBuilder.prototype.textPlaceholder")} dir="auto" />
       <div className="flex flex-wrap gap-2">
         {(["claude", "codex"] as const).map((cli) => (
-          <Button key={cli} size="sm" variant="ghost" disabled={!text.trim() || enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "text_trial" })}>
+          <Button key={cli} size="sm" variant="ghost" disabled={!text.trim() || enqueue.isPending} onClick={() => enqueue.mutate({ cli, kind: "text_trial", text })}>
             {t("companyBuilder.prototype.textTrial", { cli: cli === "claude" ? "Claude" : "Codex" })}
           </Button>
         ))}
@@ -112,7 +109,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
         {(jobs.data?.jobs ?? []).map((j) => (
           <li key={j.id} className="flex flex-col gap-1 rounded-md border border-line p-2" data-status={j.status}>
             <span>
-              <span dir="ltr">{j.cli}</span> · {j.kind} · {cbt(t, `prototype.status.${j.status}`)}
+              <span dir="ltr">{j.cli === "claude" ? "Claude" : "Codex"}</span> · {cbt(t, `prototype.kind.${j.kind}`)} · {cbt(t, `prototype.status.${j.status}`)}
               {j.error && ` — ${cbt(t, `prototype.error.${j.error.code}`)}`}
             </span>
             {j.status === "waiting_operator" && <span className="text-xs text-muted">{t("companyBuilder.prototype.waiting")}</span>}

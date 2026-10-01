@@ -6,7 +6,7 @@ import { BASE_URL } from "./stack";
 test.describe("theme switch", () => {
   test("persists across reload and appears in the server HTML", async ({ page, context }) => {
     await page.goto("/sign-in");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
     await page.getByRole("button", { name: "Light" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

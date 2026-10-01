@@ -989,6 +989,7 @@ export const ssoConfig = pgTable("sso_config", {
     .primaryKey()
     .references(() => workspace.id, { onDelete: "cascade" }),
   issuer: text("issuer").notNull(),
+  provider: text("provider").$type<"oidc" | "zitadel">().notNull().default("oidc"),
   clientId: text("client_id").notNull(),
   clientSecretEnc: text("client_secret_enc").notNull(),
   keyId: text("key_id").notNull(),

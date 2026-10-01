@@ -1,7 +1,7 @@
 # Company Builder — copy review
 
-Source catalogue: `src/i18n/messages/company-builder.ar.ts` (Arabic, source of truth) and
-`src/i18n/messages/company-builder.en.ts` (same keys, TypeScript-enforced). Every visible string of the new screens is a
+Source catalogue: `src/i18n/messages/ar.json (companyBuilder namespace)` (Arabic, source of truth) and
+`src/i18n/messages/en.json (companyBuilder namespace)` (same keys, catalogue parity checked). Every visible string of the new screens is a
 catalogue key with a display condition in the component that renders it. Model/CLI output never supplies product
 copy: generated content is shown only as quoted data (reply drafts, copy options), escaped by React.
 

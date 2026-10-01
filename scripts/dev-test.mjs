@@ -62,7 +62,7 @@ const procs = [
   spawn(`npx tsx e2e/fakes/provider-server.ts --port ${FAKE_PROVIDERS_PORT}`, { stdio: "inherit", shell: true, env: process.env }),
   spawn(`npx tsx e2e/fakes/ai-server.ts --port ${FAKE_AI_PORT}`, { stdio: "inherit", shell: true, env: process.env }),
   spawn(`npx next ${prodMode ? "start" : "dev"} -p ${stack.port}`, { stdio: "inherit", shell: true, env: process.env }),
-  spawn("npx tsx worker/index.ts", { stdio: "inherit", shell: true, env: process.env }),
+  spawn(`npx tsx worker/index.ts --flowline-test-stack=${stack.port}`, { stdio: "inherit", shell: true, env: process.env }),
 ];
 
 let stopping = false;

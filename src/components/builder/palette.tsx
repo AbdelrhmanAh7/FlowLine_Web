@@ -8,9 +8,10 @@ import { nodeCategoryLabel, nodeText } from "@/i18n/engine-text";
 import { useAiOverview } from "@/lib/ai";
 import { useCatalog } from "@/lib/catalog";
 import { useWorkspace } from "../shell/workspace-context";
-import { CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn, useReturnFocus } from "../ui";
+import { Input, CAT_BG, CAT_TEXT, CATEGORY_HUE, NODE_ICONS, cn, useReturnFocus } from "../ui";
 
 export const DRAG_MIME = "application/x-flowline-node";
+export const DRAG_TEXT_PREFIX = "flowline/node:";
 
 interface Props {
   hasTrigger: boolean;
@@ -63,7 +64,7 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
 
   return (
     <div ref={contentRef} role="dialog" aria-label={t("palette.dialog")} className="motion-pop absolute top-12 start-3 z-30 w-72 rounded-lg border border-line bg-elevated p-2 shadow-[var(--shadow-popover)]">
-      <input
+      <Input
         ref={ref}
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -106,6 +107,8 @@ export const NodePalette = forwardRef<HTMLInputElement, Props>(function NodePale
               draggable={allowDrag && !reason}
               onDragStart={(e) => {
                 e.dataTransfer.setData(DRAG_MIME, d.type);
+                // WebKit preserves standard text data when it strips a custom MIME type.
+                e.dataTransfer.setData("text/plain", `${DRAG_TEXT_PREFIX}${d.type}`);
                 e.dataTransfer.effectAllowed = "move";
               }}
               onMouseEnter={() => setActive(i)}

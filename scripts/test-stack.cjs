@@ -65,6 +65,9 @@ function testStack(env = process.env) {
  */
 function applyTestStackEnv(env = process.env) {
   const s = testStack(env);
+  // The application root .env is also auto-loaded by Next during test builds. Never let the local owner's
+  // operator-managed ZITADEL app credentials bleed into an isolated test stack, even if caller env overrides .env.test.
+  for (const key of ["ZITADEL_ISSUER", "ZITADEL_CLIENT_ID", "ZITADEL_CLIENT_SECRET"]) env[key] = "";
   if (env.DATABASE_URL) {
     const u = new URL(env.DATABASE_URL);
     u.pathname = `/${s.db}`;

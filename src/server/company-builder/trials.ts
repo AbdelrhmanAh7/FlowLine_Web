@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CompanyBlueprint, Provenance, TrialVerdict, UserVerdict } from "@/company-builder/model";
 import { getPack } from "@/company-builder/packs";
+import { sampleTrialDrift } from "@/company-builder/sample-safety";
 import type { FlowGraph } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "@/server/access";
@@ -59,15 +60,23 @@ export async function startTrial(user: CurrentUser, workspaceId: string, install
     .where(and(eq(schema.cbTrial.installationId, inst.id), eq(schema.cbTrial.taskId, taskId), eq(schema.cbTrial.trialKey, input.trialKey)));
   if (existing) return { trial: existing, duplicate: true };
 
-  // A sample trial must never reach an account: if a person added steps outside the pack's local nodes (HTTP, AI,
-  // integrations, code), the draft is no longer a sample-safe definition and the trial is refused (use the editor).
-  const [flow] = await db.select({ graph: schema.flow.graph, deletedAt: schema.flow.deletedAt }).from(schema.flow).where(eq(schema.flow.id, item.refId));
-  if (!flow || flow.deletedAt) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "The draft was deleted");
-  if ((flow.graph as FlowGraph).nodes.some((n) => !pack.nodeTypes.includes(n.type))) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft now has steps that could reach real accounts — run it from the editor instead");
+  // A sample trial must never reach an account or real data: if a person added steps outside the pack's local nodes
+  // (HTTP, AI, integrations, code) or changed what an allowed step does (e.g. a data.store namespace/key, or the
+  // expression that computes the key), the draft is no longer the pack's sample-safe definition and the trial is
+  // refused (use the editor). Label and position edits are fine.
   // A sample trial is ALWAYS labelled sample (records go under a "sample:" key), whatever the client sent.
   const given = input.input;
   const sample = given ? { ...given, request: { ...(given.request as Record<string, unknown>), sample: true } } : (pack.sample(task.params) as Record<string, unknown>);
-  const { run } = await enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` });
+  // The check and the enqueue share one transaction holding the flow row lock: saves wait, so the run's pinned
+  // snapshot is exactly the graph checked here.
+  const { run } = await db.transaction(async (tx) => {
+    const [flow] = await tx.select({ graph: schema.flow.graph, deletedAt: schema.flow.deletedAt }).from(schema.flow).where(eq(schema.flow.id, item.refId)).for("update");
+    if (!flow || flow.deletedAt) throw new HttpError(409, "TRIAL_NOT_AVAILABLE", "The draft was deleted");
+    const graph = flow.graph as FlowGraph;
+    if (graph.nodes.some((n) => !pack.nodeTypes.includes(n.type))) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft now has steps that could reach real accounts — run it from the editor instead");
+    if (sampleTrialDrift(pack, task.params, graph).length > 0) throw new HttpError(409, "TRIAL_NOT_SAMPLE_SAFE", "This draft's steps were changed from the tested definition — run it from the editor instead");
+    return enqueueRunEx(user, item.refId, { input: sample, triggerKind: "manual", triggerRef: `cb-trial:${input.trialKey}` }, tx);
+  });
   const [trial] = await db
     .insert(schema.cbTrial)
     .values({ workspaceId, installationId: inst.id, taskId, flowId: item.refId, runId: run.id, trialKey: input.trialKey, provenance: input.provenance ?? "deterministic_calculation", createdBy: user.id })

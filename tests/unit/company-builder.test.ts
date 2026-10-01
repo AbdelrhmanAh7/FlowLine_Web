@@ -404,9 +404,9 @@ describe("owner prototype gate", () => {
 describe("copy contract", () => {
   it("contains the required sentences verbatim (Arabic source)", () => {
     const c = ar.companyBuilder;
-    expect(c.promise).toBe("ابنِ فريقًا رقميًا يعرف شغلك.");
+    expect(c.promise).toBe("ابنِ فريقًا رقميًا يفهم عملك.");
     expect(c.supporting).toBe("أخبرنا بما تريد إنجازه. نجهز المهام على أدواتك، وتراجع الإجراءات المهمة قبل تنفيذها.");
-    expect(c.start).toBe("اقترح فريقي");
+    expect(c.start).toBe("اقترح فريقًا لي");
     expect(c.facts.heading).toBe("راجع ما فهمناه عن مشروعك.");
     expect(c.plan.ready).toBe("خطة فريقك جاهزة للمراجعة.");
     expect(c.plan.draftNotice).toBe("هذه مسودة. لم يبدأ أي تشغيل تلقائي.");

@@ -50,6 +50,8 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await answerSingle(page, "cust_reviewer", "Me (the owner)");
   await answerMulti(page, "cust_details", ["The service they need", "A suitable date", "A phone number"]);
   await answerSingle(page, "team", "2–10 people");
+  // Wait for the save to finish before reloading; a click only dispatches the request.
+  await expect(page.getByTestId("cb-question")).toHaveAttribute("data-question", "tools");
 
   // Resume: a reload continues at the next question with nothing lost (no fixed progress total).
   await page.reload();
@@ -200,8 +202,8 @@ test("company builder: Arabic is the default, right-to-left, with the reviewed p
   const { workspace } = await setupUser(page);
   await page.goto(`/w/${workspace.slug}/company`);
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.getByRole("heading", { name: "ابنِ فريقًا رقميًا يعرف شغلك." })).toBeVisible();
-  await expect(page.getByTestId("cb-start")).toHaveText("اقترح فريقي");
+  await expect(page.getByRole("heading", { name: "ابنِ فريقًا رقميًا يفهم عملك." })).toBeVisible();
+  await expect(page.getByTestId("cb-start")).toHaveText("اقترح فريقًا لي");
   await page.getByTestId("cb-start").click();
   // Outcome first, in Arabic: the first question asks for the result to improve (free text, mixed input allowed).
   await expect(page.getByRole("heading", { name: "ما أول نتيجة تريد تحسينها في عملك؟ صفها بكلماتك." })).toBeVisible();

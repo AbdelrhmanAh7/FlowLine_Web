@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { MessageKey } from "@/i18n/types";
 import type { CompanyBlueprint, TaskPlan } from "@/company-builder/model";
-import { Badge, Button, Card, StatusBadge, type Tone } from "@/components/ui";
+import { Radio, Badge, Button, Card, StatusBadge, type Tone } from "@/components/ui";
 import { useLocale, useT } from "@/i18n/client";
 import type { Translator } from "@/i18n/translate";
 import { FollowUpResult } from "./result";
@@ -349,7 +349,7 @@ export function PlanPanel({
           <>
             <section aria-label={t("companyBuilder.planSection.understood")} className="flex flex-col gap-1" data-testid="cb-plan-section-understood">
               <p className="text-sm text-hi">{t("companyBuilder.planSection.understood")}</p>
-              <a href="#cb-facts-heading" className="text-sm text-accent-text hover:underline">
+              <a href="?section=cb-facts-heading" className="text-sm text-accent-text hover:underline">
                 {t("companyBuilder.facts.heading")}
               </a>
             </section>
@@ -455,7 +455,7 @@ function AcceptBox({ taskId, trial, busy, canRun, onVerdict }: { taskId: string;
           <legend className="font-medium text-hi">{t("companyBuilder.trial.rejectWhy")}</legend>
           {REJECT_REASONS.map((r) => (
             <label key={r} className="flex items-center gap-2">
-              <input type="radio" name={`cb-reject-reason-${taskId}`} value={r} checked={reason === r} onChange={() => setReason(r)} />
+              <Radio name={`cb-reject-reason-${taskId}`} value={r} checked={reason === r} onChange={() => setReason(r)} />
               {t(`companyBuilder.trial.rejectReason.${r}` as MessageKey)}
             </label>
           ))}

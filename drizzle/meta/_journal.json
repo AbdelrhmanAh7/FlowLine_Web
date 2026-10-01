@@ -162,6 +162,13 @@
       "when": 1790811244393,
       "tag": "0022_company_builder_acceptance_experiment",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790861121074,
+      "tag": "0023_little_silver_fox",
+      "breakpoints": true
     }
   ]
 }

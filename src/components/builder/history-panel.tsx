@@ -99,7 +99,7 @@ export function HistoryPanel({
                 aria-current={open === v.id ? "true" : undefined}
                 className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-start text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
               >
-                <span className="data text-hi">v{v.version}</span>
+                <span className="data text-hi">{t("common.version", { version: v.version })}</span>
                 <StatusBadge tone={v.reason === "publish" ? "success" : "muted"}>{t.has(`history.reason.${v.reason}`) ? t(`history.reason.${v.reason}`) : v.reason}</StatusBadge>
                 {v.id === publishedVersionId && <StatusBadge tone="accent">{t("history.live")}</StatusBadge>}
                 <span className="data ms-auto text-muted">{t.relative(v.createdAt)}</span>
@@ -113,7 +113,7 @@ export function HistoryPanel({
           {detail.data ? (
             <>
               <p className="text-sm text-med">
-                v{detail.data.version} · {t.plural("history.steps", detail.data.graph.nodes.length)}
+                {t("common.version", { version: detail.data.version })} · {t.plural("history.steps", detail.data.graph.nodes.length)}
               </p>
               <ul className="flex flex-col gap-0.5 text-sm">
                 {detail.data.graph.nodes.map((n) => (

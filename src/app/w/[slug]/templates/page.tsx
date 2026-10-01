@@ -16,6 +16,7 @@ import type { MessageKey } from "@/i18n/types";
 import { useOnline } from "@/lib/hooks";
 import { topoOrder } from "@/engine/validate";
 import { useCreateFlow } from "../flows/dashboard";
+import { HelpDisclosure } from "@/components/help-disclosure";
 
 const CATEGORIES = ["All", "Sales", "Support", "Marketing", "Data ops", "Finance", "Operations", "Personal", "Engineering"] as const;
 
@@ -50,6 +51,7 @@ export default function TemplatesPage() {
     <div className="flex flex-col">
       <PageHeader title={t("templates.title")} sub={t("templates.sub")} />
       <div className="flex flex-col gap-6 p-4 sm:p-6">
+        <HelpDisclosure label={t("uxPages.templates.helpLabel")}>{t("uxPages.templates.helpBody")}</HelpDisclosure>
         <div className="flex flex-wrap items-center gap-3">
           <div role="group" aria-label={t("templates.filterAria")} className="flex flex-wrap gap-1">
             {CATEGORIES.map((c) => (

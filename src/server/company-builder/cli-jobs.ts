@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { applyProposal, blueprintProposalSchema, buildBlueprintEnvelope, envelopeSchema, sanitiseText, textTrialResultSchema, type CliKind, type Envelope } from "@/company-builder/cli/envelope";
 import type { CompanyBlueprint } from "@/company-builder/model";
+import { validateBlueprint } from "@/company-builder/validate";
 import type { CurrentUser } from "@/server/access";
 import { audit, userActor } from "@/server/audit";
+import { canonicalJson } from "@/server/crypto";
 import { HttpError, notFound } from "@/server/http";
-import { latestBlueprint, storeBlueprint } from "./blueprints";
+import { diffBlueprints, latestBlueprint } from "./blueprints";
 import { requireSession, stateOf } from "./sessions";
 
 /**
@@ -21,15 +23,23 @@ const TERMINAL = ["review_required", "completed", "cancelled", "failed", "blocke
 
 export const REQUEST_KEY = /^[A-Za-z0-9_-]{8,64}$/;
 
+type StoredJobEnvelope = Envelope & { baseBlueprint?: { id: string; version: number } };
+
+/** Remove server-only plan identity before an envelope reaches a CLI or laptop export. */
+export function cliEnvelope(value: unknown): Envelope {
+  const { baseBlueprint: _baseBlueprint, ...envelope } = value as StoredJobEnvelope;
+  return envelopeSchema.parse(envelope);
+}
+
 export async function enqueueJob(user: CurrentUser, workspaceId: string, input: { sessionId: string; cli: CliKind; kind: "blueprint" | "text_trial"; requestKey: string; text?: string }) {
   if (!REQUEST_KEY.test(input.requestKey)) throw new HttpError(400, "VALIDATION", "Invalid request key");
   const session = await requireSession(workspaceId, input.sessionId);
   const jobId = randomUUID();
-  let envelope: Envelope;
+  let envelope: StoredJobEnvelope;
   if (input.kind === "blueprint") {
     const base = await latestBlueprint(session.id);
     if (!base) throw new HttpError(409, "PLAN_FIRST", "Preview the plan first; the CLI only refines it");
-    envelope = buildBlueprintEnvelope(jobId, input.cli, stateOf(session).facts, base.body as CompanyBlueprint);
+    envelope = { ...buildBlueprintEnvelope(jobId, input.cli, stateOf(session).facts, base.body as CompanyBlueprint), baseBlueprint: { id: base.id, version: base.version } };
   } else {
     const text = sanitiseText(input.text, 2000);
     if (!text) throw new HttpError(422, "VALIDATION", "Enter a synthetic request to process");
@@ -90,17 +100,61 @@ export function validateJobOutput(envelope: Envelope, raw: unknown): ValidationO
 
 /** Applies a validated result: blueprint proposals become a new blueprint version (review required). */
 export async function applyJobResult(founder: CurrentUser, job: typeof schema.cbCliJob.$inferSelect, value: unknown, generator: CompanyBlueprint["generator"]) {
-  const envelope = job.envelope as Envelope;
-  if (envelope.kind === "text_trial") {
-    await db.update(schema.cbCliJob).set({ status: "completed", result: value as object, finishedAt: new Date(), error: null }).where(eq(schema.cbCliJob.id, job.id));
-    return null;
-  }
-  const base = await latestBlueprint(job.sessionId!);
-  if (!base) throw new HttpError(409, "PLAN_FIRST", "No base plan");
-  const { blueprint, ignored } = applyProposal(base.body as CompanyBlueprint, blueprintProposalSchema.parse(value), generator);
-  const { row } = await storeBlueprint(founder, job.workspaceId, job.sessionId!, blueprint, generator);
-  await db.update(schema.cbCliJob).set({ status: "review_required", result: { ignoredTaskIds: ignored }, resultBlueprintId: row.id, finishedAt: new Date(), error: null }).where(eq(schema.cbCliJob.id, job.id));
-  return row;
+  return db.transaction(async (tx) => {
+    const [currentJob] = await tx.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id)).for("update");
+    if (!currentJob || currentJob.status !== "validating" || currentJob.cancelRequestedAt) throw new HttpError(409, "JOB_CANCELLED", "The CLI job was cancelled before its result could be applied");
+    const envelope = currentJob.envelope as StoredJobEnvelope;
+    if (envelope.kind === "text_trial") {
+      const [done] = await tx
+        .update(schema.cbCliJob)
+        .set({ status: "completed", result: value as object, finishedAt: new Date(), error: null, lockedBy: null })
+        .where(and(eq(schema.cbCliJob.id, currentJob.id), eq(schema.cbCliJob.status, "validating"), isNull(schema.cbCliJob.cancelRequestedAt)))
+        .returning();
+      if (!done) throw new HttpError(409, "JOB_CANCELLED", "The CLI job was cancelled before its result could be applied");
+      return null;
+    }
+
+    const pointer = envelope.baseBlueprint;
+    if (!pointer || !currentJob.sessionId) throw new HttpError(409, "PLAN_BASE_MISSING", "The plan version used by this CLI job is unavailable");
+    // Match storeBlueprint's session-row lock so no newer plan can appear between the version check and insert.
+    const [session] = await tx
+      .select({ id: schema.cbSession.id })
+      .from(schema.cbSession)
+      .where(and(eq(schema.cbSession.id, currentJob.sessionId), eq(schema.cbSession.workspaceId, currentJob.workspaceId)))
+      .for("update");
+    if (!session) throw notFound("Session not found");
+    const [base] = await tx
+      .select()
+      .from(schema.cbBlueprint)
+      .where(and(eq(schema.cbBlueprint.id, pointer.id), eq(schema.cbBlueprint.workspaceId, currentJob.workspaceId), eq(schema.cbBlueprint.sessionId, currentJob.sessionId)))
+      .limit(1);
+    const [latest] = await tx.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, currentJob.sessionId)).orderBy(desc(schema.cbBlueprint.version)).limit(1);
+    if (!base || base.version !== pointer.version || !latest || latest.id !== pointer.id || latest.version !== pointer.version) {
+      throw new HttpError(409, "PLAN_SUPERSEDED", "A newer plan exists; create a new CLI job for that version");
+    }
+
+    const { blueprint: proposed, ignored } = applyProposal(base.body as CompanyBlueprint, blueprintProposalSchema.parse(value), generator);
+    const checked = validateBlueprint(proposed);
+    if (!checked.blueprint) throw new HttpError(422, "BLUEPRINT_INVALID", "The proposed plan failed validation", checked.issues);
+    if (checked.blueprint.sessionId !== currentJob.sessionId) throw new HttpError(422, "BLUEPRINT_INVALID", "The plan belongs to another interview");
+    let row = base;
+    if (canonicalJson(base.body) !== canonicalJson(checked.blueprint)) {
+      const diff = diffBlueprints(base.body as CompanyBlueprint, checked.blueprint);
+      const [created] = await tx
+        .insert(schema.cbBlueprint)
+        .values({ workspaceId: currentJob.workspaceId, sessionId: currentJob.sessionId, version: base.version + 1, profileVersion: checked.blueprint.profileVersion, generator, body: checked.blueprint, diff, createdBy: founder.id })
+        .returning();
+      row = created!;
+      if (base.status !== "superseded") await tx.update(schema.cbBlueprint).set({ status: "superseded" }).where(eq(schema.cbBlueprint.id, base.id));
+    }
+    const [done] = await tx
+      .update(schema.cbCliJob)
+      .set({ status: "review_required", result: { ignoredTaskIds: ignored }, resultBlueprintId: row.id, finishedAt: new Date(), error: null, lockedBy: null })
+      .where(and(eq(schema.cbCliJob.id, currentJob.id), eq(schema.cbCliJob.status, "validating"), isNull(schema.cbCliJob.cancelRequestedAt)))
+      .returning();
+    if (!done) throw new HttpError(409, "JOB_CANCELLED", "The CLI job was cancelled before its result could be applied");
+    return row;
+  });
 }
 
 /* ───────────── Operator export / import (laptop-only CLIs, Pi limitation) ───────────── */
@@ -109,7 +163,7 @@ export async function applyJobResult(founder: CurrentUser, job: typeof schema.cb
 export async function exportJob(workspaceId: string, jobId: string) {
   const job = await requireJob(workspaceId, jobId);
   if (job.status !== "waiting_operator") throw new HttpError(409, "NOT_EXPORTABLE", `This job is ${job.status}`);
-  return { format: "flowline-cb-envelope", version: 1, envelope: job.envelope as Envelope };
+  return { format: "flowline-cb-envelope", version: 1, envelope: cliEnvelope(job.envelope) };
 }
 
 /**
@@ -138,7 +192,9 @@ export async function importJobResult(founder: CurrentUser, workspaceId: string,
   try {
     return await applyJobResult(founder, claimed, check.value, "cli_import");
   } catch (e) {
-    await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "OUTPUT_INVALID" }, finishedAt: new Date() }).where(eq(schema.cbCliJob.id, job.id));
+    const cancelled = e instanceof HttpError && e.code === "JOB_CANCELLED";
+    const code = cancelled ? "CANCELLED" : e instanceof HttpError ? e.code : "OUTPUT_INVALID";
+    await db.update(schema.cbCliJob).set({ status: cancelled ? "cancelled" : "failed", error: { code }, finishedAt: new Date(), lockedBy: null }).where(and(eq(schema.cbCliJob.id, job.id), eq(schema.cbCliJob.status, "validating")));
     throw e;
   }
 }

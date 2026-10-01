@@ -5,6 +5,7 @@ import { HttpError } from "./http";
 import { platformAudit, type Assurance } from "./platform-audit";
 import { SETTING_ENV, SETTING_KEYS, type SettingKey } from "./platform-purposes";
 import { SETTING_SCHEMAS } from "./platform-setting-schemas";
+import { safeFetch } from "./egress";
 
 export { SETTING_SCHEMAS } from "./platform-setting-schemas";
 
@@ -40,7 +41,25 @@ export interface SettingActor {
 export async function setSetting<K extends SettingKey>(actor: SettingActor, key: K, value: unknown, expectedRevision: number, opts: { importedFromEnv?: boolean } = {}) {
   const parsed = SETTING_SCHEMAS[key].safeParse(value);
   if (!parsed.success) throw new HttpError(400, "SETTING_INVALID", "This value isn't valid for this setting", parsed.error.issues.map((i) => ({ path: i.path, message: i.message })));
+  if (key === "signin.zitadel.issuer") {
+    const issuer = parsed.data as string;
+    const res = await safeFetch(`${issuer}/.well-known/openid-configuration`, { headers: { accept: "application/json" }, timeoutMs: 8_000, maxBytes: 128 * 1024, maxRedirects: 0 });
+    if (res.status !== 200) throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery could not be verified");
+    let doc: Record<string, unknown>;
+    try { doc = res.json<Record<string, unknown>>(); } catch { throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery is invalid"); }
+    if (doc.issuer !== issuer || !["authorization_endpoint", "token_endpoint", "userinfo_endpoint", "jwks_uri"].every((k) => {
+      try { const u = new URL(doc[k] as string); return typeof doc[k] === "string" && u.origin === issuer && !u.username && !u.password; } catch { return false; }
+    })) throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery does not match this issuer");
+    if (!Array.isArray(doc.token_endpoint_auth_methods_supported) || !doc.token_endpoint_auth_methods_supported.includes("client_secret_basic"))
+      throw new HttpError(400, "SETTING_INVALID", "ZITADEL must support client_secret_basic");
+    if (!Array.isArray(doc.id_token_signing_alg_values_supported) || !doc.id_token_signing_alg_values_supported.includes("RS256"))
+      throw new HttpError(400, "SETTING_INVALID", "ZITADEL must publish RS256 signing metadata");
+  }
   return db.transaction(async (tx) => {
+    if (key === "signin.zitadel.issuer") {
+      const [credential] = await tx.select({ id: schema.platformSecret.id }).from(schema.platformSecret).where(eq(schema.platformSecret.purpose, "signin.zitadel")).for("update");
+      if (credential) throw new HttpError(409, "ZITADEL_CLEAR_FIRST", "Clear the ZITADEL client credential before changing its issuer");
+    }
     const [row] = await tx.select().from(schema.platformSetting).where(eq(schema.platformSetting.key, key)).for("update");
     const current = row?.revision ?? 0;
     if (current !== expectedRevision) throw new HttpError(409, "REVISION_CONFLICT", "This setting changed since you loaded it. Reload and try again.");
@@ -105,6 +124,7 @@ export function settingFromEnv(key: SettingKey, env: NodeJS.ProcessEnv = process
         return undefined;
       }
     }
+    case "signin.zitadel.issuer": return undefined;
   }
 }
 

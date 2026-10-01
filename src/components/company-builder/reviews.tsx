@@ -78,8 +78,8 @@ export function ReviewInbox({ data, canDecide, isOwner, busy, onDecide, onVerify
                 <dt className="text-muted">{t("companyBuilder.review.reviewer")}</dt>
                 <dd>{cbt(t, `reviewerRole.${it.reviewerRole}`)}</dd>
                 <dt className="text-muted">{t("companyBuilder.review.taskVersion")}</dt>
-                <dd dir="ltr" className="text-start">
-                  {it.taskVersion} · plan v{it.blueprintVersion}
+                <dd className="text-start">
+                  {t("companyBuilder.review.versionSummary", { taskVersion: it.taskVersion, planVersion: it.blueprintVersion })}
                 </dd>
               </dl>
               {state === "invalidated" && <p className="text-sm text-danger">{t("companyBuilder.review.invalidated")}</p>}

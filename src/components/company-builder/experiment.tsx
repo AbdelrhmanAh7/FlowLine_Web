@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Input, Button, Card } from "@/components/ui";
 import { intlLocale } from "@/i18n/config";
 import { useLocale, useT } from "@/i18n/client";
 import { api } from "@/lib/api";
@@ -124,7 +124,7 @@ export function ExperimentPanel({ base, sessionId, refreshKey }: { base: string;
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-med">{t("companyBuilder.experiment.logSupport")}</span>
-          <input type="number" min={1} max={1440} step={1} inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-28 rounded-md border border-line bg-app px-2 py-1" data-testid="cb-experiment-support-minutes" />
+          <Input type="number" min={1} max={1440} step={1} inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-28 rounded-md border border-line bg-app px-2 py-1" data-testid="cb-experiment-support-minutes" />
         </label>
         <span className="pb-1.5 text-sm text-muted">{t("companyBuilder.experiment.minutes")}</span>
         <Button size="sm" variant="secondary" onClick={save} loading={saving} disabled={minutes.trim() === ""} data-testid="cb-experiment-support-save">

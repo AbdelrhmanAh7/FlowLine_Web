@@ -1,9 +1,10 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { CliError, cliConfig, parseJsonOutput, preflight, runCli, type CliConfig, type CliErrorCode } from "@/company-builder/cli/adapter";
-import { MAX_REPAIRS, type CliKind, type Envelope } from "@/company-builder/cli/envelope";
+import { MAX_REPAIRS, type CliKind } from "@/company-builder/cli/envelope";
 import type { CurrentUser } from "@/server/access";
-import { applyJobResult, validateJobOutput } from "./cli-jobs";
+import { HttpError } from "@/server/http";
+import { applyJobResult, cliEnvelope, validateJobOutput } from "./cli-jobs";
 
 /**
  * Processes ONE claimed job: preflight → run → validate → (at most one repair) → apply. Status transitions are
@@ -22,7 +23,7 @@ async function finish(jobId: string, code: CliErrorCode, reported?: Record<strin
 
 export async function processJob(job: typeof schema.cbCliJob.$inferSelect, founder: CurrentUser, cfgOverride?: CliConfig) {
   const cli = job.cli as CliKind;
-  const envelope = job.envelope as Envelope;
+  const envelope = cliEnvelope(job.envelope);
   const cfg = cfgOverride ?? cliConfig(cli);
   const pf = preflight(cli, cfg);
   if (!pf.ok) return finish(job.id, pf.code ?? "CLI_UNAVAILABLE", { cliVersion: pf.version, missingFlags: pf.missingFlags, isolation: pf.isolation.length });
@@ -68,8 +69,10 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
       }
       try {
         await applyJobResult(founder, job, check.value, cli === "claude" ? "cli_claude" : "cli_codex");
-      } catch {
+      } catch (e) {
         // A proposal that parses but produces an invalid plan is rejected as a whole (nothing partial is stored).
+        if (e instanceof HttpError && e.code === "JOB_CANCELLED") return finish(job.id, "CANCELLED", reported);
+        if (e instanceof HttpError && e.code === "PLAN_SUPERSEDED") return finish(job.id, "PLAN_SUPERSEDED", reported);
         return finish(job.id, "OUTPUT_INVALID", reported);
       }
       await db.update(schema.cbCliJob).set({ reported, lockedBy: null }).where(eq(schema.cbCliJob.id, job.id));
