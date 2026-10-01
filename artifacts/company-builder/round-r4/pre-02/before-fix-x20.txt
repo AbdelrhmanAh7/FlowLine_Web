@@ -1,0 +1,1 @@
+Before the fix (same stack, f74285c test): --repeat-each=20 → 2 failed, 18 passed (run 2026-10-01 ~10:25 UTC; console output only, report file overwritten by the next run).
