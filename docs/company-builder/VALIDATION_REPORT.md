@@ -108,7 +108,7 @@ Flowline was set up only from participant fields. The expectations are read only
 |---|---|---|---|---|
 | R1 | `ec35061` | **8/10** | VP-03: quoted the *deep-cleaning* price for an Arabic office-price question (**VF-01**, real defect). VP-06: literal hint "cancelled" matches the approved policy line (**VF-02**, packet ambiguity). | Yes — Flowline's own checks passed all 10, including the wrong VP-03 |
 | R2 | `dd9984f` | **9/10** | VP-06 (VF-02, kept as FAIL) | No |
-| Final | `29db174` | FIELD_FINAL_PLACEHOLDER | | |
+| Final | `29db174` | **9/10** | VP-06 (VF-02, disputed fixture, kept as FAIL) | No |
 
 **Honesty notes on the field result:**
 
@@ -160,7 +160,39 @@ Other observations:
 
 ## 6. Gates per round
 
-GATES_PLACEHOLDER
+| Gate | R2 `dd9984f` (historical) | **Final `29db174`** |
+|---|---|---|
+| Lint + typecheck | ✓ | ✓ |
+| Secrets scan | 0 hits | 0 hits |
+| Unit | 615/615 | **617/617** |
+| Contract | 467/467 | **467/467** |
+| Integration | 520/520 | **521/521** |
+| Field run (frozen packet, strict) | 9/10 | **9/10** |
+| E2E Chromium (1 worker) | 127/127 | **127/127** |
+| E2E Firefox (1 worker) | 62/62 | **62/62** |
+| E2E WebKit (1 worker) | 62/62 | **62/62** |
+
+**Final gate identity** (`gates-final-29db174/identity.txt`, `progress.log`):
+
+- Candidate: `29db174e4fce2671a35d75b73c59033174e64340`.
+- The working-tree HEAD when the gate started was `c8792d3`, and the server was built at `42ae9b8`. Both are
+  evidence/docs commits on top of the candidate, and the execution tree was verified equal to the candidate
+  (`git diff` excluding `*.md` and `artifacts/**` is empty; dirty count 0).
+- Next build id `4HU5MH2v16814gYjQaHTQ`.
+- The suites ran strictly one after another, 08:44 → 09:04 UTC on 2026-10-01; logs and output directories are kept.
+
+**R2 isolation:** the `dd9984f` browser runs completed with exit 0.
+
+- `lifecycle.ts` and the i18n copy were edited at 08:23, during the Chromium run.
+- The server was a prebuilt bundle, and `lifecycle.ts` is imported only by `overview.ts` (in that bundle).
+- The worker's dynamic imports don't reach the changed files, and the specs import nothing from `src`.
+- The spec edit came after WebKit ended (08:35).
+
+R2 therefore stays valid as **R2 evidence for `dd9984f` only**.
+
+**Fable bug review of the final candidate** (read-only, in parallel with the gate): FB2-01 (P1, confirmed: approved
+information over ~1,050 characters breaks plan generation), FB2-02 (P2), and FB2-03..10 (P3). All are **OPEN** for
+the next round; see BUGS.md.
 
 ## 7. Old benchmark (v1, frozen) — classification of the five failures
 

@@ -305,4 +305,9 @@ Q01–Q14 / R01–R36 / copy ids: PENDING — reference files not supplied (see 
 | CB-36 | Refund/cancellation always needs a person; draft can't bypass the reviewer; no money action | owner 2026-10-01 §3 | unit REF-*; int REF | PASS | BUGS.md FB-11 |
 | CB-37 | Phone numbers with separators recognised; display kept; no country-code guessing | owner §5A | unit PH-*; int PH | PASS | BUGS.md FB-07 |
 | CB-38 | Follow-up records scoped per interview: no cross-session overwrite, no duplicates (beta blocker) | owner §5B | unit KEY-*; int KEY | PASS | BUGS.md FB-12 |
-
+| CB-39 | Validation: tested-code equivalence 1fe3d31≡d224cfb; final candidate gated directly | validation sprint §1 | git tree comparison; final gate | PASS | `docs/company-builder/VALIDATION_REPORT.md` §1, §6 |
+| CB-40 | Validation: frozen packet field run (sample/rules-only) | validation §3 | `flowline-field/field.spec.ts` | 9/10 strict on 29db174 (VP-06 disputed fixture); not held-out | VALIDATION_REPORT §3 |
+| CB-41 | VF-03 state contract: no live email implied anywhere (Gmail marker or not) | validation | unit, int, e2e | PASS (29db174) | BUGS.md VF-03 |
+| CB-42 | Live Gmail read/send in Company Builder | validation §3 | — | NOT IMPLEMENTED (capability gap, proposal in VALIDATION_REPORT §2); live verification BLOCKED | — |
+| CB-43 | Competitor comparison; actual Chrome QA; human usability; real owner CLI | validation §2, §5 | owner-run | BLOCKED / NOT RUN / UNVERIFIED | COMPETITOR_RESULTS.md |
+| CB-44 | Fable review findings FB2-01..10 (FB2-01 P1 long approved info breaks plan) | review of 29db174 | — | OPEN (next round) | BUGS.md FB2-* |

@@ -1,5 +1,60 @@
 # Next action
 
+## Company Builder — RESUME HERE (validation round closed 2026-10-01)
+
+**Where things stand:**
+
+- Branch: `claude/company-builder-milestones-abc-pmba6v`; the pushed head is REMOTE_SHA_PLACEHOLDER. The final tested
+  candidate is **`29db174`**; the commits after it are evidence/docs only, with the execution tree verified equal.
+- **MERGE TO MAIN: NO** (owner decision). **PRODUCTION DEPLOYMENT: NO.** No live payments.
+- First slice: **COMPLETE — SAMPLE DATA / RULES-ONLY / LOCAL OUTBOX.** Overall Company Builder: **INCOMPLETE.**
+- **Competitive verdict: INCONCLUSIVE — COMPETITIVE EDGE NOT YET PROVEN.**
+- Read first: `CLAUDE.md`, `AGENTS.md`, `SCOPE_MATRIX.md` (CB-*), this file,
+  `docs/company-builder/VALIDATION_REPORT.md`, `artifacts/company-builder/BUGS.md`.
+
+**Fresh cloud session — resume steps:**
+
+```bash
+git fetch origin claude/company-builder-milestones-abc-pmba6v
+git checkout -B claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
+git log -1 --format=%H        # must equal the pushed head above
+git diff --quiet 29db174 HEAD -- . ':!*.md' ':!artifacts/**' && echo "exec tree == tested candidate 29db174"
+pnpm install --frozen-lockfile
+# Postgres 16 on :5433 with DBs flowline + flowline_test; then create the git-ignored .env.test from
+# docs/company-builder/env.test.template (fake provider credentials; generate the 3 keys with openssl).
+pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract
+pnpm stop:test && pnpm test:integration          # integration refuses to run while a test-stack worker is up
+FLOWLINE_TEST_NEXT=start pnpm dev:test &         # then: bash e2e/tools/browser-docker.sh chromium|firefox|webkit
+pnpm stop:test                                   # stops :3100, :4010, :4011 in dev and production mode
+```
+
+No untracked local file is needed beyond `.env.test`, which is reproducible from the template. Docker is needed only
+for the browser runner (`mcr.microsoft.com/playwright:v1.63.0-noble`).
+
+**Continue only the remaining validation.** Don't restart the implementation, and don't edit the frozen packet
+(`artifacts/company-builder/validation/20261001-d224cfb/packet/`, sha256 `4fa9841b…`) or the evaluator ground truth:
+
+1. **Actual Google Chrome QA**, in an environment where `dl.google.com` (or an installed Chrome) is reachable.
+   Chromium evidence is not Chrome QA.
+2. **Live Gmail certification.**
+   - Live read/send is **not implemented** in Company Builder. First approve or reject the bounded proposal in
+     VALIDATION_REPORT §2.
+   - Then you, as owner, enter the integration OAuth client in the admin panel and provide one consolidated approval:
+     dedicated sender, allowlisted recipients, marker label, maximum sends, read scope and cleanup.
+   - The owner's personal Gmail connector must not be used.
+3. **Real owner CLI verification** on your laptop ("Founder runbook (laptop)" in `docs/company-builder/CLI_PROTOTYPE.md`). Fake-CLI tests don't close it.
+4. **Competitor field testing** (`COMPETITOR_RESULTS.md`, `COMPETITIVE_TEST_PROTOCOL.md`).
+   - Use the participant packet only, with a human participant.
+   - Choose free tiers; no card or auto-renew without approval.
+
+**Open defects for the next code round** (Fable review of `29db174`; BUGS.md FB2-*):
+
+- **FB2-01, P1, confirmed:** approved information over ~1,050 characters breaks plan generation.
+- **FB2-02, P2:** rejecting a stale activation pauses an active task while its flow stays published.
+- **FB2-03..10:** P3s.
+
+Fix them as a new round with regression tests, then gate again. Don't relabel `29db174` evidence.
+
 ## Company Builder — direction v2 + owner decisions, 2026-10-01
 
 **Status:**

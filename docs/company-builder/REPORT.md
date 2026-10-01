@@ -4,6 +4,30 @@ Session: Claude Code cloud session, 2026-09-30. Brief: `docs/company-builder/CLO
 Baseline: `main` @ 9324b1fed677f03e8c044eb1373b8577167abeb5. Branch: `claude/company-builder-milestones-abc-pmba6v`
 (pushed to origin as a feature branch only — **not merged, no PR, not deployed**).
 
+## Validation sprint — closed round (2026-10-01): final candidate `29db174`
+
+Details: `VALIDATION_REPORT.md`, `COMPETITOR_RESULTS.md`, `artifacts/company-builder/BUGS.md`.
+Evidence: `artifacts/company-builder/validation/20261001-d224cfb/`.
+
+| Verdict | Status |
+|---|---|
+| FIRST VERTICAL SLICE | **COMPLETE — SAMPLE DATA / RULES-ONLY / LOCAL OUTBOX** (no live email read or send exists in Company Builder) |
+| OVERALL COMPANY BUILDER | **INCOMPLETE** |
+| Tested-code equivalence | `1fe3d31`≡`d224cfb` proven (docs/evidence only). The final candidate `29db174` was gated directly |
+| Final automated gate (`29db174`) | lint/typecheck ✓ · secrets 0 · unit 617 · contract 467 · integration 521 · Chromium 127 · Firefox 62 · WebKit 62 (sequential, 1 worker) |
+| Sample/rules-only field result | Frozen packet, strict: R1 8/10 (VF-01) → R2 9/10 → Final 9/10. **The same packet was reused after a fix**, so this is not held-out or customer validation. VP-06 is a **disputed fixture expectation**: a separate reviewer agent judged it FAIL under the rule as written, with an ambiguous expectation |
+| VF-01 / VF-03 | **FIXED**, gated on `29db174` |
+| Fable bug review of `29db174` | FB2-01 P1 (confirmed), FB2-02 P2, FB2-03..10 P3: **OPEN, next round** |
+| Real owner CLI | **UNVERIFIED** (fake-CLI tests only) |
+| Actual Google Chrome QA | **BLOCKED** (no Chrome binary; `dl.google.com` refused; not substituted) |
+| Live Gmail | **BLOCKED**: capability not implemented in Company Builder; no dedicated test account or OAuth client; not verified |
+| Competitors | **BLOCKED / NOT TESTED** (hosts unreachable; no authorised accounts) |
+| Human usability | **NOT RUN** |
+| Old benchmark v1 | 7/12 preserved. The 5 failures are all superseded by approved requirement changes; 0 regressions (see VALIDATION_REPORT §7). Not a 12/12 pass |
+| **Competitive verdict** | **INCONCLUSIVE — NO COMPETITOR RUNS OR HUMAN VALIDATION; COMPETITIVE EDGE NOT YET PROVEN** |
+
+---
+
 ## Owner decisions 2026-10-01 — current status (candidate `1fe3d31` + docs)
 
 The branch was pushed for preservation only (approved 2026-10-01; first push `8439f6f`, remote = local verified).
