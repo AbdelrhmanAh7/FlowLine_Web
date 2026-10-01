@@ -25,3 +25,6 @@ artifacts/**/helper-logs/
 artifacts/**/.profile/
 # per-run Playwright output (traces are zips the evidence scanner cannot read)
 artifacts/**/test-results*/
+
+# Local gate runs (scripts/gate.mjs); copy a run under artifacts/<area>/ deliberately to keep it as evidence
+artifacts/gates/

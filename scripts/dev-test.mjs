@@ -2,6 +2,7 @@
 // both with .env.test (flowline_test DB, FLOWLINE_ENV=test), plus the provider-boundary
 // test doubles (fake SaaS APIs on :4010, fake OpenAI-compatible AI provider on :4011). Used by Playwright.
 import { spawn, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 process.loadEnvFile(".env.test");
 process.env.NEXT_DIST_DIR = ".next-test";
@@ -20,8 +21,12 @@ spawnSync("npx tsx scripts/test/seed-platform.mts", { stdio: "inherit", shell: t
 // FLOWLINE_TEST_NEXT=start runs a PRODUCTION build (`next build` once, then `next start`) instead of `next dev`, with the
 // same fakes, worker, DB and FLOWLINE_ENV=test routes. Used to tell dev-server (on-demand compile) stalls apart from
 // application defects (INTERMITTENT-02). Default: `next dev`.
+// FLOWLINE_TEST_SKIP_BUILD=1 (prod mode only) reuses an existing .next-test build instead of rebuilding — scripts/gate.mjs
+// builds it beforehand, in parallel with the integration suite. Without a build (no BUILD_ID) it still builds.
 const prodMode = process.env.FLOWLINE_TEST_NEXT === "start";
-if (prodMode) {
+const reuseBuild = prodMode && process.env.FLOWLINE_TEST_SKIP_BUILD === "1" && existsSync(`${process.env.NEXT_DIST_DIR}/BUILD_ID`);
+if (reuseBuild) console.log(`reusing the existing ${process.env.NEXT_DIST_DIR} build (FLOWLINE_TEST_SKIP_BUILD=1)`);
+else if (prodMode) {
   const build = spawnSync("npx next build", { stdio: "inherit", shell: true, env: process.env });
   if (build.status !== 0) process.exit(build.status ?? 1);
 }

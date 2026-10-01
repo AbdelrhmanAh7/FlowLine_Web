@@ -25,6 +25,7 @@
     "test:e2e": "playwright test",
     "check": "pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract && pnpm test:integration",
     "check:evidence": "node scripts/check-evidence-secrets.mjs",
+    "gate": "node scripts/gate.mjs",
     "dev:test": "node scripts/dev-test.mjs",
     "stop:test": "node scripts/stop-test-stack.mjs",
     "test:contract": "vitest run --project contract",
