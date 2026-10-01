@@ -4,6 +4,25 @@ Session: Claude Code cloud session, 2026-09-30. Brief: `docs/company-builder/CLO
 Baseline: `main` @ 9324b1fed677f03e8c044eb1373b8577167abeb5. Branch: `claude/company-builder-milestones-abc-pmba6v`
 (pushed to origin as a feature branch only — **not merged, no PR, not deployed**).
 
+## Round R4 — correctness repair (2026-10-01): gated `f74285c`, candidate `3aa2c17`
+
+Details: `VALIDATION_REPORT.md` §10; per-finding facts in `artifacts/company-builder/BUGS.md` ("Round R4 resolution",
+"Independent read-only review of the R4 diff"). Base `203fd88`; code `64d9e00`, `62dac3f`, `f74285c`; test-only
+`3aa2c17`.
+
+| Verdict | Status |
+|---|---|
+| FB2-01 (P1), FB2-02 (P2), FB2-03/04/06/07/08/09/10 (P3) | **FIXED**, regression tests failed on old code where applicable (`artifacts/company-builder/round-r4/`) |
+| FB2-05 | **DISPROVED** (run creation already deduplicates; kept as a guard test) |
+| Review of the R4 diff (Fable subagent, read-only) | no P1; R4-RV-01 P2 and R4-RV-02/03 P3 fixed in `f74285c`; R4-RV-04 P3 open (latent); R4-RV-05 note |
+| Final gate `f74285c` | lint/typecheck ✓ · secrets 0 · unit 646 · contract 467 · integration 534 · **Chromium 127/128 (FAIL: PRE-02)** · Firefox 62 · WebKit 62 (sequential, 1 worker) |
+| Chromium on `3aa2c17` (PRE-02 test fix only) | 128/128 (rc 0; `round-r4/gates-chromium-3aa2c17/`) |
+| Field run 4 (frozen packet, strict) | 9/10, same as run 3; VP-06 remains the disputed fixture expectation |
+| Status | OVERALL COMPANY BUILDER: INCOMPLETE. LIVE GMAIL: NOT IMPLEMENTED / NOT VERIFIED. REAL CLI: UNVERIFIED. COMPETITIVE EDGE: NOT YET PROVEN. DEPLOYMENT: NO. |
+| Merge | MERGE TO MAIN: requested by the owner 2026-10-01 — see final report |
+
+The tables below are earlier rounds and are kept unchanged.
+
 ## Validation sprint — closed round (2026-10-01): final candidate `29db174`
 
 Details: `VALIDATION_REPORT.md`, `COMPETITOR_RESULTS.md`, `artifacts/company-builder/BUGS.md`.
@@ -17,7 +36,7 @@ Evidence: `artifacts/company-builder/validation/20261001-d224cfb/`.
 | Final automated gate (`29db174`) | lint/typecheck ✓ · secrets 0 · unit 617 · contract 467 · integration 521 · Chromium 127 · Firefox 62 · WebKit 62 (sequential, 1 worker) |
 | Sample/rules-only field result | Frozen packet, strict: R1 8/10 (VF-01) → R2 9/10 → Final 9/10. **The same packet was reused after a fix**, so this is not held-out or customer validation. VP-06 is a **disputed fixture expectation**: a separate reviewer agent judged it FAIL under the rule as written, with an ambiguous expectation |
 | VF-01 / VF-03 | **FIXED**, gated on `29db174` |
-| Fable bug review of `29db174` | FB2-01 P1 (confirmed), FB2-02 P2, FB2-03..10 P3: **OPEN, next round** |
+| Fable bug review of `29db174` | FB2-01 P1 (confirmed), FB2-02 P2, FB2-03..10 P3: **OPEN, next round** (2026-10-01 R4: FB2-05 disproved, the rest fixed; see Round R4 above) |
 | Real owner CLI | **UNVERIFIED** (fake-CLI tests only) |
 | Actual Google Chrome QA | **BLOCKED** (no Chrome binary; `dl.google.com` refused; not substituted) |
 | Live Gmail | **BLOCKED**: capability not implemented in Company Builder; no dedicated test account or OAuth client; not verified |
@@ -306,7 +325,12 @@ DV2-G01 original WebKit timeout (cp28) stays OPEN; R03 disappearing-opener obser
 - CB-BUG-23 self-approval for non-owner reviewer roles (prototype acceptable, open for commercial path).
 - CB-BUG-25 substring flag detection in preflight; CB-BUG-29 LAN-mode relay IP trust; CB-BUG-30 secret-pattern coverage.
 - UX-01 optional questions stay above the plan on mobile (P3).
-- PRE-02 pre-existing E2E race in `failures.spec.ts:97` (proposed test fix not applied here).
+- ~~PRE-02 pre-existing E2E race in `failures.spec.ts:97` (proposed test fix not applied here).~~ **Update
+  2026-10-01 (R4):** test fix applied in `3aa2c17` (no online blip while the other context saves). Before: 2/20
+  failed; after: 40/40 passed (`artifacts/company-builder/round-r4/pre-02/`). It still failed once in the `f74285c`
+  Chromium gate (127/128), which ran before the fix.
+- R4-RV-04 (P3, latent): `connection_missing` suppression is provider-blind; no current pack is affected.
+- R4-RV-05 (note): installations compiled before R4 keep the old draft expression until reinstalled.
 - Real Gmail/Sheets bindings for the packs are not wired (trials use the local test outbox only).
 - Questions before a full plan: 5–7 typical; up to 9–12 when optional details and a second department are answered.
   The preview is available as soon as the essentials are confirmed.

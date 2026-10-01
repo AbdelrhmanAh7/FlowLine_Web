@@ -1,6 +1,74 @@
 # Next action
 
-## Company Builder — RESUME HERE (validation round closed 2026-10-01)
+## Company Builder — RESUME HERE (round R4 closed 2026-10-01)
+
+**Where things stand:**
+
+- Branch: `claude/company-builder-milestones-abc-pmba6v`; pushed head `FINAL_HEAD_SHA`.
+- Gated code: **`f74285c`** (full sequential gate). Candidate: **`3aa2c17`** = `f74285c` + the test-only PRE-02 fix in
+  `e2e/failures.spec.ts`. Commits after `3aa2c17` are evidence/docs only.
+- **OVERALL COMPANY BUILDER: INCOMPLETE. LIVE GMAIL: NOT IMPLEMENTED / NOT VERIFIED. REAL CLI: UNVERIFIED.
+  COMPETITIVE EDGE: NOT YET PROVEN. DEPLOYMENT: NO.** No live payments.
+- MERGE TO MAIN: requested by the owner 2026-10-01 — see final report. Pre-merge checks found no deploy or spend
+  automation on main (no `.github` workflows, no deploy configs, no commit statuses) and no real secrets; main is
+  unprotected; webhooks and app installs could not be inspected.
+- A parallel gate runner, `scripts/gate.mjs`, is being added at the owner's request (faster gate).
+- Read first: `CLAUDE.md`, `AGENTS.md`, `SCOPE_MATRIX.md` (CB-*), this file,
+  `docs/company-builder/VALIDATION_REPORT.md` §10, `artifacts/company-builder/BUGS.md`.
+
+**Round R4 results** (VALIDATION_REPORT §10):
+
+- FB2-01 (P1), FB2-02 (P2), FB2-03/04/06..10 (P3): FIXED. FB2-05: DISPROVED.
+- Independent review of the R4 diff: no P1; R4-RV-01 (P2) and R4-RV-02/03 (P3) fixed in `f74285c`.
+- Gate on `f74285c`: lint/typecheck ✓, secrets 0, unit 646/646, contract 467/467, integration 534/534,
+  Chromium 127/128 (FAIL: PRE-02), Firefox 62/62, WebKit 62/62; field run 4: 9/10 strict (VP-06 disputed fixture).
+- PRE-02 fixed in `3aa2c17` (2/20 failed before, 40/40 passed after). Chromium on `3aa2c17`: 128/128 (rc 0; `round-r4/gates-chromium-3aa2c17/`).
+
+**Fresh cloud session — resume steps:**
+
+```bash
+git fetch origin claude/company-builder-milestones-abc-pmba6v
+git checkout -B claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
+git log -1 --format="%H %s"    # expect FINAL_HEAD_SHA
+git diff --quiet 3aa2c17 HEAD -- . ':!*.md' ':!artifacts/**' && echo "exec tree == candidate 3aa2c17"
+pnpm install --frozen-lockfile
+# Postgres 16 on :5433 with DBs flowline + flowline_test; then create the git-ignored .env.test from
+# docs/company-builder/env.test.template (fake provider credentials; generate the 3 keys with openssl).
+pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract
+pnpm stop:test && pnpm test:integration          # integration refuses to run while a test-stack worker is up
+FLOWLINE_TEST_NEXT=start pnpm dev:test &         # then: bash e2e/tools/browser-docker.sh chromium|firefox|webkit
+pnpm stop:test                                   # stops :3100, :4010, :4011 in dev and production mode
+```
+
+Don't edit the frozen packet (`artifacts/company-builder/validation/20261001-d224cfb/packet/`, sha256 `4fa9841b…`) or
+the evaluator ground truth. Don't relabel earlier rounds' evidence.
+
+**Still open:**
+
+- R4-RV-04 (P3, latent): `connection_missing` suppression is provider-blind; filter per connection in `setupReasons`
+  before a second-provider pack ships.
+- R4-RV-05 (note): installations compiled before R4 keep the old draft expression until reinstalled.
+- VO-01..06 observations (BUGS.md); VO-03 metric rounding is OPEN.
+- External blockers: real Google Chrome QA, live Gmail certification, real owner CLI, competitor runs, human
+  usability.
+
+**Next owner actions:**
+
+1. Confirm the merge result in the final report; deployment stays NO until you approve it separately.
+2. Decide on the live Gmail proposal (VALIDATION_REPORT §2). If approved: enter the integration OAuth client in the
+   admin panel and give one consolidated approval (dedicated sender, allowlisted recipients, marker label, maximum
+   sends, read scope, cleanup). The personal Gmail connector must not be used.
+3. Run real Google Chrome QA where `dl.google.com` (or an installed Chrome) is reachable.
+4. Run the real owner CLI on your laptop (`docs/company-builder/CLI_PROTOTYPE.md`, "Founder runbook (laptop)").
+5. Competitor field tests and a human usability run (`COMPETITOR_RESULTS.md`, `COMPETITIVE_TEST_PROTOCOL.md`); free
+   tiers, no card or auto-renew without approval.
+6. If the VP-06 dispute matters, approve a v2 packet with phrase-level hints before any further product run.
+
+### Previous resume note (validation round, superseded)
+
+_Original heading: "Company Builder — RESUME HERE (validation round closed 2026-10-01)". Kept as written; the R4
+section above supersedes it._
+
 
 **Where things stand:**
 
