@@ -1,5 +1,33 @@
 # Next action
 
+## Company Builder — direction v2 (outcome first), 2026-10-01
+
+**Status:**
+
+- **HYPOTHESIS READY TO TEST.** The competitive edge is NOT YET PROVEN.
+- **First vertical slice (Customer Request Follow-up): COMPLETE** in DETERMINISTIC_TEST mode with sample data.
+- **Overall Company Builder scope: NOT COMPLETE.**
+- Verdicts and gates: `docs/company-builder/REPORT.md` (top section). Findings: `artifacts/company-builder/BUGS.md`.
+
+The commits on branch `claude/company-builder-milestones-abc-pmba6v` after `816f342` are **local only**, because the
+amendment authorises no push. The cloud container is ephemeral: the owner must approve a push or the work is lost.
+
+**Next owner actions, in order:**
+
+1. Approve pushing the branch.
+2. Run the first-slice journey locally (`OWNER_TEST_GUIDE.md`, with the plan and acceptance steps of
+   `TASK_PACKS.md` §A).
+3. Real Chrome exploratory QA. Real Chrome is blocked in the cloud container.
+4. Decide the open product questions:
+   - FB-11: route refund requests to a person?
+   - EX-02: Arabic digit style in interpolated numbers.
+5. Run the competitive protocol (`COMPETITIVE_TEST_PROTOCOL.md`).
+6. Real CLI trials on the laptop.
+7. Codex re-test.
+
+**Tooling note ENV-04:** `pnpm stop:test` does not stop a `FLOWLINE_TEST_NEXT=start` stack. Kill the listeners on
+ports 3100, 4010 and 4011 before restarting, or E2E silently runs against the old build.
+
 ## Company Builder (Milestones A–C) — feature branch `claude/company-builder-milestones-abc-pmba6v`
 
 Implemented from main 9324b1f in a Claude cloud session (2026-09-30). Report and verdicts: `docs/company-builder/REPORT.md`;

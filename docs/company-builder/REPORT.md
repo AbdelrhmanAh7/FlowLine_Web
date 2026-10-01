@@ -4,6 +4,103 @@ Session: Claude Code cloud session, 2026-09-30. Brief: `docs/company-builder/CLO
 Baseline: `main` @ 9324b1fed677f03e8c044eb1373b8577167abeb5. Branch: `claude/company-builder-milestones-abc-pmba6v`
 (pushed to origin as a feature branch only — **not merged, no PR, not deployed**).
 
+## Direction v2 — outcome first (2026-09-30 → 2026-10-01): **HYPOTHESIS READY TO TEST**
+
+This direction follows the owner's product-direction amendment and its review correction. Commits are **local only**
+(`816f342..HEAD`: `6afd2e4`, `0551271`, `18201ec`, `cb23ac4`, `2f03e2a`, `47d8807`, plus this docs commit). The
+amendment authorises **no push, merge, deployment, live payment, invitation or destructive data operation**. The
+competitive edge is **NOT YET PROVEN**.
+
+### Separate verdicts
+
+| Verdict | Status | Basis |
+|---|---|---|
+| FIRST VERTICAL SLICE (Customer Request Follow-up) | **COMPLETE** in DETERMINISTIC_TEST mode with sample data | See the evidence list below this table. |
+| OVERALL COMPANY BUILDER SCOPE | **NOT COMPLETE** | Packs B–D are tested at unit level only (no browser journey). Open items: EX-02 digit style, FB-07 spaced phone numbers, FB-12 shared record namespace. Not yet run: real CLI runs, real Chrome QA, human usability, the competitive test, live Gmail. |
+| OWNER CLI PROTOTYPE | **BLOCKED** (real CLIs), unchanged | Gate, adapter, controller and import are unchanged except that the text trial now targets the follow-up task (CB2-02). Tested with fake CLIs (int-cli 16/16). The CLI identity is never exposed; payment or ownership never grants it. |
+| BUSINESS-RESULT QUALITY | **Frozen fixtures 10/10 (pack tests 25/25)**; benchmark v2 **12/12**; benchmark v1 **7/12** (direction change; v1 expectations unchanged) | Deterministic generator only. v2 was written by the implementer before the planner change: not independent. Real customer requests: **NOT TESTED**. |
+| RESULT VERIFICATION | **Four separate signals** | (1) Structure is valid. (2) Ran without errors. (3) Objective checks: an independent full re-computation (FB-01). (4) The person's acceptance. Activation requires (3) **and** (4), at request and at execution. |
+| AUTOMATED BROWSER GATE | **PASS** on `47d8807`: Chromium **127/127**, Firefox **62/62**, WebKit **62/62** (one worker each, one browser at a time) | `artifacts/company-builder/gates-v2/e2e-*.txt`. PRE-02 did not reproduce but stays OPEN (intermittent). |
+| CHROME EXPLORATORY QA | **BLOCKED** (real Google Chrome); **substitute run** in Playwright Chromium (Arabic, Riyadh time zone, mixed input, desktop + 375 px) | `artifacts/company-builder/v2-first-slice/exploratory/` (+ `retest-47d8807/`). Found EX-01..03. Download of Google Chrome refused by the network policy (`dl.google.com`, 403). |
+| LIVE EXTERNAL VERIFICATION | **NOT TESTED** | No Gmail connection was made. The test action writes to the local sample outbox. Simulated results are labelled "Local test outbox (nothing is sent externally)". |
+| COMPETITIVE HYPOTHESIS | **NOT YET PROVEN** | `COMPETITIVE_TEST_PROTOCOL.md`; `competitive-dataset.json` has 36 rows, all NOT_TESTED. |
+| INDEPENDENT REVIEW | **Fable review done**, plus a Sonnet helper diff reviewed by Claude; **Codex: NOT RUN** (not installed in the container) | 13 Fable findings (FB-01..13): 1 P1 and 4 P2, all fixed with regression tests; P3s fixed, disclosed or left open (BUGS.md). |
+
+**Evidence for the first slice:**
+
+- **Pack:** `customer-follow-up` v1 (behaviour revised before any release).
+- **Frozen fixtures:** committed before the pack (`6afd2e4`). Run 1 scored 11/14 tests and is kept as evidence; the
+  fixtures pass 10/10, and the full pack test file now passes 25/25, including the review regressions.
+- **Integration:** 28 Company Builder tests, plus 2 new ones for acceptance and reviewer rules.
+- **E2E journey** in Chromium, Firefox and WebKit: outcome-first interview → plan → draft → sample trial →
+  human-readable result → rejection with a reason → acceptance → refresh → test action → activation → history.
+- **Arabic / RTL:** E2E plus the exploratory pass.
+
+### Gates on `47d8807` (sequential)
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Lint | ✓ | — |
+| Typecheck | ✓ | — |
+| Evidence-secrets check | ✓ (0 hits) | — |
+| Unit | **593/593** | `artifacts/company-builder/gates-v2/unit.txt` |
+| Contract | **467/467** | `gates-v2/contract.txt` |
+| Integration | **517/517**, stack stopped | `gates-v2/integration.txt` |
+| E2E | as above | — |
+
+### What changed (summary)
+
+- **Interview (question bank v2):**
+  - starts from "What is the first result you want to improve?";
+  - every question declares what its answer changes (unit-tested);
+  - only the primary outcome's questions are asked; other areas become next improvements;
+  - "I don't know yet", Back, Edit and Save are kept; no fake progress total.
+- **Planner:**
+  - one primary outcome, one role with what it doesn't do, zero agents by default;
+  - automated / assisted / human split;
+  - cost disclosure with explicit unknowns;
+  - workspace time zone;
+  - next improvements never installed (planner, install, CLI proposal and UI all checked).
+- **Packs:** Customer Request Follow-up (A, first slice); operations summary (C) and lead qualification (D), built by
+  Sonnet helpers and reviewed by Claude; invoice organisation (B) kept. `customer-triage` is kept for older blueprints.
+- **Lifecycle:** objective checks and the person's acceptance are kept apart; the reviewer-only verdict uses migration
+  `0022`.
+- **Experiment mode (`FLOWLINE_CB_EXPERIMENT=on`):** metrics are computed on read; events hold only bounded numbers
+  and enum ids. Definitions are in `COMPETITIVE_TEST_PROTOCOL.md`.
+- **UI:** a plan section for each required item, with the required copy sentences; a human-readable result with an
+  explicit time zone; technical details under Advanced; "Your company is running" never appears (E2E).
+- **Docs:** `PRODUCT_DIRECTION.md`, `QUESTION_MODEL.md`, `TASK_PACKS.md`, `COMPETITIVE_TEST_PROTOCOL.md`,
+  `competitive-dataset.json`; `COPY_REVIEW.md` v2 section; findings in `artifacts/company-builder/BUGS.md`.
+
+### Defects found by this work (all in BUGS.md)
+
+| ID | What went wrong | How it was found | Status |
+|---|---|---|---|
+| CB2-01 | jsonb key order made every real trial fail | integration | Fixed |
+| CB2-05 | The date format crashed the page | E2E | Fixed |
+| FB-01 | The evaluator trusted flow claims | Fable | Fixed |
+| FB-02..05 | Various | Fable | Fixed |
+| EX-01 | Raw ids shown on screen | exploratory | Fixed, retested |
+
+**Open:**
+
+- EX-02: mixed digit styles.
+- FB-07: spaced phone numbers.
+- FB-11: refund routing (owner decision).
+- FB-12: shared record namespace.
+- ENV-04: `stop:test` misses a production-mode stack.
+- PRE-02: pre-existing.
+
+### Budget
+
+No billable execution: no paid APIs, no real CLI jobs, no credits, no billing activation. The session's dollar
+consumption is not exposed to it (as in phase 1). Helper agents ran inside this Claude session: Sonnet for UI and
+packs, Fable for review.
+
+---
+
+# Phase 1 report (Milestones A, B, C) — historical, unchanged
+
 ## Verdicts
 
 | Verdict | Status | Basis |

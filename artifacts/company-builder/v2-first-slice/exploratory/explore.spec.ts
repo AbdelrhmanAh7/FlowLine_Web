@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { setupUser } from "../../../../e2e/helpers";
 
-const OUT = "artifacts/company-builder/v2-first-slice/exploratory";
+const OUT = process.env.EXPLORE_OUT ?? "artifacts/company-builder/v2-first-slice/exploratory";
 
 test("exploratory: Arabic first slice, mixed input, Arabic digits, Riyadh time zone, desktop + mobile", async ({ page }) => {
   const { workspace } = await setupUser(page);

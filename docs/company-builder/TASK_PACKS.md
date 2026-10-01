@@ -45,9 +45,9 @@ A trial is refused as "sample-safe" if a person added steps outside the pack's l
 
 **What it does**
 
-1. **Normalises** Arabic-Indic digits and **extracts** service (by alias), date (`YYYY-MM-DD`) and phone (9–14 digits,
+1. **Normalises** Arabic-Indic and Persian digits and **extracts** service (by alias), date (`YYYY-MM-DD`) and phone (9–14 digits,
    with dates removed first). Relative dates such as "tomorrow" are *not* guessed; the date is then asked for.
-2. **Classifies** the topic. Order: complaint → refund → pricing → coverage → hours → delivery. Each approved line
+2. **Classifies** the topic, matching keywords at word starts only. Order: complaint → refund → pricing → coverage → hours → delivery. Each approved line
    belongs to its first matching topic only, so a line about cancellation windows mentioning "hours" is not an hours answer.
 3. **Hands off to a person** when the request is empty, is a complaint (even one that mentions a price or refund), or
    when no approved information applies.
@@ -60,7 +60,10 @@ A trial is refused as "sample-safe" if a person added steps outside the pack's l
      `next_follow_up_at` = received time + 24 h (null when the request has no timestamp; never invented), with its time zone.
    - Re-running the same request updates the same record rather than adding a duplicate.
 
-**Objective checks**, recomputed independently:
+**Objective checks.** Since the independent review (FB-01), `recomputeFollowUp` recomputes the **entire expected
+result** in TypeScript from the request and the owner's parameters: outcome, hand-off reason, exact approved lines,
+exact reply text, and the record's key, customer and follow-up time. Each check compares the flow's output with that
+result, never with the flow's own claims:
 
 | Check | What it verifies |
 |---|---|
@@ -83,7 +86,7 @@ A trial is refused as "sample-safe" if a person added steps outside the pack's l
   - fu-01…fu-10: complete English request, missing details, Arabic digits, complaint with a price, injection, empty,
     unknown service, mixed language with a relative date, no timestamp, sample-labelled.
   - Run 1: 11/14 tests (`follow-up-fixtures-run1-3-FAILED.txt`; two real defects, fixed without editing the fixtures).
-  - Run 2: 14/14.
+  - Run 2: 14/14. After the review fixes the test file has 25/25 (11 regressions added, each confirmed failing on the old pack).
 - **Wrong-result test:** a structurally valid output with a wrong business result fails the exact checks listed in the test.
 - **Key-order independence:** stored run output is jsonb, which reorders keys. Bug CB2-01 was found by the integration
   run and fixed with a regression test.
