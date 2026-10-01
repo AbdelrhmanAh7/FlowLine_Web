@@ -4,7 +4,7 @@
 
 **Where things stand:**
 
-- Branch: `claude/company-builder-milestones-abc-pmba6v`; pushed head `FINAL_HEAD_SHA`.
+- Branch: `claude/company-builder-milestones-abc-pmba6v`; pushed head `b37c1329893eaae5f68d73bf5bfce08b022188b3 (the docs commit after it only adds the handoff prompt and this SHA)`.
 - Gated code: **`f74285c`** (full sequential gate). Candidate: **`3aa2c17`** = `f74285c` + the test-only PRE-02 fix in
   `e2e/failures.spec.ts`. Commits after `3aa2c17` are evidence/docs only.
 - **OVERALL COMPANY BUILDER: INCOMPLETE. LIVE GMAIL: NOT IMPLEMENTED / NOT VERIFIED. REAL CLI: UNVERIFIED.
@@ -29,15 +29,14 @@
 ```bash
 git fetch origin claude/company-builder-milestones-abc-pmba6v
 git checkout -B claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
-git log -1 --format="%H %s"    # expect FINAL_HEAD_SHA
-git diff --quiet 3aa2c17 HEAD -- . ':!*.md' ':!artifacts/**' && echo "exec tree == candidate 3aa2c17"
+git log -2 --format="%H %s"    # HEAD = the handoff docs commit; HEAD~1 = b37c1329893eaae5f68d73bf5bfce08b022188b3
 pnpm install --frozen-lockfile
-# Postgres 16 on :5433 with DBs flowline + flowline_test; then create the git-ignored .env.test from
-# docs/company-builder/env.test.template (fake provider credentials; generate the 3 keys with openssl).
-pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract
-pnpm stop:test && pnpm test:integration          # integration refuses to run while a test-stack worker is up
-FLOWLINE_TEST_NEXT=start pnpm dev:test &         # then: bash e2e/tools/browser-docker.sh chromium|firefox|webkit
-pnpm stop:test                                   # stops :3100, :4010, :4011 in dev and production mode
+# Postgres 16 on :5433 with DBs flowline + flowline_test (the role needs CREATEDB: gate shards create flowline_test_s*/_e*);
+# then create the git-ignored .env.test from docs/company-builder/env.test.template (fake credentials; 3 keys via openssl).
+# Docker is needed for the browsers (mcr.microsoft.com/playwright:v1.63.0-noble).
+pnpm gate          # every commit, ≈3–4 min on 4 CPUs
+pnpm gate:full     # before merging to main (≈9–10 min on 4 CPUs; projects at once on ≥8 CPUs)
+pnpm stop:test     # stops the default stack; the gate stops all of its stacks itself
 ```
 
 Don't edit the frozen packet (`artifacts/company-builder/validation/20261001-d224cfb/packet/`, sha256 `4fa9841b…`) or
