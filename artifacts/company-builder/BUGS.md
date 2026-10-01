@@ -81,6 +81,23 @@ This is the running log for the direction-v2 change (`816f342..HEAD`). Phase-1 f
 | FB2-09 | P3 | An expired pending review still shows "Waiting for a decision" with no action or reason. | REPORTED, OPEN | Show an "expired" state. |
 | FB2-10 | P3 | The Refine button's disabled reason uses generic error text; interview delete has no busy/error handling (a double click causes an unhandled 404). | REPORTED, OPEN | Specific disabled reason; busy state on delete. |
 
+### Round R4 resolution of FB2-01..10 (code `62dac3f` on top of `64d9e00`; the rows above are kept as reported)
+
+Old-code regression output: `artifacts/company-builder/round-r4/` (each test was run against the code before its fix and failed as shown there).
+
+| ID | R4 status | Severity after reproduction | Fix | Regression evidence |
+|---|---|---|---|---|
+| FB2-01 | **FIXED** | P1 confirmed (plan generation failed at ≥1,050 units) | Approved lines and services moved out of the draft/extract expressions into a chain of `transform.json` data steps ("facts", each ≤3,950 chars, at most 24). Expressions only reference the data. The 1,200 limit (unit: JavaScript string length = UTF-16 code units, same in interview, UI, API, planner) and `EXPRESSION_MAX_LENGTH` 4000 are unchanged; nothing is truncated or dropped. Input that would still not fit is refused with `APPROVED_INFO_TOO_LONG` / `APPROVED_INFO_TOO_COMPLEX` instead of a generic error. | `tests/unit/cb-fb2-01-approved-length.test.ts` (950/1050/1100/1200 in English, Arabic, mixed, quotes/backslashes/line breaks; 1,201 refused; 300 random inputs; worst-case escaping; every line quoted). Integration at 1,200 through the real services (interview, resume after refresh, plan, install, worker trial). Old code: 12 failed. |
+| FB2-02 | **FIXED** | P2 confirmed (a stale reject paused an active, still-published task) | Reject/invalidate/execute-failure only change an activation the review item owns and that isn't active; a successful activation marks other pending activation requests `invalidated` (`superseded`), keeping history. | 7 integration tests: core defect, supersede, reject-first, stale approval refused, duplicate/concurrent decisions, expired request (409), owned reject; worker-visible flow stays published. Old code: 4 failed (core: state `paused`). |
+| FB2-03 | **FIXED** | P3 confirmed | Aliases need a letter and match at word starts. | `tests/unit/cb-fb2-03-numeric-alias.test.ts`. Old code: 3 failed. |
+| FB2-04 | **FIXED** | P3 confirmed | Trial input without a `request` object is rejected with 400 before anything is enqueued; the sample flag is always forced. | Integration: 7 malformed shapes → 400, 0 trials, 0 runs, 0 records. Old code: failed. |
+| FB2-05 | **DISPROVED** | — | None needed: run creation already deduplicates on `triggerRef` `cb-trial:<key>`. | Integration: 6 concurrent same-key trials → 1 trial, 1 run, 1 draft execution, 1 record, 0 outbox, ≤1 usage event; a retry returns the existing trial. Passed on old code too (kept as a guard). |
+| FB2-06 | **FIXED** | P3 | AR/EN copy for every pack check id. | Unit copy-coverage test iterating every pack's checks. |
+| FB2-07 | **FIXED** | P3 | No Company Builder copy says or implies that connecting an account turns on live email. Brief-locked sentences stay verbatim (`connectionNeeded`, `review.uncertain`); the meaning is added beside them (`connectionSampleOnly`, `review.uncertainSampleOnly`). "Needs a connection" gives way to `sample_only_not_live` in task status. Consistent meanings: "Sample data only", "Local outbox only / test outbox", "No email sent", "Live Gmail wiring not implemented". | Unit copy contract (verbatim sentences kept), VF-03 state unit tests, E2E plan text (`not.toContainText("until you connect")`). |
+| FB2-08 | **FIXED** | P3 confirmed (500) | UUID guard in `pauseTask` → 404. | Integration (HTTP and service): 4 malformed/unknown ids → 404. Old code: 500. |
+| FB2-09 | **FIXED** | P3 | Pending-past-expiry and server-retired expired items show "Expired" with their own explanation. | Unit `reviewState` + AR/EN copy. Not exercised in E2E (needs clock control). |
+| FB2-10 | **FIXED** | P3 | Refine shows "Finish the interview and prepare the plan first"; delete has a busy state, shows failures, and treats 404 as already deleted. | New E2E (failing delete shown, double click harmless, no page errors). The E2E is new, so it has no old-code run. |
+
 Confirmed OK by the reviewer:
 
 - prototype gate (404 for non-founders; LAN fails closed);
