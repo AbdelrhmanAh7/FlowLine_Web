@@ -41,21 +41,22 @@ export function taskStatus(i: TaskStateInput): TaskStatus {
   const { task } = i;
   if (task.availability !== "operational") return { state: "plan_draft", reasons: [task.availability === "planned" ? "planned_not_operational" : "not_supported"], canTry: false, canRequestActivation: false };
   if (!i.installed) return { state: "plan_draft", reasons: ["not_installed"], canTry: false, canRequestActivation: false };
-  const setup = setupReasons(task);
   const canTry = task.kind === "workflow";
-  // VF-03: "active" never implies live email handling. In this build no Company Builder task reads or sends through an
-  // account (connected or not): a task that needs one runs on demand with sample data only, and says so.
-  if (i.activation === "active") return { state: "active", reasons: task.connections.some((c) => c.status !== "not_needed") ? ["sample_only_not_live"] : [], canTry, canRequestActivation: false };
-  if (i.activation === "paused") return { state: "paused", reasons: ["paused"], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
-  if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review"], canTry, canRequestActivation: false };
-  if (i.verdict && !i.verdict.matchedOutcome) return { state: "failed", reasons: [!i.verdict.structurallyValid ? "invalid_structure" : !i.verdict.ranWithoutErrors ? "run_failed" : "outcome_not_matched"], canTry, canRequestActivation: false };
+  // VF-03 state contract: in this build no Company Builder task reads or sends through an account, connected or not.
+  // Every installed state of a task that needs one says it runs on sample data only (active never implies live email).
+  const sampleOnly = task.connections.some((c) => c.provider !== "ai" && c.status !== "not_needed") ? ["sample_only_not_live"] : [];
+  const setup = [...setupReasons(task), ...sampleOnly];
+  if (i.activation === "active") return { state: "active", reasons: sampleOnly, canTry, canRequestActivation: false };
+  if (i.activation === "paused") return { state: "paused", reasons: ["paused", ...sampleOnly], canTry, canRequestActivation: Boolean(i.verdict?.matchedOutcome) && i.userVerdict === "accepted" };
+  if (i.activation === "approval_required") return { state: "approval_required", reasons: ["awaiting_review", ...sampleOnly], canTry, canRequestActivation: false };
+  if (i.verdict && !i.verdict.matchedOutcome) return { state: "failed", reasons: [!i.verdict.structurallyValid ? "invalid_structure" : !i.verdict.ranWithoutErrors ? "run_failed" : "outcome_not_matched", ...sampleOnly], canTry, canRequestActivation: false };
   // Setup that blocks activation (reviewer, unsupported trigger) — sample trials stay available.
   const blocking = setup.filter((r) => r === "reviewer_unknown" || r === "trigger_unsupported" || (task.kind === "agent" && r === "ai_connection_missing"));
   if (i.verdict?.matchedOutcome) {
     // Objective checks passed; the person still has to say the result is what they wanted before activation.
     if (i.userVerdict === "rejected") return { state: "requires_setup", reasons: [...setup, "result_rejected"], canTry, canRequestActivation: false };
     if (i.userVerdict !== "accepted") return { state: "requires_setup", reasons: [...setup, "result_review_needed"], canTry, canRequestActivation: false };
-    if (i.liveVerified) return { state: "live_verified", reasons: [], canTry, canRequestActivation: blocking.length === 0 };
+    if (i.liveVerified) return { state: "live_verified", reasons: sampleOnly, canTry, canRequestActivation: blocking.length === 0 };
     return { state: "sample_verified", reasons: setup, canTry, canRequestActivation: blocking.length === 0 };
   }
   return { state: "requires_setup", reasons: [...setup, ...(canTry ? ["sample_trial_needed"] : [])], canTry, canRequestActivation: false };

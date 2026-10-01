@@ -165,6 +165,11 @@ function PrimaryOutcome({ data, task, onHelp }: { data: Overview; task: TaskPlan
           </ul>
         )}
         {body.sampleData && <p className="text-sm text-med">{t("companyBuilder.planSection.sampleUntilConnected")}</p>}
+        {task.connections.some((c) => c.provider !== "ai") && (
+          <p className="text-sm text-warning" data-testid="cb-live-not-available">
+            {t("companyBuilder.planSection.liveNotAvailable")}
+          </p>
+        )}
       </Section>
       <Section name="team" heading={t("companyBuilder.planSection.team")}>
         {roles.map((role) => (
@@ -583,6 +588,11 @@ export function TaskCard({ view, slug, canRun, canPublish, busy, timezone, onTry
             )}
           </div>
           <p className="text-xs text-muted">{t("companyBuilder.activation.note")}</p>
+          {task.connections.some((c) => c.provider !== "ai") && (
+            <p className="text-xs text-warning" data-testid={`cb-activation-sample-only-${task.id}`}>
+              {t("companyBuilder.activation.sampleOnly")}
+            </p>
+          )}
         </div>
       )}
     </Card>

@@ -94,6 +94,8 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await expect(plan.getByTestId("cb-next-improvements")).toContainText("An assistant that answers free-form questions");
   await expect(plan.getByTestId("cb-next-improvements").getByRole("button")).toHaveCount(0); // never activatable from here
   await expect(page.getByText("Your company is running")).toHaveCount(0);
+  // VF-03: the plan says plainly that connecting Gmail alone won't enable live email in this version.
+  await expect(plan.getByTestId("cb-live-not-available")).toContainText("Connecting Gmail alone won't turn it on");
   await plan.getByTestId("cb-approve").click();
   await plan.getByTestId("cb-install").click();
   await expect(page.getByTestId("cb-installed")).toBeVisible();
@@ -127,9 +129,11 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await expect(task.getByTestId("cb-user-verdict-customer-follow-up")).toHaveAttribute("data-verdict", "accepted");
   await expect(task).toHaveAttribute("data-state", "sample_verified");
   await expect(task).toContainText("Your answer doesn't prove every detail is right");
-  // Refresh keeps everything (no double run, no lost answer).
+  // Refresh keeps everything (no double run, no lost answer) — and the honest sample-only state.
   await page.reload();
   await expect(task).toHaveAttribute("data-state", "sample_verified");
+  await expect(task).toContainText("Sample data only: Company Builder doesn't read or send email in this version");
+  await expect(task.getByTestId("cb-activation-sample-only-customer-follow-up")).toContainText("doesn't watch your inbox or send email");
   await expect(task.getByTestId("cb-user-verdict-customer-follow-up")).toHaveAttribute("data-verdict", "accepted");
 
   // The draft is a REAL flow in the existing editor (an Advanced link, not the main path).
@@ -149,6 +153,7 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await item.getByTestId("cb-approve-send_sample-customer-follow-up").click();
   await expect(item).toHaveAttribute("data-status", "executed");
   await expect(inbox.getByTestId("cb-outbox").locator("li")).toHaveCount(1);
+  await expect(inbox.getByTestId("cb-outbox-note")).toHaveText("Approving a test action records the text here only. No email was sent.");
 
   // Activation needs an explicit development trial (not a payment), then its own review.
   await page.getByTestId("cb-grant-trial").click();
@@ -159,7 +164,7 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await act.getByTestId("cb-approve-activation-customer-follow-up").click();
   await expect(task).toHaveAttribute("data-state", "active");
   // Honest state (VF-03): "active" never implies live email handling in this version.
-  await expect(task).toContainText("Runs on demand with sample data only: no emails are read or sent from your account in this version");
+  await expect(task).toContainText("Sample data only: Company Builder doesn't read or send email in this version, and connecting Gmail alone won't change that");
 
   // History: the trial run is in the run log.
   await page.goto(flowHref!);

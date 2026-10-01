@@ -111,6 +111,9 @@ export function ReviewInbox({ data, canDecide, isOwner, busy, onDecide, onVerify
         <h3 id="cb-outbox" className="text-base font-semibold text-hi">
           {t("companyBuilder.review.outbox")}
         </h3>
+        <p className="text-xs text-muted" data-testid="cb-outbox-note">
+          {t("companyBuilder.review.outboxNote")}
+        </p>
         {data.outbox.length === 0 ? (
           <p className="text-sm text-muted">{t("companyBuilder.review.outboxEmpty")}</p>
         ) : (

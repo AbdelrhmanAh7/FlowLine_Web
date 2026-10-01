@@ -785,3 +785,46 @@ describe("owner decisions 2026-10-01 — refunds need a person, spaced phone num
   });
 });
 
+describe("VF-03 state contract — Company Builder never claims live email (no connection / connection marker present)", () => {
+  it("no Gmail connection vs a connected Gmail marker: same sample-only behaviour; trial + record; resume; activation stays local", async () => {
+    for (const withConnection of [false, true]) {
+      const owner = await makeUser(withConnection ? "cb-vf3-conn" : "cb-vf3-none");
+      const ws = await createWorkspace(owner, unique("VF3 Co"));
+      if (withConnection)
+        await db.insert(schema.connection).values({ workspaceId: ws.id, provider: "gmail", label: "test marker", authType: "oauth2", accountId: "marker", accountLabel: "marker@example.com", secretEnc: "x", keyId: "k", status: "active" });
+      const s = await createSession(owner, ws.id);
+      await answerPath(ws.id, s.id, CUSTOMER_PATH);
+      const { row: bp } = await generateDeterministic(owner, ws.id, s.id, "en");
+      const task = (bp.body as CompanyBlueprint).tasks[0]!;
+      expect(task.connections[0]).toMatchObject({ provider: "gmail", status: withConnection ? "connected" : "missing" });
+      await approveBlueprint(owner, ws.id, bp.id);
+      const { installation } = await install(owner, ws.id, bp.id, { locale: "en" });
+      // A sample trial still runs and records its follow-up (legitimate sample use).
+      const trial = await runTrial(owner, ws.id, installation.id, FU);
+      expect(trial.verdict).toMatchObject({ matchedOutcome: true });
+      expect(await db.select().from(schema.kvEntry).where(eq(schema.kvEntry.workspaceId, ws.id))).toHaveLength(1);
+      // Refresh / resume: the honest state is computed on every read.
+      for (let i = 0; i < 2; i++) expect((await sessionOverview(ws.id, s.id, null)).tasks[0]!.status.reasons).toContain("sample_only_not_live");
+      // Attempted real activation: allowed only as the manual sample workflow; still sample-only; no account step.
+      await recordUserVerdict(owner, ws.id, trial.id, "accepted", null);
+      await grantDevTrial(owner, ws.id);
+      const act = await requestActivation(owner, ws.id, installation.id, FU);
+      await decideReview(owner, ws.id, act.id, "approve");
+      const view = await sessionOverview(ws.id, s.id, null);
+      expect(view.tasks[0]!.status).toMatchObject({ state: "active", reasons: ["sample_only_not_live"] });
+      const [fi] = (await installedItems(installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+      const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId));
+      expect(f!.graph.nodes.some((n) => n.type.startsWith("integration.") || n.type.startsWith("trigger.webhook") || n.type.startsWith("trigger.schedule"))).toBe(false);
+      // Approving the test action records it locally; no run of an integration action exists for this workspace.
+      const item = await requestSampleAction(owner, ws.id, trial.id);
+      expect((await decideReview(owner, ws.id, item.id, "approve")).status).toBe("executed");
+      expect(await db.select().from(schema.cbSampleOutbox).where(eq(schema.cbSampleOutbox.workspaceId, ws.id))).toHaveLength(1);
+      const runs = await db.select({ id: schema.run.id }).from(schema.run).where(eq(schema.run.workspaceId, ws.id));
+      for (const r of runs) {
+        const steps = await db.select({ type: schema.runStep.nodeType }).from(schema.runStep).where(eq(schema.runStep.runId, r.id));
+        expect(steps.every((st) => !String(st.type).startsWith("integration."))).toBe(true);
+      }
+    }
+  });
+});
+

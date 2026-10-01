@@ -335,7 +335,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     not_installed: "Draft not created yet",
     reviewer_unknown: "Choose who reviews this task",
     trigger_unsupported: "The data source isn't supported",
-    sample_only_not_live: "Runs on demand with sample data only: no emails are read or sent from your account in this version",
+    sample_only_not_live: "Sample data only: Company Builder doesn't read or send email in this version, and connecting Gmail alone won't change that",
     connection_missing: "Needs a service connection",
     ai_connection_missing: "Needs an AI connection in Settings",
     sample_trial_needed: "Try it with sample data first",
@@ -409,6 +409,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
   },
 
   activation: {
+    sampleOnly: "Activating publishes a workflow you run on demand with sample data. It doesn't watch your inbox or send email, and connecting Gmail won't enable that in this version.",
     request: "Request activation",
     pause: "Pause the task",
     note: "Activation publishes the reviewed draft with a manual trigger. Nothing starts automatically, and paying alone never activates a task.",
@@ -428,6 +429,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
   },
 
   review: {
+    outboxNote: "Approving a test action records the text here only. No email was sent.",
     consequential: "Refund or cancellation request: approving sends only this draft text. No refund or cancellation is made by Flowline.",
     inbox: "Review inbox",
     empty: "Nothing to review.",
@@ -550,6 +552,7 @@ export const companyBuilderEn: Widen<typeof companyBuilderAr> = {
     outcome: "Another outcome: {area}",
   },
   planSection: {
+    liveNotAvailable: "Reading and sending email through Gmail isn't available in Company Builder yet. Connecting Gmail alone won't turn it on: this plan runs on sample data.",
     understood: "Here is what we understood about your business.",
     firstOutcome: "Here is the first outcome we can prepare.",
     goal: "Goal",

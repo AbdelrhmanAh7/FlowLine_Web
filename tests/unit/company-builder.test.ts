@@ -293,6 +293,23 @@ describe("task lifecycle (Milestone C)", () => {
     expect(rejected.reasons).toContain("result_rejected");
     expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "paused" }).canRequestActivation).toBe(false);
   });
+  it("VF-03 state contract: every installed state of a task that needs an account says sample data only; AI-only or no-account tasks don't", () => {
+    const states = [
+      taskStatus({ task: followUp, installed: true, verdict: null, activation: null }),
+      taskStatus({ task: followUp, installed: true, verdict: ok, activation: null }),
+      taskStatus({ task: followUp, installed: true, verdict: ok, activation: null, userVerdict: accepted }),
+      taskStatus({ task: followUp, installed: true, verdict: ok, activation: "approval_required", userVerdict: accepted }),
+      taskStatus({ task: followUp, installed: true, verdict: ok, activation: "paused", userVerdict: accepted }),
+      taskStatus({ task: followUp, installed: true, verdict: { ...ok, matchedOutcome: false }, activation: null }),
+    ];
+    for (const st of states) expect(st.reasons, st.state).toContain("sample_only_not_live");
+    // Sample trials and activation of the manual workflow stay available (legitimate sample use).
+    expect(states[0]!.canTry).toBe(true);
+    expect(states[2]!.canRequestActivation).toBe(true);
+    const aiOnly = { ...followUp, connections: [{ provider: "ai", status: "missing" as const, connectionId: null }] };
+    expect(taskStatus({ task: aiOnly, installed: true, verdict: ok, activation: null, userVerdict: accepted }).reasons).not.toContain("sample_only_not_live");
+  });
+
   it("VF-03: an active task that needs an account says it runs on sample data only (no live email claim)", () => {
     expect(taskStatus({ task: followUp, installed: true, verdict: ok, activation: "active", userVerdict: accepted }).reasons).toEqual(["sample_only_not_live"]);
     const connected = { ...followUp, connections: followUp.connections.map((c) => ({ ...c, status: "connected" as const })) };
