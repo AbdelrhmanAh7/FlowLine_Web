@@ -37,10 +37,17 @@ function interpolate(template: string, vars: Vars | undefined): string {
   return template.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
 }
 
-export function createTranslator(locale: Locale): Translator {
+export type CopyOverrides = Partial<Record<Locale, Record<string, string>>>;
+
+export function createTranslator(locale: Locale, overrides?: CopyOverrides): Translator {
   const messages = CATALOGUES[locale];
   // A key missing at runtime (only possible via a cast) falls back to English, then to the key itself.
-  const resolve = (key: string): unknown => lookup(messages, key) ?? lookup(CATALOGUES.en, key);
+  const resolve = (key: string): unknown => {
+    const original = lookup(messages, key) ?? lookup(CATALOGUES.en, key);
+    return typeof original === "string" && Object.hasOwn(overrides?.[locale] ?? {}, key)
+      ? overrides?.[locale]?.[key]
+      : original;
+  };
   const rules = new Intl.PluralRules(intlLocale(locale));
 
   const t = ((key: MessageKey, vars?: Vars) => {
@@ -51,7 +58,8 @@ export function createTranslator(locale: Locale): Translator {
   t.plural = (key, count, vars) => {
     const v = resolve(key) as PluralMessage | undefined;
     if (!v || typeof v !== "object") return key;
-    const form = v[rules.select(count) as keyof PluralMessage] ?? v.other;
+    const category = rules.select(count) as keyof PluralMessage;
+    const form = overrides?.[locale]?.[`${key}.${category}`] ?? v[category] ?? overrides?.[locale]?.[`${key}.other`] ?? v.other;
     return interpolate(form, { count: formatNumber(locale, count), ...vars });
   };
 

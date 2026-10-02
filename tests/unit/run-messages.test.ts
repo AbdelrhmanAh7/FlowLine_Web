@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { mapProviderError, safetyRefusal } from "@/ai/hub/protocols/shared";
 import { PROVIDERS, getProviderDef } from "@/ai/hub/registry";
 import { UNSTABLE_INPUT_MESSAGE } from "@/engine/validate";
-import { approvalActionId, CONNECTION_REASONS, skipReasonText, stepErrorText } from "@/i18n/engine-text";
+import { approvalActionId, stepApprovalId, CONNECTION_REASONS, skipReasonText, stepErrorText } from "@/i18n/engine-text";
 import { ar as arCatalogue } from "@/i18n/messages/ar";
 import { en as enCatalogue } from "@/i18n/messages/en";
 import { createTranslator } from "@/i18n/translate";
@@ -207,6 +207,34 @@ describe("approvalActionId", () => {
     expect(approvalActionId(approvals, "c")).toBeNull();
     expect(approvalActionId(undefined, "a")).toBeNull();
     expect(approvalActionId(approvals, undefined)).toBeNull();
+  });
+});
+
+describe("approvalActionId with the step's own approval id", () => {
+  const approvals = [
+    { id: "p1", nodeId: "a", actionId: "slack.post", status: "approved" },
+    { id: "p2", nodeId: "a", actionId: "gmail.send", status: "pending" },
+    { id: "p3", nodeId: "b", actionId: "slack.post", status: "pending" },
+  ];
+  it("returns exactly the named approval's action, even when the node has several", () => {
+    expect(approvalActionId(approvals, "a", "p1")).toBe("slack.post");
+    expect(approvalActionId(approvals, "a", "p2")).toBe("gmail.send");
+  });
+  it("never uses an approval of another node or an unknown id", () => {
+    expect(approvalActionId(approvals, "a", "p3")).toBeNull();
+    expect(approvalActionId(approvals, "a", "missing")).toBeNull();
+  });
+  it("reads the id from step meta only when it is a string", () => {
+    expect(stepApprovalId({ meta: { approvalId: "p1" } })).toBe("p1");
+    expect(stepApprovalId({ meta: { approvalId: 5 } })).toBeNull();
+    expect(stepApprovalId({ meta: null })).toBeNull();
+    expect(stepApprovalId(undefined)).toBeNull();
+  });
+  it("reviewer text that looks like an action id is never used as one", () => {
+    const t = ar;
+    const out = stepErrorText(t, err("APPROVAL_REJECTED", "Post message was rejected: slack.post"), { actionId: null });
+    expect(out).toContain("slack.post");
+    expect(approvalActionId([{ id: "x", nodeId: "a", actionId: "gmail.send", status: "rejected" }], "a", "x")).toBe("gmail.send");
   });
 });
 

@@ -160,13 +160,13 @@ describe("token guard", () => {
 /* ───────── Theme cookie resolution ───────── */
 
 describe("fl_theme resolution", () => {
-  it("falls back to dark when the cookie is absent or unknown", () => {
+  it("falls back to light when the cookie is absent or unknown (owner's Arabic/light default)", () => {
     expect(resolveTheme(undefined)).toBe(DEFAULT_THEME);
     expect(resolveTheme(null)).toBe(DEFAULT_THEME);
     expect(resolveTheme("")).toBe(DEFAULT_THEME);
     expect(resolveTheme("purple")).toBe(DEFAULT_THEME);
     expect(resolveTheme("DARK")).toBe(DEFAULT_THEME);
-    expect(DEFAULT_THEME).toBe("dark");
+    expect(DEFAULT_THEME).toBe("light");
   });
   it("accepts exactly the three preferences", () => {
     for (const p of THEME_PREFERENCES) expect(resolveTheme(p)).toBe(p);
@@ -307,12 +307,12 @@ describe("public pages: reduced motion is static and readable", () => {
   const css = readFileSync("src/app/globals.css", "utf8");
   const NO_PREF = /prefers-reduced-motion:\s*no-preference/;
 
-  it("the hero pin (170vh wrapper, sticky stage) and every scroll-timeline animation exist only under no-preference", () => {
+  it("the hero pin (170vh wrapper, sticky stage) and scrub timeline exist only under no-preference", () => {
     const pins = declarations(css, /^\s*(?:height:\s*170vh|position:\s*sticky)\s*$/).filter((d) => /hero-pin/.test(d.selector));
     expect(pins.length).toBeGreaterThanOrEqual(2);
     for (const d of pins) expect(d.atRules.some((a) => NO_PREF.test(a)), `${d.selector} { ${d.text} } must be inside @media (prefers-reduced-motion: no-preference)`).toBe(true);
     const timelines = declarations(css, /^\s*animation-timeline\s*:/);
-    expect(timelines.length).toBeGreaterThanOrEqual(3);
+    expect(timelines.length).toBeGreaterThanOrEqual(1);
     for (const d of timelines) expect(d.atRules.some((a) => NO_PREF.test(a)), `${d.selector} { ${d.text} }`).toBe(true);
   });
 
@@ -341,7 +341,7 @@ describe("public pages: reduced motion is static and readable", () => {
   it("scroll reveals never hide under reduce and never branch markup on the preference", () => {
     const reveal = readFileSync("src/components/landing/reveal.tsx", "utf8");
     expect(reveal).toMatch(/matchMedia\(REDUCED_MOTION\)\.matches\) return/);
-    for (const f of ["reveal.tsx", "magnetic.tsx", "scroll-root.tsx", "hero-pin.tsx", "parallax-gradients.tsx", "feature-scenes.tsx"]) {
+    for (const f of ["reveal.tsx", "magnetic.tsx", "scroll-root.tsx", "hero-pin.tsx", "feature-scenes.tsx"]) {
       expect(readFileSync(join("src/components/landing", f), "utf8"), `${f} must not read useReducedMotion during render (hydration)`).not.toMatch(/useReducedMotion/);
     }
   });
@@ -470,8 +470,8 @@ describe("public pages: reduced motion is static and readable", () => {
     }
     expect(Object.keys(ar.landing.heroNodes)).toEqual(Object.keys(en.landing.heroNodes));
     expect(Object.keys(ar.landing.flowNodes)).toEqual(Object.keys(en.landing.flowNodes));
-    expect(page).toContain("var(--canvas-dot)");
-    expect(page).toContain("bg-elevated");
+    expect(readFileSync("src/components/landing/hero-pin.tsx", "utf8")).toContain("var(--canvas-dot)");
+    expect(readFileSync("src/components/landing/flow-illustration.tsx", "utf8")).toContain("bg-elevated");
     expect(readFileSync("src/components/landing/flow-scene.tsx", "utf8")).toContain("var(--canvas-dot)");
   });
 
@@ -484,7 +484,7 @@ describe("public pages: reduced motion is static and readable", () => {
   });
 
   it("the landing hero dots use each node's real category hue, not hand-picked colours", () => {
-    const page = readFileSync("src/app/page.tsx", "utf8");
+    const page = readFileSync("src/components/landing/flow-illustration.tsx", "utf8");
     expect(page).toMatch(/CATEGORY_HUE\[NODE_DEFINITIONS\[/);
     expect(page).not.toMatch(/hue: "(trigger|logic|ai|app|output)" as const/);
   });
@@ -496,9 +496,34 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(readFileSync("src/app/page.tsx", "utf8")).toContain('badge: t("copilot.beta")');
   });
 
-  it("Lenis ships its recommended stylesheet and handles #anchor links", () => {
+  it("Lenis ships its recommended stylesheet and handles query section links", () => {
     const root = readFileSync("src/components/landing/scroll-root.tsx", "utf8");
     expect(root).toContain('import "lenis/dist/lenis.css";');
-    expect(root).toMatch(/new Lenis\(\{[^}]*anchors:\s*true/);
+    expect(root).toMatch(/new Lenis\(\{[^}]*anchors:\s*false/);
+    expect(root).toContain("flowline:section-scroll");
+    expect(root).toContain("lenis.scrollTo(target");
+  });
+
+  it("ambient background is quiet (tokens-only, no ribbons) and landing cards are flat (no perspective tilt)", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).not.toMatch(/\.ambient-ribbon\b/);
+    expect(css).not.toMatch(/\.ambient-particles\b/);
+    expect(css).not.toMatch(/@keyframes\s+m-hero-scrub\s*\{[^}]*rotate[XYZ]?\(/);
+    expect(css).toContain(".ambient-glow");
+    expect(css).toContain(".ambient-dots");
+    expect(css).toMatch(/@media\s*\(prefers-color-scheme:\s*light\)[\s\S]*?html\[data-theme="system"\] \.ambient-glow\s*\{[\s\S]*?\}\s*html\[data-theme="system"\] \.ambient-dots\s*\{/);
+
+    const ambientComp = readFileSync("src/components/ui/ambient-background.tsx", "utf8");
+    expect(ambientComp).not.toContain("ambient-ribbon");
+    expect(ambientComp).toContain("ambient-background");
+    expect(ambientComp).toContain("ambient-glow");
+    expect(ambientComp).toContain("ambient-dots");
+
+    const heroPin = readFileSync("src/components/landing/hero-pin.tsx", "utf8");
+    expect(heroPin).not.toMatch(/perspective\s*:\s*\d+/);
+
+    const landingPage = readFileSync("src/app/page.tsx", "utf8");
+    expect(landingPage).toMatch(/<header\s+className="[^"]*\bw-full\b/);
   });
 });
+

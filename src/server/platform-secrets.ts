@@ -212,6 +212,10 @@ async function setInTx(tx: Tx, actor: PlatformActor, def: PurposeDef, input: Set
 /** Create / replace / rotate / switch. Returns the new projection. */
 export async function setPlatformSecret(actor: PlatformActor, purpose: string, input: SetInput, opts: { setupChallengeId?: string } = {}) {
   const def = requireDef(purpose);
+  if (purpose === "signin.zitadel") {
+    const { getSetting } = await import("./platform-settings");
+    if (!await getSetting("signin.zitadel.issuer")) throw new HttpError(409, "ZITADEL_ISSUER_REQUIRED", "Set the ZITADEL issuer before the client credential");
+  }
   const result = await db.transaction((tx) => setInTx(tx, actor, def, input, opts));
   if (result.switchedFrom && def.kind === "oauth_integration") {
     // Dependent effects follow the commit (never the other way round): connections issued by the OLD client id can't

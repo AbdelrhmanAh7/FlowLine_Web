@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
-import { EN_STATE } from "../playwright.config";
+import { BASE_URL, EN_STATE } from "../playwright.config";
 import { connectAiApi, injectFault, resetFaults, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 // Captures (not compared baselines). E2E_SCREENSHOT_DIR routes a gate run's captures to its own evidence folder.
@@ -176,7 +176,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   }
 
   // Public pages (fresh, signed-out context)
-  const anon = await browser.newContext({ baseURL: "http://localhost:3100", storageState: EN_STATE });
+  const anon = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
   const ap = await anon.newPage();
   for (const [label, w, h] of sizes) {
     await ap.setViewportSize({ width: w, height: h });
@@ -189,7 +189,7 @@ test("capture screens & states at 1440 / 1024 / 375", async ({ page, browser }) 
   await anon.close();
 
   // Onboarding step 2 (goal) for a new account
-  const fresh = await browser.newContext({ baseURL: "http://localhost:3100", extraHTTPHeaders: { origin: "http://localhost:3100" }, storageState: EN_STATE });
+  const fresh = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
   const fp = await fresh.newPage();
   await signUpVerified(fp.request, uniqueEmail("onb"), "Jules Kim");
   await fp.setViewportSize({ width: 1440, height: 900 });

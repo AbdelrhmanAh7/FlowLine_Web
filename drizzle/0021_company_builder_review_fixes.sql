@@ -1,0 +1,2 @@
+DROP INDEX "cb_review_open";--> statement-breakpoint
+CREATE UNIQUE INDEX "cb_review_pending" ON "cb_review_item" USING btree ("installation_id","task_id","kind","binding_hash") WHERE status = 'pending';

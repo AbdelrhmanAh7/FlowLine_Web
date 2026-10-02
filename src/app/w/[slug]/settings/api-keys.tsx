@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
+import { Checkbox, Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input, Select, Skeleton, cx, useConfirm } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -162,7 +162,7 @@ export function ApiKeys() {
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
               {Object.entries(q.data?.scopes ?? {}).map(([s, desc]) => (
                 <label key={s} className="flex items-center gap-2 text-base" title={desc}>
-                  <input type="checkbox" checked={scopes.includes(s)} onChange={(e) => setScopes((v) => (e.target.checked ? [...v, s] : v.filter((x) => x !== s)))} />
+                  <Checkbox checked={scopes.includes(s)} onChange={(e) => setScopes((v) => (e.target.checked ? [...v, s] : v.filter((x) => x !== s)))} />
                   <code dir="ltr" className="data text-sm">
                     {s}
                   </code>

@@ -160,6 +160,11 @@
 
 /* ───────── Base ───────── */
 
+/* Body is the stacking context for the z-index:-1 ambient layer: it then paints above body's own background and below all page content. */
+body {
+  isolation: isolate;
+}
+
 html, body {
   background: var(--bg);
   color: var(--text-hi);
@@ -268,26 +273,17 @@ html, body {
  * pinned and holds its end state until the stage is released.
  */
 .hero-pin { margin-top: 3.5rem; }
+#product, #flow-demo, #features, #templates, #pricing { scroll-margin-top: 6rem; }
 .hero-scrub { transform-origin: 50% 0; }
 @keyframes m-hero-scrub {
-  from { transform: scale(1) rotateX(10deg); }
-  to { transform: scale(0.94) rotateX(0deg); }
-}
-@keyframes m-parallax-slow {
-  to { transform: translateY(-14vh); }
-}
-@keyframes m-parallax-slower {
-  to { transform: translateY(-7vh); }
+  from { transform: scale(1); }
+  to { transform: scale(0.94); }
 }
 @supports (animation-timeline: view()) {
   @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     .hero-pin { height: 170vh; view-timeline: --hero-pin block; }
     .hero-pin-stage { position: sticky; top: 6rem; }
     .hero-scrub { animation: m-hero-scrub linear both; animation-timeline: --hero-pin; animation-range: contain 0% contain 100%; }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .parallax-slow { animation: m-parallax-slow linear both; animation-timeline: scroll(root); }
-    .parallax-slower { animation: m-parallax-slower linear both; animation-timeline: scroll(root); }
   }
 }
 
@@ -306,4 +302,79 @@ html, body {
   .motion-press:active { transform: none; }
   .react-flow__node.dragging > div { transform: none; }
   .motion-running { box-shadow: 0 0 0 2px var(--run-hue, var(--accent)); }
+}
+
+/*
+ * Ambient background: ONE quiet background across the app (calm, premium).
+ * Base surface + single soft brand-tinted radial glow near the top + very faint dot grid fading out.
+ * Semantic tokens only (var(--accent), var(--canvas-dot)), no raw colors.
+ */
+.ambient-background {
+  position: fixed;
+  inset: 0;
+  /* Behind all page content (body is an isolated stacking context, and wrappers have no opaque viewport background). */
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  contain: strict;
+}
+.ambient-glow {
+  position: absolute;
+  top: -14rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: 56rem;
+  max-width: 100vw;
+  height: 32rem;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%);
+  opacity: 0.65;
+  pointer-events: none;
+  filter: blur(48px);
+  transition: opacity var(--dur-tab) var(--ease-standard);
+}
+.ambient-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.28;
+  mask-image: radial-gradient(ellipse 70% 45% at 50% 15%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 45% at 50% 15%, black 0%, transparent 70%);
+  pointer-events: none;
+  transition: opacity var(--dur-tab) var(--ease-standard);
+}
+html[data-theme="light"] .ambient-glow {
+  background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%);
+  opacity: 0.45;
+}
+html[data-theme="light"] .ambient-dots {
+  opacity: 0.18;
+}
+@media (prefers-color-scheme: light) {
+  html[data-theme="system"] .ambient-glow {
+    background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%);
+    opacity: 0.45;
+  }
+  html[data-theme="system"] .ambient-dots {
+    opacity: 0.18;
+  }
+}
+@media (max-width: 640px) {
+  .ambient-glow {
+    top: -10rem;
+    height: 24rem;
+    opacity: 0.45;
+    filter: blur(36px);
+  }
+  .ambient-dots {
+    opacity: 0.16;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient-background, .ambient-glow, .ambient-dots {
+    animation: none !important;
+    transition: none !important;
+  }
 }

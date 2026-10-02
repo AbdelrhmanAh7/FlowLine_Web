@@ -1,8 +1,31 @@
-// Stops the isolated test stack: whatever listens on :3100 plus test workers/sandboxes.
-// Matching by port (not command line) also catches the Next server child process.
+// Stops the isolated test stack: whatever listens on :3100 and on the fake-provider ports (default 4010 / 4011, from
+// .env.test like dev-test.mjs), plus test workers/sandboxes. Matching by port (not command line) also catches the Next
+// server child process in BOTH modes (`next dev` and FLOWLINE_TEST_NEXT=start `next start`). Uses lsof when present,
+// fuser otherwise (minimal Linux images ship one or the other).
+// One stack of several (sharded E2E): the same FLOWLINE_TEST_PORT / _FAKE_PORT / _AI_PORT env as dev-test.mjs, or
+// `--port=<app> [--fake-port=<p>] [--ai-port=<p>]`. Only that stack's ports and explicitly owned launcher/worker processes are stopped.
 import { execSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import testStackEnv from "./test-stack.cjs";
 
-const PORT = 3100;
+try {
+  process.loadEnvFile(".env.test");
+} catch {
+  /* defaults */
+}
+for (const a of process.argv.slice(2)) {
+  const m = a.match(/^--(port|fake-port|ai-port)=(\d+)$/);
+  if (!m) {
+    console.error(`unknown argument: ${a} (usage: stop-test-stack [--port=N] [--fake-port=N] [--ai-port=N])`);
+    process.exit(2);
+  }
+  process.env[{ port: "FLOWLINE_TEST_PORT", "fake-port": "FLOWLINE_TEST_FAKE_PORT", "ai-port": "FLOWLINE_TEST_AI_PORT" }[m[1]]] = m[2];
+}
+const stack = testStackEnv.testStack(process.env);
+const PORT = stack.port;
+const PORTS = [PORT, stack.fakePort, stack.aiPort];
+// A non-default stack may run beside the default stack, so process cleanup must stay scoped to its test port.
+const single = !process.env.FLOWLINE_TEST_PORT || PORT === 3100;
 const run = (cmd) => {
   try {
     return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
@@ -11,14 +34,42 @@ const run = (cmd) => {
   }
 };
 
+/** Linux: pids of this stack's launcher / marked worker / fakes / next, found by FLOWLINE_TEST_PORT in their environment. */
+const stackPids = () => {
+  const mine = `FLOWLINE_TEST_PORT=${PORT}`;
+  const pids = [];
+  if (!existsSync("/proc")) return pids; // macOS: by port only
+  for (const pid of readdirSync("/proc").filter((d) => /^\d+$/.test(d) && Number(d) !== process.pid)) {
+    try {
+      const cmd = readFileSync(`/proc/${pid}/cmdline`, "utf8").replace(/\0/g, " ");
+      if (!/dev-test\.mjs|worker\/index\.ts.*--flowline-test-stack=\d+|e2e\/fakes\/|next (start|dev)|next-server/.test(cmd)) continue;
+      const environment = readFileSync(`/proc/${pid}/environ`, "utf8").split("\0");
+      if (environment.includes(mine) || (single && !environment.some((entry) => entry.startsWith("FLOWLINE_TEST_PORT=")) && /worker\/index\.ts/.test(cmd))) pids.push(pid);
+    } catch {
+      /* gone, or not ours */
+    }
+  }
+  return pids;
+};
+
 if (process.platform === "win32") {
   const ps = [
-    `Get-NetTCPConnection -LocalPort ${PORT} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { taskkill /PID $_.OwningProcess /T /F | Out-Null }`,
-    `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'dev-test.mjs|worker[\\\\/]index.ts|sandbox-child' } | ForEach-Object { taskkill /PID $_.ProcessId /T /F | Out-Null }`,
+    ...(single ? [PORT] : PORTS).map(
+      (p) => `Get-NetTCPConnection -LocalPort ${p} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { taskkill /PID $_.OwningProcess /T /F | Out-Null }`,
+    ),
+    // Stop the launcher and only a worker explicitly marked for this test stack; never sweep generic workers/sandboxes.
+    ...(single
+      ? [`Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'dev-test.mjs' -or $_.CommandLine -match 'worker[\\\\/]index.ts.*--flowline-test-stack=${PORT}(?:\\s|$)' } | ForEach-Object { taskkill /PID $_.ProcessId /T /F | Out-Null }`]
+      : []),
   ].join("; ");
   run(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`);
 } else {
-  run(`lsof -ti tcp:${PORT} | xargs -r kill -9`);
-  run(`pkill -f "dev-test.mjs|worker/index.ts|sandbox-child"`);
+  const owned = stackPids(); // before the ports go, while dev-test.mjs is still up
+  for (const p of PORTS) {
+    run(`lsof -ti tcp:${p} | xargs -r kill -9`);
+    run(`fuser -k -n tcp ${p}`);
+  }
+  if (owned.length) run(`kill -9 ${owned.join(" ")}`);
 }
-console.log(`test stack on :${PORT} stopped`);
+const still = process.platform === "win32" ? [] : PORTS.filter((p) => run(`fuser -n tcp ${p} 2>/dev/null`).trim() || run(`lsof -ti tcp:${p}`).trim());
+console.log(still.length ? `test stack: ports still in use: ${still.join(", ")}` : `test stack on :${PORTS.join(", :")} stopped`);

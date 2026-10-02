@@ -5,6 +5,7 @@ import { HttpError } from "./http";
 import { platformAudit, type Assurance } from "./platform-audit";
 import { SETTING_ENV, SETTING_KEYS, type SettingKey } from "./platform-purposes";
 import { SETTING_SCHEMAS } from "./platform-setting-schemas";
+import { zitadelDiscovery } from "./zitadel-metadata";
 
 export { SETTING_SCHEMAS } from "./platform-setting-schemas";
 
@@ -40,7 +41,16 @@ export interface SettingActor {
 export async function setSetting<K extends SettingKey>(actor: SettingActor, key: K, value: unknown, expectedRevision: number, opts: { importedFromEnv?: boolean } = {}) {
   const parsed = SETTING_SCHEMAS[key].safeParse(value);
   if (!parsed.success) throw new HttpError(400, "SETTING_INVALID", "This value isn't valid for this setting", parsed.error.issues.map((i) => ({ path: i.path, message: i.message })));
+  if (key === "signin.zitadel.issuer") {
+    const issuer = parsed.data as string;
+    try { await zitadelDiscovery(issuer); }
+    catch (error) { throw new HttpError(400, "SETTING_INVALID", error instanceof Error ? error.message : "ZITADEL discovery could not be verified"); }
+  }
   return db.transaction(async (tx) => {
+    if (key === "signin.zitadel.issuer") {
+      const [credential] = await tx.select({ id: schema.platformSecret.id }).from(schema.platformSecret).where(eq(schema.platformSecret.purpose, "signin.zitadel")).for("update");
+      if (credential) throw new HttpError(409, "ZITADEL_CLEAR_FIRST", "Clear the ZITADEL client credential before changing its issuer");
+    }
     const [row] = await tx.select().from(schema.platformSetting).where(eq(schema.platformSetting.key, key)).for("update");
     const current = row?.revision ?? 0;
     if (current !== expectedRevision) throw new HttpError(409, "REVISION_CONFLICT", "This setting changed since you loaded it. Reload and try again.");
@@ -105,6 +115,7 @@ export function settingFromEnv(key: SettingKey, env: NodeJS.ProcessEnv = process
         return undefined;
       }
     }
+    case "signin.zitadel.issuer": return undefined;
   }
 }
 

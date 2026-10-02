@@ -1,0 +1,12 @@
+
+ RUN  v5.0.2 /home/user/FlowLine_Web
+
+
+ Test Files  49 passed (49)
+      Tests  593 passed (593)
+   Start at  00:05:38
+   Duration  8.22s (import 44%, tests 34%, transform 21%, worker 1%)
+
+    Isolate  49 workers spawned · ~128ms startup each (spawn + environment, per file)
+             at least ~1.96s faster with isolate: false — reuses workers across files instead of one per file
+

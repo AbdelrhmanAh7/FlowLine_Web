@@ -18,11 +18,11 @@ export type Messages = Widen<typeof ar>;
 
 type Join<P extends string, K extends string> = P extends "" ? K : `${P}.${K}`;
 
-type StringKeys<T, P extends string = ""> = {
+type StringKeys<T, P extends string = ""> = T extends readonly (infer Item)[] ? StringKeys<Item, Join<P, `${number}`>> : {
   [K in keyof T & string]: T[K] extends string ? Join<P, K> : T[K] extends { other: string } ? never : StringKeys<T[K], Join<P, K>>;
 }[keyof T & string];
 
-type PluralKeys<T, P extends string = ""> = {
+type PluralKeys<T, P extends string = ""> = T extends readonly (infer Item)[] ? PluralKeys<Item, Join<P, `${number}`>> : {
   [K in keyof T & string]: T[K] extends string ? never : T[K] extends { other: string } ? Join<P, K> : PluralKeys<T[K], Join<P, K>>;
 }[keyof T & string];
 

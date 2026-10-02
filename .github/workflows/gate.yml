@@ -1,0 +1,207 @@
+name: Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Gate tier to run
+        type: choice
+        required: true
+        default: fast
+        options: [fast, full]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Jobs run in parallel, each on its own runner (own Postgres, own test stacks); the final `gate` job is the single
+# required check. Shared setup: .github/actions/setup-gate. Per-job summary and artifacts: .github/actions/gate-report.
+# Tier: full for a PR into main or a dispatch with tier=full, otherwise fast.
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-static
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # lint, typecheck, evidence, unit and contract use no database, no browser and no fixed port.
+      - uses: ./.github/actions/setup-gate
+
+      - name: Run gate (static, unit, contract)
+        run: pnpm gate --only=static,unit,contract --out="$GATE_OUT"
+
+      - name: Report
+        if: always()
+        uses: ./.github/actions/gate-report
+        with:
+          job: static
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-integration
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          sandbox-image: "true"
+
+      - name: Run gate (integration)
+        run: pnpm gate --only=integration --out="$GATE_OUT"
+
+      - name: Report
+        if: always()
+        uses: ./.github/actions/gate-report
+        with:
+          job: integration
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          browsers: chromium
+
+      # Selecting a browser implies build + stack. Fast tier: @critical/@cross-browser specs; full tier: every spec.
+      - name: Run gate (chromium)
+        run: pnpm gate --tier="$GATE_TIER" --only=chromium --out="$GATE_OUT"
+
+      - name: Report
+        if: always()
+        uses: ./.github/actions/gate-report
+        with:
+          job: chromium
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+
+  firefox:
+    # Full tier only; skipped by design on the fast tier.
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-firefox
+      GATE_TIER: full
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          browsers: firefox
+
+      - name: Run gate (firefox)
+        run: pnpm gate --tier=full --only=firefox --out="$GATE_OUT"
+
+      - name: Report
+        if: always()
+        uses: ./.github/actions/gate-report
+        with:
+          job: firefox
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+
+  webkit:
+    # Full tier only; skipped by design on the fast tier.
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-webkit
+      GATE_TIER: full
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          browsers: webkit
+
+      - name: Run gate (webkit)
+        run: pnpm gate --tier=full --only=webkit --out="$GATE_OUT"
+
+      - name: Report
+        if: always()
+        uses: ./.github/actions/gate-report
+        with:
+          job: webkit
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+
+  # The single required check: every job must have succeeded; only firefox and webkit may be skipped, and only on
+  # the fast tier.
+  gate:
+    needs: [static, integration, chromium, firefox, webkit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+      R_STATIC: ${{ needs.static.result }}
+      R_INTEGRATION: ${{ needs.integration.result }}
+      R_CHROMIUM: ${{ needs.chromium.result }}
+      R_FIREFOX: ${{ needs.firefox.result }}
+      R_WEBKIT: ${{ needs.webkit.result }}
+    steps:
+      - name: Combine job results
+        run: |
+          ok=1
+          {
+            echo "## FlowLine gate ($GATE_TIER tier)"
+            echo
+            echo "| Job | Result |"
+            echo "| --- | --- |"
+            for pair in "static:$R_STATIC" "integration:$R_INTEGRATION" "chromium:$R_CHROMIUM" "firefox:$R_FIREFOX" "webkit:$R_WEBKIT"; do
+              name="${pair%%:*}"
+              result="${pair#*:}"
+              note=""
+              if [ "$result" = "success" ]; then
+                :
+              elif [ "$result" = "skipped" ] && [ "$GATE_TIER" = "fast" ] && { [ "$name" = "firefox" ] || [ "$name" = "webkit" ]; }; then
+                note=" (fast tier: skipped by design)"
+              else
+                ok=0
+              fi
+              echo "| $name | $result$note |"
+            done
+            echo
+            if [ "$ok" = 1 ]; then echo "Result: **PASS**"; else echo "Result: **FAIL**"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$ok" = 1 ]

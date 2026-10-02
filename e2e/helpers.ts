@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { FAKE_PROVIDER } from "./stack";
 
 export const PASSWORD = "e2e-Passw0rd!";
 
@@ -116,7 +117,7 @@ export async function nodeIds(page: Page) {
   return page.locator(".react-flow__node").evaluateAll((els) => els.map((e) => e.getAttribute("data-id")!));
 }
 
-export const FAKE_PROVIDER = "http://127.0.0.1:4010";
+export { FAKE_PROVIDER };
 
 /**
  * A flow whose Sheets step is held by the fake provider ("delay": answers normally after delayMs, or

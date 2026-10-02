@@ -12,10 +12,8 @@ import { useEffect, type ReactNode } from "react";
  * Off under prefers-reduced-motion and on coarse pointers (touch keeps native scrolling). Both are read from
  * matchMedia inside the effect (never during render) and followed live: turning the OS setting on tears Lenis down.
  *
- * `anchors: true`: with Lenis running, a native `#anchor` jump can be overridden by an in-flight smooth scroll (Lenis' README: "By default,
- * Lenis will prevent anchor links from working while scrolling"). With it on, clicks on same-page `#id` links (the header nav) scroll
- * through Lenis itself; the click is not prevented, so the URL hash still updates. The header is not sticky, so no offset is needed.
- * Nested horizontal scrollers (the illustration cards) keep scrolling natively: Lenis only drives vertical wheel gestures.
+ * Query-based section navigation delegates scrolling to Lenis while it is active.
+ * Touch and reduced-motion visitors keep native section scrolling.
  */
 export function ScrollRoot({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -26,7 +24,13 @@ export function ScrollRoot({ children }: { children: ReactNode }) {
       stop?.();
       stop = undefined;
       if (reduced.matches || coarse.matches) return;
-      const lenis = new Lenis({ duration: 1.1, smoothWheel: true, anchors: true });
+      const lenis = new Lenis({ duration: 0.25, smoothWheel: true, anchors: false });
+      const sectionScroll = (event: Event) => {
+        const target = (event as CustomEvent<{ target: HTMLElement }>).detail.target;
+        event.preventDefault();
+        lenis.scrollTo(target, { offset: -96, duration: 0.25 });
+      };
+      window.addEventListener("flowline:section-scroll", sectionScroll);
       let raf = 0;
       const loop = (time: number) => {
         lenis.raf(time);
@@ -35,6 +39,7 @@ export function ScrollRoot({ children }: { children: ReactNode }) {
       raf = requestAnimationFrame(loop);
       stop = () => {
         cancelAnimationFrame(raf);
+        window.removeEventListener("flowline:section-scroll", sectionScroll);
         lenis.destroy();
       };
     };

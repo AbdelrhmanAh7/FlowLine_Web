@@ -18,7 +18,7 @@ import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogAction } fro
 import { useAiOverview, usePickerModels, type AiRouteRef } from "@/lib/ai";
 import { ModelPicker } from "../ai/model-picker";
 import { useWorkspace } from "../shell/workspace-context";
-import { Button, Field, Input, Select as UiSelect, Textarea, cx } from "../ui";
+import { Checkbox, Button, Field, Input, Select as UiSelect, Textarea, cx } from "../ui";
 import type { RFNode } from "./graph-utils";
 
 type Cfg = Record<string, unknown>;
@@ -566,7 +566,7 @@ function ActionForm({ node, cfg, set }: FormProps) {
             {t("config.action.reset")}
           </Button>
           <label className="flex items-start gap-2 text-base">
-            <input type="checkbox" className="mt-1" checked={Boolean(cfg.requireApproval) || action.sensitive} disabled={action.sensitive} onChange={(e) => set({ requireApproval: e.target.checked })} />
+            <Checkbox className="mt-1" checked={Boolean(cfg.requireApproval) || action.sensitive} disabled={action.sensitive} onChange={(e) => set({ requireApproval: e.target.checked })} />
             <span>
               {t("config.action.requireApproval")}
               {action.sensitive && <span className="block text-sm text-muted">{t("config.action.alwaysRequired")}</span>}

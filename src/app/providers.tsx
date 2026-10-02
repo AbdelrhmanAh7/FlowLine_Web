@@ -9,10 +9,11 @@ import { ToastProvider } from "@/components/toast";
 import { TooltipProvider } from "@/components/ui";
 import { dirOf, type Locale } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/client";
+import type { CopyOverrides } from "@/i18n/translate";
 import { ServerThemeProvider } from "@/theme/client";
 import type { ThemePreference } from "@/theme/config";
 
-export function Providers({ locale, theme, children }: { locale: Locale; theme: ThemePreference; children: React.ReactNode }) {
+export function Providers({ locale, theme, overrides, children }: { locale: Locale; theme: ThemePreference; overrides: CopyOverrides; children: React.ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -33,7 +34,7 @@ export function Providers({ locale, theme, children }: { locale: Locale; theme: 
   );
   return (
     <ServerThemeProvider theme={theme}>
-      <I18nProvider locale={locale}>
+      <I18nProvider locale={locale} overrides={overrides}>
         {/* reducedMotion="user": the motion library follows prefers-reduced-motion, like our CSS. */}
         <MotionConfig reducedMotion="user">
           <DirectionProvider dir={dirOf(locale)}>

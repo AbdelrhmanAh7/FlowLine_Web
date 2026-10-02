@@ -1,0 +1,5 @@
+candidate 3aa2c172be733ee26099a67e1003d547d57e0ffb
+exec-tree diff vs f74285c (gated): 
+ e2e/failures.spec.ts | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+stack build id: ocVR0bxQZQuiCEXgaowB3 (built from f74285c src; the spec change is not part of the build)

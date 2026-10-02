@@ -141,6 +141,34 @@
       "when": 1790655704936,
       "tag": "0019_hub_retest_data",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790804164857,
+      "tag": "0020_company_builder",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790806467310,
+      "tag": "0021_company_builder_review_fixes",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790811244393,
+      "tag": "0022_company_builder_acceptance_experiment",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790861121074,
+      "tag": "0023_little_silver_fox",
+      "breakpoints": true
     }
   ]
 }

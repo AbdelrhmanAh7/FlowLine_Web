@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { dirOf, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, type Locale } from "./config";
-import { createTranslator, type Translator } from "./translate";
+import { createTranslator, type CopyOverrides, type Translator } from "./translate";
 
 const I18nContext = createContext<Translator | null>(null);
 
 /** Provides the request's locale (read on the server from the cookie) to client components. */
-export function I18nProvider({ locale, children }: { locale: Locale; children: ReactNode }) {
-  const t = useMemo(() => createTranslator(locale), [locale]);
+export function I18nProvider({ locale, overrides, children }: { locale: Locale; overrides?: CopyOverrides; children: ReactNode }) {
+  const t = useMemo(() => createTranslator(locale, overrides), [locale, overrides]);
   return <I18nContext.Provider value={t}>{children}</I18nContext.Provider>;
 }
 

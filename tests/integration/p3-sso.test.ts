@@ -78,6 +78,22 @@ async function membership(workspaceId: string, userId: string) {
 }
 
 describe("sso configuration", () => {
+  it("uses ZITADEL Basic client authentication with PKCE and preserves the selected provider", async () => {
+    const owner = await makeUser("zitadel-own");
+    const ws = await createWorkspace(owner, unique("ZitadelWs"));
+    const config = await saveSsoConfig(owner, ws.id, {
+      issuer: `${fake.url}/zitadel`, provider: "zitadel", clientId: "flowline@tenant",
+      clientSecret: "secret:with!symbols", domains: [DOMAIN], defaultRole: "viewer", enabled: false,
+    });
+    expect(config.provider).toBe("zitadel");
+    await setFakeUser(`zitadel-${randomUUID().slice(0, 8)}@${DOMAIN}`);
+    const result = await runSignIn(ws.slug, { user: owner });
+    expect(result.testSignIn).toBe(true);
+    expect(result.newUser).toBe(true);
+    expect((await getSsoConfig(owner, ws.id))?.verifiedAt).not.toBeNull();
+    await saveSsoConfig(owner, ws.id, { issuer: `${fake.url}/zitadel`, provider: "zitadel", clientId: "flowline@tenant", domains: [DOMAIN], defaultRole: "viewer", enabled: true });
+  });
+
   it("saves an encrypted config without the secret in reads or audit; enabling before a test sign-in is refused", async () => {
     const { owner, ws, config } = await workspaceWithSso();
     expect(config.verifiedAt).toBeNull();

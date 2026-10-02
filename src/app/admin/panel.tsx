@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
@@ -35,7 +36,7 @@ interface CredentialView {
 }
 
 interface SettingView {
-  key: "email.provider" | "email.allowed_recipients" | "billing.provider" | "billing.plans";
+  key: "email.provider" | "email.allowed_recipients" | "billing.provider" | "billing.plans" | "signin.zitadel.issuer";
   value: unknown;
   revision: number;
   envImport: { available: boolean; imported: boolean };
@@ -44,7 +45,7 @@ interface SettingView {
 interface Overview {
   credentials: CredentialView[];
   settings: SettingView[];
-  redirectUris: { integrations: string | null; signin: { google: string | null; github: string | null }; warnings: string[] };
+  redirectUris: { integrations: string | null; signin: { google: string | null; github: string | null; zitadel: string | null }; warnings: string[] };
   legacyEnvStillSet: string[];
   billingSafety: { paddleEnv: "sandbox" | "live"; allowLive: boolean };
 }
@@ -107,6 +108,7 @@ export function PlatformPanel() {
         <LanguageSwitcher />
       </header>
       <main className="mx-auto flex max-w-4xl flex-col gap-5 p-4 sm:p-6">
+        <Link href="/admin/copy" className="text-accent-text hover:underline">{t("platformAdmin.copyEditor.title")}</Link>
         <p className="text-base text-med">{t("platformAdmin.subtitle")}</p>
         {me.data && <StepUpCard me={me.data} unlocked={unlocked} onDone={() => me.refetch()} />}
         {overview.isPending ? (
@@ -124,6 +126,13 @@ export function PlatformPanel() {
               </Card>
             )}
             <RedirectUris uris={overview.data.redirectUris} />
+            {(() => {
+              const setting = overview.data.settings.find((s) => s.key === "signin.zitadel.issuer");
+              const credential = overview.data.credentials.find((c) => c.purpose === "signin.zitadel");
+              return setting && credential ? (
+                <ZitadelIssuerCard key={setting.revision} setting={setting} credential={credential} csrf={me.data?.csrfToken ?? ""} lockReason={lockReason} />
+              ) : null;
+            })()}
             {GROUPS.map((g) => (
               <section key={g.id} aria-labelledby={`sec-${g.id}`} className="flex flex-col gap-3">
                 <div>
@@ -249,8 +258,38 @@ function RedirectUris({ uris }: { uris: Overview["redirectUris"] }) {
       <CopyLine label={t("platformAdmin.redirect.integrations")} value={uris.integrations} />
       <CopyLine label={t("platformAdmin.redirect.signinGoogle")} value={uris.signin.google} />
       <CopyLine label={t("platformAdmin.redirect.signinGithub")} value={uris.signin.github} />
+      <CopyLine label={t("platformAdmin.redirect.signinZitadel")} value={uris.signin.zitadel} />
     </Card>
   );
+}
+
+function ZitadelIssuerCard({ setting, credential, csrf, lockReason }: { setting: SettingView; credential: CredentialView; csrf: string; lockReason: string | null }) {
+  const t = useT();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [issuer, setIssuer] = useState(String(setting.value ?? ""));
+  const [pending, setPending] = useState(false);
+  const onSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPending(true);
+    try {
+      await api("/api/platform/settings/signin.zitadel.issuer", { method: "PUT", headers: { "x-flowline-csrf": csrf }, json: { value: issuer.trim(), expectedRevision: setting.revision } });
+      toast(t("platformAdmin.settings.saved"), "success");
+      await qc.invalidateQueries({ queryKey: ["platform-overview"] });
+    } catch (err) { toast(apiErrorMessage(t, err), "danger"); }
+    finally { setPending(false); }
+  };
+  return <Card className="p-4">
+    <h2 className="text-base font-semibold">{t("platformAdmin.zitadel.title")}</h2>
+    <p className="mt-1 text-sm text-med">{t("platformAdmin.zitadel.body")}</p>
+    <form onSubmit={onSave} className="mt-3 flex flex-col gap-3">
+      <Field label={t("platformAdmin.zitadel.issuer")} htmlFor="zitadel-issuer" hint={t("platformAdmin.zitadel.issuerHint")}>
+        <Input id="zitadel-issuer" dir="ltr" className="data" type="url" value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="https://your-instance.zitadel.cloud" required />
+      </Field>
+      <Button type="submit" loading={pending} disabledReason={lockReason ?? (credential.configured || credential.status === "revoked" ? t("platformAdmin.zitadel.clearFirst") : null)}>{t("platformAdmin.zitadel.saveIssuer")}</Button>
+    </form>
+    <p className="mt-2 text-sm text-muted">{t("platformAdmin.zitadel.credentialNote")}</p>
+  </Card>;
 }
 
 function CredentialCard({ cred, csrf, lockReason }: { cred: CredentialView; csrf: string; lockReason: string | null }) {
@@ -508,10 +547,10 @@ function SettingsCard({ settings, credentials, csrf, lockReason }: { settings: S
           <Select id="set-billing-provider" className="w-auto" value={billingProvider} onChange={(e) => setBillingProvider(e.target.value)}>
             <option value="">{t("platformAdmin.settings.none")}</option>
             <option value="stripe" disabled={!configured("billing.stripe.test")}>
-              Stripe (test mode)
+              {t("platformAdmin.settings.stripeTest")}
             </option>
             <option value="paddle" disabled={!configured("billing.paddle.sandbox")}>
-              Paddle (sandbox)
+              {t("platformAdmin.settings.paddleSandbox")}
             </option>
           </Select>
         </Field>

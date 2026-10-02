@@ -27,6 +27,12 @@ const CLIENT_ID_ANY = /^[A-Za-z0-9._-]{4,200}$/;
 
 export const PURPOSES: readonly PurposeDef[] = [
   {
+    purpose: "signin.zitadel", kind: "oauth_signin", provider: "zitadel",
+    publicId: { label: "clientId", required: true, pattern: /^[A-Za-z0-9@._:-]{4,300}$/ },
+    secret: { min: 8, max: 512 }, graceMs: 7 * DAY,
+    env: { secret: "" },
+  },
+  {
     purpose: "signin.google",
     kind: "oauth_signin",
     provider: "google",
@@ -150,7 +156,7 @@ export function familyOf(providerId: string): OAuthFamily | null {
 
 /* ───────────── settings (validated, versioned, not secrets) ───────────── */
 
-export const SETTING_KEYS = ["email.provider", "email.allowed_recipients", "billing.provider", "billing.plans"] as const;
+export const SETTING_KEYS = ["email.provider", "email.allowed_recipients", "billing.provider", "billing.plans", "signin.zitadel.issuer"] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
 /** Import-from-environment mapping for settings (migration only). */
@@ -159,6 +165,7 @@ export const SETTING_ENV: Record<SettingKey, string[]> = {
   "email.allowed_recipients": ["FLOWLINE_EMAIL_ALLOWED_RECIPIENTS"],
   "billing.provider": ["FLOWLINE_BILLING_PROVIDER"],
   "billing.plans": ["FLOWLINE_BILLING_PLANS", "FLOWLINE_BILLING_FREE_PLAN"],
+  "signin.zitadel.issuer": [],
 };
 
 /** Every env var that USED to carry a now UI-managed value (the panel lists the ones still set so operators remove them). */

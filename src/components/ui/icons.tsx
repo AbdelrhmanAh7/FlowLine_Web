@@ -1,32 +1,6 @@
 "use client";
 
-import {
-  ArrowLeftRight,
-  Blocks,
-  BookOpen,
-  Bot,
-  Braces,
-  Clock,
-  CodeXml,
-  Cog,
-  Database,
-  FileText,
-  Filter,
-  GitBranch,
-  Globe,
-  History,
-  LayoutTemplate,
-  LogOut,
-  Play,
-  Repeat,
-  Sheet,
-  Sparkles,
-  Split,
-  Table2,
-  Webhook,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeftRight, Blocks, BookOpen, Bot, Braces, Clock, CodeXml, Cog, Database, FileText, Filter, GitBranch, Globe, History, LayoutTemplate, LogOut, Play, Repeat, Sheet, Sparkles, Split, Table2, Users, Webhook, Workflow, type LucideIcon } from "lucide-react";
 import type { NodeType } from "@/engine/types";
 import type { CategoryHue } from "./badge";
 
@@ -40,6 +14,7 @@ export const NAV_ICONS = {
   flows: Table2,
   canvas: Workflow,
   templates: LayoutTemplate,
+  companyBuilder: Users,
   agents: Bot,
   knowledge: BookOpen,
   runs: History,

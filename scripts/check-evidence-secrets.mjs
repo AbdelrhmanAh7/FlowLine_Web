@@ -34,7 +34,7 @@ const files = new Set();
 const walk = (dir) => {
   if (!existsSync(dir)) return;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
-    if (SKIP_DIRS.has(e.name)) continue;
+    if (SKIP_DIRS.has(e.name) || e.name.startsWith(".next-test-")) continue; // per-port `next dev` dirs (dev-test.mjs)
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p);
     else files.add(p);

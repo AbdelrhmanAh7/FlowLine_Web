@@ -1,0 +1,16 @@
+$ pnpm test:integration
+
+> flowline@0.1.0 test:integration /home/user/FlowLine_Web
+> node scripts/with-env.mjs .env.test vitest run --project integration
+
+
+ RUN  v5.0.2 /home/user/FlowLine_Web
+
+migrated postgres://***@127.0.0.1:5433/flowline_test
+[seed-platform] test platform credentials ready
+
+ Test Files  50 passed (50)
+      Tests  534 passed (534)
+   Start at  10:31:51
+   Duration  189.00s (tests 76%, import 22%, transform 2%)
+

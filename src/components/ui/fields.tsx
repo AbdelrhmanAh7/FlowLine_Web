@@ -34,20 +34,44 @@ function machineDir(type: string | undefined, className: string | undefined): "l
   return type === "email" || type === "url" || /(^|\s)data(\s|$)/.test(className ?? "") ? "ltr" : undefined;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ className, invalid, ...rest }, ref) {
+const PLACEMENT = /^-?(?:w|min-w|max-w|flex|grow|shrink|basis|self|order|col-span|col-start|col-end|justify-self|m[trblxyse]?)(?:-|$)/;
+const utility = (c: string) => c.slice(c.lastIndexOf(":") + 1);
+function splitPlacement(className: string | undefined) {
+  const placed: string[] = [];
+  const own: string[] = [];
+  for (const c of (className ?? "").split(/\s+/)) if (c) (PLACEMENT.test(utility(c)) ? placed : own).push(c);
+  return { placed, own: own.join(" ") };
+}
+
+/** Base styling shared with native uncontrolled password inputs that cannot safely use the controlled Input wrapper. */
+export const INPUT_CLASS_NAME = "h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60";
+
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean; startIcon?: ReactNode; endIcon?: ReactNode }>(function Input({ className, invalid, startIcon, endIcon, ...rest }, ref) {
   const el = useKeepEarlyInput(ref, rest.value, rest.onChange);
-  return (
+  const { placed, own } = startIcon || endIcon ? splitPlacement(className) : { placed: [], own: className };
+  const input = (
     <input
       ref={el}
       dir={machineDir(rest.type, className)}
       aria-invalid={invalid || undefined}
       className={cn(
-        "h-9 w-full rounded-md border bg-app px-3 text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none",
+        INPUT_CLASS_NAME,
+        startIcon && "ps-9",
+        endIcon && "pe-9",
         invalid ? "border-danger" : "border-line-control",
-        className,
+        startIcon || endIcon ? own : className,
       )}
       {...rest}
     />
+  );
+  if (!startIcon && !endIcon) return input;
+  const shrinkWrap = placed.some((c) => utility(c).startsWith("w-") && utility(c) !== "w-full");
+  return (
+    <span dir={rest.dir ?? machineDir(rest.type, className)} className={cn("relative", shrinkWrap ? "inline-block" : "block", placed, placed.length ? null : "w-full")}>
+      {startIcon ? <span aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 inline-flex -translate-y-1/2 items-center text-muted">{startIcon}</span> : null}
+      {input}
+      {endIcon ? <span aria-hidden="true" className="pointer-events-none absolute end-3 top-1/2 inline-flex -translate-y-1/2 items-center text-muted">{endIcon}</span> : null}
+    </span>
   );
 });
 
@@ -73,6 +97,19 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   );
 });
 
+const choiceInputClass = (invalid?: boolean) => cn(
+  "size-4 shrink-0 accent-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50",
+  invalid ? "border border-danger" : "border border-line-control",
+);
+
+export const Checkbox = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { invalid?: boolean }>(function Checkbox({ className, invalid, ...rest }, ref) {
+  return <input ref={ref} type="checkbox" aria-invalid={invalid || undefined} className={cn(choiceInputClass(invalid), "rounded-sm", className)} {...rest} />;
+});
+
+export const Radio = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { invalid?: boolean }>(function Radio({ className, invalid, ...rest }, ref) {
+  return <input ref={ref} type="radio" className={cn(choiceInputClass(invalid), "rounded-full", className)} {...rest} />;
+});
+
 const selectVariants = cva("peer block w-full appearance-none rounded-md border bg-app ps-2 pe-8 text-base text-hi transition-colors duration-[var(--dur-base)] focus:border-accent focus:outline-none disabled:text-muted", {
   variants: {
     size: { sm: "h-8", md: "h-9" },
@@ -85,15 +122,6 @@ const selectVariants = cva("peer block w-full appearance-none rounded-md border 
  * Utilities that place a control inside its parent (width, flex/grid item behaviour, margin). The chevron needs a
  * wrapper, so these move to it and the wrapper takes the <select>'s old place in the layout; the rest styles the <select>.
  */
-const PLACEMENT = /^-?(?:w|min-w|max-w|flex|grow|shrink|basis|self|order|col-span|col-start|col-end|justify-self|m[trblxyse]?)(?:-|$)/;
-const utility = (c: string) => c.slice(c.lastIndexOf(":") + 1);
-function splitPlacement(className: string | undefined) {
-  const placed: string[] = [];
-  const own: string[] = [];
-  for (const c of (className ?? "").split(/\s+/)) if (c) (PLACEMENT.test(utility(c)) ? placed : own).push(c);
-  return { placed, own: own.join(" ") };
-}
-
 /**
  * Styled native <select> with a visible chevron. Native (not Radix) on purpose: form picks keep platform behaviour and
  * E2E `selectOption`. For menu-style picks use the Radix-based primitives (Menu/Popover).
