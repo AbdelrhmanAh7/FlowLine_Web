@@ -401,7 +401,7 @@ main: {
     const stack = results.get("stack");
     if (stack && stack.status !== "pass") {
       for (const b of p4) mark(b, 4, "blocked", "test stacks did not start");
-    } else if (!existsSync("e2e/tools/browser-docker.sh")) {
+    } else if (!shouldUseNativeBrowserRunner() && !existsSync("e2e/tools/browser-docker.sh")) {
       for (const b of p4) mark(b, 4, "blocked", "e2e/tools/browser-docker.sh not found");
     } else {
       const runBrowser = (b) => {
