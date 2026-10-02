@@ -1,5 +1,5 @@
-// Windows counterpart of browser-docker.sh: same Playwright projects and shard evidence,
-// using installed native browsers rather than mounting Windows node_modules into Linux.
+// Native counterpart of browser-docker.sh: same Playwright projects and shard evidence,
+// using installed Playwright browsers instead of the Docker browser image.
 import { spawn } from "node:child_process";
 import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";

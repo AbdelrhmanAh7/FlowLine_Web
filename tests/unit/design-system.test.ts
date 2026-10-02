@@ -503,4 +503,26 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(root).toContain("flowline:section-scroll");
     expect(root).toContain("lenis.scrollTo(target");
   });
+
+  it("ambient background is quiet (tokens-only, no ribbons) and landing cards are flat (no perspective tilt)", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).not.toMatch(/\.ambient-ribbon\b/);
+    expect(css).not.toMatch(/\.ambient-particles\b/);
+    expect(css).not.toMatch(/@keyframes\s+m-hero-scrub\s*\{[^}]*rotate[XYZ]?\(/);
+    expect(css).toContain(".ambient-glow");
+    expect(css).toContain(".ambient-dots");
+
+    const ambientComp = readFileSync("src/components/ui/ambient-background.tsx", "utf8");
+    expect(ambientComp).not.toContain("ambient-ribbon");
+    expect(ambientComp).toContain("ambient-background");
+    expect(ambientComp).toContain("ambient-glow");
+    expect(ambientComp).toContain("ambient-dots");
+
+    const heroPin = readFileSync("src/components/landing/hero-pin.tsx", "utf8");
+    expect(heroPin).not.toMatch(/perspective\s*:\s*\d+/);
+
+    const landingPage = readFileSync("src/app/page.tsx", "utf8");
+    expect(landingPage).toMatch(/<header\s+className="[^"]*\bw-full\b/);
+  });
 });
+
