@@ -117,7 +117,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   async function social(provider: "google" | "github" | "zitadel") {
-    await authClient.signIn.social({ provider, callbackURL: destination });
+    setError(null);
+    try {
+      const res = await authClient.signIn.social({ provider, callbackURL: destination });
+      if (res?.error) {
+        setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
+      }
+    } catch {
+      setError(t("errors.NETWORK"));
+    }
   }
 
   const oauthReason = (p: string, enabled?: boolean) =>

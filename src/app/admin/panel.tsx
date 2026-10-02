@@ -126,7 +126,13 @@ export function PlatformPanel() {
               </Card>
             )}
             <RedirectUris uris={overview.data.redirectUris} />
-            <ZitadelIssuerCard setting={overview.data.settings.find((s) => s.key === "signin.zitadel.issuer")!} credential={overview.data.credentials.find((c) => c.purpose === "signin.zitadel")!} csrf={me.data?.csrfToken ?? ""} lockReason={lockReason} />
+            {(() => {
+              const setting = overview.data.settings.find((s) => s.key === "signin.zitadel.issuer");
+              const credential = overview.data.credentials.find((c) => c.purpose === "signin.zitadel");
+              return setting && credential ? (
+                <ZitadelIssuerCard key={setting.revision} setting={setting} credential={credential} csrf={me.data?.csrfToken ?? ""} lockReason={lockReason} />
+              ) : null;
+            })()}
             {GROUPS.map((g) => (
               <section key={g.id} aria-labelledby={`sec-${g.id}`} className="flex flex-col gap-3">
                 <div>

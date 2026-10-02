@@ -67,4 +67,9 @@ describe("dynamic form validation", () => {
     expect(validateDynamicForm(disabled, { email: "", password: "", seats: "", enabled: false })).toEqual({});
     expect(validateDynamicForm([], { email: "", password: "", seats: "", enabled: false })).toEqual({});
   });
+
+  it("does not push raw unparsed strings to parent values while typing into number fields", () => {
+    const source = readFileSync("src/components/ui/dynamic-form.tsx", "utf8");
+    expect(source).not.toMatch(/if\s*\(field\.type\s*===\s*"number"\)\s*\{[^}]+changeValue\(field\.name,\s*raw/);
+  });
 });

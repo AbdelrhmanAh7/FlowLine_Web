@@ -261,18 +261,26 @@ export async function runCli(cli: CliKind, env: Envelope, cfg: CliConfig, opts: 
         /* already gone */
       }
     };
-    let stdout = "";
-    let stderr = "";
+    // Raw chunks are kept and decoded ONCE at the end: the cap is in UTF-8 bytes (not UTF-16 code units, which would
+    // double the real limit for Arabic output), and a multi-byte character split across chunks is never corrupted.
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
     let reason: CliErrorCode | null = null;
     child.stdout.on("data", (b: Buffer) => {
-      stdout += b.toString("utf8");
-      if (stdout.length > cfg.maxOutputBytes) {
+      stdoutChunks.push(b);
+      stdoutBytes += b.byteLength;
+      if (stdoutBytes > cfg.maxOutputBytes) {
         reason ??= "OUTPUT_TOO_LARGE";
         killGroup();
       }
     });
     child.stderr.on("data", (b: Buffer) => {
-      if (stderr.length < 20_000) stderr += b.toString("utf8");
+      if (stderrBytes < 20_000) {
+        stderrChunks.push(b);
+        stderrBytes += b.byteLength;
+      }
     });
     const timer = setTimeout(() => {
       reason ??= "TIMEOUT";
@@ -318,6 +326,8 @@ export async function runCli(cli: CliKind, env: Envelope, cfg: CliConfig, opts: 
     opts.signal?.removeEventListener("abort", onAbort);
     if (exit.spawnError) throw new CliError(exit.spawnError.code === "EACCES" ? "PERMISSION_DENIED" : "CLI_UNAVAILABLE");
     if (reason) throw new CliError(reason);
+    const stdout = Buffer.concat(stdoutChunks).toString("utf8");
+    const stderr = Buffer.concat(stderrChunks).toString("utf8");
     if (exit.signal) throw new CliError("INTERRUPTED");
     if (exit.code !== 0) throw new CliError(classifyFailure(stderr, stdout));
     const result = cli === "claude" ? parseClaude(stdout) : { output: readJobFile(jobDir, "last-message.json", cfg.maxOutputBytes), reported: {} };

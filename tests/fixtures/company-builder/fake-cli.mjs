@@ -78,6 +78,22 @@ switch (mode) {
   case "huge":
     process.stdout.write("x".repeat(200_000));
     break;
+  case "huge_arabic": {
+    // 40 000 Arabic letters: under a 64 KiB cap counted in UTF-16 code units, OVER it counted in UTF-8 bytes (80 000).
+    emit({ tasks: [{ taskId: "customer-follow-up", include: true, note: "", params: {} }], notes: "ع".repeat(40_000) });
+    break;
+  }
+  case "arabic": {
+    // The JSON document arrives in two chunks split INSIDE a multi-byte UTF-8 character of the Arabic note.
+    const note = "نرد على كل الطلبات في نفس اليوم";
+    const doc = Buffer.from(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "", structured_output: { tasks: [{ taskId: "customer-follow-up", include: true, note, params: {} }], notes: "" }, total_cost_usd: 0.0123, duration_ms: 42, num_turns: 1, usage: { input_tokens: 100, output_tokens: 50 } }), "utf8");
+    const cut = doc.indexOf(Buffer.from(note, "utf8")) + 1; // one byte into the first two-byte letter
+    process.stdout.write(doc.subarray(0, cut));
+    await new Promise((r) => setTimeout(r, 150)); // separate "data" events
+    process.stdout.write(doc.subarray(cut));
+    process.stdout.write("\n");
+    break;
+  }
   case "symlink": {
     const i = args.indexOf("--output-last-message");
     // Windows junctions exercise the same outside-job symlink refusal without requiring

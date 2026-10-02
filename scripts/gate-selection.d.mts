@@ -15,3 +15,10 @@ export interface GateSelection {
 }
 
 export declare function selectGateSteps(input: GateSelectionInput): GateSelection;
+
+export declare const PG_MAX_CONNECTIONS: number;
+export declare const PG_RESERVED_CONNECTIONS: number;
+export declare const DEFAULT_POOL_MAX: number;
+export declare const MIN_POOL_MAX: number;
+export declare function stackConnections(stackCount: number, poolMax: number): number;
+export declare function stackPoolMax(stackCount: number, options?: { maxConnections?: number; reserved?: number; defaultPool?: number; minPool?: number }): number | null;

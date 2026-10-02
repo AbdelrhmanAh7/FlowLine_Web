@@ -178,6 +178,25 @@ describe("sample-trial drift against the compiled pack", () => {
     changedDraft.expression = `$merge([(${String(changedDraft.expression)}), { "record": {} }])`;
     expect(sampleTrialDrift(followUp, params, changesStoreValue)).toContain("draft");
   });
+  it("an output overlay on a node UPSTREAM of the store feeder is drift (it could unlabel the sample record or move its key)", () => {
+    // `draft` builds record.store_key from `sample` + `id` and record.sample from `sample`; neither key is a root the
+    // store reads, so an overlay on `extract` would pass the root check and write under a real customer's key.
+    const unlabelled = compiled();
+    const extract = cfg(unlabelled, "extract");
+    extract.expression = `$merge([(${String(extract.expression)}), { "sample": false, "id": "other-request-id" }])`;
+    expect(sampleTrialDrift(followUp, params, unlabelled)).toEqual(["extract"]);
+
+    const replacesRequest = compiled();
+    const facts = cfg(replacesRequest, "facts");
+    facts.expression = `$merge([(${String(facts.expression)}), { "request": { "id": "other", "sample": false } }])`;
+    expect(sampleTrialDrift(followUp, params, replacesRequest)).toEqual(["facts"]);
+
+    // Even a harmless-looking overlay is refused upstream: only the direct store feeder may carry one.
+    const harmless = compiled();
+    const ex = cfg(harmless, "extract");
+    ex.expression = `$merge([(${String(ex.expression)}), { "note": "x" }])`;
+    expect(sampleTrialDrift(followUp, params, harmless)).toEqual(["extract"]);
+  });
   it("permits registered local type changes for packs with no store side effect", () => {
     const noStore = getPack("customer-triage", 1)!;
     const graph = structuredClone(noStore.compile(params, (id) => id));
