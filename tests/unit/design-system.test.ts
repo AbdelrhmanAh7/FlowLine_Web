@@ -307,12 +307,12 @@ describe("public pages: reduced motion is static and readable", () => {
   const css = readFileSync("src/app/globals.css", "utf8");
   const NO_PREF = /prefers-reduced-motion:\s*no-preference/;
 
-  it("the hero pin (170vh wrapper, sticky stage) and every scroll-timeline animation exist only under no-preference", () => {
+  it("the hero pin (170vh wrapper, sticky stage) and scrub timeline exist only under no-preference", () => {
     const pins = declarations(css, /^\s*(?:height:\s*170vh|position:\s*sticky)\s*$/).filter((d) => /hero-pin/.test(d.selector));
     expect(pins.length).toBeGreaterThanOrEqual(2);
     for (const d of pins) expect(d.atRules.some((a) => NO_PREF.test(a)), `${d.selector} { ${d.text} } must be inside @media (prefers-reduced-motion: no-preference)`).toBe(true);
     const timelines = declarations(css, /^\s*animation-timeline\s*:/);
-    expect(timelines.length).toBeGreaterThanOrEqual(3);
+    expect(timelines.length).toBeGreaterThanOrEqual(1);
     for (const d of timelines) expect(d.atRules.some((a) => NO_PREF.test(a)), `${d.selector} { ${d.text} }`).toBe(true);
   });
 
@@ -341,7 +341,7 @@ describe("public pages: reduced motion is static and readable", () => {
   it("scroll reveals never hide under reduce and never branch markup on the preference", () => {
     const reveal = readFileSync("src/components/landing/reveal.tsx", "utf8");
     expect(reveal).toMatch(/matchMedia\(REDUCED_MOTION\)\.matches\) return/);
-    for (const f of ["reveal.tsx", "magnetic.tsx", "scroll-root.tsx", "hero-pin.tsx", "parallax-gradients.tsx", "feature-scenes.tsx"]) {
+    for (const f of ["reveal.tsx", "magnetic.tsx", "scroll-root.tsx", "hero-pin.tsx", "feature-scenes.tsx"]) {
       expect(readFileSync(join("src/components/landing", f), "utf8"), `${f} must not read useReducedMotion during render (hydration)`).not.toMatch(/useReducedMotion/);
     }
   });
@@ -511,6 +511,7 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(css).not.toMatch(/@keyframes\s+m-hero-scrub\s*\{[^}]*rotate[XYZ]?\(/);
     expect(css).toContain(".ambient-glow");
     expect(css).toContain(".ambient-dots");
+    expect(css).toMatch(/@media\s*\(prefers-color-scheme:\s*light\)[\s\S]*?html\[data-theme="system"\] \.ambient-glow\s*\{[\s\S]*?\}\s*html\[data-theme="system"\] \.ambient-dots\s*\{/);
 
     const ambientComp = readFileSync("src/components/ui/ambient-background.tsx", "utf8");
     expect(ambientComp).not.toContain("ambient-ribbon");
