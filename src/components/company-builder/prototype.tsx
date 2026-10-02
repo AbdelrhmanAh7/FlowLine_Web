@@ -35,6 +35,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
   const pendingKeys = useRef(createCliRequestKeys(key));
   const enqueue = useMutation({
     mutationFn: (b: CliRequest) => api(`${base}/sessions/${sid}/cli-jobs`, { method: "POST", json: { ...b, requestKey: pendingKeys.current.get(b) } }),
+    onMutate: () => setError(null),
     onSuccess: (_d, b) => {
       pendingKeys.current.complete(b);
       refresh();
@@ -54,6 +55,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
       URL.revokeObjectURL(url);
       return null;
     },
+    onMutate: () => setError(null),
     onSuccess: refresh,
     onError: () => setError(t("companyBuilder.errors.generic")),
   });

@@ -41,8 +41,8 @@ export default async function Landing() {
 
   return (
     <ScrollRoot>
-      {/* relative + isolate: the wrapper is a stacking context so the -z-10 glow layers paint ABOVE its bg-surface, below the content. */}
-      <div className="relative isolate min-h-dvh bg-surface">
+      {/* No opaque viewport background here: <body> paints --bg and is an isolated stacking context, so the fixed z-index:-1 ambient layer paints above that background and below this content. */}
+      <div className="relative isolate min-h-dvh">
         {/*
           Header layout (DV2-Q03/Q04). Never wider than the viewport, at any width from 360 up:
           - lg and up: ONE row, logo | nav | preferences | account actions (icon-only preferences until xl, labelled from xl).

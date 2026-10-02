@@ -4,7 +4,7 @@
 
 The current code state is commit `8663b3e`, the top of stacked PRs #2 (core, base `main`) -> #3 (UI) -> #4 (docs + evidence 1) -> #5 (evidence 2). PR #1 is closed as superseded. Merge order is top-down.
 
-`pnpm gate` PASSED on the `8663b3e` tree: unit 725, contract 468, integration 549, Chromium 77 (fast tier). The full tier (`gate:full`, all Chromium plus Firefox and WebKit) has NOT yet run on this tree. CodeRabbit reviewed #2-#5 and reported 41 findings: 30 fixed, 3 declined with reasons, and 8 on frozen evidence tracked in issue #6.
+`pnpm gate` PASSED on the `8663b3e` tree: unit 725, contract 468, integration 549, Chromium 77 (fast tier). The full tier did run on `8663b3e5b0b129ba8f7955fa6dcdf5cf784493ca`; it FAILED, with its summary at `artifacts/gates/8663b3e-20261002T154738Z/summary.json`. Disposition: that local attempt failed because the laptop ran out of memory and was stopped, so it is not an authoritative result; gates run in GitHub CI (full tier on the PR into main). This is a separate full-tier run, not evidence for the reported fast-tier counts above. CodeRabbit reviewed #2-#5 and reported 41 findings: 30 fixed, 3 declined with reasons, and 8 on frozen evidence tracked in issue #6.
 
 Repairs recorded for this state: activation is atomic in one transaction; CLI shutdown is graceful; plan `createdAt` uses the application clock to address a flaky metric; and the gate connection budget uses Postgres `max_connections=50`, defaults to at most 4 stacks, and refuses counts that cannot fit.
 
@@ -24,7 +24,7 @@ Delivered: shared developer schema forms and controls; recovery-page adoption; f
 | Full native browser baseline | Chromium 143/143, Firefox 77/77, WebKit 77/77 | `artifacts/gates/766ff3c-20261001T162843Z` |
 | Fresh authentication group after environment configuration and metadata filtering | Chromium 10/10, Firefox 8/8, WebKit 8/8 | `artifacts/gates/766ff3c-20261001T170807Z` |
 | Fresh platform group after copy-editor review fixes | Chromium 24/24, Firefox 7/7, WebKit 7/7 | `artifacts/gates/766ff3c-20261001T172115Z` |
-| Required pinned Linux WebKit runner | 77/77; zero failures, skips, flaky or interrupted tests | `test-results/webkit-linux-20261001T171243Z-7915` |
+| Required Linux WebKit runner (pinned) | 77/77; zero failures, skips, flaky or interrupted tests | `test-results/webkit-linux-20261001T171243Z-7915` |
 | Catalogue audit | 3,475 keys per language; zero structural/placeholder issues; 113 JSX files; 39 retained literal findings for brands/technical examples | `artifacts/phase-4/ui-copy-20261001` |
 
 The full native baseline preceded the final environment/metadata and copy-editor changes. The fresh auth and platform groups cover those changed areas; the Linux run additionally covers all configured critical/cross-browser tests. These reports are complementary, not a claim that every browser ran every test on one final commit. Four background variants, scroll/click selection, keyboard behavior, reduced motion, query navigation, RTL and responsive layouts have automated coverage. Representative background screenshots were visually inspected.

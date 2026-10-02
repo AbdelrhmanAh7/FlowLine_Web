@@ -27,8 +27,14 @@ export function shouldUseNativeBrowserRunner(platform = process.platform, env = 
 
 /** docker-compose.yml caps the test Postgres at max_connections=50 (superuser_reserved_connections=3 of them). */
 export const PG_MAX_CONNECTIONS = 50;
-/** Kept free of stacks: 3 superuser-reserved + Playwright fixtures, psql, and the integration shards' overlap with stack start-up. */
+/**
+ * Kept free of stacks: 3 superuser-reserved + Playwright fixtures and psql. The integration shards are NOT part of this
+ * budget (N shards × (pool 8 + a global-setup client) = 36 at --shards=4 would leave no room for the stacks), so
+ * scripts/gate.mjs starts the stacks only after the integration step has finished; the two never share the server.
+ */
 export const PG_RESERVED_CONNECTIONS = 10;
+/** Connections the integration step can hold: each shard's vitest process keeps one default pool plus the global-setup client. */
+export const integrationConnections = (shards, poolMax = DEFAULT_POOL_MAX) => shards * (poolMax + 1);
 /** The pool size src/db/index.ts uses when FLOWLINE_DB_POOL_MAX is unset. */
 export const DEFAULT_POOL_MAX = 8;
 /** The smallest pool a stack can run on (a transaction plus one concurrent query must never deadlock on the pool). */

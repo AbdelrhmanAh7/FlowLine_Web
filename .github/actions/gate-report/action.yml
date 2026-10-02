@@ -47,7 +47,7 @@ runs:
 
     - name: Upload gate logs and reports
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: flowline-gate-${{ inputs.job }}-${{ github.run_id }}-${{ github.run_attempt }}
         # Browser reports and failure context (page snapshot, screenshot) are test data only, no secrets.

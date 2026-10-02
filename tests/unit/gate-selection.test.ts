@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POOL_MAX, MIN_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, shouldUseNativeBrowserRunner, stackConnections, stackPoolMax } from "../../scripts/gate-selection.mjs";
+import { DEFAULT_POOL_MAX, integrationConnections, MIN_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, shouldUseNativeBrowserRunner, stackConnections, stackPoolMax } from "../../scripts/gate-selection.mjs";
 
 const ALL = ["lint", "build", "stack", "chromium", "firefox", "webkit"];
 const BROWSERS = ["chromium", "firefox", "webkit"];
@@ -96,5 +97,19 @@ describe("gate Postgres connection budget (docker-compose max_connections=50)", 
     expect(() => stackPoolMax(12)).toThrow(/12 test stacks need more than the 40 Postgres connections available.*at most 8 stacks fit/);
     expect(stackPoolMax(100, { maxConnections: 2000, reserved: 0 })).toBeNull(); // 20 per stack → pool 9 ≥ default 8
     expect(stackPoolMax(100, { maxConnections: 1000, reserved: 0 })).toBe(4); // 10 per stack → (10 − 1) / 2
+  });
+
+  it("the integration shards are not in the stack budget, so the gate starts the stacks only after integration", () => {
+    // Default fast tier: 4 stacks × (2 × 4 + 1) = 36 plus 4 shards × (8 + 1) = 36 would exceed max_connections=50.
+    const stacks = stackConnections(4, poolFor(4));
+    expect(integrationConnections(4)).toBe(36);
+    expect(stacks + integrationConnections(4)).toBeGreaterThan(PG_MAX_CONNECTIONS);
+    expect(stacks).toBeLessThanOrEqual(BUDGET);
+    // scripts/gate.mjs therefore awaits the integration step before startStacks(); the two never share the server.
+    const gate = readFileSync(new URL("../../scripts/gate.mjs", import.meta.url), "utf8");
+    const awaitIntegration = gate.indexOf("await integration;");
+    const startStacks = gate.indexOf("await startStacks()");
+    expect(awaitIntegration).toBeGreaterThan(-1);
+    expect(startStacks).toBeGreaterThan(awaitIntegration);
   });
 });
