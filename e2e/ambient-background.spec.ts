@@ -7,12 +7,24 @@ import { join } from "node:path";
 /**
  * Paint check: nothing painted ABOVE the ambient layer at the glow centre may be an opaque full-viewport wrapper (an opaque
  * body/wrapper background would hide the glow and dots even though the layer is "visible" and non-interactive).
+ *
+ * elementsFromPoint is a hit test, and a `pointer-events: none` element is never a hit-test target, so the layer is made
+ * hit-testable for the duration of the measurement only (its own pointer-events: none is asserted separately). The order
+ * returned is the reverse paint order, which is what this check is about.
  */
 async function expectAmbientPaintedAboveBackgrounds(page: Page) {
   const offenders = await page.evaluate(() => {
-    const ambient = document.querySelector(".ambient-background");
-    const stack = document.elementsFromPoint(window.innerWidth / 2, 40);
-    const idx = ambient ? stack.indexOf(ambient) : -1;
+    const ambient = document.querySelector<HTMLElement>(".ambient-background");
+    if (!ambient) return ["ambient layer is missing"];
+    const previous = ambient.style.pointerEvents;
+    ambient.style.pointerEvents = "auto";
+    let stack: Element[];
+    try {
+      stack = document.elementsFromPoint(window.innerWidth / 2, 40);
+    } finally {
+      ambient.style.pointerEvents = previous;
+    }
+    const idx = stack.indexOf(ambient);
     if (idx < 0) return ["ambient layer is not under the glow point"];
     return stack.slice(0, idx).flatMap((el) => {
       const r = el.getBoundingClientRect();
