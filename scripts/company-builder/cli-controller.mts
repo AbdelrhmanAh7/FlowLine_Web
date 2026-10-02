@@ -26,20 +26,25 @@ if (!founder || !member) {
   process.exit(2);
 }
 const controllerId = `cb-controller-${process.pid}`;
-let stopping = false;
-process.on("SIGINT", () => (stopping = true));
-process.on("SIGTERM", () => (stopping = true));
+const shutdown = new AbortController();
+// The first signal stops claiming and aborts the running job (its CLI process group is killed and awaited below).
+const stop = () => shutdown.abort();
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
 console.log(`[cb-controller] ${controllerId} watching workspace ${workspaceId} (one job at a time)`);
 const stale = await recoverStaleJobs();
 if (stale.length) console.log(`[cb-controller] marked ${stale.length} interrupted job(s) as failed`);
-while (!stopping) {
+while (!shutdown.signal.aborted) {
   const job = await claimJob(workspaceId, controllerId);
   if (!job) {
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise<void>((r) => {
+      const t = setTimeout(r, 2000);
+      shutdown.signal.addEventListener("abort", () => (clearTimeout(t), r()), { once: true });
+    });
     continue;
   }
   console.log(`[cb-controller] job ${job.id} (${job.cli}/${job.kind}) started`);
-  await processJob(job, founder);
+  await processJob(job, founder, undefined, shutdown.signal);
   const [after] = await db.select({ status: schema.cbCliJob.status, error: schema.cbCliJob.error }).from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
   console.log(`[cb-controller] job ${job.id} → ${after?.status}${after?.error ? ` (${after.error.code})` : ""}`);
 }

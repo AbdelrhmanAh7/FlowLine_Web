@@ -57,7 +57,9 @@ export function computeMetrics(i: MetricInputs) {
     connectionsRequired,
     timeToFirstVerifiedResultS: firstVerified ? secs(i.sessionCreatedAt, firstVerified.userVerdictAt!) : null,
     activeUserTimeS: sum("active_time", "seconds"),
-    systemWaitingTimeS: i.trials.reduce((n, t) => n + (t.completedAt ? secs(t.createdAt, t.completedAt) : 0), 0),
+    systemWaitingTimeS: Math.round(
+      i.trials.reduce((ms, t) => ms + (t.completedAt ? Math.max(0, t.completedAt.getTime() - t.createdAt.getTime()) : 0), 0) / 1000,
+    ),
     externalOnboardingDelayMin: sum("external_delay_minutes", "minutes"),
     supportTimeMin: sum("support_minutes", "minutes"),
     helpOpened: i.events.filter((e) => e.kind === "help_opened").length,
@@ -73,4 +75,3 @@ export function computeMetrics(i: MetricInputs) {
     reusedFollowingWeek: !reuseWindow ? null : i.laterRuns.some((d) => d >= reuseWindow.from && d < reuseWindow.to) ? true : i.now < reuseWindow.to ? "pending" : false,
   };
 }
-

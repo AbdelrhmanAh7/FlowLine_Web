@@ -54,6 +54,18 @@ describe("experiment metrics (definitions in COMPETITIVE_TEST_PROTOCOL.md)", () 
     expect(m.cost).toEqual({ aiReportedUsd: 0, platformCharges: null, supportEffortMin: 15 });
   });
 
+  it("sums raw trial milliseconds before rounding the aggregate seconds", () => {
+    const trials = (ms: number) => Array.from({ length: 10 }, () => ({
+      createdAt: t0,
+      completedAt: new Date(t0.getTime() + ms),
+      verdict: null,
+      userVerdict: null,
+      userVerdictAt: null,
+    }));
+    expect(computeMetrics(base({ trials: trials(600) })).systemWaitingTimeS).toBe(6);
+    expect(computeMetrics(base({ trials: trials(400) })).systemWaitingTimeS).toBe(4);
+  });
+
   it("acceptance of a result whose checks failed is never a verified result", () => {
     const m = computeMetrics(base({ trials: [{ createdAt: at(300), completedAt: at(304), verdict: { ...ok, matchedOutcome: false }, userVerdict: "accepted", userVerdictAt: at(320) }] }));
     expect(m.timeToFirstVerifiedResultS).toBeNull();

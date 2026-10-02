@@ -21,14 +21,23 @@ async function finish(jobId: string, code: CliErrorCode, reported?: Record<strin
     .where(and(eq(schema.cbCliJob.id, jobId), ne(schema.cbCliJob.status, "cancelled")));
 }
 
-export async function processJob(job: typeof schema.cbCliJob.$inferSelect, founder: CurrentUser, cfgOverride?: CliConfig) {
+/**
+ * `shutdown` is the controller's own stop signal (SIGINT/SIGTERM). It kills the running CLI's process group, is awaited
+ * to completion, and ends the job as cancelled (never re-run silently); a result is never applied once it fires.
+ */
+export async function processJob(job: typeof schema.cbCliJob.$inferSelect, founder: CurrentUser, cfgOverride?: CliConfig, shutdown?: AbortSignal) {
   const cli = job.cli as CliKind;
   const envelope = cliEnvelope(job.envelope);
   const cfg = cfgOverride ?? cliConfig(cli);
+  if (shutdown?.aborted) return finish(job.id, "CANCELLED");
   const pf = preflight(cli, cfg);
   if (!pf.ok) return finish(job.id, pf.code ?? "CLI_UNAVAILABLE", { cliVersion: pf.version, missingFlags: pf.missingFlags, isolation: pf.isolation.length });
 
   const ac = new AbortController();
+  const onShutdown = () => ac.abort();
+  shutdown?.addEventListener("abort", onShutdown, { once: true });
+  if (shutdown?.aborted) onShutdown();
+  const code = (e: unknown): CliErrorCode => (shutdown?.aborted ? "CANCELLED" : e instanceof CliError ? e.code : "CLI_FAILED");
   const beat = setInterval(() => {
     void db
       .select({ c: schema.cbCliJob.cancelRequestedAt })
@@ -50,8 +59,9 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
       try {
         result = await runCli(cli, envelope, cfg, { signal: ac.signal, repairOf });
       } catch (e) {
-        return finish(job.id, e instanceof CliError ? e.code : "CLI_FAILED", reported);
+        return finish(job.id, code(e), reported);
       }
+      if (shutdown?.aborted) return finish(job.id, "CANCELLED", reported); // fence: a stopped controller applies nothing
       reported.calls = (reported.calls as number) + 1;
       Object.assign(reported, result.reported);
       await db.update(schema.cbCliJob).set({ status: "validating", reported }).where(eq(schema.cbCliJob.id, job.id));
@@ -67,6 +77,7 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
         repairOf = { output: result.output, problem: check.problem };
         continue;
       }
+      if (shutdown?.aborted) return finish(job.id, "CANCELLED", reported);
       try {
         await applyJobResult(founder, job, check.value, cli === "claude" ? "cli_claude" : "cli_codex");
       } catch (e) {
@@ -81,5 +92,6 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
     return finish(job.id, "OUTPUT_INVALID", reported);
   } finally {
     clearInterval(beat);
+    shutdown?.removeEventListener("abort", onShutdown);
   }
 }

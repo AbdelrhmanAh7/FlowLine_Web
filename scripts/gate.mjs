@@ -3,7 +3,7 @@
 //
 //   pnpm gate        (--tier=fast, every commit; ≈3–4 min on a 4-CPU machine)
 //   pnpm gate:full   (--tier=full, before merging to main; adds every Chromium spec, Firefox and WebKit)
-//   options: [--only=a,b] [--skip=a,b] [--out=<dir>] [--stacks=K (max(3, CPUs/2), ≤6)] [--shards=N (4)]
+//   options: [--only=a,b] [--skip=a,b] [--out=<dir>] [--stacks=K (max(3, CPUs/2), default ≤4, ≤6)] [--shards=N (4)]
 //            [--browsers=sequential|parallel] [--fail-fast] [--group=product,auth,editor,platform] [--list-groups]
 //   Small gates: --only=static (lint,typecheck,evidence) | unit | contract | integration | build; browser groups with
 //   --group (implies --only=chromium; name other projects with --only). Groups run every test of concrete spec files
@@ -34,6 +34,7 @@ import { join } from "node:path";
 import { parseEnv } from "node:util";
 import testStackEnv from "./test-stack.cjs";
 import { GROUPS, checkManifest, expandSteps, resolveGroups } from "./gate-groups.mjs";
+import { selectGateSteps } from "./gate-selection.mjs";
 
 const BROWSERS = ["chromium", "firefox", "webkit"];
 const ALL = ["lint", "typecheck", "evidence", "unit", "contract", "integration", "build", "stack", ...BROWSERS];
@@ -120,18 +121,22 @@ const intNum = (v, d, max) => {
 // K isolated stacks (own app/fake ports and database each) and N integration shards (own database each).
 // Default: 3 stacks per project on a 4-CPU machine, more on bigger ones (each stack + browser container needs ~1 CPU).
 // A group run never starts more stacks than it has spec files (a shard with no files would fail with "no tests found").
-const STACKS = intNum(args.stacks, Math.min(6, Math.max(3, Math.floor(availableParallelism() / 2))), 6);
+// Default ≤4 stacks: docker-compose.yml caps the test Postgres at max_connections=50 and each stack holds ~9 connections
+// (two pools of 4 + LISTEN) plus Playwright fixtures; 6 stacks exhausted it ("too many clients", GATE-03). --stacks=K still allows up to 6.
+const STACKS = intNum(args.stacks, Math.min(4, Math.max(3, Math.floor(availableParallelism() / 2))), 6);
 const BROWSER_STACKS = groupSel ? Math.min(STACKS, groupFilesList.length) : STACKS;
 const INT_SHARDS = intNum(args.shards, 4, 16);
 // Fast tier (every commit): Chromium's @critical/@cross-browser specs only. Full tier (before merging to main): every
 // Chromium spec plus Firefox and WebKit. An explicit --only=firefox still runs Firefox in the fast tier.
 const FAST_GREP = "@critical|@cross-browser";
-const selected = new Set(
-  ALL.filter((n) => (only.length === 0 || only.includes(n)) && !skip.includes(n)).filter(
-    (n) => tier === "full" || only.includes(n) || !["firefox", "webkit"].includes(n),
-  ),
-);
-if (BROWSERS.some((b) => selected.has(b)) && !skip.includes("stack")) selected.add("stack");
+let selection;
+try {
+  selection = selectGateSteps({ all: ALL, browsers: BROWSERS, only, skip, tier, browserStacks: BROWSER_STACKS, browsersMode });
+} catch (e) {
+  console.error(e instanceof Error ? e.message : String(e));
+  process.exit(2);
+}
+const { selected, parallelProjects, stackCount } = selection;
 
 // ---- identity ----
 const sh = (cmd) => {
@@ -160,10 +165,8 @@ logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identi
 // and +1, database flowline_test_e<k>.
 // Sequential browsers share stacks 1..K. Parallel browsers get disjoint stacks per project so two projects never share a
 // database or fake-provider state: Chromium (the largest, 128 specs) gets K, Firefox and WebKit (62 each) ceil(K/2) each.
-const parallelProjects = browsersMode === "parallel" ? BROWSERS.filter((b) => selected.has(b)) : [];
-const stackCount = parallelProjects.length > 1 ? parallelProjects.reduce((n, b) => n + (b === "chromium" ? BROWSER_STACKS : Math.ceil(BROWSER_STACKS / 2)), 0) : BROWSER_STACKS;
 // Each stack holds two pools (next + worker) plus a LISTEN connection; keep the total under Postgres' default
-// max_connections (100), leaving room for the integration shards.
+// max_connections (50 in docker-compose.yml), leaving room for the integration shards and fixtures.
 const POOL_MAX = stackCount > 8 ? "3" : stackCount > 3 ? "4" : undefined;
 const makeStack = (k) => {
   const env = k === 1 ? { FLOWLINE_TEST_SHARD: "1" } : { FLOWLINE_TEST_SHARD: String(k), FLOWLINE_TEST_PORT: String(3100 + 10 * (k - 1)), FLOWLINE_TEST_FAKE_PORT: String(4500 + 10 * (k - 1)), FLOWLINE_TEST_AI_PORT: String(4501 + 10 * (k - 1)), FLOWLINE_TEST_DB: `flowline_test_e${k}` };

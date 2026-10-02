@@ -4535,6 +4535,7 @@
       "RESULT_NOT_ACCEPTED": "First confirm that the trial result matches what you wanted.",
       "generic": "Something went wrong. Nothing changed.",
       "REVISION_CONFLICT": "The interview changed in another tab.",
+      "BLUEPRINT_FACTS_CHANGED": "Interview answers changed after this plan was created. Generate and review a fresh plan.",
       "BLUEPRINT_NOT_APPROVED": "Approve the plan before creating drafts.",
       "SAMPLE_NOT_VERIFIED": "Try the task with sample data first.",
       "ENTITLEMENT_REQUIRED": "Activation needs a development trial or an active subscription.",

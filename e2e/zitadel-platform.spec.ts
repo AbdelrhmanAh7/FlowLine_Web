@@ -24,8 +24,14 @@ test.describe("platform ZITADEL hosted sign-in", () => {
   test("verified new customer completes the real code, state and PKCE callback @critical", async ({ page }) => {
     const email = uniqueEmail("zitadel-new");
     expect((await page.request.post(`${FAKE_PROVIDER}/__fake/oidc/user`, { data: { email, email_verified: true } })).ok()).toBe(true);
+    const authOptionsResponse = await page.request.get("/api/auth-config");
+    const authOptions = await authOptionsResponse.json() as { google: boolean; github: boolean; zitadel: boolean };
+    expect(authOptions.zitadel).toBe(true);
     await page.goto("/sign-up");
     await expect(page.getByRole("button", { name: "Continue with secure sign-in" })).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible();
+    if (!authOptions.google) await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+    if (!authOptions.github) await expect(page.getByRole("button", { name: "Continue with GitHub" })).toHaveCount(0);
     const callback = page.waitForRequest((req) => req.url().includes("/api/auth/callback/zitadel?"));
     await page.getByRole("button", { name: "Continue with secure sign-in" }).click();
     const request = await callback;

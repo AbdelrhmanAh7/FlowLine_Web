@@ -173,12 +173,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 {t("auth.zitadel")}
               </Button>
             )}
-            <Button size="lg" className="w-full" disabledReason={oauthReason("Google", config.data?.google)} onClick={() => social("google")}>
-              <span aria-hidden className="font-semibold">G</span> {t("auth.google")}
-            </Button>
-            <Button size="lg" className="w-full" disabledReason={oauthReason("GitHub", config.data?.github)} onClick={() => social("github")}>
-              <span aria-hidden>◉</span> {t("auth.github")}
-            </Button>
+            {(!config.data?.zitadel || config.data.google) && (
+              <Button size="lg" className="w-full" disabledReason={oauthReason("Google", config.data?.google)} onClick={() => social("google")}>
+                <span aria-hidden className="font-semibold">G</span> {t("auth.google")}
+              </Button>
+            )}
+            {(!config.data?.zitadel || config.data.github) && (
+              <Button size="lg" className="w-full" disabledReason={oauthReason("GitHub", config.data?.github)} onClick={() => social("github")}>
+                <span aria-hidden>◉</span> {t("auth.github")}
+              </Button>
+            )}
           </div>
 
           <div className="my-6 flex items-center gap-3 text-sm text-muted">

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CompanyBlueprint } from "@/company-builder/model";
 import { composeBlueprint } from "@/company-builder/planner";
@@ -78,7 +78,7 @@ export async function storeBlueprint(user: CurrentUser, workspaceId: string, ses
     const diff = last ? diffBlueprints(last.body as CompanyBlueprint, blueprint) : null;
     const [row] = await tx
       .insert(schema.cbBlueprint)
-      .values({ workspaceId, sessionId, version: (last?.version ?? 0) + 1, profileVersion: blueprint.profileVersion, generator, body: blueprint, diff, createdBy: user.id })
+      .values({ workspaceId, sessionId, version: (last?.version ?? 0) + 1, profileVersion: blueprint.profileVersion, generator, body: blueprint, diff, createdBy: user.id, createdAt: new Date() }) // app clock, like interview answer times (experiment metrics compare them)
       .returning();
     if (last && last.status !== "superseded") await tx.update(schema.cbBlueprint).set({ status: "superseded" }).where(eq(schema.cbBlueprint.id, last.id));
     return { row: row!, created: true };
@@ -103,15 +103,38 @@ export async function requireBlueprint(workspaceId: string, blueprintId: string)
 
 /** The owner's explicit review of the plan ("preview before applying"). Only the latest version can be approved. */
 export async function approveBlueprint(user: CurrentUser, workspaceId: string, blueprintId: string) {
-  return db.transaction(async (tx) => {
+  const existing = await requireBlueprint(workspaceId, blueprintId);
+  const result = await db.transaction(async (tx) => {
+    // Match answer(), storeBlueprint(), and CLI proposal locking: session first, then blueprint. This makes the
+    // fact-snapshot check atomic with any concurrent correction or newly stored plan.
+    const [session] = await tx.select().from(schema.cbSession)
+      .where(and(eq(schema.cbSession.id, existing.sessionId), eq(schema.cbSession.workspaceId, workspaceId), isNull(schema.cbSession.deletedAt)))
+      .for("update");
+    if (!session) throw notFound("Interview not found");
     const [row] = await tx.select().from(schema.cbBlueprint).where(and(eq(schema.cbBlueprint.id, blueprintId), eq(schema.cbBlueprint.workspaceId, workspaceId))).for("update");
     if (!row) throw notFound("Plan not found");
-    if (row.status === "approved") return row;
-    if (row.status === "superseded") throw new HttpError(409, "BLUEPRINT_SUPERSEDED", "A newer version of this plan exists");
+    const [latest] = await tx.select({ id: schema.cbBlueprint.id }).from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, row.sessionId)).orderBy(desc(schema.cbBlueprint.version)).limit(1);
+    if (!latest || latest.id !== row.id) return { error: "BLUEPRINT_SUPERSEDED" as const };
+    const [profile] = await tx.select({ facts: schema.cbProfile.facts }).from(schema.cbProfile)
+      .where(and(eq(schema.cbProfile.sessionId, row.sessionId), eq(schema.cbProfile.version, row.profileVersion)));
+    const factsAreCurrent = row.profileVersion === session.profileVersion && Boolean(profile) && canonicalJson(profile!.facts) === canonicalJson(stateOf(session).facts);
+    if (!factsAreCurrent) {
+      if (row.status !== "superseded") {
+        await tx.update(schema.cbBlueprint).set({ status: "superseded", approvedBy: null, approvedAt: null }).where(eq(schema.cbBlueprint.id, row.id));
+      }
+      return { error: "BLUEPRINT_FACTS_CHANGED" as const };
+    }
+    if (row.status === "superseded") return { error: "BLUEPRINT_SUPERSEDED" as const };
+    if (row.status === "approved") return { row };
     const [updated] = await tx.update(schema.cbBlueprint).set({ status: "approved", approvedBy: user.id, approvedAt: new Date() }).where(eq(schema.cbBlueprint.id, row.id)).returning();
     await audit(tx, { workspaceId, actor: userActor(user), action: "company_builder.blueprint_approved", targetType: "cb_blueprint", targetId: row.id, data: { version: row.version } });
-    return updated!;
+    return { row: updated! };
   });
+  if ("error" in result) {
+    if (result.error === "BLUEPRINT_FACTS_CHANGED") throw new HttpError(409, result.error, "Interview answers changed after this plan was created. Generate and review a fresh plan.");
+    throw new HttpError(409, "BLUEPRINT_SUPERSEDED", "A newer version of this plan exists");
+  }
+  return result.row;
 }
 
 export async function listBlueprints(sessionId: string) {

@@ -23,6 +23,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 import pg from "pg";
+import { resolveIntegrationBaseEnv } from "./test-integration-env.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_FILE = join(ROOT, ".env.test");
@@ -57,9 +58,11 @@ if (!existsSync(ENV_FILE)) {
   process.exit(2);
 }
 const fileEnv = parseEnv(readFileSync(ENV_FILE, "utf8"));
-const baseEnv = { ...fileEnv, ...process.env }; // shell values win, like process.loadEnvFile in with-env.mjs
-if (!fileEnv.DATABASE_URL) {
-  console.error(".env.test has no DATABASE_URL");
+let baseEnv;
+try {
+  baseEnv = resolveIntegrationBaseEnv(fileEnv, process.env); // shell values win, like process.loadEnvFile in with-env.mjs
+} catch (e) {
+  console.error(e instanceof Error ? e.message : String(e));
   process.exit(2);
 }
 const redact = (u) => u.replace(/\/\/[^@]*@/, "//***@");
@@ -68,7 +71,7 @@ const withDb = (url, name) => {
   u.pathname = `/${name}`;
   return u.toString();
 };
-const baseUrl = fileEnv.DATABASE_URL;
+const baseUrl = baseEnv.DATABASE_URL;
 const baseName = decodeURIComponent(new URL(baseUrl).pathname.slice(1));
 const shards = Array.from({ length: N }, (_, k) => {
   const i = k + 1;

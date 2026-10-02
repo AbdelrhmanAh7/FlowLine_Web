@@ -281,6 +281,30 @@ describe("controller + adapter with fake CLIs", () => {
     expect(rec).toMatchObject({ status: "failed", error: { code: "INTERRUPTED" } });
   });
 
+  it("controller shutdown (SIGINT/SIGTERM signal) kills the running CLI, awaits it, cancels the job and applies nothing", async () => {
+    const job = await newJob();
+    const before = (await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).length;
+    const claimed = (await claimJob(wsId, "shutdown-controller"))!;
+    const shutdown = new AbortController();
+    const started = Date.now();
+    const p = processJob(claimed, founder, cfg(fakeBin("hang"), 30_000), shutdown.signal);
+    await new Promise((r) => setTimeout(r, 800));
+    shutdown.abort();
+    await p; // resolves only after the child process has exited
+    expect(Date.now() - started).toBeLessThan(15_000); // not the 30 s CLI timeout
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "cancelled", error: { code: "CANCELLED" }, lockedBy: null, resultBlueprintId: null });
+    expect(after!.finishedAt).toBeTruthy();
+    expect(await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).toHaveLength(before);
+
+    // A signal that arrives before the job starts never spawns the CLI.
+    const queued = await newJob();
+    const claimed2 = (await claimJob(wsId, "shutdown-controller"))!;
+    await processJob(claimed2, founder, cfg(fakeBin("success")), AbortSignal.abort());
+    const [early] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, queued.id));
+    expect(early).toMatchObject({ status: "cancelled", error: { code: "CANCELLED" }, lockedBy: null });
+  });
+
   it("does not apply a CLI proposal after its base plan has been superseded", async () => {
     const job = await newJob();
     const before = (await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).length;

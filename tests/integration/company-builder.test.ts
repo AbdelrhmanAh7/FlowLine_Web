@@ -18,7 +18,7 @@ import { startCheckout } from "@/billing/service";
 import type { CompanyBlueprint } from "@/company-builder/model";
 import { auth } from "@/lib/auth";
 import type { CurrentUser } from "@/server/access";
-import { approveBlueprint, generateDeterministic } from "@/server/company-builder/blueprints";
+import { approveBlueprint, generateDeterministic, storeBlueprint } from "@/server/company-builder/blueprints";
 import { cancelDevTrial, effectiveEntitlement, grantDevTrial, reconcileEntitlement } from "@/server/company-builder/entitlement";
 import { cancelInstallation, install, installedItems } from "@/server/company-builder/install";
 import { sessionOverview } from "@/server/company-builder/overview";
@@ -131,6 +131,66 @@ describe("Milestone A — interview persistence", () => {
     const again = await generateDeterministic(owner, ws.id, s.id, "en");
     expect(again.created).toBe(false);
     expect((again.row.body as CompanyBlueprint).complete).toBe(true);
+  });
+});
+
+describe("blueprint fact-snapshot approval", () => {
+  it("supersedes approved plans on corrections and rejects a delayed stale proposal until fresh facts are snapshotted", async () => {
+    const owner = await makeUser("cb-facts-snapshot");
+    const ws = await createWorkspace(owner, unique("Facts Snapshot Co"));
+    const session = await createSession(owner, ws.id);
+    await answerPath(ws.id, session.id, CUSTOMER_PATH);
+    const { row: approvedPlan } = await generateDeterministic(owner, ws.id, session.id, "en");
+    await approveBlueprint(owner, ws.id, approvedPlan.id);
+
+    const [beforeCorrection] = await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, session.id));
+    await answer(ws.id, session.id, { questionId: "cust_info", value: "Our revised monthly plan price is 420 SAR.", revision: beforeCorrection!.revision, mode: "correction" });
+    const [invalidated] = await db.select({ status: schema.cbBlueprint.status }).from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, approvedPlan.id));
+    expect(invalidated?.status).toBe("superseded");
+    await expectHttpError(install(owner, ws.id, approvedPlan.id, { locale: "en" }), 409, "BLUEPRINT_NOT_APPROVED");
+
+    // A proposal created from a worker snapshot just before the correction can arrive after the correction commits.
+    // Approval must compare the actual fact snapshot, not trust the blueprint's status or profileVersion field alone.
+    const delayedBody = { ...(approvedPlan.body as CompanyBlueprint), clientName: "Plan based on earlier answers" };
+    const { row: delayedPlan } = await storeBlueprint(owner, ws.id, session.id, delayedBody, "cli_import");
+    expect(delayedPlan.profileVersion).toBe(approvedPlan.profileVersion);
+    await expectHttpError(approveBlueprint(owner, ws.id, delayedPlan.id), 409, "BLUEPRINT_FACTS_CHANGED");
+    const [delayedStatus] = await db.select({ status: schema.cbBlueprint.status }).from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, delayedPlan.id));
+    expect(delayedStatus?.status).toBe("superseded");
+
+    const { row: freshPlan } = await generateDeterministic(owner, ws.id, session.id, "en");
+    expect(freshPlan.profileVersion).toBeGreaterThan(approvedPlan.profileVersion);
+    await approveBlueprint(owner, ws.id, freshPlan.id);
+    const { installation } = await install(owner, ws.id, freshPlan.id, { locale: "en" });
+    expect(installation.status).toBe("installed");
+  });
+
+  it("keeps an older published task visible and controllable after installing its replacement plan", async () => {
+    const { owner, ws, session, installation } = await installedCompany();
+    await grantDevTrial(owner, ws.id);
+    await verifiedTrial(owner, ws.id, installation.id, FU);
+    const activation = await requestActivation(owner, ws.id, installation.id, FU);
+    await decideReview(owner, ws.id, activation.id, "approve");
+    const [oldItem] = (await installedItems(installation.id)).filter((item) => item.taskId === FU && item.kind === "flow");
+    const [oldFlow] = await db.select().from(schema.flow).where(eq(schema.flow.id, oldItem!.refId));
+    expect(oldFlow?.publishedVersionId).toBeTruthy();
+
+    const [beforeCorrection] = await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, session.id));
+    await answer(ws.id, session.id, { questionId: "cust_info", value: "Our monthly plan price is 425 SAR.", revision: beforeCorrection!.revision, mode: "correction" });
+    const { row: replacementPlan } = await generateDeterministic(owner, ws.id, session.id, "en");
+    await approveBlueprint(owner, ws.id, replacementPlan.id);
+    const { installation: replacement } = await install(owner, ws.id, replacementPlan.id, { locale: "en" });
+    expect(replacement.id).not.toBe(installation.id);
+
+    const overview = await sessionOverview(ws.id, session.id, null);
+    expect(overview.installation?.id).toBe(installation.id);
+    expect(overview.planInstallation?.id).toBe(replacement.id);
+    expect(overview.tasks.find((view) => view.task.id === FU)).toMatchObject({ status: { state: "active" }, flow: { id: oldItem!.refId, published: true } });
+
+    // The selected installation id also routes the visible pause control to the old active record.
+    await pauseTask(owner, ws.id, overview.installation!.id, FU);
+    const [paused] = await db.select({ state: schema.cbActivation.state }).from(schema.cbActivation).where(and(eq(schema.cbActivation.installationId, installation.id), eq(schema.cbActivation.taskId, FU)));
+    expect(paused?.state).toBe("paused");
   });
 });
 
@@ -965,6 +1025,30 @@ describe("FB2-02 — a stale activation decision never changes the newer approve
     await decideReview(c.owner, c.ws.id, req.id, "reject");
     const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
     expect(a).toMatchObject({ state: "paused", reason: "activation_rejected", reviewItemId: req.id });
+  });
+
+  it("activation is atomic: a failure after publication rolls back and preserves the approved review", async () => {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const req = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    const [fi] = (await installedItems(c.installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+    const versionsBefore = await db.select({ id: schema.flowVersion.id }).from(schema.flowVersion).where(eq(schema.flowVersion.flowId, fi!.refId));
+    setFault(c.owner.id, "cb_activation_bookkeeping", 1);
+    try {
+      await expect(decideReview(c.owner, c.ws.id, req.id, "approve")).rejects.toThrow();
+    } finally {
+      resetFaults(c.owner.id);
+    }
+    const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId));
+    expect(f!.publishedVersionId).toBeNull(); // the publication was rolled back, not left running
+    expect(await db.select({ id: schema.flowVersion.id }).from(schema.flowVersion).where(eq(schema.flowVersion.flowId, fi!.refId))).toHaveLength(versionsBefore.length);
+    const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
+    expect(a?.state).toBe("approval_required");
+    const [item] = await db.select().from(schema.cbReviewItem).where(eq(schema.cbReviewItem.id, req.id));
+    expect(item!.status).toBe("approved");
+    const audits = await db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, c.ws.id), eq(schema.auditEvent.action, "company_builder.activation_changed"), eq(schema.auditEvent.targetId, FU)));
+    expect(audits.filter((e) => (e.data as { state?: string } | null)?.state === "active")).toHaveLength(0);
   });
 });
 

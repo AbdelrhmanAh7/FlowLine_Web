@@ -142,7 +142,7 @@ export async function applyJobResult(founder: CurrentUser, job: typeof schema.cb
       const diff = diffBlueprints(base.body as CompanyBlueprint, checked.blueprint);
       const [created] = await tx
         .insert(schema.cbBlueprint)
-        .values({ workspaceId: currentJob.workspaceId, sessionId: currentJob.sessionId, version: base.version + 1, profileVersion: checked.blueprint.profileVersion, generator, body: checked.blueprint, diff, createdBy: founder.id })
+        .values({ workspaceId: currentJob.workspaceId, sessionId: currentJob.sessionId, version: base.version + 1, profileVersion: checked.blueprint.profileVersion, generator, body: checked.blueprint, diff, createdBy: founder.id, createdAt: new Date() }) // app clock, like interview answer times
         .returning();
       row = created!;
       if (base.status !== "superseded") await tx.update(schema.cbBlueprint).set({ status: "superseded" }).where(eq(schema.cbBlueprint.id, base.id));

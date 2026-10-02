@@ -210,10 +210,10 @@ export async function decideReview(user: CurrentUser, workspaceId: string, itemI
   try {
     return await execute(user, item);
   } catch (e) {
-    // A definite failure (not an unknown outcome) never leaves the item stuck in "approved".
-    if (!(e instanceof UncertainOutcomeError)) {
+    // Activation owns a wider transaction that rolls publication, activation bookkeeping, audit, and final review
+    // update back together. Keep its pre-execution approved decision intact when that transaction fails.
+    if (!(e instanceof UncertainOutcomeError) && item.kind !== "activation") {
       await db.update(schema.cbReviewItem).set({ status: "invalidated", note: e instanceof HttpError ? e.code : "EXECUTION_FAILED" }).where(and(eq(schema.cbReviewItem.id, item.id), eq(schema.cbReviewItem.status, "approved")));
-      if (item.kind === "activation") await setActivation(db, item, "failed", e instanceof HttpError ? e.code : "EXECUTION_FAILED", user.id, { ownedOnly: true });
     }
     throw e;
   }
@@ -302,25 +302,32 @@ async function activate(user: CurrentUser, item: ReviewRow) {
     throw new HttpError(402, "ENTITLEMENT_REQUIRED", "Activation needs a development trial or an active subscription");
   }
   const source = item.source as { flowId: string; graphHash: string };
-  // Publishing pins the reviewed draft as the version runs use (manual trigger only — checked in the binding).
-  const published = await publishFlow(user, source.flowId);
-  const [pv] = await db.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, published.versionId));
-  const g = pv!.graph as FlowGraph;
-  if (graphHash(g) !== source.graphHash || published.trigger !== "trigger.manual") {
-    // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published.
-    await unpublishFlow(source.flowId);
-    await setActivation(db, item, "paused", "draft_changed_during_activation", user.id); // explicit: nothing is published
-    throw new HttpError(409, "REVIEW_INVALIDATED", "The draft changed while it was being activated — request a new review", { reason: "draft_changed_during_activation" });
-  }
-  await setActivation(db, item, "active", null, user.id);
-  // Older pending activation requests for this task can't apply any more: mark them superseded (history kept).
-  await db
-    .update(schema.cbReviewItem)
-    .set({ status: "invalidated", note: "superseded" })
-    .where(and(eq(schema.cbReviewItem.installationId, item.installationId), eq(schema.cbReviewItem.taskId, item.taskId), eq(schema.cbReviewItem.kind, "activation"), eq(schema.cbReviewItem.status, "pending"), ne(schema.cbReviewItem.id, item.id)));
-  await audit(db, { workspaceId: item.workspaceId, actor: userActor(user), action: "company_builder.activation_changed", targetType: "cb_task", targetId: item.taskId, data: { state: "active", source: ent.source } });
-  const [done] = await db.update(schema.cbReviewItem).set({ status: "executed", executedAt: new Date() }).where(eq(schema.cbReviewItem.id, item.id)).returning();
-  return done!;
+  // Publication, the activation record, superseding older requests, the audit entry and the review's final state are ONE
+  // transaction: a failure anywhere rolls the publication back, so a published flow never exists without its activation.
+  const outcome = await db.transaction(async (tx) => {
+    // Publishing pins the reviewed draft as the version runs use (manual trigger only — checked in the binding).
+    const published = await publishFlow(user, source.flowId, tx);
+    const [pv] = await tx.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, published.versionId));
+    const g = pv!.graph as FlowGraph;
+    if (graphHash(g) !== source.graphHash || published.trigger !== "trigger.manual") {
+      // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published.
+      await unpublishFlow(source.flowId, tx);
+      await setActivation(tx, item, "paused", "draft_changed_during_activation", user.id); // explicit: nothing is published
+      return null;
+    }
+    if (consumeFault(user.id, "cb_activation_bookkeeping")) throw new Error("injected activation bookkeeping failure"); // TEST ONLY
+    await setActivation(tx, item, "active", null, user.id);
+    // Older pending activation requests for this task can't apply any more: mark them superseded (history kept).
+    await tx
+      .update(schema.cbReviewItem)
+      .set({ status: "invalidated", note: "superseded" })
+      .where(and(eq(schema.cbReviewItem.installationId, item.installationId), eq(schema.cbReviewItem.taskId, item.taskId), eq(schema.cbReviewItem.kind, "activation"), eq(schema.cbReviewItem.status, "pending"), ne(schema.cbReviewItem.id, item.id)));
+    await audit(tx, { workspaceId: item.workspaceId, actor: userActor(user), action: "company_builder.activation_changed", targetType: "cb_task", targetId: item.taskId, data: { state: "active", source: ent.source } });
+    const [done] = await tx.update(schema.cbReviewItem).set({ status: "executed", executedAt: new Date() }).where(eq(schema.cbReviewItem.id, item.id)).returning();
+    return done!;
+  });
+  if (!outcome) throw new HttpError(409, "REVIEW_INVALIDATED", "The draft changed while it was being activated — request a new review", { reason: "draft_changed_during_activation" });
+  return outcome;
 }
 
 export async function pauseTask(user: CurrentUser, workspaceId: string, installationId: string, taskId: string, reason = "paused_by_owner") {

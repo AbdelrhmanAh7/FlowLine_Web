@@ -1,9 +1,10 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AnswerError, answeredCount, applyAnswer, correctFact, emptyState, nextQuestion, previousQuestion, readiness } from "@/company-builder/interview";
 import type { InterviewState } from "@/company-builder/model";
 import { QUESTION_BANK_VERSION, QUESTION_BY_ID } from "@/company-builder/questions";
 import type { CurrentUser } from "@/server/access";
+import { canonicalJson } from "@/server/crypto";
 import { HttpError, notFound } from "@/server/http";
 import { unpublishFlow } from "@/server/publish";
 
@@ -89,6 +90,13 @@ export async function answer(workspaceId: string, sessionId: string, input: Answ
     } catch (e) {
       if (e instanceof AnswerError) throw new HttpError(422, e.code, "That answer isn't valid for this question");
       throw e;
+    }
+    if (canonicalJson(stateOf(row).facts) !== canonicalJson(next.facts)) {
+      // A reviewed or approved plan is a snapshot of the interview facts. Invalidate it in the same transaction as
+      // the correction so it cannot be installed after an answer change.
+      await tx.update(schema.cbBlueprint)
+        .set({ status: "superseded", approvedBy: null, approvedAt: null })
+        .where(and(eq(schema.cbBlueprint.sessionId, row.id), inArray(schema.cbBlueprint.status, ["review_required", "approved"])));
     }
     const [updated] = await tx
       .update(schema.cbSession)

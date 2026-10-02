@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { isRouteRef } from "@/ai/hub/routing";
 import { taskStatus } from "@/company-builder/lifecycle";
@@ -18,8 +18,20 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
   await reconcileEntitlement(workspaceId);
   const bp = await latestBlueprint(sessionId);
   const versions = await listBlueprints(sessionId);
-  // The installation shown: the latest plan's, else the most recent INSTALLED one of this interview (a newer plan
-  // version — e.g. a CLI proposal awaiting review — never hides tasks that are installed or active).
+  // Keep the most recent still-published active installation in control until its tasks are retired. Installing a
+  // replacement plan alone must not hide the older flows that remain published and need an owner control surface.
+  const [activeInst] = await db
+    .select({ inst: schema.cbInstallation })
+    .from(schema.cbActivation)
+    .innerJoin(schema.cbInstallation, eq(schema.cbInstallation.id, schema.cbActivation.installationId))
+    .innerJoin(schema.cbBlueprint, eq(schema.cbBlueprint.id, schema.cbInstallation.blueprintId))
+    .innerJoin(schema.cbInstalledItem, and(eq(schema.cbInstalledItem.installationId, schema.cbInstallation.id), eq(schema.cbInstalledItem.taskId, schema.cbActivation.taskId), eq(schema.cbInstalledItem.kind, "flow")))
+    .innerJoin(schema.flow, and(eq(schema.flow.id, schema.cbInstalledItem.refId), isNull(schema.flow.deletedAt), isNotNull(schema.flow.publishedVersionId)))
+    .where(and(eq(schema.cbBlueprint.sessionId, sessionId), eq(schema.cbInstallation.status, "installed"), eq(schema.cbActivation.state, "active")))
+    .orderBy(desc(schema.cbInstallation.createdAt))
+    .limit(1);
+  // Otherwise show the latest plan's installation, else the most recent installed version when a replacement plan is
+  // still under review or being installed.
   const [latestInst] = bp ? await db.select().from(schema.cbInstallation).where(eq(schema.cbInstallation.blueprintId, bp.id)).orderBy(desc(schema.cbInstallation.createdAt)).limit(1) : [];
   const [liveInst] = latestInst?.status === "installed"
     ? []
@@ -30,7 +42,7 @@ export async function sessionOverview(workspaceId: string, sessionId: string, cu
         .where(and(eq(schema.cbBlueprint.sessionId, sessionId), eq(schema.cbInstallation.status, "installed")))
         .orderBy(desc(schema.cbInstallation.createdAt))
         .limit(1);
-  const inst = latestInst?.status === "installed" ? latestInst : (liveInst?.inst ?? latestInst);
+  const inst = activeInst?.inst ?? (latestInst?.status === "installed" ? latestInst : (liveInst?.inst ?? latestInst));
   const [instBp] = inst && inst.blueprintId !== bp?.id ? await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, inst.blueprintId)) : [];
   const items = inst ? await installedItems(inst.id) : [];
   const flowIds = items.filter((i) => i.kind === "flow").map((i) => i.refId);

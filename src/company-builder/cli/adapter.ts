@@ -255,6 +255,7 @@ export async function runCli(cli: CliKind, env: Envelope, cfg: CliConfig, opts: 
     const killGroup = () => {
       try {
         if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
+        else if (child.pid) spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" }); // whole tree
         else child.kill("SIGKILL");
       } catch {
         /* already gone */
@@ -282,12 +283,37 @@ export async function runCli(cli: CliKind, env: Envelope, cfg: CliConfig, opts: 
       killGroup();
     };
     opts.signal?.addEventListener("abort", onAbort, { once: true });
+    if (opts.signal?.aborted) onAbort();
     child.stdin.on("error", () => {});
     child.stdin.end(buildPrompt(env, opts.repairOf));
-    const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null; spawnError?: NodeJS.ErrnoException }>((resolve) => {
+    type ChildExit = { code: number | null; signal: NodeJS.Signals | null; spawnError?: NodeJS.ErrnoException };
+    const exitPromise = new Promise<ChildExit>((resolve) => {
       child.on("error", (e) => resolve({ code: null, signal: null, spawnError: e as NodeJS.ErrnoException }));
       child.on("close", (code, signal) => resolve({ code, signal }));
     });
+    // A killed process group should close promptly. Bound shutdown in case a descendant retains a pipe
+    // or the platform fails to deliver close; the job must not hold its database lock indefinitely.
+    let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
+    let onShutdownBound: (() => void) | undefined;
+    const exit = await Promise.race([
+      exitPromise,
+      new Promise<ChildExit>((resolve) => {
+        onShutdownBound = () => {
+          shutdownTimer = setTimeout(() => {
+            child.stdout.destroy();
+            child.stderr.destroy();
+            child.stdin.destroy();
+            child.kill("SIGKILL");
+            resolve({ code: null, signal: "SIGKILL" });
+          }, 5000);
+          shutdownTimer.unref();
+        };
+        opts.signal?.addEventListener("abort", onShutdownBound, { once: true });
+        if (opts.signal?.aborted) onShutdownBound();
+      }),
+    ]);
+    if (shutdownTimer) clearTimeout(shutdownTimer);
+    if (onShutdownBound) opts.signal?.removeEventListener("abort", onShutdownBound);
     clearTimeout(timer);
     opts.signal?.removeEventListener("abort", onAbort);
     if (exit.spawnError) throw new CliError(exit.spawnError.code === "EACCES" ? "PERMISSION_DENIED" : "CLI_UNAVAILABLE");
