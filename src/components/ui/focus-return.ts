@@ -16,25 +16,80 @@
 export interface FocusTarget {
   isConnected: boolean;
   disabled?: boolean;
+  hidden?: boolean | "until-found";
+  inert?: boolean;
   tagName?: string;
+  getAttribute?(name: string): string | null;
+  parentElement?: FocusTarget | null;
+  closest?(selector: string): unknown;
+  getClientRects?(): { length: number };
+  ownerDocument?: { querySelector?(selector: string): unknown } | null;
   focus(): void;
 }
 
+/**
+ * A nested layer inside (or portaled out of) a panel: a menu, listbox, tooltip, popover or dialog that is not the panel.
+ * The panel's own element is `role="dialog"` too, so it is excluded by identity.
+ */
+export const NESTED_LAYER_SELECTOR = '[data-radix-popper-content-wrapper], [role="menu"], [role="listbox"], [role="tooltip"], [role="alertdialog"], [role="dialog"]';
+
 const isPageRoot = (el: FocusTarget) => el.tagName === "BODY" || el.tagName === "HTML";
+
+/** A focusable element: one that can receive focus, is not disabled, and is still in the document. */
+function isFocusable(el: FocusTarget | null | undefined): boolean {
+  if (!el || !el.isConnected || el.disabled) return false;
+  const tag = el.tagName?.toUpperCase();
+  if (tag === "A" || tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "SUMMARY") return true;
+  const tabindex = el.getAttribute?.("tabindex");
+  if (tabindex === null || tabindex === undefined) return false;
+  return Number.parseInt(tabindex, 10) >= -1;
+}
+
+/**
+ * The nearest focusable ancestor of an element, starting at its PARENT (the element itself is the opener and is handled
+ * separately), skipping ancestors that live inside a nested layer (a menu item's menu goes away together with the item).
+ * Returns null when there is none.
+ */
+export function closestFocusableAncestor<T extends FocusTarget>(el: T | null | undefined): T | null {
+  let current: FocusTarget | null = el?.parentElement ?? null;
+  while (current && !isPageRoot(current)) {
+    if (isFocusable(current) && !current.closest?.(NESTED_LAYER_SELECTOR)) return current as T;
+    current = current.parentElement ?? null;
+  }
+  return null;
+}
+
+/** The page's <main> region (focusable through `tabIndex={-1}`), the last resort when focus is lost. */
+export function mainRegion(from: FocusTarget | null | undefined): FocusTarget | null {
+  const doc = from?.ownerDocument ?? (typeof document === "undefined" ? null : document);
+  return (doc?.querySelector?.("main") as FocusTarget | null | undefined) ?? null;
+}
 
 /**
  * The element to give focus back to, chosen when the dialog opens. Nothing is remembered when focus was on the page
  * itself (<body>), or already inside the dialog (an `autoFocus` field): there is nothing to return to in either case.
+ * Also saves the closest focusable ancestor outside any nested layer as a fallback, for when the opener is later removed.
  */
-export function pickReturnTarget<T extends FocusTarget>(active: T | null | undefined, content: { contains(node: NoInfer<T>): boolean } | null | undefined): T | null {
-  if (!active || isPageRoot(active)) return null;
-  if (content?.contains(active)) return null;
-  return active;
+export function pickReturnTarget<T extends FocusTarget>(
+  active: T | null | undefined,
+  content: { contains(node: NoInfer<T>): boolean } | null | undefined,
+): { target: T | null; fallback: T | null } {
+  if (!active || isPageRoot(active)) {
+    return { target: null, fallback: null };
+  }
+  if (content?.contains(active)) {
+    return { target: null, fallback: null };
+  }
+  const fallback = closestFocusableAncestor(active);
+  return { target: active, fallback };
 }
 
-/** A remembered element can take focus again: it is still in the document and not disabled. */
+/** A remembered element can take focus again: in the document, not disabled, hidden, inert or display:none. */
 export function canRefocus(target: FocusTarget | null | undefined): target is FocusTarget {
-  return Boolean(target && target.isConnected && !target.disabled);
+  if (!target || !target.isConnected || target.disabled || target.hidden || target.inert) return false;
+  if (target.closest?.("[hidden], [inert]")) return false;
+  const rects = target.getClientRects?.();
+  return !(rects && rects.length === 0);
 }
 
 /**
@@ -71,12 +126,6 @@ export function restoreFocus<T extends FocusTarget>(
  * took (`consumed`), an Escape it keeps without closing (`keep`), or an Escape that closes it (`close`).
  */
 export type PanelEscape = "ignore" | "consumed" | "keep" | "close";
-
-/**
- * A nested layer inside (or portaled out of) a panel: a menu, listbox, tooltip, popover or dialog that is not the panel.
- * The panel's own element is `role="dialog"` too, so it is excluded by identity.
- */
-export const NESTED_LAYER_SELECTOR = '[data-radix-popper-content-wrapper], [role="menu"], [role="listbox"], [role="tooltip"], [role="alertdialog"], [role="dialog"]';
 
 /** True when the key's target sits inside a nested layer of the panel (see `NESTED_LAYER_SELECTOR`). */
 export function inNestedLayer(target: { closest?(selector: string): unknown } | null | undefined, panel: unknown): boolean {

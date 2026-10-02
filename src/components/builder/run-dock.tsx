@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
-import { approvalActionId, runLabel, stepErrorText } from "@/i18n/engine-text";
+import { approvalActionId, stepApprovalId, runLabel, stepErrorText } from "@/i18n/engine-text";
 import { pretty } from "@/lib/format";
 import { modKey, useNow } from "@/lib/hooks";
 import { runningDetail } from "@/lib/run-status";
@@ -123,7 +123,7 @@ export function RunDock({ run, loading, runs, workspaceSlug, onSelectRun, onSele
               </ol>
               {run.status === "failed" && run.error && (
                 <p role="alert" className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
-                  ⚠ {stepErrorText(t, run.error, { actionId: approvalActionId(run.approvals, run.error.nodeId) })}
+                  ⚠ {stepErrorText(t, run.error, { actionId: approvalActionId(run.approvals, run.error.nodeId, stepApprovalId(run.steps.find((s) => s.nodeId === run.error?.nodeId))) })}
                 </p>
               )}
               {run.status === "succeeded" && (
