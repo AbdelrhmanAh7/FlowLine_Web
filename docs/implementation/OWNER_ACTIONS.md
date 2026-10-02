@@ -1,4 +1,4 @@
-# Owner actions ? private beta
+# Owner actions — private beta
 
 ## Tomorrow (2026-10-03) — owner in Chrome
 

@@ -274,21 +274,11 @@ html, body {
   from { transform: scale(1); }
   to { transform: scale(0.94); }
 }
-@keyframes m-parallax-slow {
-  to { transform: translateY(-14vh); }
-}
-@keyframes m-parallax-slower {
-  to { transform: translateY(-7vh); }
-}
 @supports (animation-timeline: view()) {
   @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     .hero-pin { height: 170vh; view-timeline: --hero-pin block; }
     .hero-pin-stage { position: sticky; top: 6rem; }
     .hero-scrub { animation: m-hero-scrub linear both; animation-timeline: --hero-pin; animation-range: contain 0% contain 100%; }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .parallax-slow { animation: m-parallax-slow linear both; animation-timeline: scroll(root); }
-    .parallax-slower { animation: m-parallax-slower linear both; animation-timeline: scroll(root); }
   }
 }
 
@@ -355,6 +345,15 @@ html[data-theme="light"] .ambient-glow {
 }
 html[data-theme="light"] .ambient-dots {
   opacity: 0.18;
+}
+@media (prefers-color-scheme: light) {
+  html[data-theme="system"] .ambient-glow {
+    background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%);
+    opacity: 0.45;
+  }
+  html[data-theme="system"] .ambient-dots {
+    opacity: 0.18;
+  }
 }
 @media (max-width: 640px) {
   .ambient-glow {
