@@ -32,6 +32,8 @@ jobs:
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       # lint, typecheck, evidence, unit and contract use no database, no browser and no fixed port.
       - uses: ./.github/actions/setup-gate
@@ -55,6 +57,8 @@ jobs:
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -81,6 +85,8 @@ jobs:
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -110,6 +116,8 @@ jobs:
       GATE_TIER: full
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -138,6 +146,8 @@ jobs:
       GATE_TIER: full
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup-gate
         with:
