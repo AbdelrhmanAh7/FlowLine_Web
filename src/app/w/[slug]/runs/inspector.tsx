@@ -14,7 +14,7 @@ import { metaText } from "@/lib/meta-text";
 import { useToast } from "@/components/toast";
 import { Radio, Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { approvalActionId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
+import { approvalActionId, stepApprovalId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
@@ -31,7 +31,8 @@ function fixFor(t: ReturnType<typeof useT>, code: string): string {
   return t.has(`runs.fixes.${code}`) ? t(`runs.fixes.${code}` as MessageKey) : t("runs.fixes.NODE_ERROR");
 }
 /** The action a step waits on or ran, when the loaded run is the row's own (list rows don't carry approvals). */
-const actionIdOf = (run: RunDetailDto | undefined, runId: string, nodeId: string) => (run?.id === runId ? approvalActionId(run.approvals, nodeId) : null);
+const actionIdOf = (run: RunDetailDto | undefined, runId: string, nodeId: string) =>
+  run?.id === runId ? approvalActionId(run.approvals, nodeId, stepApprovalId(run.steps.find((s) => s.nodeId === nodeId))) : null;
 const DOT: Record<string, string> = { succeeded: "bg-success", reused: "bg-success", failed: "bg-danger", running: "bg-info", skipped: "bg-muted", pending: "bg-muted", cancelled: "bg-muted", waiting_approval: "bg-warning", uncertain: "bg-warning" };
 
 export function RunInspector() {

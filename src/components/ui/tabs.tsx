@@ -1,8 +1,9 @@
 "use client";
 
 import * as RadixTabs from "@radix-ui/react-tabs";
-import { useId, type ReactNode } from "react";
+import { useId, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "./cn";
+import { nextTabFocus } from "./tab-nav";
 import { Tooltip } from "./tooltip";
 
 const TAB_CLASS =
@@ -17,7 +18,8 @@ export interface TabItem<T extends string> {
   disabled?: boolean;
   /**
    * Blocked, and says why (the "disabled control with a reason" rule): the tab is `aria-disabled` and dimmed, is not
-   * activatable and is skipped by arrow/Home/End, but an explained tab is keyboard-focusable — its reason shows in a
+   * activatable (Enter/Space only show the reason) and is dimmed; arrow/Home/End land on an explained tab without
+   * selecting it (a tab blocked without a reason is skipped), and it is keyboard-focusable — its reason shows in a
    * tooltip (hover, focus or tap) and is the tab's accessible description.
    */
   disabledReason?: string | null;
@@ -50,14 +52,28 @@ export function Tabs<T extends string>({
 }) {
   const baseId = useId();
   const reasonId = (id: string) => `${baseId}-reason-${id}`;
+  // Radix's roving focus only knows the enabled tabs, so arrows would skip an explained (blocked) one and its reason
+  // would be out of keyboard reach (DV2-R02). Handle the strip keys here, over every focusable tab. Focus on an enabled
+  // tab still selects it (Radix automatic activation); focus on a blocked one never does.
+  const onListKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const from = (e.target as HTMLElement).closest<HTMLElement>('[role="tab"]');
+    if (!from || e.altKey || e.ctrlKey || e.metaKey) return;
+    const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
+    const nav = tabs.map((t) => ({ id: t.id, focusable: !t.disabled || !!t.disabledReason }));
+    const next = nextTabFocus(nav, from.dataset.tabId ?? null, e.key, rtl);
+    if (!next) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.querySelector<HTMLElement>(`[data-tab-id="${CSS.escape(next)}"]`)?.focus();
+  };
   return (
     <RadixTabs.Root value={value} onValueChange={(v) => onChange(v as T)} className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      <RadixTabs.List aria-label={label} className={cn("flex gap-5 border-b border-line px-5", listClassName)}>
+      <RadixTabs.List aria-label={label} onKeyDownCapture={onListKeyDown} className={cn("flex gap-5 border-b border-line px-5", listClassName)}>
         {tabs.map((t) => {
           const reason = t.disabledReason || undefined;
           if (!t.disabled && !reason) {
             return (
-              <RadixTabs.Trigger key={t.id} value={t.id} className={cn(TAB_CLASS, tabClassName)}>
+              <RadixTabs.Trigger key={t.id} value={t.id} data-tab-id={t.id} className={cn(TAB_CLASS, tabClassName)}>
                 {t.label}
               </RadixTabs.Trigger>
             );
@@ -68,6 +84,7 @@ export function Tabs<T extends string>({
               key={t.id}
               type="button"
               role="tab"
+              data-tab-id={t.id}
               aria-selected={selected}
               aria-disabled="true"
               aria-describedby={reason ? reasonId(t.id) : undefined}
