@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
+import { Checkbox, Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { dataText } from "@/i18n/workspace-text";
 import { ModelPicker } from "@/components/ai/model-picker";
@@ -136,7 +136,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
         <p className="text-sm text-med">{t("agents.form.toolsBody")}</p>
         <div className="flex flex-wrap items-center gap-3 border-b border-line pb-3">
           <label className="flex items-center gap-2 text-base">
-            <input type="checkbox" disabled={ro} checked={Boolean(kTool)} onChange={(e) => set({ tools: e.target.checked ? [...c.tools, { tool: "knowledge_search", permission: "allow" }] : c.tools.filter((t) => t.tool !== "knowledge_search") })} />
+            <Checkbox disabled={ro} checked={Boolean(kTool)} onChange={(e) => set({ tools: e.target.checked ? [...c.tools, { tool: "knowledge_search", permission: "allow" }] : c.tools.filter((t) => t.tool !== "knowledge_search") })} />
             {t("agents.form.knowledgeSearch")}
           </label>
           {kTool && (
@@ -153,8 +153,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
                 {sources.data!.map((s) => (
                   <li key={s.id} className="motion-list-in">
                     <label className="flex items-center gap-2 text-base">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         disabled={ro}
                         checked={c.knowledgeSourceIds.includes(s.id)}
                         onChange={(e) => set({ knowledgeSourceIds: e.target.checked ? [...c.knowledgeSourceIds, s.id] : c.knowledgeSourceIds.filter((x) => x !== s.id) })}
@@ -175,7 +174,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
               return (
                 <li key={f.id} className="motion-list-in flex flex-wrap items-center gap-2">
                   <label className="flex items-center gap-2 text-base">
-                    <input type="checkbox" disabled={ro || f.publishedVersion == null} checked={Boolean(tool)} onChange={(e) => setWorkflow(f.id, e.target.checked ? "ask" : null)} />
+                    <Checkbox disabled={ro || f.publishedVersion == null} checked={Boolean(tool)} onChange={(e) => setWorkflow(f.id, e.target.checked ? "ask" : null)} />
                     {f.name}
                   </label>
                   {f.publishedVersion == null ? (
@@ -216,8 +215,7 @@ export function AgentForm({ initial, onSave, saving, readOnlyReason, submitLabel
         {/* CXH-04: an explicit, clearly labelled opt-out of the cap guarantee for unknown-price calls (default off). */}
         <div className="flex w-full flex-col gap-1">
           <label className="flex items-center gap-2 text-base">
-            <input
-              type="checkbox"
+            <Checkbox
               disabled={ro || c.limits.maxCostMicros == null}
               checked={c.limits.maxCostMicros != null && c.limits.allowUnknownCost === true}
               onChange={(e) => set({ limits: { ...c.limits, allowUnknownCost: e.target.checked } })}

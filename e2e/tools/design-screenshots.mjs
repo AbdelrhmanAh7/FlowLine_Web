@@ -10,9 +10,10 @@ import { chromium, request } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import testStackEnv from "../../scripts/test-stack.cjs";
 
-const BASE = "http://localhost:3100";
-const FAKE = "http://127.0.0.1:4010";
+// FLOWLINE_TEST_PORT / FLOWLINE_TEST_FAKE_PORT pick another test stack (scripts/test-stack.cjs).
+const { baseUrl: BASE, fakeUrl: FAKE } = testStackEnv.testStack();
 const PASSWORD = "e2e-Passw0rd!";
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith("--") ? [...a, [v.slice(2), all[i + 1]]] : a), []));
 const OUT = args.out ?? "artifacts/design-v2/screenshots/after";

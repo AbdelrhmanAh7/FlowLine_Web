@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, Dialog, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
+import { Checkbox, Button, Card, Dialog, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
@@ -338,7 +338,7 @@ function ConnectDialog({ provider, reconnect, onClose }: { provider: CatalogProv
         )}
         {!oauth && !reconnect && (
           <label className="flex items-start gap-2 text-base">
-            <input type="checkbox" className="mt-1" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
+            <Checkbox className="mt-1" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
             <span>
               {t("integrations.dialog.private")}
               <span className="block text-sm text-muted">{t("integrations.dialog.privateHint")}</span>

@@ -61,12 +61,20 @@ export function FeatureScenes({
   return (
     <section id="features" className="mx-auto max-w-6xl px-4 pb-24 sm:px-8">
       <Reveal>
-        <h2 className="text-xl font-semibold">
+        <h2 id="features-heading" className="text-xl font-semibold">
           <WordReveal text={title} />
         </h2>
         <p className="mt-1 max-w-2xl text-base text-med">{body}</p>
       </Reveal>
 
+      <nav aria-labelledby="features-heading" className="mt-6 flex flex-wrap gap-2">
+        {scenes.map((scene, index) => (
+          <a key={scene.id} href={`/?section=feature-${scene.id}`} aria-current={active === index ? "location" : undefined}
+            onClick={() => setActive(index)} className={cn("rounded-lg border px-3 py-2 text-sm transition-colors duration-[var(--dur-base)] motion-reduce:transition-none", active === index ? "border-accent bg-accent-bg text-accent-text" : "border-line bg-card text-med hover:text-hi")}>
+            {scene.title}
+          </a>
+        ))}
+      </nav>
       <div ref={ref} className="mt-10 lg:motion-safe:grid lg:motion-safe:grid-cols-[auto_1fr] lg:motion-safe:gap-10">
         {/* Progress rail (decorative and aria-hidden; the scenes themselves carry the content). */}
         <div aria-hidden className="sticky top-1/3 mb-8 hidden h-fit flex-col items-center gap-2 lg:motion-safe:flex">
@@ -83,7 +91,7 @@ export function FeatureScenes({
             const Icon = ICONS[s.id];
             const hue = HUES[s.id];
             return (
-              <div key={s.id} className={cn(i < scenes.length - 1 && "lg:motion-safe:min-h-[105vh]")}>
+              <div id={`feature-${s.id}`} key={s.id} className={cn("scroll-mt-28", i < scenes.length - 1 && "lg:motion-safe:min-h-[105vh]")}>
                 <div className="rounded-xl border border-line bg-card p-6 sm:p-8 lg:motion-safe:sticky lg:motion-safe:top-28">
                   <div className="flex items-center justify-between gap-3">
                     <span aria-hidden className={cn("flex size-10 items-center justify-center rounded-lg", hue.bg)}>

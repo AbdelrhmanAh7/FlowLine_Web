@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { setupUser, signUpVerified, uniqueEmail } from "./helpers";
 import { BASE_URL } from "../playwright.config";
+import { FAKE_PROVIDER } from "./stack";
 
 // This file now exercises a write-only API-key reveal; never capture it in failure evidence.
 test.use({ trace: "off", screenshot: "off", video: "off" });
@@ -70,7 +71,7 @@ test.describe("@cross-browser remaining keyboard surfaces (DV2-K01–K05)", () =
     } finally { await other.dispose(); }
 
     // Removal revokes the provider token: never revoke the shared test-token used by later specs.
-    const issued = await page.request.post("http://127.0.0.1:4010/__fake/issue-token", { data: { account: "a" } });
+    const issued = await page.request.post(`${FAKE_PROVIDER}/__fake/issue-token`, { data: { account: "a" } });
     expect(issued.ok()).toBe(true);
     const { token } = await issued.json();
     expect((await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Keyboard", fields: { token } } })).ok()).toBe(true);
@@ -159,7 +160,7 @@ test.describe("@cross-browser remaining keyboard surfaces (DV2-K01–K05)", () =
   });
   test("connection removal keeps focus useful while the catalogue is pending", async ({ page }) => {
     const { workspace } = await setupUser(page);
-    const issued = await page.request.post("http://127.0.0.1:4010/__fake/issue-token", { data: { account: "a" } });
+    const issued = await page.request.post(`${FAKE_PROVIDER}/__fake/issue-token`, { data: { account: "a" } });
     expect(issued.ok()).toBe(true);
     const { token } = await issued.json();
     expect((await page.request.post(`/api/workspaces/${workspace.id}/connections`, { data: { provider: "google_sheets", label: "Pending catalogue", fields: { token } } })).ok()).toBe(true);
@@ -208,8 +209,20 @@ test.describe("@cross-browser remaining keyboard surfaces (DV2-K01–K05)", () =
     await page.keyboard.press("Enter");
     await expect(page.getByRole("tooltip")).toContainText("This step didn't fail");
     await expect(blockedError).toHaveAttribute("aria-selected", "false");
+    // Arrow keys reach the explained blocked tab too (focus, no selection); Enter/Space never select it.
     await page.keyboard.press("Escape");
     await expect(page.getByRole("tooltip")).toHaveCount(0);
+    // Tab order is input, output, error, log: the arrow from "output" lands on the blocked "error" tab.
+    const outputTab = panel.getByRole("tab", { name: "output", exact: true });
+    await outputTab.focus();
+    await expect(outputTab).toHaveAttribute("aria-selected", "true"); // focusing an enabled tab selects it (automatic activation)
+    await page.keyboard.press("ArrowRight");
+    await expect(blockedError).toBeFocused();
+    await expect(blockedError).toHaveAttribute("aria-selected", "false");
+    await expect(outputTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tooltip")).toContainText("This step didn't fail");
+    await page.keyboard.press("ArrowLeft");
+    await expect(outputTab).toBeFocused();
     await expect(panel).toBeVisible();
     const rerun = panel.getByRole("button", { name: /Re-run from this step/ });
     await activate(page, rerun);

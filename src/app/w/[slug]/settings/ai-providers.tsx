@@ -7,7 +7,7 @@ import { LtrRuns } from "@/components/ai/ltr-runs";
 import { ModelPicker } from "@/components/ai/model-picker";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, Dialog, ErrorState, Field, Input, Select, Skeleton, StatusBadge, type Tone } from "@/components/ui";
+import { Radio, Checkbox, Button, Card, Dialog, ErrorState, Field, Input, Select, Skeleton, StatusBadge, type Tone } from "@/components/ui";
 import { providerFreeTierNote, providerNotes, providerOptionLabel, providerPrivacyNote, providerTermsNotes, providerVerdictEvidence, retiredEvidence } from "@/i18n/ai-provider-text";
 import { useT } from "@/i18n/client";
 import { denyReasonText, stepErrorText } from "@/i18n/engine-text";
@@ -309,7 +309,7 @@ function RoutingPolicy({ overview }: { overview: AiOverviewDto }) {
         <legend className="mb-1 text-sm font-medium text-med">{t("aiHub.policy.mode")}</legend>
         {MODES.map((m) => (
           <label key={m} className="flex items-start gap-2 text-sm">
-            <input type="radio" name="ai-policy-mode" className="mt-1" value={m} checked={s.mode === m} onChange={() => set({ mode: m })} />
+            <Radio name="ai-policy-mode" className="mt-1" value={m} checked={s.mode === m} onChange={() => set({ mode: m })} />
             <span>
               <span className="font-medium text-hi">{t(`aiHub.policy.modes.${m}`)}</span>
               <span className="block text-muted">{t(`aiHub.policy.modeHelp.${m}`)}</span>
@@ -334,14 +334,14 @@ function RoutingPolicy({ overview }: { overview: AiOverviewDto }) {
         </>
       )}
       <label className="flex items-start gap-2 text-sm text-med">
-        <input type="checkbox" className="mt-1" checked={s.requireNoTraining} disabled={ro} onChange={(e) => set({ requireNoTraining: e.target.checked })} />
+        <Checkbox className="mt-1" checked={s.requireNoTraining} disabled={ro} onChange={(e) => set({ requireNoTraining: e.target.checked })} />
         <span>
           {t("aiHub.policy.noTraining")}
           <span className="block text-muted">{t("aiHub.policy.noTrainingHint")}</span>
         </span>
       </label>
       <label className="flex items-start gap-2 text-sm text-med">
-        <input type="checkbox" className="mt-1" checked={s.allowUnknownCost} disabled={ro} onChange={(e) => set({ allowUnknownCost: e.target.checked })} />
+        <Checkbox className="mt-1" checked={s.allowUnknownCost} disabled={ro} onChange={(e) => set({ allowUnknownCost: e.target.checked })} />
         <span>
           {t("aiHub.policy.allowUnknown")}
           <span className="block text-muted">{t("aiHub.policy.allowUnknownHint")}</span>
@@ -583,7 +583,7 @@ function ConnectionCard({ conn, overview }: { conn: AiConnectionDto; overview: A
         <legend className="mb-1 text-muted">{t("aiHub.connection.useRoles")}</legend>
         {(["owner", "editor"] as const).map((r) => (
           <label key={r} className="flex items-center gap-1.5">
-            <input type="checkbox" checked={roles.includes(r)} onChange={(e) => setRoles((s) => (e.target.checked ? [...s, r] : s.filter((x) => x !== r)))} />
+            <Checkbox checked={roles.includes(r)} onChange={(e) => setRoles((s) => (e.target.checked ? [...s, r] : s.filter((x) => x !== r)))} />
             {t(`roles.${r}`)}
           </label>
         ))}
@@ -750,7 +750,7 @@ function ConnectDialog({ provider, onClose }: { provider: AiProviderDto; onClose
         ))}
         {provider.requiresPlanAttestation && (
           <label className="flex items-start gap-2 text-sm" data-testid="ai-attest">
-            <input type="checkbox" className="mt-1" checked={attest} onChange={(e) => setAttest(e.target.checked)} required />
+            <Checkbox className="mt-1" checked={attest} onChange={(e) => setAttest(e.target.checked)} required />
             {t("aiHub.dialog.attest")}
           </label>
         )}
@@ -899,7 +899,7 @@ function InferenceTestDialog({ conn, onClose, onDone }: { conn: AiConnectionDto;
           </Select>
         </Field>
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
+          <Checkbox className="mt-1" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
           {t("aiHub.paidTest.confirm")}
         </label>
         {result && (

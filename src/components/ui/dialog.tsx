@@ -4,7 +4,7 @@ import * as RadixDialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
 import { cn } from "./cn";
-import { pickReturnTarget, restoreFocus } from "./focus-return";
+import { mainRegion, pickReturnTarget, restoreFocus } from "./focus-return";
 
 /**
  * Focus return for both modals (DV2-Q02). Radix hands focus back only to a `Dialog.Trigger`; ours have none (they are
@@ -21,6 +21,7 @@ import { pickReturnTarget, restoreFocus } from "./focus-return";
 export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boolean, fallback?: () => HTMLElement | null) {
   const contentRef = useRef<T>(null);
   const returnTo = useRef<HTMLElement | null>(null);
+  const returnFallback = useRef<HTMLElement | null>(null);
   const opened = useRef(false);
   const fallbackRef = useRef(fallback);
   useLayoutEffect(() => {
@@ -36,12 +37,21 @@ export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     }
     if (opened.current) return;
     opened.current = true;
-    returnTo.current = pickReturnTarget(document.activeElement as HTMLElement | null, contentRef.current);
+    const result = pickReturnTarget(document.activeElement as HTMLElement | null, contentRef.current);
+    returnTo.current = result.target;
+    returnFallback.current = result.fallback;
   }, [open]);
 
+  // Fallback order: the opener, its closest focusable ancestor outside nested layers, a caller-supplied launcher
+  // (`fallback`, e.g. builder panels), then <main>. A Dialog opened from a menu item gets <main> (the menu is a
+  // nested layer and Dialog supplies no launcher) — never <body>.
   // `lostWithin`: for a surface that is hidden instead of removed, focus still inside it counts as lost (see `restoreFocus`).
   const restore = useCallback(
-    (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus([returnTo.current, fallbackRef.current?.()], document.activeElement as HTMLElement | null, lostWithin),
+    (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus(
+      [returnTo.current, returnFallback.current, fallbackRef.current?.(), returnTo.current ? (mainRegion(returnTo.current) as HTMLElement | null) : null],
+      document.activeElement as HTMLElement | null,
+      lostWithin,
+    ),
     [],
   );
 

@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
-import { Button, StatusBadge, Textarea, cx, useSidePanel } from "@/components/ui";
+import { Checkbox, Button, StatusBadge, Textarea, cx, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { issueMessage, notPreviewedReason, statusWord } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -97,10 +97,10 @@ export function CopilotPanel({
     // A non-modal side panel on purpose (no scrim, no focus trap, no aria-modal): the toolbar and canvas stay usable next to a proposal, and
     // closing it must not be a stray outside-click that discards the proposal. It slides in from the inline end like the drawers. Closed
     // it is `hidden` (still mounted, so the proposal survives; Tailwind's preflight makes [hidden] win over the display classes below).
-    <aside ref={panelRef} hidden={!open} onKeyDown={onKeyDown} role="dialog" aria-label="Copilot" className="motion-drawer absolute top-0 end-0 z-40 flex h-full w-full max-w-md flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
+    <aside ref={panelRef} hidden={!open} onKeyDown={onKeyDown} role="dialog" aria-label={t("copilot.title")} className="motion-drawer absolute top-0 end-0 z-40 flex h-full w-full max-w-md flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-4 shadow-[var(--shadow-popover)]">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="text-lg font-semibold">✦ Copilot</h2>
+          <h2 className="text-lg font-semibold">✦ {t("copilot.title")}</h2>
           {/* Honest status: proposals are validated, but their quality is still being measured. */}
           <StatusBadge tone="warning" upper>
             {t("copilot.beta")}
@@ -194,7 +194,7 @@ export function CopilotPanel({
             <>
               {removed.length > 0 && (
                 <label className={cx("flex items-start gap-2 rounded-md border border-danger-border p-2 text-sm")}>
-                  <input type="checkbox" className="mt-0.5" checked={confirmRemovals} onChange={(e) => setConfirmRemovals(e.target.checked)} />
+                  <Checkbox className="mt-0.5" checked={confirmRemovals} onChange={(e) => setConfirmRemovals(e.target.checked)} />
                   <span>
                     {t.plural("copilot.confirmRemovals", removed.length, { labels: removed.map((r) => r.label).join(t("perm.listSep")) })}
                   </span>

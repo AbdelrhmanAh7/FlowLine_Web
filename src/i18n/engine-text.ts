@@ -253,12 +253,25 @@ type Shape = readonly [code: string, re: RegExp, key: MessageKey, vars?: (m: Reg
  * The integration action a step waits on or ran, from the run's approval records (a pending one first). Run lists and
  * the dock don't carry it on the step, and it lets a generated message name the action in the UI language.
  */
-export function approvalActionId(approvals: readonly { nodeId: string; actionId: string; status: string }[] | undefined, nodeId: string | null | undefined): string | null {
+export function approvalActionId(
+  approvals: readonly { id?: string; nodeId: string; actionId: string; status: string }[] | undefined,
+  nodeId: string | null | undefined,
+  approvalId?: string | null,
+): string | null {
   if (!nodeId) return null;
   const forNode = (approvals ?? []).filter((a) => a.nodeId === nodeId);
+  // Exact: the step records the id of the approval it waits on or ran under, so one node with several approvals
+  // (a loop, a retried or superseded one) can't name the wrong action. Only the approval's stored action id is used.
+  if (approvalId) return forNode.find((a) => a.id === approvalId)?.actionId ?? null;
   const pending = forNode.filter((a) => a.status === "pending");
   const actions = new Set((pending.length ? pending : forNode).map((a) => a.actionId));
   return actions.size === 1 ? [...actions][0]! : null;
+}
+
+/** The approval id a step recorded in its meta (`meta.approvalId`), or null. */
+export function stepApprovalId(step: { meta?: Record<string, unknown> | null } | null | undefined): string | null {
+  const id = step?.meta?.approvalId;
+  return typeof id === "string" && id ? id : null;
 }
 
 /** An action's title in the UI language when the action is known by id; otherwise the English title inside the stored message. */

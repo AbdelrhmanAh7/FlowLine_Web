@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, Card, ErrorState, Field, Input, Select, Skeleton, StatusBadge } from "@/components/ui";
+import { Checkbox, Button, Card, ErrorState, Field, Input, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 interface SsoConfig {
   workspaceId: string;
   issuer: string;
+  provider: "oidc" | "zitadel";
   clientId: string;
   hasSecret: boolean;
   domains: string[];
@@ -23,6 +24,7 @@ interface SsoConfig {
 
 interface SsoForm {
   issuer: string;
+  provider: "oidc" | "zitadel";
   clientId: string;
   clientSecret: string;
   domains: string;
@@ -30,10 +32,10 @@ interface SsoForm {
   enabled: boolean;
 }
 
-const EMPTY: SsoForm = { issuer: "", clientId: "", clientSecret: "", domains: "", defaultRole: "viewer", enabled: false };
+const EMPTY: SsoForm = { issuer: "", provider: "oidc", clientId: "", clientSecret: "", domains: "", defaultRole: "viewer", enabled: false };
 
 function fromConfig(c: SsoConfig): SsoForm {
-  return { issuer: c.issuer, clientId: c.clientId, clientSecret: "", domains: c.domains.join(", "), defaultRole: c.defaultRole, enabled: c.enabled };
+  return { issuer: c.issuer, provider: c.provider, clientId: c.clientId, clientSecret: "", domains: c.domains.join(", "), defaultRole: c.defaultRole, enabled: c.enabled };
 }
 
 export function Sso() {
@@ -44,7 +46,7 @@ export function Sso() {
   const isOwner = role === "owner";
   const query = useQuery({
     queryKey: ["sso", workspace.id],
-    queryFn: () => api<{ config: SsoConfig | null; canManage: boolean }>(`/api/workspaces/${workspace.id}/sso`),
+    queryFn: () => api<{ config: SsoConfig | null; canManage: boolean; callbackUri: string | null }>(`/api/workspaces/${workspace.id}/sso`),
   });
   const config = query.data?.config ?? null;
   const [form, setForm] = useState<SsoForm | null>(null);
@@ -56,6 +58,7 @@ export function Sso() {
         method: "PUT",
         json: {
           issuer: f.issuer,
+          provider: f.provider,
           clientId: f.clientId,
           ...(f.clientSecret.trim() ? { clientSecret: f.clientSecret.trim() } : {}),
           domains: f.domains.split(/[,\s]+/).filter(Boolean),
@@ -66,7 +69,7 @@ export function Sso() {
     onSuccess: (d) => {
       toast(t("settings.sso.saved"), "success");
       setForm(fromConfig(d.config));
-      qc.setQueryData(["sso", workspace.id], { config: d.config, canManage: query.data?.canManage ?? true });
+      qc.setQueryData(["sso", workspace.id], { config: d.config, canManage: query.data?.canManage ?? true, callbackUri: query.data?.callbackUri ?? null });
     },
     onError: (e) => toast(apiErrorMessage(t, e, t("settings.sso.saveError")), "danger"),
   });
@@ -110,8 +113,22 @@ export function Sso() {
           }}
         >
           <fieldset disabled={!isOwner} className="flex flex-col gap-4">
+            <Field label={t("settings.sso.provider")} htmlFor="sso-provider">
+              <Select id="sso-provider" value={f.provider} onChange={(e) => setForm({ ...f, provider: e.target.value as SsoForm["provider"], enabled: false })}>
+                <option value="oidc">{t("settings.sso.providerGeneric")}</option>
+                <option value="zitadel">{t("settings.sso.providerZitadel")}</option>
+              </Select>
+            </Field>
+            {f.provider === "zitadel" && (
+              <div className="rounded-lg border border-line p-4 text-sm text-med">
+                <p>{t("settings.sso.zitadelSteps")}</p>
+                <p className="mt-2">{t("settings.sso.callbackLabel")}</p>
+                {query.data?.callbackUri ? <code dir="ltr" className="data block break-all text-hi">{query.data.callbackUri}</code> : <p>{t("settings.sso.callbackUnavailable")}</p>}
+                <p className="mt-2">{t("settings.sso.zitadelAuth")}</p>
+              </div>
+            )}
             <Field label={t("settings.sso.issuer")} htmlFor="sso-issuer" hint={t("settings.sso.issuerHint")}>
-              <Input id="sso-issuer" dir="ltr" className="data" placeholder="https://idp.example.com/realms/acme" value={f.issuer} onChange={(e) => setForm({ ...f, issuer: e.target.value })} />
+              <Input id="sso-issuer" dir="ltr" className="data" placeholder={f.provider === "zitadel" ? "https://your-instance.zitadel.cloud" : "https://idp.example.com/realms/acme"} value={f.issuer} onChange={(e) => setForm({ ...f, issuer: e.target.value })} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t("settings.sso.clientId")} htmlFor="sso-client-id">
@@ -146,9 +163,8 @@ export function Sso() {
               </Field>
               <Field label={t("settings.sso.enableLabel")} htmlFor="sso-enabled" hint={verified ? t("settings.sso.enableHintOn") : t("settings.sso.enableHintOff")}>
                 <label className="flex h-9 items-center gap-2 text-base text-hi">
-                  <input
+                  <Checkbox
                     id="sso-enabled"
-                    type="checkbox"
                     checked={f.enabled}
                     disabled={!verified}
                     onChange={(e) => setForm({ ...f, enabled: e.target.checked })}

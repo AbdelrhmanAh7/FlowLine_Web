@@ -1,0 +1,6 @@
+$ pnpm check:evidence
+
+> flowline@0.1.0 check:evidence /home/user/FlowLine_Web
+> node scripts/check-evidence-secrets.mjs
+
+check-evidence-secrets: 6 local secret value(s) checked across 1219 file(s); 0 hit(s)
