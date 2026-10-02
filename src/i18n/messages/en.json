@@ -4398,6 +4398,8 @@
         "TIMEOUT": "Timed out",
         "OUTPUT_TOO_LARGE": "The result was too large",
         "OUTPUT_INVALID": "The result was invalid even after one repair attempt",
+        "MANIFEST_INVALID": "This file isn't a result for this job",
+        "NOT_IMPORTABLE": "A result can't be imported for this job right now",
         "SECRET_IN_OUTPUT": "The result looked like secret data and was rejected. Nothing was stored.",
         "INTERRUPTED": "The process was interrupted",
         "CANCELLED": "Cancelled",
