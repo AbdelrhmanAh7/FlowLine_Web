@@ -15,6 +15,7 @@ export interface GateSelection {
 }
 
 export declare function selectGateSteps(input: GateSelectionInput): GateSelection;
+export declare function shouldUseNativeBrowserRunner(platform?: string, env?: { FLOWLINE_GATE_NATIVE_BROWSERS?: string }): boolean;
 
 export declare const PG_MAX_CONNECTIONS: number;
 export declare const PG_RESERVED_CONNECTIONS: number;
