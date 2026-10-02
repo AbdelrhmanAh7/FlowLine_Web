@@ -35,7 +35,7 @@ This dated section is the current owner-action plan and supersedes older handoff
 Merged design-v2 source b40cb38 into main 264e0c7 and pushed main only. See docs/implementation/MAIN_CONSOLIDATION.md and the complete docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md. The owner will continue Company Builder implementation with Claude cloud, then return for testing. Company Builder remains unimplemented; React/React DOM already19.3.0. Initial WebKit timeout stays OPEN despite final123/59/59 repeat and actual Chrome10/10 pass. No production/deployment/live-payment/invitation approval; no worktrees removed. Historical pending/paused statements below are superseded by this current handoff.
 
 
-## Current owner consolidation — 2026-09-30
+## Historical owner consolidation — 2026-09-30 (superseded; do not act)
 
 The owner explicitly requests merging the completed candidate into main for Claude continuation. See docs/implementation/MAIN_CONSOLIDATION.md for current gate, preservation and release limits. Earlier no-merge/no-push statements are historical for this consolidation only. Company Builder is not implemented; its complete updated prompt is docs/company-builder/CLOUD_IMPLEMENTATION_PROMPT.md. React/React DOM are already 19.3.0. Final merge/push is pending; no deployment, live payments or invitations.
 
@@ -45,9 +45,9 @@ MERGED: NO. PUBLIC PRODUCTION APPROVED: NO. No worktree deletion or real invitat
 
 Aggregate spend cap: $0. No billing activation, payment methods, purchases, subscriptions, top-ups or billable API/AI traffic. Unknown cost remains blocked. Owner authorized direct safe copy/paste of named credentials into intended masked fields; never print them or search arbitrary secrets. Password, MFA, CAPTCHA and signup are owner takeovers.
 
-## Active handoff
+## Historical active handoff (superseded; do not act)
 
-USER ACTION REQUIRED ? Finish Flowline owner MFA
+Historical status: USER ACTION REQUIRED — finish Flowline owner MFA
 Page/window: Chrome tab846411899, http://localhost:3000/admin/setup (currently English)
 Action: Enter the current authenticator code and click Confirm authenticator, then complete the final Complete setup step with a fresh code.
 Purpose and affected account: Owner signup/sign-in/email verification are complete; finish MFA and grant the local platform administrator role.

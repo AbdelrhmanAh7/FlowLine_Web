@@ -377,14 +377,18 @@ main: {
   await Promise.all(p1.map((n) => run(n, 1, cmd1[n])));
   if (stopFailFast(1, p1)) break main;
 
-  // Phase 2: integration, sharded over its own databases (flowline_test_s<i>), beside the stacks' production build and
-  // then the stacks themselves (flowline_test / flowline_test_e<k>). No step shares a database or a port with another.
+  // Phase 2: integration, sharded over its own databases (flowline_test_s<i>), beside the stacks' production build
+  // (which needs no database); then the stacks themselves (flowline_test / flowline_test_e<k>). No step shares a
+  // database or a port with another. The stacks start only after integration has finished: stackPoolMax budgets the
+  // stacks alone, and the N shards (pool 8 + a global-setup client each: 36 connections at --shards=4) would exceed
+  // max_connections=50 together with the stacks (4 × 9 = 36 in the fast tier) — "too many clients", like GATE-03.
   const p2 = sel(["integration", "build"]);
   if (p2.length || selected.has("stack")) stopStack();
   const integration = selected.has("integration") ? run("integration", 2, `node scripts/test-integration-sharded.mjs --shards=${INT_SHARDS} --log-dir=${join(out, "integration")}`) : null;
   const buildAndStacks = (async () => {
     if (selected.has("build")) await run("build", 2, "npx next build", testEnv());
-    if (stopFailFast(2, sel(["build"]))) return;
+    await integration;
+    if (stopFailFast(2, sel(["build", "integration"]))) return;
     if (selected.has("stack")) {
       if (results.get("build")?.status === "fail") mark("stack", 3, "blocked", "build failed");
       else await startStacks();

@@ -13,7 +13,7 @@ This guide applies to developers and AI agents. Start with [AGENTS.md](../AGENTS
 
 ## Localization
 
-The complete canonical catalogues are `src/i18n/messages/ar.json` and `en.json`. Arabic defines the key shape; English must match. Preserve placeholders and plural categories. Use nested JSON objects rather than dotted literal keys. Use `useT()` from `@/i18n/client` in client components and `await getT()` from `@/i18n/server` in server components. Keys remain dotted paths in code, for example `t("account.email")`.
+The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/messages/en.json`. Arabic defines the key shape; English must match. Preserve placeholders and plural categories. Use nested JSON objects rather than dotted literal keys. Use `useT()` from `@/i18n/client` in client components and `await getT()` from `@/i18n/server` in server components. Keys remain dotted paths in code, for example `t("account.email")`.
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 

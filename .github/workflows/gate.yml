@@ -31,7 +31,7 @@ jobs:
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-static
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # lint, typecheck, evidence, unit and contract use no database, no browser and no fixed port.
       - uses: ./.github/actions/setup-gate
@@ -54,7 +54,7 @@ jobs:
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-integration
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -80,7 +80,7 @@ jobs:
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
       GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -109,7 +109,7 @@ jobs:
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-firefox
       GATE_TIER: full
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: ./.github/actions/setup-gate
         with:
@@ -137,7 +137,7 @@ jobs:
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-webkit
       GATE_TIER: full
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: ./.github/actions/setup-gate
         with:

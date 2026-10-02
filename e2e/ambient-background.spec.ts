@@ -1,7 +1,33 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { BASE_URL } from "./stack";
+import { setupUser } from "./helpers";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * Paint check: nothing painted ABOVE the ambient layer at the glow centre may be an opaque full-viewport wrapper (an opaque
+ * body/wrapper background would hide the glow and dots even though the layer is "visible" and non-interactive).
+ */
+async function expectAmbientPaintedAboveBackgrounds(page: Page) {
+  const offenders = await page.evaluate(() => {
+    const ambient = document.querySelector(".ambient-background");
+    const stack = document.elementsFromPoint(window.innerWidth / 2, 40);
+    const idx = ambient ? stack.indexOf(ambient) : -1;
+    if (idx < 0) return ["ambient layer is not under the glow point"];
+    return stack.slice(0, idx).flatMap((el) => {
+      const r = el.getBoundingClientRect();
+      const coversViewport = r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95;
+      if (!coversViewport) return [];
+      const cs = getComputedStyle(el);
+      const m = /rgba?\(([^)]*)\)|color\(([^)]*)\)/.exec(cs.backgroundColor);
+      const parts = (m?.[1] ?? m?.[2] ?? "").split(/[ ,/]+/).filter(Boolean);
+      const alpha = cs.backgroundColor === "transparent" ? 0 : parts.length >= 4 ? Number.parseFloat(parts[parts.length - 1]) : 1;
+      const clear = alpha === 0 && cs.backgroundImage === "none";
+      return clear ? [] : [`${el.tagName.toLowerCase()}.${el.className} bg=${cs.backgroundColor} image=${cs.backgroundImage}`];
+    });
+  });
+  expect(offenders).toEqual([]);
+}
 
 test("quiet ambient background remains decorative, subtle and non-interactive @cross-browser", async ({ page, context }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -18,7 +44,8 @@ test("quiet ambient background remains decorative, subtle and non-interactive @c
     // Non-interactive: pointer-events none, aria-hidden
     await expect(field).toHaveAttribute("aria-hidden", "true");
     expect(await field.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
-    expect(await field.evaluate((el) => getComputedStyle(el).zIndex)).toBe("1");
+    // Stacking is verified by the paint check below, not by the raw z-index value.
+    await expectAmbientPaintedAboveBackgrounds(page);
     expect(await field.evaluate((el) => {
       const hit = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
       return hit !== el && (!hit || !el.contains(hit));
@@ -62,11 +89,24 @@ test("ambient background respects system theme and stays non-interactive @cross-
   await page.goto("/");
   const field = page.locator(".ambient-background");
   await expect(field).toHaveAttribute("data-theme", "system");
-  await expect(field.locator(".ambient-glow")).toBeVisible();
+  const glow = field.locator(".ambient-glow");
+  await expect(glow).toBeVisible();
   expect(await field.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+  const lightImage = await glow.evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(lightImage).not.toBe("none");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(field).toHaveAttribute("data-theme", "system");
-  await expect(field.locator(".ambient-glow")).toBeVisible();
+  await expect(glow).toBeVisible();
   expect(await field.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+  // The resolved glow must follow the system scheme (light uses a weaker tint than dark).
+  await expect.poll(() => glow.evaluate((el) => getComputedStyle(el).backgroundImage)).not.toBe(lightImage);
+});
+
+test("ambient background is painted above the app shell's backgrounds @cross-browser", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await expect(page.locator(".ambient-background")).toHaveCount(1);
+  await expectAmbientPaintedAboveBackgrounds(page);
 });

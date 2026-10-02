@@ -86,7 +86,7 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
       <a href="?section=main" data-section-focus="true" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[200] focus:rounded-md focus:bg-accent focus:px-3 focus:py-1.5 focus:text-on-accent">
         {t("shell.skipToContent")}
       </a>
-      <div className="flex h-dvh overflow-hidden bg-app">
+      <div className="flex h-dvh overflow-hidden">
         {/* Desktop sidebar (240px) / tablet icon rail (48px) */}
         <aside aria-label={t("shell.workspaceNav")} className="hidden shrink-0 flex-col border-e border-line bg-surface md:flex md:w-[var(--rail-w)] xl:w-[var(--sidebar-w)]">
           <SidebarContent support={support} sections={sections} settings={settings} pathname={pathname} workspace={workspace} user={user} compact />
