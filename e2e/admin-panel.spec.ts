@@ -101,7 +101,8 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await expect(page.getByText("Draft saved.")).toBeVisible();
     await page.reload();
     await expect(page.getByRole("paragraph").filter({ hasText: originalEn })).toBeVisible();
-    await expect(page.locator('[lang="ar"]').getByText(originalAr, { exact: true })).toBeVisible();
+    // After the reload the editor loads the saved DRAFT, so the Arabic preview shows the draft value (draft persisted).
+    await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Publish draft" }).click();
     await expect(page.getByText("Copy published.")).toBeVisible();
     await page.reload();
