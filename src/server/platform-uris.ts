@@ -19,7 +19,7 @@ export function platformRedirectUris() {
   if (!authOrigin) warnings.push("BETTER_AUTH_URL_UNSET");
   return {
     integrations: pub ? `${pub}/api/oauth/callback` : null,
-    signin: { google: authOrigin ? `${authOrigin}/api/auth/callback/google` : null, github: authOrigin ? `${authOrigin}/api/auth/callback/github` : null },
+    signin: { google: authOrigin ? `${authOrigin}/api/auth/callback/google` : null, github: authOrigin ? `${authOrigin}/api/auth/callback/github` : null, zitadel: authOrigin ? `${authOrigin}/api/auth/callback/zitadel` : null },
     sso: pub ? `${pub}/api/sso/callback` : null,
     warnings,
   };

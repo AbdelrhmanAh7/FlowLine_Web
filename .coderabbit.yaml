@@ -1,0 +1,11 @@
+# CodeRabbit: review stacked PRs too (their base is the previous PR's branch, not main).
+# Large changes are split into stacked PRs of <=150 reviewable files each.
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - ".*"

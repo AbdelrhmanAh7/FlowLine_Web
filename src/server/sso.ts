@@ -12,6 +12,7 @@ import { allowSignUp, BETA_REFUSAL } from "./beta";
 import { HttpError } from "./http";
 import {
   assertIssuerUrl,
+  basicClientAuthorization,
   fetchDiscovery,
   validateIdToken,
   type Jwks,
@@ -46,6 +47,7 @@ export function publicSsoConfig(c: typeof schema.ssoConfig.$inferSelect) {
   return {
     workspaceId: c.workspaceId,
     issuer: c.issuer,
+    provider: c.provider,
     clientId: c.clientId,
     hasSecret: Boolean(c.clientSecretEnc),
     domains: c.domains,
@@ -67,6 +69,7 @@ export async function getSsoConfig(user: CurrentUser, workspaceId: string) {
 
 export interface SsoConfigInput {
   issuer: string;
+  provider?: "oidc" | "zitadel";
   clientId: string;
   /** Empty/omitted keeps the existing secret. Required for a new configuration. */
   clientSecret?: string;
@@ -83,6 +86,8 @@ export async function saveSsoConfig(
   const { workspace } = await requireWorkspace(user, workspaceId, "sso.manage");
   const issuer = input.issuer.trim().replace(/\/+$/, "");
   assertIssuerUrl(issuer);
+  const provider = input.provider ?? "oidc";
+  if (provider !== "oidc" && provider !== "zitadel") throw new HttpError(400, "VALIDATION", "Unknown SSO provider");
   const clientId = input.clientId.trim();
   if (!clientId || clientId.length > 200)
     throw new HttpError(
@@ -114,7 +119,9 @@ export async function saveSsoConfig(
     );
 
   // The provider must actually speak OIDC before anything is stored.
-  await fetchDiscovery(issuer);
+  const discovery = await fetchDiscovery(issuer);
+  if (provider === "zitadel" && !discovery.token_endpoint_auth_methods_supported?.includes("client_secret_basic"))
+    throw new HttpError(400, "VALIDATION", "This issuer does not advertise client_secret_basic for a ZITADEL Web application");
 
   const [existing] = await db
     .select()
@@ -135,7 +142,7 @@ export async function saveSsoConfig(
 
   // Changing who issues tokens or which client we are invalidates the previous test sign-in.
   const identityChanged =
-    !existing || existing.issuer !== issuer || existing.clientId !== clientId;
+    !existing || existing.issuer !== issuer || existing.clientId !== clientId || existing.provider !== provider || Boolean(input.clientSecret?.trim());
   const verifiedAt = identityChanged ? null : existing.verifiedAt;
   if (input.enabled && !verifiedAt) {
     throw new HttpError(
@@ -150,6 +157,7 @@ export async function saveSsoConfig(
     .values({
       workspaceId: workspace.id,
       issuer,
+      provider,
       clientId,
       clientSecretEnc: secretEnc,
       keyId,
@@ -164,6 +172,7 @@ export async function saveSsoConfig(
       target: schema.ssoConfig.workspaceId,
       set: {
         issuer,
+        provider,
         clientId,
         clientSecretEnc: secretEnc,
         keyId,
@@ -185,6 +194,7 @@ export async function saveSsoConfig(
     targetId: workspace.id,
     data: {
       issuer,
+      provider,
       clientId,
       domains,
       defaultRole: input.defaultRole,
@@ -299,7 +309,7 @@ export interface SsoSignInResult {
 
 /**
  * Completes an SSO sign-in: consumes the single-use state, exchanges the code
- * (client_secret_post + PKCE), validates the id_token, finds-or-creates the user
+ * (provider client authentication + PKCE), validates the id_token, finds-or-creates the user
  * and workspace membership, creates a better-auth session, and (on the first
  * success) marks the configuration verified. Any failure throws — no session,
  * no membership.
@@ -349,10 +359,12 @@ export async function completeSso(opts: {
     grant_type: "authorization_code",
     code: opts.code,
     redirect_uri: ssoRedirectUri(),
-    client_id: cfg.clientId,
-    client_secret: clientSecret,
     code_verifier: verifier,
   });
+  if (cfg.provider === "oidc") {
+    body.set("client_id", cfg.clientId);
+    body.set("client_secret", clientSecret);
+  }
   let tokenRes;
   try {
     tokenRes = await safeFetch(discovery.token_endpoint, {
@@ -360,6 +372,7 @@ export async function completeSso(opts: {
       headers: {
         "content-type": "application/x-www-form-urlencoded",
         accept: "application/json",
+        ...(cfg.provider === "zitadel" ? { authorization: basicClientAuthorization(cfg.clientId, clientSecret) } : {}),
       },
       body: body.toString(),
       timeoutMs: 15_000,

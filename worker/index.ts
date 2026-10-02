@@ -22,6 +22,7 @@ import { claimNextRun, processRun, recoverStaleRuns } from "./runner";
 import { schedulerTick } from "./scheduler";
 import { pruneOnce } from "@/server/retention";
 import { backgroundRefresh } from "@/ai/hub/discovery";
+import { reconcileActiveEntitlements } from "@/server/company-builder/entitlement";
 
 /** Runs executed concurrently by this worker process (runs mostly wait on I/O). */
 const CONCURRENCY = Math.max(1, Number(process.env.FLOWLINE_WORKER_CONCURRENCY ?? 4));
@@ -142,6 +143,9 @@ async function main() {
         .catch((e) => log("platform notification error", e instanceof Error ? e.message : e)),
     60_000,
   );
+  // Company Builder: tasks activated under an entitlement that lapsed (dev trial expired, billing cancelled) are paused
+  // within a minute, whether or not anyone opens the page. Payments never activate anything.
+  const cbEntitlementTimer = setInterval(() => void reconcileActiveEntitlements().then((n) => n && log("company builder tasks paused (no entitlement)", n)).catch((e) => log("company builder reconcile error", e instanceof Error ? e.message : e)), 60_000);
   const catalogueTimer = setInterval(
     () => void backgroundRefresh(db, { max: 5 }).then((r) => r.checked && log("ai catalogues refreshed", r.refreshed, "of", r.checked)).catch((e) => log("ai catalogue refresh error", e instanceof Error ? e.message : e)),
     3600_000,
@@ -170,6 +174,7 @@ async function main() {
   clearInterval(reconcileTimer);
   clearInterval(retentionTimer);
   clearInterval(catalogueTimer);
+  clearInterval(cbEntitlementTimer);
   clearInterval(notifyTimer);
   await Promise.allSettled([...active]);
   await db.execute(sql`delete from worker_heartbeat where worker_id = ${workerId}`);

@@ -1,7 +1,12 @@
 import { generateKeyPairSync, sign as cryptoSign, type KeyObject } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { HttpError } from "@/server/http";
-import { validateIdToken, type Jwks } from "@/server/oidc";
+import { basicClientAuthorization, validateIdToken, type Jwks } from "@/server/oidc";
+
+it("form-encodes both ZITADEL Basic credentials before base64", () => {
+  const header = basicClientAuthorization("78366401571920522@acme", "veryweaksecret!");
+  expect(Buffer.from(header.slice(6), "base64").toString("utf8")).toBe("78366401571920522%40acme:veryweaksecret%21");
+});
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const { privateKey: otherKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });

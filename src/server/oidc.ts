@@ -13,6 +13,13 @@ export interface OidcDiscovery {
   authorization_endpoint: string;
   token_endpoint: string;
   jwks_uri: string;
+  token_endpoint_auth_methods_supported?: string[];
+}
+
+/** ZITADEL Web apps use client_secret_basic. OAuth requires form encoding before base64. */
+export function basicClientAuthorization(clientId: string, clientSecret: string): string {
+  const formEncode = (value: string) => new URLSearchParams({ x: value }).toString().slice(2);
+  return `Basic ${Buffer.from(`${formEncode(clientId)}:${formEncode(clientSecret)}`, "utf8").toString("base64")}`;
 }
 
 export interface Jwks {

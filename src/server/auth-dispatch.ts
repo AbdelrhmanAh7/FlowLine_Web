@@ -4,13 +4,16 @@ import { db, schema } from "@/db";
 import { auth, authFor, type AuthInstance, type SocialConfig } from "@/lib/auth";
 import { sha256Hex } from "./crypto";
 import { markPlatformSecretVerified, resolvePlatformCredential } from "./platform-secrets";
+import { activeZitadelConfig } from "./zitadel-config";
+import type { ZitadelApp } from "./zitadel-auth";
+import { zitadelLocalUrl } from "./zitadel-url";
 
 /**
  * Sign-in dispatch for better-auth (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
  *
- * - Every request resolves a request-local SNAPSHOT of the sign-in apps (`signin.google`, `signin.github`) from the
- *   platform panel's DB records and uses the better-auth instance built for exactly those revisions. Rotation takes
- *   effect on the next request — no restart, no stale cache, no environment fallback.
+ * - Google/GitHub sign-in apps come from platform DB records. ZITADEL prefers the complete operator environment tuple
+ *   (issuer, client ID and secret), fails closed on partial env configuration, and falls back to its optional DB record
+ *   only when the tuple is entirely absent. Each request uses the better-auth instance built for that exact snapshot.
  * - Starting a social sign-in records (hash of state → provider, app identity, revision). The callback is dispatched
  *   ONLY with that stored app + revision, and only while it is still accepted: the same app (platform_secret row) at its
  *   current revision, or the previous one inside its grace window. A callback for an unknown/expired/revoked attempt is
@@ -19,7 +22,7 @@ import { markPlatformSecretVerified, resolvePlatformCredential } from "./platfor
  *   and attempt binding carries the platform_secret row id (immutable; a cleared + reconfigured app gets a new row) as
  *   well as the revision. Two different apps can never share a cached better-auth instance.
  */
-const PROVIDERS = ["google", "github"] as const;
+const PROVIDERS = ["google", "github", "zitadel"] as const;
 type Provider = (typeof PROVIDERS)[number];
 const ATTEMPT_TTL_MS = 10 * 60_000;
 
@@ -30,12 +33,32 @@ interface SigninApp {
   secret: string;
   revision: number;
   previous: { secret: string; revision: number; validUntil: Date } | null;
+  source: "environment" | "database";
+  issuer?: string;
+  issuerRevision?: number;
+  /** Used only as an input to a server-private cache key. */
+  secretFingerprint?: string;
 }
 
 async function signinApp(p: Provider): Promise<SigninApp | null> {
+  if (p === "zitadel") {
+    const config = await activeZitadelConfig();
+    if (!config) return null; // partial/invalid env values deliberately suppress DB fallback
+    return {
+      id: config.id,
+      clientId: config.clientId,
+      secret: config.clientSecret,
+      revision: config.revision,
+      previous: null,
+      source: config.source,
+      issuer: config.issuer,
+      issuerRevision: config.issuerRevision,
+      secretFingerprint: config.secretFingerprint,
+    };
+  }
   const cred = await resolvePlatformCredential(`signin.${p}`);
   if (!cred?.publicId) return null;
-  return { id: cred.id, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, previous: cred.previous };
+  return { id: cred.id, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, previous: cred.previous, source: "database" };
 }
 
 /** Instance-key part of one provider's app: identity AND revision (a revision number alone is reused after a clear). */
@@ -44,26 +67,34 @@ function keyPart(p: string, appId: string, revision: number) {
 }
 
 /** Request-local snapshot of the CURRENT sign-in apps. */
-export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; revisions: Partial<Record<Provider, number>>; appIds: Partial<Record<Provider, string>> }> {
+export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; zitadel: ZitadelApp | null; revisions: Partial<Record<Provider, number>>; appIds: Partial<Record<Provider, string>> }> {
   const social: SocialConfig = {};
+  let zitadel: ZitadelApp | null = null;
   const revisions: Partial<Record<Provider, number>> = {};
   const appIds: Partial<Record<Provider, string>> = {};
   const parts: string[] = [];
   for (const p of PROVIDERS) {
     const app = await signinApp(p);
     if (!app) continue;
-    social[p] = { clientId: app.clientId, clientSecret: app.secret };
+    if (p === "zitadel") {
+      if (!app.issuer || !zitadelLocalUrl("discovery")) continue;
+      zitadel = { issuer: app.issuer, clientId: app.clientId, clientSecret: app.secret };
+      parts.push(`issuer:r${app.issuerRevision}`);
+      // The fingerprint never leaves this internal factory key; it makes secret-only env changes rebuild auth.
+      parts.push(`credential-secret:${app.secretFingerprint}`);
+    } else social[p] = { clientId: app.clientId, clientSecret: app.secret };
     revisions[p] = app.revision;
     appIds[p] = app.id;
     parts.push(keyPart(p, app.id, app.revision));
   }
-  return { key: parts.join("|"), social, revisions, appIds };
+  return { key: parts.length ? sha256Hex(parts.join("|")) : "", social, zitadel, revisions, appIds };
 }
 
 /** Public: which sign-in methods are configured right now (read per request). */
 export async function signinAvailability() {
-  const out: Record<Provider, boolean> = { google: false, github: false };
-  for (const p of PROVIDERS) out[p] = Boolean(await signinApp(p));
+  const out: Record<Provider, boolean> = { google: false, github: false, zitadel: false };
+  for (const p of ["google", "github"] as const) out[p] = Boolean(await signinApp(p));
+  out.zitadel = Boolean(await signinApp("zitadel")) && Boolean(zitadelLocalUrl("discovery"));
   return out;
 }
 
@@ -71,7 +102,7 @@ export async function signinAvailability() {
  * The instance a CALLBACK must use: built with the revision that started this attempt, if that revision is still
  * accepted. null = refuse.
  */
-export async function instanceForCallback(provider: string, state: string | null): Promise<{ instance: AuthInstance; revision: number } | null> {
+export async function instanceForCallback(provider: string, state: string | null): Promise<{ instance: AuthInstance; revision: number; source: "environment" | "database" } | null> {
   if (!state || !(PROVIDERS as readonly string[]).includes(provider)) return null;
   const [attempt] = await db
     .select()
@@ -88,12 +119,14 @@ export async function instanceForCallback(provider: string, state: string | null
   else return null;
   // Other providers keep their current configuration; only this provider is pinned to the attempt's revision.
   const snap = await currentSnapshot();
-  const social: SocialConfig = { ...snap.social, [provider]: { clientId: app.clientId, clientSecret: secret } };
-  const key = Object.keys(social)
-    .sort()
-    .map((p) => (p === provider ? keyPart(p, app.id, attempt.revision) : keyPart(p, snap.appIds[p as Provider]!, snap.revisions[p as Provider]!)))
-    .join("|");
-  return { instance: authFor(key, social), revision: attempt.revision };
+  const social: SocialConfig = { ...snap.social };
+  let zitadel = snap.zitadel;
+  if (provider === "zitadel") {
+    if (!zitadel) return null;
+    zitadel = { ...zitadel, clientSecret: secret };
+  } else social[provider] = { clientId: app.clientId, clientSecret: secret };
+  const key = `${snap.key}|callback:${keyPart(provider, app.id, attempt.revision)}`;
+  return { instance: await authFor(key, social, zitadel ?? undefined), revision: attempt.revision, source: app.source };
 }
 
 async function recordAttempt(provider: string, responseBody: unknown, revision: number | undefined, secretId: string | undefined) {
@@ -144,19 +177,33 @@ export async function dispatchAuth(request: Request, method: "GET" | "POST"): Pr
     // A completed sign-in (redirect without an error and with a session cookie) verifies exactly that revision.
     const location = res.headers.get("location") ?? "";
     if (res.status >= 300 && res.status < 400 && !/[?&]error=/.test(location) && /session_token/.test(res.headers.get("set-cookie") ?? "")) {
-      await markPlatformSecretVerified(`signin.${provider}`, pinned.revision, "signin").catch(() => {});
+      if (provider !== "zitadel" || pinned.source === "database") await markPlatformSecretVerified(`signin.${provider}`, pinned.revision, "signin").catch(() => {});
     }
     return withNoReferrer(res);
   }
-  const snap = await currentSnapshot();
-  const instance = snap.key ? authFor(snap.key, snap.social) : auth;
-  if (method === "POST" && (path === "/sign-in/social" || path === "/link-social")) {
-    let provider = "";
+  const socialPost = method === "POST" && (path === "/sign-in/social" || path === "/link-social");
+  let provider = "";
+  if (socialPost) {
+    // Better Auth (better-call) also parses form-encoded bodies, which would skip the check below. Only JSON is
+    // accepted on these two paths (every Flowline client sends JSON); anything else fails closed before body parsing.
+    const noStore = { "cache-control": "no-store" };
+    if (!/^application\/json\s*(;|$)/i.test(request.headers.get("content-type") ?? ""))
+      return Response.json({ code: "UNSUPPORTED_MEDIA_TYPE" }, { status: 415, headers: noStore });
+    let body: { provider?: unknown; idToken?: unknown } | null;
     try {
-      provider = String(((await request.clone().json()) as { provider?: unknown }).provider ?? "");
+      body = (await request.clone().json()) as { provider?: unknown; idToken?: unknown } | null;
     } catch {
-      provider = "";
+      body = null;
     }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return Response.json({ code: "INVALID_JSON_BODY" }, { status: 400, headers: noStore });
+    provider = String(body.provider ?? "");
+    // Better Auth also accepts caller-supplied ID tokens at /sign-in/social. ZITADEL sign-in
+    // must use the server-created authorization-code state, nonce and PKCE verifier instead.
+    if (provider === "zitadel" && Object.hasOwn(body, "idToken")) return Response.json({ code: "ZITADEL_CODE_FLOW_REQUIRED" }, { status: 400, headers: noStore });
+  }
+  const snap = await currentSnapshot();
+  const instance = snap.key ? await authFor(snap.key, snap.social, snap.zitadel ?? undefined) : auth;
+  if (socialPost) {
     const res = await toNextJsHandler(instance).POST(request);
     if (res.ok) {
       try {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { SettingKey } from "./platform-purposes";
+import { isAllowlisted } from "./egress";
 
 /** Validation of the platform settings (pure: no DB), shared by the settings service and the unit tests. */
 const planSchema = z.object({
@@ -22,10 +23,18 @@ const plansSchema = z
 
 const recipientRule = z.string().trim().toLowerCase().min(3).max(254).regex(/^(\*\.|\.|@)?[a-z0-9._%+-]*@?[a-z0-9.-]+\.[a-z]{2,}$/i);
 
+export const zitadelIssuerSchema = z.string().min(8).max(500).refine((raw) => {
+  try {
+    const u = new URL(raw);
+    const testIssuer = process.env.FLOWLINE_ENV === "test" && u.protocol === "http:" && isAllowlisted(u.hostname, Number(u.port || 80));
+    return (u.protocol === "https:" || testIssuer) && u.origin === raw && !u.username && !u.password && !u.search && !u.hash;
+  } catch { return false; }
+}, "Enter the exact HTTPS origin of the ZITADEL instance");
+
 export const SETTING_SCHEMAS = {
   "email.provider": z.enum(["resend", "postmark"]).nullable(),
   "email.allowed_recipients": z.array(recipientRule).max(200),
   "billing.provider": z.enum(["stripe", "paddle"]).nullable(),
   "billing.plans": plansSchema.nullable(),
+  "signin.zitadel.issuer": zitadelIssuerSchema,
 } satisfies Record<SettingKey, z.ZodType>;
-

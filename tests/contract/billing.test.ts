@@ -179,7 +179,7 @@ describe("webhook verification", () => {
     return (async () => {
       const { payload, header } = await emit({ type: "invoice.paid", customer: "cus_fake_1" });
       expect(() => adapter().verifyWebhook(payload.replace("cus_fake_1", "cus_evil"), header, new Date())).toThrow(WebhookVerificationError);
-      expect(() => adapter().verifyWebhook(payload, header.replace(/v1=[0-9a-f]{2}/, "v1=00"), new Date())).toThrow(WebhookVerificationError);
+      expect(() => adapter().verifyWebhook(payload, header.replace(/v1=([0-9a-f])/, (_m, c: string) => `v1=${c === "0" ? "1" : "0"}`), new Date())).toThrow(WebhookVerificationError);
       expect(() => adapter().verifyWebhook(payload, null, new Date())).toThrow(WebhookVerificationError);
     })();
   });

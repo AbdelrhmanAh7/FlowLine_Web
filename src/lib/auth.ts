@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { twoFactor } from "better-auth/plugins/two-factor";
+import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { redactString, safeErrorText } from "@/server/redact";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -9,18 +10,19 @@ import { wrapAccountTokenEncryption } from "@/server/auth-token-adapter";
 import { allowSignUp, BETA_REFUSAL, betaMode } from "@/server/beta";
 import { issueAccountToken } from "@/server/email/flows";
 import { track } from "@/server/telemetry";
+import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
 
 /**
  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
  *
  * The Google/GitHub sign-in apps are platform credentials (`signin.google`, `signin.github`) managed in the admin
- * panel — never read from the environment. Each request takes a snapshot of the current sign-in revisions and uses an
- * instance built for exactly that snapshot (see src/server/auth-dispatch.ts), so rotating a sign-in app needs no
- * restart. The base `auth` instance (no social providers) serves sessions, email/password and two-factor.
+ * panel. ZITADEL may be configured by the complete operator environment tuple or, when absent, its optional DB record.
+ * Each request takes a snapshot of the current sign-in configuration (see src/server/auth-dispatch.ts). The base `auth`
+ * instance (no social providers) serves sessions, email/password and two-factor.
  */
 export type SocialConfig = Record<string, { clientId: string; clientSecret: string }>;
 
-function buildAuth(socialProviders: SocialConfig) {
+function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
   return betterAuth({
     appName: "Flowline",
     secret: process.env.BETTER_AUTH_SECRET,
@@ -54,6 +56,8 @@ function buildAuth(socialProviders: SocialConfig) {
       },
     },
     socialProviders,
+    // Intentional, documented security tradeoff (not changed here): with ZITADEL configured no provider links implicitly.
+    account: { accountLinking: { disableImplicitLinking: Boolean(zitadel) } },
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
@@ -91,7 +95,7 @@ function buildAuth(socialProviders: SocialConfig) {
       },
     },
     // TOTP two-factor (required for platform admins before the admin panel unlocks; available to every account).
-    plugins: [nextCookies(), twoFactor({ issuer: "Flowline" })],
+    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), nextCookies()],
   });
 }
 
@@ -101,20 +105,44 @@ export const auth = buildAuth({});
 export type AuthInstance = typeof auth;
 export type Session = typeof auth.$Infer.Session;
 
-const instances = new Map<string, AuthInstance>();
+interface CacheEntry { instance: AuthInstance; /** Set only for an instance whose ZITADEL provider failed to load: it expires and is rebuilt. */ retryAt?: number }
+const instances = new Map<string, CacheEntry>();
+const building = new Map<string, Promise<AuthInstance>>();
+/** How long an instance whose ZITADEL discovery failed is reused before the next attempt (bounds load on the IdP). */
+export const ZITADEL_RETRY_MS = 5_000;
 
 /**
  * The instance for one sign-in-app snapshot (`key` identifies each app by its immutable platform_secret id AND its
  * revision — a revision number alone restarts at 1 after a clear, CXH-02). Instances are immutable per key; a rotation
  * or a different app produces a new key, so no request ever sees another app's or a half-updated configuration.
  * Bounded cache.
+ *
+ * ZITADEL discovery runs once while the instance initializes and a failure only logs and skips the provider. We await
+ * that initialization: an instance without its provider is returned (sign-in for it fails closed) but cached only for
+ * `ZITADEL_RETRY_MS`, so a transient outage recovers on its own instead of lasting until the next configuration change.
  */
-export function authFor(key: string, social: SocialConfig): AuthInstance {
+export async function authFor(key: string, social: SocialConfig, zitadel?: ZitadelApp): Promise<AuthInstance> {
   if (!key) return auth;
   const hit = instances.get(key);
-  if (hit) return hit;
-  const instance = buildAuth(social) as AuthInstance;
-  instances.set(key, instance);
-  if (instances.size > 8) instances.delete(instances.keys().next().value!);
-  return instance;
+  if (hit && (hit.retryAt === undefined || hit.retryAt > Date.now())) return hit.instance;
+  const pending = building.get(key);
+  if (pending) return pending;
+  const build = (async () => {
+    const instance = buildAuth(social, zitadel) as AuthInstance;
+    let ready = true;
+    if (zitadel) {
+      try {
+        const ctx = await instance.$context;
+        ready = ctx.socialProviders.some((p) => p.id === "zitadel");
+      } catch {
+        ready = false;
+      }
+    }
+    instances.delete(key);
+    instances.set(key, ready ? { instance } : { instance, retryAt: Date.now() + ZITADEL_RETRY_MS });
+    if (instances.size > 8) instances.delete(instances.keys().next().value!);
+    return instance;
+  })().finally(() => building.delete(key));
+  building.set(key, build);
+  return build;
 }

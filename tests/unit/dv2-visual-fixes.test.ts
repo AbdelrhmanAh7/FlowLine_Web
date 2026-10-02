@@ -12,10 +12,14 @@ describe("design-v2 visual-review fixes", () => {
     expect(css.indexOf('@import "@xyflow/react/dist/base.css"')).toBeLessThan(css.indexOf(rule![0]));
   });
 
-  it("DV2-V02: the auth illustration takes node subtitles from the translated node catalogue", () => {
+  it("DV2-V02: the auth illustration uses translated client-facing walkthrough copy", () => {
     const src = readFileSync("src/app/(auth)/auth-form.tsx", "utf8");
     expect(src).not.toMatch(/"(TRIGGER|TRANSFORM|OUTPUT) · [A-Z]+"/);
-    expect(src.match(/nodeText\(t, "(trigger\.manual|transform\.json|output)", "subtitle"\)/g)).toHaveLength(3);
+    expect(src).toContain("<AuthWalkthrough />");
+    const walkthrough = readFileSync("src/components/auth/auth-walkthrough.tsx", "utf8");
+    for (const field of ["title", "label", "detail"]) expect(walkthrough).toContain(`.${field}`);
+    expect(walkthrough).toContain("useT()");
+    expect(walkthrough).not.toContain("JSONATA");
   });
 });
 

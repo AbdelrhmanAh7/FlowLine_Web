@@ -85,8 +85,11 @@ export function webhookUrl(token: string) {
   return `${(process.env.FLOWLINE_PUBLIC_URL ?? "http://localhost:3000").replace(/\/$/, "")}/api/hooks/${token}`;
 }
 
-export async function publishFlow(user: CurrentUser, flowId: string) {
-  return db.transaction(async (tx) => {
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Publishes the draft. Pass `outer` to publish inside the caller's transaction (it then commits or rolls back with it). */
+export async function publishFlow(user: CurrentUser, flowId: string, outer?: Tx) {
+  const publish = async (tx: Tx) => {
     const [flow] = await tx.select().from(schema.flow).where(eq(schema.flow.id, flowId)).for("update");
     if (!flow || flow.deletedAt) throw notFound("Flow not found");
     const graph = flow.graph as FlowGraph;
@@ -134,13 +137,14 @@ export async function publishFlow(user: CurrentUser, flowId: string) {
       await tx.update(schema.schedule).set({ active: false }).where(eq(schema.schedule.flowId, flow.id));
     }
     return { version: version.version, versionId: version.id, trigger: trigger.type, webhook, schedule: scheduleInfo };
-  });
+  };
+  return outer ? publish(outer) : db.transaction(publish);
 }
 
-export async function unpublishFlow(flowId: string) {
-  await db.update(schema.flow).set({ publishedVersionId: null }).where(eq(schema.flow.id, flowId));
-  await db.update(schema.webhookEndpoint).set({ active: false }).where(eq(schema.webhookEndpoint.flowId, flowId));
-  await db.update(schema.schedule).set({ active: false }).where(eq(schema.schedule.flowId, flowId));
+export async function unpublishFlow(flowId: string, dbx: Tx | typeof db = db) {
+  await dbx.update(schema.flow).set({ publishedVersionId: null }).where(eq(schema.flow.id, flowId));
+  await dbx.update(schema.webhookEndpoint).set({ active: false }).where(eq(schema.webhookEndpoint.flowId, flowId));
+  await dbx.update(schema.schedule).set({ active: false }).where(eq(schema.schedule.flowId, flowId));
 }
 
 export async function rotateWebhookSecret(flowId: string) {
