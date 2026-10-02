@@ -209,8 +209,17 @@ test.describe("@cross-browser remaining keyboard surfaces (DV2-K01–K05)", () =
     await page.keyboard.press("Enter");
     await expect(page.getByRole("tooltip")).toContainText("This step didn't fail");
     await expect(blockedError).toHaveAttribute("aria-selected", "false");
+    // Arrow keys reach the explained blocked tab too (focus, no selection); Enter/Space never select it.
     await page.keyboard.press("Escape");
     await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await inputTab.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(blockedError).toBeFocused();
+    await expect(blockedError).toHaveAttribute("aria-selected", "false");
+    await expect(inputTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tooltip")).toContainText("This step didn't fail");
+    await page.keyboard.press("ArrowLeft");
+    await expect(inputTab).toBeFocused();
     await expect(panel).toBeVisible();
     const rerun = panel.getByRole("button", { name: /Re-run from this step/ });
     await activate(page, rerun);
