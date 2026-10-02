@@ -276,9 +276,48 @@ describe("controller + adapter with fake CLIs", () => {
 
     const stale = await newJob();
     await db.update(schema.cbCliJob).set({ status: "generating", heartbeatAt: new Date(Date.now() - 600_000) }).where(eq(schema.cbCliJob.id, stale.id));
-    await recoverStaleJobs();
+    await recoverStaleJobs(wsId);
     const [rec] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, stale.id));
     expect(rec).toMatchObject({ status: "failed", error: { code: "INTERRUPTED" } });
+  });
+
+  it("stale recovery is scoped to the controller's workspace: another workspace's running job is left alone", async () => {
+    const other = await makeUser("cb-other-founder");
+    const otherWs = await createWorkspace(other, unique("Other Lab"));
+    const otherSession = await createSession(other, otherWs.id);
+    const theirs = await enqueueJob(other, otherWs.id, { sessionId: otherSession.id, cli: "claude", kind: "text_trial", requestKey: unique("req").replace(/[^A-Za-z0-9_-]/g, ""), text: "Hello, is the office open on Friday?" });
+    const mine = await newJob();
+    const missedHeartbeat = new Date(Date.now() - 600_000);
+    await db.update(schema.cbCliJob).set({ status: "generating", lockedBy: "their-controller", heartbeatAt: missedHeartbeat }).where(eq(schema.cbCliJob.id, theirs.id));
+    await db.update(schema.cbCliJob).set({ status: "validating", lockedBy: "my-dead-controller", heartbeatAt: missedHeartbeat }).where(eq(schema.cbCliJob.id, mine.id));
+    const recovered = await recoverStaleJobs(wsId);
+    expect(recovered.map((r) => r.id)).toEqual([mine.id]);
+    const [stillTheirs] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, theirs.id));
+    expect(stillTheirs).toMatchObject({ status: "generating", lockedBy: "their-controller", error: null });
+    expect(await recoverStaleJobs(otherWs.id)).toEqual([{ id: theirs.id }]);
+  });
+
+  it("a job another writer already ended (stale recovery) is never moved back to an active state or finished twice", async () => {
+    const job = await newJob();
+    const before = (await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).length;
+    const claimed = (await claimJob(wsId, "slow-controller"))!;
+    // Between the claim and the run, a recovery pass (delayed heartbeat) failed the job as INTERRUPTED.
+    await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "INTERRUPTED" }, finishedAt: new Date(), lockedBy: null }).where(eq(schema.cbCliJob.id, job.id));
+    // The "invalid then valid" fixture exercises BOTH unguarded transitions: → validating, then → generating for the repair.
+    await processJob(claimed, founder, cfg(fakeBin("invalid_then_valid")));
+    const [after] = await db.select().from(schema.cbCliJob).where(eq(schema.cbCliJob.id, job.id));
+    expect(after).toMatchObject({ status: "failed", error: { code: "INTERRUPTED" }, lockedBy: null, resultBlueprintId: null, repairAttempts: 0 });
+    expect(await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId))).toHaveLength(before);
+  });
+
+  it("output limits count UTF-8 bytes, and a multi-byte character split across chunks is decoded intact", async () => {
+    // 40 000 Arabic letters are 40 000 UTF-16 code units (under a 64 KiB cap) but 80 000 bytes (over it).
+    expect(await runWith(fakeBin("huge_arabic"))).toMatchObject({ status: "failed", error: { code: "OUTPUT_TOO_LARGE" } });
+    const job = await runWith(fakeBin("arabic"));
+    expect(job.status, JSON.stringify(job.error)).toBe("review_required");
+    const [bp] = await db.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, job.resultBlueprintId!));
+    const followUp = (bp!.body as CompanyBlueprint).tasks.find((t) => t.id === "customer-follow-up")!;
+    expect(followUp.params.modelNote).toBe("نرد على كل الطلبات في نفس اليوم");
   });
 
   it("controller shutdown (SIGINT/SIGTERM signal) kills the running CLI, awaits it, cancels the job and applies nothing", async () => {

@@ -23,8 +23,10 @@ export function validateCopy(locale: string, key: string, value: string | null) 
   if ((locale !== "ar" && locale !== "en") || !EDITABLE_COPY_KEYS.has(key)) throw new HttpError(400, "COPY_KEY_INVALID", "Unknown copy key");
   if (value === null) return;
   const base = baseCopy(locale, key)!;
-  if ((!value.trim() && base !== "") || value.length > (key === "meta.keywords" ? 500 : 1200) || /[<>\u0000-\u0008\u000B\u000C\u000E-\u001F]/u.test(value)) {
-    throw new HttpError(400, "COPY_VALUE_INVALID", "Enter plain text between 1 and 1200 characters");
+  const max = key === "meta.keywords" ? 500 : 1200;
+  const min = base === "" ? 0 : 1;
+  if ((!value.trim() && base !== "") || value.length > max || /[<>\u0000-\u0008\u000B\u000C\u000E-\u001F]/u.test(value)) {
+    throw new HttpError(400, "COPY_VALUE_INVALID", min === 0 ? `Enter plain text up to ${max} characters` : `Enter plain text between 1 and ${max} characters`);
   }
   if (placeholders(value) !== placeholders(base)) throw new HttpError(400, "COPY_PLACEHOLDERS_INVALID", "Keep the original placeholders unchanged");
 }

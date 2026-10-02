@@ -22,7 +22,7 @@ import { approveBlueprint, generateDeterministic, storeBlueprint } from "@/serve
 import { cancelDevTrial, effectiveEntitlement, grantDevTrial, reconcileEntitlement } from "@/server/company-builder/entitlement";
 import { cancelInstallation, install, installedItems } from "@/server/company-builder/install";
 import { sessionOverview } from "@/server/company-builder/overview";
-import { decideReview, pauseTask, pendingReviewCount, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
+import { decideReview, listReviewItems, pauseTask, pendingReviewCount, requestActivation, requestSampleAction, verifyUncertain } from "@/server/company-builder/reviews";
 import { reconcileActiveEntitlements } from "@/server/company-builder/entitlement";
 import { deleteSession } from "@/server/company-builder/sessions";
 import { answer, createSession } from "@/server/company-builder/sessions";
@@ -163,6 +163,35 @@ describe("blueprint fact-snapshot approval", () => {
     await approveBlueprint(owner, ws.id, freshPlan.id);
     const { installation } = await install(owner, ws.id, freshPlan.id, { locale: "en" });
     expect(installation.status).toBe("installed");
+  });
+
+  it("a superseded plan is never the dedupe result: a corrected-then-reverted interview gets a fresh live version it can approve", async () => {
+    const owner = await makeUser("cb-revert");
+    const ws = await createWorkspace(owner, unique("Revert Co"));
+    const session = await createSession(owner, ws.id);
+    await answerPath(ws.id, session.id, CUSTOMER_PATH);
+    const { row: v1 } = await generateDeterministic(owner, ws.id, session.id, "en");
+    const revision = async () => (await db.select({ revision: schema.cbSession.revision }).from(schema.cbSession).where(eq(schema.cbSession.id, session.id)))[0]!.revision;
+    const original = CUSTOMER_PATH.find(([q]) => q === "cust_info")![1];
+    await answer(ws.id, session.id, { questionId: "cust_info", value: "Our monthly plan price is 999 SAR.", revision: await revision(), mode: "correction" });
+    await answer(ws.id, session.id, { questionId: "cust_info", value: original, revision: await revision(), mode: "correction" });
+    expect((await db.select({ status: schema.cbBlueprint.status }).from(schema.cbBlueprint).where(eq(schema.cbBlueprint.id, v1.id)))[0]!.status).toBe("superseded");
+
+    // The identical body behind a superseded latest row: a new version is inserted (before: the superseded row came back
+    // with created=false and every approval failed with BLUEPRINT_SUPERSEDED until the answers were changed again).
+    const same = await storeBlueprint(owner, ws.id, session.id, v1.body, "cli_import");
+    expect(same.created).toBe(true);
+    expect(same.row.id).not.toBe(v1.id);
+    expect(same.row).toMatchObject({ version: v1.version + 1, status: "review_required" });
+    await expectHttpError(approveBlueprint(owner, ws.id, v1.id), 409, "BLUEPRINT_SUPERSEDED"); // the old row stays retired
+
+    // The person's path: regenerate after the revert and approve — no longer stuck.
+    const again = await generateDeterministic(owner, ws.id, session.id, "en");
+    expect(again.row.status).not.toBe("superseded");
+    expect((await approveBlueprint(owner, ws.id, again.row.id)).status).toBe("approved");
+    // Refresh/double click on the live latest version still dedupes.
+    const refreshed = await generateDeterministic(owner, ws.id, session.id, "en");
+    expect(refreshed).toMatchObject({ created: false, row: { id: again.row.id } });
   });
 
   it("keeps an older published task visible and controllable after installing its replacement plan", async () => {
@@ -1049,6 +1078,37 @@ describe("FB2-02 — a stale activation decision never changes the newer approve
     expect(item!.status).toBe("approved");
     const audits = await db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, c.ws.id), eq(schema.auditEvent.action, "company_builder.activation_changed"), eq(schema.auditEvent.targetId, FU)));
     expect(audits.filter((e) => (e.data as { state?: string } | null)?.state === "active")).toHaveLength(0);
+  });
+
+  it("a draft that changes between approval and publication: nothing stays published and the review item is invalidated in the same transaction", async () => {
+    const c = await installedCompany();
+    await grantDevTrial(c.owner, c.ws.id);
+    await verifiedTrial(c.owner, c.ws.id, c.installation.id, FU);
+    const req = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    const [fi] = (await installedItems(c.installation.id)).filter((i) => i.taskId === FU && i.kind === "flow");
+    // The window between the binding check (which sees the current draft) and publication: the graph activation pins
+    // no longer matches what gets published.
+    const source = req.source as { flowId: string; graphHash: string };
+    await db.update(schema.cbReviewItem).set({ source: { ...source, graphHash: "0".repeat(64) } }).where(eq(schema.cbReviewItem.id, req.id));
+    const e = await expectHttpError(decideReview(c.owner, c.ws.id, req.id, "approve"), 409, "REVIEW_INVALIDATED");
+    expect(e.details).toEqual({ reason: "draft_changed_during_activation" });
+    const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, fi!.refId));
+    expect(f!.publishedVersionId).toBeNull();
+    const [a] = await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id));
+    expect(a).toMatchObject({ state: "paused", reason: "draft_changed_during_activation" });
+    // The stored status matches what the caller was told: not an "approved" activation that never ran and that no
+    // decision or verification path could ever resolve.
+    const [item] = await db.select().from(schema.cbReviewItem).where(eq(schema.cbReviewItem.id, req.id));
+    expect(item).toMatchObject({ status: "invalidated", note: "draft_changed_during_activation" });
+    expect(await pendingReviewCount(c.ws.id)).toBe(0);
+    expect((await listReviewItems(c.ws.id, "approved")).map((r) => r.id)).not.toContain(req.id);
+    await expectHttpError(decideReview(c.owner, c.ws.id, req.id, "approve"), 409, "ALREADY_DECIDED");
+    // A new request can be opened against the real current draft, and approving it activates the task.
+    const again = await requestActivation(c.owner, c.ws.id, c.installation.id, FU);
+    expect(again.id).not.toBe(req.id);
+    expect(again.status).toBe("pending");
+    expect((await decideReview(c.owner, c.ws.id, again.id, "approve")).status).toBe("executed");
+    expect(await db.select().from(schema.cbActivation).where(eq(schema.cbActivation.installationId, c.installation.id))).toMatchObject([{ state: "active", reviewItemId: again.id }]);
   });
 });
 

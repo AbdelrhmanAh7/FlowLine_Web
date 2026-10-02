@@ -65,6 +65,9 @@ export async function latestBlueprint(sessionId: string) {
 /**
  * Stores a VALIDATED blueprint as the next version (unchanged body = the existing latest version is returned, so a
  * refresh or double click never creates duplicates). Model/CLI output reaches the DB only through this function.
+ * A SUPERSEDED latest version is never returned as the dedupe result: an answer corrected and then reverted leaves
+ * the same body behind a superseded row, and returning it would make every regeneration unapprovable
+ * (BLUEPRINT_SUPERSEDED). A fresh live version is inserted instead.
  */
 export async function storeBlueprint(user: CurrentUser, workspaceId: string, sessionId: string, body: unknown, generator: CompanyBlueprint["generator"]) {
   const { blueprint, issues } = validateBlueprint(body);
@@ -74,7 +77,7 @@ export async function storeBlueprint(user: CurrentUser, workspaceId: string, ses
     // Serialise versions per session (row lock on the session).
     await tx.select({ id: schema.cbSession.id }).from(schema.cbSession).where(and(eq(schema.cbSession.id, sessionId), eq(schema.cbSession.workspaceId, workspaceId))).for("update");
     const [last] = await tx.select().from(schema.cbBlueprint).where(eq(schema.cbBlueprint.sessionId, sessionId)).orderBy(desc(schema.cbBlueprint.version)).limit(1);
-    if (last && canonicalJson(last.body) === canonicalJson(blueprint)) return { row: last, created: false };
+    if (last && last.status !== "superseded" && canonicalJson(last.body) === canonicalJson(blueprint)) return { row: last, created: false };
     const diff = last ? diffBlueprints(last.body as CompanyBlueprint, blueprint) : null;
     const [row] = await tx
       .insert(schema.cbBlueprint)

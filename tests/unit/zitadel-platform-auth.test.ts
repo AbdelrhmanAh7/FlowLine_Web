@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { basicClientAuthorization } from "@/server/oidc";
 import { zitadelIssuerSchema } from "@/server/platform-setting-schemas";
-import { zitadelBasic, zitadelProvider } from "@/server/zitadel-auth";
+import { zitadelProvider } from "@/server/zitadel-auth";
 import * as egress from "@/server/egress";
 
 describe("platform ZITADEL configuration", () => {
@@ -11,7 +12,7 @@ describe("platform ZITADEL configuration", () => {
   });
 
   it("form-encodes both client credentials for HTTP Basic", () => {
-    const encoded = zitadelBasic("123@tenant", "secret:with!symbols");
+    const encoded = basicClientAuthorization("123@tenant", "secret:with!symbols");
     expect(Buffer.from(encoded.slice(6), "base64").toString()).toBe("123%40tenant:secret%3Awith%21symbols");
   });
 

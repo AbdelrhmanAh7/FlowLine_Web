@@ -1,14 +1,9 @@
 import type { GenericOAuthConfig } from "better-auth/plugins/generic-oauth";
 import { safeFetch } from "./egress";
 import { zitadelLocalUrl } from "./zitadel-url";
+import { basicClientAuthorization } from "./oidc";
 
 export interface ZitadelApp { issuer: string; clientId: string; clientSecret: string }
-
-/** OAuth client-secret Basic uses application/x-www-form-urlencoded encoding before base64. */
-export function zitadelBasic(clientId: string, clientSecret: string) {
-  const encode = (v: string) => new URLSearchParams({ x: v }).toString().slice(2);
-  return `Basic ${Buffer.from(`${encode(clientId)}:${encode(clientSecret)}`).toString("base64")}`;
-}
 
 /**
  * Better Auth owns state, PKCE, nonce, callback and verified ID-token handling.
@@ -34,7 +29,7 @@ export function zitadelProvider(app: ZitadelApp): GenericOAuthConfig<"zitadel"> 
       if (!codeVerifier) throw new Error("ZITADEL PKCE verifier missing");
       const body = new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectURI });
       body.set("code_verifier", codeVerifier);
-      const res = await safeFetch(tokenUrl, { method: "POST", headers: { authorization: zitadelBasic(app.clientId, app.clientSecret), "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body: body.toString(), timeoutMs: 12_000, maxBytes: 64 * 1024, maxRedirects: 0 });
+      const res = await safeFetch(tokenUrl, { method: "POST", headers: { authorization: basicClientAuthorization(app.clientId, app.clientSecret), "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body: body.toString(), timeoutMs: 12_000, maxBytes: 64 * 1024, maxRedirects: 0 });
       if (res.status !== 200) throw new Error("ZITADEL token exchange failed");
       const raw = res.json<Record<string, unknown>>();
       if (typeof raw.access_token !== "string" || typeof raw.id_token !== "string") throw new Error("ZITADEL response omitted required tokens");

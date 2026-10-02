@@ -9,7 +9,13 @@ import { spawn } from "node:child_process";
 process.loadEnvFile(".env");
 const dev = process.argv.includes("--dev");
 const privateHost = process.argv.find((a) => a.startsWith("--private-host="))?.split("=")[1];
-if (privateHost && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)\d+\.\d+(\.\d+)?$/.test(privateHost)) {
+const isPrivateIpv4 = (value) => {
+  const octets = value.split(".");
+  if (octets.length !== 4 || octets.some((octet) => !/^\d{1,3}$/.test(octet) || Number(octet) > 255)) return false;
+  const [first, second] = octets.map(Number);
+  return first === 10 || (first === 192 && second === 168) || (first === 172 && second >= 16 && second <= 31);
+};
+if (privateHost && !isPrivateIpv4(privateHost)) {
   console.error("--private-host must be a private (RFC 1918) IPv4 address");
   process.exit(2);
 }

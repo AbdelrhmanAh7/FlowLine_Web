@@ -310,9 +310,12 @@ async function activate(user: CurrentUser, item: ReviewRow) {
     const [pv] = await tx.select({ graph: schema.flowVersion.graph }).from(schema.flowVersion).where(eq(schema.flowVersion.id, published.versionId));
     const g = pv!.graph as FlowGraph;
     if (graphHash(g) !== source.graphHash || published.trigger !== "trigger.manual") {
-      // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published.
+      // The draft changed between approval and publication: withdraw it; nothing unreviewed stays published. The review
+      // item is invalidated in the SAME transaction (an "approved" activation that never ran would be unresolvable: no
+      // decision or verification path exists for it) — the stored status always matches what the caller is told.
       await unpublishFlow(source.flowId, tx);
       await setActivation(tx, item, "paused", "draft_changed_during_activation", user.id); // explicit: nothing is published
+      await tx.update(schema.cbReviewItem).set({ status: "invalidated", note: "draft_changed_during_activation" }).where(and(eq(schema.cbReviewItem.id, item.id), eq(schema.cbReviewItem.status, "approved")));
       return null;
     }
     if (consumeFault(user.id, "cb_activation_bookkeeping")) throw new Error("injected activation bookkeeping failure"); // TEST ONLY
