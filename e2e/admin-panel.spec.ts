@@ -92,25 +92,44 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
   await expect(copyKey).toHaveAttribute("aria-pressed", "true");
   const originalEn = await page.locator("#copy-en").inputValue();
   const originalAr = await page.locator("#copy-ar").inputValue();
-  await page.locator("#copy-en").fill("Previewed English copy");
-  await page.locator("#copy-ar").fill("نص عربي للمعاينة");
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
-  await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("Draft saved.")).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole("paragraph").filter({ hasText: originalEn })).toBeVisible();
-  await page.getByRole("button", { name: "Publish draft" }).click();
-  await expect(page.getByText("Copy published.")).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
-  await page.locator("#copy-search").fill("platformAdmin.copyEditor.previewNote");
-  await page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ }).click();
-  await page.locator("#copy-en").fill(originalEn);
-  await page.locator("#copy-ar").fill(originalAr);
-  await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("Draft saved.")).toBeVisible();
-  await page.getByRole("button", { name: "Publish draft" }).click();
-  await expect(page.getByText("Copy published.")).toBeVisible();
+  try {
+    await page.locator("#copy-en").fill("Previewed English copy");
+    await page.locator("#copy-ar").fill("نص عربي للمعاينة");
+    await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(page.getByText("Draft saved.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("paragraph").filter({ hasText: originalEn })).toBeVisible();
+    await page.getByRole("button", { name: "Publish draft" }).click();
+    await expect(page.getByText("Copy published.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+  } finally {
+    // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
+    // is dirty raises window.confirm (accept it), and Save/Publish are disabled when there is nothing to save or publish.
+    page.once("dialog", (d) => void d.accept());
+    await page.goto(page.url());
+    await page.locator("#copy-search").fill("platformAdmin.copyEditor.previewNote");
+    await page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ }).click();
+    await page.locator("#copy-en").fill(originalEn);
+    await page.locator("#copy-ar").fill(originalAr);
+    const save = page.getByRole("button", { name: "Save draft" });
+    if (await save.isEnabled()) {
+      await save.click();
+      await expect(page.getByText("Draft saved.")).toBeVisible();
+    }
+    const publish = page.getByRole("button", { name: "Publish draft" });
+    if (await publish.isEnabled()) {
+      await publish.click();
+      await expect(page.getByText("Copy published.")).toBeVisible();
+    }
+    // Verify the published copy is back to the originals.
+    await page.reload();
+    await page.locator("#copy-search").fill("platformAdmin.copyEditor.previewNote");
+    await page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ }).click();
+    expect(await page.locator("#copy-en").inputValue()).toBe(originalEn);
+    expect(await page.locator("#copy-ar").inputValue()).toBe(originalAr);
+  }
   await page.getByRole("link", { name: "Back to admin" }).click();
 
   // 6. Enter a credential: write-only field (password type, no autofill/save), cleared after submit.
