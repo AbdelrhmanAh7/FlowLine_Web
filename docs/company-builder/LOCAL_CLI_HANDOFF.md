@@ -23,7 +23,7 @@ Read, in this order, before changing anything:
 - Postgres 16 on 127.0.0.1:5433 with databases `flowline` and `flowline_test`; the role needs CREATEDB (the gate
   creates flowline_test_s1..4 and flowline_test_e2.. for its shards and stacks).
 - pnpm install --frozen-lockfile
-- Create the git-ignored .env.test from docs/company-builder/env.test.template (fake credentials only; generate the
+- Create the git-ignored .env.test from .github/ci/env.test.template (fake credentials only; generate the
   three keys with openssl as the template says). Never put real credentials in it.
 - Never use the dev database for tests.
 
