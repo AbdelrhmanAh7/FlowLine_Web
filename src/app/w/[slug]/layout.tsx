@@ -3,6 +3,7 @@ import { getCurrentUser, requireWorkspaceBySlug } from "@/server/access";
 import { listWorkspaces } from "@/server/workspaces";
 import { AppShell } from "@/components/shell/app-shell";
 import { betaSupport } from "@/server/beta";
+import { companyBuilderEnabled } from "@/server/company-builder/gate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
       workspace={{ id: row.workspace.id, name: row.workspace.name, slug: row.workspace.slug, timezone: row.workspace.timezone, currency: row.workspace.currency ?? "USD" }}
       role={row.role}
       support={betaSupport()}
+      companyBuilder={companyBuilderEnabled()}
       workspaces={workspaces.map((w) => ({ id: w.id, name: w.name, slug: w.slug, role: w.role }))}
     >
       {children}

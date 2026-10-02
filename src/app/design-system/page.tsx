@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Guide } from "./guide";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: "Design system" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.designSystem"), robots: { index: false, follow: false } };
+}
 
 /**
  * Internal living style guide: every token, component, variant and motion primitive, in both themes

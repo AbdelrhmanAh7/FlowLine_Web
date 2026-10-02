@@ -8,10 +8,11 @@ import { useEffect, useState } from "react";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import type { NodeType } from "@/engine/types";
 import { PageHeader } from "@/components/page-header";
+import { HelpDisclosure } from "@/components/help-disclosure";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { metaText } from "@/lib/meta-text";
 import { useToast } from "@/components/toast";
-import { Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm, useSidePanel } from "@/components/ui";
+import { Radio, Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { approvalActionId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -161,6 +162,7 @@ export function RunInspector() {
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader title={t("runs.title")} />
+      <div className="px-4 pt-3 sm:px-6"><HelpDisclosure label={t("uxPages.runs.helpLabel")}>{t("uxPages.runs.helpBody")}</HelpDisclosure></div>
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-3 py-2.5">
@@ -410,7 +412,7 @@ function StepPanel({
             </StatusBadge>
           </h2>
           <p className="data mt-1 text-sm text-muted">
-            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · v{run.version} · {step.nodeType} · {step.nodeId}
+            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {t("common.version", { version: run.version ?? "—" })} · {step.nodeType} · {step.nodeId}
             {step.attempts ? ` · ${t.plural("runs.panel.attempts", step.attempts)}` : ""}
           </p>
         </div>
@@ -649,11 +651,11 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
       <fieldset className="mt-3 flex flex-col gap-1.5 text-base">
         <legend className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runs.rerun.revision")}</legend>
         <label className="flex items-center gap-2">
-          <input type="radio" name="rev" checked={revision === "original"} onChange={() => setRevision("original")} />
+          <Radio name="rev" checked={revision === "original"} onChange={() => setRevision("original")} />
           {t("runs.rerun.original", { version: run.version ?? "" })}
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" name="rev" checked={revision === "latest"} onChange={() => setRevision("latest")} />
+          <Radio name="rev" checked={revision === "latest"} onChange={() => setRevision("latest")} />
           {t("runs.rerun.latest")}
         </label>
       </fieldset>

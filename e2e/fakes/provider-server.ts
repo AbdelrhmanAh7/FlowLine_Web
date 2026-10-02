@@ -179,6 +179,7 @@ interface State {
   tokens: Map<string, TokenInfo>;
   oauthCodes: Map<string, { provider: string; challenge?: string; account: AccountKey }>;
   oidcCodes: Map<string, OidcCode>;
+  oidcAccessTokens: Map<string, { sub: string; email: string; emailVerified: boolean; expiresAt: number }>;
   oidcUser: { email: string; emailVerified: boolean };
   oidcTamper: OidcTamper | null;
   refreshTokens: Map<string, { account: AccountKey; current: boolean; denied: boolean }>;
@@ -247,6 +248,7 @@ function seed(): State {
     tokens,
     oauthCodes: new Map(),
     oidcCodes: new Map(),
+    oidcAccessTokens: new Map(),
     oidcUser: { email: ACCOUNTS.a.email, emailVerified: true },
     oidcTamper: null,
     refreshTokens: new Map([["denied-refresh-token", { account: "a", current: true, denied: true }]]),
@@ -575,7 +577,9 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
 // ---------------------------------------------------------------- oidc (fake SSO identity provider)
 
 function oidcIssuer(req: IncomingMessage): string {
-  return `http://${req.headers.host}/oidc`;
+  const path = req.url ?? "";
+  if (path.startsWith("/.well-known/") || path.startsWith("/oauth/v2/") || path.startsWith("/oidc/v1/")) return `http://${req.headers.host}`;
+  return `http://${req.headers.host}/${path.startsWith("/zitadel/") ? "zitadel" : "oidc"}`;
 }
 
 function signIdToken(ctx: Ctx, req: IncomingMessage, rec: OidcCode): string {
@@ -605,22 +609,31 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
   const state = ctx.state;
   if (req.method === "GET" && path === "/.well-known/openid-configuration") {
     const issuer = oidcIssuer(req);
+    const platform = !issuer.endsWith("/oidc") && !issuer.endsWith("/zitadel");
     json(ctx, req, res, 200, {
       issuer,
-      authorization_endpoint: `${issuer}/authorize`,
-      token_endpoint: `${issuer}/token`,
-      jwks_uri: `${issuer}/jwks`,
+      authorization_endpoint: `${issuer}${platform ? "/oauth/v2" : ""}/authorize`,
+      token_endpoint: `${issuer}${platform ? "/oauth/v2" : ""}/token`,
+      jwks_uri: `${issuer}${platform ? "/oauth/v2/keys" : "/jwks"}`,
+      userinfo_endpoint: `${issuer}${platform ? "/oidc/v1/userinfo" : "/userinfo"}`,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code"],
       subject_types_supported: ["public"],
       id_token_signing_alg_values_supported: ["RS256"],
-      token_endpoint_auth_methods_supported: ["client_secret_post"],
+      token_endpoint_auth_methods_supported: [platform || issuer.endsWith("/zitadel") ? "client_secret_basic" : "client_secret_post"],
       code_challenge_methods_supported: ["S256"],
     });
     return true;
   }
   if (req.method === "GET" && path === "/jwks") {
     json(ctx, req, res, 200, { keys: [ctx.oidc.publicJwk] });
+    return true;
+  }
+  if (req.method === "GET" && path === "/userinfo") {
+    const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
+    const profile = state.oidcAccessTokens.get(token);
+    if (!profile || profile.expiresAt <= Date.now()) return json(ctx, req, res, 401, { error: "invalid_token" }), true;
+    json(ctx, req, res, 200, { sub: profile.sub, email: profile.email, email_verified: profile.emailVerified, name: profile.email.split("@")[0] });
     return true;
   }
   if (req.method === "GET" && path === "/authorize") {
@@ -650,6 +663,14 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
   }
   if (req.method === "POST" && path === "/token") {
     const form = parseForm(rawBody);
+    if (oidcIssuer(req).endsWith("/zitadel") || oidcIssuer(req) === `http://${req.headers.host}`) {
+      const auth = req.headers.authorization ?? "";
+      if (!auth.startsWith("Basic ")) return json(ctx, req, res, 401, { error: "invalid_client" }), true;
+      const [id, secret] = Buffer.from(auth.slice(6), "base64").toString("utf8").split(":");
+      form.client_id = new URLSearchParams(`x=${id ?? ""}`).get("x") ?? "";
+      form.client_secret = new URLSearchParams(`x=${secret ?? ""}`).get("x") ?? "";
+      if (rawBody.includes("client_secret=")) return json(ctx, req, res, 400, { error: "secret_in_body" }), true;
+    }
     if (form.grant_type !== "authorization_code") {
       json(ctx, req, res, 400, { error: "unsupported_grant_type" });
       return true;
@@ -671,8 +692,10 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
       }
     }
     state.oidcCodes.delete(form.code ?? ""); // single use
+    const accessToken = `fake-oidc-at-${randomBytes(8).toString("hex")}`;
+    state.oidcAccessTokens.set(accessToken, { sub: `oidc-${rec.email}`, email: rec.email, emailVerified: rec.emailVerified, expiresAt: Date.now() + 3_600_000 });
     json(ctx, req, res, 200, {
-      access_token: `fake-oidc-at-${randomBytes(8).toString("hex")}`,
+      access_token: accessToken,
       token_type: "Bearer",
       expires_in: 3600,
       id_token: signIdToken(ctx, req, rec),
@@ -2203,6 +2226,20 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
         return json(ctx, req, res, 404, { error: "unknown control endpoint" });
       }
 
+      // Platform-owned ZITADEL instance: issuer is the fake server's exact origin.
+      const platformOidcPath: Record<string, string> = {
+        "/.well-known/openid-configuration": "/.well-known/openid-configuration",
+        "/oauth/v2/authorize": "/authorize",
+        "/oauth/v2/token": "/token",
+        "/oauth/v2/keys": "/jwks",
+        "/oidc/v1/userinfo": "/userinfo",
+      };
+      const oidcPath = platformOidcPath[url.pathname];
+      if (oidcPath) {
+        const rawBody = req.method === "POST" ? await readBody(req) : "";
+        if (handleOidc(ctx, req, res, oidcPath, url, rawBody)) return;
+      }
+
       const seg = /^\/([a-z_]+)(\/.*)?$/.exec(url.pathname);
       const provider = seg?.[1] ?? "";
       const handler = HANDLERS[provider];
@@ -2236,7 +2273,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       }
 
       // The fake OIDC IdP (SSO tests): unauthenticated by design, like the OAuth endpoints.
-      if (provider === "oidc") {
+      if (provider === "oidc" || provider === "zitadel") {
         const rawBody = req.method === "POST" ? await readBody(req) : "";
         if (handleOidc(ctx, req, res, path, url, rawBody)) return;
         return json(ctx, req, res, 404, { error: "unknown oidc endpoint" });

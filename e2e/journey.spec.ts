@@ -13,7 +13,7 @@ test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@criti
 
   // Landing → sign up
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Make everyday work easier/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Less repetitive work/ })).toBeVisible();
   await page.getByRole("link", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
   // OAuth is not configured in the test env: buttons must say so, not pretend.
@@ -61,7 +61,19 @@ test("new user builds, saves, reopens, runs and inspects a flow", { tag: "@criti
     await page.getByRole("button", { name: /Add node/ }).click();
     const palette = page.getByRole("dialog", { name: "Add node" });
     await palette.getByLabel("Search nodes").fill(search);
-    await palette.getByRole("option", { name: option }).dragTo(pane, { targetPosition: { x, y } });
+    const source = await palette.getByRole("option", { name: option }).boundingBox();
+    const target = await pane.boundingBox();
+    expect(source).not.toBeNull();
+    expect(target).not.toBeNull();
+    const count = await page.locator(".react-flow__node").count();
+    // Native HTML drag needs a move after dragstart and a separate dragover before release in WebKit.
+    await page.mouse.move(source!.x + source!.width / 2, source!.y + source!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(source!.x + source!.width / 2 + 12, source!.y + source!.height / 2, { steps: 3 });
+    await page.mouse.move(target!.x + x, target!.y + y, { steps: 8 });
+    await page.mouse.move(target!.x + x + 1, target!.y + y + 1);
+    await page.mouse.up();
+    await expect(page.locator(".react-flow__node")).toHaveCount(count + 1);
     await page.keyboard.press("Escape"); // close drawer for the new node
   };
   await drop(/Manual trigger/, "manual", 400, 480);

@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, type InputHTMLAttributes } from "react";
-import { cx } from "@/components/ui";
+import { cx, INPUT_CLASS_NAME } from "@/components/ui";
 
 /**
  * Write-only secret field (docs/security/CREDENTIALS_DESIGN.md MUST 9).
@@ -28,7 +28,8 @@ export const SecretInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes
       autoCorrect="off"
       dir="ltr"
       className={cx(
-        "h-9 w-full rounded-md border border-line-control bg-app px-3 font-mono text-base text-hi placeholder:text-muted transition-colors duration-[var(--dur-hover)] focus:border-accent focus:outline-none",
+        INPUT_CLASS_NAME,
+        "border-line-control font-mono",
         className,
       )}
       {...rest}

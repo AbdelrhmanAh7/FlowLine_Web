@@ -58,6 +58,24 @@ export function useSidePanel<T extends HTMLElement = HTMLElement>({
     wasOpen.current = open;
   }, [open, restore, panelRef]);
 
+  // WebKit can leave focus on the page root when an async submit settles. In that case Escape no longer bubbles through
+  // the panel's aside, so handle only a root-targeted Escape while this panel is open. Radix capture handlers still get first
+  // refusal; closing uses the same busy/IME checks and the existing close effect returns focus when appropriate.
+  useEffect(() => {
+    if (!open) return;
+    const onRootEscape = (e: globalThis.KeyboardEvent) => {
+      const rootTarget = e.target === document.body || e.target === document.documentElement;
+      if (!rootTarget || document.activeElement !== document.body) return;
+      const action = panelEscapeAction({ key: e.key, defaultPrevented: e.defaultPrevented, isComposing: e.isComposing }, busy);
+      if (action === "ignore") return;
+      if (action !== "consumed") e.preventDefault();
+      e.stopPropagation();
+      if (action === "close") onClose();
+    };
+    document.addEventListener("keydown", onRootEscape);
+    return () => document.removeEventListener("keydown", onRootEscape);
+  }, [open, busy, onClose]);
+
   const onKeyDown = (e: KeyboardEvent<T>) => {
     const action = panelEscapeAction(
       { key: e.key, defaultPrevented: e.defaultPrevented || e.nativeEvent.defaultPrevented, isComposing: e.nativeEvent.isComposing, inNestedLayer: inNestedLayer(e.target as Element | null, panelRef.current) },

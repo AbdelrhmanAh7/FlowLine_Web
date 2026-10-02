@@ -11,6 +11,7 @@ import { Button, Field, Input, Logo, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
+import { HelpDisclosure } from "@/components/help-disclosure";
 
 type Goal = "sales" | "support" | "data" | "engineering";
 interface Ws {
@@ -126,6 +127,7 @@ export function OnboardingWizard({ user, existingWorkspace }: { user: { name: st
                 <WordReveal text={t("onboarding.step2Title")} />
               </h1>
               <p className="mt-1 text-base text-med">{t("onboarding.step2Body")}</p>
+              <HelpDisclosure className="mt-4" label={t("uxPages.onboarding.helpLabel")}>{t("uxPages.onboarding.helpBody")}</HelpDisclosure>
               <div role="radiogroup" aria-label={t("onboarding.goalAria")} className="mt-6 flex flex-col gap-3">
                 {GOALS.map((g) => (
                   <button

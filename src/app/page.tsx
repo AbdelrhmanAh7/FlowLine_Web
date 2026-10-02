@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { LANDING_TEMPLATES, LOCAL_TEMPLATES } from "@/engine/templates";
-import type { NodeType } from "@/engine/types";
 import { listProviders } from "@/integrations/registry";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { CATEGORY_HUE, Logo, type CategoryHue } from "@/components/ui";
+import { Logo } from "@/components/ui";
 import { FeatureScenes } from "@/components/landing/feature-scenes";
 import { FlowScene } from "@/components/landing/flow-scene";
 import { HeroPin } from "@/components/landing/hero-pin";
@@ -16,9 +14,8 @@ import { ParallaxGradients } from "@/components/landing/parallax-gradients";
 import { Reveal, WordReveal } from "@/components/landing/reveal";
 import { ScrollRoot } from "@/components/landing/scroll-root";
 import { getT } from "@/i18n/server";
-import type { Translator } from "@/i18n/translate";
 import type { MessageKey } from "@/i18n/types";
-import { LandingDocsLink } from "./landing-docs";
+import { LandingNav } from "@/components/landing/landing-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -56,16 +53,11 @@ export default async function Landing() {
             its two groups take part in this flex-wrap layout directly; the preferences are pushed to their own full-width line with `order-last`.
           flex-wrap is the safety net: if a translation ever makes a row too wide, a group drops to the next line instead of overflowing the page.
         */}
-        <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8 lg:min-h-16 lg:content-center lg:py-0">
+        <header className="sticky top-0 z-30 mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur-sm sm:px-8 lg:min-h-16 lg:content-center lg:py-0">
           <Link href="/" aria-label={t("common.homeAria")} className="shrink-0">
             <Logo />
           </Link>
-          <nav aria-label={t("landing.navAria")} className="hidden items-center gap-6 text-base whitespace-nowrap text-med md:flex">
-            <Link href="#product" className="hover:text-hi">{t("landing.nav.product")}</Link>
-            <Link href="#templates" className="hover:text-hi">{t("landing.nav.templates")}</Link>
-            <Link href="#pricing" className="hover:text-hi">{t("landing.nav.pricing")}</Link>
-            <LandingDocsLink />
-          </nav>
+          <LandingNav />
           <div className="contents lg:flex lg:items-center lg:gap-3">
             <div data-testid="landing-preferences" className="order-last flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 md:justify-end lg:order-none lg:w-auto lg:flex-nowrap lg:gap-3">
               <ThemeSwitcher compact="responsive" />
@@ -110,21 +102,17 @@ export default async function Landing() {
                 </Link>
               </Magnetic>
               <Magnetic>
-                <Link href={signedIn ? "/app" : "/sign-up?next=canvas"} className={`${btn} motion-press h-11 border border-line-strong bg-card px-5 text-base text-hi hover:bg-elevated`}>
+                <Link href="/?section=flow-demo" scroll={false} className={`${btn} motion-press h-11 border border-line-strong bg-card px-5 text-base text-hi hover:bg-elevated`}>
                   {t("landing.ctaCanvas")}
                 </Link>
               </Magnetic>
             </div>
 
-            <HeroPin>
-              <div
-                aria-label={t("landing.canvasAria")}
-                role="img"
-                className="w-full overflow-hidden rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10"
-              >
-                <HeroFlow t={t} />
-              </div>
-            </HeroPin>
+            <HeroPin label={t("landing.canvasAria")} nodes={[
+              { id: "t", type: "trigger.manual", label: t("landing.heroNodes.trigger"), sub: t("landing.heroNodes.triggerSub") },
+              { id: "n", type: "transform.json", label: t("landing.heroNodes.transform"), sub: t("landing.heroNodes.transformSub") },
+              { id: "c", type: "logic.condition", label: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub") },
+            ]} />
           </section>
 
           <FlowScene nodes={[...flowNodes]} title={t("landing.flowSceneTitle")} body={t("landing.flowSceneBody")} />
@@ -179,31 +167,5 @@ export default async function Landing() {
         <footer className="border-t border-line py-6 text-center text-sm text-muted">{t("landing.footer")}</footer>
       </div>
     </ScrollRoot>
-  );
-}
-
-function HeroFlow({ t }: { t: Translator }) {
-  const nodes = [
-    // Plain landing subtitles, with category colours from the real catalogue.
-    { title: t("landing.heroNodes.trigger"), sub: t("landing.heroNodes.triggerSub"), type: "trigger.manual" },
-    { title: t("landing.heroNodes.transform"), sub: t("landing.heroNodes.transformSub"), type: "transform.json" },
-    { title: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub"), type: "logic.condition" },
-  ].map((n) => ({ ...n, hue: CATEGORY_HUE[NODE_DEFINITIONS[n.type as NodeType].category] }));
-  // The dot is the node's real category hue (same mapping as the canvas), so the illustration can't drift from the product.
-  const HUE_BG: Record<CategoryHue, string> = { trigger: "bg-cat-trigger", logic: "bg-cat-logic", ai: "bg-cat-ai", app: "bg-cat-app", output: "bg-cat-output" };
-  return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
-      {nodes.map((n, i) => (
-        <div key={n.title} className="flex items-center gap-0 sm:flex-1">
-          <div className={`w-44 rounded-lg border bg-elevated shadow-[var(--shadow-popover)] px-3.5 py-3 text-start ${i === 1 ? "border-accent shadow-[var(--shadow-glow)]" : "border-line-strong"}`}>
-            <p className="flex items-center gap-2 text-base font-semibold">
-              <span className={`size-2 rounded-full ${HUE_BG[n.hue]}`} /> {n.title}
-            </p>
-            <p className="mt-0.5 text-xs tracking-[0.4px] text-muted">{n.sub}</p>
-          </div>
-          {i < nodes.length - 1 && <div className={`hidden h-px flex-1 sm:block ${i === 1 ? "border-t border-dashed border-accent" : "bg-line-strong"}`} />}
-        </div>
-      ))}
-    </div>
   );
 }

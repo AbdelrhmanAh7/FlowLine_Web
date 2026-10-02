@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { setupUser } from "./helpers";
+import { BASE_URL } from "./stack";
 
 test.describe("@cross-browser everyday scenario gallery", () => {
   for (const locale of ["en", "ar"] as const) {
     test(`${locale}: filter, search, create and run a quote from the gallery`, async ({ page, context }) => {
       const { workspace } = await setupUser(page);
-      await context.addCookies([{ name: "fl_locale", value: locale, url: "http://localhost:3100" }]);
+      await context.addCookies([{ name: "fl_locale", value: locale, url: BASE_URL }]);
       await page.setViewportSize({ width: 375, height: 812 });
       await page.goto(`/w/${workspace.slug}/templates`);
       await expect(page.getByTestId("template-low-stock-list")).toBeVisible();

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createHash, randomUUID } from "node:crypto";
 import { BASE_URL, EN_STATE } from "../playwright.config";
+import { AI_FAKE } from "./stack";
 import { expectSaved, PASSWORD, setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 /**
@@ -10,7 +11,6 @@ import { expectSaved, PASSWORD, setupUser, signUpVerified, uniqueEmail } from ".
  * active only because the test stack runs with FLOWLINE_ENV=test; the page says so). A unique canary key is
  * checked against the page HTML, browser storage and API responses.
  */
-const AI_FAKE = process.env.FLOWLINE_AI_TEST_OVERRIDE ?? "http://127.0.0.1:4011";
 const pos = (i: number) => ({ x: 300 * i, y: 120 });
 
 async function storageDump(page: Page) {

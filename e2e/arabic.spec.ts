@@ -26,7 +26,7 @@ test("Arabic by default: sign-up → onboarding → Flows, sign-in, language swi
   // Landing
   await page.goto("/");
   await expectArabic(page);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("سهّل عملك اليومي.");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("عمل أقل تكرارًا.");
   await page.getByRole("link", { name: "ابدأ مجانًا" }).click();
 
   // Sign-up (Arabic labels; the e-mail field stays left-to-right)

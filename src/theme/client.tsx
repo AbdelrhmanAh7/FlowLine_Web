@@ -31,7 +31,7 @@ function subscribeTheme(cb: () => void) {
 }
 
 /** The preference the server rendered (from the cookie), so SSR and hydration agree with <html data-theme>. */
-const ServerTheme = createContext<ThemePreference>("dark");
+const ServerTheme = createContext<ThemePreference>("light");
 
 export function ServerThemeProvider({ theme, children }: { theme: ThemePreference; children: ReactNode }) {
   return <ServerTheme.Provider value={theme}>{children}</ServerTheme.Provider>;

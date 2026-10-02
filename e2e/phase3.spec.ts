@@ -2,12 +2,13 @@ import { expect, test, type APIRequestContext, type Browser, type Page } from "@
 import { randomUUID } from "node:crypto";
 import { BASE_URL, EN_STATE } from "../playwright.config";
 import { connectAiApi, setupUser, signUpVerified, uniqueEmail } from "./helpers";
+import { FAKE_PROVIDER } from "./stack";
 
 /**
  * Phase 3 journeys through the real UI. Provider boundary only is doubled (fake SaaS :4010, fake AI :4011
  * incl. its Copilot/agent modes, fake Stripe checkout). Every test uses its own users and workspaces.
  */
-const FAKE = process.env.FLOWLINE_PROVIDER_OVERRIDE ?? "http://127.0.0.1:4010";
+const FAKE = FAKE_PROVIDER;
 
 async function newUserContext(browser: Browser, email = uniqueEmail("p3")) {
   const ctx = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
