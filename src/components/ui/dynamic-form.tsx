@@ -214,7 +214,6 @@ export function DynamicForm<T extends DynamicFormValues>({
             const raw = event.currentTarget.value;
             if (field.type === "number") {
               setNumberDrafts((current) => ({ ...current, [field.name]: raw }));
-              changeValue(field.name, raw as T[typeof field.name]);
             } else {
               changeValue(field.name, raw as T[typeof field.name]);
             }

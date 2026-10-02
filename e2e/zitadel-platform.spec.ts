@@ -59,13 +59,17 @@ test.describe("platform ZITADEL hosted sign-in", () => {
 
   test("invite-only beta refuses a verified but uninvited provider user @critical", async ({ page }) => {
     const email = uniqueEmail("zitadel-uninvited");
-    expect((await page.request.post("/api/test/beta", { data: { mode: "invite_only" } })).ok()).toBe(true);
-    expect((await page.request.post(`${FAKE_PROVIDER}/__fake/oidc/user`, { data: { email, email_verified: true } })).ok()).toBe(true);
-    await page.goto("/sign-up");
-    const callback = page.waitForRequest((req) => req.url().includes("/api/auth/callback/zitadel?"));
-    await page.getByRole("button", { name: "Continue with secure sign-in" }).click();
-    await callback;
-    await expect(page).toHaveURL(/error=/);
-    expect(await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email))).toHaveLength(0);
+    try {
+      expect((await page.request.post("/api/test/beta", { data: { mode: "invite_only" } })).ok()).toBe(true);
+      expect((await page.request.post(`${FAKE_PROVIDER}/__fake/oidc/user`, { data: { email, email_verified: true } })).ok()).toBe(true);
+      await page.goto("/sign-up");
+      const callback = page.waitForRequest((req) => req.url().includes("/api/auth/callback/zitadel?"));
+      await page.getByRole("button", { name: "Continue with secure sign-in" }).click();
+      await callback;
+      await expect(page).toHaveURL(/error=/);
+      expect(await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, email))).toHaveLength(0);
+    } finally {
+      await page.request.post("/api/test/beta", { data: { mode: "open" } }).catch(() => null);
+    }
   });
 });

@@ -34,7 +34,7 @@ import { join } from "node:path";
 import { parseEnv } from "node:util";
 import testStackEnv from "./test-stack.cjs";
 import { GROUPS, checkManifest, expandSteps, resolveGroups } from "./gate-groups.mjs";
-import { selectGateSteps } from "./gate-selection.mjs";
+import { DEFAULT_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, stackConnections, stackPoolMax } from "./gate-selection.mjs";
 
 const BROWSERS = ["chromium", "firefox", "webkit"];
 const ALL = ["lint", "typecheck", "evidence", "unit", "contract", "integration", "build", "stack", ...BROWSERS];
@@ -121,8 +121,9 @@ const intNum = (v, d, max) => {
 // K isolated stacks (own app/fake ports and database each) and N integration shards (own database each).
 // Default: 3 stacks per project on a 4-CPU machine, more on bigger ones (each stack + browser container needs ~1 CPU).
 // A group run never starts more stacks than it has spec files (a shard with no files would fail with "no tests found").
-// Default ≤4 stacks: docker-compose.yml caps the test Postgres at max_connections=50 and each stack holds ~9 connections
-// (two pools of 4 + LISTEN) plus Playwright fixtures; 6 stacks exhausted it ("too many clients", GATE-03). --stacks=K still allows up to 6.
+// Default ≤4 stacks: docker-compose.yml caps the test Postgres at max_connections=50; the pool size of every stack is
+// derived from that budget below (stackPoolMax), for the total number of stacks of the tier, so 6 stacks never exhaust
+// it again ("too many clients", GATE-03). --stacks=K still allows up to 6.
 const STACKS = intNum(args.stacks, Math.min(4, Math.max(3, Math.floor(availableParallelism() / 2))), 6);
 const BROWSER_STACKS = groupSel ? Math.min(STACKS, groupFilesList.length) : STACKS;
 const INT_SHARDS = intNum(args.shards, 4, 16);
@@ -137,6 +138,16 @@ try {
   process.exit(2);
 }
 const { selected, parallelProjects, stackCount } = selection;
+// Each stack holds two pools (next + worker) plus a LISTEN connection. The pool size comes from the connection budget
+// for the TOTAL number of stacks of this tier (parallel full tier: Chromium K + Firefox ceil(K/2) + WebKit ceil(K/2)),
+// so the sum stays under max_connections=50 (docker-compose.yml) with room for the integration shards and fixtures.
+let POOL_MAX;
+try {
+  POOL_MAX = stackPoolMax(stackCount);
+} catch (e) {
+  console.error(e instanceof Error ? e.message : String(e));
+  process.exit(2);
+}
 
 // ---- identity ----
 const sh = (cmd) => {
@@ -154,23 +165,21 @@ const out = typeof args.out === "string" ? args.out : join("artifacts", "gates",
 mkdirSync(out, { recursive: true });
 const identity = { sha, shortSha, dirty: dirtyCount > 0, dirtyCount, node: process.version, pnpm: sh("pnpm --version") || "unknown" };
 console.log(`gate: ${sha}${identity.dirty ? ` (dirty: ${dirtyCount} changed)` : ""} · node ${identity.node} · pnpm ${identity.pnpm}`);
-console.log(`gate: tier ${tier} · steps ${[...selected].join(", ") || "(none)"} · ${BROWSER_STACKS} stack(s) per project · ${INT_SHARDS} integration shard(s) · browsers ${browsersMode} · out ${out}`);
+const poolNote = `${stackCount} stack(s) in total, pool ${POOL_MAX ?? DEFAULT_POOL_MAX} → ≤${stackConnections(stackCount, POOL_MAX ?? DEFAULT_POOL_MAX)} of ${PG_MAX_CONNECTIONS - PG_RESERVED_CONNECTIONS} connections`;
+console.log(`gate: tier ${tier} · steps ${[...selected].join(", ") || "(none)"} · ${BROWSER_STACKS} stack(s) per project (${poolNote}) · ${INT_SHARDS} integration shard(s) · browsers ${browsersMode} · out ${out}`);
 if (groupSel) console.log(`gate: browser group(s) ${groupSel.groups.join(", ")} · ${groupFilesList.length} spec file(s): ${groupFilesList.join(" ")}`);
 
 const progress = join(out, "progress.log");
 const logLine = (s) => appendFileSync(progress, `${new Date().toISOString()} ${s}\n`);
-logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} tier=${tier} stacks=${BROWSER_STACKS} intShards=${INT_SHARDS} steps=${[...selected].join(",")} browsers=${browsersMode} groups=${groupSel?.groups.join(",") ?? "all"}`);
+logLine(`GATE sha=${sha} dirty=${dirtyCount} node=${identity.node} pnpm=${identity.pnpm} tier=${tier} stacks=${BROWSER_STACKS} totalStacks=${stackCount} poolMax=${POOL_MAX ?? DEFAULT_POOL_MAX} intShards=${INT_SHARDS} steps=${[...selected].join(",")} browsers=${browsersMode} groups=${groupSel?.groups.join(",") ?? "all"}`);
 
 // Stack 1 is the default stack (3100/4010/4011, flowline_test); stack k>1 uses app 3100+10(k-1), fakes 4500+10(k-1)
 // and +1, database flowline_test_e<k>.
 // Sequential browsers share stacks 1..K. Parallel browsers get disjoint stacks per project so two projects never share a
 // database or fake-provider state: Chromium (the largest, 128 specs) gets K, Firefox and WebKit (62 each) ceil(K/2) each.
-// Each stack holds two pools (next + worker) plus a LISTEN connection; keep the total under Postgres' default
-// max_connections (50 in docker-compose.yml), leaving room for the integration shards and fixtures.
-const POOL_MAX = stackCount > 8 ? "3" : stackCount > 3 ? "4" : undefined;
 const makeStack = (k) => {
   const env = k === 1 ? { FLOWLINE_TEST_SHARD: "1" } : { FLOWLINE_TEST_SHARD: String(k), FLOWLINE_TEST_PORT: String(3100 + 10 * (k - 1)), FLOWLINE_TEST_FAKE_PORT: String(4500 + 10 * (k - 1)), FLOWLINE_TEST_AI_PORT: String(4501 + 10 * (k - 1)), FLOWLINE_TEST_DB: `flowline_test_e${k}` };
-  if (POOL_MAX) env.FLOWLINE_DB_POOL_MAX = POOL_MAX;
+  if (POOL_MAX !== null) env.FLOWLINE_DB_POOL_MAX = String(POOL_MAX);
   const base = { ...(existsSync(".env.test") ? parseEnv(readFileSync(".env.test", "utf8")) : {}), ...process.env, ...env };
   if (k === 1) for (const v of ["FLOWLINE_TEST_PORT", "FLOWLINE_TEST_FAKE_PORT", "FLOWLINE_TEST_AI_PORT", "FLOWLINE_TEST_DB"]) delete base[v];
   const st = testStackEnv.testStack(base);
@@ -431,7 +440,7 @@ const ok = steps.length > 0 && steps.every((s) => s.status === "pass");
 const finishedAt = new Date().toISOString();
 writeFileSync(
   join(out, "summary.json"),
-  `${JSON.stringify({ ...identity, tier, group: groupSel ? { groups: groupSel.groups, files: groupFilesList } : null, stacks: BROWSER_STACKS, integrationShards: INT_SHARDS, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
+  `${JSON.stringify({ ...identity, tier, group: groupSel ? { groups: groupSel.groups, files: groupFilesList } : null, stacks: BROWSER_STACKS, totalStacks: stackCount, poolMax: POOL_MAX ?? DEFAULT_POOL_MAX, integrationShards: INT_SHARDS, startedAt, finishedAt, browsersMode, failFast, out, ok, steps }, null, 2)}\n`,
 );
 logLine(`GATE ${ok ? "PASS" : "FAIL"}`);
 

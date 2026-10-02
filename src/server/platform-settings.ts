@@ -5,7 +5,7 @@ import { HttpError } from "./http";
 import { platformAudit, type Assurance } from "./platform-audit";
 import { SETTING_ENV, SETTING_KEYS, type SettingKey } from "./platform-purposes";
 import { SETTING_SCHEMAS } from "./platform-setting-schemas";
-import { safeFetch } from "./egress";
+import { zitadelDiscovery } from "./zitadel-metadata";
 
 export { SETTING_SCHEMAS } from "./platform-setting-schemas";
 
@@ -43,17 +43,8 @@ export async function setSetting<K extends SettingKey>(actor: SettingActor, key:
   if (!parsed.success) throw new HttpError(400, "SETTING_INVALID", "This value isn't valid for this setting", parsed.error.issues.map((i) => ({ path: i.path, message: i.message })));
   if (key === "signin.zitadel.issuer") {
     const issuer = parsed.data as string;
-    const res = await safeFetch(`${issuer}/.well-known/openid-configuration`, { headers: { accept: "application/json" }, timeoutMs: 8_000, maxBytes: 128 * 1024, maxRedirects: 0 });
-    if (res.status !== 200) throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery could not be verified");
-    let doc: Record<string, unknown>;
-    try { doc = res.json<Record<string, unknown>>(); } catch { throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery is invalid"); }
-    if (doc.issuer !== issuer || !["authorization_endpoint", "token_endpoint", "userinfo_endpoint", "jwks_uri"].every((k) => {
-      try { const u = new URL(doc[k] as string); return typeof doc[k] === "string" && u.origin === issuer && !u.username && !u.password; } catch { return false; }
-    })) throw new HttpError(400, "SETTING_INVALID", "ZITADEL discovery does not match this issuer");
-    if (!Array.isArray(doc.token_endpoint_auth_methods_supported) || !doc.token_endpoint_auth_methods_supported.includes("client_secret_basic"))
-      throw new HttpError(400, "SETTING_INVALID", "ZITADEL must support client_secret_basic");
-    if (!Array.isArray(doc.id_token_signing_alg_values_supported) || !doc.id_token_signing_alg_values_supported.includes("RS256"))
-      throw new HttpError(400, "SETTING_INVALID", "ZITADEL must publish RS256 signing metadata");
+    try { await zitadelDiscovery(issuer); }
+    catch (error) { throw new HttpError(400, "SETTING_INVALID", error instanceof Error ? error.message : "ZITADEL discovery could not be verified"); }
   }
   return db.transaction(async (tx) => {
     if (key === "signin.zitadel.issuer") {

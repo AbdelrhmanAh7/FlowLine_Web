@@ -12,7 +12,7 @@ import type { QuestionDto } from "./types";
 const TONE: Record<Fact["status"], Tone> = { confirmed: "success", inferred: "info", contradictory: "warning", unknown: "muted" };
 
 /** "راجع ما فهمناه عن مشروعك." — every fact with its status, provenance and version; corrections are new versions. */
-export function FactsPanel({ facts, pending, error, onCorrect }: { facts: Record<string, Fact>; pending: boolean; error: string | null; onCorrect: (questionId: string, value: unknown, unknown: boolean) => void }) {
+export function FactsPanel({ facts, pending, error, onCorrect }: { facts: Record<string, Fact>; pending: boolean; error: string | null; onCorrect: (questionId: string, value: unknown, unknown: boolean) => Promise<unknown> | void }) {
   const t = useT();
   const [editing, setEditing] = useState<string | null>(null);
   const entries = Object.entries(facts);
@@ -54,9 +54,13 @@ export function FactsPanel({ facts, pending, error, onCorrect }: { facts: Record
                     backTo={null}
                     pending={pending}
                     error={error}
-                    onAnswer={(v, u) => {
-                      onCorrect(q.id, v, u);
-                      setEditing(null);
+                    onAnswer={async (v, u) => {
+                      try {
+                        await onCorrect(q.id, v, u);
+                        setEditing(null);
+                      } catch {
+                        // Keep editing form open so the typed correction is preserved on failure
+                      }
                     }}
                     onBack={() => {}}
                   />

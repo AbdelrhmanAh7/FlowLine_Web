@@ -108,7 +108,9 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
   await page.locator("#copy-en").fill(originalEn);
   await page.locator("#copy-ar").fill(originalAr);
   await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByText("Draft saved.")).toBeVisible();
   await page.getByRole("button", { name: "Publish draft" }).click();
+  await expect(page.getByText("Copy published.")).toBeVisible();
   await page.getByRole("link", { name: "Back to admin" }).click();
 
   // 6. Enter a credential: write-only field (password type, no autofill/save), cleared after submit.

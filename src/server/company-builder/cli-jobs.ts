@@ -175,7 +175,7 @@ export async function importJobResult(founder: CurrentUser, workspaceId: string,
   if (job.status !== "waiting_operator") throw new HttpError(409, "NOT_IMPORTABLE", `This job is ${job.status}`);
   const m = manifest as { format?: unknown; jobId?: unknown; output?: unknown; reported?: unknown } | null;
   if (!m || m.format !== "flowline-cb-result" || m.jobId !== job.id) throw new HttpError(422, "MANIFEST_INVALID", "This file isn't a result for this job");
-  const envelope = job.envelope as Envelope;
+  const envelope = cliEnvelope(job.envelope); // the same stripped, schema-checked envelope the controller validates against
   const check = validateJobOutput(envelope, m.output);
   if (!check.ok) {
     await db.update(schema.cbCliJob).set({ status: "failed", error: { code: "OUTPUT_INVALID" }, finishedAt: new Date() }).where(and(eq(schema.cbCliJob.id, job.id), eq(schema.cbCliJob.status, "waiting_operator")));
@@ -213,12 +213,16 @@ export async function claimJob(workspaceId: string, controllerId: string) {
   });
 }
 
-/** A controller that died mid-job leaves it "generating": it is failed as INTERRUPTED (never re-run silently). */
-export async function recoverStaleJobs(staleMs = 120_000) {
+/**
+ * A controller that died mid-job leaves it "generating": it is failed as INTERRUPTED (never re-run silently). Scoped to
+ * the controller's own workspace (one controller per workspace by design): it never ends a job that a controller of
+ * another workspace is still running through a slow heartbeat.
+ */
+export async function recoverStaleJobs(workspaceId: string, staleMs = 120_000) {
   const cutoff = new Date(Date.now() - staleMs);
   return db
     .update(schema.cbCliJob)
     .set({ status: "failed", error: { code: "INTERRUPTED" }, finishedAt: new Date(), lockedBy: null })
-    .where(and(inArray(schema.cbCliJob.status, ["generating", "validating"]), or(lt(schema.cbCliJob.heartbeatAt, cutoff), sql`${schema.cbCliJob.heartbeatAt} is null`)))
+    .where(and(eq(schema.cbCliJob.workspaceId, workspaceId), inArray(schema.cbCliJob.status, ["generating", "validating"]), or(lt(schema.cbCliJob.heartbeatAt, cutoff), sql`${schema.cbCliJob.heartbeatAt} is null`)))
     .returning({ id: schema.cbCliJob.id });
 }

@@ -44,9 +44,12 @@ export function sampleTrialDrift(pack: TaskPack, params: PackParams, graph: Flow
     }
   }
 
-  // The store and every node feeding its key/value are safety-critical. Keep their wiring fixed. A transform may
-  // wrap its original expression in a JSON merge that changes unrelated output fields; the exact original remains
-  // intact and the patch cannot replace any root consumed by the store.
+  // The store and every node feeding its key/value are safety-critical. Keep their wiring fixed. Only a transform that
+  // feeds a store DIRECTLY may wrap its original expression in a JSON merge that changes unrelated output fields: the
+  // store reads that node's output roots, so `protectedRoots` covers everything the patch could reach. A transitive
+  // upstream node (extract, facts, …) stays exact-match only — its outputs are rebuilt by the direct feeder under
+  // other names (`sample` → `record.sample`, `id` → `record.store_key`), which the root check cannot see.
+  const directFeeders = new Set<string>(compiled.edges.filter((e) => stores.some((s) => s.id === e.target)).map((e) => e.source));
   const critical = new Set<string>(stores.map((n) => n.id));
   let changed = true;
   while (changed) {
@@ -79,7 +82,7 @@ export function sampleTrialDrift(pack: TaskPack, params: PackParams, graph: Flow
     }
     const wantConfig = wanted.data.config as unknown as Record<string, unknown>;
     const gotConfig = found.data.config as unknown as Record<string, unknown>;
-    if (found.type === "transform.json" && typeof wantConfig.expression === "string" && typeof gotConfig.expression === "string" && outputOnlyOverlay(wantConfig.expression, gotConfig.expression)) continue;
+    if (found.type === "transform.json" && directFeeders.has(id) && typeof wantConfig.expression === "string" && typeof gotConfig.expression === "string" && outputOnlyOverlay(wantConfig.expression, gotConfig.expression)) continue;
     drift.push(id);
   }
 

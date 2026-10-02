@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { CliError, cliConfig, parseJsonOutput, preflight, runCli, type CliConfig, type CliErrorCode } from "@/company-builder/cli/adapter";
 import { MAX_REPAIRS, type CliKind } from "@/company-builder/cli/envelope";
@@ -13,12 +13,16 @@ import { applyJobResult, cliEnvelope, validateJobOutput } from "./cli-jobs";
  */
 
 const STATUS_FOR: Partial<Record<CliErrorCode, string>> = { AUTH_REQUIRED: "blocked_auth", QUOTA_EXHAUSTED: "blocked_quota", PERMISSION_DENIED: "blocked_permission" };
+/** The only statuses this controller may move a job out of. A job another writer already ended (cancelled, failed by
+ * stale recovery, …) keeps that terminal state: every transition below is guarded by it. */
+const ACTIVE: ["generating", "validating"] = ["generating", "validating"];
+const active = (jobId: string) => and(eq(schema.cbCliJob.id, jobId), inArray(schema.cbCliJob.status, ACTIVE));
 
 async function finish(jobId: string, code: CliErrorCode, reported?: Record<string, unknown>) {
   await db
     .update(schema.cbCliJob)
     .set({ status: code === "CANCELLED" ? "cancelled" : (STATUS_FOR[code] ?? "failed"), error: { code }, finishedAt: new Date(), lockedBy: null, ...(reported ? { reported } : {}) })
-    .where(and(eq(schema.cbCliJob.id, jobId), ne(schema.cbCliJob.status, "cancelled")));
+    .where(active(jobId));
 }
 
 /**
@@ -54,7 +58,7 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
   try {
     let repairOf: { output: string; problem: string } | undefined;
     for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-      if (attempt > 0) await db.update(schema.cbCliJob).set({ repairAttempts: attempt, status: "generating" }).where(eq(schema.cbCliJob.id, job.id));
+      if (attempt > 0) await db.update(schema.cbCliJob).set({ repairAttempts: attempt, status: "generating" }).where(active(job.id));
       let result;
       try {
         result = await runCli(cli, envelope, cfg, { signal: ac.signal, repairOf });
@@ -64,7 +68,7 @@ export async function processJob(job: typeof schema.cbCliJob.$inferSelect, found
       if (shutdown?.aborted) return finish(job.id, "CANCELLED", reported); // fence: a stopped controller applies nothing
       reported.calls = (reported.calls as number) + 1;
       Object.assign(reported, result.reported);
-      await db.update(schema.cbCliJob).set({ status: "validating", reported }).where(eq(schema.cbCliJob.id, job.id));
+      await db.update(schema.cbCliJob).set({ status: "validating", reported }).where(active(job.id));
       let raw: unknown;
       try {
         raw = parseJsonOutput(result.output);
