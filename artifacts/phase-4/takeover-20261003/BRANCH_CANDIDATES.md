@@ -5,11 +5,11 @@ Observed 2026-10-03 in the docs worktree. Base: `main` / `origin/main` at `9fdcb
 ## Tips verified as ancestors of main
 
 - Company Builder stack refs: `pr/cb-4-evidence` (`8dbd8de81f61c4e105856e53bb87f482ed4965b8`), `pr/cb-3-docs-evidence` (`8d9221eee4fc02974fb02804e7171f003576ecb2`), `pr/cb-2-ui` (`a0a94a40b7ba62a95bf992b2ea82bbeca847a376`), `pr/cb-1-core` (`294063bcdd164e94723368badf03b20463120698`), and `codex/cb-review-repair-20261003` (`719056cefa9d9810f93ea8c917da2bda82fe2e4a`). PR #2 is merged, so these tips are now contained in main. Keep them pending root's cleanup decision and ownership checks.
-- `codex/takeover-docs-20261003` points to the current merged main commit; this is the active docs worktree with uncommitted edits. Retain it.
 - Historical refs `ai-hub` (`d70c2cc`), `design-v2` (`b40cb38`), `phase-2` (`7104c25`), `phase-3` (`8622dcf`), `phase-4` (`1a9883f`), `preserve/20261001-detached-2d36` (`8622dcf`), and `codex/takeover-security-20261003` (`9324b1f`) are ancestors of main. Preserve recovery/phase history; no deletion recommendation.
 
 ## Tips not ancestors of main — retain
 
+- `codex/takeover-docs-20261003`: committed documentation candidate awaiting independent review and publication. Its tip is not yet contained in the merged main snapshot; retain its worktree until its own PR merges.
 - `codex/takeover-beta-20261003` (`5be15b8`) and `codex/takeover-field-20261003` (`a7c2aef`): unmerged tips; preserve their worktrees and branches.
 - `codex/company-builder-continuation` (`e690de6`), `codex/lighthouse-ci` (`bbf2c60`), and `codex/p3-polish` (`dd567a4`): older distinct tips not contained in main; compare/preserve, do not delete by inference.
 - `codex/cleanup-inventory`, `codex/copy-editor`, `codex/ux-pages`, `codex/worktree-cleanup-review`, `codex/zitadel-pilot`, and `codex/zitadel-platform-auth` (each `766ff3c`): not contained in main; inspect/retain.
