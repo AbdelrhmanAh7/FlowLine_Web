@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: gate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   gate:
@@ -68,6 +68,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
 
+      # The code node runs user code in Docker (src/server/code-sandbox.ts SANDBOX_IMAGE); the integration suite
+      # requires the image to be present.
+      - name: Pull the code-sandbox image
+        run: docker pull node:22-alpine
+
       - name: Install Playwright browsers
         run: |
           if [ "$GATE_TIER" = "full" ]; then
@@ -93,22 +98,22 @@ jobs:
           echo "::add-mask::$CI_TEST_DATABASE_URL"
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
-          const source = readFileSync('.env.example', 'utf8');
+          const source = readFileSync('docs/company-builder/env.test.template', 'utf8');
           const values = {
             DATABASE_URL: process.env.CI_TEST_DATABASE_URL,
             BETTER_AUTH_SECRET: process.env.CI_AUTH_SECRET,
+            BETTER_AUTH_URL: 'http://localhost:3100',
             FLOWLINE_ENV: 'test',
+            FLOWLINE_PUBLIC_URL: 'http://localhost:3100',
             FLOWLINE_ENCRYPTION_KEY: process.env.CI_ENCRYPTION_KEY,
             FLOWLINE_PLATFORM_ENCRYPTION_KEY: process.env.CI_PLATFORM_KEY,
-            FLOWLINE_EGRESS_ALLOWLIST: '127.0.0.1:4010,127.0.0.1:4011',
-            FLOWLINE_PROVIDER_OVERRIDE: 'http://127.0.0.1:4010',
             FLOWLINE_AI_TEST_OVERRIDE: 'http://127.0.0.1:4011',
           };
           let output = source;
           for (const [name, value] of Object.entries(values)) {
             const line = `${name}=${value}`;
             const pattern = new RegExp(`^${name}=.*$`, 'm');
-            output = pattern.test(output) ? output.replace(pattern, line) : `${output.trimEnd()}\n${line}\n`;
+            output = pattern.test(output) ? output.replace(pattern, () => line) : `${output.trimEnd()}\n${line}\n`;
           }
           writeFileSync('.env.test', output, { mode: 0o600 });
           NODE

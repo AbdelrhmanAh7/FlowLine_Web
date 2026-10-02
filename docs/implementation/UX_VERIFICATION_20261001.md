@@ -1,6 +1,6 @@
-# UX implementation verification ? 2026-10-01 and 2026-10-02
+# UX implementation verification — 2026-10-01 and 2026-10-02
 
-## Update ? 2026-10-02 (source 8663b3e)
+## Update — 2026-10-02 (source 8663b3e)
 
 The current code state is commit `8663b3e`, the top of stacked PRs #2 (core, base `main`) -> #3 (UI) -> #4 (docs + evidence 1) -> #5 (evidence 2). PR #1 is closed as superseded. Merge order is top-down.
 

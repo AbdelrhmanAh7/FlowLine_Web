@@ -10,7 +10,6 @@ import { FeatureScenes } from "@/components/landing/feature-scenes";
 import { FlowScene } from "@/components/landing/flow-scene";
 import { HeroPin } from "@/components/landing/hero-pin";
 import { Magnetic } from "@/components/landing/magnetic";
-import { ParallaxGradients } from "@/components/landing/parallax-gradients";
 import { Reveal, WordReveal } from "@/components/landing/reveal";
 import { ScrollRoot } from "@/components/landing/scroll-root";
 import { getT } from "@/i18n/server";
@@ -44,7 +43,6 @@ export default async function Landing() {
     <ScrollRoot>
       {/* relative + isolate: the wrapper is a stacking context so the -z-10 glow layers paint ABOVE its bg-surface, below the content. */}
       <div className="relative isolate min-h-dvh bg-surface">
-        <ParallaxGradients />
         {/*
           Header layout (DV2-Q03/Q04). Never wider than the viewport, at any width from 360 up:
           - lg and up: ONE row, logo | nav | preferences | account actions (icon-only preferences until xl, labelled from xl).
