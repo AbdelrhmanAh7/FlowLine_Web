@@ -92,10 +92,12 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
   await expect(copyKey).toHaveAttribute("aria-pressed", "true");
   const originalEn = await page.locator("#copy-en").inputValue();
   const originalAr = await page.locator("#copy-ar").inputValue();
+  const englishPreview = page.locator('div[lang="en"]').getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ });
+  const publishedNote = page.locator('div[lang="en"]').locator("..").locator(":scope > p");
   try {
     await page.locator("#copy-en").fill("Previewed English copy");
     await page.locator("#copy-ar").fill("نص عربي للمعاينة");
-    await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+    await expect(englishPreview).toBeVisible();
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page.getByText("Draft saved.")).toBeVisible();
@@ -110,14 +112,19 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     // The saved draft persisted across the reload: both fields and both previews show the draft values.
     await expect(page.locator("#copy-en")).toHaveValue("Previewed English copy");
     await expect(page.locator("#copy-ar")).toHaveValue("نص عربي للمعاينة");
+    await expect(englishPreview).toBeVisible();
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
+    // Saving a draft leaves the published UI note unchanged.
+    await expect(publishedNote).toHaveText(originalEn);
     await page.getByRole("button", { name: "Publish draft" }).click();
     await expect(page.getByText("Copy published.")).toBeVisible();
     await page.reload();
     await reselect();
     await expect(page.locator("#copy-en")).toHaveValue("Previewed English copy");
     await expect(page.locator("#copy-ar")).toHaveValue("نص عربي للمعاينة");
+    await expect(englishPreview).toBeVisible();
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
+    await expect(publishedNote).toHaveText("Previewed English copy");
   } finally {
     // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
     // is dirty raises window.confirm (accept it), and Save/Publish are disabled when there is nothing to save or publish.
@@ -143,6 +150,7 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ }).click();
     expect(await page.locator("#copy-en").inputValue()).toBe(originalEn);
     expect(await page.locator("#copy-ar").inputValue()).toBe(originalAr);
+    await expect(publishedNote).toHaveText(originalEn);
   }
   await page.getByRole("link", { name: "Back to admin" }).click();
 
