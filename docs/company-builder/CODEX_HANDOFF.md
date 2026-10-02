@@ -15,7 +15,7 @@ Read first: `CLOUD_IMPLEMENTATION_PROMPT.md` (the brief), `REPORT.md`, `ARCHITEC
   - `b2a3cf8` review fixes
   - `f84e44b` pre-existing contract flake
   - `09b0689` docs
-  - `6bade3d` re-test fixes (**tested revision**)
+  - `6bade3d` re-test fixes (**revision for the historical results below**)
   - then docs/evidence commits only. Check with `git diff 6bade3d..HEAD --stat`; it should touch only `docs/`,
     `artifacts/`, `SCOPE_MATRIX.md` and `NEXT_ACTION.md`.
 - Migrations: `0020_company_builder`, `0021_company_builder_review_fixes` (expand-only).
@@ -27,12 +27,13 @@ git fetch origin claude/company-builder-milestones-abc-pmba6v && git switch clau
 pnpm install --frozen-lockfile
 # .env.test: add  FLOWLINE_COMPANY_BUILDER=on   (the rest of your existing .env.test is unchanged)
 pnpm stop:test; pnpm db:migrate:test
-pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract && pnpm test:integration
-FLOWLINE_TEST_NEXT=start pnpm test:e2e            # Chromium + Firefox; then WebKit:
-bash e2e/tools/webkit-docker.sh                   # with the stack running (pnpm dev:test)
+pnpm gate                                           # required for every commit
+pnpm gate:full                                      # required before merging to main
+# Focused browser checks: bash e2e/tools/browser-docker.sh <chromium|firefox|webkit>
 ```
-Expected on Claude's cloud run (Linux): unit 535, contract 467, integration 513, Chromium 126/127 (PRE-02),
-Firefox 62, WebKit 62. Record your own numbers, first failures, retries 0, SHA and BUILD_ID. Keep failing evidence.
+Historical counts on Claude's cloud run for `6bade3d` (Linux): unit 535, contract 467, integration 513,
+Chromium 126/127 (PRE-02), Firefox 62, WebKit 62. These are not current expectations. Record your own counts,
+first failures, retries 0, SHA and BUILD_ID. Keep failing evidence.
 
 ## What to test (priority order)
 

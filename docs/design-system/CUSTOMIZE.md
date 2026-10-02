@@ -33,6 +33,8 @@ Status and node-category colors are separate semantic roles: `SEMANTIC.dark.succ
 
 ## Regenerate and review
 
+Before committing, run `pnpm gate`; before merging to `main`, run `pnpm gate:full`. See the [developer guide](../DEVELOPER_GUIDE.md#feature-workflow) for gate coverage.
+
 After editing `src/design/tokens.ts`, run `pnpm tokens`. This rewrites both generated files. Then run the targeted token test and the normal source checks:
 
 ```sh

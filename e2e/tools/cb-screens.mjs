@@ -34,9 +34,9 @@ const shots = async (name, path, locales = ["ar", "en"], widths = [1440, 375]) =
     }
 };
 await shots("01-landing", `/w/${ws.slug}/company`);
-for (const [q, v] of answers.slice(0, 3)) rev = (await (await req.post(`${cb}/sessions/${sid}/answer`, { data: { questionId: q, value: v, revision: rev } })).json()).session;
+for (const [q, v] of answers.slice(0, 3)) rev = (await (await req.post(`${cb}/sessions/${sid}/answer`, { data: { questionId: q, value: v, revision: rev } })).json()).session.revision;
 await shots("02-question", `/w/${ws.slug}/company/${sid}`);
-for (const [q, v] of answers.slice(3)) rev = (await (await req.post(`${cb}/sessions/${sid}/answer`, { data: { questionId: q, value: v, revision: rev } })).json()).session;
+for (const [q, v] of answers.slice(3)) rev = (await (await req.post(`${cb}/sessions/${sid}/answer`, { data: { questionId: q, value: v, revision: rev } })).json()).session.revision;
 const bid = (await (await req.post(`${cb}/sessions/${sid}/blueprint`, { data: {} })).json()).blueprintId;
 await shots("03-plan", `/w/${ws.slug}/company/${sid}`);
 await req.post(`${cb}/blueprints/${bid}/approve`, { data: {} });

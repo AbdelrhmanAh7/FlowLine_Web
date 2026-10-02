@@ -19,3 +19,31 @@ export function selectGateSteps({ all, browsers, only, skip, tier, browserStacks
   }
   return { selected, parallelProjects, stackCount };
 }
+
+/** docker-compose.yml caps the test Postgres at max_connections=50 (superuser_reserved_connections=3 of them). */
+export const PG_MAX_CONNECTIONS = 50;
+/** Kept free of stacks: 3 superuser-reserved + Playwright fixtures, psql, and the integration shards' overlap with stack start-up. */
+export const PG_RESERVED_CONNECTIONS = 10;
+/** The pool size src/db/index.ts uses when FLOWLINE_DB_POOL_MAX is unset. */
+export const DEFAULT_POOL_MAX = 8;
+/** The smallest pool a stack can run on (a transaction plus one concurrent query must never deadlock on the pool). */
+export const MIN_POOL_MAX = 2;
+
+/** Connections one stack can hold: two pools (next + worker) of `poolMax` plus the worker's LISTEN connection. */
+export const stackConnections = (stackCount, poolMax) => stackCount * (2 * poolMax + 1);
+
+/**
+ * Pool size for `stackCount` isolated stacks under the Postgres connection budget, for EVERY tier (fast: K stacks;
+ * full parallel: K + ceil(K/2) + ceil(K/2)). Returns null when the default pool already fits. Throws when the stacks
+ * cannot fit even with the smallest pool, naming the largest count that does.
+ */
+export function stackPoolMax(stackCount, { maxConnections = PG_MAX_CONNECTIONS, reserved = PG_RESERVED_CONNECTIONS, defaultPool = DEFAULT_POOL_MAX, minPool = MIN_POOL_MAX } = {}) {
+  const budget = maxConnections - reserved;
+  const perStack = Math.floor(budget / stackCount);
+  const pool = Math.floor((perStack - 1) / 2);
+  if (pool < minPool) {
+    const most = Math.floor(budget / (2 * minPool + 1));
+    throw new Error(`${stackCount} test stacks need more than the ${budget} Postgres connections available (max_connections=${maxConnections} in docker-compose.yml, ${reserved} reserved); at most ${most} stacks fit — lower --stacks or use --browsers=sequential`);
+  }
+  return pool >= defaultPool ? null : pool;
+}

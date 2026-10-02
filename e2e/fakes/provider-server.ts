@@ -666,10 +666,21 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
     if (oidcIssuer(req).endsWith("/zitadel") || oidcIssuer(req) === `http://${req.headers.host}`) {
       const auth = req.headers.authorization ?? "";
       if (!auth.startsWith("Basic ")) return json(ctx, req, res, 401, { error: "invalid_client" }), true;
-      const [id, secret] = Buffer.from(auth.slice(6), "base64").toString("utf8").split(":");
-      form.client_id = new URLSearchParams(`x=${id ?? ""}`).get("x") ?? "";
-      form.client_secret = new URLSearchParams(`x=${secret ?? ""}`).get("x") ?? "";
-      if (rawBody.includes("client_secret=")) return json(ctx, req, res, 400, { error: "secret_in_body" }), true;
+      const secretInBody = "client_secret" in form;
+      const decoded = Buffer.from(auth.slice(6), "base64").toString("utf8");
+      const colon = decoded.indexOf(":");
+      const rawId = colon === -1 ? decoded : decoded.slice(0, colon);
+      const rawSecret = colon === -1 ? "" : decoded.slice(colon + 1);
+      const decodeParam = (v: string) => {
+        try {
+          return decodeURIComponent(v.replace(/\+/g, " "));
+        } catch {
+          return v;
+        }
+      };
+      form.client_id = decodeParam(rawId);
+      form.client_secret = decodeParam(rawSecret);
+      if (secretInBody) return json(ctx, req, res, 400, { error: "secret_in_body" }), true;
     }
     if (form.grant_type !== "authorization_code") {
       json(ctx, req, res, 400, { error: "unsupported_grant_type" });

@@ -43,7 +43,8 @@ const stackPids = () => {
     try {
       const cmd = readFileSync(`/proc/${pid}/cmdline`, "utf8").replace(/\0/g, " ");
       if (!/dev-test\.mjs|worker\/index\.ts.*--flowline-test-stack=\d+|e2e\/fakes\/|next (start|dev)|next-server/.test(cmd)) continue;
-      if (readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").includes(mine)) pids.push(pid);
+      const environment = readFileSync(`/proc/${pid}/environ`, "utf8").split("\0");
+      if (environment.includes(mine) || (single && !environment.some((entry) => entry.startsWith("FLOWLINE_TEST_PORT=")) && /worker\/index\.ts/.test(cmd))) pids.push(pid);
     } catch {
       /* gone, or not ours */
     }

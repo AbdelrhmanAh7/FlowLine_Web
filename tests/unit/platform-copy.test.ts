@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createTranslator } from "@/i18n/translate";
 import { BASE_COPY, EDITABLE_COPY_KEYS, baseCopy, validateCopy } from "@/i18n/copy-validation";
 import { publishedCopyOrBase } from "@/i18n/copy-fallback";
@@ -17,6 +17,9 @@ describe("platform copy", () => {
     expect(() => validateCopy("ar", "meta.title", "<script>alert(1)</script>")).toThrow();
     expect(() => validateCopy("en", "runs.errorShape.aiAuthFailed", "Wrong {status}")).toThrow();
     expect(() => validateCopy("en", "runs.errorShape.aiAuthFailed", "{provider} returned {status}")).not.toThrow();
+    expect(() => validateCopy("en", "meta.keywords", "k".repeat(501))).toThrowError("Enter plain text between 1 and 500 characters");
+    expect(() => validateCopy("en", "meta.title", "t".repeat(1201))).toThrowError("Enter plain text between 1 and 1200 characters");
+    expect(() => validateCopy("ar", "flows.activity.pausedFlows.zero", "x".repeat(1201))).toThrowError("Enter plain text up to 1200 characters");
   });
 
   it("lists every plural form, preserves an intentionally empty zero form and uses English fallback", () => {

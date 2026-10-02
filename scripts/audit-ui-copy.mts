@@ -22,6 +22,7 @@ const issues: { key: string; reason: string }[] = [];
 for (const a of arabic) {
   const e = english.get(a.key);
   if (!e) issues.push({ key: a.key, reason: "missing English key" });
+  else if (a.plural !== e.plural) issues.push({ key: a.key, reason: `message shape mismatch: AR ${a.plural ? "plural" : "string"} / EN ${e.plural ? "plural" : "string"}` });
   else if (JSON.stringify(parameters(a)) !== JSON.stringify(parameters(e))) issues.push({ key: a.key, reason: `placeholder mismatch: AR ${parameters(a)} / EN ${parameters(e)}` });
   // Zero-count suffixes intentionally omit a notice when nothing is paused/waiting.
   const optionalZeroSuffix = ["flows.activity.pausedFlows", "flows.activity.runsWaiting", "integrations.bannerPaused"].includes(a.key);
@@ -39,6 +40,7 @@ for (const file of sources) {
   };
   const visit = (node: ts.Node) => {
     if (ts.isJsxText(node)) record(node, node.text, "JSX text");
+    if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteral(node.expression)) record(node.expression, node.expression.text, "JSX expression");
     if (ts.isJsxAttribute(node) && ["title", "placeholder", "aria-label", "alt"].includes(node.name.getText(source)) && node.initializer && ts.isStringLiteral(node.initializer)) record(node, node.initializer.text, "attribute");
     ts.forEachChild(node, visit);
   };

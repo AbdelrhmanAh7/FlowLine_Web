@@ -60,7 +60,6 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
       after?.();
     } catch (e) {
       setError(errorText(e));
-      if (e instanceof ApiError && e.code === "REVISION_CONFLICT") await refresh();
       await refresh();
     } finally {
       setBusy(null);
@@ -187,7 +186,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
           )}
         </div>
         <div className="flex min-w-0 flex-col gap-6">
-          <FactsPanel facts={s.facts} pending={answer.isPending} error={error} onCorrect={(questionId, value, unknown) => answer.mutate({ questionId, value, unknown, mode: "correction" })} />
+          <FactsPanel facts={s.facts} pending={answer.isPending} error={error} onCorrect={(questionId, value, unknown) => answer.mutateAsync({ questionId, value, unknown, mode: "correction" })} />
           {installed && (
             <ReviewInbox
               data={data}

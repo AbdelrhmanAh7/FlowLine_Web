@@ -118,18 +118,19 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
             </span>
             <div className="flex flex-wrap gap-2">
               {ACTIVE.has(j.status) && (
-                <Button size="sm" variant="ghost" onClick={() => act.mutate({ job: j, op: "cancel" })}>
+                <Button size="sm" variant="ghost" disabled={act.isPending} loading={act.isPending && act.variables?.job.id === j.id && act.variables.op === "cancel"} onClick={() => act.mutate({ job: j, op: "cancel" })}>
                   {t("companyBuilder.prototype.cancel")}
                 </Button>
               )}
               {j.status === "waiting_operator" && (
                 <>
-                  <Button size="sm" variant="ghost" onClick={() => act.mutate({ job: j, op: "export" })}>
+                  <Button size="sm" variant="ghost" disabled={act.isPending} loading={act.isPending && act.variables?.job.id === j.id && act.variables.op === "export"} onClick={() => act.mutate({ job: j, op: "export" })}>
                     {t("companyBuilder.prototype.export")}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={act.isPending}
                     onClick={() => {
                       importTarget.current = j;
                       fileRef.current?.click();
@@ -141,7 +142,7 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
                 </>
               )}
               {j.kind === "text_trial" && j.status === "completed" && data.installation?.status === "installed" && (
-                <Button size="sm" variant="secondary" onClick={() => act.mutate({ job: j, op: "trial" })}>
+                <Button size="sm" variant="secondary" disabled={act.isPending} loading={act.isPending && act.variables?.job.id === j.id && act.variables.op === "trial"} onClick={() => act.mutate({ job: j, op: "trial" })}>
                   {t("companyBuilder.prototype.useInTrial")}
                 </Button>
               )}
