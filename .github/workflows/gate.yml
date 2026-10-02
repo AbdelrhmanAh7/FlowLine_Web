@@ -1,0 +1,156 @@
+name: Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Gate tier to run
+        type: choice
+        required: true
+        default: fast
+        options: [fast, full]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Start PostgreSQL 17 with the test connection limit
+        run: |
+          CI_DATABASE_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$CI_DATABASE_PASSWORD"
+          echo "CI_DATABASE_PASSWORD=$CI_DATABASE_PASSWORD" >> "$GITHUB_ENV"
+          docker run --detach --rm --name flowline-ci-postgres \
+            --env POSTGRES_USER=flowline \
+            --env POSTGRES_PASSWORD="$CI_DATABASE_PASSWORD" \
+            --env POSTGRES_DB=flowline \
+            --publish 5433:5432 \
+            postgres:17.6-alpine postgres -c shared_buffers=64MB -c max_connections=50
+          for attempt in $(seq 1 30); do
+            if docker exec flowline-ci-postgres pg_isready -U flowline; then exit 0; fi
+            sleep 2
+          done
+          docker logs flowline-ci-postgres
+          exit 1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        run: |
+          if [ "$GATE_TIER" = "full" ]; then
+            pnpm exec playwright install --with-deps chromium firefox webkit
+          else
+            pnpm exec playwright install --with-deps chromium
+          fi
+
+      - name: Create disposable test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_secret="$(openssl rand -hex 32)"
+          encryption_key="$(openssl rand -base64 32 | tr -d '\n')"
+          platform_key="$(openssl rand -base64 32 | tr -d '\n')"
+          for value in "$CI_DATABASE_PASSWORD" "$auth_secret" "$encryption_key" "$platform_key"; do
+            echo "::add-mask::$value"
+          done
+          export CI_AUTH_SECRET="$auth_secret"
+          export CI_ENCRYPTION_KEY="$encryption_key"
+          export CI_PLATFORM_KEY="$platform_key"
+          export CI_TEST_DATABASE_URL="postgres://flowline:${CI_DATABASE_PASSWORD}@127.0.0.1:5433/flowline_test"
+          echo "::add-mask::$CI_TEST_DATABASE_URL"
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const source = readFileSync('.env.example', 'utf8');
+          const values = {
+            DATABASE_URL: process.env.CI_TEST_DATABASE_URL,
+            BETTER_AUTH_SECRET: process.env.CI_AUTH_SECRET,
+            FLOWLINE_ENV: 'test',
+            FLOWLINE_ENCRYPTION_KEY: process.env.CI_ENCRYPTION_KEY,
+            FLOWLINE_PLATFORM_ENCRYPTION_KEY: process.env.CI_PLATFORM_KEY,
+            FLOWLINE_EGRESS_ALLOWLIST: '127.0.0.1:4010,127.0.0.1:4011',
+            FLOWLINE_PROVIDER_OVERRIDE: 'http://127.0.0.1:4010',
+            FLOWLINE_AI_TEST_OVERRIDE: 'http://127.0.0.1:4011',
+          };
+          let output = source;
+          for (const [name, value] of Object.entries(values)) {
+            const line = `${name}=${value}`;
+            const pattern = new RegExp(`^${name}=.*$`, 'm');
+            output = pattern.test(output) ? output.replace(pattern, line) : `${output.trimEnd()}\n${line}\n`;
+          }
+          writeFileSync('.env.test', output, { mode: 0o600 });
+          NODE
+
+      - name: Run fast gate
+        if: env.GATE_TIER == 'fast'
+        run: pnpm gate --out="$GATE_OUT"
+
+      - name: Run full gate
+        if: env.GATE_TIER == 'full'
+        run: pnpm gate:full --out="$GATE_OUT"
+
+      - name: Add gate summary
+        if: always()
+        env:
+          GATE_SUMMARY: ${{ env.GATE_OUT }}/summary.json
+        run: |
+          {
+            echo "## FlowLine gate ($GATE_TIER)"
+            if [ -f "$GATE_SUMMARY" ]; then
+              node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const gate = JSON.parse(readFileSync(process.env.GATE_SUMMARY, 'utf8'));
+          console.log(`Commit: \`${gate.sha}\` · result: **${gate.ok ? 'PASS' : 'FAIL'}** · browser mode: ${gate.browsersMode}`);
+          console.log('\n| Step | Status | Time | Tests / note |\n| --- | --- | ---: | --- |');
+          for (const step of gate.steps) {
+            const totals = step.totals ? Object.entries(step.totals).map(([k, v]) => `${v} ${k}`).join(', ') : (step.note ?? '');
+            const time = step.durationMs ? `${(step.durationMs / 1000).toFixed(1)}s` : '—';
+            console.log(`| ${step.name} | ${step.status} | ${time} | ${totals.replaceAll('|', '\\|')} |`);
+          }
+          NODE
+            else
+              echo
+              echo "Gate summary was not created. Check the job logs for setup or early gate failures."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload gate logs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flowline-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/gates/**
+          if-no-files-found: warn
+          retention-days: 14

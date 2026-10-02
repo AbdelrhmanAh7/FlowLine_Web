@@ -30,7 +30,7 @@ export function HeroPin({ nodes, label }: { nodes: IllustrationNode[]; label: st
   const active = selected ?? lit - 1;
   return (
     <div ref={ref} data-testid="landing-hero-scene" className="hero-pin w-full max-w-4xl">
-      <div className="hero-pin-stage" style={{ perspective: 900 }}>
+      <div className="hero-pin-stage">
         <div className="hero-scrub">
           <div role="group" aria-label={label} className="w-full rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
             <FlowIllustration nodes={nodes} lit={active + 1} onSelect={(index) => { selectedAt.current = scrollYProgress.get(); setSelected(index); }} />

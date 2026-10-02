@@ -20,6 +20,11 @@ export function selectGateSteps({ all, browsers, only, skip, tier, browserStacks
   return { selected, parallelProjects, stackCount };
 }
 
+/** Use installed Playwright browsers on Windows, or when CI explicitly requests native browsers. */
+export function shouldUseNativeBrowserRunner(platform = process.platform, env = process.env) {
+  return platform === "win32" || env.FLOWLINE_GATE_NATIVE_BROWSERS === "1";
+}
+
 /** docker-compose.yml caps the test Postgres at max_connections=50 (superuser_reserved_connections=3 of them). */
 export const PG_MAX_CONNECTIONS = 50;
 /** Kept free of stacks: 3 superuser-reserved + Playwright fixtures, psql, and the integration shards' overlap with stack start-up. */
