@@ -39,7 +39,7 @@ Preserve invitation-only signup when configured, verification requirements and t
 
 ## Verification and handoff
 
-Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:contract`, and `pnpm test:integration`. Stop the test stack with `pnpm stop:test` before integration tests. UI changes require Chromium, Firefox and WebKit; use the repository gate runner and browser tooling. A laptop-friendly full run is `pnpm gate:full -- --stacks=1 --shards=2 --browsers=sequential`. Respect any feature flags required by the feature under test.
+Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on every PR and push to `main`, and the full tier for PRs targeting `main`. Open the PR's **Checks** tab and select **Gate** to see the step summary; the `flowline-gate-*` artifact contains per-step logs and `summary.json`. To rerun the full tier, use **Actions → Gate → Run workflow**, choose the branch, set **tier** to `full`, and start the run. The `fast` dispatch option is available for a targeted rerun. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
 
 Tests use port 3100 and isolated test databases, never the development database. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
 

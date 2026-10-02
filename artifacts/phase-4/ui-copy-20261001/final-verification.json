@@ -1,4 +1,36 @@
 {
+  "currentState2026-10-02": {
+    "commit": "8663b3e",
+    "stackedPullRequests": "#2 (core, base main) -> #3 (UI) -> #4 (docs+evidence 1) -> #5 (evidence 2)",
+    "pr1": "closed as superseded",
+    "mergeOrder": "top-down",
+    "gateFast": {
+      "status": "PASSED",
+      "unit": 725,
+      "contract": 468,
+      "integration": 549,
+      "chromium": 77
+    },
+    "gateFull": "NOT RUN on this tree; includes all Chromium, Firefox and WebKit",
+    "codeRabbit": {
+      "reviewed": "PRs #2-#5",
+      "findings": 41,
+      "fixed": 30,
+      "declinedWithReasons": 3,
+      "frozenEvidenceTrackedInIssue6": 8
+    },
+    "repairs": [
+      "activation atomic in one transaction",
+      "graceful CLI shutdown",
+      "plan createdAt uses the application clock to address a flaky metric",
+      "gate connection budget: Postgres max_connections=50, default at most 4 stacks, refuses counts that cannot fit"
+    ],
+    "googleConsent": "configured in Testing mode",
+    "googleToZitadelToFlowlineRoundTrip": "UNVERIFIED; last click timed out",
+    "ownerTotpBootstrap": "UNVERIFIED",
+    "ownerActionTiming": "planned for 2026-10-03; no owner action requested on 2026-10-02"
+  },
+  "historicalResultsNote": "All validation results below belong to the earlier source state identified by baseSha and must not be attributed to current commit 8663b3e.",
   "baseSha": "766ff3ce8060a4caf35d8e75d969fca68d97f51a",
   "dirtyAtValidation": true,
   "sourceFingerprint": "9cf6dafcf134c4a901868963cc554e0a00414541061d51e155bcf135f530b60b",

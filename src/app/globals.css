@@ -271,8 +271,8 @@ html, body {
 #product, #flow-demo, #features, #templates, #pricing { scroll-margin-top: 6rem; }
 .hero-scrub { transform-origin: 50% 0; }
 @keyframes m-hero-scrub {
-  from { transform: scale(1) rotateX(10deg); }
-  to { transform: scale(0.94) rotateX(0deg); }
+  from { transform: scale(1); }
+  to { transform: scale(0.94); }
 }
 @keyframes m-parallax-slow {
   to { transform: translateY(-14vh); }
@@ -309,16 +309,12 @@ html, body {
   .motion-running { box-shadow: 0 0 0 2px var(--run-hue, var(--accent)); }
 }
 
-/* Soft, masked ribbons give the page a quiet sense of depth without competing with its content. */
+/*
+ * Ambient background: ONE quiet background across the app (calm, premium).
+ * Base surface + single soft brand-tinted radial glow near the top + very faint dot grid fading out.
+ * Semantic tokens only (var(--accent), var(--canvas-dot)), no raw colors.
+ */
 .ambient-background {
-  --ambient-near-x: 0px;
-  --ambient-near-y: 0px;
-  --ambient-far-x: 0px;
-  --ambient-far-y: 0px;
-  --ambient-flow: 0;
-  --ambient-flow-phase: 0px;
-  --ambient-line: color-mix(in oklab, var(--accent) 22%, transparent);
-  --ambient-grid: color-mix(in oklab, var(--accent) 8%, transparent);
   position: fixed;
   inset: 0;
   z-index: 1;
@@ -326,69 +322,54 @@ html, body {
   pointer-events: none;
   user-select: none;
   contain: strict;
-  color: var(--accent);
 }
-.ambient-background__map {
+.ambient-glow {
+  position: absolute;
+  top: -14rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: 56rem;
+  max-width: 100vw;
+  height: 32rem;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%);
+  opacity: 0.65;
+  pointer-events: none;
+  filter: blur(48px);
+  transition: opacity var(--dur-tab) var(--ease-standard);
+}
+.ambient-dots {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: .56;
-  transform: translate3d(var(--ambient-far-x), var(--ambient-far-y), 0);
-  transition: transform 240ms var(--ease-standard);
-  -webkit-mask-image: radial-gradient(ellipse 53% 46% at 50% 46%, transparent 0%, transparent 49%, black 100%);
-  mask-image: radial-gradient(ellipse 53% 46% at 50% 46%, transparent 0%, transparent 49%, black 100%);
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.28;
+  mask-image: radial-gradient(ellipse 70% 45% at 50% 15%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 45% at 50% 15%, black 0%, transparent 70%);
+  pointer-events: none;
+  transition: opacity var(--dur-tab) var(--ease-standard);
 }
-.ambient-structure { opacity: .2; }
-.ambient-particles { opacity: .4; }
-.ambient-lens { opacity: .34; filter: blur(12px); }
-.ambient-scene { display: none; opacity: .9; transform: translate3d(var(--ambient-near-x), var(--ambient-near-y), 0); transition: transform 240ms var(--ease-standard); }
-.ambient-background[data-scene="pearl-ribbon-sweep"] .ambient-scene--ar-light,
-.ambient-background[data-scene="glass-fluid-arc"] .ambient-scene--en-light,
-.ambient-background[data-scene="auroral-lens"] .ambient-scene--ar-dark,
-.ambient-background[data-scene="woven-light-trail"] .ambient-scene--en-dark { display: inline; }
-.ambient-ribbon { fill: none; stroke: var(--ambient-line); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.ambient-ribbon--wide { stroke-width: 52; opacity: .2; }
-.ambient-ribbon--second { opacity: .72; }
-.ambient-ribbon--third { opacity: .56; }
-.ambient-ribbon--hairline { stroke-width: 1.4; opacity: .62; stroke-dasharray: 16 26; stroke-dashoffset: calc(120px - var(--ambient-flow-phase)); transition: stroke-dashoffset 240ms linear; }
-.ambient-background[data-pulse="true"] .ambient-ribbon--hairline { stroke-width: 2.2; }
-.ambient-background__glint {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background: radial-gradient(circle 110px at var(--ambient-click-x, 50%) var(--ambient-click-y, 50%), color-mix(in oklab, var(--accent) 12%, transparent), transparent 74%);
-  transition: opacity 240ms var(--ease-standard);
+html[data-theme="light"] .ambient-glow {
+  background: radial-gradient(ellipse 60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%);
+  opacity: 0.45;
 }
-.ambient-background[data-pulse="true"] .ambient-background__glint { opacity: .72; }
-html[data-theme="light"] .ambient-background { --ambient-line: color-mix(in oklab, var(--accent) 18%, transparent); --ambient-grid: color-mix(in oklab, var(--accent) 6%, transparent); }
-html[data-theme="light"] .ambient-background__map { opacity: .62; }
-html[data-theme="dark"] .ambient-background { --ambient-line: color-mix(in oklab, var(--accent) 30%, transparent); --ambient-grid: color-mix(in oklab, var(--accent) 7%, transparent); }
-html[data-theme="dark"] .ambient-background__map { opacity: .78; }
-html[lang="ar"][data-theme="light"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-app) 22%, transparent); }
-html[lang="en"][data-theme="light"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-output) 19%, transparent); }
-html[lang="ar"][data-theme="dark"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-ai) 28%, transparent); }
-html[lang="en"][data-theme="dark"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-app) 24%, transparent); }
-@media (prefers-color-scheme: light) {
-  html[data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--accent) 18%, transparent); --ambient-grid: color-mix(in oklab, var(--accent) 6%, transparent); }
-  html[lang="ar"][data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-app) 22%, transparent); }
-  html[lang="en"][data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-output) 19%, transparent); }
-  html[data-theme="system"] .ambient-background__map { opacity: .62; }
-}
-@media (prefers-color-scheme: dark) {
-  html[data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--accent) 30%, transparent); --ambient-grid: color-mix(in oklab, var(--accent) 7%, transparent); }
-  html[lang="ar"][data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-ai) 28%, transparent); }
-  html[lang="en"][data-theme="system"] .ambient-background { --ambient-line: color-mix(in oklab, var(--cat-app) 24%, transparent); }
-  html[data-theme="system"] .ambient-background__map { opacity: .78; }
+html[data-theme="light"] .ambient-dots {
+  opacity: 0.18;
 }
 @media (max-width: 640px) {
-  .ambient-background__map { opacity: .38 !important; transform: none; }
-  .ambient-structure { opacity: .12; }
-  .ambient-particles { opacity: .26; }
-  .ambient-scene { transform: none; }
-  .ambient-ribbon--wide { stroke-width: 42; }
+  .ambient-glow {
+    top: -10rem;
+    height: 24rem;
+    opacity: 0.45;
+    filter: blur(36px);
+  }
+  .ambient-dots {
+    opacity: 0.16;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ambient-background__map, .ambient-background__glint, .ambient-scene { transform: none !important; transition: none !important; }
-  .ambient-ribbon--hairline { transition: none !important; }
+  .ambient-background, .ambient-glow, .ambient-dots {
+    animation: none !important;
+    transition: none !important;
+  }
 }

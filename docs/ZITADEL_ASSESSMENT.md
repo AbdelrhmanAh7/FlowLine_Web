@@ -1,4 +1,10 @@
-# ZITADEL identity assessment — 2026-10-01
+# ZITADEL identity assessment — 2026-10-01 and 2026-10-02
+
+## Current status — 2026-10-02
+
+Google consent is configured in Testing mode. The Google -> ZITADEL -> Flowline round-trip is UNVERIFIED; the last click timed out. Owner TOTP/bootstrap is UNVERIFIED. The owner plans to complete these checks tomorrow, 2026-10-03. No owner action is requested today. This setup is not production-ready: the Google round-trip and owner bootstrap are unverified, and Google consent remains in Testing mode.
+
+The dated 2026-10-01 notes below record earlier configuration and verification state. Where those notes describe the Google provider as a draft or the real ZITADEL callback as passed, they are historical and do not establish the current Google round-trip.
 
 ZITADEL is Flowline's **platform-owned** identity provider. The Flowline owner configures one ZITADEL tenant for customer sign-in; customers do not need their own tenant or infrastructure credentials. Separate workspace SSO remains available for clients who want their own identity provider. ZITADEL hosts its login page and can offer Google sign-in when the owner enables Google as an upstream identity provider. Flowline still hosts the application, Postgres, workers, invitations, sessions and workspace permissions. The owner-created EU Free tenant is connected to local development; production is not deployed or verified.
 
