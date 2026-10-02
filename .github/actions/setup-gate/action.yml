@@ -1,0 +1,110 @@
+name: Set up gate job
+description: Setup shared by every Gate job (pnpm, Node, dependencies, disposable .env.test, optional Postgres, sandbox image and Playwright browsers). Run actions/checkout first.
+inputs:
+  postgres:
+    description: Start PostgreSQL 17 (max_connections=50, port 5433)
+    default: "false"
+  sandbox-image:
+    description: Pull the code-sandbox image (node:22-alpine)
+    default: "false"
+  browsers:
+    description: Space-separated Playwright browsers to install (chromium firefox webkit); empty installs none
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10.32.1
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Generate masked database password
+      shell: bash
+      run: |
+        CI_DATABASE_PASSWORD="$(openssl rand -hex 32)"
+        echo "::add-mask::$CI_DATABASE_PASSWORD"
+        echo "CI_DATABASE_PASSWORD=$CI_DATABASE_PASSWORD" >> "$GITHUB_ENV"
+
+    - name: Start PostgreSQL 17 with the test connection limit
+      if: inputs.postgres == 'true'
+      shell: bash
+      run: |
+        docker run --detach --rm --name flowline-ci-postgres \
+          --env POSTGRES_USER=flowline \
+          --env POSTGRES_PASSWORD="$CI_DATABASE_PASSWORD" \
+          --env POSTGRES_DB=flowline \
+          --publish 5433:5432 \
+          postgres:17.6-alpine postgres -c shared_buffers=64MB -c max_connections=50
+        for attempt in $(seq 1 30); do
+          if docker exec flowline-ci-postgres pg_isready -U flowline; then exit 0; fi
+          sleep 2
+        done
+        docker logs flowline-ci-postgres
+        exit 1
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Cache Playwright browsers
+      if: inputs.browsers != ''
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ inputs.browsers }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+    # The code node runs user code in Docker (src/server/code-sandbox.ts SANDBOX_IMAGE); the integration suite
+    # requires the image to be present.
+    - name: Pull the code-sandbox image
+      if: inputs.sandbox-image == 'true'
+      shell: bash
+      run: docker pull node:22-alpine
+
+    - name: Install Playwright browsers
+      if: inputs.browsers != ''
+      shell: bash
+      env:
+        PW_BROWSERS: ${{ inputs.browsers }}
+      run: pnpm exec playwright install --with-deps $PW_BROWSERS
+
+    - name: Create disposable test environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        auth_secret="$(openssl rand -hex 32)"
+        encryption_key="$(openssl rand -base64 32 | tr -d '\n')"
+        platform_key="$(openssl rand -base64 32 | tr -d '\n')"
+        for value in "$CI_DATABASE_PASSWORD" "$auth_secret" "$encryption_key" "$platform_key"; do
+          echo "::add-mask::$value"
+        done
+        export CI_AUTH_SECRET="$auth_secret"
+        export CI_ENCRYPTION_KEY="$encryption_key"
+        export CI_PLATFORM_KEY="$platform_key"
+        export CI_TEST_DATABASE_URL="postgres://flowline:${CI_DATABASE_PASSWORD}@127.0.0.1:5433/flowline_test"
+        echo "::add-mask::$CI_TEST_DATABASE_URL"
+        node --input-type=module <<'NODE'
+        import { readFileSync, writeFileSync } from 'node:fs';
+        const source = readFileSync('.github/ci/env.test.template', 'utf8');
+        const values = {
+          DATABASE_URL: process.env.CI_TEST_DATABASE_URL,
+          BETTER_AUTH_SECRET: process.env.CI_AUTH_SECRET,
+          BETTER_AUTH_URL: 'http://localhost:3100',
+          FLOWLINE_ENV: 'test',
+          FLOWLINE_PUBLIC_URL: 'http://localhost:3100',
+          FLOWLINE_ENCRYPTION_KEY: process.env.CI_ENCRYPTION_KEY,
+          FLOWLINE_PLATFORM_ENCRYPTION_KEY: process.env.CI_PLATFORM_KEY,
+          FLOWLINE_AI_TEST_OVERRIDE: 'http://127.0.0.1:4011',
+        };
+        let output = source;
+        for (const [name, value] of Object.entries(values)) {
+          const line = `${name}=${value}`;
+          const pattern = new RegExp(`^${name}=.*$`, 'm');
+          output = pattern.test(output) ? output.replace(pattern, () => line) : `${output.trimEnd()}\n${line}\n`;
+        }
+        writeFileSync('.env.test', output, { mode: 0o600 });
+        NODE
