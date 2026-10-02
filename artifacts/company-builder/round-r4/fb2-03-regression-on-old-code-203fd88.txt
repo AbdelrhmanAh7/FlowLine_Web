@@ -1,0 +1,5 @@
+     × a date that contains 24 doesn't select a service; the reply asks which service 28ms
+     × a phone number containing 24 or 7 doesn't select a service 9ms
+     × the full service name still matches, written with or without the slash 9ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  3 failed | 2 passed (5)

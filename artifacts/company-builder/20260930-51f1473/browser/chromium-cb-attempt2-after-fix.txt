@@ -1,0 +1,11 @@
+forward 127.0.0.1:3100 → host.docker.internal:3100
+forward 127.0.0.1:4010 → host.docker.internal:4010
+forward 127.0.0.1:4011 → host.docker.internal:4011
+
+Running 4 tests using 1 worker
+
+[1/4] [chromium] › e2e/company-builder.spec.ts:30:5 › company builder: interview → plan → real drafts → sample trial → review → activation → history @critical
+[2/4] [chromium] › e2e/company-builder.spec.ts:129:5 › company builder: another workspace's member gets 404; nobody but the founder reaches the CLI prototype @critical
+[3/4] [chromium] › e2e/company-builder.spec.ts:150:5 › company builder: Arabic is the default, right-to-left, with the reviewed promise @cross-browser
+[4/4] [chromium] › e2e/company-builder.spec.ts:164:5 › company builder: keyboard-only answering; mobile width has no horizontal scroll
+  4 passed (25.4s)

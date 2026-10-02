@@ -1,0 +1,11 @@
+
+ RUN  v5.0.2 /home/user/FlowLine_Web
+
+migrated postgres://***@127.0.0.1:5433/flowline_test
+[seed-platform] test platform credentials ready
+
+ Test Files  50 passed (50)
+      Tests  520 passed (520)
+   Start at  06:55:27
+   Duration  184.73s (tests 76%, import 22%, transform 2%)
+

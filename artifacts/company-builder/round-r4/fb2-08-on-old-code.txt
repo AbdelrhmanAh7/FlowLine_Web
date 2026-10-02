@@ -1,0 +1,5 @@
+# FB2-08 regression with the R4 working tree on 64d9e00 and only src/server/company-builder/reviews.ts reverted (no UUID guard in pauseTask)
+     × FB2-08: pausing with a malformed or unknown installation id is a 404, never a 500 194ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: not-a-uuid: expected 500 to be 404 // Object.is equality
+      Tests  1 failed | 43 skipped (44)

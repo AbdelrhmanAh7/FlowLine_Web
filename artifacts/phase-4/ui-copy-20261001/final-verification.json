@@ -1,0 +1,44 @@
+{
+  "baseSha": "766ff3ce8060a4caf35d8e75d969fca68d97f51a",
+  "dirtyAtValidation": true,
+  "sourceFingerprint": "9cf6dafcf134c4a901868963cc554e0a00414541061d51e155bcf135f530b60b",
+  "files": 729,
+  "fingerprintAlgorithm": "SHA-256 of sorted path NUL raw file bytes NUL for tracked and non-ignored source/config files; excludes secrets, docs and evidence",
+  "unit": 709,
+  "contract": 468,
+  "integration": {
+    "passed": 540,
+    "failed": 0,
+    "skipped": 0
+  },
+  "fullBrowserBaseline": {
+    "chromium": 143,
+    "firefox": 77,
+    "nativeWebkit": 77,
+    "gate": "artifacts/gates/766ff3c-20261001T162843Z"
+  },
+  "latestAuthentication": {
+    "chromium": 10,
+    "firefox": 8,
+    "nativeWebkit": 8,
+    "gate": "artifacts/gates/766ff3c-20261001T170807Z"
+  },
+  "latestPlatformAndBackend": {
+    "chromium": 24,
+    "firefox": 7,
+    "nativeWebkit": 7,
+    "gate": "artifacts/gates/766ff3c-20261001T172115Z"
+  },
+  "linuxWebkit": {
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "evidence": "test-results/webkit-linux-20261001T171243Z-7915"
+  },
+  "catalogueKeysPerLanguage": 3475,
+  "catalogueIssues": 0,
+  "liveZitadel": "real development authorization-code callback and workspace onboarding passed; production unverified",
+  "google": "separate OAuth client created; ZITADEL provider draft awaits final activation approval",
+  "release": "push, latest-head Codex review and clean-PR merge still pending"
+}

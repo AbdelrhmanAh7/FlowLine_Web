@@ -1,0 +1,81 @@
+[50/128] [chromium] › e2e/company-builder.spec.ts:217:5 › company builder: keyboard-only answering; mobile width has no horizontal scroll
+[51/128] [chromium] › e2e/company-builder.spec.ts:247:5 › company builder: deleting an interview shows a failure instead of swallowing it, and a double click is harmless (FB2-10)
+[52/128] [chromium] › e2e/failures.spec.ts:8:5 › invalid flow: run is blocked with reasons, fields show errors, API refuses
+[53/128] [chromium] › e2e/failures.spec.ts:39:5 › save failure: silent retries then recovery, and manual retry after repeated failures
+[54/128] [chromium] › e2e/failures.spec.ts:63:5 › load failure: the canvas shows an error with a working Retry
+[55/128] [chromium] › e2e/failures.spec.ts:74:5 › offline: edits kept locally, run disabled, reconciled on reconnect
+[56/128] [chromium] › e2e/failures.spec.ts:97:5 › offline conflict: newer server copy is never silently overwritten
+[57/128] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1440px en-US America/New_York @cross-browser
+[58/128] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 1024px ar-EG Africa/Cairo @cross-browser
+[59/128] [chromium] › e2e/hydration.spec.ts:20:7 › no hydration warnings: 375px de-DE Asia/Tokyo @cross-browser
+[60/128] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser
+[61/128] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser
+[62/128] [chromium] › e2e/hydration.spec.ts:61:7 › no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser
+[63/128] [chromium] › e2e/journey.spec.ts:9:5 › new user builds, saves, reopens, runs and inspects a flow @critical
+[64/128] [chromium] › e2e/landing.spec.ts:53:7 › landing scroll experience › scrolls through every section with no console errors
+[65/128] [chromium] › e2e/landing.spec.ts:65:7 › landing scroll experience › reduced motion: scroll scenes are static
+[66/128] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 375px
+[67/128] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1024px
+[68/128] [chromium] › e2e/landing.spec.ts:99:9 › landing scroll experience › RTL: no horizontal scroll at 1440px
+[69/128] [chromium] › e2e/landing.spec.ts:114:7 › landing scroll experience with motion allowed (desktop) › scroll reveals end fully visible (opacity 1, none left hidden)
+[70/128] [chromium] › e2e/landing.spec.ts:128:7 › landing scroll experience with motion allowed (desktop) › hero scrub: .hero-scrub runs on the wrapper's named view timeline where the browser supports scroll timelines
+[71/128] [chromium] › e2e/landing.spec.ts:158:7 › landing scroll experience with motion allowed (desktop) › hero scrub: the scale/tilt plays WHILE the stage is pinned (not only at pin release)
+[72/128] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, light)
+[73/128] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (en, dark)
+[74/128] [chromium] › e2e/landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (en)
+[75/128] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, light)
+[76/128] [chromium] › e2e/landing.spec.ts:274:11 › landing header: fits every width, keeps theme and language reachable › fits from 360 to 1440 without horizontal overflow (ar, dark)
+[77/128] [chromium] › e2e/landing.spec.ts:291:9 › landing header: fits every width, keeps theme and language reachable › 768x950 and 1440: no horizontal overflow and Start free fully inside the viewport (ar)
+[78/128] [chromium] › e2e/landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 375px: theme and language can be changed from the header
+[79/128] [chromium] › e2e/landing.spec.ts:302:9 › landing header: fits every width, keeps theme and language reachable › phone 360px: theme and language can be changed from the header
+[80/128] [chromium] › e2e/landing.spec.ts:336:7 › landing header: fits every width, keeps theme and language reachable › phone 375px: the preferences are keyboard operable with a visible focus ring
+[81/128] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › en/light: readable illustrations at 360, 768, 1024 and 1440
+[82/128] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › en/dark: readable illustrations at 360, 768, 1024 and 1440
+[83/128] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › ar/light: readable illustrations at 360, 768, 1024 and 1440
+[84/128] [chromium] › e2e/landing.spec.ts:361:11 › landing copy and illustration contrast @cross-browser › ar/dark: readable illustrations at 360, 768, 1024 and 1440
+[85/128] [chromium] › e2e/landing.spec.ts:401:7 › @cross-browser en: section links preserve landing content through account-route Back and Forward
+[86/128] [chromium] › e2e/landing.spec.ts:401:7 › @cross-browser ar: section links preserve landing content through account-route Back and Forward
+[87/128] [chromium] › e2e/library.spec.ts:4:5 › templates: a local template creates a flow and opens the canvas; design templates list their real requirements
+[88/128] [chromium] › e2e/library.spec.ts:25:5 › settings: owner renames the workspace and sets a timezone; values persist; unavailable features explain themselves
+[89/128] [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › en: filter, search, create and run a quote from the gallery
+[90/128] [chromium] › e2e/local-scenarios.spec.ts:6:9 › @cross-browser everyday scenario gallery › ar: filter, search, create and run a quote from the gallery
+[91/128] [chromium] › e2e/phase2.spec.ts:82:5 › template journey: connect apps via OAuth, finish setup in the canvas, Sheets fails, re-run from that step without duplicates
+[92/128] [chromium] › e2e/phase2.spec.ts:148:5 › double-clicked Run starts one run, and Cancel stops it mid-request
+[93/128] [chromium] › e2e/phase2.spec.ts:176:5 › approval: a gated Slack post waits, is approved in the inspector, and posts exactly once @critical
+[94/128] [chromium] › e2e/phase2.spec.ts:200:5 › repair a connection: revoked at the provider → only its flow pauses, banner, reconnect same account via OAuth, nothing auto-runs
+[95/128] [chromium] › e2e/phase2.spec.ts:257:5 › mobile: Phase 2 pages fit a phone screen without horizontal scrolling
+[96/128] [chromium] › e2e/phase3.spec.ts:42:5 › members: invite link → accept; a VIEWER can see but not approve (UI + API); promotion allows it; removal revokes access @critical
+[97/128] [chromium] › e2e/phase3.spec.ts:102:5 › API keys: created with a one-time reveal, work against /api/v1, stop working when revoked @critical
+[98/128] [chromium] › e2e/phase3.spec.ts:125:5 › knowledge + agent: upload, index, cite; ASK tool pauses for approval and runs the published workflow once @critical
+[99/128] [chromium] › e2e/phase3.spec.ts:184:7 › Copilot › valid generation with a missing credential → approve → saved draft, nothing ran @critical
+[100/128] [chromium] › e2e/phase3.spec.ts:209:7 › Copilot › invalid proposal and missing integration are explained and can't be applied; rejection changes nothing
+[101/128] [chromium] › e2e/phase3.spec.ts:225:7 › Copilot › patching an existing flow keeps the user's steps; removals need explicit confirmation
+[102/128] [chromium] › e2e/phase3.spec.ts:247:5 › billing sandbox: choose a test plan → fake checkout → verified webhook → plan in force
+[103/128] [chromium] › e2e/phase3.spec.ts:261:5 › history: restore an older version as a draft (rollback) — history is kept
+[104/128] [chromium] › e2e/phase3.spec.ts:277:5 › mobile: Agents and Knowledge fit a phone; Copilot and editing stay disabled on mobile
+[105/128] [chromium] › e2e/phase3.spec.ts:289:5 › SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over
+[106/128] [chromium] › e2e/phase3.spec.ts:349:5 › a pending agent approval can be found again after navigating away (Codex CX3Q-01): dashboard → Review → Runs; viewer can't decide; owner approves once @cross-browser
+[107/128] [chromium] › e2e/prehydration.spec.ts:7:5 › text typed before hydration survives @cross-browser
+[108/128] [chromium] › e2e/prehydration.spec.ts:20:5 › sign-in forms submitted before hydration: SSO still works, credentials never reach a URL @cross-browser
+[109/128] [chromium] › e2e/reduced-motion.spec.ts:17:7 › reduced motion › the running node has no animation — a static ring marks it
+[110/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 1440px
+[111/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 1280px
+[112/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 1279px
+[113/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 1024px
+[114/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 768px
+[115/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 767px
+[116/128] [chromium] › e2e/responsive.spec.ts:44:9 › breakpoints › shell at 375px
+[117/128] [chromium] › e2e/responsive.spec.ts:60:5 › builder drawer: 360px at desktop, overlay + scrim on tablet, bottom sheet on mobile
+[118/128] [chromium] › e2e/responsive.spec.ts:93:5 › mobile is monitor-only: editing disabled with a persistent banner, running still works
+[119/128] [chromium] › e2e/responsive.spec.ts:125:5 › capture screens & states at 1440 / 1024 / 375
+[120/128] [chromium] › e2e/responsive.spec.ts:246:5 › capture Phase 3 surfaces (empty / populated) at 1440 / 1024 / 375
+[121/128] [chromium] › e2e/run-states.spec.ts:21:7 › run visual states @cross-browser › running glows and flows, succeeded draws its tick
+[122/128] [chromium] › e2e/tenancy.spec.ts:5:5 › two users in separate workspaces cannot see each other's flows or runs @critical
+[123/128] [chromium] › e2e/tenancy.spec.ts:46:5 › unauthenticated API access is rejected and app routes redirect to sign-in
+[124/128] [chromium] › e2e/tenancy.spec.ts:52:5 › sign-out clears local drafts
+[125/128] [chromium] › e2e/theme.spec.ts:6:7 › theme switch › persists across reload and appears in the server HTML
+[126/128] [chromium] › e2e/theme.spec.ts:23:7 › theme switch › system follows the OS color scheme
+[127/128] [chromium] › e2e/theme.spec.ts:33:7 › theme switch › works in Arabic (RTL)
+[128/128] [chromium] › e2e/theme.spec.ts:44:7 › theme switch › the user menu switches the theme too
+  128 passed (6.6m)
+rc=0
