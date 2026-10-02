@@ -1,14 +1,19 @@
 # CodeRabbit runs only on GitHub (no local CodeRabbit CLI).
 # Stacked PRs: their base is the previous PR's branch, so allow any base branch.
 # Rate limits: chat replies are NOT automatic (thread replies like "Fixed in <sha>" don't spend chat messages);
-# tag @coderabbitai only when its answer is needed (max ~5 per hour). Fixes are verified by the incremental
-# review on each push, so push one batch per fix round.
+# tag @coderabbitai only when its answer is needed. Fixes are verified by a manually requested review after a
+# batched push (one push per fix round).
+# Plan limit (Essentials): 5 PR reviews per developer per hour. Every push to a stack would re-review every PR, so
+# automatic re-review is OFF. The allowance is per developer ACROSS projects on a rolling hour: Flowline uses at most
+# 3 reviews per rolling 60 minutes (2 left for the owner's other project); request `@coderabbitai review` only on PRs
+# whose code changed.
 language: en-US
 reviews:
   profile: assertive
   request_changes_workflow: false
   auto_review:
     enabled: true
+    auto_incremental_review: false
     drafts: false
     base_branches:
       - ".*"
