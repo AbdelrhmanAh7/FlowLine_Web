@@ -99,14 +99,24 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page.getByText("Draft saved.")).toBeVisible();
+    // A reload selects the first key again, so re-select the edited key before checking its values and previews.
+    const reselect = async () => {
+      await page.locator("#copy-search").fill("platformAdmin.copyEditor.previewNote");
+      await page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ }).click();
+      await expect(page.getByRole("button", { name: /platformAdmin.copyEditor.previewNote/ })).toHaveAttribute("aria-pressed", "true");
+    };
     await page.reload();
-    await expect(page.getByRole("paragraph").filter({ hasText: originalEn })).toBeVisible();
-    // After the reload the editor loads the saved DRAFT, so the Arabic preview shows the draft value (draft persisted).
+    await reselect();
+    // The saved draft persisted across the reload: both fields and both previews show the draft values.
+    await expect(page.locator("#copy-en")).toHaveValue("Previewed English copy");
+    await expect(page.locator("#copy-ar")).toHaveValue("نص عربي للمعاينة");
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Publish draft" }).click();
     await expect(page.getByText("Copy published.")).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+    await reselect();
+    await expect(page.locator("#copy-en")).toHaveValue("Previewed English copy");
+    await expect(page.locator("#copy-ar")).toHaveValue("نص عربي للمعاينة");
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
   } finally {
     // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
