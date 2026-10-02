@@ -1,0 +1,19 @@
+{
+  "candidateSha": "719056cefa9d9810f93ea8c917da2bda82fe2e4a",
+  "runId": "e0338d6482d9bee50343705dc438a4dd",
+  "scope": "DB-only synthetic fixture + actual candidate crypto; no app/worker/migration/ARM certification",
+  "status": "BLOCKED",
+  "checks": [
+    {
+      "name": "candidate crypto matches exact Git SHA",
+      "ok": true
+    },
+    {
+      "name": "candidate journal matches exact Git SHA",
+      "ok": true
+    }
+  ],
+  "cleanup": [],
+  "at": "2026-10-02T23:15:06.064Z",
+  "code": "DOCKER_OPERATION_FAILED"
+}
