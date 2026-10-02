@@ -32,7 +32,7 @@ const stop = () => shutdown.abort();
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 console.log(`[cb-controller] ${controllerId} watching workspace ${workspaceId} (one job at a time)`);
-const stale = await recoverStaleJobs();
+const stale = await recoverStaleJobs(workspaceId);
 if (stale.length) console.log(`[cb-controller] marked ${stale.length} interrupted job(s) as failed`);
 while (!shutdown.signal.aborted) {
   const job = await claimJob(workspaceId, controllerId);

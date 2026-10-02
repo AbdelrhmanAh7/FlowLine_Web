@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const sessionHolder = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock("next/headers", () => ({
@@ -26,6 +26,11 @@ afterAll(async () => {
   await db.delete(schema.platformSetting).where(eq(schema.platformSetting.key, "site.copy.draft"));
   await db.delete(schema.platformSetting).where(eq(schema.platformSetting.key, "site.copy.published"));
   await closeDb();
+});
+
+beforeAll(async () => {
+  await db.delete(schema.platformSetting).where(eq(schema.platformSetting.key, "site.copy.draft"));
+  await db.delete(schema.platformSetting).where(eq(schema.platformSetting.key, "site.copy.published"));
 });
 
 describe("platform copy routes", () => {
