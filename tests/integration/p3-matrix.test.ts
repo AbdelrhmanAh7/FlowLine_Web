@@ -91,6 +91,7 @@ import { createWorkspace } from "@/server/workspaces";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { startFakeProviders } from "../../e2e/fakes/provider-server";
 import { addMember, closeDb, makeUser, unique } from "./helpers";
+import { apiKeySecret, inviteTokenFromUrl, secretNeedles } from "./secret-needles";
 
 /* ───────────── session plumbing ───────────── */
 
@@ -1541,7 +1542,7 @@ describe("secrets never leave the server through projections", () => {
       email: `${unique("s")}@flowline-test.local`,
       role: "viewer",
     });
-    const inviteToken = url.split("/").pop()!;
+    const inviteToken = inviteTokenFromUrl(url);
     await invoke(A.owner, {
       method: "PUT",
       handler: ssoPUT,
@@ -1607,7 +1608,16 @@ describe("secrets never leave the server through projections", () => {
       bodies.push(JSON.stringify(r.body));
     }
     const text = bodies.join("\n");
-    for (const needle of ["secretEnc", "not-a-real-secret-ciphertext", "keyHash", "tokenHash", "clientSecretEnc", "sso-test-secret-not-logged", inviteToken, key.split("_").pop()!]) {
+    // Full secrets (key, its 43-char secret part, invite token, SSO client secret, the fake ciphertext)
+    // plus the column names. `secretNeedles` throws on anything shorter than 8 characters, so a mis-built
+    // fragment fails loudly instead of matching unrelated JSON (CI run 37059910151: `not to contain 'E'`
+    // came from `key.split("_").pop()` on a base64url secret that itself contained an underscore).
+    // The key prefix `fl_test_<8 chars>` is a public hint and is allowed in the projection, so it is not a needle.
+    const needles = secretNeedles({
+      fields: ["secretEnc", "keyHash", "tokenHash", "clientSecretEnc"],
+      secrets: ["not-a-real-secret-ciphertext", "sso-test-secret-not-logged", inviteToken, key, apiKeySecret(key)],
+    });
+    for (const needle of needles) {
       expect(text, `response contains ${needle}`).not.toContain(needle);
     }
   });
