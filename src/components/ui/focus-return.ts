@@ -22,14 +22,62 @@ export interface FocusTarget {
 
 const isPageRoot = (el: FocusTarget) => el.tagName === "BODY" || el.tagName === "HTML";
 
+/** A focusable element: one that can receive focus, is not disabled, and is still in the document. */
+function isFocusable(el: FocusTarget | null | undefined): boolean {
+  if (!el || !el.isConnected || el.disabled) return false;
+  const tag = el.tagName?.toUpperCase();
+  // Interactive elements
+  if (tag === "A" || tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "SUMMARY") {
+    return true;
+  }
+  // Elements with tabindex (check in a way that works in both DOM and jsdom)
+  if (typeof (el as any).getAttribute === "function") {
+    const tabindex = (el as any).getAttribute("tabindex");
+    if (tabindex !== null) {
+      const idx = parseInt(tabindex, 10);
+      return idx >= -1;
+    }
+  }
+  return false;
+}
+
+/**
+ * Finds the closest connected, focusable ancestor of an element (or the element itself if already focusable).
+ * Stops at the document root. Returns null if no focusable ancestor exists.
+ */
+export function closestFocusableAncestor<T extends FocusTarget>(el: T | null | undefined): T | null {
+  let current: FocusTarget | null = el ?? null;
+  while (current && !isPageRoot(current)) {
+    if (isFocusable(current)) return current as T;
+    // Try to get parent element (works in DOM, safely returns null in jsdom without HTMLElement)
+    const parentEl = typeof (current as any).parentElement !== "undefined" ? (current as any).parentElement : null;
+    current = parentEl as FocusTarget | null;
+  }
+  // If nothing else, try the main region with tabIndex=-1 as a last resort
+  if (typeof (el as any).ownerDocument !== "undefined") {
+    const main = (el as any).ownerDocument?.querySelector?.("main");
+    if (main && isFocusable(main as unknown as FocusTarget)) return main as unknown as T;
+  }
+  return null;
+}
+
 /**
  * The element to give focus back to, chosen when the dialog opens. Nothing is remembered when focus was on the page
  * itself (<body>), or already inside the dialog (an `autoFocus` field): there is nothing to return to in either case.
+ * Also saves the closest focusable ancestor as a fallback when the opener is later removed.
  */
-export function pickReturnTarget<T extends FocusTarget>(active: T | null | undefined, content: { contains(node: NoInfer<T>): boolean } | null | undefined): T | null {
-  if (!active || isPageRoot(active)) return null;
-  if (content?.contains(active)) return null;
-  return active;
+export function pickReturnTarget<T extends FocusTarget>(
+  active: T | null | undefined,
+  content: { contains(node: NoInfer<T>): boolean } | null | undefined,
+): { target: T | null; fallback: T | null } {
+  if (!active || isPageRoot(active)) {
+    return { target: null, fallback: null };
+  }
+  if (content?.contains(active)) {
+    return { target: null, fallback: null };
+  }
+  const fallback = closestFocusableAncestor(active);
+  return { target: active, fallback };
 }
 
 /** A remembered element can take focus again: it is still in the document and not disabled. */

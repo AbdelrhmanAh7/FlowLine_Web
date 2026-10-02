@@ -21,6 +21,7 @@ import { pickReturnTarget, restoreFocus } from "./focus-return";
 export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boolean, fallback?: () => HTMLElement | null) {
   const contentRef = useRef<T>(null);
   const returnTo = useRef<HTMLElement | null>(null);
+  const returnFallback = useRef<HTMLElement | null>(null);
   const opened = useRef(false);
   const fallbackRef = useRef(fallback);
   useLayoutEffect(() => {
@@ -36,12 +37,18 @@ export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     }
     if (opened.current) return;
     opened.current = true;
-    returnTo.current = pickReturnTarget(document.activeElement as HTMLElement | null, contentRef.current);
+    const result = pickReturnTarget(document.activeElement as HTMLElement | null, contentRef.current);
+    returnTo.current = result.target;
+    returnFallback.current = result.fallback;
   }, [open]);
 
   // `lostWithin`: for a surface that is hidden instead of removed, focus still inside it counts as lost (see `restoreFocus`).
   const restore = useCallback(
-    (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus([returnTo.current, fallbackRef.current?.()], document.activeElement as HTMLElement | null, lostWithin),
+    (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus(
+      [returnTo.current, returnFallback.current, fallbackRef.current?.()],
+      document.activeElement as HTMLElement | null,
+      lostWithin,
+    ),
     [],
   );
 
