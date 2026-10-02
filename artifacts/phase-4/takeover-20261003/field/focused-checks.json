@@ -1,0 +1,61 @@
+{
+  "testedBaseSha": "9324b1fed677f03e8c044eb1373b8577167abeb5",
+  "sourceCandidateSha": "719056cefa9d9810f93ea8c917da2bda82fe2e4a",
+  "dirty": true,
+  "recordedAt": "2026-10-02T23:28:00Z",
+  "mode": "DETERMINISTIC_SCORER_CHECKS_ONLY",
+  "checks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project unit tests/unit/field-validation-v2.test.ts --maxWorkers 1 --no-file-parallelism --configLoader runner --no-cache",
+      "exitCode": 0,
+      "testFiles": 1,
+      "testsPassed": 52,
+      "testsFailed": 0,
+      "testsSkipped": 0
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc -p scripts/field-validation/v2/tsconfig.json --noEmit",
+      "exitCode": 0,
+      "scope": "field harness/scoring/unit tests and imported e2e helper only"
+    },
+    {
+      "command": "node node_modules/eslint/bin/eslint.js scripts/field-validation/v2/*.ts tests/unit/field-validation-v2.test.ts --no-cache",
+      "exitCode": 0
+    }
+  ],
+  "sourceHashes": {
+    "frozenPacketSha256": "4fa9841b2a5f40f76ea197e9a1a9f5dd4c10b3796e156968b4808f9d495d6596",
+    "frozenHarnessSha256": "50fa75501f865cf2231bd8e51bcf828fc3e949ffd2faab8f6bde84fa80940825"
+  },
+  "sourcePacketComparison": {
+    "method": "Read-only git show of candidate719056c frozen packet, SHA256 of raw git object bytes, parsed-field comparison with v2 packet",
+    "provenanceMatches": true,
+    "requestsPreserved": true,
+    "approvedInformationPreserved": true,
+    "universalChecksPreserved": true,
+    "failureCasesPreserved": true
+  },
+  "testedFileSha256": {
+    "scripts/field-validation/v2/field.config.ts": "deca3413cac0196516963a4fbf95208799a9fa3b8cb201308712266fb3044735",
+    "scripts/field-validation/v2/field.spec.ts": "fdc9fc148d54a57b553c11dfd4f21d2ea4473f4c7f7633e411ee6fe3843f9520",
+    "scripts/field-validation/v2/isolation.ts": "99b0bb3d99ebcef7575b75d1b44f1ce11a503b4f121aa6f0f59a974f1bd25213",
+    "scripts/field-validation/v2/packet.json": "b4a278f96c2d1acbf8d4fb0a0ce0b465fc05276e6ac76b5111e27fbd5fdf1d4f",
+    "scripts/field-validation/v2/packet.ts": "af4bf9d41dc41479b38b98db9fb8cb6da81c60cbcde52b20459f02bc32fe17f6",
+    "scripts/field-validation/v2/scoring.ts": "e26ca205485f3030741d9cfe1022230c5b03d737bffa04ffdab2a0f82a03f9ff",
+    "scripts/field-validation/v2/SHA256SUMS": "56f26c0ca696bcada2ed1e3bb558b985a1b78d617377ab50b9c7345847845b76",
+    "scripts/field-validation/v2/tsconfig.json": "038c28cd96c756750faba8ebe37471b4af0e9bdce3513be8a238117a642ade48",
+    "tests/unit/field-validation-v2.test.ts": "11732d5e50974c44a578d93cae20fd58b7b5fcde0f22c03427e8c39dfe6b446c"
+  },
+  "apiFieldRun": "NOT_RUN",
+  "browserRun": "NOT_RUN",
+  "providerLiveRun": "NOT_RUN",
+  "ci": "NOT_RUN",
+  "blocked": [
+    "API/worker/persisted field run: source checkout is pre-Company Builder and this lane prohibits starting a test stack; merge candidate and use a dedicated isolated test database/port before opting in",
+    "Actual browser/owner usability: prohibited in this lane; requires authorized browser session and owner participation",
+    "Live Gmail delivery/cancellation/refund: sample outbox proves none of these; requires scoped provider account and owner consent",
+    "Candidate source REFUND_NOTE lacks explicit owner-decision wording for VP-05/VP-06; inferred from source, not an observed field failure"
+  ],
+  "issueRead": "PRIMARY_SAVED_ISSUE6_RESTART_JSON",
+  "publication": "NONE"
+}
