@@ -11,7 +11,9 @@ Arabic-first UI. You are on the owner's laptop, in the repository root.
 
 ## 0. Get the code and read the rules first
 git fetch origin
-git checkout -B claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
+# Check whether the local branch already exists and has commits not on the remote before proceeding.
+# If it has local-only commits, preserve them and use a fresh handoff branch instead of resetting it.
+git checkout -b claude/company-builder-milestones-abc-pmba6v origin/claude/company-builder-milestones-abc-pmba6v
 # PR #1 (this branch → main) is open: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/1
 Read, in this order, before changing anything:
   AGENTS.md (binding project rules — note "This is NOT the Next.js you know": read node_modules/next/dist/docs/
@@ -28,13 +30,13 @@ Read, in this order, before changing anything:
 - Never use the dev database for tests.
 
 ## 2. Gates (owner decision 2026-10-01, written in AGENTS.md)
-- Every commit: `pnpm gate` (~3–4 min on 4 CPUs: static checks in parallel, integration sharded over its own DBs,
-  Chromium @critical/@cross-browser split over 3 isolated test stacks).
-- Before merging to main: `pnpm gate:full` (adds all Chromium specs, Firefox, WebKit; on ≥8 CPUs the three projects run
-  at once, otherwise one after another). Logs + summary.json land in artifacts/gates/ (git-ignored).
+- Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test` while developing. CI runs the fast
+  tier for PRs not targeting main and pushes to main; PRs targeting main run the full tier. Use `pnpm gate` locally
+  only when explicitly needed. CI logs and `summary.json` are uploaded as artifacts; local gate output is written
+  under `artifacts/gates/` (git-ignored).
 - Skipped or flaky tests are failures. Never delete an assertion, loosen a timeout, or change a baseline to get green.
   Re-running until green is not a fix. Root-cause it, or report it as open.
-- If you have more CPUs, try `pnpm gate:full` and report the wall time; it should go under 8 minutes.
+- For a full-tier rerun, use GitHub Actions → Gate → Run workflow and select `full`; run `pnpm gate` locally only when explicitly needed.
 
 ## 3. Current state (as of head b37c132 + one docs commit)
 - Company Builder round R4 is done: FB2-01..10 fixed (FB2-05 disproved), the independent-review P2 fixed,
@@ -44,7 +46,7 @@ Read, in this order, before changing anything:
      browser runs on the default stack. Suspected keep-alive socket reuse racing the server's idle close under load.
      Root-cause it (e.g. compare Node's server keepAliveTimeout with Playwright's request-context reuse), fix it,
      and show it no longer reproduces with repeated runs.
-  2. Confirm `pnpm gate:full` passes on the final head (the last confirmation run was stopped by the owner).
+  2. Confirm the full-tier CI gate passes on the final head (the last confirmation run was stopped by the owner).
   3. R4-RV-04 (P3, latent): the connection_missing suppression in src/company-builder/lifecycle.ts is
      provider-blind. Fix it per connection only when a second non-AI provider pack exists.
   4. Observations VO-01..06 in BUGS.md are product decisions for the owner, not defects to "fix" silently.
