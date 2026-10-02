@@ -1,6 +1,18 @@
-# UX implementation verification ? 2026-10-01
+# UX implementation verification ? 2026-10-01 and 2026-10-02
 
-Validation began from base SHA `766ff3ce8060a4caf35d8e75d969fca68d97f51a` with the implementation changes present. The tested source fingerprint and exact report locations are recorded in `artifacts/phase-4/ui-copy-20261001/final-verification.json`; later commit/review status must be checked separately.
+## Update ? 2026-10-02 (source 8663b3e)
+
+The current code state is commit `8663b3e`, the top of stacked PRs #2 (core, base `main`) -> #3 (UI) -> #4 (docs + evidence 1) -> #5 (evidence 2). PR #1 is closed as superseded. Merge order is top-down.
+
+`pnpm gate` PASSED on the `8663b3e` tree: unit 725, contract 468, integration 549, Chromium 77 (fast tier). The full tier (`gate:full`, all Chromium plus Firefox and WebKit) has NOT yet run on this tree. CodeRabbit reviewed #2-#5 and reported 41 findings: 30 fixed, 3 declined with reasons, and 8 on frozen evidence tracked in issue #6.
+
+Repairs recorded for this state: activation is atomic in one transaction; CLI shutdown is graceful; plan `createdAt` uses the application clock to address a flaky metric; and the gate connection budget uses Postgres `max_connections=50`, defaults to at most 4 stacks, and refuses counts that cannot fit.
+
+Google consent is configured in Testing mode. The Google -> ZITADEL -> Flowline round-trip is UNVERIFIED because the last click timed out. Owner TOTP/bootstrap is also UNVERIFIED. The owner plans these checks for 2026-10-03; no owner action is requested today.
+
+All counts and outcomes in the 2026-10-01 section below belong to its earlier source state and do not describe commit `8663b3e`.
+
+Validation began from base SHA `766ff3ce8060a4caf35d8e75d969fca68d97f51a` with the implementation changes present. These results are historical for that earlier source state. The tested source fingerprint and exact report locations are recorded in `artifacts/phase-4/ui-copy-20261001/final-verification.json`.
 
 Delivered: shared developer schema forms and controls; recovery-page adoption; four interactive locale/theme backgrounds; equal landing cards with illustrated scroll/click selection; query section navigation; Arabic/light defaults; owner copy editing with preview and protected publication; complete JSON catalogues; platform-owned ZITADEL environment configuration alongside workspace SSO; developer guides; and the nine existing Codex review repairs for Company Builder.
 

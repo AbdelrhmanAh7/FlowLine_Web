@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POOL_MAX, MIN_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, stackConnections, stackPoolMax } from "../../scripts/gate-selection.mjs";
+import { DEFAULT_POOL_MAX, MIN_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, shouldUseNativeBrowserRunner, stackConnections, stackPoolMax } from "../../scripts/gate-selection.mjs";
 
 const ALL = ["lint", "build", "stack", "chromium", "firefox", "webkit"];
 const BROWSERS = ["chromium", "firefox", "webkit"];
@@ -12,6 +12,17 @@ const select = (over: Partial<Parameters<typeof selectGateSteps>[0]> = {}) => se
   browserStacks: 3,
   browsersMode: "sequential",
   ...over,
+});
+
+describe("native Playwright browser runner", () => {
+  it("uses installed browsers on Windows and when explicitly enabled in CI", () => {
+    expect(shouldUseNativeBrowserRunner("win32", {})).toBe(true);
+    expect(shouldUseNativeBrowserRunner("linux", { FLOWLINE_GATE_NATIVE_BROWSERS: "1" })).toBe(true);
+  });
+
+  it("keeps the Docker browser runner as the Linux default", () => {
+    expect(shouldUseNativeBrowserRunner("linux", {})).toBe(false);
+  });
 });
 
 describe("gate browser prerequisites", () => {

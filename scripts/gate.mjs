@@ -1,7 +1,7 @@
 // Gate runner: the pre-commit gate (AGENTS.md "Gates before commit") with everything that can safely run at once in
 // parallel. Two tiers:
 //
-//   pnpm gate        (--tier=fast, every commit; ≈3–4 min on a 4-CPU machine)
+//   pnpm gate        (--tier=fast, CI on every PR; ≈3–4 min on a 4-CPU machine)
 //   pnpm gate:full   (--tier=full, before merging to main; adds every Chromium spec, Firefox and WebKit)
 //   options: [--only=a,b] [--skip=a,b] [--out=<dir>] [--stacks=K (max(3, CPUs/2), default ≤4, ≤6)] [--shards=N (4)]
 //            [--browsers=sequential|parallel] [--fail-fast] [--group=product,auth,editor,platform] [--list-groups]
@@ -17,7 +17,7 @@
 //      K isolated test stacks on that build, each with its own app/fake ports and database (scripts/test-stack.cjs):
 //      stack 1 = 3100/4010/4011 + flowline_test, stack k = 3k00/4k10/4k11 + flowline_test_e<k>.
 //   3. chromium, firefox, webkit — each project runs as Playwright shards at once (--shard=i/n), one per stack, via
-//      e2e/tools/browser-docker.sh. Fast tier: Chromium's @critical/@cross-browser specs on K stacks. Full tier: all
+//      e2e/tools/browser-docker.sh, or installed browsers with FLOWLINE_GATE_NATIVE_BROWSERS=1. Fast tier: Chromium's @critical/@cross-browser specs on K stacks. Full tier: all
 //      Chromium specs on K stacks, Firefox and WebKit on ceil(K/2) each, all three projects at once on disjoint stacks
 //      on machines with ≥8 CPUs; below that (or --browsers=sequential) the projects run one after another on stacks 1..K.
 //      Measured on 4 CPUs: fast ≈3m20s; full ≈9m45s sequential (all-at-once ≈8m40s but load-flaky there).
@@ -34,7 +34,7 @@ import { join } from "node:path";
 import { parseEnv } from "node:util";
 import testStackEnv from "./test-stack.cjs";
 import { GROUPS, checkManifest, expandSteps, resolveGroups } from "./gate-groups.mjs";
-import { DEFAULT_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, stackConnections, stackPoolMax } from "./gate-selection.mjs";
+import { DEFAULT_POOL_MAX, PG_MAX_CONNECTIONS, PG_RESERVED_CONNECTIONS, selectGateSteps, shouldUseNativeBrowserRunner, stackConnections, stackPoolMax } from "./gate-selection.mjs";
 
 const BROWSERS = ["chromium", "firefox", "webkit"];
 const ALL = ["lint", "typecheck", "evidence", "unit", "contract", "integration", "build", "stack", ...BROWSERS];
@@ -408,9 +408,8 @@ main: {
         // A group run executes every test in the group's concrete files (no grep); otherwise the tier decides as before.
         const grep = groupSel ? ` ${groupFilesList.join(" ")}` : tier === "fast" && b === "chromium" ? ` --grep="${FAST_GREP}"` : "";
         const mine = stacksFor.get(b);
-        // Cloud Docker mounts cannot use Windows pnpm symlinks. Run the installed native
-        // Playwright browsers here; keep identical projects, shards, reporters and zero retries.
-        if (process.platform === "win32") {
+        // Native mode uses installed Playwright browsers with the same projects, shards, reporters and zero retries.
+        if (shouldUseNativeBrowserRunner()) {
           return run(b, 4, `node scripts/gate-browser-native.mjs ${b}${grep}`, {
             ...process.env,
             FLOWLINE_GATE_STACKS: JSON.stringify(mine),
