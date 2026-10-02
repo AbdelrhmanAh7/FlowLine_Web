@@ -1,0 +1,29 @@
+# DV2-02 review-ready implementation; real proof pending
+
+- Worktree base SHA: `9324b1fed677f03e8c044eb1373b8577167abeb5`; root candidate context: `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. Their `src/server/crypto.ts` Git blob is identical (`f344947921d47a6a8cc0804e52df0d84cff41c2d`). Tests exercise that crypto file plus the uncommitted verifier/test diff, not the entire root candidate stack.
+- Frozen source records inspected by metadata: primary `artifacts/beta-execution/20260930T122429Z/key-reuse-audit.json`, `key-rotation.json`, and `BUGS.md`; current copied `artifacts/design-v2/BUGS.md`; and takeover `common.txt`.
+- No real local `.env*` contents or encryption-key values were read or processed. Tests used generated in-memory keys only. No database or environment file was changed. Frozen evidence was not edited.
+
+## Named environment scope
+
+The audit lists exactly two disposable files with the affected reused variable: `FlowLine/.env.test` and `FL-wt-aihub/.env.test`. It lists the corresponding non-test `.env` and `.env.staging` inputs, plus staging containers, with no reused variables. It lists the design worktree `.env.test` with no reused variable. The recorded rotations name `flowline_test` → `flowline_test_beta20260930main` and `flowline_test_aihub` → `flowline_test_beta20260930hub`; they state old databases were preserved and no active old-key fallback remained.
+
+Current file-existence-only checks found `FlowLine/.env`, `.env.test`, and `.env.staging` present; all named `FL-wt-aihub` and `FL-wt-design` files from the historical audit are absent. Absence is not proof of current key hygiene or persistence. No contents were loaded. The prior primary and ai-hub rotations were not repeated. No other affected named test configuration is identified by the historical audit.
+
+## What the preserved proof establishes
+
+`key-rotation.json` records per-environment app crypto, credential persistence, and that each old key cannot decrypt newly encrypted data, plus separate platform-key checks and no fallback. It does **not** establish that each replacement key cannot decrypt old ciphertext from the preserved old database. The standalone `artifacts/design-v2/dv2-02/crypto-verify.txt` covers the earlier design worktree rotation and has the same direction of old-key rejection; it is not proof for the two environments above.
+
+The reverse-direction check and current persistence recheck against actual local databases remain unexecuted. `scripts/security/dv2-02-verifier.ts` is now implemented for independent review. Its focused tests use generated in-memory keys and stateful SQL doubles only. They verify positive controls before switching keys, then old v1/Wave A/envelope rejection, retained fallback failure, malformed/context/config rejection, original-AAD authentication (no envelope-id relabel), real-schema fixture commit/read/cleanup, old read-only transactions, changed-row failure, exact named-file audit scope, and UTF8/UTF16LE parsing using generated buffers.
+
+The CLI imports without reading environments. After review only, `--primary` or `--aihub` internally processes that exact named `.env.test`, checks the archived database pair/replacement identity, and refuses non-test/remote/override URLs and fallbacks. Old DB access is read-only at session and transaction level. The new DB receives only a generated workspace and synthetic connection using the app's encryption/opening API and real schema; the committed fixture is read back and exactly cleaned. No DB creation/drop/migration/rotation occurs. `--audit-named-envs` confines internal processing to the seven historical named files; it reports existence, invalid/reused-key counts, and fallback presence only. Staging containers are outside this fresh file audit.
+
+All selected old-key connection candidates must be supported and rejected; empty scope or any unsupported candidate stops proof. The replacement raw bytes authenticate the original legacy/Wave A ciphertext or wrapped DEK with original AAD. Actual old ciphertext validity cannot be positively reauthenticated without the old key, which is never loaded. Other credential tables and HTTP/provider/browser flows are outside this verifier's proof. Preservation comparison covers selected old connection rows; the verifier issues no writes to the old DB.
+
+Schema detection supports the coordinator-reported old schema without `legacy_crypto`: only v1 is accepted with `legacyCrypto=null` and explicit inferred provenance. No column marker is manufactured; raw AES-GCM and app `decryptLegacyV1` rejection are both required. Old/new schema metadata and inference count are reported, with the provenance limit stated. Existing-column false/null v1 markers still fail, as do changing metadata and a missing marker in the new DB. The maintained verifier/configs now live in `scripts/security/`, outside evidence; imports are extensionless.
+
+Focused validation: 34/34 tests, focused verifier/test TypeScript check, full worktree TypeScript check, and scoped ESLint pass. Full typecheck covers base 9324b1f plus this delta, not the updated primary stack. Exact commands, output summary, source hashes and proof commands are in `SECURITY_HANDOFF.md` / `focused-results.json`. No independent review or real-secret/DB proof has run.
+
+## Status
+
+DV2-02 is **PARTIAL**, not closed. The accurate current `artifacts/design-v2/BUGS.md` row now records the prior successful rotation evidence and the exact missing proof. The primary environment is already rotated according to the supplied record and owner direction; rotating it again would be needless. If coordinator review determines a remaining target is non-disposable or cannot be safely identified, route that finding through owner boundary O03 before any change. Current audit evidence does not identify such a target.
