@@ -96,14 +96,17 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await page.locator("#copy-en").fill("Previewed English copy");
     await page.locator("#copy-ar").fill("نص عربي للمعاينة");
     await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+    await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Save draft" }).click();
     await expect(page.getByText("Draft saved.")).toBeVisible();
     await page.reload();
     await expect(page.getByRole("paragraph").filter({ hasText: originalEn })).toBeVisible();
+    await expect(page.locator('[lang="ar"]').getByText(originalAr, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Publish draft" }).click();
     await expect(page.getByText("Copy published.")).toBeVisible();
     await page.reload();
     await expect(page.getByRole("paragraph").filter({ hasText: /^Previewed English copy$/ })).toBeVisible();
+    await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
   } finally {
     // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
     // is dirty raises window.confirm (accept it), and Save/Publish are disabled when there is nothing to save or publish.

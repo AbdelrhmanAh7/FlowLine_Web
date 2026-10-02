@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button, Card, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { api } from "@/lib/api";
+import { apiErrorMessage } from "@/i18n/errors";
+import { api, ApiError } from "@/lib/api";
 import { cbt } from "./text";
 import type { CliJobDto, Overview } from "./types";
 import { createCliRequestKeys, type CliRequest } from "./cli-request-keys";
@@ -61,11 +62,22 @@ export function PrototypePanel({ base, data }: { base: string; data: Overview })
   });
   const importFile = async (job: CliJobDto, file: File) => {
     setError(null);
+    let json: unknown;
     try {
-      await api(`${base}/cli-jobs/${job.id}/import`, { method: "POST", json: JSON.parse(await file.text()) });
-      refresh();
+      json = JSON.parse(await file.text());
     } catch {
+      // The file itself is not JSON: invalid output, nothing was sent.
       setError(cbt(t, "prototype.error.OUTPUT_INVALID"));
+      return;
+    }
+    try {
+      await api(`${base}/cli-jobs/${job.id}/import`, { method: "POST", json });
+      refresh();
+    } catch (e) {
+      // Reserve OUTPUT_INVALID for what the server's validation rejected; transport and other server errors keep their own message.
+      const code = e instanceof ApiError ? (e.code === "JOB_CANCELLED" ? "CANCELLED" : e.code) : null; // the job was cancelled meanwhile
+      if (e instanceof ApiError && !e.isNetwork && t.has(`companyBuilder.prototype.error.${code}`)) setError(cbt(t, `prototype.error.${code}`));
+      else setError(apiErrorMessage(t, e, t("companyBuilder.errors.generic")));
     }
   };
 
