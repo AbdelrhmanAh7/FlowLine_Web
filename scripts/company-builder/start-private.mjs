@@ -5,18 +5,13 @@
 // Only a server started this way sets FLOWLINE_CB_BOUND, without which the prototype gate stays closed. The CLI
 // controller is separate (scripts/company-builder/cli-controller.mts) and is started by the founder when needed.
 import { spawn } from "node:child_process";
+import { isPrivateIpv4 } from "./private-host.mjs";
 
 process.loadEnvFile(".env");
 const dev = process.argv.includes("--dev");
 const privateHost = process.argv.find((a) => a.startsWith("--private-host="))?.split("=")[1];
-const isPrivateIpv4 = (value) => {
-  const octets = value.split(".");
-  if (octets.length !== 4 || octets.some((octet) => !/^\d{1,3}$/.test(octet) || Number(octet) > 255)) return false;
-  const [first, second] = octets.map(Number);
-  return first === 10 || (first === 192 && second === 168) || (first === 172 && second >= 16 && second <= 31);
-};
 if (privateHost && !isPrivateIpv4(privateHost)) {
-  console.error("--private-host must be a private (RFC 1918) IPv4 address");
+  console.error("--private-host must be a private (RFC 1918) IPv4 address in canonical dotted form (no zero-padded octets)");
   process.exit(2);
 }
 const host = privateHost ?? "127.0.0.1";
