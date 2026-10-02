@@ -245,6 +245,13 @@ test("account actions in Arabic: user menu and settings reach resend-verificatio
   await page.getByRole("menuitem", { name: "حذف الحساب" }).click();
   await expect(page.getByRole("heading", { name: "حذف الحساب" })).toBeVisible();
   await expectArabic(page);
+  // The opener (a menu item) is removed with its menu: closing the dialog must not drop focus to <body> (DV2-R03).
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "حذف الحساب" })).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
+  await page.getByRole("button", { name: "E2E User" }).click();
+  await page.getByRole("menuitem", { name: "حذف الحساب" }).click();
+  await expect(page.getByRole("heading", { name: "حذف الحساب" })).toBeVisible();
   await page.getByRole("button", { name: "إرسال رابط التأكيد" }).click();
   await expect(page.getByRole("status").filter({ hasText: "تم إرسال رابط التأكيد إلى بريدك." })).toBeVisible();
   const mail = await latestEmail(page.request, email, "delete");

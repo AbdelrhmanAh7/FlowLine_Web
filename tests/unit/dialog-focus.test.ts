@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { canRefocus, focusIsFree, pickReturnTarget, restoreFocus, closestFocusableAncestor, type FocusTarget } from "@/components/ui/focus-return";
+import { canRefocus, focusIsFree, pickReturnTarget, restoreFocus, closestFocusableAncestor, mainRegion, type FocusTarget } from "@/components/ui/focus-return";
 
 /** A stand-in for an element: the focus-return logic only needs these parts of the DOM (the unit tests have no DOM). */
 function el(tagName = "BUTTON", over: Partial<FocusTarget> = {}) {
@@ -68,42 +68,79 @@ describe("dialog focus return (DV2-Q02, DV2-R03)", () => {
     expect(restoreFocus([], null)).toBe(false);
   });
 
-  it("saves the closest focusable ancestor as a fallback when the opener might be removed (DV2-R03)", () => {
-    // Simulate a button that opens a dialog: the button is focusable itself
-    const button = el("BUTTON");
-    // When the dialog opens, we save the button and its closest focusable ancestor
-    const result = pickReturnTarget(button, { contains: () => false });
-    expect(result.target).toBe(button);
-    // For a focusable element, the fallback is itself (since it's the closest focusable)
-    expect(result.fallback).toBe(button);
-  });
-
-  it("restores focus to fallback when the original opener was removed (menu item inside closed menu)", () => {
-    const opener = el("LI", { tagName: "LI", isConnected: false }); // now removed
-    const fallback = el("BUTTON", { tagName: "BUTTON" }); // its ancestor menu button
-    expect(restoreFocus([opener, fallback], el("BODY"))).toBe(true);
-    expect([opener.calls, fallback.calls]).toEqual([[], ["focus"]]);
+  it("canRefocus rejects hidden, inert and display:none targets, so restoreFocus does not claim a no-op focus", () => {
+    expect(canRefocus(el("BUTTON", { hidden: true }))).toBe(false);
+    expect(canRefocus(el("BUTTON", { inert: true }))).toBe(false);
+    expect(canRefocus(el("BUTTON", { closest: (sel: string) => (sel.includes("[inert]") ? {} : null) }))).toBe(false);
+    expect(canRefocus(el("BUTTON", { getClientRects: () => ({ length: 0 }) }))).toBe(false);
+    expect(canRefocus(el("BUTTON", { getClientRects: () => ({ length: 1 }) }))).toBe(true);
+    const hiddenOpener = el("BUTTON", { hidden: true });
+    expect(restoreFocus([hiddenOpener], el("BODY"))).toBe(false);
+    expect(hiddenOpener.calls).toEqual([]);
   });
 });
 
-describe("closestFocusableAncestor (DV2-R03)", () => {
-  it("returns the element itself if it is focusable", () => {
+/** A menu item removed with its menu: item (tabindex -1) -> menu -> wrapper -> body. The trigger is NOT an ancestor (portal). */
+function menuItem() {
+  const body = el("BODY");
+  const inLayer = (sel: string) => (sel.includes('role="menu"') ? {} : null);
+  const menu = el("DIV", { getAttribute: (n) => (n === "role" ? "menu" : n === "tabindex" ? "-1" : null), parentElement: body, closest: inLayer });
+  const item = el("DIV", { getAttribute: (n) => (n === "tabindex" ? "-1" : null), parentElement: menu, closest: inLayer });
+  return { body, menu, item };
+}
+
+describe("closest focusable ancestor and the menu-opener case (DV2-R03)", () => {
+  it("starts above the element: a focusable opener is not its own fallback", () => {
     const button = el("BUTTON");
-    expect(closestFocusableAncestor(button)).toBe(button);
+    expect(closestFocusableAncestor(button)).toBeNull();
+    const section = el("SECTION", { getAttribute: (n) => (n === "tabindex" ? "0" : null) });
+    const child = el("BUTTON", { parentElement: section });
+    const result = pickReturnTarget(child, { contains: () => false });
+    expect(result.target).toBe(child);
+    expect(result.fallback).toBe(section);
+    expect(result.fallback).not.toBe(result.target);
   });
 
-  it("returns the closest focusable parent when the element itself is not focusable", () => {
-    // Mock parentElement traversal (can't do real DOM in jsdom without setup)
-    // The function should identify the parent as focusable
-    // This is tested indirectly through pickReturnTarget integration
-    const _parent = el("BUTTON");
-    const _child = el("SPAN", { tagName: "SPAN" });
+  it("skips ancestors inside a nested layer (the menu goes away with its item)", () => {
+    const { item } = menuItem();
+    expect(closestFocusableAncestor(item)).toBeNull(); // the tabindex=-1 menu is a layer, not a safe fallback
+    expect(pickReturnTarget(item, { contains: () => false })).toEqual({ target: item, fallback: null });
   });
 
-  it("returns null when no focusable ancestor exists", () => {
-    const div = el("DIV", { tagName: "DIV" });
-    // In jsdom without real DOM, returns null (no traversal)
-    expect(closestFocusableAncestor(div)).toBeNull();
+  it("a removed menu-item opener lands on the launcher (menu trigger), not <body>", () => {
+    const { item } = menuItem();
+    const { target, fallback } = pickReturnTarget(item, { contains: () => false });
+    item.isConnected = false; // the menu unmounted
+    const trigger = el("BUTTON");
+    const main = el("MAIN");
+    expect(restoreFocus([target, fallback, trigger, main], el("BODY"))).toBe(true);
+    expect([trigger.calls, main.calls]).toEqual([["focus"], []]);
+  });
+
+  it("with no launcher either, <main> takes focus", () => {
+    const { item } = menuItem();
+    const { target, fallback } = pickReturnTarget(item, { contains: () => false });
+    item.isConnected = false;
+    const main = el("MAIN");
+    expect(restoreFocus([target, fallback, null, main], null)).toBe(true);
+    expect(main.calls).toEqual(["focus"]);
+  });
+
+  it("does not move focus when it was not lost", () => {
+    const { item } = menuItem();
+    const { target, fallback } = pickReturnTarget(item, { contains: () => false });
+    item.isConnected = false;
+    const trigger = el("BUTTON");
+    const elsewhere = el("INPUT");
+    expect(restoreFocus([target, fallback, trigger], elsewhere)).toBe(false);
+    expect(trigger.calls).toEqual([]);
+  });
+
+  it("mainRegion finds <main> through the owner document", () => {
+    const main = el("MAIN");
+    const opener = el("BUTTON", { ownerDocument: { querySelector: (s: string) => (s === "main" ? main : null) } });
+    expect(mainRegion(opener)).toBe(main);
+    expect(mainRegion(el("BUTTON", { ownerDocument: { querySelector: () => null } }))).toBeNull();
   });
 });
 
@@ -129,7 +166,7 @@ describe("ui/dialog.tsx wiring", () => {
 
   it("passes both target and fallback to restore focus, then the caller's fallback", () => {
     expect(src).toContain("restoreFocus(");
-    expect(src).toContain("[returnTo.current, returnFallback.current, fallbackRef.current?.()]");
+    expect(src).toContain("[returnTo.current, returnFallback.current, fallbackRef.current?.(), returnTo.current ? (mainRegion(returnTo.current)");
   });
 
   it("the Drawer never overrides Radix's own aria-labelledby with undefined (that leaves it unnamed)", () => {

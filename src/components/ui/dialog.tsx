@@ -4,7 +4,7 @@ import * as RadixDialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
 import { cn } from "./cn";
-import { pickReturnTarget, restoreFocus } from "./focus-return";
+import { mainRegion, pickReturnTarget, restoreFocus } from "./focus-return";
 
 /**
  * Focus return for both modals (DV2-Q02). Radix hands focus back only to a `Dialog.Trigger`; ours have none (they are
@@ -45,7 +45,7 @@ export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boo
   // `lostWithin`: for a surface that is hidden instead of removed, focus still inside it counts as lost (see `restoreFocus`).
   const restore = useCallback(
     (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus(
-      [returnTo.current, returnFallback.current, fallbackRef.current?.()],
+      [returnTo.current, returnFallback.current, fallbackRef.current?.(), returnTo.current ? (mainRegion(returnTo.current) as HTMLElement | null) : null],
       document.activeElement as HTMLElement | null,
       lostWithin,
     ),
