@@ -1,0 +1,179 @@
+{
+  "frozenAt": "2026-09-30",
+  "generator": "deterministic (rules + tested packs; no model inference)",
+  "cases": 12,
+  "score": 7,
+  "target": 10,
+  "verdict": "EXPERIMENTAL",
+  "violations": 0,
+  "rows": [
+    {
+      "id": "B01-solo-founder-no-tools-ar",
+      "lang": "ar",
+      "questionsAsked": 9,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": false,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": false,
+      "unsupported": false
+    },
+    {
+      "id": "B02-existing-company-finance-en",
+      "lang": "en",
+      "questionsAsked": 9,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "B03-agency-client-content-en",
+      "lang": "en",
+      "questionsAsked": 7,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "B04-design-files-only-ar",
+      "lang": "ar",
+      "questionsAsked": 5,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": true
+    },
+    {
+      "id": "B05-recruitment-planned-en",
+      "lang": "en",
+      "questionsAsked": 6,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": true
+    },
+    {
+      "id": "B06-unsupported-tools-ar",
+      "lang": "ar",
+      "questionsAsked": 7,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": false,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": false,
+      "unsupported": false
+    },
+    {
+      "id": "B07-ambiguous-dont-know-en",
+      "lang": "en",
+      "questionsAsked": 6,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "B08-contradiction-ar",
+      "lang": "ar",
+      "questionsAsked": 5,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": false,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": false,
+      "unsupported": false
+    },
+    {
+      "id": "B09-inference-unconfirmed-en",
+      "lang": "en",
+      "questionsAsked": 2,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "B10-multi-department-ar",
+      "lang": "ar",
+      "questionsAsked": 12,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": false,
+        "taskSelection": false,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": false,
+      "unsupported": false
+    },
+    {
+      "id": "B11-prompt-injection-en",
+      "lang": "en",
+      "questionsAsked": 7,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": false,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": false,
+      "unsupported": false
+    },
+    {
+      "id": "B12-other-goal-en",
+      "lang": "en",
+      "questionsAsked": 4,
+      "dimensions": {
+        "factsProvenance": true,
+        "questions": true,
+        "taskSelection": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": true
+    }
+  ]
+}

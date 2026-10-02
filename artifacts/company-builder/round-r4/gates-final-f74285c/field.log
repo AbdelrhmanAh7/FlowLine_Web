@@ -1,0 +1,5 @@
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › artifacts/company-builder/validation/20261001-d224cfb/flowline-field/field.spec.ts:28:5 › Flowline field run — frozen packet
+  1 passed (7.4s)

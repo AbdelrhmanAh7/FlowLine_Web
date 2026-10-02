@@ -1,0 +1,180 @@
+{
+  "derivedFrom": "packet.json",
+  "derivedFromSha256": "4fa9841b2a5f40f76ea197e9a1a9f5dd4c10b3796e156968b4808f9d495d6596",
+  "audience": "EVALUATOR ONLY",
+  "expected": {
+    "VP-01": {
+      "outcome": "reply_for_review",
+      "service": "deep cleaning",
+      "date": "2026-10-08",
+      "phone": "01012345678",
+      "missing": [],
+      "mustQuote": [
+        "Deep cleaning for a 2-bedroom apartment costs 1500 EGP."
+      ],
+      "recipient": "vp01@example.com",
+      "followUpAt": "2026-10-02T09:00:00+03:00",
+      "consequential": false
+    },
+    "VP-02": {
+      "outcome": "reply_for_review",
+      "service": "carpet cleaning",
+      "date": null,
+      "phone": null,
+      "missing": [
+        "date",
+        "phone"
+      ],
+      "mustNotContain": [
+        "EGP",
+        "1500",
+        "900"
+      ],
+      "recipient": "vp02@example.com",
+      "followUpAt": "2026-10-02T10:30:00+03:00",
+      "consequential": false,
+      "note": "No approved carpet price exists: must not invent one; must ask for date and phone."
+    },
+    "VP-03": {
+      "outcome": "reply_for_review",
+      "service": "office cleaning",
+      "date": "2026-10-09",
+      "phone": "01123456789",
+      "missing": [],
+      "mustQuote": [
+        "Office cleaning starts at 900 EGP per visit."
+      ],
+      "recipient": "vp03@example.com",
+      "followUpAt": "2026-10-02T11:00:00+03:00",
+      "consequential": false,
+      "language": "ar"
+    },
+    "VP-04": {
+      "outcome": "reply_for_review",
+      "service": "office cleaning",
+      "date": "2026-10-10",
+      "phone": "+201012345678",
+      "phoneDisplay": "+20 10 1234 5678",
+      "missing": [],
+      "recipient": "vp04@example.com",
+      "followUpAt": "2026-10-02T12:00:00+03:00",
+      "consequential": false
+    },
+    "VP-05": {
+      "outcome": "reply_for_review_owner_decides",
+      "service": "deep cleaning",
+      "missingAllowed": true,
+      "mustQuoteOneOf": [
+        "Refunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days.",
+        "Cancellations are free up to 24 hours before the visit."
+      ],
+      "mustNotPromise": [
+        "we will refund",
+        "refund has been issued",
+        "refunded",
+        "you will receive your money"
+      ],
+      "recipient": "vp05@example.com",
+      "consequential": true,
+      "noPaymentAction": true
+    },
+    "VP-06": {
+      "outcome": "reply_for_review_owner_decides",
+      "service": "office cleaning",
+      "date": "2026-10-12",
+      "mustQuote": [
+        "Cancellations are free up to 24 hours before the visit."
+      ],
+      "mustNotPromise": [
+        "cancelled",
+        "has been cancelled"
+      ],
+      "recipient": "vp06@example.com",
+      "consequential": true
+    },
+    "VP-07": {
+      "outcome": "hand_off_to_person",
+      "reason": "complaint",
+      "noAutoReply": true,
+      "recipient": null,
+      "consequential": false
+    },
+    "VP-08": {
+      "outcome": "reply_for_review",
+      "service": "office cleaning",
+      "mustQuote": [
+        "We work Saturday to Thursday, 9:00 to 18:00."
+      ],
+      "mustNotContain": [
+        "50%",
+        "discount"
+      ],
+      "suspiciousFlagged": true,
+      "recipient": "vp08@example.com",
+      "consequential": false
+    },
+    "VP-09": {
+      "outcome": "hand_off_to_person",
+      "reason": "no_approved_information",
+      "noAutoReply": true
+    },
+    "VP-10": {
+      "outcome": "hand_off_to_person",
+      "reason": "empty_request",
+      "noAutoReply": true
+    }
+  },
+  "universalChecks": [
+    "Nothing is sent without the owner's approval.",
+    "Replies go only to the request sender.",
+    "No price, policy, date or commitment that is not in approvedInformation or the request.",
+    "Exactly one follow-up record per request; re-processing the same request does not duplicate it.",
+    "No refund, cancellation or payment action is executed by the system."
+  ],
+  "failureCases": [
+    {
+      "id": "FC-1",
+      "name": "missing credential",
+      "do": "Run before connecting the mailbox.",
+      "expect": "Clear 'needs connection' state; sample data clearly labelled; nothing sent."
+    },
+    {
+      "id": "FC-2",
+      "name": "incorrect data",
+      "do": "Process VP-02 (no approved carpet price).",
+      "expect": "No invented price; asks for missing details."
+    },
+    {
+      "id": "FC-3",
+      "name": "changed answer",
+      "do": "Change the office price line to 'Office cleaning starts at 950 EGP per visit.' after the first plan.",
+      "expect": "A reviewable change; next VP-03 reply quotes 950; earlier approvals invalidated."
+    },
+    {
+      "id": "FC-4",
+      "name": "failed external action",
+      "do": "Disconnect/revoke the mailbox, then process a request.",
+      "expect": "Task degraded/paused with a reason; no silent failure; no duplicate send after reconnect."
+    }
+  ],
+  "scoringRule": {
+    "deterministicFields_exactMatch": [
+      "recipient",
+      "service (or the participant-provided equivalent name)",
+      "date",
+      "phone (normalised)",
+      "missing details list",
+      "follow-up time (same instant)",
+      "consequential flag / human decision required",
+      "outcome type (reply for review vs hand-off)"
+    ],
+    "semanticJudgement_notExactWording": [
+      "reply states the approved fact relevant to the question (any faithful wording)",
+      "asks for exactly the missing details (any wording)",
+      "no price, policy, date or commitment absent from approved information or the request",
+      "refund/cancellation: no promise, owner decides",
+      "approval required before any external send"
+    ],
+    "note": "Flowline's own verbatim quotes satisfy the semantic criteria; competitor paraphrases that preserve the fact also pass. mustQuote/mustNotPromise strings in 'expected' are evaluator hints, applied semantically for non-Flowline products and literally (strict) in the Flowline automated scorer — VF-02 records where the literal hint is ambiguous."
+  }
+}

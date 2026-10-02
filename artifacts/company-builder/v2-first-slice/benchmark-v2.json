@@ -1,0 +1,203 @@
+{
+  "frozenAt": "2026-09-30",
+  "generator": "deterministic (rules + tested packs; no model inference)",
+  "cases": 12,
+  "score": 12,
+  "target": 10,
+  "verdict": "PASS",
+  "violations": 0,
+  "rows": [
+    {
+      "id": "V01-acceptance-journey-en",
+      "lang": "en",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V02-acceptance-journey-ar",
+      "lang": "ar",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V03-invoices-en",
+      "lang": "en",
+      "questionsToPreview": 6,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V04-operations-summary-ar",
+      "lang": "ar",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V05-leads-en",
+      "lang": "en",
+      "questionsToPreview": 6,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V06-everything-at-once-en",
+      "lang": "en",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V07-does-not-know-en",
+      "lang": "en",
+      "questionsToPreview": 3,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V08-whatsapp-unsupported-ar",
+      "lang": "ar",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V09-contradiction-en",
+      "lang": "en",
+      "questionsToPreview": 4,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    },
+    {
+      "id": "V10-design-only-ar",
+      "lang": "ar",
+      "questionsToPreview": 4,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": true
+    },
+    {
+      "id": "V11-hiring-en",
+      "lang": "en",
+      "questionsToPreview": 3,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": true
+    },
+    {
+      "id": "V12-injection-en",
+      "lang": "en",
+      "questionsToPreview": 5,
+      "dimensions": {
+        "questions": true,
+        "smallTeam": true,
+        "nextImprovementsSeparate": true,
+        "honestBlockers": true,
+        "connectionsDisclosed": true,
+        "permissions": true,
+        "actualResult": true
+      },
+      "appropriate": true,
+      "unsupported": false
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+
+ RUN  v5.0.2 /home/user/FlowLine_Web
+
+ ❯ |unit| tests/unit/cb-pack-customer-follow-up.test.ts (14 tests | 3 failed) 204ms
+   ❯ Customer Request Follow-up — frozen acceptance fixtures (first vertical slice) (14)
+     × fu-05-injection: business result matches the frozen expectation 16ms
+     × fu-09-no-timestamp: business result matches the frozen expectation 6ms
+     × objective checks catch a wrong result that is still valid JSON (invented price, wrong recipient, no record) 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| tests/unit/cb-pack-customer-follow-up.test.ts > Customer Request Follow-up — frozen acceptance fixtures (first vertical slice) > fu-05-injection: business result matches the frozen expectation
+AssertionError: expected 'Hello,\n\nCancellations are free up t…' to contain 'We work Saturday to Thursday, 8am to …'
+
+- Expected
++ Received
+
+- We work Saturday to Thursday, 8am to 6pm.
++ Hello,
++
++ Cancellations are free up to 24 hours before the visit.
++
++ Which date would suit you?
++
++ What is the best phone number to reach you?
++
++ Thank you — we'll confirm the details with you.
+
+ ❯ tests/unit/cb-pack-customer-follow-up.test.ts:36:69
+     34|       expect(out.suspicious).toBe(e.suspicious);
+     35|       if (e.reason) expect(out.reason).toBe(e.reason);
+     36|       for (const s of e.mustInclude ?? []) expect(String(out.body)).to…
+       |                                                                     ^
+     37|       for (const s of e.mustNotInclude ?? []) expect(String(out.body ?…
+     38|       const rec = o.follow_up_record as Record<string, unknown>;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |unit| tests/unit/cb-pack-customer-follow-up.test.ts > Customer Request Follow-up — frozen acceptance fixtures (first vertical slice) > fu-09-no-timestamp: business result matches the frozen expectation
+AssertionError: expected 'Hello,\n\nCancellations are free up t…' to contain 'We work Saturday to Thursday, 8am to …'
+
+- Expected
++ Received
+
+- We work Saturday to Thursday, 8am to 6pm.
++ Hello,
++
++ Cancellations are free up to 24 hours before the visit.
++
++ Thank you — we'll confirm the details with you.
+
+ ❯ tests/unit/cb-pack-customer-follow-up.test.ts:36:69
+     34|       expect(out.suspicious).toBe(e.suspicious);
+     35|       if (e.reason) expect(out.reason).toBe(e.reason);
+     36|       for (const s of e.mustInclude ?? []) expect(String(out.body)).to…
+       |                                                                     ^
+     37|       for (const s of e.mustNotInclude ?? []) expect(String(out.body ?…
+     38|       const rec = o.follow_up_record as Record<string, unknown>;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |unit| tests/unit/cb-pack-customer-follow-up.test.ts > Customer Request Follow-up — frozen acceptance fixtures (first vertical slice) > objective checks catch a wrong result that is still valid JSON (invented price, wrong recipient, no record)
+AssertionError: expected [ 'follow_up_recorded', …(4) ] to deeply equal [ 'asks_for_missing_details', …(6) ]
+
+- Expected
++ Received
+
+  [
+-   "asks_for_missing_details",
+    "follow_up_recorded",
+-   "no_invented_numbers",
+    "record_status_consistent",
+    "reply_only_approved_info",
+    "reply_to_sender",
+    "review_required",
+  ]
+
+ ❯ tests/unit/cb-pack-customer-follow-up.test.ts:63:20
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 11 passed (14)
+   Start at  23:20:03
+   Duration  597ms (tests 44%, transform 40%, import 15%, worker 1%)
+
