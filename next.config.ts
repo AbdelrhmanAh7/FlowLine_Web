@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   serverExternalPackages: ["pg"],
+  // Keep Next's build worker pool bounded on memory-limited ARM64 and CI hosts.
+  experimental: { cpus: 2 },
   // Credential surfaces (docs/security/CREDENTIALS_DESIGN.md MUST 10, 21): OAuth callbacks carry codes/state in the URL
   // and the admin panel handles secrets — never leak their URLs through Referer, never cache them.
   async headers() {
