@@ -42,6 +42,9 @@ export function useReturnFocus<T extends HTMLElement = HTMLDivElement>(open: boo
     returnFallback.current = result.fallback;
   }, [open]);
 
+  // Fallback order: the opener, its closest focusable ancestor outside nested layers, a caller-supplied launcher
+  // (`fallback`, e.g. builder panels), then <main>. A Dialog opened from a menu item gets <main> (the menu is a
+  // nested layer and Dialog supplies no launcher) — never <body>.
   // `lostWithin`: for a surface that is hidden instead of removed, focus still inside it counts as lost (see `restoreFocus`).
   const restore = useCallback(
     (lostWithin?: { contains(node: HTMLElement): boolean } | null) => restoreFocus(

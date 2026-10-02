@@ -109,7 +109,7 @@ export function AppShell({ user, workspace, role, workspaces, support = NO_SUPPO
             <span className="truncate text-base font-semibold">{workspace.name}</span>
           </div>
           <StatusBanners />
-          <main id="main" tabIndex={-1} className="relative min-h-0 flex-1 overflow-auto outline-none">
+          <main id="main" tabIndex={-1} className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:shadow-none">
             {children}
           </main>
         </div>

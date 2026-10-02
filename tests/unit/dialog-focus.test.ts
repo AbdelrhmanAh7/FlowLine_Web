@@ -107,7 +107,7 @@ describe("closest focusable ancestor and the menu-opener case (DV2-R03)", () => 
     expect(pickReturnTarget(item, { contains: () => false })).toEqual({ target: item, fallback: null });
   });
 
-  it("a removed menu-item opener lands on the launcher (menu trigger), not <body>", () => {
+  it("a removed menu-item opener lands on a caller-supplied launcher (e.g. a panel button), not <body>", () => {
     const { item } = menuItem();
     const { target, fallback } = pickReturnTarget(item, { contains: () => false });
     item.isConnected = false; // the menu unmounted
