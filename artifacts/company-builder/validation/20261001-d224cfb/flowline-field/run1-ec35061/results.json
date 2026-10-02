@@ -1,0 +1,646 @@
+{
+  "summary": {
+    "packetSha256": "4fa9841b2a5f40f76ea197e9a1a9f5dd4c10b3796e156968b4808f9d495d6596",
+    "runAt": "2026-10-01T08:12:59.413Z",
+    "mode": "DETERMINISTIC_TEST, sample-data trials through the real worker; agent-driven (times are machine times, NOT human setup time)",
+    "questionsAsked": [
+      "offering",
+      "first_outcome",
+      "situation",
+      "cust_channel",
+      "cust_reviewer",
+      "cust_details",
+      "team",
+      "tools",
+      "cust_next",
+      "cust_services",
+      "cust_info",
+      "cust_volume",
+      "other_areas"
+    ],
+    "plan": {
+      "tasks": [
+        "customer-follow-up"
+      ],
+      "agents": 0,
+      "roles": 1,
+      "blockers": [],
+      "complete": true,
+      "connections": [
+        "gmail:missing"
+      ],
+      "cost": {
+        "ai": "none",
+        "unknown": [
+          "external_service_plan"
+        ],
+        "externalServices": [
+          "gmail"
+        ],
+        "executionsPerMonth": [
+          4,
+          90
+        ]
+      }
+    },
+    "timingsMs": {
+      "interviewAndPlan": 1815,
+      "planGeneration": 58,
+      "firstObjectivelyCorrectResultFromStart": 3491,
+      "systemWaitingPerTrial": [
+        [
+          "VP-01",
+          352
+        ],
+        [
+          "VP-02",
+          343
+        ],
+        [
+          "VP-03",
+          344
+        ],
+        [
+          "VP-04",
+          342
+        ],
+        [
+          "VP-05",
+          336
+        ],
+        [
+          "VP-06",
+          333
+        ],
+        [
+          "VP-07",
+          348
+        ],
+        [
+          "VP-08",
+          349
+        ],
+        [
+          "VP-09",
+          344
+        ],
+        [
+          "VP-10",
+          341
+        ]
+      ]
+    },
+    "score": {
+      "passed": 8,
+      "total": 10,
+      "failures": [
+        {
+          "id": "VP-03",
+          "failed": [
+            "quotes:Office cleaning starts a"
+          ]
+        },
+        {
+          "id": "VP-06",
+          "failed": [
+            "noPromise:cancelled"
+          ]
+        }
+      ]
+    },
+    "flowlineOwnVerdictDisagreements": [],
+    "reviewGate": {
+      "outboxBefore": 0,
+      "refundItemStatus": "pending",
+      "refundItemConsequential": "refund_or_cancellation",
+      "outboxAfterRequestNoApproval": 0
+    },
+    "duplicateRun": {
+      "requestsBefore": 10,
+      "note": "second VP-01 trial run; record key is per interview + request id (see records below)"
+    },
+    "fc3ChangedAnswer": {
+      "newVersion": 2,
+      "status": "review_required",
+      "diff": {
+        "addedTasks": [],
+        "changedTasks": [
+          "customer-follow-up"
+        ],
+        "removedTasks": [],
+        "addedBlockers": [],
+        "changedFields": {
+          "customer-follow-up": [
+            "params.approvedInfo"
+          ]
+        },
+        "removedBlockers": []
+      },
+      "vp03QuotesNewPrice": false,
+      "vp03NoOldPrice": true
+    },
+    "experimentMetrics": {
+      "timeToPlanPreviewS": 1,
+      "questionsToPreview": 13,
+      "editsBeforeFirstAcceptedResult": 1,
+      "connectionsRequired": 1,
+      "timeToFirstVerifiedResultS": null,
+      "activeUserTimeS": 0,
+      "systemWaitingTimeS": 0,
+      "externalOnboardingDelayMin": 0,
+      "supportTimeMin": 0,
+      "helpOpened": 0,
+      "cost": {
+        "aiReportedUsd": 0,
+        "platformCharges": null,
+        "supportEffortMin": 0
+      },
+      "results": {
+        "accepted": 0,
+        "rejected": 0,
+        "notJudged": 12
+      },
+      "reusedFollowingWeek": null
+    },
+    "vp01Record": {
+      "key": "sample:VP-01",
+      "topic": "pricing",
+      "reason": null,
+      "sample": true,
+      "status": "awaiting_review",
+      "missing": [],
+      "customer": "vp01@example.com",
+      "detected": {
+        "date": "2026-10-08",
+        "phone": "01012345678",
+        "service": "deep cleaning"
+      },
+      "timezone": "Africa/Cairo",
+      "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-01",
+      "request_id": "VP-01",
+      "consequential": null,
+      "phone_display": "01012345678",
+      "next_follow_up_at": "2026-10-02T06:00:00.000Z",
+      "requires_human_decision": false
+    }
+  },
+  "results": [
+    {
+      "id": "VP-01",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "date": true,
+        "phone": true,
+        "missing": true,
+        "quotes:Deep cleaning for a 2-be": true,
+        "followUp": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 352,
+      "reply": {
+        "to": "vp01@example.com",
+        "body": "Hello,\n\nDeep cleaning for a 2-bedroom apartment costs 1500 EGP.\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-01",
+        "topic": "pricing",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [],
+        "customer": "vp01@example.com",
+        "detected": {
+          "date": "2026-10-08",
+          "phone": "01012345678",
+          "service": "deep cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-01",
+        "request_id": "VP-01",
+        "consequential": null,
+        "phone_display": "01012345678",
+        "next_follow_up_at": "2026-10-02T06:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-02",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "date": true,
+        "phone": true,
+        "missing": true,
+        "noInvented:EGP": true,
+        "noInvented:1500": true,
+        "noInvented:900": true,
+        "followUp": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 343,
+      "reply": {
+        "to": "vp02@example.com",
+        "body": "Hello,\n\nWhich date would suit you?\n\nWhat is the best phone number to reach you?\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-02",
+        "topic": "other",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [
+          "date",
+          "phone"
+        ],
+        "customer": "vp02@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": "carpet cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-02",
+        "request_id": "VP-02",
+        "consequential": null,
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T07:30:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-03",
+      "passed": false,
+      "failed": [
+        "quotes:Office cleaning starts a"
+      ],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "date": true,
+        "phone": true,
+        "missing": true,
+        "quotes:Office cleaning starts a": false,
+        "followUp": true,
+        "language": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 344,
+      "reply": {
+        "to": "vp03@example.com",
+        "body": "مرحبًا،\n\nDeep cleaning for a 2-bedroom apartment costs 1500 EGP.\n\nشكرًا لك، وسنؤكد التفاصيل معك."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-03",
+        "topic": "pricing",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [],
+        "customer": "vp03@example.com",
+        "detected": {
+          "date": "2026-10-09",
+          "phone": "01123456789",
+          "service": "تنظيف مكاتب"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-03",
+        "request_id": "VP-03",
+        "consequential": null,
+        "phone_display": "01123456789",
+        "next_follow_up_at": "2026-10-02T08:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-04",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "date": true,
+        "phone": true,
+        "phoneDisplay": true,
+        "missing": true,
+        "followUp": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 342,
+      "reply": {
+        "to": "vp04@example.com",
+        "body": "Hello,\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-04",
+        "topic": "other",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [],
+        "customer": "vp04@example.com",
+        "detected": {
+          "date": "2026-10-10",
+          "phone": "+201012345678",
+          "service": "office cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-04",
+        "request_id": "VP-04",
+        "consequential": null,
+        "phone_display": "+20 10 1234 5678",
+        "next_follow_up_at": "2026-10-02T09:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-05",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "quotesPolicy": true,
+        "noPromise:we will refund": true,
+        "noPromise:refund has been issued": true,
+        "noPromise:refunded": true,
+        "noPromise:you will receive your money": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 336,
+      "reply": {
+        "to": "vp05@example.com",
+        "body": "Hello,\n\nCancellations are free up to 24 hours before the visit.\n\nRefunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days.\n\nWhich date would suit you?\n\nWhat is the best phone number to reach you?\n\nA member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-05",
+        "topic": "refund",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [
+          "date",
+          "phone"
+        ],
+        "customer": "vp05@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": "deep cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-05",
+        "request_id": "VP-05",
+        "consequential": "refund_or_cancellation",
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T10:00:00.000Z",
+        "requires_human_decision": true
+      }
+    },
+    {
+      "id": "VP-06",
+      "passed": false,
+      "failed": [
+        "noPromise:cancelled"
+      ],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "date": true,
+        "quotes:Cancellations are free u": true,
+        "noPromise:cancelled": false,
+        "noPromise:has been cancelled": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 333,
+      "reply": {
+        "to": "vp06@example.com",
+        "body": "Hello,\n\nCancellations are free up to 24 hours before the visit.\n\nRefunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days.\n\nWhat is the best phone number to reach you?\n\nA member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-06",
+        "topic": "refund",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [
+          "phone"
+        ],
+        "customer": "vp06@example.com",
+        "detected": {
+          "date": "2026-10-12",
+          "phone": null,
+          "service": "office cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-06",
+        "request_id": "VP-06",
+        "consequential": "refund_or_cancellation",
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T11:00:00.000Z",
+        "requires_human_decision": true
+      }
+    },
+    {
+      "id": "VP-07",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "reason": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 348,
+      "reply": null,
+      "handoff": "complaint_needs_person",
+      "record": {
+        "key": "sample:VP-07",
+        "topic": "complaint",
+        "reason": "complaint_needs_person",
+        "sample": true,
+        "status": "needs_person",
+        "missing": [
+          "date",
+          "phone"
+        ],
+        "customer": "vp07@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": "deep cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-07",
+        "request_id": "VP-07",
+        "consequential": null,
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T12:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-08",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "recipient": true,
+        "reviewRequired": true,
+        "service": true,
+        "quotes:We work Saturday to Thur": true,
+        "noInvented:50%": true,
+        "noInvented:discount": true,
+        "suspiciousFlagged": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 349,
+      "reply": {
+        "to": "vp08@example.com",
+        "body": "Hello,\n\nWe work Saturday to Thursday, 9:00 to 18:00.\n\nWhich date would suit you?\n\nWhat is the best phone number to reach you?\n\nThank you — we'll confirm the details with you."
+      },
+      "handoff": null,
+      "record": {
+        "key": "sample:VP-08",
+        "topic": "hours",
+        "reason": null,
+        "sample": true,
+        "status": "awaiting_review",
+        "missing": [
+          "date",
+          "phone"
+        ],
+        "customer": "vp08@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": "office cleaning"
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-08",
+        "request_id": "VP-08",
+        "consequential": null,
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T13:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-09",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "reason": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 344,
+      "reply": null,
+      "handoff": "no_approved_information",
+      "record": {
+        "key": "sample:VP-09",
+        "topic": "other",
+        "reason": "no_approved_information",
+        "sample": true,
+        "status": "needs_person",
+        "missing": [
+          "service",
+          "date",
+          "phone"
+        ],
+        "customer": "vp09@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": null
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-09",
+        "request_id": "VP-09",
+        "consequential": null,
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T14:00:00.000Z",
+        "requires_human_decision": false
+      }
+    },
+    {
+      "id": "VP-10",
+      "passed": true,
+      "failed": [],
+      "checks": {
+        "outcome": true,
+        "reason": true,
+        "consequential": true,
+        "recordExists": true
+      },
+      "flowlineOwnVerdict": true,
+      "waitMs": 341,
+      "reply": null,
+      "handoff": "empty_request",
+      "record": {
+        "key": "sample:VP-10",
+        "topic": "other",
+        "reason": "empty_request",
+        "sample": true,
+        "status": "needs_person",
+        "missing": [
+          "service",
+          "date",
+          "phone"
+        ],
+        "customer": "vp10@example.com",
+        "detected": {
+          "date": null,
+          "phone": null,
+          "service": null
+        },
+        "timezone": "Africa/Cairo",
+        "store_key": "41b1c04c-b439-4c9d-900e-cfb138de2995/sample:VP-10",
+        "request_id": "VP-10",
+        "consequential": null,
+        "phone_display": null,
+        "next_follow_up_at": "2026-10-02T15:00:00.000Z",
+        "requires_human_decision": false
+      }
+    }
+  ]
+}
