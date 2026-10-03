@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
@@ -6,6 +5,7 @@ import { extractKnowledge, KnowledgeExtractionError, KNOWLEDGE_MAX_CHUNKS } from
 import type { CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { HttpError, notFound } from "./http";
+import { insertRetainedFile } from "./retained-files";
 
 /**
  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
@@ -67,10 +67,7 @@ export async function addSource(db: Db, user: CurrentUser, workspaceId: string, 
   if (!mime) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload text, Markdown, CSV, JSON or PDF");
   const name = input.name.trim().slice(0, 120) || "Untitled";
   return db.transaction(async (tx) => {
-    const [file] = await tx
-      .insert(schema.fileObject)
-      .values({ workspaceId, name, mime, size: input.bytes.length, sha256: createHash("sha256").update(input.bytes).digest("hex"), data: input.bytes, createdBy: user.id })
-      .returning({ id: schema.fileObject.id });
+    const file = await insertRetainedFile(tx, { workspaceId, name, mime, data: input.bytes, createdBy: user.id });
     const [src] = await tx
       .insert(schema.knowledgeSource)
       .values({ workspaceId, name, kind: mime === "text/csv" ? "table" : input.kind, fileId: file!.id, mime, size: input.bytes.length, status: "pending", createdBy: user.id })
