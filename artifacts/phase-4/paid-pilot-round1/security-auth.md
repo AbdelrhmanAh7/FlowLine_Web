@@ -6,6 +6,7 @@
 - Units: `pnpm exec vitest run --project unit --fileParallelism=false tests/unit/auth-confirmation.test.ts tests/unit/zitadel-issuer-binding.test.ts tests/unit/zitadel-platform-auth.test.ts tests/unit/zitadel-review-fixes.test.ts tests/unit/zitadel-env-config.test.ts`: **5 files / 19 passed**, no skips.
 - `pnpm exec tsc --noEmit`: passed. `git diff --cached --check`: passed.
 - Focused integration via `run-auth-focused.mjs`: `sec-sso-email-prehijack`, `sec-sso-link-consent`, `sec-zitadel-issuer-binding`, `p3-sso`: **4 files / 28 passed**, no skips. Fresh owned database `flowline_test_pilotsecauth` created on the existing local DB container; migrations and synthetic seeding succeeded; no worker/server launched. Database retained for bounded reproduction.
+- Re-running: `run-auth-focused.mjs` (and `artifacts/phase-4/security-auth/run-focused.mjs`) read the target from `DATABASE_URL`, which must name a disposable `flowline_test*` database; the scripts store no credentials and stop when it is unset.
 - H1/H2/M7 committed fixes are included. **H3 remains OPEN**: the source lane has substantial unfinished federated MFA changes, deliberately preserved and not copied. Platform MFA assurance and federated sign-in require that separately reviewed work.
 - H1/H2 email/IdP tests are local fixtures/outbox; live email, ZITADEL and tenant-provider acceptance remain unverified.
 - Report included for standalone main candidate; after the report PR merges, retain canonical report and add only auth remediation annotations.

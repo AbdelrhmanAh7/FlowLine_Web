@@ -1,5 +1,7 @@
 # Local H3 candidate validation
 
+> **Historical / superseded.** This validation describes an earlier H3 candidate. The current implementation fences every Better Auth adapter session read (not only the admin panel), binds session assurance to the current verified factor, and rejects replayed codes at the federated gates. The typecheck and 63-test integration results below belong to that candidate and are not validation of the current tree, whose status and gaps are in the [H3 readiness README](../../h3-readiness/README.md); behavior is in [FEDERATED_MFA.md](../../../../docs/security/FEDERATED_MFA.md). `reviewable.diff` and `focused-results.json` carry the same label.
+
 Candidate branch: `codex/paid-pilot-federated-mfa-20261003`, based on the independently reviewed local auth commit `08355ae423aa91c7d2b6f106878603d3c2f98ecb`. No commit, push, PR, deployment, real provider, login or browser gate was performed by this worker.
 
 ## Immutable source provenance

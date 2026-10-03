@@ -1,3 +1,9 @@
+HISTORICAL / SUPERSEDED - not a review of the current tree.
+This is the diff of an earlier H3 candidate (base 08355ae). Its recordMfaAssurance/hasSessionMfa store and compare only the user id;
+the current src/server/federated-mfa.ts binds assurance to [userId, sha256(factor secret)] and refuses legacy user-id-only records.
+Current behavior: docs/security/FEDERATED_MFA.md. Current status and gaps: artifacts/phase-4/h3-readiness/README.md.
+Everything from the first "diff --git" line below is the original, unmodified diff (sha256 966f6fbc503f33f869ea205261309ddb8868e0d8180c5939da6d1a1ee1b8e473).
+
 diff --git a/docs/security/SECURITY_REVIEW_20261003.md b/docs/security/SECURITY_REVIEW_20261003.md
 index 7a971e6..31e7736 100644
 --- a/docs/security/SECURITY_REVIEW_20261003.md
