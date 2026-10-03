@@ -8,6 +8,20 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+# Constitution (binding on every AI agent: Claude, Codex, agy/Gemini, OpenCode, Copilot, Kimi, Command Code, Ollama, subagents)
+
+Owner decision 2026-10-03. These articles override convenience, quotas and deadlines. The project rules below apply them.
+
+1. **Every exception needs a written reason.** Any deviation from these rules or the project rules (merging or folding a draft, merging without a reviewer's confirmation, waiving or skipping a check, dismissing a scanner/Dependabot alert, force-pushing, rewriting pushed history, resolving a thread without the reviewer's confirmation, deleting data or branches) is allowed only if the reason, the risk and how it was verified are recorded **before or at the moment of the action**, in the commit message **and** as a comment on the PR or issue. No recorded reason, no exception. A missed record is corrected publicly as soon as it is found.
+2. **Review before merge, on every branch.** Every PR, including stacked PRs into another PR's branch, gets a CodeRabbit review; a thread is resolved only after CodeRabbit itself confirms the fix (or the owner overrides with a recorded reason). Never merge, fold, cherry-pick-and-close or fast-forward a base branch over a **draft** PR: mark it ready, let it be reviewed, then merge it explicitly, or close it with a recorded reason.
+3. **Green checks.** Required checks (`gate`, `docs`) and CodeQL must pass; code PRs also pass the full tier once on the final candidate. Never delete or weaken an assertion, raise a timeout or add a retry to hide a failure.
+4. **Honesty.** Report outcomes as they are, with evidence (run ids, SHAs, commands). When an earlier statement turns out wrong, correct it where it was made (PR, issue, ledger).
+5. **Traceability.** Every task has an issue on the board; every PR links it; decisions and exceptions are recorded where the next agent will look (PR, issue, `docs/implementation/`).
+6. **Docs are part of the change** (see "Docs (mandatory)" below).
+7. **Owner-only actions stay owner-only:** production deploy, live payments, DNS, real invitations, spending above $0, personal logins/MFA/secrets. Agents prepare; the owner acts.
+
+Details and the exception-record template: `docs/GITHUB_WORKFLOW.md`.
+
 # Flowline — project rules (all agents)
 
 - **Scope:** Phases 1–3 are delivered; Phase 4 (private beta) status is in `SCOPE_MATRIX.md` and `docs/implementation/PHASE4_BETA_REPORT.md`. New work needs its own prompt. **Production deployment, live payments and release-scope changes need explicit owner approval.** Unverified integrations must never be presented as production-verified.

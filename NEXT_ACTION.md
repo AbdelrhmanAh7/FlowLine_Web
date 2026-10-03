@@ -2,7 +2,7 @@
 
 ## Current state
 
-- **Pilot round (2026-10-03):** nine pilot PRs merged into main today: #20 (CI tiers, always-reporting `gate`, `docs` check, `pnpm wt`), #12, #13, #16, #15, #17, #19, #14, #18. Open: [#21](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/21) (H3 federated MFA, CodeRabbit review in progress), #31 (this docs PR), #33 (draft, 90 s upload deadline). Full tier: once per final candidate via Actions → Gate → Run workflow (`tier=full`), see [GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md); the dispatch run [37137969499](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37137969499) on `050407f` (PR #20) passed all jobs ([report](docs/implementation/PHASE4_BETA_REPORT.md)).
+- **Pilot round (2026-10-03):** all twelve pilot PRs are merged into main: #20 (CI tiers, always-reporting `gate`, `docs` check, `pnpm wt`), #12, #13, #16, #15, #17, #19, #14, #18, #21 (H3 federated MFA + TOTP replay guard), #31 (docs refresh, GitHub workflow) and #33 (90 s upload deadline). Every CodeRabbit thread was confirmed by CodeRabbit before merge; code PRs passed the full tier. Open follow-ups: issues #27, #35, #36, #37; owner items #24 and #30.
 - **Owner-only items unchanged:** Google → ZITADEL → FlowLine round-trip, TOTP/bootstrap, DNS/host, invitations, deployment and spend; see [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md).
 - **Baseline:** this docs branch (`claude/docs-freshness`, PR #31) was written against `9641ad1e684cad7b84bd2385751ea19b0a9d4060`, the PR #8 docs merge, which follows the PR #2 merge `9fdcb7d`; it now merges `origin/main` at `cf11f3c0754d8310e300d017aa6bdc24389ab109` (the head when the merge was made; main moves). GitHub states below come from read-only `gh` queries on 2026-10-03 and change over time; recheck before relying on them.
 - **Stack:** Company Builder source is integrated, with the feature off unless `FLOWLINE_COMPANY_BUILDER=on`. [PR #2](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/2) (head `719056c`) merged into main as `9fdcb7d` at `2026-10-02T23:40:03Z`; PRs #3–#5 had merged earlier that day into their stack bases and reached main through #2. [PR #1](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/1) is closed without merging (recorded as superseded). Owner UI acceptance, provider operation and beta readiness remain unverified.
@@ -11,7 +11,7 @@
 
 ## Next steps
 
-1. Finish review and merge of open PRs #21, #31 and #33: resolve CodeRabbit threads only after it confirms the fix, run the full tier once on each final candidate, and require green `gate` and `docs` ([GITHUB_WORKFLOW.md](docs/GITHUB_WORKFLOW.md)).
+1. Work the open follow-up issues on the [board](https://github.com/users/AbdelrhmanAh7/projects/21) under the constitution in `AGENTS.md` (every exception needs a recorded reason).
 2. Reconcile G2/G4 with their actual evidence and owner authorization before execution; main does not establish completion, and the only G4 record lives on draft PR #9 until that PR is reviewed and merged.
 3. Obtain a fresh issue #6 field-validation version without modifying frozen evidence; keep issue #6 open until the new run's evidence supports closure.
 4. Owner completes the Google → ZITADEL → FlowLine round-trip and TOTP/bootstrap privately, following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md) (bounded provider checks: [BETA_EXECUTION_BRIEF.md](docs/implementation/BETA_EXECUTION_BRIEF.md)). Keep `PRIVATE_BETA_READY: NO` until provider, security, field-validation, and owner checks are evidenced.
