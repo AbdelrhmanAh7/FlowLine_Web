@@ -1,11 +1,13 @@
-# Socket-level upload deadline, including stalled/chunked bodies, before Next.js.
-# Keep read_body aligned with BODY_READ_TIMEOUT_MS in src/server/http.ts.
+# Socket-level body-read deadlines, including stalled/chunked bodies, before Next.js.
+# Keep read_body aligned with BODY_READ_TIMEOUT_MS and the upload block read_timeout with
+# UPLOAD_BODY_READ_TIMEOUT_MS (both in src/server/http.ts; tests/unit/proxy-body-limits.test.ts checks them).
 {
 	servers {
 		# Caddy 2.10 does not pass these read deadlines to its HTTP/3 server.
 		protocols h1 h2
 		timeouts {
 			read_header 5s
+			# Default for every route; only the upload block below raises it.
 			read_body 10s
 		}
 	}
@@ -31,6 +33,10 @@ http://{$BETA_DOMAIN} {
 	@upload_body path_regexp ^/api/workspaces/[^/]+/(files|knowledge)/?$
 	request_body @upload_body {
 		max_size 5308416
+		# Absolute per-request read deadline (Caddy sets it from here, replacing read_body for this request):
+		# 5308416 B at 512 kbit/s (64000 B/s) is 83 s, plus ramp-up margin. Last writer wins, not the minimum,
+		# so no other request_body block may match these paths or set read_timeout.
+		read_timeout 90s
 	}
 	@public_body path_regexp ^/api/(email|beta/check)/?$
 	request_body @public_body {
