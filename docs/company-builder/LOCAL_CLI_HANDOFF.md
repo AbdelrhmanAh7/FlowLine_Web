@@ -31,7 +31,7 @@ Read, in this order, before changing anything:
 
 ## 2. Gates (owner decision 2026-10-01, written in AGENTS.md)
 - Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test` while developing. CI runs the fast
-  tier for PRs not targeting main and pushes to main; PRs targeting main run the full tier. Use `pnpm gate` locally
+  tier for PRs and pushes to main; the full tier runs only from a `tier=full` dispatch. Use `pnpm gate` locally
   only when explicitly needed. CI logs and `summary.json` are uploaded as artifacts; local gate output is written
   under `artifacts/gates/` (git-ignored).
 - Skipped or flaky tests are failures. Never delete an assertion, loosen a timeout, or change a baseline to get green.
