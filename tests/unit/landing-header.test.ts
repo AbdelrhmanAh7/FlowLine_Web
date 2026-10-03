@@ -105,8 +105,9 @@ describe("landing header markup (src/app/page.tsx)", () => {
 
   it("wraps instead of overflowing, with no document-level overflow hack", () => {
     expect(header).toContain("flex-wrap");
-    // The preferences take their own full-width row below lg and sit inline from lg up.
-    expect(header).toMatch(/data-testid="landing-preferences" className="[^"]*\border-last\b[^"]*\bw-full\b[^"]*\blg:order-none\b[^"]*\blg:w-auto\b/);
+    // Preferences follow account actions below lg and move before them from lg up.
+    expect(header).toContain('data-testid="landing-preferences"');
+    expect(header).toContain('data-testid="landing-preferences" className="order-2 flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 md:justify-end lg:order-1 lg:w-auto');
     expect(src).not.toMatch(/overflow-x-(hidden|clip)/);
   });
 
@@ -115,5 +116,16 @@ describe("landing header markup (src/app/page.tsx)", () => {
     // Start free / Open app use the shared `btn` class string, which is nowrap.
     expect(header).toMatch(/href="\/sign-up" className=\{`\$\{btn\}/);
     expect(/const btn = "[^"]*whitespace-nowrap/.test(src)).toBe(true);
+  });
+
+  it("keeps account actions before preferences in the DOM and reorders only for the wide visual row", () => {
+    const account = header.indexOf('className="order-1 flex items-center gap-3 lg:order-2"');
+    const preferences = header.indexOf('data-testid="landing-preferences"');
+    expect(account).toBeGreaterThan(-1);
+    expect(preferences).toBeGreaterThan(account);
+    expect(header.slice(account, preferences)).toContain("order-1");
+    expect(header.slice(account, preferences)).toContain("lg:order-2");
+    expect(header.slice(preferences)).toContain("order-2");
+    expect(header.slice(preferences)).toContain("lg:order-1");
   });
 });

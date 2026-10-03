@@ -81,7 +81,7 @@ describe("stepErrorText: English is unchanged", () => {
   });
 
   it("keeps unrecognised messages and unknown codes untouched, in both languages", () => {
-    for (const row of [err("HTTP_500", "Server said no"), err("PROVIDER_CLIENT", "The app rejected the request: bad range"), err("EXPRESSION_RUNTIME", "$number is not a function"), err("AI_AUTH_FAILED", "Something else entirely")]) {
+    for (const row of [err("HTTP_500", "Server said no"), err("PROVIDER_CLIENT", "The app rejected the request: bad range"), err("EXPRESSION_RUNTIME", "$number is not a function")]) {
       expect(stepErrorText(en, row)).toBe(row.message);
       expect(stepErrorText(ar, row)).toBe(row.message);
     }
@@ -93,6 +93,14 @@ describe("stepErrorText: English is unchanged", () => {
     const row = err("PLATFORM_UNAVAILABLE", "This step was interrupted because Flowline's database was unavailable. Nothing is wrong with the step itself.");
     expect(stepErrorText(en, row)).toBe(row.message);
     expect(ARABIC.test(stepErrorText(ar, row))).toBe(true);
+  });
+
+  it("translates uncommon AI provider codes through the AI catalogue", () => {
+    const row = err("AI_ACCOUNT_ACTION_REQUIRED", "The provider account needs an action first (e.g. a payment method).");
+    expect(stepErrorText(en, row)).toBe(enCatalogue.aiHub.errors.AI_ACCOUNT_ACTION_REQUIRED);
+    expect(stepErrorText(ar, row)).toBe(arCatalogue.aiHub.errors.AI_ACCOUNT_ACTION_REQUIRED);
+    expect(ARABIC.test(stepErrorText(ar, row))).toBe(true);
+    expect(stepErrorText(ar, err("AI_AUTH_FAILED", "Something else entirely"))).toBe(arCatalogue.aiHub.errors.AI_AUTH_FAILED);
   });
 });
 

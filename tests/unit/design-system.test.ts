@@ -232,6 +232,16 @@ function contrastPairs(theme: ThemeName): ContrastSpec[] {
 }
 
 describe("contrast (WCAG AA)", () => {
+  it("light category graphics retain 3:1 contrast against the surface and amber/orange stay distinct", () => {
+    const trigger = hex("light", "cat-trigger");
+    const logic = hex("light", "cat-logic");
+    const surface = hex("light", "surface");
+    expect(contrastRatio(trigger, surface)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(logic, surface)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(trigger, logic)).toBeGreaterThanOrEqual(1.2);
+    expect(SEMANTIC.dark["cat-trigger"]).toBe("amber.400");
+    expect(SEMANTIC.dark["cat-logic"]).toBe("orange.400");
+  });
   it("blend composites a foreground at an alpha over an opaque background", () => {
     expect(blend("#000000", "#ffffff", 0)).toBe("#ffffff");
     expect(blend("#000000", "#ffffff", 1)).toBe("#000000");
@@ -526,4 +536,3 @@ describe("public pages: reduced motion is static and readable", () => {
     expect(landingPage).toMatch(/<header\s+className="[^"]*\bw-full\b/);
   });
 });
-

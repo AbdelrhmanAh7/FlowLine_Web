@@ -172,6 +172,12 @@ describe("API error messages", () => {
     expect(apiErrorMessage(t, new ApiError(400, "VALIDATION", "Invalid request"))).toBe(ar.errors.VALIDATION);
   });
 
+  it("maps less common AI hub codes through the shared AI catalogue", () => {
+    const code = "AI_ACCOUNT_ACTION_REQUIRED";
+    expect(apiErrorMessage(createTranslator("en"), new ApiError(400, code, "provider account action required"))).toBe(en.aiHub.errors[code]);
+    expect(apiErrorMessage(t, new ApiError(400, code, "provider account action required"))).toBe(ar.aiHub.errors[code]);
+  });
+
   it("falls back to the server message, then to the given fallback", () => {
     expect(apiErrorMessage(t, new ApiError(400, "VALIDATION", "Workspace name must be 2–60 characters"))).toBe("Workspace name must be 2–60 characters");
     expect(apiErrorMessage(t, new ApiError(409, "SOMETHING_NEW", "Server says why"))).toBe("Server says why");

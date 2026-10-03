@@ -48,7 +48,7 @@ export default async function Landing() {
           - lg and up: ONE row, logo | nav | preferences | account actions (icon-only preferences until xl, labelled from xl).
           - below lg: TWO rows. Row 1 is logo | nav (md+) | account actions; row 2 is the preferences (Light/Dark/System, العربية/English), so a phone or
             tablet visitor can always change theme and language from the landing page. The wrapper below is `display: contents` there, which lets
-            its two groups take part in this flex-wrap layout directly; the preferences are pushed to their own full-width line with `order-last`.
+            its two groups take part in this flex-wrap layout directly; the preferences follow the account actions on their own full-width line.
           flex-wrap is the safety net: if a translation ever makes a row too wide, a group drops to the next line instead of overflowing the page.
         */}
         <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur-sm">
@@ -58,11 +58,7 @@ export default async function Landing() {
             </Link>
             <LandingNav />
             <div className="contents lg:flex lg:items-center lg:gap-3">
-              <div data-testid="landing-preferences" className="order-last flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 md:justify-end lg:order-none lg:w-auto lg:flex-nowrap lg:gap-3">
-                <ThemeSwitcher compact="responsive" />
-                <LanguageSwitcher compact="responsive" />
-              </div>
-              <div className="flex items-center gap-3">
+              <div className="order-1 flex items-center gap-3 lg:order-2">
                 {signedIn ? (
                   <Link href="/app" className={`${btn} motion-press h-9 bg-accent px-4 font-semibold text-on-accent hover:bg-accent-hover`}>
                     {t("landing.openApp")}
@@ -77,6 +73,10 @@ export default async function Landing() {
                     </Link>
                   </>
                 )}
+              </div>
+              <div data-testid="landing-preferences" className="order-2 flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 md:justify-end lg:order-1 lg:w-auto lg:flex-nowrap lg:gap-3">
+                <ThemeSwitcher compact="responsive" />
+                <LanguageSwitcher compact="responsive" />
               </div>
             </div>
           </div>
