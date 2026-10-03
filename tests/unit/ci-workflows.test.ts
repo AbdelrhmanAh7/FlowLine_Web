@@ -104,3 +104,58 @@ describe("docs.yml always re-evaluates", () => {
     expect(jobs(text).docs).toMatch(/^ {4}if: \$\{\{ !github\.event\.pull_request\.draft \}\}$/m);
   });
 });
+
+describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
+  const action = read(".github/actions/gate-report/action.yml");
+  // Splits the composite action into { step name: body text } using the fixed four-space step indentation.
+  const steps: Record<string, string> = {};
+  const parts = action.slice(action.indexOf("\n  steps:\n")).split(/^ {4}- name: (.+)$/m);
+  for (let i = 1; i < parts.length; i += 2) steps[parts[i]] = parts[i + 1];
+  const logs = stripComments(steps["Upload gate logs and reports"] ?? "");
+  const traces = stripComments(steps["Upload Playwright traces"] ?? "");
+  const retention = (body: string) => Number(/^ {8}retention-days: (\d+)$/m.exec(body)?.[1]);
+  const uploadPin = (body: string) => /uses: (actions\/upload-artifact@[0-9a-f]{40}) # v\d+\.\d+\.\d+$/m.exec(body)?.[1];
+
+  it("uploads the per-shard Playwright JSON report and error context with the gate logs", () => {
+    expect(logs).toMatch(/^ {6}if: \$\{\{ always\(\) \}\}$/m);
+    for (const glob of ["artifacts/gates/**", "test-results/*-report.txt", "test-results/*-results.json", "test-results/**/error-context.md", "test-results/**/test-failed-*.png"]) {
+      expect(logs.split("\n").map((line) => line.trim()), glob).toContain(glob);
+    }
+    expect(logs).not.toContain("trace.zip");
+    expect(retention(logs)).toBe(14);
+  });
+
+  it("uploads trace.zip files as their own short-lived artifact, only creating it when a trace exists", () => {
+    expect(traces).toMatch(/^ {6}if: \$\{\{ always\(\) \}\}$/m);
+    expect(traces).toMatch(/^ {8}name: flowline-gate-\$\{\{ inputs\.job \}\}-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}-traces$/m);
+    expect(traces).toMatch(/^ {8}path: test-results\/\*\*\/trace\.zip$/m);
+    expect(traces).toMatch(/^ {8}if-no-files-found: ignore$/m);
+    expect(retention(traces)).toBe(7);
+  });
+
+  it("reuses the existing upload-artifact pin for both uploads", () => {
+    expect(uploadPin(logs)).toBeDefined();
+    expect(uploadPin(traces)).toBe(uploadPin(logs));
+  });
+
+  it("matches what the browser runners write and what Playwright records", () => {
+    // test-results/<project>-<shard>-results.json (JSON) and <output dir>/<test folder>/trace.zip (trace).
+    expect(read("scripts/gate-browser-native.mjs")).toContain("`test-results/${project}-${stack.k}-results.json`");
+    expect(read("scripts/gate-browser-native.mjs")).toContain("`--output=test-results/${project}-${stack.k}`");
+    expect(read("e2e/tools/browser-docker.sh")).toContain('"test-results/$out-results.json"');
+    const config = stripComments(read("playwright.config.ts"));
+    expect(config).toMatch(/\btrace: "retain-on-failure"/);
+    expect(config).toMatch(/\bretries: 0\b/);
+  });
+
+  it("keeps secrets out of what a public repository's artifacts expose", () => {
+    // Traces record the page's network log and DOM, so the job must not hold repository secrets, and the specs that
+    // reveal write-only credentials must keep tracing off (their canary values must not land in evidence).
+    for (const file of allFiles) expect(stripComments(read(file)), file).not.toMatch(/secrets\./);
+    const byJob = jobs(read(".github/workflows/gate.yml"));
+    for (const job of ["checks", "chromium", "firefox", "webkit"]) expect(byJob[job], job).not.toMatch(/github\.token|GH_TOKEN/);
+    for (const spec of ["e2e/admin-panel.spec.ts", "e2e/keyboard-surfaces.spec.ts"]) {
+      expect(read(spec), spec).toMatch(/^test\.use\(\{ trace: "off", screenshot: "off", video: "off" \}\);$/m);
+    }
+  });
+});
