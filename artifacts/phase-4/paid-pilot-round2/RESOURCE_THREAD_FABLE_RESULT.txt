@@ -1,0 +1,29 @@
+**Verdict: APPROVE the proposed disposition.** Reply to both threads, resolve both as "not repaired", keep M4 PARTIAL and the PR BLOCKED on deployed proof, no merge, no new commit. No restacking is triggered.
+
+**Caveat on verification scope.** Tools are off for this turn, and this worktree is on the round-two branch, whose Caddyfile has no `request_body` directive at all. I verified the public-body and rate-limit code from the pasted head sources, and the Caddy finding only against the head's documented 6 MiB intent.
+
+**Finding 2, public-body.ts (rate before cap): invalid as an improvement, keep rate-first.**
+- The DB cost of `checkRate` is one short advisory-locked transaction per request. It is identical for a 1-byte body and a 64 KiB body. Body size never reaches the DB, so moving the cap first reduces zero attacker-driven DB load. An attacker who wants lock contention sends tiny valid-length bodies.
+- Cap-first would make oversized requests exempt from admission. An attacker from one IP could stream 64 KiB per request without limit and never see a 429. Rate-first caps that at 60 admissions per minute per IP, after which bodies are refused unread. That is the asserted property in the `request.bodyUsed === false` on 429 test.
+- Counting rejected oversized requests against the sender's own window is the desired outcome, not a leak. The only legitimate-user cost is shared-NAT window consumption, which small-body abuse causes equally.
+- Declared-oversize Content-Length still short-circuits before the DB, so the cheap case already avoids the lock.
+
+**Finding 1, Caddyfile (no body deadline, no per-route proxy caps): valid but deferred, not a blocker for this partial candidate.**
+- The gap is real and already recorded as the reason M4 is PARTIAL. The app-side 30 s whole-body deadline in the queued candidate 9d7f0c4 bounds slow-body connections for every route that uses `capBody`, which includes all auth POSTs, email and beta-check.
+- The remaining proxy exposure is for paths that do not pass through `capBody`, and for connection slots on Caddy itself. That is defense in depth, correctly owned by deployment validation.
+- Shipping the proxy change now would be a documentation-only edit with no executed acceptance check. The Caddy knob maps to Go's server ReadTimeout and would also govern the 5 MiB knowledge upload path, so a wrong value breaks legitimate slow uploads. That must be validated on the real stack, not asserted.
+- Tighter `/api/auth` and `/api/email` proxy matchers only duplicate app caps that already stop reading at the limit. Marginal value, same validation need, defer with the deadline.
+
+**Required content of the deployment-validation followup, so the deferral is honest:** add a global options block (the current file has none) with `servers { timeouts { read_body <value> } }`, choose a value coherent with the app's 30 s deadline and a slow legit 5 MiB upload, confirm the proxy returns 413 rather than 502 when `max_size` trips mid-stream, and confirm it bounds requests on routes without `capBody`. Record the executed result as the M4 evidence.
+
+**Suggested thread replies.**
+
+Caddyfile thread:
+```
+Valid and already tracked: M4 remains PARTIAL because body read deadlines and proxy behaviour are unvalidated. The app-side whole-body 30s deadline is in the queued candidate 9d7f0c4 and covers every capBody route (all auth POSTs, email, beta). The Caddy read_body timeout maps to the Go server read timeout and also governs the 5 MiB upload path, so it will be added and measured in the deployment-validation followup with an executed acceptance check rather than asserted from docs. Per-route proxy matchers duplicate app caps that already stop reading at the limit; deferred to the same followup. Not changed in this PR; PR stays blocked on that proof.
+```
+
+public-body.ts thread:
+```
+Not changed, deliberate. checkRate cost is one short advisory-locked transaction regardless of body size, so cap-first does not reduce DB load (a tiny body costs the same). Cap-first would exempt oversized requests from admission: unlimited 64 KiB streams per IP with no 429. Rate-first bounds that to 60 admissions/min/IP, after which bodies are refused unread (asserted by the bodyUsed=false on 429 test). Declared-oversize Content-Length already short-circuits before the DB. Counting rejected oversized requests against the sender's window is the intended behaviour.
+```

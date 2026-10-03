@@ -1,0 +1,22 @@
+**Decision 13: APPROVE** the two-file diff for commit and push to existing PR 15, conditional on a fresh full CI run passing. Hash 8065fa41…3655 is accepted as the identity of the reviewed diff; I cannot recompute it without tools, so the push must carry exactly this diff.
+
+**Record correction, acknowledged.** The earlier claim that the public hydration test does not register a user was wrong. The spec creates a verified user for onboarding after the public landing and sign-in scan, so it needs the beta admission cookie like every other registering context. The three failing public hydration cases per browser and the Chromium SSO newcomer case are fixture gaps in the scoped cookie fix, not product bugs. No WebKit transport or root-cause work is in scope.
+
+**Why the hydration change is correct**
+- The three main contexts now spread `EN_STATE`, matching every other registering context after the audit, so sign-up passes the test-only beta cookie under `FLOWLINE_ENV=test`.
+- The public state spreads `AR_STATE.cookies` first, then re-states `fl_locale=ar` and `fl_theme=light`. Later entries win on duplicate name, domain and path, so the Arabic light assertions keep their original inputs. Route, RTL, theme and zero-warning assertions are untouched.
+- Global beta env stays unset, so the CodeRabbit dev trial and CLI path are preserved and default admission remains fail-closed.
+
+**Why the SSO change is correct**
+- The server gate for SSO sign-up reads global `allowSignUp`, not the request cookie, so the cookie fix alone could not admit the synthetic newcomer. Creating a real pending invite through the existing workspace invites API is the honest fixture: it exercises the production admission rule instead of weakening it.
+- Role editor matches the existing SSO default-role assertion, so membership, takeover refusal and role checks are unchanged. The invite email lands in the isolated CI outbox only.
+- The `ok()` assertion with the response body as the message fails loudly if the API rejects the call, which is the right failure mode.
+
+**Points to watch in the fresh CI, none blocking**
+- Typecheck confirms `AR_STATE` and `EN_STATE` are state objects, not file paths. If they were strings, the array spread would throw at runtime, and static would already flag the member access.
+- Contexts with an Arabic browser locale now carry the English cookie. The main loop asserts only on hydration warnings, so this is fine, but any assertion tied to browser locale there would surface in CI.
+- Because the newcomer now holds a pending editor invite, the SSO test no longer isolates the SSO default-role path from invite acceptance. Both yield editor, so assertions hold. Note it in the beta report as a known overlap rather than silently.
+
+**Process**
+- Commit and push this exact diff to PR 15. Request the latest-head CodeRabbit review only at the next slot at or after 04:31:59 UTC, with the 04:33:30 margin.
+- Advance the queued resource after the review threads complete. No baseline rerun; the new full CI is the gate. No merge, no retries, no skips, no assertion or timeout changes.

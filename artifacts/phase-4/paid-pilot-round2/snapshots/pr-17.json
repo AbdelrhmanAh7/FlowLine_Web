@@ -1,0 +1,94 @@
+{
+  "at": "2026-10-03T04:57:18.079Z",
+  "pr": {
+    "number": 17,
+    "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17",
+    "state": "OPEN",
+    "headRefOid": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+    "headRefName": "codex/pilot-security-auth-round1",
+    "baseRefName": "main",
+    "isDraft": false,
+    "reviews": {
+      "nodes": []
+    },
+    "reviewThreads": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "id": "IC_kwDOUvLGYc8AAAABY5XMyA",
+          "author": {
+            "login": "coderabbitai"
+          },
+          "createdAt": "2026-10-03T04:55:21Z",
+          "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- review_stack_entry_start -->\n\n<a href=\"https://app.coderabbit.ai/change-stack/AbdelrhmanAh7/FlowLine_Web/pull/17?cs_source=review_comment\"><img src=\"https://storage.googleapis.com/coderabbit_public_assets/review-stack-in-coderabbit-ui-dark.svg?v=2\" alt=\"Review in Change Stack →\" width=\"220\" height=\"32\"></a>\n\nNavigate logical layers of code changes, visualize relationships, and explore their blast radius.\n\n<!-- review_stack_entry_end -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n\n> [!NOTE]\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> \n> <details>\n> <summary>⚙️ Run configuration</summary>\n> \n> - **Configuration used**: Repository: AbdelrhmanAh7/FlowLine_Web/.coderabbit.yaml\n> - **Review profile**: ASSERTIVE\n> - **Plan**: Essentials\n> - **Run ID**: `5269dda1-4da1-49d4-bb4c-2a7654a9bdf7`\n> \n> </details>\n> \n> <details>\n> <summary>📥 Commits</summary>\n> \n> Reviewing files that changed from the base of the PR and between 9641ad1e684cad7b84bd2385751ea19b0a9d4060 and 08355ae423aa91c7d2b6f106878603d3c2f98ecb.\n> \n> </details>\n> \n> <details>\n> <summary>📒 Files selected for processing (29)</summary>\n> \n> * `artifacts/phase-4/paid-pilot-round1/run-auth-focused.mjs`\n> * `artifacts/phase-4/paid-pilot-round1/security-auth.md`\n> * `artifacts/phase-4/security-auth/run-focused.mjs`\n> * `docs/security/SECURITY_REVIEW_20261003.md`\n> * `e2e/phase3.spec.ts`\n> * `e2e/zitadel.spec.ts`\n> * `src/app/(auth)/auth-form.tsx`\n> * `src/app/(auth)/sso/link/page.tsx`\n> * `src/app/api/sso/callback/route.ts`\n> * `src/app/api/sso/link/route.ts`\n> * `src/app/api/sso/start/route.ts`\n> * `src/db/schema.ts`\n> * `src/i18n/messages/ar.json`\n> * `src/i18n/messages/en.json`\n> * `src/server/audit.ts`\n> * `src/server/auth-confirmation.ts`\n> * `src/server/auth-dispatch.ts`\n> * `src/server/email/flows.ts`\n> * `src/server/sso-link.ts`\n> * `src/server/sso.ts`\n> * `src/server/zitadel-auth.ts`\n> * `tests/integration/federation-fixture.ts`\n> * `tests/integration/p3-sso.test.ts`\n> * `tests/integration/sec-sso-email-prehijack.test.ts`\n> * `tests/integration/sec-sso-link-consent.test.ts`\n> * `tests/integration/sec-zitadel-issuer-binding.test.ts`\n> * `tests/integration/zitadel-platform-auth.test.ts`\n> * `tests/unit/auth-confirmation.test.ts`\n> * `tests/unit/zitadel-issuer-binding.test.ts`\n> \n> </details>\n> \n> ```ascii\n>  ______________________________________________________\n> < Your merge request walked so code reviews could run. >\n>  ------------------------------------------------------\n>   \\\n>    \\   \\\n>         \\ /\\\n>         ( )\n>       .( o ).\n> ```\n\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n\n<!-- finishing_touch_checkbox_start -->\n\n<details>\n<summary>✨ Finishing Touches</summary>\n\n<details open>\n<summary>📝 Generate docstrings</summary>\n\n- [ ] <!-- {\"checkboxId\":\"3e1879ae-f29b-4d0d-8e06-d12b7ba33d98\"} --> Commit to this branch\n- [ ] <!-- {\"checkboxId\":\"7962f53c-55bc-4827-bfbf-6a18da830691\"} --> Create a new PR\n\n</details>\n\n</details>\n\n<!-- finishing_touch_checkbox_end -->\n\n<!-- autopilot:start -->\n- [ ] <!-- {\"checkboxId\":\"2708ad07-9f24-4260-9c11-7dc76a49f2e3\"} --> <strong title=\"Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\">Autopilot</strong> · Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\n<!-- autopilot:end -->\n<!-- tips_start -->\n\n---\n\n\n\n\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>\n\n<!-- tips_end -->",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#issuecomment-5965728968"
+        }
+      ]
+    }
+  },
+  "runs": [
+    {
+      "id": 37098120270,
+      "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270",
+      "name": "Gate",
+      "status": "in_progress",
+      "conclusion": null,
+      "headSha": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "isCurrentHead": true,
+      "createdAt": "2026-10-03T04:55:04Z",
+      "jobs": [
+        {
+          "id": 111132109137,
+          "name": "firefox",
+          "status": "in_progress",
+          "conclusion": null,
+          "startedAt": "2026-10-03T04:55:26Z",
+          "completedAt": null,
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270/job/111132109137"
+        },
+        {
+          "id": 111132109258,
+          "name": "integration",
+          "status": "in_progress",
+          "conclusion": null,
+          "startedAt": "2026-10-03T04:55:06Z",
+          "completedAt": null,
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270/job/111132109258"
+        },
+        {
+          "id": 111132109329,
+          "name": "chromium",
+          "status": "in_progress",
+          "conclusion": null,
+          "startedAt": "2026-10-03T04:55:07Z",
+          "completedAt": null,
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270/job/111132109329"
+        },
+        {
+          "id": 111132109341,
+          "name": "webkit",
+          "status": "in_progress",
+          "conclusion": null,
+          "startedAt": "2026-10-03T04:55:07Z",
+          "completedAt": null,
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270/job/111132109341"
+        },
+        {
+          "id": 111132109385,
+          "name": "static",
+          "status": "in_progress",
+          "conclusion": null,
+          "startedAt": "2026-10-03T04:55:07Z",
+          "completedAt": null,
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37098120270/job/111132109385"
+        }
+      ]
+    }
+  ]
+}

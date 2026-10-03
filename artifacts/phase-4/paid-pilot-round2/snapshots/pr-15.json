@@ -1,10 +1,10 @@
 {
-  "at": "2026-10-03T04:17:26.843Z",
+  "at": "2026-10-03T04:43:06.198Z",
   "pr": {
     "number": 15,
     "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/15",
     "state": "OPEN",
-    "headRefOid": "151a6b19094f9bdca5058b11f9636f47bfd29b34",
+    "headRefOid": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
     "headRefName": "codex/pilot-security-redact-round1",
     "baseRefName": "main",
     "isDraft": false,
@@ -26,7 +26,7 @@
             "login": "coderabbitai"
           },
           "createdAt": "2026-10-03T03:44:25Z",
-          "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- review_stack_entry_start -->\n\n<a href=\"https://app.coderabbit.ai/change-stack/AbdelrhmanAh7/FlowLine_Web/pull/15?cs_source=review_comment\"><img src=\"https://storage.googleapis.com/coderabbit_public_assets/review-stack-in-coderabbit-ui-dark.svg?v=2\" alt=\"Review in Change Stack →\" width=\"220\" height=\"32\"></a>\n\nNavigate logical layers of code changes, visualize relationships, and explore their blast radius.\n\n<!-- review_stack_entry_end -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n\n> [!IMPORTANT]\n> ## Review skipped\n> \n> Auto incremental reviews are disabled on this repository.\n> \n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> \n> <details>\n> <summary>⚙️ Run configuration</summary>\n> \n> - **Configuration used**: Repository: AbdelrhmanAh7/FlowLine_Web/.coderabbit.yaml\n> - **Review profile**: ASSERTIVE\n> - **Plan**: Essentials\n> - **Run ID**: `4106933b-360e-41f9-8704-a9fe4c37052f`\n> \n> </details>\n> \n> You can disable this status message by setting the `reviews.review_status` to `false` in the CodeRabbit configuration file.\n> \n> Use the checkbox below for a quick retry:\n> - [ ] <!-- {\"checkboxId\":\"e9bb8d72-00e8-4f67-9cb2-caf3b22574fe\"} --> 🔍 Trigger review\n\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n\n<!-- recent_review_start -->\n\nNo actionable comments were generated in the recent review. 🎉\n\n<details>\n<summary>ℹ️ Recent review info</summary>\n\n<details>\n<summary>⚙️ Run configuration</summary>\n\n- **Configuration used**: Repository: AbdelrhmanAh7/FlowLine_Web/.coderabbit.yaml\n- **Review profile**: ASSERTIVE\n- **Plan**: Essentials\n- **Run ID**: `687fd126-9583-406d-b6f6-bc041a8dc6a8`\n\n</details>\n\n<details>\n<summary>📥 Commits</summary>\n\nReviewing files that changed from the base of the PR and between 9641ad1e684cad7b84bd2385751ea19b0a9d4060 and 09be0b3641a139409fad242e9617eec9b0db1975.\n\n</details>\n\n<details>\n<summary>📒 Files selected for processing (15)</summary>\n\n* `artifacts/phase-4/paid-pilot-round1/security-redaction.md`\n* `artifacts/phase-4/security-remediation/validation.md`\n* `docs/security/SECURITY_REVIEW_20261003.md`\n* `src/app/api/billing/webhook/route.ts`\n* `src/server/beta.ts`\n* `src/server/egress.ts`\n* `src/server/redact.ts`\n* `tests/integration/p3-billing.test.ts`\n* `tests/unit/beta-mode-security.test.ts`\n* `tests/unit/billing-webhook-retry.test.ts`\n* `tests/unit/egress-redirect-security.test.ts`\n* `tests/unit/redact-api-logging.test.ts`\n* `tests/unit/redact.test.ts`\n* `tests/unit/run-output-redaction.test.ts`\n* `worker/runner.ts`\n\n</details>\n\n**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.\n\n</details>\n\n---\n\n\n\n<!-- recent_review_end -->\n<!-- walkthrough_start -->\n\n<details>\n<summary>📝 Walkthrough</summary>\n\n## Walkthrough\n\nThe pull request changes run-output and error redaction, egress redirect handling, beta signup configuration, and billing webhook retry responses. It adds tests for these behaviors and security review, remediation validation, and candidate-preparation records.\n\n### Changes\n\n**Security remediation**\n\n|Layer / File(s)|Summary|\n|:---|:---|\n|**Run-output redaction** <br> `worker/runner.ts`, `tests/unit/run-output-redaction.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Encrypted step data now stores collected secrets for resume and rerun reconstruction. Persisted run output is redacted with those secrets. Tests cover public projections, encrypted data, and reused step output.|\n|**Error redaction** <br> `src/server/redact.ts`, `tests/unit/redact.test.ts`, `tests/unit/redact-api-logging.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|The `params:` scrubber now omits multiline tails, and depth overflow returns `[REDACTED_LIMIT]`. Tests cover nested errors, deep values, cycles, and route logs.|\n|**Egress redirect handling** <br> `src/server/egress.ts`, `tests/unit/egress-redirect-security.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Cross-origin redirects with retained bodies are refused. Permitted cross-origin redirects drop supplied headers. Tests cover same-origin redirects and private-address blocking.|\n|**Beta signup configuration** <br> `src/server/beta.ts`, `tests/unit/beta-mode-security.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Only valid beta modes are accepted. Missing or invalid configuration defaults to `invite_only` and logs an error. Tests cover signup checks and test-only cookie overrides.|\n|**Billing webhook retries** <br> `src/app/api/billing/webhook/route.ts`, `tests/unit/billing-webhook-retry.test.ts`, `tests/integration/p3-billing.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Failed processing returns HTTP 503, `received: false`, and `Retry-After: 30`. Tests check redelivery, canonical state updates, and duplicate handling.|\n|**Security review and validation records** <br> `docs/security/SECURITY_REVIEW_20261003.md`, `artifacts/phase-4/security-remediation/validation.md`, `artifacts/phase-4/paid-pilot-round1/security-redaction.md`|The records describe review findings, inspected controls, evidence limits, remediation test results, and candidate-preparation checks.|\n\n<!-- change_assessment_start -->\n**Priority:** ⬆️ High\n\n\n\n\n\n\n\n\n\n**Estimated code review effort:** 4 (Complex) | ~45 minutes\n\n<!-- change_assessment_commit:\"09be0b3641a139409fad242e9617eec9b0db1975\" -->\n**Change:** Bug fix · **Severity of issue fixed:** High\n<!-- change_assessment_end -->\n\n</details>\n\n<!-- walkthrough_end -->\n<!-- final_review_risk_start -->\n**Merge Risk:** _⚪ Minimal_ · up to `09be0`\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"09be0b3641a139409fad242e9617eec9b0db1975\",\"coveredCommitId\":\"09be0b3641a139409fad242e9617eec9b0db1975\",\"kind\":\"reviewed\"} -->\n\nNo merge-blocking issue is established. Complete the planned CI and integration validation before release.\n<!-- final_review_risk_end -->\n<!-- pre_merge_checks_walkthrough_start -->\n\n<details>\n<summary>🚥 Pre-merge checks | ✅ 4 | ❌ 1</summary>\n\n### ❌ Failed checks (1 warning)\n\n|     Check name     | Status     | Explanation                                                                                                                                                                                               | Resolution                                                                         |\n| :----------------: | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |\n| Docstring Coverage | ⚠️ Warning | Docstring coverage is 33.33% which is insufficient. The required threshold is 80.00%. Docstring coverage is scoped to functions touched by this diff. Analyzed 12 functions across 12 files. (3 skipped:… | Write docstrings for the functions missing them to satisfy the coverage threshold. |\n\n<details>\n<summary>✅ Passed checks (4 passed)</summary>\n\n|         Check name         | Status   | Explanation                                                                                                              |\n| :------------------------: | :------- | :----------------------------------------------------------------------------------------------------------------------- |\n|      Description Check     | ✅ Passed | Check skipped - CodeRabbit’s high-level summary is enabled.                                                              |\n|         Title check        | ✅ Passed | The title clearly summarizes the main security changes: secret redaction and enforcement of credential trust boundaries. |\n|     Linked Issues check    | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                 |\n| Out of Scope Changes check | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                 |\n\n</details>\n\n<details>\n<summary>Full details: Docstring Coverage</summary>\n\n**Explanation**\n\nDocstring coverage is 33.33% which is insufficient. The required threshold is 80.00%. Docstring coverage is scoped to functions touched by this diff. Analyzed 12 functions across 12 files. (3 skipped: 3 unsupported.)\n\n</details>\n\n</details>\n\n<!-- pre_merge_checks_walkthrough_end -->\n<!-- finishing_touch_checkbox_start -->\n\n<details>\n<summary>✨ Finishing Touches</summary>\n\n<details open>\n<summary>📝 Generate docstrings</summary>\n\n- [ ] <!-- {\"checkboxId\":\"3e1879ae-f29b-4d0d-8e06-d12b7ba33d98\"} --> Commit to this branch\n- [ ] <!-- {\"checkboxId\":\"7962f53c-55bc-4827-bfbf-6a18da830691\"} --> Create a new PR\n\n</details>\n\n</details>\n\n<!-- finishing_touch_checkbox_end -->\n\n<!-- autopilot:start -->\n- [ ] <!-- {\"checkboxId\":\"2708ad07-9f24-4260-9c11-7dc76a49f2e3\"} --> <strong title=\"Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\">Autopilot</strong> · Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\n<!-- autopilot:end -->\n<!-- tips_start -->\n\n---\n\n\n\n\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>\n\n<!-- tips_end -->",
+          "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- review_stack_entry_start -->\n\n<a href=\"https://app.coderabbit.ai/change-stack/AbdelrhmanAh7/FlowLine_Web/pull/15?cs_source=review_comment\"><img src=\"https://storage.googleapis.com/coderabbit_public_assets/review-stack-in-coderabbit-ui-dark.svg?v=2\" alt=\"Review in Change Stack →\" width=\"220\" height=\"32\"></a>\n\nNavigate logical layers of code changes, visualize relationships, and explore their blast radius.\n\n<!-- review_stack_entry_end -->\n<!-- recent_review_start -->\n\nNo actionable comments were generated in the recent review. 🎉\n\n<details>\n<summary>ℹ️ Recent review info</summary>\n\n<details>\n<summary>⚙️ Run configuration</summary>\n\n- **Configuration used**: Repository: AbdelrhmanAh7/FlowLine_Web/.coderabbit.yaml\n- **Review profile**: ASSERTIVE\n- **Plan**: Essentials\n- **Run ID**: `0b195572-7325-4a43-9190-9803e2b04db1`\n\n</details>\n\n<details>\n<summary>📥 Commits</summary>\n\nReviewing files that changed from the base of the PR and between 09be0b3641a139409fad242e9617eec9b0db1975 and 037af94a6465e3f57d37bdeb354e1bd66ef41da7.\n\n</details>\n\n<details>\n<summary>📒 Files selected for processing (7)</summary>\n\n* `e2e/arabic.spec.ts`\n* `e2e/company-builder.spec.ts`\n* `e2e/hydration.spec.ts`\n* `e2e/phase3.spec.ts`\n* `playwright.config.ts`\n* `tests/integration/email.test.ts`\n* `tests/integration/p3-sso.test.ts`\n\n</details>\n\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.\n\n</details>\n\n---\n\n\n\n<!-- recent_review_end -->\n<!-- walkthrough_start -->\n\n<details>\n<summary>📝 Walkthrough</summary>\n\n## Walkthrough\n\nThe pull request updates run-output redaction, error redaction, egress redirect handling, beta signup configuration, and billing webhook retry responses. It adds tests for these behaviors, updates end-to-end test setup, and records security review findings and validation results.\n\n### Changes\n\n**Security remediation**\n\n|Layer / File(s)|Summary|\n|:---|:---|\n|**Run-output redaction** <br> `worker/runner.ts`, `tests/unit/run-output-redaction.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Encrypted step data now stores collected secrets for resume and rerun reconstruction. Persisted run output is redacted with those secrets. Tests cover public projections, encrypted data, and reused step output.|\n|**Error redaction** <br> `src/server/redact.ts`, `tests/unit/redact.test.ts`, `tests/unit/redact-api-logging.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|The `params:` scrubber now omits multiline tails, and depth overflow returns `[REDACTED_LIMIT]`. Tests cover nested errors, deep values, cycles, and route logs.|\n|**Egress redirect handling** <br> `src/server/egress.ts`, `tests/unit/egress-redirect-security.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Cross-origin redirects with retained bodies are refused. Permitted cross-origin redirects drop supplied headers. Tests cover same-origin redirects and private-address blocking.|\n|**Beta signup and test setup** <br> `src/server/beta.ts`, `tests/unit/beta-mode-security.test.ts`, `playwright.config.ts`, `e2e/*`, `tests/integration/email.test.ts`, `tests/integration/p3-sso.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Only valid beta modes are accepted. Missing or invalid configuration defaults to `invite_only` and logs an error. Tests cover signup checks and test-only cookie overrides. End-to-end tests use configured storage states, and email and SSO integration tests explicitly set open mode.|\n|**Billing webhook retries** <br> `src/app/api/billing/webhook/route.ts`, `tests/unit/billing-webhook-retry.test.ts`, `tests/integration/p3-billing.test.ts`, `docs/security/SECURITY_REVIEW_20261003.md`|Failed processing returns HTTP 503, `received: false`, and `Retry-After: 30`. Tests check redelivery, canonical state updates, and duplicate handling.|\n|**Security review and validation records** <br> `docs/security/SECURITY_REVIEW_20261003.md`, `artifacts/phase-4/security-remediation/validation.md`, `artifacts/phase-4/paid-pilot-round1/security-redaction.md`|The records describe review findings, inspected controls, evidence limits, remediation test results, and candidate-preparation checks.|\n\n<!-- change_assessment_start -->\n**Priority:** ⬆️ High\n\n**Estimated code review effort:** 3 (Moderate) | ~30 minutes\n\n<!-- change_assessment_commit:\"037af94a6465e3f57d37bdeb354e1bd66ef41da7\" -->\n**Change:** Bug fix · **Severity of issue fixed:** High\n<!-- change_assessment_end -->\n\n</details>\n\n<!-- walkthrough_end -->\n<!-- final_review_risk_start -->\n**Merge Risk:** _⚪ Minimal_ · up to `037af`\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"037af94a6465e3f57d37bdeb354e1bd66ef41da7\",\"coveredCommitId\":\"037af94a6465e3f57d37bdeb354e1bd66ef41da7\",\"kind\":\"reviewed\"} -->\n\nThe reviewed changes show no concrete user-impacting regression, so the PR is mergeable subject to its normal checks.\n<!-- final_review_risk_end -->\n<!-- pre_merge_checks_walkthrough_start -->\n\n<details>\n<summary>🚥 Pre-merge checks | ✅ 4 | ❌ 1</summary>\n\n### ❌ Failed checks (1 warning)\n\n|     Check name     | Status     | Explanation                                                                                                                                                                                  | Resolution                                                                         |\n| :----------------: | :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |\n| Docstring Coverage | ⚠️ Warning | Docstring coverage is 28.57% which is insufficient. The required threshold is 80.00%. Docstring coverage is scoped to functions touched by this diff. Analyzed 14 functions across 19 files. | Write docstrings for the functions missing them to satisfy the coverage threshold. |\n\n<details>\n<summary>✅ Passed checks (4 passed)</summary>\n\n|         Check name         | Status   | Explanation                                                                                                              |\n| :------------------------: | :------- | :----------------------------------------------------------------------------------------------------------------------- |\n|      Description Check     | ✅ Passed | Check skipped - CodeRabbit’s high-level summary is enabled.                                                              |\n|         Title check        | ✅ Passed | The title clearly summarizes the main security changes: secret redaction and enforcement of credential trust boundaries. |\n|     Linked Issues check    | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                 |\n| Out of Scope Changes check | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                 |\n\n</details>\n\n</details>\n\n<!-- pre_merge_checks_walkthrough_end -->\n\n- [ ] <!-- {\"checkboxId\":\"585bb3f6-faf5-4dbf-96d2-74e382adf19a\"} --> Fix all pre-merge checks with AI\n<!-- finishing_touch_checkbox_start -->\n\n<details>\n<summary>✨ Finishing Touches 💡 1</summary>\n\n<!-- finishing_touch_suggestion:docstrings -->\n<details open>\n<summary>📝 Generate docstrings 💡</summary>\n\n- [ ] <!-- {\"checkboxId\":\"3e1879ae-f29b-4d0d-8e06-d12b7ba33d98\"} --> Commit to this branch\n- [ ] <!-- {\"checkboxId\":\"7962f53c-55bc-4827-bfbf-6a18da830691\"} --> Create a new PR\n\n</details>\n\n</details>\n\n<!-- finishing_touch_checkbox_end -->\n\n<!-- autopilot:start -->\n- [ ] <!-- {\"checkboxId\":\"2708ad07-9f24-4260-9c11-7dc76a49f2e3\"} --> <strong title=\"Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\">Autopilot</strong> · Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\n<!-- autopilot:end -->\n<!-- tips_start -->\n\n---\n\n\n\n\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>\n\n<!-- tips_end -->",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/15#issuecomment-5965182602"
         },
         {
@@ -55,19 +55,138 @@
           "createdAt": "2026-10-03T04:14:35Z",
           "body": "Latest correction pushed in `151a6b19094f9bdca5058b11f9636f47bfd29b34` after independent exact-diff Fable approval and verification of its three source conditions.\n\nThe earlier `6da59d7` fixture change cleared all 549 integration tests. The subsequent global test-mode attempt `5f07d88` conflicted with Company Builder's intentional development-trial and CLI guards; its failed CI is preserved. The latest commit reverts that global setting and uses the existing `FLOWLINE_ENV=test`-only beta cookie in EN/AR registration storage states. Arabic still has no locale cookie. Product admission, entitlement and prototype guards, and all assertions/retries/timeouts, remain unchanged.\n\nThe fresh full GitHub gate must validate this head. No local tests, stack, browser or build was run. Current-head CodeRabbit coverage remains required; another request waits for the shared rolling-hour slot. This status comment requests no review and does not enable billing or imply merge/pilot readiness.\n",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/15#issuecomment-5965424376"
+        },
+        {
+          "id": "IC_kwDOUvLGYc8AAAABY5M8GQ",
+          "author": {
+            "login": "AbdelrhmanAh7"
+          },
+          "createdAt": "2026-10-03T04:33:42Z",
+          "body": "@coderabbitai review\n\nPlease review latest head 037af94a6465e3f57d37bdeb354e1bd66ef41da7. Test fixtures now explicitly exercise fail-closed beta admission: integration fixtures declare their intended mode; Playwright states carry the existing test-only cookie; hydration custom states include it; the synthetic SSO newcomer receives a pending workspace invitation through the existing API. Global beta mode remains unset to preserve Company Builder trial guards. Assertions, baselines, retries and timeouts are unchanged. Failed CI attempts remain recorded; latest full gate is pending.\n",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/15#issuecomment-5965560857"
+        },
+        {
+          "id": "IC_kwDOUvLGYc8AAAABY5M_-Q",
+          "author": {
+            "login": "coderabbitai"
+          },
+          "createdAt": "2026-10-03T04:33:51Z",
+          "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n<!-- CodeRabbit review command invocation: v2:08b6bb2d929cc11605a15938d8abbb531868eb1de5448b3ae40a6bfef20985b1 -->\n<details>\n<summary>✅ Action performed</summary>\n\nReview finished.\n\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused.\n\n</details>",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/15#issuecomment-5965561849"
         }
       ]
     }
   },
   "runs": [
     {
+      "id": 37096736397,
+      "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397",
+      "name": "Gate",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
+      "isCurrentHead": true,
+      "createdAt": "2026-10-03T04:29:58Z",
+      "jobs": [
+        {
+          "id": 111128091993,
+          "name": "chromium",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:38:37Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128091993"
+        },
+        {
+          "id": 111128092076,
+          "name": "firefox",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:38:15Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092076"
+        },
+        {
+          "id": 111128092139,
+          "name": "webkit",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:00Z",
+          "completedAt": "2026-10-03T04:39:38Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092139"
+        },
+        {
+          "id": 111128092161,
+          "name": "integration",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:33:18Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092161"
+        },
+        {
+          "id": 111128092258,
+          "name": "static",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:00Z",
+          "completedAt": "2026-10-03T04:31:55Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092258"
+        },
+        {
+          "id": 111129653372,
+          "name": "gate",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:39:42Z",
+          "completedAt": "2026-10-03T04:39:46Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111129653372"
+        }
+      ],
+      "timing": {
+        "billable": {
+          "UBUNTU": {
+            "total_ms": 0,
+            "jobs": 6,
+            "job_runs": [
+              {
+                "job_id": 111128091993,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111128092076,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111128092139,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111128092161,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111128092258,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111129653372,
+                "duration_ms": 0
+              }
+            ]
+          }
+        },
+        "run_duration_ms": 589000
+      }
+    },
+    {
       "id": 37095815314,
       "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314",
       "name": "Gate",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "failure",
       "headSha": "151a6b19094f9bdca5058b11f9636f47bfd29b34",
-      "isCurrentHead": true,
+      "isCurrentHead": false,
       "createdAt": "2026-10-03T04:13:20Z",
       "jobs": [
         {
@@ -82,28 +201,28 @@
         {
           "id": 111125391580,
           "name": "webkit",
-          "status": "in_progress",
-          "conclusion": null,
+          "status": "completed",
+          "conclusion": "failure",
           "startedAt": "2026-10-03T04:13:22Z",
-          "completedAt": null,
+          "completedAt": "2026-10-03T04:22:32Z",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391580"
         },
         {
           "id": 111125391612,
           "name": "chromium",
-          "status": "in_progress",
-          "conclusion": null,
+          "status": "completed",
+          "conclusion": "failure",
           "startedAt": "2026-10-03T04:13:22Z",
-          "completedAt": null,
+          "completedAt": "2026-10-03T04:21:52Z",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391612"
         },
         {
           "id": 111125391647,
           "name": "firefox",
-          "status": "in_progress",
-          "conclusion": null,
+          "status": "completed",
+          "conclusion": "failure",
           "startedAt": "2026-10-03T04:13:22Z",
-          "completedAt": null,
+          "completedAt": "2026-10-03T04:21:32Z",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391647"
         },
         {
@@ -114,8 +233,52 @@
           "startedAt": "2026-10-03T04:13:22Z",
           "completedAt": "2026-10-03T04:15:21Z",
           "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391682"
+        },
+        {
+          "id": 111126902577,
+          "name": "gate",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T04:22:34Z",
+          "completedAt": "2026-10-03T04:22:39Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111126902577"
         }
-      ]
+      ],
+      "timing": {
+        "billable": {
+          "UBUNTU": {
+            "total_ms": 0,
+            "jobs": 6,
+            "job_runs": [
+              {
+                "job_id": 111125391425,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111125391580,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111125391612,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111125391647,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111125391682,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111126902577,
+                "duration_ms": 0
+              }
+            ]
+          }
+        },
+        "run_duration_ms": 559000
+      }
     },
     {
       "id": 37094988325,

@@ -1,0 +1,22 @@
+{
+  "artifactId": 11264306483,
+  "zipSHA256": "1b55defa0a1bc0ab40f1bcee9242dd40e0d6750283500dd8f8dc628fd3343b1b",
+  "diagnostics": [
+    {
+      "path": "test-results/chromium-2-report.txt",
+      "logSHA256": "a872e53dd5a0aea5146d503a89f9be261d75c320d91180dad42e9c6ad531e6a5",
+      "excerpts": [
+        "  1) [chromium] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser \n\n    Error: no verify email for hydration-30488e03@flowline-e2e.test\n\n    no verify email for hydration-30488e03@flowline-e2e.test",
+        "  2) [chromium] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser \n\n    Error: no verify email for hydration-4127be27@flowline-e2e.test\n\n    no verify email for hydration-4127be27@flowline-e2e.test",
+        "  3) [chromium] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser \n\n    Error: no verify email for hydration-aa66e3f0@flowline-e2e.test\n\n    no verify email for hydration-aa66e3f0@flowline-e2e.test"
+      ]
+    },
+    {
+      "path": "test-results/chromium-3-report.txt",
+      "logSHA256": "a32193909b24154e8cc46ebb5dd0337aa7467dd4661af0805e1395c68d47b58e",
+      "excerpts": [
+        "  1) [chromium] \u203a e2e/phase3.spec.ts:290:5 \u203a SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over \n\n    Error: expect(page).toHaveURL(expected) failed\n\n    Expected pattern: /\\/w\\/e2e-84f922\\/flows/"
+      ]
+    }
+  ]
+}

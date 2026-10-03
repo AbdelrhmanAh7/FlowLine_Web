@@ -1,0 +1,53 @@
+{
+  "sha": "16792df01f4a375d9e753ecdb574610363efbcde",
+  "shortSha": "16792df",
+  "dirty": false,
+  "dirtyCount": 0,
+  "node": "v22.23.3",
+  "pnpm": "10.32.1",
+  "tier": "full",
+  "group": null,
+  "stacks": 3,
+  "totalStacks": 3,
+  "poolMax": 6,
+  "integrationShards": 4,
+  "startedAt": "2026-10-03T04:14:08.970Z",
+  "finishedAt": "2026-10-03T04:21:48.973Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "artifacts/gates/ci-37095815314-1-chromium",
+  "ok": false,
+  "steps": [
+    {
+      "name": "build",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 67140,
+      "log": "artifacts/gates/ci-37095815314-1-chromium/build.log",
+      "totals": null
+    },
+    {
+      "name": "stack",
+      "phase": 3,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 18269,
+      "log": "artifacts/gates/ci-37095815314-1-chromium/stack.log",
+      "totals": null,
+      "note": "3 stack(s) on this run's build"
+    },
+    {
+      "name": "chromium",
+      "phase": 4,
+      "status": "fail",
+      "rc": 1,
+      "durationMs": 372235,
+      "log": "artifacts/gates/ci-37095815314-1-chromium/chromium.log",
+      "totals": {
+        "passed": 140,
+        "failed": 4
+      }
+    }
+  ]
+}

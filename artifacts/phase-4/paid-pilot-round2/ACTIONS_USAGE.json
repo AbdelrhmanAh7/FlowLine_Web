@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-03T04:16:41.356Z",
+  "at": "2026-10-03T04:45:32.573Z",
   "method": "Observed job startedAt/completedAt durations, summed across parallel runners. Per-job rounded minutes are an estimate, not a billing meter. Timing API returns zero billable milliseconds; included balance and billed consumption remain unverified. Superseded/cancelled runs included.",
   "runs": [
     {
@@ -299,17 +299,152 @@
       ]
     },
     {
+      "id": 37096736397,
+      "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397",
+      "head": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
+      "status": "completed",
+      "conclusion": "success",
+      "completedJobs": 6,
+      "totalJobs": 6,
+      "observedRunnerMinutes": 31.733333333333334,
+      "roundedPerJobMinutes": 35,
+      "apiBillableMs": 0,
+      "jobs": [
+        {
+          "id": 111128091993,
+          "name": "chromium",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:38:37Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128091993",
+          "elapsedSeconds": 516
+        },
+        {
+          "id": 111128092076,
+          "name": "firefox",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:38:15Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092076",
+          "elapsedSeconds": 494
+        },
+        {
+          "id": 111128092139,
+          "name": "webkit",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:00Z",
+          "completedAt": "2026-10-03T04:39:38Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092139",
+          "elapsedSeconds": 578
+        },
+        {
+          "id": 111128092161,
+          "name": "integration",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:01Z",
+          "completedAt": "2026-10-03T04:33:18Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092161",
+          "elapsedSeconds": 197
+        },
+        {
+          "id": 111128092258,
+          "name": "static",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:30:00Z",
+          "completedAt": "2026-10-03T04:31:55Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111128092258",
+          "elapsedSeconds": 115
+        },
+        {
+          "id": 111129653372,
+          "name": "gate",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:39:42Z",
+          "completedAt": "2026-10-03T04:39:46Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37096736397/job/111129653372",
+          "elapsedSeconds": 4
+        }
+      ]
+    },
+    {
       "id": 37095815314,
       "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314",
       "head": "151a6b19094f9bdca5058b11f9636f47bfd29b34",
-      "status": "in_progress",
-      "conclusion": null,
-      "completedJobs": 0,
-      "totalJobs": 5,
-      "observedRunnerMinutes": 0,
-      "roundedPerJobMinutes": 0,
-      "apiBillableMs": null,
-      "jobs": []
+      "status": "completed",
+      "conclusion": "failure",
+      "completedJobs": 6,
+      "totalJobs": 6,
+      "observedRunnerMinutes": 31.099999999999998,
+      "roundedPerJobMinutes": 35,
+      "apiBillableMs": 0,
+      "jobs": [
+        {
+          "id": 111125391425,
+          "name": "integration",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:13:22Z",
+          "completedAt": "2026-10-03T04:16:34Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391425",
+          "elapsedSeconds": 192
+        },
+        {
+          "id": 111125391580,
+          "name": "webkit",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T04:13:22Z",
+          "completedAt": "2026-10-03T04:22:32Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391580",
+          "elapsedSeconds": 550
+        },
+        {
+          "id": 111125391612,
+          "name": "chromium",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T04:13:22Z",
+          "completedAt": "2026-10-03T04:21:52Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391612",
+          "elapsedSeconds": 510
+        },
+        {
+          "id": 111125391647,
+          "name": "firefox",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T04:13:22Z",
+          "completedAt": "2026-10-03T04:21:32Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391647",
+          "elapsedSeconds": 490
+        },
+        {
+          "id": 111125391682,
+          "name": "static",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T04:13:22Z",
+          "completedAt": "2026-10-03T04:15:21Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111125391682",
+          "elapsedSeconds": 119
+        },
+        {
+          "id": 111126902577,
+          "name": "gate",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T04:22:34Z",
+          "completedAt": "2026-10-03T04:22:39Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37095815314/job/111126902577",
+          "elapsedSeconds": 5
+        }
+      ]
     },
     {
       "id": 37094988325,
@@ -532,9 +667,22 @@
           "elapsedSeconds": 5
         }
       ]
+    },
+    {
+      "id": 37097538824,
+      "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37097538824",
+      "head": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "status": "in_progress",
+      "conclusion": null,
+      "completedJobs": 0,
+      "totalJobs": 5,
+      "observedRunnerMinutes": 0,
+      "roundedPerJobMinutes": 0,
+      "apiBillableMs": null,
+      "jobs": []
     }
   ],
-  "observedRunnerMinutes": 206.25,
-  "roundedPerJobMinutes": 233,
+  "observedRunnerMinutes": 269.0833333333333,
+  "roundedPerJobMinutes": 303,
   "apiBillableMs": null
 }

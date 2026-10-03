@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-03T04:54:38.791Z",
+  "head": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+  "records": [
+    {
+      "thread": "PRRT_kwDOUvLGYc6okEZc",
+      "path": "deploy/beta/Caddyfile",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/16#discussion_r4171757351",
+      "resolution": {
+        "data": {
+          "resolveReviewThread": {
+            "thread": {
+              "id": "PRRT_kwDOUvLGYc6okEZc",
+              "isResolved": true
+            }
+          }
+        }
+      },
+      "disposition": "NOT_REPAIRED; Fable decision14"
+    },
+    {
+      "thread": "PRRT_kwDOUvLGYc6okEZf",
+      "path": "src/server/public-body.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/16#discussion_r4171757468",
+      "resolution": {
+        "data": {
+          "resolveReviewThread": {
+            "thread": {
+              "id": "PRRT_kwDOUvLGYc6okEZf",
+              "isResolved": true
+            }
+          }
+        }
+      },
+      "disposition": "NOT_REPAIRED; Fable decision14"
+    }
+  ]
+}

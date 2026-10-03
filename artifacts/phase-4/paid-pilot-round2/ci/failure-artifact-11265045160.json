@@ -1,0 +1,15 @@
+{
+  "artifactId": 11265045160,
+  "zipSHA256": "9beff442a120a977be4d482bacb1c707cd471b4772653e078c38bb77f53fd99b",
+  "diagnostics": [
+    {
+      "path": "test-results/firefox-2-report.txt",
+      "logSHA256": "f6ee26de35440ffe708f9011d911fa2195d3e3e99d52eed9b918676e221a797a",
+      "excerpts": [
+        "  1) [firefox] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 1440px en-US America/New_York @cross-browser \n\n    Error: no verify email for hydration-4ba951cc@flowline-e2e.test\n\n    no verify email for hydration-4ba951cc@flowline-e2e.test",
+        "  2) [firefox] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 1024px ar-EG Africa/Cairo @cross-browser \n\n    Error: no verify email for hydration-31f5e633@flowline-e2e.test\n\n    no verify email for hydration-31f5e633@flowline-e2e.test",
+        "  3) [firefox] \u203a e2e/hydration.spec.ts:61:7 \u203a no hydration warnings on public pages, Arabic + light: 375px de-DE Asia/Tokyo @cross-browser \n\n    Error: no verify email for hydration-c79d455d@flowline-e2e.test\n\n    no verify email for hydration-c79d455d@flowline-e2e.test"
+      ]
+    }
+  ]
+}
