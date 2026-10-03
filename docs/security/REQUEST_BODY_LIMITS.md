@@ -8,7 +8,7 @@ Caddy installs streaming byte caps before `reverse_proxy` reads and forwards a b
 |---|---:|---|
 | `/api/email`, `/api/beta/check` | 16 KiB (16,384 bytes) | `public-body.ts`: `PUBLIC_JSON_MAX_BYTES` |
 | `/api/auth` and descendants | 64 KiB (65,536 bytes) | `public-body.ts`: `AUTH_BODY_MAX_BYTES` (all auth POSTs) |
-| `/api/hooks/<token>`, `/api/billing/webhook` | 256 KiB (262,144 bytes) | webhook handlers and `publish.ts` |
+| `/api/hooks/<token>`, `/api/billing/webhook` | 256 KiB (262,144 bytes) | public webhook: `publish.ts` `WEBHOOK_MAX_BYTES`; billing webhook: an inline `256 * 1024` literal in its route |
 | `/api/platform` and descendants | 16 KiB | `platform-http.ts` |
 | `/api/platform/setup` and descendants; `/api/workspaces/<wid>/oauth-apps/<family>` | 8 KiB (8,192 bytes) | `platform-setup-http.ts`, workspace OAuth-app handler |
 | Exactly `/api/workspaces/<wid>/files` or `/api/workspaces/<wid>/knowledge` | 5 MiB + 64 KiB (5,308,416 bytes) | file/knowledge handlers: 5 MiB content plus multipart/JSON overhead |
@@ -31,6 +31,19 @@ Streaming ingress does not pre-buffer the whole request: a bounded prefix can re
 Timer/reader cleanup runs on success and failure. Cancellation is requested on read failure, overflow or timeout without awaiting an uncooperative stream's cancellation promise. This bounds helper completion; it does not claim to close a hosting provider's underlying client socket. Already-queued chunks are also checked against elapsed monotonic time.
 
 `parseBody` defaults to 1 MiB. Email/beta use 16 KiB; `capAuthBody` uses 64 KiB before cloning or Better Auth parsing. Trusted-IP admission remains separate: only the proxy-overwritten `X-Real-IP` is used, at 60 requests/minute per public-body kind. Calls without a valid trusted IP retain byte/time caps but lack that IP admission. Some authenticated custom readers use `req.json()`/`req.text()` directly and rely on the ingress default; this change does not claim full direct-to-Next.js coverage.
+
+### Route error responses
+
+The helper's `HttpError` carries the status and stable code. A route that catches a body error must return that error's own `status` and `code`, never a fixed status or a generic `VALIDATION`/`BAD_JSON`. Only a 400 (invalid JSON or schema) may still be rewritten into a route-specific message, as the AI connection test route does.
+
+| Status | Code | When |
+|---|---|---|
+| 408 | `BODY_READ_TIMEOUT` | The body did not finish arriving within `BODY_READ_TIMEOUT_MS`. |
+| 413 | `BODY_TOO_LARGE` | Declared or streamed size exceeds the cap in `parseBody`, auth, platform and OAuth-app handlers. |
+| 413 | `PAYLOAD_TOO_LARGE` | Same, for the public webhook and the billing webhook. |
+| 413 | `FILE_TOO_LARGE`, `SOURCE_TOO_LARGE` | Same, for file and knowledge uploads. |
+
+The envelope depends on the route, for example: `route()` returns `{ error: { code, message, details } }`; the public webhook returns the flat `{ error, code }`; `dispatchAuth` returns `{ code }`. Route-level regressions (billing webhook, public webhook, AI connection test, with no downstream work on refusal) live in `tests/unit/route-body-errors.test.ts`; the public JSON and auth routes are covered in `tests/unit/public-route-body-budget.test.ts`.
 
 ## Why no Next.js proxy was added
 
