@@ -48,7 +48,7 @@ try {
     // Refuse occupied names; never remove something merely because its name looks familiar.
     const names = docker(["ps", "-a", "--format", "{{.Names}}"], undefined, 1024 * 1024).toString().trim().split(/\r?\n/);
     requireSafe(!names.includes(name), "CONTAINER_NAME_OCCUPIED");
-    const id = docker(["run", "-d", "--name", name, "--network", "none", "--memory", "384m", "--cpus", "0.5", "--pids-limit", "128",
+    const id = docker(["run", "-d", "--pull=never", "--name", name, "--network", "none", "--memory", "384m", "--cpus", "0.5", "--pids-limit", "128",
       "--mount", "type=tmpfs,destination=/var/lib/postgresql/data,tmpfs-size=268435456",
       "--label", `${LABEL}.run=${runId}`, "--label", `${LABEL}.role=${role}`, "--label", `${LABEL}.database=${database}`,
       "--label", `${LABEL}.scope=disposable-beta`,
