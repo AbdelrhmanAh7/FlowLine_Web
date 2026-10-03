@@ -43,6 +43,8 @@ API data".
   OpenRouter routes are refused rather than assumed safe.
 - **Training by default:** Moonshot routes are refused.
 - **Unknown terms:** xAI, DeepSeek and MiniMax routes are refused.
+- **Other non-`no` entries:** Gemini, Mistral, Cohere, Cerebras, Together, Hugging Face and Vercel are also refused
+  under this policy. The check uses the registry's provider-level training value; it does not infer an account's opt-out.
 - **Result:** `AI_PRIVACY_POLICY`. The refusal is visible in `routesSkipped`.
 
 **Capabilities are tri-state.** Only `UNSUPPORTED` excludes a route. For example, if an OpenRouter listing's
@@ -146,10 +148,11 @@ revoked connection is still refused at once in every mode.
   - **Timeout after send, stream cut, or cancellation:** settled at the reservation (possible charge).
   - **Success with no usage reported:** tokens unknown, the ledger keeps the reservation, and `cost_source` is
     `unknown`.
-- **Unknown is not 0.** With a hard cap (workspace budget or plan cap) **or an agent's own cost limit**, an
-  unknown-price call is refused unsent (`AI_COST_UNKNOWN`) unless the owner allows unknown-cost calls; then it is
-  recorded with `cost_source = unknown` (an agent step's cost is `null`), never as 0. That setting never makes an
-  unknown price "free" or "within a ceiling".
+- **Unknown is not 0.** A workspace/plan cap refuses unknown-price calls unless the policy sets `allowUnknownCost`.
+  An agent cost limit independently refuses them unless the agent sets `allowUnknownCost` (passed to the hub as
+  `agentAllowsUnknownCost`); the workspace setting cannot waive that limit. An opted-in call runs outside the
+  corresponding cap guarantee and is recorded with `cost_source = unknown` (agent cost `null`). Neither opt-in
+  makes an unknown price "free" or "within a ceiling".
 - **Usage must be complete.** A response whose usage lacks a required count (e.g. `usage: {}`, only a prompt count,
   cached tokens above the prompt total) is **unknown** in every adapter: the ledger keeps the reservation, the
   tokens stay `null`.
@@ -163,8 +166,9 @@ revoked connection is still refused at once in every mode.
   `${requestId}:${attempt}`, so a retried or fallen-back call never double-bills.
 - **Recovery:** attempt numbers survive a worker restart. A recovered request continues after the highest attempt
   found in `ai_attempt` or the ledger, and every send reserves a **new** key first; an existing key is never taken as
-  permission to send (another process holding it just moves this one to the next number). A reservation left open by
-  a worker that stopped (older than 60 s, no attempt record) is settled at its reservation and recorded as an
+  permission to send (another process holding it just moves this one to the next number). Abandonment checks the
+  owning run/agent execution lease and heartbeat (60 s stale threshold), not reservation age alone; unleased calls
+  have a 10-minute maximum. Settlement rechecks under row locks. An abandoned reservation is kept and recorded as an
   `interrupted` attempt with `possible_charge = true` (`AI_ATTEMPT_ABANDONED`). No answer is reused across a
   recovery: the hub keeps no answer text outside the run's encrypted step data, so the request is sent again and both
   charges stay in the ledger (step meta `recoveredAttempts`). An agent model retry never replays

@@ -10,12 +10,15 @@ This guide applies to developers and AI agents. Start with [AGENTS.md](../AGENTS
 4. Use shared controls and semantic design tokens. Provide keyboard operation, visible focus and narrow-screen layouts.
 5. Enforce server validation, authorization and the existing mutation/CSRF guards. Client validation is only feedback.
 6. Add meaningful tests for changed behavior, run the required gates and record exact evidence and remaining external checks.
+7. Update every affected Markdown doc in the same change: the area doc under `docs/`, README/this guide for commands, and the phase ledger when relevant. Verify commands, paths, configuration and status against the repository; mark external results unverified.
+
+Toolchain: Node.js ≥22, pnpm 10.32.1, Next.js 16.3.6 and React 19.3.0 (`package.json`). Use `pnpm.cmd` on Windows if the PowerShell launcher fails.
 
 ## Localization
 
 The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/messages/en.json`. Arabic defines the key shape; English must match. Preserve placeholders and plural categories. Use nested JSON objects rather than dotted literal keys. Use `useT()` from `@/i18n/client` in client components and `await getT()` from `@/i18n/server` in server components. Keys remain dotted paths in code, for example `t("account.email")`.
 
-Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
+Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
 Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
 
@@ -35,13 +38,13 @@ Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` a
 
 Provider credentials use uncontrolled `SecretInput` plus `takeSecret`; never store them in controlled form state, drafts, URLs, query caches or evidence. Follow `docs/security/CREDENTIALS_DESIGN.md`. Account login/recovery forms have their existing dedicated handling; do not generalize that exception to provider secrets.
 
-Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. Flowline's owner configures platform authentication through the complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` environment tuple; never expose it to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
+Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. The complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` tuple takes precedence over encrypted platform DB settings; all absent permits that legacy configuration, but a partial tuple disables ZITADEL without fallback. Restart web processes after environment changes; never expose the tuple to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
 
 ## Verification and handoff
 
 Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` uses the fast tier for PRs not targeting main (stacked PRs) and pushes to main; PRs targeting main run the full tier; workflow_dispatch selects fast or full. The workflow runs parallel jobs (`static`, `integration`, `chromium`, and `firefox`/`webkit` on the full tier only); the final `gate` job is the single required check and its summary lists every job's result. Open the PR's **Checks** tab and select a job (or **Gate**) to see its step summary; each job uploads its own `flowline-gate-<job>-*` artifact with per-step logs and `summary.json`. To rerun the full tier, use **Actions → Gate → Run workflow**, choose the branch, set **tier** to `full`, and start the run. The `fast` dispatch option is available for a targeted rerun. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
 
-Tests use port 3100 and isolated test databases, never the development database. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
+Tests default to port 3100 and `flowline_test`; isolated stacks use the ports and `flowline_test_<suffix>` databases from `scripts/test-stack.cjs`, never the development database. `pnpm test:e2e` selects all three configured browsers; use `--project=chromium --project=firefox` for only those two. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 

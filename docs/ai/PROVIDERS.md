@@ -1,7 +1,9 @@
 # AI providers
 
 This is the provider record for the AI hub. It says which providers are implemented, which are unsuitable or
-deferred, and why.
+deferred, and why. Endpoint, pricing and terms descriptions below are the repository's **2026-09-29 research
+snapshot**, checked against the registry/catalogue in this pass; current vendor terms, availability and prices are
+**unverified**. This is not a fresh vendor or legal certification.
 
 - **Source of truth:** `artifacts/ai-hub/research/providers-2026-09-29.md`. It uses official vendor sources only and
   was checked on **2026-09-29**. Every endpoint, auth scheme, error rule and price in the code cites a URL from it.
@@ -16,7 +18,7 @@ deferred, and why.
 |---|---|---|
 | IMPLEMENTED | The adapter exists and can be connected. | All implemented providers |
 | CONTRACT VERIFIED | Tested against a protocol-accurate test double built from the documented shapes (`e2e/fakes/ai-protocols.ts`): request/response, endpoint, discovery and pagination, streaming, tools, schema rejection, usage, errors and provider quirks. | All implemented providers |
-| LIVE VERIFIED | A real call on an owner-authorised connection. | **NOT RUN for any provider.** Needs owner keys and a budget (Wave C, AIH-17). |
+| LIVE VERIFIED | Evidence from a real call on an owner-authorised connection; no automatic promotion in current code. | No live certification evidence located; current account/key state is unverified. The private-beta spend cap remains **$0**. |
 
 ## Core providers (15)
 

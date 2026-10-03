@@ -2,12 +2,12 @@
 
 One system, every surface: colors and motion come from a single documented source, and screens compose
 owned components instead of hand-rolling styles. The living reference is the internal **`/design-system`**
-page (development and the test stack only; production returns 404).
+page (development and `FLOWLINE_ENV=test`; other production builds return 404).
 
 ## Principles
 
 1. **Tokens before classes.** Components and screens use *semantic* tokens only — never a primitive
-   scale, never raw hex. `tests/unit/design-system.test.ts` fails the build on violations in
+   scale, never raw hex. `tests/unit/design-system.test.ts` checks violations in
    `src/components/**` and `src/app/**`.
 2. **Color has meaning.** A hue always says the same thing everywhere (see "Color usage" below).
 3. **Motion is feedback.** Every action shows what happened — through the motion primitives baked into
@@ -35,7 +35,8 @@ radius (`sm 4 · md 6 · lg 8 · xl 12`), the Inter type scale (`xs 11 · sm 12 
 
 ### Layer 2 — semantic (per theme)
 
-Defined for `dark` (default) and `light`; `[data-theme="system"]` follows `prefers-color-scheme`:
+Defined for `dark` and `light` (the application default); `[data-theme="system"]` follows `prefers-color-scheme`.
+The generated CSS's bare `:root` fallback remains dark; `src/app/layout.tsx` applies the resolved theme explicitly.
 
 | Token | Utility | Meaning |
 |---|---|---|
@@ -178,7 +179,7 @@ Owned, shadcn-style: Radix primitives for behaviour, cva for typed variants, our
 
 ## Theming
 
-`fl_theme` cookie = `light | dark | system` (default dark), written client-side like `fl_locale` and
+`fl_theme` cookie = `light | dark | system` (default light, including invalid values), written client-side like `fl_locale` and
 applied **on the server** to `<html data-theme>` (no flash). The switch lives in the user menu (radio
 items) and on the auth pages (`ThemeSwitcher`). Canvas chrome that needs concrete colors in JS
 (MiniMap/Background) reads the tokens through `useCanvasColors()`.
@@ -195,10 +196,10 @@ Tokens are platform-neutral **data**, so a future desktop or mobile app maps the
   (`duration.fast = 80`, `easing.emphasized = [0.16, 1, 0.3, 1]`) ready for Reanimated.
 - Framework-neutral names are a hard rule: no `dark:`-style framework idioms inside token names.
 
-## Libraries (all MIT/ISC/Apache, exact versions pinned)
+## Libraries (exact versions pinned in package.json)
 
 Tailwind v4 · class-variance-authority (typed variants) · clsx + tailwind-merge (`cn`) · Radix UI
-primitives (dialog, dropdown-menu, popover, tooltip, tabs, select, direction — accessible behaviour;
+primitives (dialog, dropdown-menu, popover, tooltip, tabs, direction — accessible behaviour;
 our tokens do the styling) · motion (app animation + scroll-linked public pages) · lenis (smooth
 scrolling, public pages only) · lucide-react (one icon set). See `artifacts/design-v2/NOTES.md` for
 versions and rationale.
