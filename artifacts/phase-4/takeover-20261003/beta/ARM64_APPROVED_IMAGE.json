@@ -1,0 +1,10 @@
+{
+    "platformManifestDigest":  "sha256:6d2406c1216cfd5d450a3755269bca36272115f3e4710460978f97b58fc2f834",
+    "sourceSha":  "7a315f7146784a4ac23b48e1ba06f46a762a21a7",
+    "localImageId":  "sha256:f2e50c0236355765a35d95706d6d4b1d23cdb92ea325dba6aa3e442a3f9a7e9d",
+    "manifestListDigest":  "sha256:f2e50c0236355765a35d95706d6d4b1d23cdb92ea325dba6aa3e442a3f9a7e9d",
+    "limits":  "Local build and metadata only; no ARM/Pi runtime, deployment, migration or provider certification",
+    "registryPush":  false,
+    "sourceTree":  "6418ad710a312ae45732a288b7efaebf1a4d07f8",
+    "platform":  "linux/arm64"
+}

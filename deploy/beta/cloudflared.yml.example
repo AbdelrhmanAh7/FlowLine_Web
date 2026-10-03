@@ -1,0 +1,8 @@
+# REVIEW TEMPLATE ONLY. Copy as cloudflared.yml only after exact tunnel/DNS approval.
+# Literal values: cloudflared does not use Compose interpolation here.
+tunnel: REPLACE_WITH_APPROVED_NAMED_TUNNEL_UUID
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: beta.example.com
+    service: http://caddy:8080
+  - service: http_status:404
