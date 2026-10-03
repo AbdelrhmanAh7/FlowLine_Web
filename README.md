@@ -64,7 +64,7 @@ Never presented as live-verified: nothing above claims a real provider, OAuth ex
 
 ## Requirements
 
-- Node.js ≥ 22 (developed on 25.6) and pnpm 10 (`npm i -g pnpm@10`; Node 25 no longer ships corepack)
+- Node.js 22 LTS and pnpm 10 (`npm i -g pnpm@10`); CI and the release image use the same supported Node major.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - No provider credentials in `.env`: AI keys are added per workspace (Settings → AI Providers); OAuth apps, email and
   Paddle billing are entered through `/admin` after bootstrap (`scripts/admin/bootstrap.mts`).
