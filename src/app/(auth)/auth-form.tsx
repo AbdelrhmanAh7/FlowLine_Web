@@ -348,6 +348,7 @@ function CheckInbox({ email, callbackURL, signInHref, onBack }: { email: string;
 
 /** Auth-library errors → a line in the UI language (the library's own message is the fallback). */
 function friendly(t: Translator, message: string, status: number) {
+  if (status === 408) return t("errors.BODY_READ_TIMEOUT");
   if (status === 413) return t("errors.BODY_TOO_LARGE");
   if (status === 429) return t("errors.RATE_LIMITED");
   // Server-side outage (e.g. the database is unreachable): say so plainly instead of "Internal Server Error".
