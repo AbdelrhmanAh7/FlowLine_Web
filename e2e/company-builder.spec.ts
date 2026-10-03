@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { EN_STATE } from "../playwright.config";
+import { AR_STATE, EN_STATE } from "../playwright.config";
 import { setupUser } from "./helpers";
 
 /**
@@ -197,7 +197,7 @@ test("company builder: another workspace's member gets 404; nobody but the found
 });
 
 test("company builder: Arabic is the default, right-to-left, with the reviewed promise", { tag: "@cross-browser" }, async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const ctx = await browser.newContext({ storageState: AR_STATE });
   const page = await ctx.newPage();
   const { workspace } = await setupUser(page);
   await page.goto(`/w/${workspace.slug}/company`);
