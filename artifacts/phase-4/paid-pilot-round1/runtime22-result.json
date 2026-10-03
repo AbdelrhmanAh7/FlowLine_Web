@@ -1,0 +1,11 @@
+{
+  "testedSha": "97567e8d1e5cf8c724946c3c283b47dbef57a262",
+  "image": "node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402",
+  "scope": "actual selected Node22-alpine executes exact crypto module; not bookworm application build, auth, migration, worker or ARM64 proof",
+  "exitCode": 0,
+  "result": {
+    "node": "v22.23.3",
+    "checks": 7,
+    "status": "PASS_CRYPTO_ONLY"
+  }
+}

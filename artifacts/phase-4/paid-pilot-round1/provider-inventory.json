@@ -1,0 +1,215 @@
+{
+  "observedAt": "2026-10-03T01:27:27.186Z",
+  "sourceSha": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "scope": "Static source inventory only; contract marker is not a fresh test or live certificate",
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini API",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral AI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "zai",
+      "name": "Z.ai (GLM)",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot AI (Kimi)",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "dashscope",
+      "name": "Alibaba Cloud Model Studio",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "opencode-zen",
+      "name": "OpenCode Zen",
+      "implementation": "UNSUITABLE",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    },
+    {
+      "id": "command-code",
+      "name": "Command Code Provider API",
+      "implementation": "UNSUITABLE",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks AI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "deepinfra",
+      "name": "DeepInfra",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face Inference Providers",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare Workers AI",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "vercel-gateway",
+      "name": "Vercel AI Gateway",
+      "implementation": "IMPLEMENTED",
+      "sourceContractMarker": true,
+      "liveVerification": "BLOCKED",
+      "reason": "Owner credential/consent and verified zero-cost/no-overage route absent. No inference attempted."
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA API catalog (build.nvidia.com)",
+      "implementation": "UNSUITABLE",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    },
+    {
+      "id": "bedrock",
+      "name": "Amazon Bedrock",
+      "implementation": "DEFERRED",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    },
+    {
+      "id": "azure-openai",
+      "name": "Azure OpenAI / Microsoft Foundry",
+      "implementation": "DEFERRED",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    },
+    {
+      "id": "vertex",
+      "name": "Google Vertex AI",
+      "implementation": "DEFERRED",
+      "sourceContractMarker": false,
+      "liveVerification": "NOT_EXECUTABLE",
+      "reason": "Source registry excludes executable transport."
+    }
+  ]
+}
