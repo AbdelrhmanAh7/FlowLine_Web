@@ -1907,7 +1907,7 @@
       "approvalRejected": "{title} was rejected",
       "approvalRejectedNote": "{title} was rejected: {note}",
       "outcomeHttp": "No response from {host} — the request may have been applied. Mark it done, retry, or fail.",
-      "outcomeAction": "{title} may or may not have been applied by {provider} (lost response). Check it and choose: mark done, retry, or fail.",
+      "outcomeAction": "{title} may or may not have been applied by {provider} (unconfirmed outcome). Check it and choose: mark done, retry, or fail.",
       "outcomeSubflow": "\"{name}\" was interrupted and may have partly run steps with external effects. Check, then mark done, retry, or fail.",
       "outcomeFailedHttp": "The request's outcome was unknown and a reviewer failed the step",
       "outcomeFailedAction": "{title} outcome was unknown and a reviewer failed the step",

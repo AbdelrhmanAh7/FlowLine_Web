@@ -130,6 +130,55 @@ describe("Sheets step fails, then re-run from that step: no duplicated effects",
 });
 
 describe("lost responses on non-idempotent actions", () => {
+  it("500 after commit is verified without resending a non-idempotent Slack message", async () => {
+    const { user, conn, flowOf } = await setup("ServerApplied");
+    const slack = await conn("slack");
+    const flow = await flowOf(chain(trigger({}), action("m", "slack.post_message", slack.id, '{ "channel": "C_SALES", "text": "server applied once" }')));
+    await fake.reset();
+    const before = await slackMessages();
+    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500_after_commit", times: 1 });
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("succeeded");
+    expect((await byNode(run.id)).m!.meta).toMatchObject({ verifiedAfterLostResponse: true });
+    expect((await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage")).toHaveLength(1);
+    expect(await slackMessages()).toBe(before + 1);
+  });
+
+  it("500 after commit without provider verification asks for review; done never resends", async () => {
+    const { user, ws, conn, flowOf } = await setup("ServerReview");
+    const hub = await conn("hubspot");
+    const flow = await flowOf(chain(trigger({}), action("deal", "hubspot.create_deal", hub.id, '{ "dealname": "server applied", "amount": "100" }')));
+    await fake.reset();
+    await fake.fault({ provider: "hubspot", pathPattern: "/crm/v3/objects/deals", mode: "500_after_commit", times: 1 });
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("waiting_approval");
+    expect((await byNode(run.id)).deal!.status).toBe("uncertain");
+    const sends = async () => (await fake.requests("hubspot")).filter(r => r.method === "POST");
+    expect(await sends()).toHaveLength(1);
+    const [review] = await db.select().from(schema.approval).where(and(eq(schema.approval.runId, run.id), eq(schema.approval.kind, "review")));
+    await decide(db, { workspaceId: ws.id, approvalId: review!.id, userId: user.id, decision: "done" });
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("succeeded");
+    expect(await sends()).toHaveLength(1);
+  });
+
+  it("verified-not-applied with no attempts left preserves the server error", async () => {
+    const { user, conn, flowOf } = await setup("ServerExhausted");
+    const slack = await conn("slack");
+    const flow = await flowOf(chain(trigger({}), action("m", "slack.post_message", slack.id, '{ "channel": "C_SALES", "text": "not applied" }', { retry: { maxAttempts: 1 } })));
+    await fake.reset();
+    const before = await slackMessages();
+    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500", times: 1 });
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("failed");
+    expect((await byNode(run.id)).m!.error?.code).toBe("PROVIDER_SERVER");
+    expect((await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage")).toHaveLength(1);
+    expect(await slackMessages()).toBe(before);
+  });
+
   it("drop after commit → verified with the provider → success, exactly one row", async () => {
     const { user, conn, flowOf } = await setup("Lost");
     const sheets = await conn("google_sheets");

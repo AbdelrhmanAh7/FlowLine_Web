@@ -1,0 +1,32 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-safe-retry-20261003
+
+migrated postgres://***@127.0.0.1:64593/flowline_test_pilotretry
+[seed-platform] test platform credentials ready
+ ❯ |integration| tests/integration/p2-review-fixes.test.ts (13 tests | 1 failed) 1540ms
+   ❯ M1 — non-idempotent HTTP requests are never blindly re-sent (5)
+     × keeps ordinary 500 retries for none HTTP requests 30ms
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 27 passed (28)
+   Start at  04:57:10
+   Duration  13.14s (tests 68%, import 23%, transform 9%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/p2-review-fixes.test.ts > M1 — non-idempotent HTTP requests are never blindly re-sent > keeps ordinary 500 retries for none HTTP requests
+Error: Fix the flow before running it
+ ❯ work src/server/runs.ts:103:36
+    101|     } else {
+    102|       const issues = validateGraph(flow.graph as FlowGraph);
+    103|       if (issues.length > 0) throw new HttpError(422, "INVALID_FLOW", …
+       |                                    ^
+    104|       version = await insertVersion(tx as Tx, user!, flow, "run");
+    105|     }
+ ❯ NodePgSession.transaction ../FlowLine/node_modules/.pnpm/drizzle-orm@0.45.3_@types+pg@8.23.1_kysely@0.29.6_pg@8.23.0/node_modules/src/node-postgres/session.ts:259:19
+ ❯ enqueueRun src/server/runs.ts:58:11
+ ❯ tests/integration/p2-review-fixes.test.ts:127:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

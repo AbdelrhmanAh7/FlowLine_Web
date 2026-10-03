@@ -48,13 +48,13 @@ const trigger = (payload: unknown) => node("t", "trigger.manual", { samplePayloa
 const out = () => node("o", "output", { key: "r", expression: "" });
 const slackPost = (id: string, connId: string, mapping: string, extra: Record<string, unknown> = {}) =>
   node(id, "integration.action", { actionId: "slack.post_message", connectionId: connId, inputMapping: mapping, requireApproval: false, retry: { maxAttempts: 1 }, ...extra });
-const httpPost = (id: string, channel: string) =>
+const httpPost = (id: string, channel: string, sideEffect = "non_idempotent") =>
   node(id, "http.request", {
     method: "POST",
     url: `"${fake.url}/slack/chat.postMessage"`,
     headers: '{ "authorization": "Bearer test-token" }',
     body: `{ "channel": "${channel}", "text": "via http" }`,
-    sideEffect: "non_idempotent",
+    sideEffect,
     timeoutMs: 5000,
     retry: { maxAttempts: 3 },
   });
@@ -94,6 +94,43 @@ async function crashDuring(runId: string, done: Record<string, unknown>, running
 }
 
 describe("M1 — non-idempotent HTTP requests are never blindly re-sent", () => {
+  it("500 after commit sends one POST, asks for review, and marking done never sends again", async () => {
+    const channel = unique("C_HTTP_500");
+    const { user, ws, flowOf } = await setup("Http500");
+    const flow = await flowOf(chain(trigger({}), httpPost("h", channel), out()));
+    await fake.reset();
+    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500_after_commit", times: 1 });
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("waiting_approval");
+    expect((await stepOf(run.id, "h")).status).toBe("uncertain");
+    expect(await posts(channel)).toHaveLength(1);
+    const sends = async () => (await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage");
+    expect(await sends()).toHaveLength(1);
+    const [review] = await reviewsOf(run.id);
+    await decide(db, { workspaceId: ws.id, approvalId: review!.id, userId: user.id, decision: "done" });
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("succeeded");
+    expect(await sends()).toHaveLength(1);
+    expect(await posts(channel)).toHaveLength(1);
+  });
+
+  for (const effect of ["none", "idempotent"] as const) it(`keeps ordinary 500 retries for ${effect} HTTP requests`, async () => {
+    const { user, flowOf } = await setup("SafeHttp500");
+    const request = effect === "none"
+      ? node("h", "http.request", { method: "GET", url: `"${fake.url}/slack/conversations.list"`, headers: '{ "authorization": "Bearer test-token" }', timeoutMs: 5000, retry: { maxAttempts: 2 } })
+      : httpPost("h", unique("C_IDEM"), "idempotent");
+    const flow = await flowOf(chain(trigger({}), request, out()));
+    await fake.reset();
+    const path = effect === "none" ? "conversations.list" : "chat.postMessage";
+    await fake.fault({ provider: "slack", pathPattern: path, mode: "500", times: 1 });
+    const run = await enqueueRun(user, flow.id);
+    await claimAndProcess(run.id);
+    expect((await freshRun(run.id)).status).toBe("succeeded");
+    expect((await fake.requests("slack")).filter(r => r.path.endsWith(path))).toHaveLength(2);
+    expect(await reviewsOf(run.id)).toHaveLength(0);
+  });
+
   it("a worker that died mid-request leads to a review, not a second POST", async () => {
     const channel = unique("C_HTTP");
     const { user, ws, flowOf } = await setup("HttpCrash");
