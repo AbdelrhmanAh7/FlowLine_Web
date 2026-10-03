@@ -5,6 +5,14 @@ import { basicClientAuthorization } from "./oidc";
 
 export interface ZitadelApp { issuer: string; clientId: string; clientSecret: string }
 
+/** OIDC identity is (issuer, subject), never a bare subject shared across issuers.
+ * Legacy bare-subject accounts deliberately require an explicit re-link; their
+ * issuer cannot be inferred safely from today's platform configuration.
+ */
+export function zitadelAccountId(issuer: string, subject: string): string {
+  return `oidc:${Buffer.from(JSON.stringify([issuer, subject]), "utf8").toString("base64url")}`;
+}
+
 /**
  * Better Auth owns state, PKCE, nonce, callback and verified ID-token handling.
  * Outbound requests carrying credentials or identity use the guarded egress client.
@@ -16,6 +24,10 @@ export function zitadelProvider(app: ZitadelApp): GenericOAuthConfig<"zitadel"> 
   const userInfoUrl = `${app.issuer}/oidc/v1/userinfo`;
   return {
     providerId: "zitadel",
+    accountSubject: ({ profile }) => {
+      if (typeof profile.sub !== "string" || !profile.sub) throw new Error("ZITADEL subject missing");
+      return zitadelAccountId(app.issuer, profile.sub);
+    },
     name: "ZITADEL",
     clientId: app.clientId,
     clientSecret: app.clientSecret,
@@ -49,7 +61,7 @@ export function zitadelProvider(app: ZitadelApp): GenericOAuthConfig<"zitadel"> 
       let tokenSub: unknown;
       try { tokenSub = JSON.parse(Buffer.from(tokens.idToken.split(".")[1] ?? "", "base64url").toString("utf8")).sub; } catch { return null; }
       if (tokenSub !== sub) return null;
-      return { sub, id: sub, email, emailVerified: true, name: typeof raw.name === "string" ? raw.name : email, image: typeof raw.picture === "string" ? raw.picture : undefined };
+      return { sub, id: zitadelAccountId(app.issuer, sub), email, emailVerified: true, name: typeof raw.name === "string" ? raw.name : email, image: typeof raw.picture === "string" ? raw.picture : undefined };
     },
   };
 }

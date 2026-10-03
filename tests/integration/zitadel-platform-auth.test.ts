@@ -38,7 +38,12 @@ describe("platform ZITADEL sign-in availability", () => {
     expect(snap.social.zitadel).toBeUndefined();
     const app = (await platformCredentialStatus("signin.zitadel"))!;
     await db.insert(schema.signinAttempt).values({ stateHash: sha256Hex(state), provider: "zitadel", revision: app.revision, secretId: app.id, expiresAt: new Date(Date.now() + 60_000) });
+    await db.insert(schema.verification).values({ id: crypto.randomUUID(), identifier: `signin-issuer:${sha256Hex(state)}`, value: JSON.stringify([issuer, 1, "12345@tenant"]), expiresAt: new Date(Date.now() + 60_000) });
     expect((await instanceForCallback("zitadel", state))?.revision).toBe(app.revision);
+    await db.update(schema.platformSetting).set({ value: "https://replacement.zitadel.cloud", revision: 2 }).where(eq(schema.platformSetting.key, "signin.zitadel.issuer"));
+    expect(await instanceForCallback("zitadel", state)).toBeNull();
+    await db.update(schema.platformSetting).set({ value: issuer, revision: 2 }).where(eq(schema.platformSetting.key, "signin.zitadel.issuer"));
+    expect(await instanceForCallback("zitadel", state)).toBeNull(); // even replacing and restoring the issuer invalidates the attempt
     await revokePlatformSecret(SYSTEM, "signin.zitadel", app.revision);
     expect((await available()).zitadel).toBe(false);
     expect(await instanceForCallback("zitadel", state)).toBeNull();
