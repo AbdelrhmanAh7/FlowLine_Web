@@ -1,0 +1,21 @@
+**Decision 1 (WebKit reset): Approve Worker B's recommendation as written.** Leave the original reset OPEN. No retries, skips, baselines, timeout bumps, or Connection-close production patch this round. The stale keep-alive socket theory is plausible but unproved, and the worker "done" log sits in a finally block, so neither the success path nor exactly-one downstream effect is established.
+
+Amendments to the next-round diagnostic, instrumentation-only, test stack only:
+- **Gate the instrumentation** behind `FLOWLINE_ENV=test` per project rules. Nothing lands in production code paths.
+- **Correlate on one run id** across all five signals: sanitized client socket reuse/close, server arrival/status/close, process exit and cleanup order, persisted approval and run state, and fake downstream invocation count.
+- **Add the missing timestamp line**: log the worker claim, the effect, and the finally-done separately, so exactly-one is observable rather than inferred.
+- **Reproduce before fixing**: a causal fix needs a correlated reproduction, or a reasoned argument from the trace that the keep-alive reuse explains the specific failure.
+
+Read-only lane ends with findings this round.
+
+**Decision 2 (PR12 CodeRabbit sequencing): Replying and resolving the docs-only comment is sufficient. Do not spend a review slot on a manual docs re-review.**
+
+Exact rule: a manual CodeRabbit review is requested only when a push changes code. PR12's follow-up commit from Worker A is documentation-only, and the comment being resolved is a clarification about the application-SHA versus committed-docs distinction, not a defect. The lead's independent pre-push review covers the docs fix. So:
+
+1. Worker A pushes the minimal docs fix.
+2. Lead reviews the diff independently before push.
+3. Reply on the CodeRabbit thread with "Fixed in <sha>" and resolve it.
+4. Record in PR12's status that CodeRabbit coverage is at the earlier head and the latest docs head is uncovered. Mark PR12 "coverage pending, not merge-ready" on that basis.
+5. Open the runtime lane next. Use the remaining two review slots for code-changing pushes only.
+
+PR12 stays unmerged until an owner-visible decision on whether docs-only heads need re-review, which is not this round's question. No billing or spend changes.

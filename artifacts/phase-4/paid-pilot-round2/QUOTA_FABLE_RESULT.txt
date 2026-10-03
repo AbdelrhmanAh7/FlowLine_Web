@@ -1,0 +1,11 @@
+Approved, with one amendment.
+
+**Decision:**
+
+- **Stay stopped now.** No new review requests or PR openings before the bot's advertised rollover.
+- **One manual re-review at 02:51 UTC** on unchanged 56f96d9 for PR 13. Count it as the third attempt in the lead's rolling hour. This is a bounded retry after a provider-advertised rollover, not a loop, and uses no paid route.
+- **Amendment: wait until 02:52 UTC, not 02:51.** The bot said "9 minutes" at 02:40:59, which lands at 02:49:59. Rounding to the minute boundary risks a one-minute miss. One extra minute costs nothing and avoids burning the attempt on a clock skew.
+- **No new PR before 03:31:52**, regardless of what the provider allows sooner. The conservative rolling-hour window from the 02:31:51 attempt governs, as DECISION_FABLE requires.
+- **If the 02:52 attempt is rate-limited again,** stop all review attempts this round. Record the refusal text and timestamp in the round-1 artifacts, defer all remaining PRs, and do not retry.
+- **If the review returns findings needing code changes,** fix, independently review, push, and reply "Fixed in <sha>" on each thread. Request re-review only when budget and the 03:43 opening deadline both allow, and let it displace dependency PRs rather than stack on top of them.
+- **Deadlines unchanged:** last PR opening 03:43, no new work after 04:13:30, stop at 04:23:30.

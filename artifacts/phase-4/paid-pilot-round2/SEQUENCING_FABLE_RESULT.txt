@@ -1,0 +1,13 @@
+**APPROVE, with three amendments.**
+
+The sequence as stated is consistent with the owner guards in DECISION_FABLE.md: one ready PR at a time, lead-only opening, the 3-per-rolling-hour CodeRabbit budget counted against initial reviews and re-reviews alike, stop on the first rate limit, full thread disposition before the next PR, no merge this round, #9–#11 untouched, combined head never PR'd. Not blocking on CI before the next PR is correct, since CI is $0 and the guard is on review spend, and the no-merge rule already prevents an ungated merge.
+
+Amendments:
+
+1. **Budget the window before opening the third PR.** Round stops new work at 04:13 UTC. A PR opened after roughly 03:50 cannot realistically get its review, replies and resolutions done by 04:23. Rule: open a new PR only if at least 30 minutes remain before the new-work stop, else record it as "ready, deferred to next round" with its reviewed head. Re-reviews triggered by fixes count against the same clock, so if a re-review is pending at 04:13, leave the fix pushed, reply on every thread with the fix SHA, and record "re-review pending" as the blocker rather than waiting past the stop.
+
+2. **Define the skip disposition precisely.** Treat a CodeRabbit skip as a completed review only when the PR shows CodeRabbit's own explicit skip notice or a review summary with zero actionable findings. Silence, a timeout, or a rate-limit message is not a skip. Record which of the three occurred in the PR notes, and count a skip against the 3/hour budget only if CodeRabbit actually posted a review event.
+
+3. **Pre-existing regression on main: preserve, but prove it.** Before classifying a CI failure as pre-existing, point to the same failure on an unchanged-main run or the latest main gate log, and record that link in the blocker note. Without that evidence it is treated as a candidate failure and the PR stays blocked. Either way, no code change to the candidate.
+
+The combined-head backup after an independent source review is fine, since it's a backup, not a PR, and spends nothing. Record the reviewer, head SHA, and manifest SHA with the backup. Everything else stands as proposed.

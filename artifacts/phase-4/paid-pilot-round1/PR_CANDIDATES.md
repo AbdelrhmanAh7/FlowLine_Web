@@ -1,0 +1,50 @@
+# Paid-pilot PR candidate inventory
+
+**Snapshot:** 2026-10-03 refresh. Primary checkout `FlowLine` has `HEAD`/`main` at `9641ad1e684cad7b84bd2385751ea19b0a9d4060`; the branch refs below were inventoried locally. This is a candidate/payload index, not a review or readiness claim. Changed-path counts include evidence files and are a conservative upper bound on reviewable files. Remote refs were not comprehensively checked; the only push state noted is the coordinator-reported update to the tool-roster branch.
+
+## Local refs and intended payloads
+
+| Local ref | Exact HEAD | Intended base / dependency | Changed paths vs intended base | Required CI if submitted | Notes |
+|---|---|---|---:|---|---|
+| `paid-pilot-lighthouse` | `d4eae152b1931f08e1bc1c434eef3ca1f90bbde5` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 4 | Full; final `gate` required | Original isolated lane. |
+| `paid-pilot-p3` | `c1ba48220fca07da7d9b0be3844732c14e06df20` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 11 | Full; final `gate` required | Original isolated lane. |
+| `paid-pilot-copilot` | `0c58c4d39a353957973b12036fa6e0ae415799f1` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 12 | Full; final `gate` required | Original isolated lane. |
+| `paid-pilot-hubspot` | `d5fa51e33fe807a075138e2660074335412df723` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 13 | Full; final `gate` required | Original isolated lane; keep both listener-based test files and assertions. |
+| `codex/pilot-security-report-round1` | `bc46dc257e28602e76f82d71b791ade401306643` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 2 | Full; final `gate` required | Isolated security-report candidate. |
+| `codex/pilot-security-runtime-round1` | `56f96d9ee31498d2a38d1b4516dadcc49b7ac352` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 10 | Full; final `gate` required | Isolated runtime candidate. |
+| `codex/pilot-security-deps-round1` | `dd840db6bf6f9329f61007152b3bb500b4d66b75` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 5 | Full; final `gate` required | Latest dependency-pruning head. |
+| `codex/pilot-security-redact-round1` | `09be0b3641a139409fad242e9617eec9b0db1975` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 15 | Full; final `gate` required | Isolated redaction/trust-boundary candidate. |
+| `codex/pilot-security-resource-round1` | `a9f7597c90b98128a1cebf46a949810e0586c31d` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 20 | Full; final `gate` required | Resource prerequisite for the two stacked slices below. |
+| `codex/paid-pilot-upload-admission-20261003` | `360078e9d3357267711f006888b578f5a0c6c434` | Stack on resource `a9f7597c90b98128a1cebf46a949810e0586c31d` | 21 | Fast; final `gate` required | M5 finalized/pushed per coordinator; separate resource-dependent slice, no longer an alias of the resource head. |
+| `codex/paid-pilot-body-deadline-20261003` | `9d7f0c426f0d952aa46296a9f32ee5c30b6c263e` | Stack on resource `a9f7597c90b98128a1cebf46a949810e0586c31d` | 7 | Fast; final `gate` required | Sibling stack to upload-admission; 22 paths cumulatively from main. |
+| `codex/pilot-security-auth-round1` | `08355ae423aa91c7d2b6f106878603d3c2f98ecb` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 29 | Full; final `gate` required | Auth prerequisite. |
+| `codex/paid-pilot-federated-mfa-20261003` | `2c85f058c2bf382ee861a2c2007af129705c62c6` | Stack on auth `08355ae423aa91c7d2b6f106878603d3c2f98ecb` | 40 | Fast; final `gate` required | H3/federated-MFA follow-on; 63 paths cumulatively from main. |
+| `codex/paid-pilot-monitor-20261003` | `67d3bed6c4524d6fe62bc8f7b43b199114ea2797` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 5 | Full; final `gate` required | Isolated monitoring candidate. |
+| `codex/paid-pilot-safe-retry-main-20261003` | `b854d2c94ce31ec2503c58f6d883dcfd117edcb1` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 17 | Full; final `gate` required | Preferred standalone 5xx/safe-retry candidate. |
+| `paid-pilot-tool-roster` | `287096749d8107a7c9a8fe2ce20ec0d77fb861ef` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 2 | Full; final `gate` required | Coordinator reports this branch pushed; no remote ref verification here. |
+| `codex/paid-pilot-product-20261003` | `6bfbbe7938854ed05340f971c787d8993afcacc3` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 21 | Full; final `gate` required | Product/fix candidate; sequence after prerequisite/security lanes. |
+| `codex/paid-pilot-deploy-align-20261003` | `f1921e58c5115a8fd3939587db9a713e546f6c04` | Existing draft #9 lineage; parent `85d805d96ee2c1b207017345b4f08dbd1e43b127`; common base with main `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d` | 3 after parent (28 from common base) | Existing draft only; do not trigger new CI | Deploy follow-up; preserve PR #9 lineage and leave the draft untouched. |
+| `codex/paid-pilot-combined-20261003` | `1fff962e4711816558b2e2484f2078deebe5753a` | Combined/test lineage parent `40fb97cecf8fcb6ade3e2883b7f420385a6b3e74`; direct comparison to `main` | 232 from main (21 at tip) | None; never PR | Test-only backup, over 150-path limit. |
+| `codex/paid-pilot-safe-retry-20261003` | `485a4f854b5df7b1f8d3776bb8c93dfe0b463c82` | Old combined base `f035f88089048b2cff307d3bd16262de34d7799a`; tail commit changes 17 paths | 156 from main | None; use standalone candidate | Inherited base exceeds 150 for direct PR; preserve original ref unchanged. |
+| `codex/paid-pilot-round1-20261003` | `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | `main` `9641ad1e684cad7b84bd2385751ea19b0a9d4060` | 0 | None | Coordinator/base alias; no candidate diff. |
+
+Counts are local tree comparisons, not proof that any branch is reviewed, CI-ready, or backed up remotely. Every proposed main-targeted candidate is under the 150-path cap. Resource/M5 and resource/deadline are separate sibling stacks; auth/H3 is a separate stack. The combined backup (232 paths) and inherited safe-retry branch (156 paths) are never direct PR payloads. Stacked branches target their named dependency and each remain under 150 changed paths.
+
+## Safe local payload order
+
+1. Keep original isolated lanes separate: Lighthouse, P3 polish, Copilot benchmark, and HubSpot (both listener tests intact). Then handle isolated security report, runtime, latest dependency-pruning head (`dd840db`), and redaction candidates.
+2. Resource chain: resource prerequisite first; then review upload-admission/M5 and body-deadline as separate sibling stacks on resource.
+3. Auth chain: auth prerequisite first; then federated MFA/H3 on auth.
+4. Follow with standalone safe-retry (`b854d2c`), monitoring, then product/fix (`codex/paid-pilot-product-20261003`) and tool-roster docs. This is sequencing advice only, not readiness approval.
+5. Keep combined `1fff962e` as test-only backup. Preserve old 5xx `485a4f8`; use standalone `b854d2c` if a future PR is authorized. Preserve existing draft #9's deploy-follow-up lineage.
+
+## Existing drafts, review, CI, and spending blocks
+
+- **Existing PRs #9–#11:** status records all three as draft/unmerged, with historical six-job green full CI on their exact published heads. That historical CI is not fresh validation for these local heads and is not completed CodeRabbit coverage. Leave them untouched: do not edit, retarget, close, or request a review. PR #9's local ARM64 build and 18 DB recovery checks remain preparation, not current Pi/deployed restore or rollback certification.
+- **Review budget:** PR #8's latest CodeRabbit report says **0 included reviews remain**; replenishment and paid-overage disablement are unverified. FlowLine's shared limit is **3 reviews per rolling 60 minutes**; this round requested **0**. No new PRs can be opened, including drafts, while the review/spend block stands. Prepare local PR payloads only. When review is authorized, use a different worker for exact-head pre-push review, then reply to, resolve, and answer every CodeRabbit thread's last message before merge.
+- **CI/publication:** repository visibility is private. Two GitHub billing API reads returned 404 with missing `user` scope; no browser surfaces were available. Included Actions allowance/overage prevention cannot be verified; no new PR or CI trigger is permitted. Do not change token scopes/budgets or bypass required CI. Current gate policy: PRs targeting main require the **full** tier; stacked PRs targeting a non-main branch require the **fast** tier; the final `gate` job is required in either tier.
+- **No-PR branch backup route:** source review established that unique no-PR branch backups do not trigger the main-push Gate or PR-only Lighthouse workflow. Independent review of that route is approved. Such a push is only a backup; it establishes neither CI nor review readiness. This refresh performs no push and makes no claim that all local refs have remote backups.
+- **Spending and owner authority:** cap remains **$0** unless the owner explicitly approves otherwise; no paid API/review route. No production deployment, live-payment activation, DNS change, or invitations are authorized. Owner-only credentials and real-provider/account verification remain blocked until handled privately.
+- **Activity for this refresh:** local inventory/documentation only. No PR, workflow, review request, push, test run, or other primary file change was made. The current pilot verdict remains **NOT READY** pending the recorded blockers and owner actions.
+
+Sources: `docs/implementation/PAID_PILOT_BRIEF.md`, `docs/implementation/PAID_PILOT_STATUS.md`, and `docs/implementation/CODEX_TAKEOVER_20261003.md`.
