@@ -4,6 +4,8 @@ This guide applies to developers and AI agents. Start with [AGENTS.md](../AGENTS
 
 ## Feature workflow
 
+Track every task on GitHub first: issue, milestone, labels and the project board, as described in [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md).
+
 1. Identify the route, server API, permissions, persistence and UI states affected. Inspect existing patterns before adding abstractions.
 2. Define real loading, empty, error and success behavior. A successful HTTP request must be checked before displaying success. Unbuilt actions use a disabled control with a translated reason.
 3. Add Arabic and English copy together, including field labels, validation, tooltips, accessible names and metadata.
