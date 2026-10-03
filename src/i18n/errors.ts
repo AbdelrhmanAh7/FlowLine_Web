@@ -60,6 +60,10 @@ export function apiErrorMessage(t: Translator, err: unknown, fallback?: string):
   if (err instanceof ApiError) {
     if (err.isNetwork || err.code === "NETWORK") return t("errors.NETWORK");
     if (KNOWN.has(err.code)) return t(`errors.${err.code}` as MessageKey);
+    // AI hub codes share the catalogue with run errors; keep these translated even when an endpoint
+    // returns a less common hub code instead of one of the workspace API's short error codes.
+    const aiKey = `aiHub.errors.${err.code}`;
+    if (err.code.startsWith("AI_") && t.has(aiKey)) return t(aiKey as MessageKey);
     if (err.code === "VALIDATION" && (!err.message || err.message === "Invalid request")) return t("errors.VALIDATION");
     if (err.status >= 500 && /^HTTP_5\d\d$/.test(err.code)) return t("errors.server");
     return err.message || fallback || t("errors.generic");

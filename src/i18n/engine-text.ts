@@ -420,6 +420,10 @@ export function stepErrorText(t: Translator, error: { code?: string | null; mess
     }
     const key = `runs.errorText.${code}`;
     if (t.has(key)) return t(key as MessageKey);
+    // The AI hub catalogue also covers uncommon provider codes that do not need a run-specific
+    // sentence. Keep the code's stable, localized explanation instead of exposing raw English.
+    const aiKey = `aiHub.errors.${code}`;
+    if (code.startsWith("AI_") && t.has(aiKey)) return t(aiKey as MessageKey);
   }
   return text;
 }
