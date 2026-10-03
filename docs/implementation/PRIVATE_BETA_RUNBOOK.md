@@ -2,9 +2,8 @@
 
 **Status: plan only.** No approved domain or Pi target is recorded, no Pi inspection or DNS change has been authorized,
 no named tunnel has been created, and no deployment has occurred. This runbook is not approval to expose a service.
-Current local recovery evidence and its limits are recorded in `BETA_EXECUTION_STATUS.md` and
-`OWNER_ACTIONS.md`. `MERGED` and production status must be checked against current Git refs; a beta worktree is never
-assumed to be merged.
+Current local recovery and ARM64 build evidence is recorded in `../../artifacts/phase-4/takeover-20261003/beta/CURRENT_RESULT.md`
+and `OWNER_ACTIONS.md`. Main is `9641ad1e684cad7b84bd2385751ea19b0a9d4060`; draft PR #9 remains unmerged with full CI failed. A beta worktree is never assumed to be merged.
 
 ## Intended topology
 
@@ -57,10 +56,11 @@ owner-only filesystem access and mount them read-only. Never put credentials in 
 
 1. Freeze and record the exact source commit. Read `docs/ai/MIGRATION.md`, inspect the actual migration journal, and
    classify the installation as fresh or upgrade; do not assume a migration range.
-2. Build once with `docker buildx build --platform linux/arm64 --load --build-arg GIT_SHA=<full-sha> -t
-   flowline:<full-sha> .`. This is a local build only; do not push. The current inherited build at `719056c` failed
-   during page-data collection after reporting 31 workers and a Docker EOF. It is not an artifact or ARM64 pass.
-   `next.config.ts` bounds Next build workers to two; validate this setting on a future owner/root-controlled build.
+2. The final candidate `7a315f7146784a4ac23b48e1ba06f46a762a21a7` already has a recorded local `linux/arm64` build
+   pass. See `../../artifacts/phase-4/takeover-20261003/beta/ARM64_BUILD_7A315F7.json` and
+   `../../artifacts/phase-4/takeover-20261003/beta/ARM64_APPROVED_IMAGE.json` for exact source, source tree, local
+   image ID and platform manifest digest. Registry push is false. Do not treat this as runtime, Pi, migration or
+   deployment certification. The earlier `719056c` Docker-EOF build is retained as historical failed evidence.
 3. Keep Docker context free of `.env*`, `.takeover-beta-*`, encrypted `.bundle` files and SQL `.dump` files. Verify
    ignore behavior before building. Never copy a scratch backup or database dump into the context.
 4. Run only the disposable recovery proof against a uniquely labelled, network-isolated PostgreSQL pair and synthetic
@@ -70,6 +70,13 @@ owner-only filesystem access and mount them read-only. Never put credentials in 
    This DB-only exercise is not application, migration, ARM64-image, off-device-backup or Pi restore certification.
 5. Record the local proof under the unique takeover evidence directory, with the tested SHA and sanitized result.
    Keep keys, plaintext, ciphertext, database dumps and environment values out of evidence.
+
+### Current final local evidence
+
+For exact tested code `7a315f7146784a4ac23b48e1ba06f46a762a21a7` (source tree
+`6418ad710a312ae45732a288b7efaebf1a4d07f8`), the sanitized ARM64 metadata records a local `linux/arm64` build pass;
+the sanitized DB-only recovery proof records 18/18 checks passed and cleanup of its two owned containers and private
+   files. See `../../artifacts/phase-4/takeover-20261003/beta/CURRENT_RESULT.md`. Draft PR #9 is unmerged and its full CI failed. G4 remains PARTIAL; no registry push, runtime, Pi, migration, provider, deployment or readiness proof exists.
 
 ## After the separate deployment approval
 
