@@ -626,13 +626,15 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
   const t = useT();
   const toast = useToast();
   const [revision, setRevision] = useState<"original" | "latest">("original");
+  // Keep the request identity after a lost response, so retrying this dialog cannot enqueue a second run.
+  const [clientRequestId] = useState(() => crypto.randomUUID());
   const preview = useQuery({
     queryKey: ["rerun-preview", run.id, step.nodeId, revision],
     queryFn: () => api<Preview>(`/api/runs/${run.id}/rerun-preview?fromNodeId=${encodeURIComponent(step.nodeId)}&revision=${revision}`),
     retry: false,
   });
   const start = useMutation({
-    mutationFn: () => api<{ run: { id: string; number: number } }>(`/api/runs/${run.id}/rerun`, { method: "POST", json: { fromNodeId: step.nodeId, revision } }),
+    mutationFn: () => api<{ run: { id: string; number: number } }>(`/api/runs/${run.id}/rerun`, { method: "POST", json: { fromNodeId: step.nodeId, revision, clientRequestId } }),
     onSuccess: ({ run: r }) => {
       toast(t("runs.rerun.started", { number: r.number }), "info");
       onStarted(r.id);

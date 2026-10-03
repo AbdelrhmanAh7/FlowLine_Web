@@ -1,0 +1,13 @@
+{
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-product-1790990656777",
+  "database": "flowline_test_pilotproduct",
+  "tests": [
+    {
+      "command": "pnpm exec vitest run --project integration tests/integration/pilot-rerun-idempotency.test.ts tests/integration/runs.test.ts --fileParallelism=false",
+      "exitCode": 1
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94"
+}

@@ -121,6 +121,7 @@ export function BillingPlan() {
       <Card className="p-5">
         <h2 className="text-lg font-semibold">{t("settings.billing.title")}</h2>
         <p className="mt-1 text-base text-med">{t("settings.billing.notConfigured")}</p>
+        <p className="mt-3 text-sm text-muted">{t("settings.billing.providerCharges")}</p>
       </Card>
     );
   }
@@ -146,6 +147,8 @@ export function BillingPlan() {
             </span>
           )}
         </div>
+
+        <p className="mt-3 text-sm text-med">{t("settings.billing.providerCharges")}</p>
 
         {account?.status === "past_due" && (
           <div role="alert" className="mt-4 rounded-xl border border-danger-border bg-danger-bg p-4">
@@ -239,6 +242,8 @@ export function BillingPlan() {
       <Card className="p-5">
         <h3 className="text-base font-semibold">{t("settings.billing.entitlementsTitle")}</h3>
         <p className="mt-1 text-sm text-muted">{t("settings.billing.entitlementsBody", { date: fmtDate(d.usage.periodStart) })}</p>
+        <p className="mt-2 text-sm text-muted">{t("settings.billing.executionCounting")}</p>
+        <p className="mt-2 text-sm text-muted">{t("settings.billing.ledgerLimitations")}</p>
         {d.entitlements ? (
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-3">
             <div>

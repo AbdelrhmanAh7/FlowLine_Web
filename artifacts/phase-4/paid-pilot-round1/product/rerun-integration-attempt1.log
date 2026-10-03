@@ -1,0 +1,52 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-product-20261003
+
+migrated postgres://***@127.0.0.1:52132/flowline_test_pilotproduct
+[seed-platform] test platform credentials ready
+ ❯ |integration| tests/integration/pilot-rerun-idempotency.test.ts (2 tests | 1 failed) 860ms
+   ❯ paid pilot rerun request identity (2)
+     × a new request, a different step, or a different revision remains a distinct rerun 501ms
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 16 passed (17)
+   Start at  04:24:20
+   Duration  9.59s (tests 51%, import 36%, transform 13%)
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/pilot-rerun-idempotency.test.ts > paid pilot rerun request identity > a new request, a different step, or a different revision remains a distinct rerun
+Error: No queued run available; expected to claim d1df3557-e295-454d-a132-02fa42c5476f: {
+ "table": "run",
+ "target": {
+  "id": "d1df3557-e295-454d-a132-02fa42c5476f",
+  "status": "succeeded",
+  "locked_by": null,
+  "heartbeat_at": "2026-10-03T01:24:29.441Z",
+  "created_at": "2026-10-03T01:24:29.357Z",
+  "workspace_id": "82a5da55-e4ab-4435-bd5d-3ace60f4b4ff"
+ },
+ "rowLock": "not locked",
+ "concurrency": {
+  "max": 3,
+  "running": 0
+ },
+ "queuedBefore": {
+  "n": 0
+ },
+ "claimed": [],
+ "sessions": []
+}
+ ❯ claimAndProcess tests/integration/helpers.ts:125:20
+    123| export async function claimAndProcess(runId: string, workerId = unique…
+    124|   const done = await claimUntil({ table: "run", targetId: runId, claim…
+    125|   if (!done) throw new Error(`No queued run available; expected to cla…
+       |                    ^
+    126| }
+    127|
+ ❯ tests/integration/pilot-rerun-idempotency.test.ts:50:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

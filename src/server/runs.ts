@@ -257,11 +257,15 @@ export async function rerunPreview(original: typeof schema.run.$inferSelect, fro
   return { revision: versionLabel, willRerun, reused, warnings, missingUpstream };
 }
 
-export async function rerunFromStep(user: CurrentUser, original: typeof schema.run.$inferSelect, fromNodeId: string, revision: "original" | "latest" = "original") {
+export async function rerunFromStep(user: CurrentUser, original: typeof schema.run.$inferSelect, fromNodeId: string, revision: "original" | "latest" = "original", clientRequestId?: string) {
   if (["queued", "running", "waiting_approval"].includes(original.status)) {
     throw new HttpError(409, "RUN_ACTIVE", "Wait for this run to finish (or cancel it) before re-running it");
   }
-  return enqueueRun(user, original.flowId, { rerunOf: original, fromNodeId, rerunRevision: revision, triggerKind: "rerun" });
+  return enqueueRun(user, original.flowId, {
+    rerunOf: original, fromNodeId, rerunRevision: revision, triggerKind: "rerun",
+    // Bind retries to the complete request. A different source, step or revision is a deliberate new execution.
+    triggerRef: clientRequestId ? `rerun:${JSON.stringify([original.id, fromNodeId, revision, clientRequestId])}` : undefined,
+  });
 }
 
 /** Cancel: queued / waiting runs stop immediately; running runs are signalled and stop between (or during) steps. */

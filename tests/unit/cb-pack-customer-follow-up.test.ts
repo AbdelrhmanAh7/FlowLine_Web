@@ -180,6 +180,7 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         const text = String(reply.body);
         expect(text).toContain("Cancellations are free up to 24 hours before the visit."); // approved policy line only
         expect(text).toMatch(/Nothing has been refunded or cancelled yet|لم يتم أي استرداد أو إلغاء حتى الآن/);
+        expect(text).toMatch(/business owner will review and decide on your refund or cancellation request|صاحب العمل طلب الاسترداد أو الإلغاء ويقرر بشأنه/);
         for (const promise of [/we (will|have) refund/i, /refund (has been|was) (issued|processed|made)/i, /you will (get|receive) your money/i, /تم (الاسترداد|استرداد المبلغ|إلغاء)/]) expect(text).not.toMatch(promise);
         expect(failing(o, req)).toEqual([]);
       });
@@ -200,6 +201,9 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
       const skipped = structuredClone(o);
       skipped.reply_draft!.status = "approved";
       expect(failing(skipped, req)).toEqual(expect.arrayContaining(["review_required", "consequential_needs_person"]));
+      const unqualified = structuredClone(o);
+      unqualified.reply_draft!.body = String(unqualified.reply_draft!.body).replace("The business owner will review and decide on your refund or cancellation request.", "A member of our team will review your request and confirm the next step.");
+      expect(failing(unqualified, req)).toContain("reply_only_approved_info");
     });
     it("a non-refund request is not flagged", async () => {
       const req = { ...base, body: "How much does deep cleaning cost?" };

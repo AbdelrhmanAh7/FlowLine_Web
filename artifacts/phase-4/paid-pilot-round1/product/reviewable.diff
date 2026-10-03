@@ -1,0 +1,518 @@
+diff --git a/artifacts/phase-4/paid-pilot-round1/product/verify-field-engine.mts b/artifacts/phase-4/paid-pilot-round1/product/verify-field-engine.mts
+new file mode 100644
+index 0000000..37c9c65
+--- /dev/null
++++ b/artifacts/phase-4/paid-pilot-round1/product/verify-field-engine.mts
+@@ -0,0 +1,43 @@
++// Fresh bounded engine check against the existing immutable v2 packet/scorer; never edits earlier field evidence.
++import { createHash } from "node:crypto";
++import { readFileSync, writeFileSync } from "node:fs";
++import { resolve } from "node:path";
++import { pathToFileURL } from "node:url";
++import { executeGraph } from "@/engine/execute";
++import { customerFollowUpPack } from "@/company-builder/packs/customer-follow-up";
++import { memoryStore } from "../../../../tests/fixtures/company-builder/store-stub";
++
++const field = resolve(process.argv[2] ?? "../FL-wt-field-20261003");
++const frozen = resolve(field, "scripts/field-validation/v2");
++const { verifyPacket } = await import(pathToFileURL(resolve(frozen, "packet.ts")).href);
++const { scoreRequest } = await import(pathToFileURL(resolve(frozen, "scoring.ts")).href);
++const { packet, sha256 } = verifyPacket(readFileSync(resolve(frozen, "packet.json")), readFileSync(resolve(frozen, "SHA256SUMS"), "utf8"));
++const params = {
++  approvedInfo: packet.approvedInformation.join("\n"),
++  services: packet.company.services.map((service: string, i: number) => `${service}|${packet.company.servicesArabic[i]}`),
++  requiredDetails: packet.company.requiredDetailsBeforeBooking,
++  followUpHours: 24, timezone: packet.company.timezone, language: "ar", recordScope: "pilot-product-engine",
++};
++const graph = customerFollowUpPack.compile(params, (id) => id);
++const store = memoryStore();
++const scores = [];
++for (const request of packet.requests) {
++  const input = { request: { id: request.id, from: request.from, received_at: request.receivedAt, subject: request.subject, body: request.body, channel: "email", sample: true } };
++  const run = await executeGraph(graph, input, { handler: store.handler });
++  const fieldScore = scoreRequest(packet, request.id, run.output);
++  const checks = customerFollowUpPack.evaluate(run.output, input, params);
++  scores.push({ id: request.id, status: run.status, fieldScore, failedProductChecks: checks.filter((c) => !c.passed).map((c) => c.id) });
++}
++const result = {
++  scope: "synthetic executeGraph plus in-memory data.store; NOT API/worker/browser/provider/human acceptance",
++  packetSha256: sha256,
++  scorerSha256: createHash("sha256").update(readFileSync(resolve(frozen, "scoring.ts"))).digest("hex"),
++  frozenFieldSource: "46a26297ec915d958b16e6c492c5787a24a38ba7",
++  passed: scores.every((s) => s.status === "succeeded" && s.fieldScore.passed && s.failedProductChecks.length === 0),
++  persistedInMemoryRecords: store.entries.size,
++  scores,
++};
++const name = resolve("artifacts/phase-4/paid-pilot-round1/product", `field-engine-${Date.now()}.json`);
++writeFileSync(name, `${JSON.stringify(result, null, 2)}\n`);
++console.log(JSON.stringify({ passed: result.passed, records: result.persistedInMemoryRecords, scores: scores.map((s) => ({ id: s.id, passed: s.fieldScore.passed, failed: s.fieldScore.failed })), evidence: name }));
++if (!result.passed) process.exitCode = 1;
+diff --git a/artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs b/artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs
+new file mode 100644
+index 0000000..5c27a88
+--- /dev/null
++++ b/artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs
+@@ -0,0 +1,54 @@
++// Local-only focused verifier: cached image, generated credentials, uniquely owned disposable container.
++// Never loads .env files, starts a browser/web service, or calls a real provider.
++import { spawnSync } from "node:child_process";
++import { randomBytes } from "node:crypto";
++import { writeFileSync } from "node:fs";
++import { fileURLToPath } from "node:url";
++
++const cwd = fileURLToPath(new URL("../../../../", import.meta.url));
++const evidence = fileURLToPath(new URL("./", import.meta.url));
++const attempt = Date.now();
++const container = `flowline-pilot-product-${attempt}`;
++const password = randomBytes(24).toString("hex");
++const command = (bin, args, opts = {}) => spawnSync(bin, args, { cwd, encoding: "utf8", ...opts });
++const checked = (bin, args, opts) => {
++  const result = command(bin, args, opts);
++  if (result.status !== 0) throw new Error(`${bin} failed (${result.status}): ${result.stderr || result.stdout}`);
++  return result.stdout.trim();
++};
++const result = { scope: "isolated synthetic Postgres integration; no external providers", container, database: "flowline_test_pilotproduct", tests: [], cleanup: false };
++let created = false;
++try {
++  result.image = checked("docker", ["image", "inspect", "postgres:17.6-alpine", "--format", "{{.Id}}"]);
++  checked("docker", ["run", "-d", "--name", container, "--label", "flowline.proof=pilot-product", "-e", `POSTGRES_PASSWORD=${password}`, "-e", "POSTGRES_USER=pilot_product", "-e", "POSTGRES_DB=flowline_test_pilotproduct", "-p", "127.0.0.1::5432", "postgres:17.6-alpine"]);
++  created = true;
++  const port = checked("docker", ["inspect", "--format", '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}', container]);
++  let ready = false;
++  for (let i = 0; i < 30; i++) {
++    if (command("docker", ["exec", container, "pg_isready", "-U", "pilot_product", "-d", "flowline_test_pilotproduct"]).status === 0) { ready = true; break; }
++    await new Promise((resolve) => setTimeout(resolve, 500));
++  }
++  if (!ready) throw new Error("Owned disposable Postgres did not become ready");
++  const env = {
++    ...process.env, DATABASE_URL: `postgres://pilot_product:${password}@127.0.0.1:${port}/flowline_test_pilotproduct`,
++    FLOWLINE_ENV: "test", BETTER_AUTH_URL: "http://localhost:3100", FLOWLINE_PUBLIC_URL: "http://localhost:3100",
++    BETTER_AUTH_SECRET: randomBytes(32).toString("hex"), FLOWLINE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
++    FLOWLINE_PLATFORM_ENCRYPTION_KEY: randomBytes(32).toString("base64"), FLOWLINE_EMAIL_PROVIDER: "outbox",
++    FLOWLINE_COMPANY_BUILDER: "on", FLOWLINE_DB_POOL_MAX: "4",
++  };
++  const args = ["exec", "vitest", "run", "--project", "integration", "tests/integration/pilot-rerun-idempotency.test.ts", "tests/integration/runs.test.ts", "--fileParallelism=false"];
++  const run = command(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, { env, shell: process.platform === "win32" });
++  const output = `${run.stdout ?? ""}${run.stderr ?? ""}`.replaceAll(password, "[generated credential redacted]");
++  writeFileSync(`${evidence}rerun-integration-${attempt}.log`, output);
++  result.tests.push({ command: `pnpm ${args.join(" ")}`, exitCode: run.status });
++  process.stdout.write(output);
++  if (run.status !== 0) process.exitCode = 1;
++} catch (error) {
++  result.error = String(error.message).replaceAll(password, "[generated credential redacted]");
++  console.error(result.error);
++  process.exitCode = 1;
++} finally {
++  if (created) result.cleanup = command("docker", ["rm", "-f", container]).status === 0;
++  if (created && !result.cleanup) process.exitCode = 1;
++  writeFileSync(`${evidence}rerun-integration-${attempt}.json`, `${JSON.stringify(result, null, 2)}\n`);
++}
+diff --git a/docs/implementation/PAID_PILOT_POLICIES_DRAFT.md b/docs/implementation/PAID_PILOT_POLICIES_DRAFT.md
+new file mode 100644
+index 0000000..da883a6
+--- /dev/null
++++ b/docs/implementation/PAID_PILOT_POLICIES_DRAFT.md
+@@ -0,0 +1,44 @@
++# Paid pilot policies — owner review draft
++
++These are product/operational drafting points for owner review, not published terms or legal advice. Jurisdiction, legal entity, support contact, prices, taxes, policy effective dates, retention periods and statutory consumer rights are intentionally undecided. Qualified review and the owner's approval are required before customer acceptance. No live payment is authorized by this draft.
++
++## Scope / نطاق التجربة
++
++Flowline is an invite-only general workflow platform pilot for 3–5 approved customers. The signed offer must identify the one subscription price, currency, billing interval, workspace, execution/concurrency limits, verified providers and support hours. Unverified integrations and providers must be described as unavailable or pending verification. No uptime or business-result guarantee is created by sample tests.
++
++Flowline منصة عامة لسير العمل ضمن تجربة محدودة بالدعوات لـ3–5 عملاء معتمدين. يجب أن يحدد العرض المقبول سعر الاشتراك وعملته ودورته ومساحة العمل وحدود التشغيل والتزامن والمزودين المتحقق منهم وساعات الدعم. تُعرض التكاملات غير المتحقق منها كغير متاحة أو بانتظار التحقق. لا تنشئ اختبارات البيانات التجريبية ضمانًا للتوافر أو نتائج الأعمال.
++
++## Usage and separate provider charges / الاستخدام ورسوم المزود المنفصلة
++
++An accepted workflow or agent run consumes one execution even if it later fails or is cancelled. Recovery/deduplication of that run does not consume another; a new run does. Limits reset by UTC calendar month. The customer supplies supported API credentials and pays provider charges separately. Flowline ledger amounts use configured prices and may omit unknown provider costs; they are not a provider invoice or an external spend guarantee. The customer controls provider-side budgets, scopes and connection permissions. The final offer must state the approved limits and over-limit behavior explicitly; no automatic paid overage is proposed.
++
++يستهلك التشغيل المقبول لسير عمل أو وكيل تشغيلًا واحدًا حتى إذا فشل أو أُلغي لاحقًا. لا تستهلك استعادته أو إزالة تكراره تشغيلًا آخر؛ يستهلك التشغيل الجديد تشغيلًا إضافيًا. تبدأ الحدود من جديد كل شهر تقويمي بتوقيت UTC. يقدم العميل بيانات API المدعومة ويدفع رسوم المزود منفصلة. تعتمد مبالغ السجل على الأسعار المُعدّة وقد لا تشمل تكاليف مجهولة؛ وهي ليست فاتورة المزود أو ضمانًا لحد إنفاق خارجي. لا يقترح هذا المسودّة رسوم تجاوز مدفوعة تلقائية.
++
++## Human approval / الموافقة البشرية
++
++Customers review destinations, content and consequences before approving sensitive actions. A refund/cancellation request is prepared for the business owner's decision; a draft never proves that money moved or a booking changed. Unknown external outcomes require provider reconciliation before retry. Customers can pause automation and revoke connection access through supported controls.
++
++يراجع العميل الوجهة والمحتوى والنتائج قبل الموافقة على الإجراءات الحساسة. يُجهّز طلب الاسترداد أو الإلغاء ليقرر فيه صاحب العمل؛ ولا تثبت المسودة انتقال أموال أو تغيير حجز. تتطلب النتائج الخارجية المجهولة فحص سجل المزود قبل إعادة المحاولة.
++
++## Cancellation and refunds / الإلغاء والاسترداد
++
++The existing subscription control requests cancellation at the provider's period end; the confirmed provider state determines the effective end date. The final policy must define how to request cancellation, what access continues, how disputes are handled and applicable statutory rights. Refund eligibility and timing require owner/legal approval; there is no automatic refund promise in this draft. Sandbox tests use synthetic payments and do not establish live refund capability.
++
++يرسل زر إلغاء الاشتراك طلبًا إلى المزود للإلغاء عند نهاية الفترة، وتحدد حالة المزود المؤكدة تاريخ الانتهاء الفعلي. يجب أن توضح السياسة النهائية طريقة الطلب واستمرار الوصول والتعامل مع النزاعات والحقوق القانونية المطبقة. تحتاج أهلية الاسترداد ومدته إلى موافقة المالك والمراجعة القانونية؛ ولا تقدم هذه المسودة وعدًا تلقائيًا بالاسترداد.
++
++## Data and provider processing / البيانات ومعالجة المزود
++
++Before publication, inventory actual collected account/workspace data, persisted workflow inputs/outputs, run logs, connection-secret storage, provider transfers, infrastructure locations, subprocessors, backup copies and deletion/export controls. State specific retention/deletion periods and the authorized contact. Describe encryption and access controls only to the extent currently implemented and tested. Do not promise complete erasure, zero provider training, regional residency or a credential-access guarantee without evidence. Use synthetic data during onboarding until the owner approves the customer's data category and provider handling.
++
++قبل النشر، احصر البيانات التي تُجمع فعليًا ومدخلات ومخرجات سير العمل وسجلات التشغيل وأماكن تخزين مفاتيح الربط وعمليات نقل البيانات للمزود ومواقع البنية التحتية والجهات الفرعية والنسخ الاحتياطية وأدوات الحذف والتصدير. حدّد فترات الاحتفاظ والحذف وجهة التواصل. لا تعد بالمحو الكامل أو عدم تدريب المزود على البيانات أو إقامة البيانات في منطقة محددة دون دليل.
++
++## Owner approval checklist
++
++- [ ] Approved legal entity, jurisdiction, contact and effective dates.
++- [ ] One verified price/interval and precise execution/concurrency/reset definitions.
++- [ ] Separate provider charges and supported credential types disclosed in EN/AR.
++- [ ] Real sandbox checkout, renewal, failure and cancellation evidence linked.
++- [ ] Refund/dispute terms reviewed without overriding statutory rights.
++- [ ] Actual data/subprocessor inventory, retention, export/deletion and backup handling documented.
++- [ ] Support contact/hours and incident escalation approved.
++- [ ] Published EN/AR text matches the verified offer and customer acceptance is recorded before billing.
+diff --git a/docs/implementation/PAID_PILOT_PRODUCT_ACCEPTANCE.md b/docs/implementation/PAID_PILOT_PRODUCT_ACCEPTANCE.md
+new file mode 100644
+index 0000000..1d4e4fc
+--- /dev/null
++++ b/docs/implementation/PAID_PILOT_PRODUCT_ACCEPTANCE.md
+@@ -0,0 +1,57 @@
++# Invite-only paid pilot — product acceptance draft
++
++Owner review draft, 2026-10-03. Candidate base: `9641ad1e684cad7b84bd2385751ea19b0a9d4060`. This is a general workflow platform pilot for 3–5 customers. No price, invitation, live payment, deployment or advertised provider is approved by this document. Current verdict: **NOT READY** until every required row below has current evidence or the owner narrows the advertised offer explicitly.
++
++## One proposed subscription
++
++Sell one monthly **Pilot / التجربة المدفوعة** subscription, for one customer workspace. Proposed limits: **1,000 workflow and agent executions per UTC calendar month, 2 concurrent runs**. These numbers are a proposal, not installed entitlements. The owner must set a price/currency, support hours, start/end dates and verified sandbox provider price before approval. Do not advertise an unconfigured price or unlimited usage.
++
++Use the existing `billing.plans` platform setting and existing payment adapter, not a new billing system. Configure one paid plan with `id: pilot`, its sandbox `providerPriceId`, owner-approved `displayPrice`, and `entitlements: { maxMonthlyExecutions: 1000, monthlyUsageCapMicros: null, maxConcurrentRuns: 2 }`. The required technical free/inactive fallback is not a second subscription offer: propose 25 local sample executions/month and 1 concurrent run, with the owner deciding its final allowance. Do not install these values before approval.
++
++Each accepted workflow or agent run records one execution at enqueue, including later failure or cancellation. Deduplicated requests and recovery of that same run do not add executions; a deliberately new rerun does. The stricter workspace or plan limit applies. Calendar-month metering is not the subscription anniversary. Provider calls and retries can have their own usage events and provider charges.
++
++**BYOK / مفاتيحك الخاصة:** the customer supplies supported API keys through Settings → AI Providers (`/w/<slug>/settings?tab=ai`) or the integration connection UI. Provider charges are separate from the Flowline subscription. Configured ledger prices are not a provider invoice; unpriced calls can understate costs, and a workspace cap cannot guarantee the provider's final bill. Customers set provider-side budgets and alerts. No individual Claude/Codex membership is sold as an API entitlement. Real-account provider validation and supported authorization remain required before listing any provider in the pilot offer.
++
++## Five existing templates to include
++
++All five already exist, use deterministic local nodes, have editable synthetic inputs and store results without contacting external services. They retain translated stable IDs and node labels. Existing `tests/unit/local-scenarios.test.ts` exercises default, alternate and empty inputs plus relevant boundaries; this round's evidence records the focused rerun. Selection does not imply that connected SaaS templates are verified.
++
++| Template ID | English / العربية | Acceptance result |
++| --- | --- | --- |
++| `low-stock-list` | Low Stock List / قائمة المخزون المنخفض | Lists only products at or below reorder level; orders nothing |
++| `quote-calculator` | Quote Calculator / حاسبة عرض السعر | Computes configured line amounts and rounding; sends no quote |
++| `expense-category-summary` | Expense Category Summary / ملخص فئات المصروفات | Groups sample expenses; performs no payment |
++| `weekly-task-plan` | Weekly Task Plan / خطة المهام الأسبوعية | Produces a plan from supplied dates; creates no calendar event |
++| `support-backlog-summary` | Support Backlog Summary / ملخص طلبات الدعم المتراكمة | Summarizes sample tickets; sends no notification |
++
++## First customer session
++
++1. Owner approves the exact customer/workspace invitation separately; the customer registers and verifies email through the real endpoint.
++2. Customer uses the existing workspace → goal → first flow onboarding. Begin with one of the five local templates; use synthetic input and no provider key.
++3. Save an edited sample, reload to verify persistence, run it, open the inspector and compare the actual result with the expected result. Repeat once in Arabic and once in English.
++4. Demonstrate an invalid configuration, its error and repair. Explain that Run again starts a new execution. For an uncertain external result, inspect the provider before authorizing any retry; do not repeatedly click Run.
++5. Only after a specific provider is independently verified, connect the customer account privately, restrict connection permissions, check provider budgets, and test a bounded action with required approval. Enable automated triggers only after published-version and dedupe tests pass.
++6. Walk through the displayed plan limits and separate provider charges, the support procedure and owner-approved policies. Capture explicit customer acceptance of the workflow's actual result.
++
++Arabic onboarding summary: ابدأ بقالب محلي وبيانات تجريبية، واحفظ التغييرات ثم أعد تحميل الصفحة وشغّل القالب وافحص النتيجة. لا تربط حساب مزود قبل التحقق منه. راجع حدود الخطة ورسوم المزود المنفصلة، ولا تكرر إجراءً خارجيًا كانت نتيجته غير مؤكدة قبل فحصه لدى المزود.
++
++## Required acceptance ledger
++
++The owner/lead records evidence links, exact candidate SHA and date beside each row. Local tests, CI, real-provider verification and human UAT are separate evidence classes. A later documentation-only green CI run does not clear an unresolved flaky transport failure.
++
++| Required check | Current bounded evidence / remaining action |
++| --- | --- |
++| Create, save, reload, manual run, results and repair in EN/AR | Existing integration/E2E coverage; candidate CI and customer session still required |
++| Automated publish, schedule, signed webhook and duplicate event handling | Existing trigger tests; final candidate CI and bounded real source required |
++| Safe recovery and rerun metering | This candidate binds a rerun retry to one request; focused tests verify one run and execution event. Existing uncertain-action review remains required; this does not make deliberate reruns safe for external effects |
++| Consequential drafts reserve the decision for the owner | EN/AR note fixed; focused engine/fixture result is separate from a fresh API/worker field run and actual owner review |
++| Five templates, both languages, default/alternate/empty cases | Existing local scenario suite, fresh focused result recorded this round; browser UAT still required |
++| One plan and enforceable limits | Configuration mechanism exists; proposed limits and price need owner approval and installation |
++| Checkout, renewal, cancellation, payment decline, duplicate/stale webhooks | Local fake-provider adapter/service tests are useful preparation; **real sandbox account journeys remain BLOCKED** |
++| Every advertised integration and AI provider | **BLOCKED** on dedicated accounts, privately entered credentials, verified no-cost allowance and consent; mock contracts do not qualify |
++| Invite-only signup, recovery, membership isolation and protected credentials | Security lane/current candidate evidence required; owner identity/MFA remains separate |
++| Exact artifact deployment, alerts, off-device backup restore and rollback | Infra lane preparation and owner authorization required; local image/DB proof is insufficient |
++| Customer support and policies | [Support draft](PAID_PILOT_SUPPORT_DRAFT.md) and [policy draft](PAID_PILOT_POLICIES_DRAFT.md) require owner-approved contact/hours/terms before sale |
++| 3–5 customer UAT and invitation approvals | **BLOCKED** until the preceding offer/readiness checks pass and the owner approves named recipients |
++
++Stop acceptance when an external action could have occurred twice, an invoice/meter differs from promised limits, isolation fails, secret material appears, an unresolved flaky test remains, or customer-facing copy implies a verification that was not performed. Preserve the failure evidence; repair and rerun the affected check on the final candidate.
+diff --git a/docs/implementation/PAID_PILOT_SUPPORT_DRAFT.md b/docs/implementation/PAID_PILOT_SUPPORT_DRAFT.md
+new file mode 100644
+index 0000000..3877c86
+--- /dev/null
++++ b/docs/implementation/PAID_PILOT_SUPPORT_DRAFT.md
+@@ -0,0 +1,35 @@
++# Paid pilot support — owner review draft
++
++Not published. The owner must approve a real support contact, staffed hours/timezone, expected response time and emergency escalation route before inviting customers. This draft creates no inbox, service-level promise or automatic notification.
++
++## Customer instructions / إرشادات العميل
++
++If a workflow fails, open its run inspector and record the workflow name, run number, approximate time, selected step, displayed error code and language. Explain the expected result and the actual result. If billing is affected, record the subscription status and date; use the provider's secure support channel for payment details. Send only sanitized screenshots and a minimal synthetic reproduction to the approved pilot support contact.
++
++عند فشل سير عمل، افتح تفاصيل التشغيل وسجّل اسم سير العمل ورقم التشغيل والوقت التقريبي والخطوة ورمز الخطأ واللغة. وضّح النتيجة المتوقعة والنتيجة الفعلية. إذا تعلّق الأمر بالفوترة، سجّل حالة الاشتراك والتاريخ، واستخدم قناة المزود الآمنة لتفاصيل الدفع. أرسل صورًا منقّحة ومثالًا تجريبيًا صغيرًا إلى جهة الدعم المعتمدة للتجربة.
++
++Never send API keys, passwords, session cookies, OTPs, recovery codes, customer personal data or full request/response bodies to support. Enter credentials only in the intended protected settings/provider UI. A support worker does not need your password or MFA code.
++
++لا ترسل مفاتيح API أو كلمات المرور أو ملفات تعريف جلسات الدخول أو رموز التحقق أو رموز الاسترداد أو بيانات العملاء الشخصية أو نصوص الطلبات الكاملة إلى الدعم. أدخل بيانات الاعتماد في صفحة الإعدادات المحمية أو صفحة المزود فقط. لا يحتاج موظف الدعم إلى كلمة مرورك أو رمز التحقق الخاص بك.
++
++If an external result is uncertain, pause the flow and inspect the provider's history before retrying. A fresh rerun can repeat an external action and counts as another execution. Do not approve a refund, cancellation, outgoing message or write until the owner checks the current request and destination. Retry protection for a submitted dialog does not make a deliberate new run harmless.
++
++إذا كانت نتيجة إجراء خارجي غير مؤكدة، أوقف سير العمل مؤقتًا وافحص سجل المزود قبل إعادة المحاولة. قد يكرر تشغيل جديد الإجراء الخارجي ويُحتسب تشغيلًا إضافيًا. لا توافق على استرداد أو إلغاء أو رسالة صادرة أو كتابة بيانات قبل مراجعة المالك للطلب الحالي والوجهة.
++
++## Operator procedure
++
++1. Check whether the incident affects one run, workspace or all pilot customers. Keep tenant access bounded to authorized roles.
++2. For suspected duplicate external actions, unauthorized access, exposed credentials or wrong payment state, pause affected automation and billing changes. Preserve sanitized timestamps and correlation IDs. Escalate to the owner immediately through the approved route.
++3. Inspect persisted run/step/event history and provider receipts before deciding whether an action occurred. Do not claim success from a request timeout or UI toast.
++4. Reproduce with synthetic data in an isolated test environment. Link the exact source SHA, relevant diff, logs and focused test result. Keep failed evidence intact.
++5. If a credential may be exposed, the owner revokes/replaces it privately through the provider and reconnects it. Do not rotate or destroy customer data without an approved recovery plan.
++6. Tell the customer what is confirmed, what remains uncertain and the next update time agreed with the owner. Refunds and cancellations are owner decisions under the approved terms; this document does not grant support workers payment authority.
++7. Close the incident only after the owner verifies the repair and the customer confirms the actual expected result. Record any residual limitation and needed follow-up.
++
++## Before publication
++
++- [ ] Real support contact and secure intake approved; no invented address or channel.
++- [ ] Staffed hours, response target and emergency escalation agreed for 3–5 customers.
++- [ ] EN/AR customer instructions reviewed, accessible from the onboarding/support surface chosen by the owner.
++- [ ] Secret-free evidence retention location, authorized readers and incident owner established.
++- [ ] One synthetic failure and one uncertain-action support drill completed on the release candidate.
+diff --git a/src/app/api/runs/[rid]/rerun/route.ts b/src/app/api/runs/[rid]/rerun/route.ts
+index 26c9ec5..9f57793 100644
+--- a/src/app/api/runs/[rid]/rerun/route.ts
++++ b/src/app/api/runs/[rid]/rerun/route.ts
+@@ -10,7 +10,11 @@ export const POST = route(async (req, { params }: Ctx) => {
+   const user = await requireUser();
+   const { run } = await requireRun(user, (await params).rid, "flow.run");
+   await checkRunRate(user.id);
+-  const { fromNodeId, revision } = await parseBody(req, z.object({ fromNodeId: z.string().min(1).max(64), revision: z.enum(["original", "latest"]).default("original") }));
+-  const next = await rerunFromStep(user, run, fromNodeId, revision);
++  const { fromNodeId, revision, clientRequestId } = await parseBody(req, z.object({
++    fromNodeId: z.string().min(1).max(64),
++    revision: z.enum(["original", "latest"]).default("original"),
++    clientRequestId: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
++  }));
++  const next = await rerunFromStep(user, run, fromNodeId, revision, clientRequestId);
+   return json({ run: next }, { status: 202 });
+ });
+diff --git a/src/app/w/[slug]/runs/inspector.tsx b/src/app/w/[slug]/runs/inspector.tsx
+index ca79307..90a3beb 100644
+--- a/src/app/w/[slug]/runs/inspector.tsx
++++ b/src/app/w/[slug]/runs/inspector.tsx
+@@ -626,13 +626,15 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
+   const t = useT();
+   const toast = useToast();
+   const [revision, setRevision] = useState<"original" | "latest">("original");
++  // Keep the request identity after a lost response, so retrying this dialog cannot enqueue a second run.
++  const [clientRequestId] = useState(() => crypto.randomUUID());
+   const preview = useQuery({
+     queryKey: ["rerun-preview", run.id, step.nodeId, revision],
+     queryFn: () => api<Preview>(`/api/runs/${run.id}/rerun-preview?fromNodeId=${encodeURIComponent(step.nodeId)}&revision=${revision}`),
+     retry: false,
+   });
+   const start = useMutation({
+-    mutationFn: () => api<{ run: { id: string; number: number } }>(`/api/runs/${run.id}/rerun`, { method: "POST", json: { fromNodeId: step.nodeId, revision } }),
++    mutationFn: () => api<{ run: { id: string; number: number } }>(`/api/runs/${run.id}/rerun`, { method: "POST", json: { fromNodeId: step.nodeId, revision, clientRequestId } }),
+     onSuccess: ({ run: r }) => {
+       toast(t("runs.rerun.started", { number: r.number }), "info");
+       onStarted(r.id);
+diff --git a/src/app/w/[slug]/settings/billing-plan.tsx b/src/app/w/[slug]/settings/billing-plan.tsx
+index bff2ec0..dd494eb 100644
+--- a/src/app/w/[slug]/settings/billing-plan.tsx
++++ b/src/app/w/[slug]/settings/billing-plan.tsx
+@@ -121,6 +121,7 @@ export function BillingPlan() {
+       <Card className="p-5">
+         <h2 className="text-lg font-semibold">{t("settings.billing.title")}</h2>
+         <p className="mt-1 text-base text-med">{t("settings.billing.notConfigured")}</p>
++        <p className="mt-3 text-sm text-muted">{t("settings.billing.providerCharges")}</p>
+       </Card>
+     );
+   }
+@@ -147,6 +148,8 @@ export function BillingPlan() {
+           )}
+         </div>
+ 
++        <p className="mt-3 text-sm text-med">{t("settings.billing.providerCharges")}</p>
++
+         {account?.status === "past_due" && (
+           <div role="alert" className="mt-4 rounded-xl border border-danger-border bg-danger-bg p-4">
+             <p className="font-semibold text-danger">{t("settings.billing.pastDueTitle")}</p>
+@@ -239,6 +242,8 @@ export function BillingPlan() {
+       <Card className="p-5">
+         <h3 className="text-base font-semibold">{t("settings.billing.entitlementsTitle")}</h3>
+         <p className="mt-1 text-sm text-muted">{t("settings.billing.entitlementsBody", { date: fmtDate(d.usage.periodStart) })}</p>
++        <p className="mt-2 text-sm text-muted">{t("settings.billing.executionCounting")}</p>
++        <p className="mt-2 text-sm text-muted">{t("settings.billing.ledgerLimitations")}</p>
+         {d.entitlements ? (
+           <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-3">
+             <div>
+diff --git a/src/company-builder/packs/customer-follow-up.ts b/src/company-builder/packs/customer-follow-up.ts
+index 6c7ff71..0489894 100644
+--- a/src/company-builder/packs/customer-follow-up.ts
++++ b/src/company-builder/packs/customer-follow-up.ts
+@@ -1,5 +1,6 @@
+ import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
+ import type { FlowGraph, FlowNode } from "@/engine/types";
++import { createTranslator } from "@/i18n/translate";
+ import { lit, sameJson, type PackCheck, type PackFixture, type PackParams, type TaskPack } from "./types";
+ 
+ /**
+@@ -40,8 +41,8 @@ const GREETING = { en: "Hello,", ar: "مرحبًا،" };
+  * is added to every such draft; the draft itself still waits for the named reviewer like every reply.
+  */
+ export const REFUND_NOTE = {
+-  en: "A member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.",
+-  ar: "سيراجع أحد أفراد فريقنا طلبك ويؤكد لك الخطوة التالية. لم يتم أي استرداد أو إلغاء حتى الآن.",
++  en: createTranslator("en")("companyBuilder.refundDecisionNote"),
++  ar: createTranslator("ar")("companyBuilder.refundDecisionNote"),
+ };
+ const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
+ 
+diff --git a/src/i18n/messages/ar.json b/src/i18n/messages/ar.json
+index 7340531..0f17e54 100644
+--- a/src/i18n/messages/ar.json
++++ b/src/i18n/messages/ar.json
+@@ -2528,6 +2528,9 @@
+       "testNote": "شغّل «تسجيل دخول تجريبي» بصفتك مالكًا للتحقق من هذه الإعدادات قبل تفعيلها. ستُسجَّل دخولك بالهوية التي يعيدها المزوّد: إذا كان بريدها بريدك، يُربط حسابك؛ ولا يستولي SSO أبدًا على حساب آخر موجود."
+     },
+     "billing": {
++      "providerCharges": "استخدم حسابات API المدعومة ومفاتيحك الخاصة. رسوم مزودي الذكاء الاصطناعي والتكاملات منفصلة عن اشتراكك في Flowline، ويحاسبك عليها هؤلاء المزودون.",
++      "ledgerLimitations": "تستخدم هذه المبالغ الأسعار المُعدّة في مساحة العمل. وهي ليست فاتورة مزود الخدمة، ولا تُظهر الاستدعاءات غير المُسعّرة تكلفتها الكاملة. اضبط حدود الإنفاق لدى كل مزود أيضًا.",
++      "executionCounting": "يُحتسب كل تشغيل مقبول لسير عمل أو وكيل مرة واحدة، بما في ذلك التشغيل الفاشل أو الملغى. استعادة العامل لا تضيف تشغيلًا آخر؛ بدء تشغيل جديد يضيفه.",
+       "title": "الخطة والفوترة",
+       "ownerOnly": "يقتصر إدارة الفوترة على مالكي مساحة العمل",
+       "requestFailed": "تعذّر تنفيذ طلب الفوترة",
+@@ -2535,7 +2538,7 @@
+       "cancelRequested": "طُلب الإلغاء — يسري عندما يؤكده المزوّد",
+       "viewOnly": "يقتصر عرض الفوترة على مالكي مساحة العمل ومحرّريها.",
+       "loadError": "تعذّر تحميل الفوترة",
+-      "notConfigured": "الفوترة غير مُعدّة في هذا التثبيت. تأتي الخطط من إعدادات البيئة؛ ولم يُضبط مفتاح أي مزوّد دفع.",
++      "notConfigured": "الفوترة غير مُعدّة في هذا التثبيت. يجب على مسؤول المنصة إعداد الخطط ومزود دفع في بيئة الاختبار.",
+       "mode": {
+         "test": "وضع الاختبار",
+         "sandbox": "البيئة التجريبية",
+@@ -3792,6 +3795,7 @@
+     }
+   },
+   "companyBuilder": {
++    "refundDecisionNote": "سيراجع صاحب العمل طلب الاسترداد أو الإلغاء ويقرر بشأنه. لم يتم أي استرداد أو إلغاء حتى الآن.",
+     "nav": "فريقك الرقمي",
+     "title": "فريقك الرقمي",
+     "promise": "ابنِ فريقًا رقميًا يفهم عملك.",
+diff --git a/src/i18n/messages/en.json b/src/i18n/messages/en.json
+index 8340ccf..c29e52c 100644
+--- a/src/i18n/messages/en.json
++++ b/src/i18n/messages/en.json
+@@ -2446,6 +2446,9 @@
+       "testNote": "Run “Test sign-in” as an owner to verify this configuration before it can be enabled. You’ll be signed in as the identity the provider returns: if its email is yours, your account is linked; SSO never takes over another existing account."
+     },
+     "billing": {
++      "providerCharges": "Use your own supported API accounts and keys. AI and integration provider charges are separate from your Flowline subscription and are billed by those providers.",
++      "ledgerLimitations": "These amounts use the prices configured in this workspace. They are not your provider invoice, and unpriced calls do not show their full cost. Set spending limits with each provider too.",
++      "executionCounting": "Each accepted workflow or agent run counts once, including failed or cancelled runs. Worker recovery does not add another execution; starting a new run does.",
+       "title": "Plan & billing",
+       "ownerOnly": "Only workspace owners can manage billing",
+       "requestFailed": "Billing request failed",
+@@ -2453,7 +2456,7 @@
+       "cancelRequested": "Cancellation requested — it applies when the provider confirms",
+       "viewOnly": "Only workspace owners and editors can view billing.",
+       "loadError": "Couldn't load billing",
+-      "notConfigured": "Billing isn't configured on this installation. Plans come from environment configuration; no payment provider key is set.",
++      "notConfigured": "Billing is not configured on this installation. A platform administrator must configure plans and a sandbox payment provider.",
+       "mode": {
+         "test": "Test mode",
+         "sandbox": "Sandbox",
+@@ -3670,6 +3673,7 @@
+     }
+   },
+   "companyBuilder": {
++    "refundDecisionNote": "The business owner will review and decide on your refund or cancellation request. Nothing has been refunded or cancelled yet.",
+     "nav": "Digital team",
+     "title": "Your digital team",
+     "promise": "Build a digital team that knows your work.",
+diff --git a/src/server/runs.ts b/src/server/runs.ts
+index 86fbbc6..514b0c6 100644
+--- a/src/server/runs.ts
++++ b/src/server/runs.ts
+@@ -257,11 +257,15 @@ export async function rerunPreview(original: typeof schema.run.$inferSelect, fro
+   return { revision: versionLabel, willRerun, reused, warnings, missingUpstream };
+ }
+ 
+-export async function rerunFromStep(user: CurrentUser, original: typeof schema.run.$inferSelect, fromNodeId: string, revision: "original" | "latest" = "original") {
++export async function rerunFromStep(user: CurrentUser, original: typeof schema.run.$inferSelect, fromNodeId: string, revision: "original" | "latest" = "original", clientRequestId?: string) {
+   if (["queued", "running", "waiting_approval"].includes(original.status)) {
+     throw new HttpError(409, "RUN_ACTIVE", "Wait for this run to finish (or cancel it) before re-running it");
+   }
+-  return enqueueRun(user, original.flowId, { rerunOf: original, fromNodeId, rerunRevision: revision, triggerKind: "rerun" });
++  return enqueueRun(user, original.flowId, {
++    rerunOf: original, fromNodeId, rerunRevision: revision, triggerKind: "rerun",
++    // Bind retries to the complete request. A different source, step or revision is a deliberate new execution.
++    triggerRef: clientRequestId ? `rerun:${JSON.stringify([original.id, fromNodeId, revision, clientRequestId])}` : undefined,
++  });
+ }
+ 
+ /** Cancel: queued / waiting runs stop immediately; running runs are signalled and stop between (or during) steps. */
+diff --git a/tests/integration/pilot-rerun-idempotency.test.ts b/tests/integration/pilot-rerun-idempotency.test.ts
+new file mode 100644
+index 0000000..f061d1d
+--- /dev/null
++++ b/tests/integration/pilot-rerun-idempotency.test.ts
+@@ -0,0 +1,52 @@
++import { afterAll, describe, expect, it } from "vitest";
++import { and, eq } from "drizzle-orm";
++import { db, schema } from "@/db";
++import { createFlow } from "@/server/flows";
++import { enqueueRun, rerunFromStep } from "@/server/runs";
++import { createWorkspace } from "@/server/workspaces";
++import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers";
++
++afterAll(closeDb);
++
++async function setup() {
++  const user = await makeUser("pilot-rerun");
++  const workspace = await createWorkspace(user, unique("Pilot retry"));
++  const flow = await createFlow(user, workspace.id, { templateId: "lead-qualifier", name: unique("Retry") });
++  const queued = await enqueueRun(user, flow.id);
++  await claimAndProcess(queued.id);
++  const original = await freshRun(queued.id);
++  expect(original.status).toBe("succeeded");
++  return { user, workspace, original };
++}
++
++describe("paid pilot rerun request identity", () => {
++  it("concurrent submissions and a lost-response retry create one run and one execution event", async () => {
++    const { user, workspace, original } = await setup();
++    const submit = () => rerunFromStep(user, original, "is-hot", "original", "pilot-retry-001");
++    const [first, concurrent] = await Promise.all([submit(), submit()]);
++    expect(concurrent.id).toBe(first.id);
++    await claimAndProcess(first.id);
++    const retry = await submit();
++    expect(retry.id).toBe(first.id);
++    expect(retry.status).toBe("succeeded");
++    expect((await freshRun(first.id)).output).toEqual(original.output);
++    const reruns = await db.select().from(schema.run).where(eq(schema.run.rerunOfRunId, original.id));
++    expect(reruns.map((r) => r.id)).toEqual([first.id]);
++    const executionEvents = await db.select().from(schema.usageEvent).where(and(eq(schema.usageEvent.workspaceId, workspace.id), eq(schema.usageEvent.kind, "execution")));
++    expect(executionEvents.map((event) => event.runId).sort()).toEqual([original.id, first.id].sort());
++  });
++
++  it("a new request, a different step, or a different revision remains a distinct rerun", async () => {
++    const { user, original } = await setup();
++    const otherQueued = await enqueueRun(user, original.flowId);
++    await claimAndProcess(otherQueued.id);
++    const other = await freshRun(otherQueued.id);
++    const a = await rerunFromStep(user, original, "is-hot", "original", "pilot-intent-001");
++    const b = await rerunFromStep(user, original, "is-hot", "original", "pilot-intent-002");
++    const c = await rerunFromStep(user, original, "normalise", "original", "pilot-intent-001");
++    const d = await rerunFromStep(user, original, "is-hot", "latest", "pilot-intent-001");
++    const e = await rerunFromStep(user, other, "is-hot", "original", "pilot-intent-001");
++    expect(new Set([a.id, b.id, c.id, d.id, e.id]).size).toBe(5);
++    for (const run of [a, b, c, d, e]) await claimAndProcess(run.id);
++  });
++});
+diff --git a/tests/unit/cb-pack-customer-follow-up.test.ts b/tests/unit/cb-pack-customer-follow-up.test.ts
+index 90f80ea..f694b5d 100644
+--- a/tests/unit/cb-pack-customer-follow-up.test.ts
++++ b/tests/unit/cb-pack-customer-follow-up.test.ts
+@@ -180,6 +180,7 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
+         const text = String(reply.body);
+         expect(text).toContain("Cancellations are free up to 24 hours before the visit."); // approved policy line only
+         expect(text).toMatch(/Nothing has been refunded or cancelled yet|لم يتم أي استرداد أو إلغاء حتى الآن/);
++        expect(text).toMatch(/business owner will review and decide on your refund or cancellation request|صاحب العمل طلب الاسترداد أو الإلغاء ويقرر بشأنه/);
+         for (const promise of [/we (will|have) refund/i, /refund (has been|was) (issued|processed|made)/i, /you will (get|receive) your money/i, /تم (الاسترداد|استرداد المبلغ|إلغاء)/]) expect(text).not.toMatch(promise);
+         expect(failing(o, req)).toEqual([]);
+       });
+@@ -200,6 +201,9 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
+       const skipped = structuredClone(o);
+       skipped.reply_draft!.status = "approved";
+       expect(failing(skipped, req)).toEqual(expect.arrayContaining(["review_required", "consequential_needs_person"]));
++      const unqualified = structuredClone(o);
++      unqualified.reply_draft!.body = String(unqualified.reply_draft!.body).replace("The business owner will review and decide on your refund or cancellation request.", "A member of our team will review your request and confirm the next step.");
++      expect(failing(unqualified, req)).toContain("reply_only_approved_info");
+     });
+     it("a non-refund request is not flagged", async () => {
+       const req = { ...base, body: "How much does deep cleaning cost?" };

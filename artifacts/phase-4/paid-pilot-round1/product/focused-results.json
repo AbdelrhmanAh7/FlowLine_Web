@@ -1,0 +1,137 @@
+{
+  "baseSha": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "branch": "codex/paid-pilot-product-20261003",
+  "committed": false,
+  "reviewableDiffSha256": "632bae80e00ab69340586338f7a6e7e978d51a9b42b1f229d30607927832f5ee",
+  "diffScope": "14 reviewable source, test, draft documentation and verifier files; evidence output JSON/logs are separately hashed below",
+  "files": [
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/verify-field-engine.mts",
+      "sha256": "ebc7eb92ddfee2a24339eb31a433f25119dcf5ebf4f3182ed36d653100fbcfdf"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs",
+      "sha256": "274656e76c78d9357ed0df4abdbb157f377aa3baaa7287d7cfebe14098803a5a"
+    },
+    {
+      "path": "docs/implementation/PAID_PILOT_POLICIES_DRAFT.md",
+      "sha256": "39e2d7d7ebd2e42a6d415bad88285df93dc53c7fc1036dfbf955c32f8da7f245"
+    },
+    {
+      "path": "docs/implementation/PAID_PILOT_PRODUCT_ACCEPTANCE.md",
+      "sha256": "f04b4b2b6b80dbdf13cbe4359e4d760afbfa4f0058a009efb2049f58e0822f2e"
+    },
+    {
+      "path": "docs/implementation/PAID_PILOT_SUPPORT_DRAFT.md",
+      "sha256": "016893b33864153e9e860eb1b5044c0cfaaa1978b360317e01f8fc8efcd712cb"
+    },
+    {
+      "path": "src/app/api/runs/[rid]/rerun/route.ts",
+      "sha256": "e7e3ac56e3aaceee526fe92d2c362f66aeace410bb9864ac9305ce4532f289e6"
+    },
+    {
+      "path": "src/app/w/[slug]/runs/inspector.tsx",
+      "sha256": "b09249326d9c2b90df3db6f9d6d5607fd20fc42d8cff9b549d7d82ab15e75cc8"
+    },
+    {
+      "path": "src/app/w/[slug]/settings/billing-plan.tsx",
+      "sha256": "fabe293973484bd8cdd4b9d2501278afa77c34c90c3e6925d6d3c81d7a27cf84"
+    },
+    {
+      "path": "src/company-builder/packs/customer-follow-up.ts",
+      "sha256": "77208d3542cfde4cb7f6d8f639b5d5d550c8ab65d9b22a190225e5be87579143"
+    },
+    {
+      "path": "src/i18n/messages/ar.json",
+      "sha256": "8c9cd3b659e0579ef9ad45d61de6b05df56f5f4117dc887d31128960cc70f46f"
+    },
+    {
+      "path": "src/i18n/messages/en.json",
+      "sha256": "f334bfd2604ef169b7c4ad6b56bcbe07d5a536af19db09ec4551218119a887a3"
+    },
+    {
+      "path": "src/server/runs.ts",
+      "sha256": "fa952ba28dcb57eff163386faf46f16ea4bdfbee081360400e7f0426bd081d13"
+    },
+    {
+      "path": "tests/integration/pilot-rerun-idempotency.test.ts",
+      "sha256": "131ef2019b18926d165c6d2c1f253cb5f0d4fadd67949a4af81f5edb543621bb"
+    },
+    {
+      "path": "tests/unit/cb-pack-customer-follow-up.test.ts",
+      "sha256": "228a8e096a77a48b9bd7af88be110a55d3a7053bbfe050b07a9aafd51c718aaa"
+    }
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run --project unit tests/unit/cb-pack-customer-follow-up.test.ts tests/unit/local-scenarios.test.ts --fileParallelism=false",
+      "exitCode": 0,
+      "passed": 124
+    },
+    {
+      "command": "pnpm exec vitest run --project unit tests/unit/i18n.test.ts --fileParallelism=false",
+      "exitCode": 0,
+      "passed": 16
+    },
+    {
+      "command": "pnpm exec vitest run --project contract tests/contract/billing.test.ts tests/contract/paddle-billing.test.ts --fileParallelism=false",
+      "exitCode": 0,
+      "passed": 36,
+      "scope": "local fake-provider adapters, not real sandbox verification"
+    },
+    {
+      "command": "node artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs",
+      "exitCode": 0,
+      "passed": 17,
+      "scope": "fresh isolated Postgres, generated secrets, cached image, no browser/provider"
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --incremental false",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec eslint <7 changed source/test files>",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx artifacts/phase-4/paid-pilot-round1/product/verify-field-engine.mts",
+      "exitCode": 0,
+      "passedRequests": 10,
+      "scope": "engine + in-memory store + existing immutable v2 scorer; not API/worker/approval/provider/browser acceptance"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "preservedFailure": "First fresh integration attempt: helper drained queued reruns when processing the other source. Reordered setup; assertions retained. Failed log/JSON preserved with attempt1 suffix.",
+  "evidence": [
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/field-engine-1790990798225.json",
+      "sha256": "35ecbc5169ae42cca654de588cac9c6774408b76fa25ffa10b7cd26f2f9132f0"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/rerun-integration-1790990718360.json",
+      "sha256": "6bfb87ce21f1eca5af38e4f28a2dbb85a1a7c2d75f39f6ceaed545597e3e2bc2"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/rerun-integration-1790990718360.log",
+      "sha256": "c0b5b156964c4bc392132de28a0c3191bc249a3a1ed603a2b714fdbc3f2a2be7"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/rerun-integration-attempt1.json",
+      "sha256": "697379eae85c1537453a0e1d58d97e18bc1777efb7deaf5208256b0c6e699124"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/product/rerun-integration-attempt1.log",
+      "sha256": "7afafe94c238869432136e23e9d8aeadd4f6641f80dd4d2c30cfa14174549c33"
+    }
+  ],
+  "limits": [
+    "No commits or pushes by worker",
+    "Real sandbox billing, provider verification, human UAT, final exact-head CI and fresh API/worker field rerun remain unverified",
+    "No paid plan installed; price/limits/support/policies are owner-review drafts",
+    "No .env file reads, spending, live external action, browser gate, deployment or invitation"
+  ],
+  "verdict": "NOT READY"
+}
