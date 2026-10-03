@@ -2,7 +2,7 @@
 
 ## H3 security readiness review — 2026-10-03
 
-The uncommitted candidate based on `2c85f05` enforces local MFA across all session reads, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. No commit, push, PR, merge or deployment was performed. This update does not change private-beta or production acceptance.
+PR #21 (H3, open; restacked on PR #17) enforces local MFA across all session reads, refuses replayed TOTP codes at both federated gates, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. It is not merged or deployed. This update does not change private-beta or production acceptance.
 
 ## Current execution — 2026-09-30
 

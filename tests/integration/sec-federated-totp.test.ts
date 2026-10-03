@@ -182,6 +182,62 @@ describe("pending factor lifetime and consumption", () => {
   });
 });
 
+// Written for CI (PostgreSQL concurrency and the real route); not executed locally. Codes are computed once, so a 30 s
+// boundary crossed mid-test cannot change which step a code belongs to.
+describe("federated TOTP codes cannot be replayed", () => {
+  it("accepts a code once per user across fresh challenges, refuses older steps, and keeps a refused challenge usable", async () => {
+    const user = await makeVerifiedUser("totp-replay");
+    const secret = await enrolTotp(user.id);
+    const current = code(secret);
+    const next = code(secret, 1);
+    const sessionCookie = (await auth.$context).authCookies.sessionToken.name;
+    const first = await createFederatedChallenge(user.id, "/app");
+    expect((await challengePOST(await challengeRequest(first, { code: current }), undefined)).status).toBe(200);
+    expect(await sessionRows(user.id)).toHaveLength(1);
+    const replayed = await createFederatedChallenge(user.id, "/app");
+    const refused = await challengePOST(await challengeRequest(replayed, { code: current }), undefined);
+    expect(refused.status).toBe(403);
+    expect((await refused.json()).error.code).toBe("FEDERATED_MFA_CODE_INVALID");
+    expect(cookieFrom(refused, sessionCookie)).toBe("");
+    expect(await sessionRows(user.id)).toHaveLength(1); // the refused attempt's unissued session was removed
+    const marker = async () => (await db.select().from(schema.verification).where(eq(schema.verification.id, `totp-step:${user.id}`)))[0]?.value;
+    const consumed = await marker();
+    expect(consumed).toMatch(/^\d+$/);
+    // The refusal rolled back with the transaction: the pending challenge survives and the next code completes it.
+    expect((await challengePOST(await challengeRequest(replayed, { code: next }), undefined)).status).toBe(200);
+    expect(await sessionRows(user.id)).toHaveLength(2);
+    expect(Number(await marker())).toBe(Number(consumed) + 1);
+    const older = await createFederatedChallenge(user.id, "/app");
+    expect((await challengePOST(await challengeRequest(older, { code: current }), undefined)).status).toBe(403);
+    expect(await sessionRows(user.id)).toHaveLength(2);
+    expect(Number(await marker())).toBe(Number(consumed) + 1);
+  });
+
+  it("lets only one of two concurrent challenges use the same code", async () => {
+    const user = await makeVerifiedUser("totp-replay-race");
+    const secret = await enrolTotp(user.id);
+    const current = code(secret);
+    const a = await createFederatedChallenge(user.id, "/app");
+    const b = await createFederatedChallenge(user.id, "/app");
+    const results = await Promise.all([challengePOST(await challengeRequest(a, { code: current }), undefined), challengePOST(await challengeRequest(b, { code: current }), undefined)]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 403]);
+    expect(await sessionRows(user.id)).toHaveLength(1);
+  });
+
+  it("does not burn a code when the pending authority fails inside the completion transaction", async () => {
+    const user = await makeVerifiedUser("totp-replay-revoked");
+    const secret = await enrolTotp(user.id);
+    const current = code(secret);
+    const stale = await createFederatedChallenge(user.id, "/app");
+    // The account/password fingerprint is only rechecked inside the transaction, after the code itself verified.
+    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "credential", accountId: user.id, password: "synthetic-new-password-hash" });
+    expect((await challengePOST(await challengeRequest(stale, { code: current }), undefined)).status).toBe(401);
+    expect(await db.select().from(schema.verification).where(eq(schema.verification.id, `totp-step:${user.id}`))).toHaveLength(0);
+    const fresh = await createFederatedChallenge(user.id, "/app");
+    expect((await challengePOST(await challengeRequest(fresh, { code: current }), undefined)).status).toBe(200);
+  });
+});
+
 describe("H3 pending workspace authority fences", () => {
   it("refuses factor completion after the session that initiated SSO is revoked", async () => {
     mockTenantIdp();

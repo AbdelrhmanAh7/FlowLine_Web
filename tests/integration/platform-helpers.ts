@@ -34,10 +34,17 @@ export async function sessionFor(user: { id: string; email: string }): Promise<T
   return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
 }
 
-/** A fixture session that actually verifies local TOTP and has session-bound assurance. */
-export async function assuredSessionFor(user: { id: string; email: string }, secret: string): Promise<TestSession> {
+/**
+ * A fixture session that actually verifies local TOTP and has session-bound assurance. Fixtures may be built several
+ * times inside one 30 s window, so it clears the federated-gate replay marker first. It deliberately leaves the
+ * platform step-up marker (`platformAdmin.lastTotpStep`) alone: sec-platform asserts that step-up codes cannot be
+ * replayed across sessions. The federated replay behaviour itself is covered by tests that drive the gate directly.
+ * `at` pins the code's time step for tests that must know which step this fixture consumed.
+ */
+export async function assuredSessionFor(user: { id: string; email: string }, secret: string, at = Date.now()): Promise<TestSession> {
+  await resetFederatedTotpReplay(user.id);
   const pending = await createFederatedChallenge(user.id, "/admin");
-  const { session } = await completeFederatedChallenge(pending, code(secret));
+  const { session } = await completeFederatedChallenge(pending, totpCodeFor(secret, at));
   const c = await ssoSessionCookie(session.token);
   return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
 }
@@ -68,9 +75,15 @@ export function code(secret: string, offsetSteps = 0) {
   return totpCodeFor(secret, Date.now() + offsetSteps * 30_000);
 }
 
-/** Lets a test reuse the current step again (tests run inside one 30 s window). */
+/** Lets a test reuse the current step at the federated gates (challenge completion and SSO link confirmation). */
+export async function resetFederatedTotpReplay(userId: string) {
+  await db.delete(schema.verification).where(eq(schema.verification.id, `totp-step:${userId}`));
+}
+
+/** Lets a test reuse the current step again (tests run inside one 30 s window): platform step-up and federated gates. */
 export async function resetTotpReplay(userId: string) {
   await db.update(schema.platformAdmin).set({ lastTotpStep: null }).where(eq(schema.platformAdmin.userId, userId));
+  await resetFederatedTotpReplay(userId);
 }
 
 /** A browser-like mutation to a platform route: exact Origin, the session-bound CSRF token, JSON. */

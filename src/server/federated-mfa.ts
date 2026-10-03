@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { BetterAuthPlugin } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { deleteSessionCookie } from "better-auth/cookies";
@@ -11,6 +11,7 @@ import { safePath } from "./email/redirect";
 import { audit, userActor } from "./audit";
 import type { Role } from "@/db/schema";
 import { bindFederatedLink, federatedProviderId } from "./federated-link";
+import { TOTP_PERIOD } from "./totp";
 
 export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
 const pendingId = (token: string) => `federated-mfa:${sha256Hex(token)}`;
@@ -24,6 +25,36 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 function accountsHash(accounts: (typeof schema.account.$inferSelect)[]) {
   // Ignore refreshed provider tokens; include local password changes and unlink/relink.
   return sha256Hex(JSON.stringify(accounts.map((a) => [a.id, a.providerId, a.accountId, a.password]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))));
+}
+
+const totpStepId = (userId: string) => `totp-step:${userId}`;
+
+/**
+ * Replay guard for the federated TOTP gates (challenge completion and SSO link confirmation).
+ * `verifyTotp` only proves a code is valid within +-1 step; accepting the same or an older step again would let one
+ * observed code authorise several pending challenges or link confirmations for about 90 seconds. The newest accepted
+ * step per user lives in one `verification` row (no schema change). The conditional upsert is a single atomic
+ * statement, so two concurrent requests with the same code cannot both pass; callers run it inside the transaction
+ * that issues the session or writes the link, so an attempt that rolls back does not burn the code.
+ * Returns the query so it can be inspected without a database; await it through `consumeFederatedTotpStep`.
+ */
+export function totpStepUpsert(connection: Db | Tx, userId: string, step: number) {
+  const id = totpStepId(userId);
+  // A code stays acceptable until its step falls out of the +-1 window; keep the marker past that point.
+  const expiresAt = new Date((step + 3) * TOTP_PERIOD * 1000);
+  return connection.insert(schema.verification)
+    .values({ id, identifier: id, value: String(step), expiresAt })
+    .onConflictDoUpdate({
+      target: schema.verification.id,
+      set: { value: String(step), expiresAt, updatedAt: new Date() },
+      setWhere: sql`(${schema.verification.value})::bigint < ${step}::bigint`,
+    })
+    .returning({ id: schema.verification.id });
+}
+
+/** True when `step` is newer than every step this user already used at a federated gate; records it. */
+export async function consumeFederatedTotpStep(connection: Db | Tx, userId: string, step: number) {
+  return (await totpStepUpsert(connection, userId, step)).length === 1;
 }
 
 export function federatedCookieOptions() {
@@ -86,7 +117,8 @@ export async function completeFederatedChallenge(token: string, code: string) {
   const { row, pending } = await federatedChallenge(token);
   if (!(await checkRate(`federated-mfa:${pending.userId}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Try again later");
   const { verifyTotp } = await import("./platform-access");
-  if (await verifyTotp(pending.userId, code) === null) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "Enter the current authenticator code");
+  const totpStep = await verifyTotp(pending.userId, code);
+  if (totpStep === null) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "Enter the current authenticator code");
   const { auth } = await import("@/lib/auth");
   const ctx = await auth.$context;
   // Adapter hooks/defaults run outside our locks, matching the ordinary SSO fence.
@@ -128,6 +160,9 @@ export async function completeFederatedChallenge(token: string, code: string) {
           data: { email: user.email, newUser: false, newMember: false, role: member.role, testSignIn: false, firstVerification, localTotp: true },
         });
       }
+      // Last, after every authority check, so a stale or revoked challenge never burns a code; a refusal here rolls the
+      // transaction back and the catch below removes the unissued session.
+      if (!(await consumeFederatedTotpStep(tx, user.id, totpStep))) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "That code was already used. Enter the next code from your authenticator");
       await recordMfaAssurance(currentSession.token, user.id, currentSession.expiresAt, tx);
       await tx.delete(schema.verification).where(eq(schema.verification.id, row.id));
       return { session: currentSession, next: pending.next };

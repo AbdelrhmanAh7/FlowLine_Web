@@ -9,7 +9,7 @@ const fixture = vi.hoisted(() => ({
   rows: new Map<string, { id: string; identifier: string; value: string; expiresAt: Date }>(),
   session: { token: "unissued-token", userId: "user-1", expiresAt: new Date("2099-01-01") },
   sessionLive: true, removedSessions: 0, providerStamp: "configuration-1" as string | null,
-  codeValid: true, createdSessions: 0,
+  codeValid: true, totpStep: 123, createdSessions: 0,
   markVerified: vi.fn(async () => {}),
 }));
 vi.mock("@/db", async () => {
@@ -33,7 +33,18 @@ vi.mock("@/db", async () => {
     select,
     insert: () => ({ values: (row: { id: string; identifier: string; value: string; expiresAt: Date }) => {
       const save = async () => { fixture.rows.set(row.id, row); };
-      return { then: (...args: Parameters<Promise<void>["then"]>) => save().then(...args), onConflictDoUpdate: save };
+      // The replay marker is a conditional upsert (`set ... where value < step`) that reports whether it updated a row;
+      // everything else is an unconditional upsert. This models, but does not prove, the SQL (see federated-totp-replay.test.ts).
+      const upsert = async () => {
+        const existing = fixture.rows.get(row.id);
+        if (row.id.startsWith("totp-step:") && existing && Number(existing.value) >= Number(row.value)) return [];
+        fixture.rows.set(row.id, row);
+        return [{ id: row.id }];
+      };
+      return {
+        then: (...args: Parameters<Promise<void>["then"]>) => save().then(...args),
+        onConflictDoUpdate: () => ({ returning: upsert, then: (...args: Parameters<Promise<unknown[]>["then"]>) => upsert().then(...args) }),
+      };
     } }),
     delete: (table: Parameters<typeof getTableName>[0]) => ({ where: async (sql: SQL) => {
       if (getTableName(table) === "session") fixture.removedSessions++;
@@ -44,7 +55,7 @@ vi.mock("@/db", async () => {
   return { db, schema: await import("@/db/schema") };
 });
 vi.mock("@/server/rate-limit", () => ({ checkRate: async () => true }));
-vi.mock("@/server/platform-access", () => ({ verifyTotp: async () => fixture.codeValid ? 123 : null }));
+vi.mock("@/server/platform-access", () => ({ verifyTotp: async () => fixture.codeValid ? fixture.totpStep : null }));
 vi.mock("@/server/auth-dispatch", () => ({ federatedProviderStamp: async () => fixture.providerStamp, markFederatedProviderVerified: fixture.markVerified }));
 vi.mock("@/lib/auth", () => ({ auth: { $context: Promise.resolve({ internalAdapter: { createSession: async () => { fixture.createdSessions++; return fixture.session; } } }) } }));
 import { completeFederatedChallenge, createFederatedChallenge } from "@/server/federated-mfa";
@@ -52,13 +63,14 @@ import { completeFederatedChallenge, createFederatedChallenge } from "@/server/f
 beforeEach(() => {
   fixture.rows.clear();
   fixture.markVerified.mockClear();
-  Object.assign(fixture, { sessionLive: true, removedSessions: 0, createdSessions: 0, codeValid: true, providerStamp: "configuration-1" });
+  Object.assign(fixture, { sessionLive: true, removedSessions: 0, createdSessions: 0, codeValid: true, totpStep: 123, providerStamp: "configuration-1" });
   fixture.accounts = [{ id: "account-1", providerId: "github", accountId: "subject", password: null }];
   fixture.factor = { secret: "encrypted-factor", verified: true };
   fixture.user.updatedAt = new Date("2026-01-01");
 });
 const start = () => createFederatedChallenge("user-1", "/app", undefined, undefined, { provider: "github", configStamp: "configuration-1" });
 const proofRows = () => [...fixture.rows.values()].filter((r) => r.identifier.startsWith("mfa-session:"));
+const stepMarker = () => fixture.rows.get("totp-step:user-1")?.value;
 
 describe("pending federation authority checks (mocked transactions, not PostgreSQL lock proof)", () => {
   it("consumes a valid challenge once, records assurance, and rejects replay", async () => {
@@ -99,5 +111,46 @@ describe("pending federation authority checks (mocked transactions, not PostgreS
     await expect(completeFederatedChallenge(token, "123456")).rejects.toMatchObject({ status: 401 });
     expect(fixture.createdSessions).toBe(0);
     expect(proofRows()).toHaveLength(0);
+  });
+});
+
+describe("TOTP replay guard (mocked transactions; the SQL is checked in federated-totp-replay.test.ts and PostgreSQL concurrency in CI)", () => {
+  it("accepts a code once: the same step is refused for a fresh challenge and the unissued session is removed", async () => {
+    expect(await completeFederatedChallenge(await start(), "123456")).toMatchObject({ next: "/app" });
+    expect(stepMarker()).toBe("123");
+    expect(proofRows()).toHaveLength(1);
+    await expect(completeFederatedChallenge(await start(), "123456")).rejects.toMatchObject({ status: 403, code: "FEDERATED_MFA_CODE_INVALID" });
+    expect(fixture.createdSessions).toBe(2);
+    expect(fixture.removedSessions).toBe(1);
+    expect(proofRows()).toHaveLength(1);
+    expect(fixture.markVerified).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an older step after a newer one, accepts the next step, and keeps the highest step", async () => {
+    fixture.totpStep = 124;
+    await completeFederatedChallenge(await start(), "123456");
+    fixture.totpStep = 123;
+    await expect(completeFederatedChallenge(await start(), "123456")).rejects.toMatchObject({ status: 403, code: "FEDERATED_MFA_CODE_INVALID" });
+    expect(stepMarker()).toBe("124");
+    fixture.totpStep = 125;
+    await completeFederatedChallenge(await start(), "123456");
+    expect(stepMarker()).toBe("125");
+  });
+
+  it("does not burn a code when authority fails, so the user's next attempt with the same code still works", async () => {
+    const stale = await start();
+    fixture.providerStamp = "configuration-2";
+    await expect(completeFederatedChallenge(stale, "123456")).rejects.toMatchObject({ status: 401 });
+    expect(stepMarker()).toBeUndefined();
+    fixture.providerStamp = "configuration-1";
+    await expect(completeFederatedChallenge(await start(), "123456")).resolves.toMatchObject({ next: "/app" });
+    expect(stepMarker()).toBe("123");
+  });
+
+  it("does not record a step for an invalid code", async () => {
+    const token = await start();
+    fixture.codeValid = false;
+    await expect(completeFederatedChallenge(token, "000000")).rejects.toMatchObject({ status: 403 });
+    expect(stepMarker()).toBeUndefined();
   });
 });

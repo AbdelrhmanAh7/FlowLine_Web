@@ -8,6 +8,7 @@ import { randomToken, sha256Hex } from "./crypto";
 import { HttpError } from "./http";
 import { checkRate } from "./rate-limit";
 import { verifyTotp } from "./platform-access";
+import { consumeFederatedTotpStep } from "./federated-mfa";
 import { ssoProviderId } from "./sso";
 import { deliverAccountToken, prepareAccountToken } from "./email/flows";
 
@@ -80,8 +81,10 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
   if (!details.mailboxVerified) throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Verify ownership through the Flowline email link");
   await requireWorkspace(user, intent.workspaceId, "viewer");
   if (!(await checkRate(`sso-link:${user.id}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Try again later");
+  let totpStep: number | null = null;
   if (details.needsTotp) {
-    if (await verifyTotp(user.id, assurance.code ?? "") === null) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your authenticator");
+    totpStep = await verifyTotp(user.id, assurance.code ?? "");
+    if (totpStep === null) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your authenticator");
   } else if (details.needsPassword) {
     if (!assurance.password || !(await verifyPassword({ hash: details.passwordHash!, password: assurance.password }))) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your password");
   } else if (Date.now() - session.createdAt.getTime() > 300_000) {
@@ -102,6 +105,8 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${providerId}:${intent.subject}`}))`);
     const [linked] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, intent.subject)));
     if (linked && linked.userId !== user.id) throw invalid();
+    // After every authority check, inside this transaction: a code already used at a federated gate cannot confirm a link.
+    if (totpStep !== null && !(await consumeFederatedTotpStep(tx, user.id, totpStep))) throw new HttpError(403, "SSO_LINK_ASSURANCE", "That code was already used. Confirm with the next code from your authenticator");
     if (!linked) await tx.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId, accountId: intent.subject });
     if (!cfg.verifiedAt) await tx.update(schema.ssoConfig).set({ verifiedAt: new Date(), updatedAt: new Date() }).where(eq(schema.ssoConfig.workspaceId, intent.workspaceId));
     await tx.delete(schema.verification).where(eq(schema.verification.id, pending.id));
