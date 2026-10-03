@@ -23,7 +23,9 @@ interface Pending { userId: string; next: string; userStamp: string; factorHash:
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 function accountsHash(accounts: (typeof schema.account.$inferSelect)[]) {
-  // Ignore refreshed provider tokens; include local password changes and unlink/relink.
+  // Ignore refreshed provider tokens; include local password changes and unlink/relink. `password` is Better Auth's stored
+  // scrypt output (salt:key) or null, never plaintext, so this is a change fingerprint, not password hashing (CodeQL #11,
+  // dismissed as a false positive; see docs/security/FEDERATED_MFA.md).
   return sha256Hex(JSON.stringify(accounts.map((a) => [a.id, a.providerId, a.accountId, a.password]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))));
 }
 
