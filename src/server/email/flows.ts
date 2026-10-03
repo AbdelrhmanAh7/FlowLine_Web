@@ -69,6 +69,7 @@ export async function issueAccountToken(purpose: Purpose, user: { id: string; em
     await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id));
     throw error;
   }
+  return { id: row!.id };
 }
 
 export async function sendNotice(kind: "passwordChanged" | "emailVerified" | "emailChanged", to: string, request?: Request) {
@@ -177,6 +178,11 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
+      // Historical tenant-created identities have no independently proven mailbox
+      // ownership. Recovery removes those methods; explicitly mailbox-approved
+      // links retain normal recovery behaviour.
+      await tx.delete(schema.account).where(and(eq(schema.account.userId, row.userId), sql`${schema.account.providerId} like 'sso:%'`, sql`${schema.account.providerId} not like 'sso:approved:%'`));
+      await tx.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, row.userId));
       // Any other outstanding reset link for this account stops working too.
       await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.userId, row.userId), eq(schema.emailToken.purpose, "reset"), isNull(schema.emailToken.consumedAt)));
     } else {

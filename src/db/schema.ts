@@ -1011,7 +1011,7 @@ export const ssoState = pgTable("sso_state", {
   nonce: text("nonce").notNull(),
   codeVerifierEnc: text("code_verifier_enc").notNull(),
   keyId: text("key_id").notNull(),
-  /** The signed-in user who started this sign-in, if any — the only account an email match may link to. */
+  /** Initiator of a possible proposal only. A link is persisted exclusively by POST confirmation. */
   initiatorUserId: text("initiator_user_id"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
