@@ -12,7 +12,7 @@ requirement for the web release and changes nothing else in Phases 1–4.
 | Path | Code | Today |
 |---|---|---|
 | Workflow AI nodes (`ai.generate` / `ai.extract` / `ai.classify`) | `worker/handlers.ts` `aiNode` → `resolveRoute` / `executeAi` | Workspace BYOK route, policy and hub metering. Node route pins take precedence over the workspace default; legacy local pins are refused. |
-| Agents | `worker/agent-runner.ts` → `src/ai/chat.ts` `chat` / `resolveAgentRoute` | Cloud hub with route snapshots on agent versions. The model proposes tools; the runtime applies ALLOW/ASK/DENY. The hub meters every attempt and enforces agent cost limits. |
+| Agents | `worker/agent-runner.ts` → `src/ai/chat.ts` `chat` / `resolveAgentRoute` | Cloud hub. An agent version snapshots its route (the picked one, else the workspace default) when saved; with neither it stores none and uses the workspace default at run time. The model proposes tools; the runtime applies ALLOW/ASK/DENY. The hub meters every attempt and enforces agent cost limits. |
 | Copilot generate + repair | `src/server/copilot.ts` → `src/ai/provider.ts` `getAiProvider` → `executeAi` | Policy plan/repair routes, typed validation, preview/diff, approval, draft-only save. Hub-metered. |
 | Knowledge | `src/server/knowledge.ts` | **No model calls.** Postgres full-text search; "No embedding model is used or claimed". Nothing to migrate. Embeddings/rerank stay out of scope (§4). |
 | Background tasks | worker `retention`, `runner` | No AI calls. |
@@ -61,7 +61,8 @@ UI (Settings → AI Providers, ModelPicker)
   kept, read-only. Executing them fails with `AI_LOCAL_MIGRATION_REQUIRED` and a message saying what to pick. They are
   never converted silently. A migration banner lists affected items.
 - **Snapshots:** the published version and run records store the **resolved route**, so a later change to the
-  workspace default doesn't change a published flow.
+  workspace default doesn't change a published flow. Without a default at publish time its AI steps stay unpinned
+  and use the default at run time.
 
 ### Permissions
 

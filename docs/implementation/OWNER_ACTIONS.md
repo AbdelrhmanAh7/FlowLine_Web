@@ -13,7 +13,7 @@ These checks remain unverified from the repository. Confirm the running app and 
 2. **Owner admin bootstrap and TOTP enrolment**
    - Purpose: establish the protected platform administrator account and complete its authenticator setup.
    - Page: `http://localhost:3000/admin/setup` in the same local app.
-   - Owner action: redeem a privately issued bootstrap code and complete setup; the operator command is `node scripts/with-env.mjs .env pnpm exec tsx scripts/admin/bootstrap.mts --email <owner>`. Enter codes only in the page and keep seeds and recovery codes private.
+   - Owner action: redeem a privately issued bootstrap code and complete setup; the operator command is `node scripts/with-env.mjs .env pnpm exec tsx scripts/admin/bootstrap.mts --email <owner>`. Run it in a clean shell (see [MIGRATION.md step 3](../ai/MIGRATION.md)): `with-env.mjs` never overrides variables already set, so an inherited `DATABASE_URL` would target another database. Enter codes only in the page and keep seeds and recovery codes private.
    - Claude verifies after: the page's completed setup state and access to the protected admin area, without viewing or recording authenticator material.
 
 3. **Reconcile the existing merge and review evidence**

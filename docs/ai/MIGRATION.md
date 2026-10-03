@@ -62,15 +62,20 @@ are in the private beta runbook.
    invalidate unproven prices and key verifications. They are tested from a Phase 4 database in
    `tests/integration/sec-upgrade.test.ts`.
 3. **Bootstrap the first platform admin:**
+   - `scripts/with-env.mjs` never overrides a variable that is already set in the shell (even an empty one), so an
+     inherited value beats the env file. Run steps 3 and 5 in a fresh shell, or unset the target variables first
+     (POSIX: prefix with `env -u DATABASE_URL -u FLOWLINE_ENCRYPTION_KEY -u FLOWLINE_ENCRYPTION_KEYS_OLD -u
+     FLOWLINE_PLATFORM_ENCRYPTION_KEY -u FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD`). Bootstrap uses `DATABASE_URL` (and
+     `FLOWLINE_ENV` in its test-database guard); rewrap also uses the four key variables.
    - `node scripts/with-env.mjs .env.staging pnpm exec tsx scripts/admin/bootstrap.mts --email <admin>` prints a
      one-time code; redeem it at `/admin/setup`. Substitute the intended deployment's protected env file.
    - Configure email first if needed, verify the address, enrol TOTP.
 4. **Import from environment,** once per credential, in `/admin`: Google/Slack/GitHub OAuth apps, sign-in apps,
    email, Paddle. It is explicit and audited, and runtime never falls back to env afterwards.
 5. **Re-encrypt:** run `node scripts/with-env.mjs .env.staging pnpm exec tsx scripts/admin/rewrap.mts` with the intended
-   deployment's env file. Repeat until every table reports `remaining=0`, `failed=0` and "Rotation complete"; it
-   exits non-zero while anything still needs an old key. Only then retire old keys. On a large database this is a
-   long-running maintenance job.
+   deployment's env file, in a clean environment (step 3). Repeat until every table reports `remaining=0`,
+   `failed=0` and "Rotation complete"; it exits non-zero while anything still needs an old key. Only then retire old
+   keys. On a large database this is a long-running maintenance job.
 6. **Existing Google/Slack/GitHub connections** have no recorded issuing app. They reconnect at their next refresh,
    unless you run the backfill with the client ID that is proven to have issued them (the `--backfill-oauth-app`
    option of the rewrap script). Unproven ones are never guessed.

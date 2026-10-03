@@ -28,7 +28,10 @@ The current private-beta exercise has an aggregate **$0** cap; a saved key or a 
 4. The models the key can see are listed on the connection. Choose **Refresh models** at any time. If a refresh fails,
    the previous list is kept and marked out of date.
 5. Pick a **workspace default model**. Unpinned AI steps and Copilot use it unless policy plan/repair routes are set.
-   Published flows and saved agent versions snapshot their route; changing the default does not repin them.
+   Publishing a flow or saving an agent version snapshots the default that exists at that moment, so changing it later
+   does not repin them. If there is no default then, the unpinned AI steps and the agent version (which stores no
+   route) use the workspace default as it is at run time, and fail as not configured while there is none. Steps with
+   a legacy `model` string are never snapshotted.
 6. Decide **who may use** the connection. By default only owners may use it. Connecting a key doesn't give members
    access: tick **Editors** to let them pick it.
 7. On an AI step, open **AI model** and search the picker. You can filter by capability, provider, cost information,

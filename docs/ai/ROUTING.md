@@ -16,7 +16,7 @@
 2. **Pin:**
    - an AI step's `route`;
    - an agent version's `route`. When the agent was saved without a pick, this is a **snapshot** of the workspace
-     default at save time;
+     default at save time (none stored if there was no default; it then resolves to the default at run time);
    - Copilot's planning or repair route from the workspace policy.
 3. **The workspace default route.**
 

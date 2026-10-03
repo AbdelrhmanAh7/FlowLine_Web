@@ -33,8 +33,8 @@ Arabic is the default language (RTL), with English as a secondary language throu
   - **Copilot:** you describe a flow, and it produces a validated proposal and diff, saved as a draft only after you
     approve. It never runs anything. Quality is **experimental** — see Status.
 - **Platform admin (`/admin`):** a separate admin principal (TOTP sign-in, and a fresh authenticator code — step-up, valid 10 minutes — before writes) where
-  operators enter Flowline's own service credentials in the UI — OAuth apps (Google/Slack/GitHub), sign-in apps,
-  email provider, and Paddle billing — instead of environment variables. See `docs/security/CREDENTIALS_DESIGN.md`.
+  operators enter Flowline's own service credentials in the UI — OAuth apps (Google/Slack/GitHub), sign-in apps
+  (platform ZITADEL: see Requirements), email provider, and Paddle billing — instead of environment variables. See `docs/security/CREDENTIALS_DESIGN.md`.
 - **Collaboration:** invites, owner/editor/viewer roles (one permission matrix, enforced server-side), sharing a copy
   without credentials, version history, rollback, and an audit log.
 - **Company Builder:** outcome-first interview, reviewed plan, draft installation and sample trials at
@@ -72,8 +72,10 @@ current owner credentials, live account state and remote CI are unverified in th
   (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
-  Platform ZITADEL sign-in optionally uses the complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`,
-  `ZITADEL_CLIENT_SECRET` tuple in `.env`; see `.env.example` and `docs/DEVELOPER_GUIDE.md`.
+  Platform ZITADEL sign-in is the exception: it is configured by the complete server-only `ZITADEL_ISSUER`,
+  `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` tuple in `.env`, which takes precedence over the encrypted `/admin`
+  settings. If all three are absent the `/admin` settings apply; a partial or malformed tuple disables ZITADEL with no
+  fallback. See `.env.example` and `docs/DEVELOPER_GUIDE.md`.
 
 ## Quick start (development)
 
