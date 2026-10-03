@@ -43,6 +43,8 @@ Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`;
 
 Tests use port 3100 and isolated test databases, never the development database. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
 
+For browser timeouts, distinguish the whole-test deadline from time spent on the final action. The current CI upload includes text reports, failure screenshots and error context, but excludes Playwright trace ZIPs and the native runner's `test-results/<browser>-<shard>-results.json`. A trace path in a text report does not mean that trace was uploaded. Preserve private diagnostic outputs before runner teardown and extract sanitized evidence. See [the PR #14 WebKit diagnosis](implementation/WEBKIT_14_DIAGNOSIS.md) for the exact three-stack comparison and isolated-journey commands; these require a dedicated test environment, not a shared laptop session with heavy checks prohibited.
+
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.

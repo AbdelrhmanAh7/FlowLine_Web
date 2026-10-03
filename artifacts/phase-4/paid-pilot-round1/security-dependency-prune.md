@@ -22,6 +22,8 @@ The existing [GHSA-67mh-4wv8-2f99 advisory](https://github.com/evanw/esbuild/sec
 
 ## Remaining validation
 
-L1 is **PARTIAL**: the recorded production advisory graph is eliminated and focused toolkit/auth/migration/worker checks pass, but a full Next production build, Node 22 execution and combined final-candidate CI remain unverified. Host was Node 25.6.1. Do not call the paid pilot ready or claim a CI gate. The lead coordinates additional Node 22/combined proof separately under the single heavy-job rule.
+At the original dirty-candidate checkpoint, L1 was **PARTIAL**: the recorded production advisory graph was eliminated and focused toolkit/auth/migration/worker checks passed, but a full Next production build, Node 22 execution and combined final-candidate CI were unverified. Host was Node 25.6.1.
+
+Subsequent evidence (2026-10-03): CI run `37093517476` at `f10278806a20a80b0bedd683ce446c46e7d0e416` built successfully and started all three test stacks on Node 22.23.3. Chromium/Firefox jobs succeeded, but WebKit had 77 passed / 1 failed and the final gate **failed**. Offline inspection at PR head `dd840db` found no causal loader import path; WebKit/test timing is suspected but not established. The CI Git object and action trace are absent locally, so exact tree equivalence and root cause remain unverified. See [WEBKIT_14_DIAGNOSIS.md](../../../docs/implementation/WEBKIT_14_DIAGNOSIS.md). L1 remains **PARTIAL**; do not claim a passing combined gate or pilot readiness.
 
 On every Kit upgrade, remove/re-evaluate the exact-version pruning rule, inspect new shipped runtime imports and repeat frozen install, unsuppressed audit, schema generation/check, auth/worker compilation and final-candidate build/tests. Prefer an upstream fixed release when available.
