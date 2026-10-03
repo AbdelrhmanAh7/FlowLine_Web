@@ -324,7 +324,7 @@ test("SSO: owner tests configuration without linking; mailbox-proven members exp
   await p2.getByLabel("Workspace slug").fill(workspace.slug);
   await p2.getByRole("button", { name: "Sign in with SSO" }).click();
   await expect(p2).toHaveURL(/\/sign-in\?sso_error=/);
-  await expect(p2.getByRole("alert")).toContainText("verify your email ownership");
+  await expect(p2.getByRole("alert").filter({ hasText: "verify your email ownership" })).toContainText("verify your email ownership");
   const invitation = await (await page.request.post(`/api/workspaces/${workspace.id}/invites`, { data: { email: newcomer, role: "editor" } })).json();
   await signUpVerified(p2.request, newcomer);
   expect((await p2.request.post(`/api/invites/${new URL(invitation.url).pathname.split("/").at(-1)}`)).ok()).toBeTruthy();
