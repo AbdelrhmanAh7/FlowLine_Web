@@ -13,6 +13,7 @@ export interface CatalogAction {
   verifiable: boolean;
   requiredScopes: string[];
   inputSchema: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] } | null;
+  outputSchema: Record<string, unknown> | null;
 }
 export interface CatalogProvider {
   id: string;

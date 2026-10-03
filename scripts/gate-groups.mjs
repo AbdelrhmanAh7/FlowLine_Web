@@ -25,7 +25,7 @@ export const GROUPS = {
   },
   platform: {
     description: "AI hub, admin panel, phase 2/3 platform features",
-    specs: ["admin-panel", "ai-hub", "ai-hub-wave-b", "phase2", "phase3"],
+    specs: ["admin-panel", "ai-hub", "ai-hub-wave-b", "hubspot", "phase2", "phase3"],
   },
 };
 

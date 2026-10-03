@@ -44,6 +44,7 @@ export const GET = route(async (req) => {
       verifiable: Boolean(a.verify),
       requiredScopes: a.requiredScopes,
       inputSchema: schemaOf(a.input),
+      outputSchema: schemaOf(a.output),
     })),
   }));
   const code = await codeSandboxAvailable();

@@ -1,28 +1,76 @@
 import { z } from "zod";
-import type { ProviderDef } from "../types";
+import { ProviderError, type ActionContext, type ActionDef, type HttpRequest, type ProviderDef } from "../types";
 
 const emailInput = z.string().email().max(320);
+
+// Provider bodies may reflect credentials. Preserve the HTTP failure classification, never its raw text.
+async function request<T>(ctx: Pick<ActionContext, "http">, req: HttpRequest) {
+  try {
+    return await ctx.http.request<T>(req);
+  } catch (e) {
+    if (e instanceof ProviderError) throw new ProviderError(e.kind, `HubSpot request failed (${e.kind})`, e.status, e.retryAfterMs);
+    throw e;
+  }
+}
+
+const cursor = z.string().min(1).max(128);
+const contact = z.object({
+  id: z.string().min(1),
+  properties: z.record(z.string(), z.string().nullable()),
+});
+const listInput = z.object({
+  limit: z.number().int().min(1).max(100).default(25),
+  after: cursor.optional(),
+  properties: z.array(z.string().min(1).max(100).regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/)).min(1).max(50).default(["email", "firstname", "lastname"]),
+});
+const listOutput = z.object({ contacts: z.array(contact).max(100), nextAfter: cursor.nullable() });
+const listResponse = z.object({
+  results: z.array(contact).max(100),
+  paging: z.object({ next: z.object({ after: cursor }).optional() }).optional(),
+});
+
+const listContacts: ActionDef<z.infer<typeof listInput>, z.infer<typeof listOutput>> = {
+  id: "hubspot.list_contacts",
+  version: 1,
+  provider: "hubspot",
+  title: "List contacts",
+  description: "Read one page of contacts with selected properties. Pass nextAfter as after to read the next page; null means there are no more pages.",
+  input: listInput,
+  output: listOutput,
+  sideEffect: "none",
+  requiredScopes: ["crm.objects.contacts.read"],
+  async run(ctx, input) {
+    const { data } = await request<unknown>(ctx, {
+      method: "GET",
+      path: "/crm/v3/objects/contacts",
+      query: { limit: input.limit, after: input.after, properties: input.properties.join(","), archived: false },
+    });
+    const parsed = listResponse.safeParse(data);
+    // Fixed diagnostics avoid including arbitrary provider data in step errors or logs.
+    if (!parsed.success || parsed.data.results.length > input.limit) throw new ProviderError("client", "HubSpot returned an invalid contacts response");
+    return { contacts: parsed.data.results, nextAfter: parsed.data.paging?.next?.after ?? null };
+  },
+};
 
 const provider: ProviderDef = {
   id: "hubspot",
   name: "HubSpot",
   icon: "🧲",
   category: "CRM",
-  description: "Upsert contacts and create deals in HubSpot.",
+  description: "List, read and upsert contacts and create deals in HubSpot.",
   authType: "api_key",
   apiBase: "https://api.hubapi.com",
   connectFields: [
-    { key: "token", label: "Private app token", secret: true, placeholder: "pat-na1-…" },
+    { key: "token", label: "Private app token", secret: true, placeholder: "pat-na1-…", help: "Use a private app token with permission to read contacts. Contact and deal writes need their matching write permissions. Live verification is pending." },
   ],
   async identity(ctx) {
-    const { data } = await ctx.http.request<{
-      portalId: number;
-      accountType?: string;
-      timeZone?: string;
-    }>({ method: "GET", path: "/account-info/v3/details" });
-    return { accountId: String(data.portalId), label: `Portal ${data.portalId}` };
+    const { data } = await request<unknown>(ctx, { method: "GET", path: "/account-info/v3/details" });
+    const parsed = z.object({ portalId: z.number().int().positive().safe() }).safeParse(data);
+    if (!parsed.success) throw new ProviderError("client", "HubSpot returned an invalid account identity");
+    return { accountId: String(parsed.data.portalId), label: `Portal ${parsed.data.portalId}` };
   },
   actions: [
+    listContacts,
     {
       id: "hubspot.upsert_contact",
       version: 1,
@@ -44,9 +92,9 @@ const provider: ProviderDef = {
       sideEffect: "idempotent",
       requiredScopes: ["crm.objects.contacts.write"],
       async run(ctx, input) {
-        const { data } = await ctx.http.request<{
+        const { data } = await request<{
           results: { id: string; properties: { email?: string } }[];
-        }>({
+        }>(ctx, {
           method: "POST",
           path: "/crm/v3/objects/contacts/batch/upsert",
           json: {
@@ -54,7 +102,7 @@ const provider: ProviderDef = {
               {
                 idProperty: "email",
                 id: input.email,
-                properties: { email: input.email, ...input.properties },
+                properties: { ...input.properties, email: input.email },
               },
             ],
           },
@@ -78,10 +126,10 @@ const provider: ProviderDef = {
       sideEffect: "none",
       requiredScopes: ["crm.objects.contacts.read"],
       async run(ctx, input) {
-        const { data } = await ctx.http.request<{
+        const { data } = await request<{
           id: string;
           properties: Record<string, unknown>;
-        }>({
+        }>(ctx, {
           method: "GET",
           path: `/crm/v3/objects/contacts/${encodeURIComponent(input.email)}`,
           query: { idProperty: "email" },
@@ -109,7 +157,7 @@ const provider: ProviderDef = {
         if (input.amount !== undefined) properties.amount = input.amount;
         if (input.pipeline !== undefined) properties.pipeline = input.pipeline;
         if (input.dealstage !== undefined) properties.dealstage = input.dealstage;
-        const { data } = await ctx.http.request<{ id: string }>({
+        const { data } = await request<{ id: string }>(ctx, {
           method: "POST",
           path: "/crm/v3/objects/deals",
           json: { properties },
