@@ -49,7 +49,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
   const refresh = () => qc.invalidateQueries({ queryKey: ["cb-session", sessionId] });
 
   const errorText = (e: unknown) => {
-    if (e instanceof ApiError && ["UPLOAD_WORKSPACE_STORAGE_LIMIT", "UPLOAD_INSTALLATION_STORAGE_LIMIT", "UPLOAD_STORAGE_CONFIG"].includes(e.code)) return apiErrorMessage(t, e);
+    if (e instanceof ApiError && ["UPLOAD_WORKSPACE_STORAGE_LIMIT", "UPLOAD_INSTALLATION_STORAGE_LIMIT", "UPLOAD_WORKSPACE_FILE_LIMIT", "UPLOAD_INSTALLATION_FILE_LIMIT", "UPLOAD_STORAGE_CONFIG"].includes(e.code)) return apiErrorMessage(t, e);
     if (e instanceof ApiError && t.has(`companyBuilder.errors.${e.code}`)) return cbt(t, `errors.${e.code}`);
     return t("companyBuilder.errors.generic");
   };
