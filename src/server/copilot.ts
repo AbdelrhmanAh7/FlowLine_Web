@@ -22,7 +22,7 @@ export const COPILOT_PROMPT_VERSION = "p4-1";
 
 const EXAMPLE_PATCH = {"summary": "Manual start, double n, output", "addNodes": [{"id": "n1", "type": "trigger.manual", "label": "Start", "config": {"samplePayload": "{ \"n\": 2 }"}}, {"id": "n2", "type": "transform.json", "label": "Double", "config": {"expression": "{ \"v\": n * 2 }"}}, {"id": "n3", "type": "output", "label": "Result", "config": {"key": "result", "expression": ""}}], "updateNodes": [], "removeNodes": [], "addEdges": [{"source": "n1", "target": "n2", "sourceHandle": null}, {"source": "n2", "target": "n3", "sourceHandle": null}], "removeEdges": []};
 
-function copilotInstructions(text: string) {
+export function copilotInstructions(text: string) {
   return [
     `${COPILOT_MARKER}. You edit Flowline workflows. Return ONLY a JSON patch that implements this request from the workflow's owner: "${text}".`,
     "Patch fields (use [] for any you don't need):",

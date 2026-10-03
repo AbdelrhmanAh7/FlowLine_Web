@@ -16,6 +16,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { eq } from "drizzle-orm";
 import type { FlowGraph, FlowNode } from "@/engine/types";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
@@ -187,6 +188,8 @@ const CASES: Case[] = [
 ];
 
 type Score = Record<string, boolean | "n/a" | "static">;
+// Export the exact frozen definitions for the reusable runner; the source slice above remains byte-identical.
+export { CASES };
 type CaseResult = {
   case: string; category: string; run: number; correct: boolean | null; score: Score;
   resultCheck: "dry-run" | "refusal" | "static"; generations: number; ms: number;
@@ -428,7 +431,7 @@ async function main() {
   }
 }
 
-void main().catch((error: unknown) => {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) void main().catch((error: unknown) => {
   // No arbitrary exception messages, stacks, URLs, keys, emails or raw responses in evidence.
   console.error(JSON.stringify({ verdict: "BLOCKED", code: error instanceof SafetyStop ? error.code : "BENCHMARK_ERROR", callsMayHaveOccurred: inferenceStarted }));
   process.exitCode = 1;

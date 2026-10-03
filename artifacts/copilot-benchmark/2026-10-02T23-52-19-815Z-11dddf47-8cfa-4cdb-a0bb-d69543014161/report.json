@@ -1,0 +1,357 @@
+{
+  "at": "2026-10-02T23:52:20.282Z",
+  "runId": "2026-10-02T23-52-19-815Z-11dddf47-8cfa-4cdb-a0bb-d69543014161",
+  "frozenSha256": "270c727a3eb85fa7c2e4250974e62145738e1b79350820d1d53f0cfe5d2d0e8b",
+  "promptVersion": "p4-1",
+  "scope": {
+    "workspaceId": "13928a04-5b6e-495d-87f4-26850e38fd87",
+    "connectionId": "72d6a70c-33ef-46dc-9f6a-cc308c42719c",
+    "provider": "openai",
+    "model": "fake-gpt-mini",
+    "testDouble": true
+  },
+  "safeguards": {
+    "maxUsd": 0,
+    "maximumEstimatedMicros": null,
+    "unknownCostAllowed": true,
+    "automaticRetries": 0,
+    "externalActions": "static only"
+  },
+  "summary": {
+    "correct": 2,
+    "total": 12,
+    "targetMet": false,
+    "dimensions": {
+      "structure": {
+        "passed": 1,
+        "applicable": 11
+      },
+      "nodeSelection": {
+        "passed": 1,
+        "applicable": 11
+      },
+      "order": {
+        "passed": 1,
+        "applicable": 11
+      },
+      "params": {
+        "passed": 3,
+        "applicable": 11
+      },
+      "result": {
+        "passed": 1,
+        "applicable": 11
+      },
+      "safeRefusal": {
+        "passed": 12,
+        "applicable": 12
+      }
+    },
+    "latency": {
+      "totalMs": 444,
+      "byCaseMs": [
+        46,
+        34,
+        34,
+        33,
+        31,
+        36,
+        44,
+        36,
+        39,
+        37,
+        36,
+        38
+      ]
+    },
+    "cost": {
+      "totalMicros": null,
+      "byCaseMicros": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0,
+        null
+      ]
+    },
+    "verdict": "EN_TARGET_FAIL",
+    "wallMs": 465
+  },
+  "results": [
+    {
+      "case": "schedule",
+      "category": "scheduled workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 46,
+      "costMicros": null,
+      "inputTokens": 3691,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "dry-run"
+    },
+    {
+      "case": "webhook",
+      "category": "webhook workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 34,
+      "costMicros": null,
+      "inputTokens": 3695,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "dry-run"
+    },
+    {
+      "case": "gmail",
+      "category": "Gmail workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 34,
+      "costMicros": null,
+      "inputTokens": 3687,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "sheets",
+      "category": "Google Sheets workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 33,
+      "costMicros": null,
+      "inputTokens": 3696,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "slack",
+      "category": "Slack workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 31,
+      "costMicros": null,
+      "inputTokens": 3683,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "github",
+      "category": "GitHub workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 36,
+      "costMicros": null,
+      "inputTokens": 3706,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "transform",
+      "category": "data transform",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": true,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 44,
+      "costMicros": null,
+      "inputTokens": 3708,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "dry-run"
+    },
+    {
+      "case": "branch",
+      "category": "branch / condition",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 36,
+      "costMicros": null,
+      "inputTokens": 3696,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "dry-run"
+    },
+    {
+      "case": "classify",
+      "category": "AI classification",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 39,
+      "costMicros": null,
+      "inputTokens": 3702,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "multistep",
+      "category": "multi-step workflow",
+      "correct": false,
+      "scores": {
+        "structure": false,
+        "nodeSelection": false,
+        "order": false,
+        "params": false,
+        "result": false,
+        "safeRefusal": true
+      },
+      "latencyMs": 37,
+      "costMicros": null,
+      "inputTokens": 3729,
+      "outputTokens": 50,
+      "errorCodes": [
+        "NO_RESULT",
+        "NO_TRIGGER",
+        "UNCONNECTED_INPUT"
+      ],
+      "check": "static"
+    },
+    {
+      "case": "missing",
+      "category": "missing integration request",
+      "correct": true,
+      "scores": {
+        "structure": null,
+        "nodeSelection": null,
+        "order": null,
+        "params": null,
+        "result": null,
+        "safeRefusal": true
+      },
+      "latencyMs": 36,
+      "costMicros": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "errorCodes": [],
+      "check": "refusal"
+    },
+    {
+      "case": "ambiguous",
+      "category": "ambiguous request (safe interpretation)",
+      "correct": true,
+      "scores": {
+        "structure": true,
+        "nodeSelection": true,
+        "order": true,
+        "params": true,
+        "result": true,
+        "safeRefusal": true
+      },
+      "latencyMs": 38,
+      "costMicros": null,
+      "inputTokens": 3931,
+      "outputTokens": 59,
+      "errorCodes": [],
+      "check": "static"
+    }
+  ]
+}
