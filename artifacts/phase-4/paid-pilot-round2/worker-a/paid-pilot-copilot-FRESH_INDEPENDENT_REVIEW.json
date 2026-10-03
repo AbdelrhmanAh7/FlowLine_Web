@@ -1,0 +1,78 @@
+{
+  "head": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+  "base": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "binaryDiffSHA256": "0163e3df4be6047408ad552b0b21b6598d667eef39b994c4ac66ecdfb9284ab2",
+  "paths": [
+    {
+      "path": "artifacts/copilot-benchmark/2026-10-02T23-49-45-089Z-737d7b84-e74b-4505-8e3e-ec4e71084689/report.json",
+      "sha256": "750fc8d12282f592e52b20909cabce8af2e888d32454ab06748e4808b5f0e883"
+    },
+    {
+      "path": "artifacts/copilot-benchmark/2026-10-02T23-49-45-089Z-737d7b84-e74b-4505-8e3e-ec4e71084689/report.md",
+      "sha256": "b685f0c7668e47829a0818eecaec7d344cb305a338df66760d7a13fe8569ea65"
+    },
+    {
+      "path": "artifacts/copilot-benchmark/2026-10-02T23-52-19-815Z-11dddf47-8cfa-4cdb-a0bb-d69543014161/report.json",
+      "sha256": "824e9950afdf483008d3fd2ba75e4c6eecbf5b4f40025a2f8156fb599c6089c5"
+    },
+    {
+      "path": "artifacts/copilot-benchmark/2026-10-02T23-52-19-815Z-11dddf47-8cfa-4cdb-a0bb-d69543014161/report.md",
+      "sha256": "b10e07784225779001e44dfcc5ffbaac917104cd171769bcc0a33900780379aa"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/copilot-focused.md",
+      "sha256": "5d8092b295657a1707ed14abcfd4ee2bfdbe2ed932725056c50ec4bd2b950133"
+    },
+    {
+      "path": "docs/ai/COPILOT_BENCHMARK.md",
+      "sha256": "8b176e2cf5befadc12881fd8d9316b0ab43252dd59acc7a114ee238bf3d822b6"
+    },
+    {
+      "path": "scripts/copilot-benchmark-score.ts",
+      "sha256": "8819c71b2f1950cfeb65434d3d4ba67d1e18ec4350569537547ce29818b1c456"
+    },
+    {
+      "path": "scripts/copilot-benchmark.mts",
+      "sha256": "b7cdb441f9939a03c8b94bbd138a9ef3cd8d7a17f737ff2bfb35834a4ede3e17"
+    },
+    {
+      "path": "scripts/diag/copilot-benchmark-hub.mts",
+      "sha256": "6b256b2161c4af72bdab8d6a46486f5fd963d9112a4a819eb63176d1675c8ba9"
+    },
+    {
+      "path": "src/server/copilot.ts",
+      "sha256": "deb925e07c295e365f25c44003891463ee6abd256f98813d0ed03f5a45d56613"
+    },
+    {
+      "path": "tests/integration/copilot-benchmark.test.ts",
+      "sha256": "af8e3384a920e560f17061af7e28a6b5ea299f03174946bd63165a54be8625e9"
+    },
+    {
+      "path": "tests/unit/copilot-benchmark-score.test.ts",
+      "sha256": "f0015b28e23d70dea89320db856791e7b89d672d92efd978d623a59b5a2d348a"
+    }
+  ],
+  "secretPatternFindings": [],
+  "credentialLiteralClassifications": [],
+  "reviewedAtUTC": "2026-10-03T02:53:44.170171+00:00",
+  "reviewer": "Worker A independent of routine lane author; Codex gpt-6.1-sol high",
+  "outcome": "APPROVED EXACT CURRENT SOURCE DIFF FOR LEAD PR QUEUE",
+  "sourceFindings": [
+    "Workspace owner + verified actor + USD currency + exact pinned connection/provider/model checks precede calls. Aggregate upper-bound price preflight covers11possible generations; unknown real pricing refused, exception restricted to local test double.",
+    "MANUAL policy and maxAttempts1 preserve one model/one provider attempt per case, no repair/fallback generation. Frozen case definitions compared byte-for-byte; imports no longer autoexecute the old hub runner.",
+    "Scoring requires all supported correctness dimensions, refuses credit for supported refusals and requires12complete cases for target. Reports distinguish EN-only and testDouble and sanitize error codes; imported prior fake reports explicitly show2/12fail, unknown cost, fake-gpt-mini/testDouble true.",
+    "Preview executes through existing local-only previewGraph, never saves/publishes proposal or performs external actions. No hosted quality or true provider bill guarantee claimed."
+  ],
+  "actionableFindings": [],
+  "reviewType": "Fresh independent current-head source/evidence review, supersedes unresolved hash provenance for this current diff without altering earlier review record.",
+  "checks": [
+    "Exact local head fence",
+    "Current complete binary diff SHA256 recorded",
+    "Source/docs whitespace check passed",
+    "UTF8/UTF16/NUL-aware evidence pattern/manual review: no real secret/customer data found"
+  ],
+  "limits": [
+    "No new test/build/browser/CI/provider execution. Existing focused test reports inspected and remain historical author evidence.",
+    "CodeRabbit and required final CI gate still required; this approval does not establish merge/pilot readiness."
+  ]
+}

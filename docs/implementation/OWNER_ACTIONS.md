@@ -1,5 +1,11 @@
 # Owner actions — private beta
 
+## ROUND 2 restart authority (2026-10-03)
+
+The owner-approved [Fable decision](../../artifacts/phase-4/paid-pilot-round2/DECISION_FABLE.md) supersedes the historical PP-01/PP-09 prerequisite blocks below: PRs, standard GitHub CI and included CodeRabbit reviews may **PROCEED-with-guards**, at most three reviews per rolling hour, with $0 spend. A review refusal pauses openings until rollover; quota/billing cancellation stops CI dispatches. Do not activate usage-based billing, change scopes/budgets, or enable overage. These instructions do not certify an included balance or actual billed consumption.
+
+PP-02 through PP-08 remain **BLOCKED owner actions** at their exact pages below. Production deployment, DNS/Pi changes, live payments, invitations and spending require separate explicit owner approval. No logins, MFA, consent or credentials are performed by the agent. Current progress and review/Actions accounting are in [PAID_PILOT_STATUS.md](PAID_PILOT_STATUS.md).
+
 ## Paid pilot — current BLOCKED owner steps (2026-10-03)
 
 Round-2 Fable decision authorizes PR/CI under the $0 stop guards and supersedes the old PP-01/PP-09 verification prerequisites: CodeRabbit stops at its allowance; standard GitHub Free Actions stops at $0. Do not change billing/scopes/budgets. Stop opening PRs at any review rate limit until the window rolls; stop dispatches at quota/billing cancellation. The PP-01/PP-09 page instructions below remain optional owner verification, not a prerequisite for this authorized round. All other owner actions remain BLOCKED. This section supersedes dated plans below. Main is `9641ad1`; Company Builder is implemented and merged. This round is non-interactive: work continues without waiting for owner replies. No secrets belong in conversation or evidence.

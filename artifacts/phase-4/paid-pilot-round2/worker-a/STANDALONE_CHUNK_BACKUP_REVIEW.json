@@ -1,0 +1,94 @@
+{
+  "reviewedAtUTC": "2026-10-03T02:44:10.056553+00:00",
+  "reviewer": "Worker A independent of security chunk author; Codex gpt-6.1-sol high",
+  "head": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+  "base": "e437af28b177f9998bca582de7b9752ab7e8429e",
+  "binaryDiffSHA256": "81f9694d48254294eb44e6d27c9f0b6a4889c1b1db1dea4f03fe71182e09f347",
+  "sourceBinaryDiffSHA256": "00f46ca9b2ce12c9e32c2a94664e6f00302f75ef2bde18cb8baddf20067d8e05",
+  "paths": [
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/README.md",
+      "sha256": "0eb06c3c905155ddd9cbbe685623a9d820fec8cdff9657f5201fcd194709da7a"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/focused-results.json",
+      "sha256": "76ff026e6fb6ddfbfe4c1eae58903d98b4e281c7d63eeb0e8fa29af566d7b515"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/integration-1790995146101.json",
+      "sha256": "a50ee978e33e2918bc3d329287b2f9ea95f21edbc20f88f747fd688fdb6c95ae"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/integration-1790995146101.log",
+      "sha256": "db16aa66f45850d1d1d68ce7261b95b40ca85f2038693045867c6f9ccbc2ad38"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/integration-1790995197605.json",
+      "sha256": "182f7c54f06fb7285c6f11bc6fe91af35336c6e9f63a8aa42de3fff5176d3dd7"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/integration-1790995197605.log",
+      "sha256": "9cd4714a5bae866a2b28c25fe7f495c2bcd21e3caa2fe95b53d8fc96475a3943"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/reviewable-source.diff.b64",
+      "sha256": "e38cb605214b24609ff3ba76ee85e598e21ffe2c27534dce2fbb9412d37f9882"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/run-focused.mjs",
+      "sha256": "130af0aaea7ccfe60afc474bff64fcf4b1e629439de770f4dda9d59a1195215d"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/chunk-admission/unit.log",
+      "sha256": "3419aa28f3f53edfda06a9781b38330e3315e16749e7a9f3066a354c83acde95"
+    },
+    {
+      "path": "src/i18n/knowledge-errors.ts",
+      "sha256": "0aec5bf3784f1f8e18d8519143799ddbc166bb82fb88320eb75641829b1743b6"
+    },
+    {
+      "path": "src/i18n/messages/ar.json",
+      "sha256": "c536040deaab4013dab0037394d350240ce177ef00e886cd4f96d2c194384f9d"
+    },
+    {
+      "path": "src/i18n/messages/en.json",
+      "sha256": "730ca50de1b20d9b9eb2c1282920db1363204b53fa5b8ec2b76dd776fafbbf5c"
+    },
+    {
+      "path": "src/server/knowledge-storage.ts",
+      "sha256": "0af16e9fe5f67cc27e3561dde089e9b1471c4fc3ee24064ca20d1e7b7742c051"
+    },
+    {
+      "path": "src/server/knowledge.ts",
+      "sha256": "46ed22216b31b40f0c3aa757b2298673b8f0ef4dc6f016afa0f81239528438f2"
+    },
+    {
+      "path": "tests/integration/pilot-chunk-admission.test.ts",
+      "sha256": "124ede3f8842bb8272e9d511471fbb121fd2834dff409fa2210c23ba946a07fb"
+    },
+    {
+      "path": "tests/unit/knowledge-storage.test.ts",
+      "sha256": "f2cb7df368917d38839a02dc7a9c5b1657e759b7f61c8060433354beda1ecc69"
+    }
+  ],
+  "outcome": "APPROVED SOURCE FOR BACKUP ONLY",
+  "findings": [
+    "Transaction-scoped global lock serializes final chunk writers and counts actual UTF8 bytes for exact sliced texts before replacing source generations.",
+    "Live source row/undeleted claim is checked under FOR UPDATE before old-chunk deletion or insertion; same source-before-chunks lock order as deletion; rollback retains old generations on denied/lost claim.",
+    "Other source replacements remain in count; only same source generations excluded. Deletion only decreases usage. Worker lifecycle and tenant ACLs retained.",
+    "Stable storage/config codes map to matched EN/AR entries. Limits are operational text-byte circuit breakers, explicitly exclude DB overhead, physical disk and parser authority.",
+    "18 committed changed files, including UTF16 log and base64 patch, decoded/reviewed; generated/synthetic fixture values only, no real secret/customer data found."
+  ],
+  "limitations": [
+    "Read-only source review; author-reported26DB/32units/tsc/lint not rerun. No build/browser/provider/CI acceptance.",
+    "Remote branch appeared at exactc673 during source review under another actor; this source review is not proof independent approval preceded that actor push. No redundant push by Worker A."
+  ]
+}

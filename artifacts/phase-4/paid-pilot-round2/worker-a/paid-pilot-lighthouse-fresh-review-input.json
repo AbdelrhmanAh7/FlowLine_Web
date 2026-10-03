@@ -1,0 +1,25 @@
+{
+  "head": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+  "base": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "binaryDiffSHA256": "c8a1031319e923fe8f143d1118f162f582b1b7353e8ab45a268375f69dd2a667",
+  "paths": [
+    {
+      "path": ".github/workflows/lighthouse.yml",
+      "sha256": "47866aba5736fb503de2c8f1b2603c6416f4c947c6f1fff03c4f8dfd802a13af"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/lighthouse-focused.md",
+      "sha256": "f264f21576963706901dc1d02706d82f0d47fc52c971639aa7d2f82483b28d08"
+    },
+    {
+      "path": "docs/DEVELOPER_GUIDE.md",
+      "sha256": "5726b669be1e31097270d147a73c86e4ff64b0945f22c6b81eae253c04ed6554"
+    },
+    {
+      "path": "lighthouserc.cjs",
+      "sha256": "dbd7b08cd63ab8e24c4e5cb82e4408086ec70845dd5a5cceb742b84b7ee5880f"
+    }
+  ],
+  "secretPatternFindings": [],
+  "credentialLiteralClassifications": []
+}

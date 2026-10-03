@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-03T03:15:16.916Z",
+  "previousReviewedHash": "065e4b5e32d083927008454d9f3a7c31d20a21fecf3b1cc64a4c9abe0e081d15",
+  "finalReviewedHash": "026e0e28b30abc80c992991b26ab733fc540d6f223228f65b594dd013dd9275e",
+  "updatedPaths": [
+    "docs/implementation/OWNER_ACTIONS.md",
+    "docs/implementation/PAID_PILOT_STATUS.md",
+    "artifacts/phase-4/paid-pilot-round2/ai-tool-usage.md",
+    "artifacts/phase-4/paid-pilot-round2/open-next.mjs",
+    "artifacts/phase-4/paid-pilot-round2/restart-ops.mjs",
+    "artifacts/phase-4/paid-pilot-round2/snapshots/pr13-summary.json",
+    "artifacts/phase-4/takeover-20261003/G4_FINAL_CI.json"
+  ],
+  "addedPaths": [
+    "artifacts/phase-4/paid-pilot-round2/RESTART_CHECKPOINT_CORRECTIONS.md",
+    "artifacts/phase-4/paid-pilot-round2/RESTART_CHECKPOINT_MANIFEST.json",
+    "artifacts/phase-4/paid-pilot-round2/RESTART_CHECKPOINT_REVIEW.txt",
+    "artifacts/phase-4/paid-pilot-round2/review-corrections.mjs"
+  ]
+}

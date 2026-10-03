@@ -1,0 +1,187 @@
+{
+  "at": "2026-10-03T03:03:52.237Z",
+  "rows": [
+    {
+      "ref": "codex/paid-pilot-body-deadline-20261003",
+      "local": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "previousRemote": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "pushed": false,
+      "remote": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e"
+    },
+    {
+      "ref": "codex/paid-pilot-chunk-admission-20261003",
+      "local": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "previousRemote": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "pushed": false,
+      "remote": "c6739566558981c0b59d5a3564603ef651c4b0bd"
+    },
+    {
+      "ref": "codex/paid-pilot-combined-20261003",
+      "local": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+      "previousRemote": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+      "pushed": false,
+      "remote": "de79ab296e772e5f285b33c4cd0ac9056b73f250"
+    },
+    {
+      "ref": "codex/paid-pilot-deploy-align-20261003",
+      "local": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "previousRemote": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "pushed": false,
+      "remote": "f1921e58c5115a8fd3939587db9a713e546f6c04"
+    },
+    {
+      "ref": "codex/paid-pilot-federated-mfa-20261003",
+      "local": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "previousRemote": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "pushed": false,
+      "remote": "2c85f058c2bf382ee861a2c2007af129705c62c6"
+    },
+    {
+      "ref": "codex/paid-pilot-index-admission-20261003",
+      "local": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "previousRemote": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "pushed": false,
+      "remote": "e437af28b177f9998bca582de7b9752ab7e8429e"
+    },
+    {
+      "ref": "codex/paid-pilot-monitor-20261003",
+      "local": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "previousRemote": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "pushed": false,
+      "remote": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797"
+    },
+    {
+      "ref": "codex/paid-pilot-product-20261003",
+      "local": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "previousRemote": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "pushed": false,
+      "remote": "6bfbbe7938854ed05340f971c787d8993afcacc3"
+    },
+    {
+      "ref": "codex/paid-pilot-round1-20261003",
+      "local": "794cbe2724b2beedb56703ac40560ccc732a8486",
+      "previousRemote": "794cbe2724b2beedb56703ac40560ccc732a8486",
+      "pushed": false,
+      "remote": "794cbe2724b2beedb56703ac40560ccc732a8486"
+    },
+    {
+      "ref": "codex/paid-pilot-round2-20261003",
+      "local": "33c9aa3c9b4cc4ccf84e4a12347ea51119f996ce",
+      "previousRemote": "33c9aa3c9b4cc4ccf84e4a12347ea51119f996ce",
+      "pushed": false,
+      "remote": "33c9aa3c9b4cc4ccf84e4a12347ea51119f996ce"
+    },
+    {
+      "ref": "codex/paid-pilot-safe-retry-20261003",
+      "local": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "previousRemote": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "pushed": false,
+      "remote": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82"
+    },
+    {
+      "ref": "codex/paid-pilot-safe-retry-main-20261003",
+      "local": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "previousRemote": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "pushed": false,
+      "remote": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1"
+    },
+    {
+      "ref": "codex/paid-pilot-upload-admission-20261003",
+      "local": "360078e9d3357267711f006888b578f5a0c6c434",
+      "previousRemote": "360078e9d3357267711f006888b578f5a0c6c434",
+      "pushed": false,
+      "remote": "360078e9d3357267711f006888b578f5a0c6c434"
+    },
+    {
+      "ref": "codex/pilot-retained-count-round1",
+      "local": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "previousRemote": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "pushed": false,
+      "remote": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe"
+    },
+    {
+      "ref": "codex/pilot-sandbox-env-round1",
+      "local": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "previousRemote": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "pushed": false,
+      "remote": "571d1c62d83d7f01461739ad1ed4e830c04d7796"
+    },
+    {
+      "ref": "codex/pilot-security-auth-round1",
+      "local": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "previousRemote": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "pushed": false,
+      "remote": "08355ae423aa91c7d2b6f106878603d3c2f98ecb"
+    },
+    {
+      "ref": "codex/pilot-security-deps-round1",
+      "local": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "previousRemote": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "pushed": false,
+      "remote": "dd840db6bf6f9329f61007152b3bb500b4d66b75"
+    },
+    {
+      "ref": "codex/pilot-security-redact-round1",
+      "local": "09be0b3641a139409fad242e9617eec9b0db1975",
+      "previousRemote": "09be0b3641a139409fad242e9617eec9b0db1975",
+      "pushed": false,
+      "remote": "09be0b3641a139409fad242e9617eec9b0db1975"
+    },
+    {
+      "ref": "codex/pilot-security-report-round1",
+      "local": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "previousRemote": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "pushed": false,
+      "remote": "a9276f663a2984531ae4f4a76379f36eeff8ce18"
+    },
+    {
+      "ref": "codex/pilot-security-resource-round1",
+      "local": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "previousRemote": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "pushed": false,
+      "remote": "a9f7597c90b98128a1cebf46a949810e0586c31d"
+    },
+    {
+      "ref": "codex/pilot-security-runtime-round1",
+      "local": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "previousRemote": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "pushed": false,
+      "remote": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352"
+    },
+    {
+      "ref": "paid-pilot-copilot",
+      "local": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "previousRemote": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "pushed": false,
+      "remote": "0c58c4d39a353957973b12036fa6e0ae415799f1"
+    },
+    {
+      "ref": "paid-pilot-hubspot",
+      "local": "d5fa51e33fe807a075138e2660074335412df723",
+      "previousRemote": "d5fa51e33fe807a075138e2660074335412df723",
+      "pushed": false,
+      "remote": "d5fa51e33fe807a075138e2660074335412df723"
+    },
+    {
+      "ref": "paid-pilot-lighthouse",
+      "local": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "previousRemote": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "pushed": false,
+      "remote": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5"
+    },
+    {
+      "ref": "paid-pilot-p3",
+      "local": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "previousRemote": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "pushed": false,
+      "remote": "c1ba48220fca07da7d9b0be3844732c14e06df20"
+    },
+    {
+      "ref": "paid-pilot-tool-roster",
+      "local": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "previousRemote": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "pushed": false,
+      "remote": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef"
+    }
+  ]
+}

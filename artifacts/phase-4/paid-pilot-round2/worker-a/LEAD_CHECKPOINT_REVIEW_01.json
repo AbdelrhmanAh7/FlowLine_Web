@@ -1,0 +1,18 @@
+{
+  "reviewedAtUTC": "2026-10-03T02:41:17.011201+00:00",
+  "reviewer": "Worker A, independent of lead documentation author",
+  "stagedBinaryDiffSHA256": "90fe0cfba97a980bc502ee9ad47159907b26ac8ebcd06fbab190ca7bee50b21a",
+  "changedPaths": 13,
+  "outcome": "CHANGES REQUESTED",
+  "findings": [
+    "PAID_PILOT_STATUS live candidate row claims exact reviewed heads despite five unresolved full-diff review hash mismatches; say exact manifest heads and preserve unresolved review provenance.",
+    "PAID_PILOT_STATUS live #12 row must record latest docs SHAa9276f663a2984531ae4f4a76379f36eeff8ce18 and old-head coverage/current-docs coverage pending not merge-ready, with thread disposition.",
+    "Four linked evidence files absent from clean checkpoint: combined-clean-1fff962.json, unit-97567e8.md, runtime22-result.json, recovery-current-97567e8.json. Include sanitized evidence or link remote immutable source explicitly."
+  ],
+  "approvedBoundaries": [
+    "Owner PP01/09 superseding guards; remaining owner PP02-08 blocked.",
+    "No merge/main push/deploy/payment/DNS/invitations/billing or token-scope changes.",
+    "Deadline03:43 PR openings;04:13:30 work launch;04:23:30 completion.",
+    "Historical owner brief/journal and verbatim Fable messages distinguished from current lead sequencing decisions."
+  ]
+}

@@ -1,0 +1,15 @@
+**Decision: B.** Keep product PR readiness BLOCKED on the two verifier findings and schedule the correction as the first item of the next slice.
+
+**Why not A now**
+
+- A fix buys nothing in this window. The product PR is not launching before cutoff, so a corrected branch sits idle while costing lead review time that Runtime CR needs right now.
+- Any commit to the product branch changes the hashes on the declared reviewable paths. The provenance you just recovered exactly would have to be re-derived, and that is a worse use of the remaining 78 minutes than finishing the runtime sequence.
+- The findings carry no live risk this window. The script is not executed, no helper runs, and no environment is read. A latent bug in idle tooling does not justify a mid-window branch mutation.
+
+**Guardrails for B**
+
+- Record both findings in the round-two ledger as explicit product-readiness blockers, with the concrete remedy already specified: explicit child env allowlist with generated synthetic values, record the container ID plus a unique owned label at run, inspect ID and label before any `docker rm -f`, and preserve mismatches instead of removing them.
+- Add a do-not-execute note for `artifacts/phase-4/paid-pilot-round1/product/verify-rerun-local.mjs` until the fix lands, so no later worker runs it in its current form.
+- Release Worker A. No new agent, no paid route, no new review attempt, no owner question.
+- Next slice opens with the correction as a 20-minute bounded task on the existing product branch, using exactly A's scope and verification limits, followed by one lead review and a re-pinned provenance manifest for the touched path.
+- Slice order stays unchanged. Lead attention stays on Runtime CR and the remaining PR sequence until cutoff.

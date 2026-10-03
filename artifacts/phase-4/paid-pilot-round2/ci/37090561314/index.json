@@ -1,0 +1,209 @@
+[
+  {
+    "artifactId": 11262398562,
+    "artifactName": "flowline-gate-webkit-37090561314-1",
+    "originalPath": "artifacts/gates/ci-37090561314-1-webkit/summary.json",
+    "sha256": "8ff1eeb3b4e31d9dc2d9e1f86a35886689563fcde3544820333a02b4c6955f22",
+    "testedSha": "728b002737d275cef15b268759981a0a5c795403",
+    "ok": true,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 52265,
+        "log": "artifacts/gates/ci-37090561314-1-webkit/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 14618,
+        "log": "artifacts/gates/ci-37090561314-1-webkit/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "webkit",
+        "phase": 4,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 383697,
+        "log": "artifacts/gates/ci-37090561314-1-webkit/webkit.log",
+        "totals": {
+          "passed": 78
+        }
+      }
+    ],
+    "file": "flowline-gate-webkit-37090561314-1-summary.json"
+  },
+  {
+    "artifactId": 11262388045,
+    "artifactName": "flowline-gate-integration-37090561314-1",
+    "originalPath": "artifacts/gates/ci-37090561314-1-integration/summary.json",
+    "sha256": "c0f6cd3741660ace8306db753d5d6aed5b517ba8b1af343f9391a5177f939961",
+    "testedSha": "728b002737d275cef15b268759981a0a5c795403",
+    "ok": true,
+    "steps": [
+      {
+        "name": "integration",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 156728,
+        "log": "artifacts/gates/ci-37090561314-1-integration/integration.log",
+        "totals": {
+          "passed": 549,
+          "failed": 0,
+          "skipped": 0
+        }
+      }
+    ],
+    "file": "flowline-gate-integration-37090561314-1-summary.json"
+  },
+  {
+    "artifactId": 11261904198,
+    "artifactName": "flowline-gate-chromium-37090561314-1",
+    "originalPath": "artifacts/gates/ci-37090561314-1-chromium/summary.json",
+    "sha256": "7466a4b5dcddba3d23c2b09494e41260868c431c8c50d8a8ebf4cb675bfcd71f",
+    "testedSha": "728b002737d275cef15b268759981a0a5c795403",
+    "ok": true,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 51941,
+        "log": "artifacts/gates/ci-37090561314-1-chromium/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 13813,
+        "log": "artifacts/gates/ci-37090561314-1-chromium/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "chromium",
+        "phase": 4,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 313035,
+        "log": "artifacts/gates/ci-37090561314-1-chromium/chromium.log",
+        "totals": {
+          "passed": 144
+        }
+      }
+    ],
+    "file": "flowline-gate-chromium-37090561314-1-summary.json"
+  },
+  {
+    "artifactId": 11261888208,
+    "artifactName": "flowline-gate-static-37090561314-1",
+    "originalPath": "artifacts/gates/ci-37090561314-1-static/summary.json",
+    "sha256": "9b2d602fd3104c1385278ab68bb87bb69d661cb2b718a68686d191c0c4d938db",
+    "testedSha": "728b002737d275cef15b268759981a0a5c795403",
+    "ok": true,
+    "steps": [
+      {
+        "name": "lint",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 109381,
+        "log": "artifacts/gates/ci-37090561314-1-static/lint.log",
+        "totals": null
+      },
+      {
+        "name": "typecheck",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 105799,
+        "log": "artifacts/gates/ci-37090561314-1-static/typecheck.log",
+        "totals": null
+      },
+      {
+        "name": "evidence",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 2288,
+        "log": "artifacts/gates/ci-37090561314-1-static/evidence.log",
+        "totals": null
+      },
+      {
+        "name": "unit",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 106854,
+        "log": "artifacts/gates/ci-37090561314-1-static/unit.log",
+        "totals": {
+          "passed": 760
+        }
+      },
+      {
+        "name": "contract",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 78874,
+        "log": "artifacts/gates/ci-37090561314-1-static/contract.log",
+        "totals": {
+          "passed": 468
+        }
+      }
+    ],
+    "file": "flowline-gate-static-37090561314-1-summary.json"
+  },
+  {
+    "artifactId": 11261654156,
+    "artifactName": "flowline-gate-firefox-37090561314-1",
+    "originalPath": "artifacts/gates/ci-37090561314-1-firefox/summary.json",
+    "sha256": "adbdb40a7f3258ababdf04c329b88aada0083238ef6452d944ed56d660a3e989",
+    "testedSha": "728b002737d275cef15b268759981a0a5c795403",
+    "ok": true,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 51484,
+        "log": "artifacts/gates/ci-37090561314-1-firefox/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 15467,
+        "log": "artifacts/gates/ci-37090561314-1-firefox/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "firefox",
+        "phase": 4,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 257577,
+        "log": "artifacts/gates/ci-37090561314-1-firefox/firefox.log",
+        "totals": {
+          "passed": 78
+        }
+      }
+    ],
+    "file": "flowline-gate-firefox-37090561314-1-summary.json"
+  }
+]

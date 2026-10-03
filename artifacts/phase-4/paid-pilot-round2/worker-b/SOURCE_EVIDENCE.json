@@ -1,0 +1,231 @@
+{
+  "recordedAt": "2026-10-03T02:38:03.588447+00:00",
+  "disposition": "ROOT_CAUSE_UNPROVEN",
+  "failingRun": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37081791704",
+  "candidate": "6a57f97b30ea95c536793199f107e58eb4fa4e68",
+  "candidateParents": [
+    "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+    "7a315f7146784a4ac23b48e1ba06f46a762a21a7"
+  ],
+  "candidateIdentityMethod": "Read-only gh api commits plus contents; no Git fetch, checkout, CI dispatch or PR action",
+  "sourceBlobs": [
+    {
+      "path": "scripts/gate.mjs",
+      "candidateBlob": "1d266bb2bd9628b5504527e72f8f0bec2b3c86a9",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "scripts/gate-browser-native.mjs",
+      "candidateBlob": "e303957952027e5a4e48601a208b3916a35da1b8",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "scripts/dev-test.mjs",
+      "candidateBlob": "09ecf75675bcf81c851633b7196569d685f4c619",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "playwright.config.ts",
+      "candidateBlob": "c0b29b678f0ff42b388fb701a2c81ad0cddd8cfc",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "e2e/phase3.spec.ts",
+      "candidateBlob": "42c8279617e3456013e8860e977ff07ebdaff061",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "e2e/tools/browser-docker.sh",
+      "candidateBlob": "2982c4e7e3fb0a44e41ad56f10a99f3826a70b00",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "worker/index.ts",
+      "candidateBlob": "99c9188a5fd073995a11fd6b542bfa36bba05cd3",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    },
+    {
+      "path": "src/app/api/runs/[rid]/route.ts",
+      "candidateBlob": "b2905e388f9eb842231ea303cc68d88b6c76c312",
+      "method": "Read-only GitHub contents SHA at failing candidate compared with local git blob at9641ad1; all eight matched"
+    }
+  ],
+  "originalArtifactDigests": [
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "artifacts/gates/ci-37081791704-1-webkit/progress.log",
+      "sha256": "7275ebae71b32c671da3c1ac18f5cb39ea4d53d8e5bae9c0ade1e4847fcac0af"
+    },
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "artifacts/gates/ci-37081791704-1-webkit/webkit.log",
+      "sha256": "09bd248dc4a3097ae2834ed0bfce2246dc369e68693049befc9a8da975a6cf53"
+    },
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "artifacts/gates/ci-37081791704-1-webkit/stack-3.log",
+      "sha256": "f3e0d40087545c3aef4594d3b705008a4bd39afad27384374a8d73fc12c59b2d"
+    },
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "artifacts/gates/ci-37081791704-1-webkit/summary.json",
+      "sha256": "9089a8630354b13ef7f644dc778ab11e0fa7c09af270495f410cd21388586155"
+    },
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "test-results/webkit-3-report.txt",
+      "sha256": "2b6f07a48a441d03a70ef915170aa98076f8aa41e7a3a4cbe1bdff364dc7a319"
+    },
+    {
+      "sourceRoot": "OS TEMP/flowline-takeover-webkit-37081791704",
+      "path": "test-results/webkit-3/phase3-members-invite-link-3e58a-s-it-removal-revokes-access-webkit/error-context.md",
+      "sha256": "dc00bdfc7910754395040d445d8a86132fa3609c3ca1615f5b99f105936c25ab"
+    }
+  ],
+  "sanitizedFailedRequestExcerpt": [
+    {
+      "line": 16,
+      "text": "    Error: apiRequestContext.get: read ECONNRESET"
+    },
+    {
+      "line": 18,
+      "text": "      - \u2192 GET http://localhost:3120/api/runs/<failed-run-id>"
+    },
+    {
+      "line": 26,
+      "text": "      86 |   await v.page.getByRole(\"list\", { name: \"Runs\" }).getByRole(\"button\", { name: /Post to Slack/ }).click();"
+    },
+    {
+      "line": 27,
+      "text": "      87 |   await v.page.getByTestId(\"decision-box\").getByRole(\"button\", { name: \"Approve\" }).click();"
+    },
+    {
+      "line": 28,
+      "text": "    > 88 |   await expect.poll(async () => (await (await page.request.get(`/api/runs/${runId}`)).json()).run.status, { timeout: 20_000 }).toBe(\"succeeded\");"
+    },
+    {
+      "line": 33,
+      "text": "        at _test.expect.poll.timeout (/home/runner/work/FlowLine_Web/FlowLine_Web/e2e/phase3.spec.ts:88:60)"
+    },
+    {
+      "line": 34,
+      "text": "        at /home/runner/work/FlowLine_Web/FlowLine_Web/e2e/phase3.spec.ts:88:3"
+    },
+    {
+      "line": 67,
+      "text": "  1 failed"
+    },
+    {
+      "line": 69,
+      "text": "  21 passed (6.0m)"
+    }
+  ],
+  "sanitizedFailedRunWorkerCorrelation": [
+    {
+      "line": 26,
+      "text": "2026-10-03T00:27:17.119Z [worker] run <failed-run-id> claimed"
+    },
+    {
+      "line": 27,
+      "text": "2026-10-03T00:27:17.255Z [worker] run <failed-run-id> done"
+    },
+    {
+      "line": 28,
+      "text": "2026-10-03T00:27:29.303Z [worker] run <failed-run-id> claimed"
+    },
+    {
+      "line": 29,
+      "text": "2026-10-03T00:27:29.529Z [worker] run <failed-run-id> done"
+    },
+    {
+      "line": 53,
+      "text": "2026-10-03T00:33:15.239Z [worker] stopped"
+    }
+  ],
+  "progress": [
+    "2026-10-03T00:23:44.623Z GATE sha=6a57f97b30ea95c536793199f107e58eb4fa4e68 dirty=0 node=v22.23.3 pnpm=10.32.1 tier=full stacks=3 totalStacks=3 poolMax=6 intShards=4 steps=webkit,stack,build browsers=sequential groups=all",
+    "2026-10-03T00:23:44.626Z STOP test stacks",
+    "2026-10-03T00:23:45.696Z START build",
+    "2026-10-03T00:24:53.342Z END build rc=0 67.6s",
+    "2026-10-03T00:24:53.343Z START stack",
+    "2026-10-03T00:25:12.124Z END stack rc=0 18.8s",
+    "2026-10-03T00:25:12.125Z START webkit",
+    "2026-10-03T00:33:15.140Z END webkit rc=1 483.0s",
+    "2026-10-03T00:33:15.161Z STOP test stacks",
+    "2026-10-03T00:33:16.480Z GATE FAIL"
+  ],
+  "nativeRunnerLog": [
+    "$ node scripts/gate-browser-native.mjs webkit",
+    "webkit: all specs (no file filter)",
+    "webkit shard 3/3: rc=1; test-results/webkit-3-report.txt",
+    "webkit shard 1/3: rc=0; test-results/webkit-1-report.txt",
+    "webkit shard 2/3: rc=0; test-results/webkit-2-report.txt"
+  ],
+  "installedPackage": {
+    "path": "node_modules\\.pnpm\\playwright-core@1.63.0\\node_modules\\playwright-core\\lib\\coreBundle.js",
+    "version": "1.63.0",
+    "sha256": "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171",
+    "scope": "Local installed pinned implementation, not copied from failing runner",
+    "excerpt": [
+      {
+        "line": 26363,
+        "text": "agent = protocol === \"https:\" ? new import_https2.default.Agent({ keepAlive: true }) : new import_http3.default.Agent({ keepAlive: true });"
+      },
+      {
+        "line": 26474,
+        "text": "maxRetries ??= 0;"
+      },
+      {
+        "line": 26483,
+        "text": "if (maxRetries === 0)"
+      },
+      {
+        "line": 26484,
+        "text": "throw e;"
+      },
+      {
+        "line": 26487,
+        "text": "if (e.code !== \"ECONNRESET\")"
+      },
+      {
+        "line": 26523,
+        "text": "const requestConstructor = (url3.protocol === \"https:\" ? import_https2.default : import_http3.default).request;"
+      },
+      {
+        "line": 26525,
+        "text": "requestOptions.agent = options.agent ?? this._ensureAgent(url3.protocol);"
+      },
+      {
+        "line": 26758,
+        "text": "if (request2.reusedSocket) {"
+      },
+      {
+        "line": 26759,
+        "text": "reusedSocketAt = monotonicTime();"
+      },
+      {
+        "line": 26818,
+        "text": "BrowserContextAPIRequestContext = class extends APIRequestContext {"
+      }
+    ]
+  },
+  "missingDiagnosticData": [
+    "failed request timestamp",
+    "reusedSocket flag",
+    "client/server socket identifiers and lifecycle",
+    "server request arrival/response finish",
+    "effective server timeout values",
+    "kernel OOM and contemporaneous resource evidence",
+    "persisted final run state and downstream effect count",
+    "retained trace.zip"
+  ],
+  "actions": {
+    "productChanges": false,
+    "testRuns": false,
+    "ciDispatch": false,
+    "retryChanges": false,
+    "protectedConfigurationRead": false,
+    "commits": false,
+    "prChanges": false
+  }
+}

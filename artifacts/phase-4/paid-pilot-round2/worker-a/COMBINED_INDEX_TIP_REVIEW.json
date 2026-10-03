@@ -1,0 +1,156 @@
+{
+  "reviewedAtUTC": "2026-10-03T02:36:03.704715+00:00",
+  "reviewer": "Worker A, independent of index security author; Codex gpt-6.1-sol high",
+  "base": "97567e8d1e5cf8c724946c3c283b47dbef57a262",
+  "head": "3c10df7731ae06845a40c0b3b8749b84324ca281",
+  "binaryDiffSHA256": "4d19df46c8a01ef7d569b7cc624dba43446dea5b24653e26230e7d3c66e7591a",
+  "sourceBinaryDiffSHA256": "8c76e97052f2b7574aafb2b37a49d08fd8a247ccc0bbae2b548f7d64f2b48c5d",
+  "standaloneHead": "e437af28b177f9998bca582de7b9752ab7e8429e",
+  "standaloneBase": "360078e9d3357267711f006888b578f5a0c6c434",
+  "standaloneBinaryDiffSHA256": "6dc4f2a97a58146e1f94cc9276f7ca408b754b24d0a7ecb24ba6815a9d8d3c51",
+  "standaloneSourceBinaryDiffSHA256": "9e9f87f93ab03813627ce1ae0609d3d3abf45643944064b691370d00fdbbd3e4",
+  "paths": [
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/README.md",
+      "sha256": "b59305520b2b2a5c2a6c5e8cf4d98191d954d59333476775afc035e455193b53",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/focused-results.json",
+      "sha256": "8d53eefe65cb8e22425cceed87c765a1c9c4bc4b25bc696b11a0f0ebfc8176d1",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/initial-unit-failure.txt",
+      "sha256": "2ddbd7ee808fdfb566fe52b2165a37390140e2c560a286f9a280beaab7bd3db6",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/integration-1790994539449.json",
+      "sha256": "c2a0a47ca0655a1475aed05453105afb539a1817a7dd6ef9c21c4cb98e1731b5",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/integration-1790994539449.log",
+      "sha256": "4bbf727a94ce5775525331e96c00bd64ba16563b4d162eecef6b4aa77aa0b1f0",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/integration-1790994606127.json",
+      "sha256": "18aa8b3dc9f4d663371983ae54746f553636b0faf8cf9f3946c572541faac8d8",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/integration-1790994606127.log",
+      "sha256": "64f144a3f3e9a5838bb729820c7fc4c386792a745847b959ae01bb157b272929",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/reviewable-source.diff.b64",
+      "sha256": "fc4a241fbe9cba4d6e2a8a325cc2dd85d3369179442bc6c183fded56f3de0ce6",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/run-focused.mjs",
+      "sha256": "427c6615c7b17c0dfa656e0779b97cd081a0ab0649a188de19f53aaae6e7c009",
+      "matchesStandaloneBlob": true,
+      "secretClassification": [
+        "known synthetic fixture"
+      ]
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/index-admission/unit.log",
+      "sha256": "3a4e856678f1bdbf0d95461957e034b0c242ab7f9cc52e82eaff744a8b632fbd",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "src/components/company-builder/session.tsx",
+      "sha256": "9bea5d711d78f551ba53986813f299987de7f5d235525f93eacdb96207673110",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "src/i18n/errors.ts",
+      "sha256": "9551c696b74c665e94194f1f98dbd16e5fb66b9c57c23a346b3d772e2c2a2365",
+      "matchesStandaloneBlob": false,
+      "secretClassification": []
+    },
+    {
+      "path": "src/i18n/messages/ar.json",
+      "sha256": "8f7c8dcde19dd0e6faad6441caa151723a5f7cde02dc87894d2f109671c4ff96",
+      "matchesStandaloneBlob": false,
+      "secretClassification": []
+    },
+    {
+      "path": "src/i18n/messages/en.json",
+      "sha256": "ea09128d06186a4fcc9f3f1c75d2c5eabf7014a585ed7a9b48d1b76ec1673471",
+      "matchesStandaloneBlob": false,
+      "secretClassification": []
+    },
+    {
+      "path": "src/server/company-builder/install.ts",
+      "sha256": "de26ce7990090cf1d151545d57b255b97afd2eef1da91d79fa679acf87386b60",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "src/server/knowledge-admission.ts",
+      "sha256": "6ea7f7f81a3e3877f62051afe1942bfa5c7be7ca6cd053eba703c95e43a4fa14",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "src/server/knowledge.ts",
+      "sha256": "b44259b616d63db79dee5e2b952808fd8160f1f4cedd6e9049f22e00461e5d34",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "tests/integration/pilot-index-admission.test.ts",
+      "sha256": "353df79c55c92e5e37f3bb5426a62239a291c3b3e944fdb016b635e01a6954b8",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    },
+    {
+      "path": "tests/unit/knowledge-admission.test.ts",
+      "sha256": "c3efb3f9d50565453a7930d6bc99ccd038d4c48fb0a8cf122a21a2c6220fc98a",
+      "matchesStandaloneBlob": true,
+      "secretClassification": []
+    }
+  ],
+  "outcome": "APPROVED FOR IMMUTABLE BACKUP ONLY",
+  "sourceFindings": [
+    "Global transaction advisory lock serializes admission; pending and indexing rows count, exclusion applies only to same currently row-locked reindex source.",
+    "All production pending writers inspected: addSource, approved Company Builder stored-file branch, reindex. Queue lock precedes retained-file lock; denied operations roll back raw-file insert and step records.",
+    "Reindex rechecks undeleted same-workspace source under row lock; claim invalidation unchanged. Worker completion frees slot and stale old-worker chunks roll back on claim loss.",
+    "ACL route behavior is retained before admission; three new errors have identical EN/AR keys and locale projections match standalone. errors.ts/catalog differences from standalone are disjoint inherited BODY_READ_TIMEOUT/AI/auth/provider/product entries.",
+    "No DB schema changes, providers, subscription pricing, executable defaults, OS/data authority or product features added.",
+    "Committed evidence includes failed initial attempt and final synthetic test summaries. UTF16/NUL-bearing logs and base64 source-diff evidence decoded for pattern/manual review; no real credentials or customer data identified."
+  ],
+  "verificationLimits": [
+    "No new tests/build/browser/CI run. Historical source tests are reported by author evidence, not independently rerun.",
+    "Queue and retained-byte circuit breakers leave aggregate chunks, parser CPU/heap/concurrency, DB row/index overhead and OS confinement OPEN/PARTIAL.",
+    "This review covers exact tip21paths plus identity to standalone source; combined lineage remains over150 and is never a PR."
+  ]
+}

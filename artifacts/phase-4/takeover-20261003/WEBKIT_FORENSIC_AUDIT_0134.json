@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-03T01:34:00Z",
+  "run": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37081791704",
+  "candidate": "6a57f97b30ea95c536793199f107e58eb4fa4e68",
+  "result": "UNRESOLVED_MERGE_BLOCKER",
+  "failure": {
+    "spec": "e2e/phase3.spec.ts",
+    "line": 88,
+    "operation": "API run-status poll after approval",
+    "error": "apiRequestContext.get: read ECONNRESET",
+    "passed": 77,
+    "failed": 1
+  },
+  "observations": [
+    "Downloaded the retained WebKit gate artifact to a task-specific temporary directory.",
+    "Read only narrowly filtered and sanitized diagnostic output; raw reports can contain disposable authentication material and were not copied into evidence.",
+    "Stack 3 worker activity continued after the failed request; no recorded crash or OOM establishes a root cause.",
+    "Gate source waits for browser completion before normal stack cleanup; the inspected record does not establish premature teardown.",
+    "Connection reuse and server keep-alive timing remain hypotheses without request/server trace evidence.",
+    "Later exact-head full CI passed, but a later pass alone does not resolve this flaky failure."
+  ],
+  "nextDiagnosticRequirement": "Correlate the failed API request with server connection/request lifecycle evidence, establish a cause, and fix it through a reviewed PR without changing assertions, adding retries or skipping coverage.",
+  "productChanges": false,
+  "localBrowserGateRun": false,
+  "testRetriesAdded": false,
+  "protectedConfigurationRead": false
+}

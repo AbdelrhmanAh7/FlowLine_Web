@@ -1,0 +1,97 @@
+{
+  "head": "d5fa51e33fe807a075138e2660074335412df723",
+  "base": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "binaryDiffSHA256": "838b5d848848d2192dc617a5fe5459e61e841d2ab6845c14bf5ce2e79e77e90b",
+  "paths": [
+    {
+      "path": "artifacts/phase-4/hubspot/IMPLEMENTATION.md",
+      "sha256": "afefdf6b2cb555e08d933380459ecefb208723013aaf11b8f86092c3834709ac"
+    },
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/hubspot-focused.md",
+      "sha256": "7e8d69e58c961f2f4f1fc29400da40361303e1cf51cad9c0b0072f453ce68e31"
+    },
+    {
+      "path": "e2e/fakes/provider-server.ts",
+      "sha256": "34fd0d6569c4f629e466ec6ceec0cea63ec505343cdedfe3160f2eaf21bc79e6"
+    },
+    {
+      "path": "e2e/hubspot.spec.ts",
+      "sha256": "9a9c80eb31f42ea10aadb6e8d09e1ee433d578af4983e3235436c31dbd6f9e5f"
+    },
+    {
+      "path": "scripts/gate-groups.mjs",
+      "sha256": "78c536a3951f19999faf13722ee6cad86c6985716f5bfa2aeed0a0d799715aad"
+    },
+    {
+      "path": "src/app/api/integrations/catalog/route.ts",
+      "sha256": "83b7d5fcf8b37ab6392442ecf1acbe9be5be9a0cd1c9bb193c6c220ff3e720d6"
+    },
+    {
+      "path": "src/i18n/messages/ar.json",
+      "sha256": "789f4d9e568277c4ae700455859346bdeac497afd1c54ec6e17dd4b6180aae47"
+    },
+    {
+      "path": "src/i18n/messages/en.json",
+      "sha256": "866fbf9e6d5ce7cf839db76df3d580e7860032c82bbae325c8785bd205442b66"
+    },
+    {
+      "path": "src/integrations/providers/hubspot.ts",
+      "sha256": "0163ff6a72dd7c1666228ceb8616e9a3ac72c53d69120054d5c440ed027a5458"
+    },
+    {
+      "path": "src/lib/catalog.ts",
+      "sha256": "8ff6357845dfdc173af346345cad0cc054377da5e6dab6977a7cdb689398ef46"
+    },
+    {
+      "path": "tests/contract/hubspot.test.ts",
+      "sha256": "d69b88a9d35dfdc17703e14f1309caa5d6370db1e9fc34db2ee7d2679b05c475"
+    },
+    {
+      "path": "tests/integration/hubspot.test.ts",
+      "sha256": "047981f639e55341d825f9dc70b1a6ed353dd0fd36c2a66a913799c71a8fc8ef"
+    },
+    {
+      "path": "tests/unit/hubspot.test.ts",
+      "sha256": "975a430cfa0b6bceebdab08bc8acaf777529f4729b82601dd5dcf18cf8f0c231"
+    }
+  ],
+  "secretPatternFindings": [],
+  "credentialLiteralClassifications": [
+    {
+      "path": "tests/contract/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "b9c92a99e8f6f322ed1a6f77619b7b8691c8610dc9b6d19bd94814e095096ce3"
+    },
+    {
+      "path": "tests/contract/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "a0681124726effb16d5d38d054824ee027a0bda46afc95a3a6d53ace6a4dbac9"
+    },
+    {
+      "path": "tests/integration/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "5c347c71a926cf90f897ab4529e1df64506eba1f9a90b044fa7174207b84eff1"
+    },
+    {
+      "path": "tests/integration/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "a0681124726effb16d5d38d054824ee027a0bda46afc95a3a6d53ace6a4dbac9"
+    },
+    {
+      "path": "tests/integration/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "b9c92a99e8f6f322ed1a6f77619b7b8691c8610dc9b6d19bd94814e095096ce3"
+    },
+    {
+      "path": "tests/unit/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "fd55ab4c816e75977250cb9cf87e694bf3683b983be44b76b17f69d79c96de37"
+    },
+    {
+      "path": "tests/unit/hubspot.test.ts",
+      "classification": "synthetic/fixture",
+      "literalSHA256": "fd55ab4c816e75977250cb9cf87e694bf3683b983be44b76b17f69d79c96de37"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "capturedAtUTC": "2026-10-03T02:44:12.227150+00:00",
+  "correction": "Earlier message inferred mutable combined backup from20exact count; inference was incorrect. Audited JSON correctly retained remoteHead=null for mutable combined. Count increase was new sandbox candidate; mutable combined remains absent. Manifest was updated concurrently; initial19 refs observation and later expanded inventory are dated snapshots.",
+  "remoteMutableCombined": null,
+  "localMutableCombined": "4a907b84c630388befe77044bf18c318826737ed",
+  "workerAPushes": 3,
+  "immutableBackups": {
+    "codex/paid-pilot-combined-backup-3c10df7": "3c10df7731ae06845a40c0b3b8749b84324ca281",
+    "codex/paid-pilot-combined-backup-97567e8": "97567e8d1e5cf8c724946c3c283b47dbef57a262",
+    "codex/paid-pilot-index-admission-backup-e437af2": "e437af28b177f9998bca582de7b9752ab7e8429e"
+  },
+  "newStandaloneChunkRemote": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+  "newStandaloneChunkReview": "STANDALONE_CHUNK_BACKUP_REVIEW.json",
+  "manifestDrift": "Captured BACKUP_AND_CANDIDATE_AUDIT included an in-flight chunk row relative to main; for current intended chunk dependency usec673/e437 and18paths here. The index follow-on ise437/360 and21paths."
+}

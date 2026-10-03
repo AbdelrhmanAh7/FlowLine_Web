@@ -1,0 +1,13 @@
+{
+  "headBefore": "bc46dc257e28602e76f82d71b791ade401306643",
+  "author": "Worker A",
+  "file": "artifacts/phase-4/paid-pilot-round1/security-report.md",
+  "binaryDiffSHA256": "b512933b0463d5e063ef0d49df76ca05add8997f6b490b63c9334e6bea555e0a",
+  "checks": [
+    "git diff --check passed",
+    "preserved report scope line cites applicatione690de6d7197abcc4e905dad831721448e8525ec; object exists",
+    "historical uncommitted preparation observation retained; bc46dc2 labeled documentation baseline, no later runtime acceptance claimed"
+  ],
+  "committed": false,
+  "pushed": false
+}

@@ -1,0 +1,20 @@
+**APPROVE** staged diff SHA256 `026e0e28b30abc80c992991b26ab733fc540d6f223228f65b594dd013dd9275e` for commit and push to the existing non-main backup branch only. No PR, merge, CI acceptance, deploy, payment or release authorisation. This is Fable decision eight.
+
+**Prior findings, verified against this stage**
+
+1. Fable count: the new restart paragraph states seven through the prior review and that future decisions increment it. Correct. The older "five bounded decisions" paragraph stays below it as dated history, which is acceptable.
+2. Binary records: both decoded as plain UTF-8 JSON. G4_FINAL_CI shows run 37083233953 at head `85d805d9`, six jobs all success. pr13-summary shows run 37090636510 at head `56f96d9e`, six jobs all success, billable total zero. Neither contains credentials, tokens or customer data. Only public GitHub handle, public URLs and CodeRabbit marker ids appear.
+3. Request journal: open-next.mjs now reads both the committed and the shared log, unions and dedups by line, counts slots on the union, and writes both copies after an opening. Divergence is resolved. Missing files fail closed because readFileSync throws.
+4. Backup helper: the dead ancestor guard is gone. Drift now throws before any push. The script no longer pushes at all. Correct and conservative.
+5. PR13 replies: corrections doc records reply 03:02:25 and resolution 03:03:47, matching the snapshot timestamps.
+6. Manifest: RESTART_CHECKPOINT_MANIFEST.json is now staged. Its 85 paths reconcile with the prior approved count.
+7. Combined branch advance from `4a907b8` to `de79ab2` is now explained, remote matching.
+
+**Owner barriers** hold. Product verifier stays blocked, no billing route, no merge, no scope change, cutoff 06:30Z unchanged, sequential single lead with the old process stopped.
+
+**Non-blocking notes for the next refresh**
+
+- open-next.mjs now calls writeFileSync. The import line is outside the shown hunk, so I could not confirm it is imported. Run a syntax check before the next opening.
+- In restart-ops.mjs the `pushed` field is now always false because the throw precedes it. Honest, but misleading as a name.
+- The corrections doc has run-together tokens such as "at03:02:25UTC". Cosmetic.
+- The self-recording manifest and this review text, when staged after approval, will change the committed diff hash. Record in the commit or manifest that the only additions beyond `026e0e28…` are those two metadata files.

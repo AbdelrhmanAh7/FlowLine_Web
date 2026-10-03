@@ -1,0 +1,13 @@
+2026-10-02T20:13:37.142Z #2
+2026-10-02T20:13:38.578Z #3
+2026-10-02T20:13:40.008Z #4
+2026-10-02T21:13:39.910Z #2
+2026-10-02T21:41:30.445Z #2
+2026-10-02T21:54:34.905Z #2
+2026-10-02T22:14:13.303Z #2
+2026-10-02T22:41:57.106247Z #2 full-review recovery
+2026-10-02T23:22:08.6147029Z #7 four-file tail review (owner-approved bounded recovery)
+2026-10-02T23:55:34.8459875Z #8 initial automatic review on ready docs PR (auto_review.enabled; no manual duplicate)
+2026-10-03T02:31:51Z #12 initial automatic review on ready security-report PR; conservatively reserved slot
+2026-10-03T02:40:48Z #13 initial automatic review on ready runtime PR; second slot reserved
+2026-10-03T02:52:16.4255477Z #13 single Fable-approved unchanged-head review after advertised rollover; third conservative attempt

@@ -1,0 +1,20 @@
+Ruling (decision only, no tools used).
+
+**Confirmed:**
+- The latest owner restart governs. Low-memory mode, sequential slices, GitHub CI only, RAM check ≥6GB before heavy steps with a 5-minute pause otherwise. Deadlines today: stop launching 09:30 Cairo, push and refresh ledger by 09:40, absolute stop 09:46. The earlier 07:13/07:23 sequencing is superseded.
+- Binding limits unchanged: 3 reviews per rolling hour, stop openings on rate limit until the window rolls, no billing changes and $0, no merges this round, PRs 9–11 untouched.
+- Review slot accounting: counting 02:31:51, 02:40:48 (refused) and 02:52:19 as three is the correct conservative reading. Earliest next review 03:31:52 UTC, then 03:40:49 and 03:52:20 as each departs.
+- PR 12 (a9276f6) and PR 13 (56f96d9): full CI green, reviews finished. Implement the prior nit disposition on PR 13: reply "Not changed" with the stated reason (unquoted 22 with newline matches, 22.1 rejected) and resolve. PR 12 provenance thread is already resolved; the docs-only rereview waiver stands.
+- One PR at a time, finish all threads before opening the next, CI may finish independently, max 150 files, no merges.
+- Existing independent exact-diff reviews are reusable only while the reviewed SHA is unchanged. Any new author edit needs a fresh independent sequential review before push, consuming a slot; no parallel worker.
+- M5 commit 360078e: verify it is on the remote; do not recommit or redo backups.
+- Owner-only barriers (deploy, payments, DNS, invites, spend) are recorded as BLOCKED, not worked around.
+
+**Corrections and clarifications:**
+1. Replying and resolving threads are not reviews. They do not consume a slot and may happen now. Only review openings count against the rolling hour.
+2. Order the remaining slices by dependency and slot availability, not by appetite: deps (dd840db) first, then redaction/resource/auth, then upload/body/MFA, then monitor/retry/lighthouse. With a hard stop at 09:46 Cairo (06:46 UTC) and about 3 slots per hour, expect at most roughly 9 review openings total. Plan for fewer, since each PR needs threads finished before the next opens.
+3. The 09:30 Cairo launch cutoff applies to review openings and PR pushes alike. Do not open a review after 09:30 even if a slot is free. Anything unreviewed at that point is carried over in the ledger, not pushed.
+4. Before each heavy step, the RAM check is a gate, not a note. If it fails twice in a row, record the slice as deferred rather than looping indefinitely.
+5. No paid route, no secret requests, no credentials in evidence or the ledger.
+
+Proceed in that order, starting with the PR 13 nit reply and resolve, then the remote check for 360078e, then the deps slice at or after 03:31:52 UTC.

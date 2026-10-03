@@ -1,0 +1,53 @@
+{
+  "head": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+  "base": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "binaryDiffSHA256": "43a7c09ee2874f2218ddd3ad8b01f47779e7364340ed8321995edf088f0b9466",
+  "paths": [
+    {
+      "path": "artifacts/phase-4/paid-pilot-round1/p3-focused.md",
+      "sha256": "b04870b140abce855cb51695264480148d0278ab7af9c849606cedbb5df40b03"
+    },
+    {
+      "path": "src/app/page.tsx",
+      "sha256": "13a8cedf731ca34f3397e17f585c31890a9b0132a51274b93a718b48965acd54"
+    },
+    {
+      "path": "src/design/tokens.generated.css",
+      "sha256": "51ebf3991441b4815d09b61d4dd5281124074493a7df3ea3864010b899d3a07c"
+    },
+    {
+      "path": "src/design/tokens.json",
+      "sha256": "c6decaf5eba4b0f9a391e5d955e898d4656a9b0ffe5e288dd2d274788e1ae685"
+    },
+    {
+      "path": "src/design/tokens.ts",
+      "sha256": "cf822e72074ba3a2a7c0678610130f40e499a613d772f5b91343d09f16087d3b"
+    },
+    {
+      "path": "src/i18n/engine-text.ts",
+      "sha256": "eabd9fc12f2d9ccc3e7436e76ce40bea3acbcd38902bd5f1ccc0601b8acadc8a"
+    },
+    {
+      "path": "src/i18n/errors.ts",
+      "sha256": "3e84ec641fd7f10900a3b47ab88a6fa2cb3c631a813bd564cfa3fa39ad9a7840"
+    },
+    {
+      "path": "tests/unit/design-system.test.ts",
+      "sha256": "d03ea42adff4cf4f16d823259d18a93bdb07a26fab216d77466c4161a58977d3"
+    },
+    {
+      "path": "tests/unit/i18n.test.ts",
+      "sha256": "c5c564c58be7a79cb9fcee0313f9ad80e0cc54f08649d6bda61f4590701913aa"
+    },
+    {
+      "path": "tests/unit/landing-header.test.ts",
+      "sha256": "62e52ed113deb29ff1551f424bdf86777b68dade4132cec31ce4d72d3bbd08d7"
+    },
+    {
+      "path": "tests/unit/run-messages.test.ts",
+      "sha256": "57fc2b8ff39a7a59b7e0483b0a79e7b78f62ea475092cf0367b23e8e7dbd80eb"
+    }
+  ],
+  "secretPatternFindings": [],
+  "credentialLiteralClassifications": []
+}

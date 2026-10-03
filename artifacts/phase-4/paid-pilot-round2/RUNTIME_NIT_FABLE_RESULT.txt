@@ -1,0 +1,11 @@
+**Decision: B.** Reply "Not changed" on the CodeRabbit thread, resolve the nit, keep the reviewed head, and proceed with the dependency work once the window opens at 03:31:52.
+
+**Why B:**
+- **No defect.** The source under test uses unquoted `node-version: 22` followed by a newline, which the current regex matches. The nit describes a hypothetical format the file does not use.
+- **The assertion is doing real work.** It rejects `22.1`, so it is not a weak or misleading test. Loosening it for formats that don't exist adds nothing and marginally widens what passes.
+- **Cost outweighs value.** Option A would invalidate the green exact-head CI run (six jobs, all suites passing), require a new pre-push review, and consume a review attempt that is better spent on the queued dependency PRs.
+- **Honesty rule is satisfied.** Nothing is being changed to hide a failure. The thread reply states the current unquoted source and the green exact-head gate, which is the actual evidence.
+
+**Thread reply wording:** "Not changed. `setup-gate/action.yml` uses unquoted `node-version: 22` with a trailing newline, which the current regex matches exactly, and the strictness is intentional so `22.1` is rejected. Exact-head full CI is green. Formatting robustness for quoted values can be added if the action file ever changes format."
+
+Pick up A only if a future edit to the action file introduces quotes or moves the key to end-of-file, at which point the regex change should ride along with that edit rather than stand alone.

@@ -1,0 +1,70 @@
+{
+  "url": "https://api.github.com/repos/AbdelrhmanAh7/FlowLine_Web/pulls/comments/4171455270",
+  "pull_request_review_id": 5398712272,
+  "id": 4171455270,
+  "node_id": "PRRC_kwDOUvLGYc74o1sm",
+  "diff_hunk": "@@ -0,0 +1,29 @@\n+import { readFileSync } from \"node:fs\";\n+import { describe, expect, it } from \"vitest\";\n+\n+const read = (file: string) => readFileSync(new URL(`../../${file}`, import.meta.url), \"utf8\");\n+const pinned = /^[a-z0-9/._-]+:[a-z0-9._-]+@sha256:[a-f0-9]{64}$/i;\n+describe(\"release input policy\", () => {\n+  it(\"aligns package support, CI, build and runtime on approved Node 22 LTS\", () => {\n+    const dockerfile = read(\"Dockerfile\");\n+    const packageJson = JSON.parse(read(\"package.json\"));\n+    expect(packageJson.engines.node).toBe(\"22.x\");\n+    expect(read(\".github/actions/setup-gate/action.yml\")).toMatch(/node-version:\\s*22\\s/);",
+  "path": "tests/unit/release-input-policy.test.ts",
+  "commit_id": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+  "original_commit_id": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+  "user": {
+    "login": "AbdelrhmanAh7",
+    "id": 109826556,
+    "node_id": "U_kgDOBovR_A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/109826556?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/AbdelrhmanAh7",
+    "html_url": "https://github.com/AbdelrhmanAh7",
+    "followers_url": "https://api.github.com/users/AbdelrhmanAh7/followers",
+    "following_url": "https://api.github.com/users/AbdelrhmanAh7/following{/other_user}",
+    "gists_url": "https://api.github.com/users/AbdelrhmanAh7/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/AbdelrhmanAh7/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/AbdelrhmanAh7/subscriptions",
+    "organizations_url": "https://api.github.com/users/AbdelrhmanAh7/orgs",
+    "repos_url": "https://api.github.com/users/AbdelrhmanAh7/repos",
+    "events_url": "https://api.github.com/users/AbdelrhmanAh7/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/AbdelrhmanAh7/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "body": "Not changed, per the recorded Fable disposition. `setup-gate/action.yml` uses unquoted `node-version: 22` with a trailing newline, which the current regex matches; it rejects `22.1`. Exact-head full CI is green at `56f96d9ee31498d2a38d1b4516dadcc49b7ac352`. Quoted-value/EOF formatting support can accompany a future action-format change. No runtime or configuration defect is present in this head.",
+  "created_at": "2026-10-03T03:03:47Z",
+  "updated_at": "2026-10-03T03:03:47Z",
+  "html_url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/13#discussion_r4171455270",
+  "pull_request_url": "https://api.github.com/repos/AbdelrhmanAh7/FlowLine_Web/pulls/13",
+  "_links": {
+    "self": {
+      "href": "https://api.github.com/repos/AbdelrhmanAh7/FlowLine_Web/pulls/comments/4171455270"
+    },
+    "html": {
+      "href": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/13#discussion_r4171455270"
+    },
+    "pull_request": {
+      "href": "https://api.github.com/repos/AbdelrhmanAh7/FlowLine_Web/pulls/13"
+    }
+  },
+  "reactions": {
+    "url": "https://api.github.com/repos/AbdelrhmanAh7/FlowLine_Web/pulls/comments/4171455270/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "start_line": null,
+  "original_start_line": null,
+  "start_side": null,
+  "line": 11,
+  "original_line": 11,
+  "side": "RIGHT",
+  "in_reply_to_id": 4171441723,
+  "author_association": "OWNER",
+  "original_position": 11,
+  "position": 11,
+  "subject_type": "line"
+}
