@@ -167,6 +167,7 @@ describe("API error messages", () => {
 
   it("maps known codes to the catalogue", () => {
     expect(apiErrorMessage(t, new ApiError(410, "INVITE_EXPIRED", "This invitation expired — ask for a new one"))).toBe(ar.errors.INVITE_EXPIRED);
+    expect(apiErrorMessage(t, new ApiError(403, "PLATFORM_MFA_REQUIRED", "Sign in again and complete your authenticator challenge"))).toBe(ar.errors.PLATFORM_MFA_REQUIRED);
     expect(apiErrorMessage(t, new ApiError(0, "NETWORK", "Can't reach Flowline"))).toBe(ar.errors.NETWORK);
     expect(apiErrorMessage(t, new ApiError(502, "HTTP_502", "Request failed (502)"))).toBe(ar.errors.server);
     expect(apiErrorMessage(t, new ApiError(400, "VALIDATION", "Invalid request"))).toBe(ar.errors.VALIDATION);

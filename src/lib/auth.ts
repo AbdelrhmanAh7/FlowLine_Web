@@ -12,6 +12,7 @@ import { issueAccountToken } from "@/server/email/flows";
 import { track } from "@/server/telemetry";
 import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
 import { federatedMfa } from "@/server/federated-mfa";
+import { assertFederatedLinkSession } from "@/server/federated-link";
 
 /**
  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -62,6 +63,8 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
+      // Every read must reach the DB-backed MFA/revocation fence.
+      cookieCache: { enabled: false },
     },
     rateLimit: {
       // Relaxed only for the isolated test stack (E2E signs up many users); the email flows keep their own
@@ -74,6 +77,10 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
     advanced: { database: { generateId: () => crypto.randomUUID() } },
     // Private beta (P4-12): every new account — email or Google/GitHub — must be invited, hold a beta code, or be an admin.
     databaseHooks: {
+      account: {
+        create: { before: async (_account, ctx) => { await assertFederatedLinkSession(ctx); } },
+        update: { before: async (_account, ctx) => { await assertFederatedLinkSession(ctx); } },
+      },
       user: {
         create: {
           before: async (user, ctx) => {
@@ -96,7 +103,12 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
       },
     },
     // TOTP two-factor (required for platform admins before the admin panel unlocks; available to every account).
-    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), federatedMfa(), nextCookies()],
+    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), federatedMfa(async (provider) => {
+      const expected = provider === "zitadel" ? zitadel : socialProviders[provider];
+      if (!expected) return null;
+      const { federatedProviderStamp } = await import("@/server/auth-dispatch");
+      return federatedProviderStamp(provider, expected);
+    }), nextCookies()],
   });
 }
 

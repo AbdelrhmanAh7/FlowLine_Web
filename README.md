@@ -139,6 +139,9 @@ test stack and a manually run production build, not a pushed release image).
   platform and workspace secrets); API keys are stored hashed and shown once (`docs/security/CREDENTIALS_DESIGN.md`).
 - Platform admin access requires a dedicated `platform_admin` principal, TOTP, and a session-bound step-up
   (10 minutes) before writes; it is never derived from workspace roles or SSO.
+- Federated sign-in requires an enrolled account's local authenticator before issuing a usable session. All session
+  reads require proof for the current factor; older unassured sessions must sign in again. See
+  [federated MFA and revocation](docs/security/FEDERATED_MFA.md), including the separate API-key contract and pending live validation.
 - Outbound requests go through an SSRF guard (`src/server/egress.ts`), including a per-AI-provider host allowlist.
   AI output is treated as data; tool permissions are enforced by the backend, not by prompts.
 - Independent reviews: `artifacts/phase-3/`, `artifacts/phase-4/`, `artifacts/ai-hub/`.

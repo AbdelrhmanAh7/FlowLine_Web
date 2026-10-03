@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## H3 security readiness review — 2026-10-03
+
+The uncommitted candidate based on `2c85f05` enforces local MFA across all session reads, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. No commit, push, PR, merge or deployment was performed. This update does not change private-beta or production acceptance.
+
 ## Current execution — 2026-09-30
 
 The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.

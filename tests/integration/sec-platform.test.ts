@@ -484,7 +484,7 @@ describe("first-admin bootstrap", () => {
     const enabled = (await auth.api.enableTwoFactor({ body: { password }, headers })) as { totpURI: string };
     const raw = base32Decode(new URL(enabled.totpURI).searchParams.get("secret")!);
     await auth.api.verifyTOTP({ body: { code: totpCodeFor(raw) }, headers });
-    const s2 = await sessionFor({ id: u!.id, email: emailAddr });
+    const s2 = await assuredSessionFor({ id: u!.id, email: emailAddr }, raw.toString("utf8"));
     userCookie = s2.cookie;
     sessionHolder.headers = withSetup();
     const state = await call(setupGET, setupReq("/api/platform/setup"));

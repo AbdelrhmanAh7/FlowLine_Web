@@ -45,9 +45,10 @@ export async function ssoLinkDetails(token: string, sessionToken: string) {
   const [user] = await db.select().from(schema.user).where(eq(schema.user.id, intent.userId));
   const [credential] = await db.select().from(schema.account).where(and(eq(schema.account.userId, intent.userId), eq(schema.account.providerId, "credential")));
   if (!user || user.email !== intent.email) throw invalid();
+  const [factor] = user.twoFactorEnabled ? await db.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, user.id)) : [];
   const [proof] = intent.mailboxTokenId ? await db.select().from(schema.emailToken).where(and(eq(schema.emailToken.id, intent.mailboxTokenId), eq(schema.emailToken.userId, user.id), eq(schema.emailToken.purpose, "verify"))) : [];
   const mailboxVerified = Boolean(user.emailVerified && proof?.consumedAt);
-  return { intent, session, user, needsTotp: user.twoFactorEnabled, needsPassword: Boolean(credential?.password), passwordHash: credential?.password, mailboxVerified };
+  return { intent, session, user, needsTotp: user.twoFactorEnabled, needsPassword: Boolean(credential?.password), passwordHash: credential?.password, factorHash: factor && factor.verified !== false ? sha256Hex(factor.secret) : null, mailboxVerified };
 }
 
 /** Fresh Flowline verification is required even for historical tenant-created
@@ -91,9 +92,12 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
     if (!pending || pending.value !== JSON.stringify(intent)) throw invalid();
     const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, sessionToken), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("update");
     const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user.id)).for("update");
+    const [currentFactor] = user.twoFactorEnabled ? await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, user.id)).for("share") : [];
+    const [currentCredential] = await tx.select().from(schema.account).where(and(eq(schema.account.userId, user.id), eq(schema.account.providerId, "credential"))).for("share");
+    if ((user.twoFactorEnabled && (!currentFactor || currentFactor.verified === false || sha256Hex(currentFactor.secret) !== details.factorHash)) || (currentCredential?.password ?? null) !== (details.passwordHash ?? null)) throw invalid();
     const [cfg] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, intent.workspaceId)).for("update");
     const [member] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, intent.workspaceId), eq(schema.workspaceMember.userId, user.id))).for("update");
-    if (!currentSession || !currentUser || !currentUser.emailVerified || currentUser.email !== intent.email || currentUser.twoFactorEnabled !== user.twoFactorEnabled || !cfg || cfg.updatedAt.toISOString() !== intent.configStamp || !member || (!cfg.enabled && member.role !== "owner")) throw invalid();
+    if (!currentSession || !currentUser || !currentUser.emailVerified || currentUser.email !== intent.email || currentUser.updatedAt.toISOString() !== user.updatedAt.toISOString() || currentUser.twoFactorEnabled !== user.twoFactorEnabled || !cfg || cfg.updatedAt.toISOString() !== intent.configStamp || !member || (!cfg.enabled && member.role !== "owner")) throw invalid();
     const providerId = ssoProviderId(intent.workspaceId, cfg.issuer, cfg.clientId);
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${providerId}:${intent.subject}`}))`);
     const [linked] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, intent.subject)));

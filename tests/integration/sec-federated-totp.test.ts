@@ -62,8 +62,9 @@ async function assertChallenge(response: Response, userId: string, secret: strin
     await expect(requireStepUp(principal)).resolves.toBeUndefined();
     const other = await sessionFor({ id: userId, email: session!.user.email });
     const unassured = await platformGET(new Request(`${ORIGIN}/api/platform/me`, { headers: { cookie: other.cookie } }), platformContext);
-    expect(unassured.status).toBe(403);
-    expect((await unassured.json()).error.code).toBe("PLATFORM_MFA_REQUIRED");
+    expect(await auth.api.getSession({ headers: new Headers({ cookie: other.cookie }) })).toBeNull();
+    expect(unassured.status).toBe(404);
+    expect((await unassured.json()).error.code).toBe("NOT_FOUND");
   }
 }
 
@@ -122,6 +123,42 @@ describe("H3: built-in social-provider callbacks enforce the same local factor",
   });
 });
 
+// Written for CI; not executed during the resource-limited readiness review.
+describe("H3 global pending authority and pre-enrollment sessions", () => {
+  it("rejects a session created before TOTP enrollment at the shared session boundary", async () => {
+    const user = await makeVerifiedUser("before-enrollment");
+    const old = await sessionFor(user);
+    const headers = new Headers({ cookie: old.cookie });
+    expect((await auth.api.getSession({ headers }))?.user.id).toBe(user.id);
+    await enrolTotp(user.id);
+    expect(await auth.api.getSession({ headers })).toBeNull();
+    expect((await auth.handler(new Request(`${ORIGIN}/api/auth/list-accounts`, { headers }))).status).toBe(401);
+  });
+
+  for (const change of ["app revoked", "account unlinked", "password changed"] as const) {
+    it(`rejects a global pending factor after ${change}`, async () => {
+      const user = await makeVerifiedUser("global-pending");
+      const secret = await enrolTotp(user.id);
+      const subject = Math.floor(Math.random() * 1_000_000_000);
+      await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "github", accountId: String(subject) });
+      const response = await githubCallback({ subject, email: user.email, next: "/app" });
+      const token = cookieFrom(response, FEDERATED_MFA_COOKIE).slice(FEDERATED_MFA_COOKIE.length + 1);
+      expect(token).toBeTruthy();
+      expect(await sessionRows(user.id)).toHaveLength(0);
+      if (change === "app revoked") {
+        const dispatch = await import("@/server/auth-dispatch");
+        vi.mocked(dispatch.federatedProviderStamp).mockResolvedValue(null);
+      }
+      if (change === "account unlinked") await db.delete(schema.account).where(eq(schema.account.userId, user.id));
+      if (change === "password changed") await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "credential", accountId: user.id, password: "synthetic-new-password-hash" });
+      const refused = await challengePOST(await challengeRequest(token, { code: code(secret) }), undefined);
+      expect(refused.status).toBe(401);
+      expect(cookieFrom(refused, (await auth.$context).authCookies.sessionToken.name)).toBe("");
+      expect(await sessionRows(user.id)).toHaveLength(0);
+    });
+  }
+});
+
 describe("pending factor lifetime and consumption", () => {
   it("refuses expired, recovered and changed-enrollment challenges; concurrent completions create exactly one session", async () => {
     const user = await makeVerifiedUser("pending-totp");
@@ -153,7 +190,8 @@ describe("H3 pending workspace authority fences", () => {
     const secret = await enrolTotp(user.id);
     await addMember(ws.id, user.id, "viewer");
     await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: ssoProviderId(ws.id, ISSUER, "test-client"), accountId: "attacker-subject" });
-    const initiator = await sessionFor(user);
+    const { assuredSessionFor } = await import("./platform-helpers");
+    const initiator = await assuredSessionFor(user, secret);
     const attempt = await oidcAttempt(ws.slug, user.email, initiator);
     const response = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}; ${initiator.cookie}` } }));
     const pending = cookieFrom(response, FEDERATED_MFA_COOKIE).slice(FEDERATED_MFA_COOKIE.length + 1);

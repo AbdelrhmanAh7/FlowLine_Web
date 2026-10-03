@@ -9,6 +9,10 @@
 3. ستصلك رسالة **تأكيد البريد الإلكتروني**. افتح الرابط خلال ٢٤ ساعة (وإن انتهت صلاحيته فاطلب رسالة جديدة من صفحة الدخول).
 4. أكمل خطوات البداية: اختر هدفك ثم ابدأ بقالب جاهز.
 
+إذا فعّلت تطبيق المصادقة في Flowline، فأدخل رمزه المكوّن من ٦ أرقام بعد تسجيل الدخول عبر Google أو GitHub أو ZITADEL أو الدخول الموحّد لمساحة العمل. لا يفتح الحساب حتى ينجح هذا التحقق المحلي، حتى لو تحقّق مزوّد الهوية منك مسبقاً. تنتهي المحاولة بعد ١٠ دقائق؛ أعد تسجيل الدخول إذا انتهت أو تغيّر ربط الحساب. الجلسات القديمة التي لم تُكمل التحقق المحلي تحتاج تسجيل الدخول مجدداً. رموز الاسترداد والجهاز الموثوق لا يتجاوزان هذه الخطوة في الدخول الموحّد.
+
+لربط الدخول الموحّد لمساحة عمل بحساب موجود، سجّل الدخول إلى Flowline أولاً، وأكّد ملكية بريدك برابط Flowline، ثم وافق صراحةً على الربط وأكمل التحقق المطلوب. تطابق البريد لدى مزوّد الهوية وحده لا يربط الحساب. تسجيل الخروج من Flowline لا يُنهي جلسة مزوّد الهوية.
+
 ## ٢. أول مسار (Workflow)
 - ابدأ بقالب **لا يحتاج أي تكامل خارجي**، مثل «تأهيل العملاء المحتملين»، لتجربة التشغيل فوراً.
 - اضغط **تشغيل**، ثم افتح **سجل التشغيل** لترى مُدخلات كل خطوة ومخرجاتها ومدتها.
@@ -55,6 +59,7 @@ user menu.
 
 1. **Getting in:** sign up with your invited email (or a beta code), then **verify your email** (the link is valid
    for 24 h).
+   If you enrolled a Flowline authenticator, Google/GitHub/ZITADEL and workspace SSO also require its six-digit code before the account opens. The pending challenge expires after ten minutes; restart sign-in after expiry or changed account links. Older sessions without local MFA proof require sign-in again. Provider MFA, trusted devices and backup codes do not bypass this federated challenge. Workspace SSO linking requires signing in first, independent Flowline mailbox verification and explicit link confirmation. Flowline sign-out does not end the provider's session.
 2. **First workflow:** start from a credential-free template, run it, and inspect each step in Run history. Editing
    works on tablet and desktop; mobile is for monitoring.
 3. **Integrations:**

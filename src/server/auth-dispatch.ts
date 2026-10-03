@@ -61,6 +61,27 @@ async function signinApp(p: Provider): Promise<SigninApp | null> {
   return { id: cred.id, clientId: cred.publicId, secret: cred.secret, revision: cred.revision, previous: cred.previous, source: "database" };
 }
 
+/** Pending local MFA remains tied to the provider configuration that accepted it. */
+function providerStamp(app: SigninApp) {
+  return sha256Hex(JSON.stringify([app.id, app.revision, app.clientId, app.issuer, app.issuerRevision, app.secretFingerprint]));
+}
+
+export async function federatedProviderStamp(provider: string, expected?: { clientId: string; clientSecret: string; issuer?: string }): Promise<string | null> {
+  if (!(PROVIDERS as readonly string[]).includes(provider)) return null;
+  const app = await signinApp(provider as Provider);
+  if (app && expected && (app.clientId !== expected.clientId || app.issuer !== expected.issuer ||
+    (app.secret !== expected.clientSecret && !(app.previous?.secret === expected.clientSecret && app.previous.validUntil > new Date())))) return null;
+  return app ? providerStamp(app) : null;
+}
+
+/** Only a completed factor may finish the pending sign-in's credential verification. */
+export async function markFederatedProviderVerified(provider: string, stamp: string) {
+  if (!(PROVIDERS as readonly string[]).includes(provider)) return;
+  const app = await signinApp(provider as Provider);
+  if (app?.source === "database" && providerStamp(app) === stamp)
+    await markPlatformSecretVerified(`signin.${provider}`, app.revision, "signin", app.id);
+}
+
 /** Instance-key part of one provider's app: identity AND revision (a revision number alone is reused after a clear). */
 function keyPart(p: string, appId: string, revision: number) {
   return `${p}:${appId}:r${revision}`;
@@ -186,11 +207,16 @@ export async function dispatchAuth(request: Request, method: "GET" | "POST"): Pr
     const pinned = await instanceForCallback(provider, state);
     if (!pinned) return refused();
     const res = await toNextJsHandler(pinned.instance)[method](request);
+    // The token exchange can yield while an operator revokes/replaces the app.
+    // Recheck the original attempt before publishing any session/challenge cookie.
+    const stillAccepted = await instanceForCallback(provider, state);
     await db.delete(schema.signinAttempt).where(eq(schema.signinAttempt.stateHash, sha256Hex(state!)));
     await db.delete(schema.verification).where(eq(schema.verification.identifier, `signin-issuer:${sha256Hex(state!)}`));
+    if (!stillAccepted) return refused();
     // A completed sign-in (redirect without an error and with a session cookie) verifies exactly that revision.
     const location = res.headers.get("location") ?? "";
-    if (res.status >= 300 && res.status < 400 && !/[?&]error=/.test(location) && /session_token/.test(res.headers.get("set-cookie") ?? "")) {
+    const issuedSession = res.headers.getSetCookie().some((cookie) => /^[^=]*session_token=[^;]/.test(cookie) && !/max-age=0(?:;|$)/i.test(cookie));
+    if (res.status >= 300 && res.status < 400 && !/[?&]error=/.test(location) && issuedSession) {
       if (provider !== "zitadel" || pinned.source === "database") await markPlatformSecretVerified(`signin.${provider}`, pinned.revision, "signin").catch(() => {});
     }
     return withNoReferrer(res);

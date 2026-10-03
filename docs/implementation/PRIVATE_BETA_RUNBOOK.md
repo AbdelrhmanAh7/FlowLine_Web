@@ -60,6 +60,8 @@ Service credentials (sign-in apps, integration OAuth apps, email, sandbox billin
 plans) are entered in the app at **`/admin`**, not in `.env.beta`. Details: `docs/security/CREDENTIALS_DESIGN.md`,
 `docs/integrations/CONNECTING.md`.
 
+Enrolled users must complete Flowline's local authenticator after any federated sign-in, including ZITADEL. Old sessions without exact-session/current-factor proof require reauthentication. This sign-in challenge is separate from the write elevation below; see [federated MFA](../security/FEDERATED_MFA.md).
+
 **In the app (after the one-time bootstrap below):** sign in → `/admin` → enter an authenticator code under
 **Unlock changes** → fill each card (client id / sender / client token + secret) → **Save** → **Test**. Register the
 redirect URIs the panel shows. Rotation, revocation and provider changes apply to the next operation — no restart.

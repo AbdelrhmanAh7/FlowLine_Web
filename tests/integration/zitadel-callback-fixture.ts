@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import { vi, expect } from "vitest";
 import { authFor } from "@/lib/auth";
 import * as egress from "@/server/egress";
+import * as authDispatch from "@/server/auth-dispatch";
 import { jwks, signedToken } from "./federation-fixture";
 import { ORIGIN } from "./platform-helpers";
 
 /** Real better-auth OIDC callbacks (including PKCE/state/nonce/JWKS), no server. */
 export async function zitadelCallback(opts: { issuer: string; subject: string; email: string; next?: string }) {
+  vi.spyOn(authDispatch, "federatedProviderStamp").mockResolvedValue(`fixture:${opts.issuer}`);
   let jwt = "";
   const discovery = { issuer: opts.issuer, authorization_endpoint: `${opts.issuer}/authorize`, token_endpoint: `${opts.issuer}/oauth/v2/token`, userinfo_endpoint: `${opts.issuer}/oidc/v1/userinfo`, jwks_uri: `${opts.issuer}/jwks`, id_token_signing_alg_values_supported: ["RS256"], token_endpoint_auth_methods_supported: ["client_secret_basic"] };
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
@@ -43,6 +45,7 @@ export async function zitadelCallback(opts: { issuer: string; subject: string; e
 
 /** Real built-in social-provider callback, with only HTTP transport replaced. */
 export async function githubCallback(opts: { subject: number; email: string; next: string }) {
+  vi.spyOn(authDispatch, "federatedProviderStamp").mockResolvedValue("fixture:github");
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.href === "https://github.com/login/oauth/access_token") return Response.json({ access_token: "synthetic-github-token", token_type: "bearer", scope: "read:user,user:email" });

@@ -10,14 +10,21 @@ import { checkRate } from "./rate-limit";
 import { safePath } from "./email/redirect";
 import { audit, userActor } from "./audit";
 import type { Role } from "@/db/schema";
+import { bindFederatedLink } from "./federated-link";
 
 export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
 const pendingId = (token: string) => `federated-mfa:${sha256Hex(token)}`;
 const assuranceId = (token: string) => `mfa-session:${sha256Hex(token)}`;
 const invalid = () => new HttpError(401, "FEDERATED_MFA_INVALID", "Restart sign-in to confirm your authenticator");
 interface WorkspaceSignIn { workspaceId: string; newMember: boolean; role: Role; configStamp: string; providerId: string; subject: string; initiator?: { sessionId: string; userId: string; sessionHash: string } }
-interface Pending { userId: string; next: string; userStamp: string; factorHash: string; workspace?: WorkspaceSignIn }
+interface GlobalSignIn { provider: string; configStamp: string }
+interface Pending { userId: string; next: string; userStamp: string; factorHash: string; accountsHash: string; workspace?: WorkspaceSignIn; global?: GlobalSignIn }
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+function accountsHash(accounts: (typeof schema.account.$inferSelect)[]) {
+  // Ignore refreshed provider tokens; include local password changes and unlink/relink.
+  return sha256Hex(JSON.stringify(accounts.map((a) => [a.id, a.providerId, a.accountId, a.password]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))));
+}
 
 export function federatedCookieOptions() {
   return { httpOnly: true, sameSite: "lax" as const, secure: (process.env.BETTER_AUTH_URL ?? process.env.FLOWLINE_PUBLIC_URL ?? "").startsWith("https:"), path: "/", maxAge: 600 };
@@ -34,22 +41,29 @@ export function federatedDestination(value: string) {
 }
 
 export async function recordMfaAssurance(token: string, userId: string, expiresAt: Date, tx: Db | Tx = db) {
+  const [factor] = await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
+  if (!factor || factor.verified === false) throw invalid();
   // Deterministic PK + expiry avoids duplicates when an enrollment hook runs twice.
   const id = assuranceId(token);
-  await tx.insert(schema.verification).values({ id, identifier: id, value: userId, expiresAt }).onConflictDoUpdate({ target: schema.verification.id, set: { value: userId, expiresAt } });
+  const value = JSON.stringify([userId, sha256Hex(factor.secret)]);
+  await tx.insert(schema.verification).values({ id, identifier: id, value, expiresAt }).onConflictDoUpdate({ target: schema.verification.id, set: { value, expiresAt } });
 }
 export async function hasSessionMfa(token: string, userId: string) {
-  const [proof] = await db.select().from(schema.verification).where(and(eq(schema.verification.identifier, assuranceId(token)), eq(schema.verification.value, userId), gt(schema.verification.expiresAt, new Date())));
+  const [factor] = await db.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
+  if (!factor || factor.verified === false) return false;
+  const value = JSON.stringify([userId, sha256Hex(factor.secret)]);
+  const [proof] = await db.select().from(schema.verification).where(and(eq(schema.verification.identifier, assuranceId(token)), eq(schema.verification.value, value), gt(schema.verification.expiresAt, new Date())));
   return Boolean(proof);
 }
 
 /** Opaque pending state is the only cookie granted before local TOTP succeeds. */
-export async function createFederatedChallenge(userId: string, next: string, workspace?: WorkspaceSignIn, connection: Db | Tx = db) {
+export async function createFederatedChallenge(userId: string, next: string, workspace?: WorkspaceSignIn, connection: Db | Tx = db, global?: GlobalSignIn) {
   const [user] = await connection.select().from(schema.user).where(eq(schema.user.id, userId));
   const [tf] = await connection.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
   if (!user?.twoFactorEnabled || !tf || tf.verified === false) throw invalid();
+  const accounts = await connection.select().from(schema.account).where(eq(schema.account.userId, userId));
   const token = randomToken(32);
-  const value: Pending = { userId, next: federatedDestination(next), userStamp: user.updatedAt.toISOString(), factorHash: sha256Hex(tf.secret), ...(workspace ? { workspace } : {}) };
+  const value: Pending = { userId, next: federatedDestination(next), userStamp: user.updatedAt.toISOString(), factorHash: sha256Hex(tf.secret), accountsHash: accountsHash(accounts), ...(workspace ? { workspace } : {}), ...(global ? { global } : {}) };
   await connection.insert(schema.verification).values({ id: randomUUID(), identifier: pendingId(token), value: JSON.stringify(value), expiresAt: new Date(Date.now() + 600_000) });
   return token;
 }
@@ -78,12 +92,22 @@ export async function completeFederatedChallenge(token: string, code: string) {
   // Adapter hooks/defaults run outside our locks, matching the ordinary SSO fence.
   const session = await ctx.internalAdapter.createSession(pending.userId);
   try {
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [fresh] = await tx.select().from(schema.verification).where(and(eq(schema.verification.id, row.id), gt(schema.verification.expiresAt, new Date()))).for("update");
       if (!fresh || fresh.value !== row.value) throw invalid();
       const [user] = await tx.select().from(schema.user).where(eq(schema.user.id, pending.userId)).for("update");
       const [tf] = await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, pending.userId)).for("update");
       if (!user?.twoFactorEnabled || user.updatedAt.toISOString() !== pending.userStamp || !tf || tf.verified === false || sha256Hex(tf.secret) !== pending.factorHash) throw invalid();
+      const accounts = await tx.select().from(schema.account).where(eq(schema.account.userId, user.id)).for("share");
+      if (accountsHash(accounts) !== pending.accountsHash) throw invalid();
+      if (pending.global) {
+        // Serialize DB-backed app revocation/rotation and issuer replacement with
+        // the final authority check. Environment changes require a process restart.
+        await tx.select({ id: schema.platformSecret.id }).from(schema.platformSecret).where(eq(schema.platformSecret.purpose, `signin.${pending.global.provider}`)).for("share");
+        if (pending.global.provider === "zitadel") await tx.select({ key: schema.platformSetting.key }).from(schema.platformSetting).where(eq(schema.platformSetting.key, "signin.zitadel.issuer")).for("share");
+        const { federatedProviderStamp } = await import("./auth-dispatch");
+        if (await federatedProviderStamp(pending.global.provider) !== pending.global.configStamp) throw invalid();
+      }
       const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("share");
       if (!currentSession) throw invalid();
       if (pending.workspace) {
@@ -103,11 +127,16 @@ export async function completeFederatedChallenge(token: string, code: string) {
           workspaceId, actor: userActor(user), action: "sso.signin", targetType: "user", targetId: user.id,
           data: { email: user.email, newUser: false, newMember: false, role: member.role, testSignIn: false, firstVerification, localTotp: true },
         });
-    }
-    await recordMfaAssurance(currentSession.token, user.id, currentSession.expiresAt, tx);
-    await tx.delete(schema.verification).where(eq(schema.verification.id, row.id));
-    return { session: currentSession, next: pending.next };
+      }
+      await recordMfaAssurance(currentSession.token, user.id, currentSession.expiresAt, tx);
+      await tx.delete(schema.verification).where(eq(schema.verification.id, row.id));
+      return { session: currentSession, next: pending.next };
     });
+    if (pending.global) {
+      const { markFederatedProviderVerified } = await import("./auth-dispatch");
+      await markFederatedProviderVerified(pending.global.provider, pending.global.configStamp).catch(() => {});
+    }
+    return result;
   } catch (error) {
     await db.delete(schema.session).where(eq(schema.session.token, session.token));
     throw error;
@@ -119,27 +148,57 @@ export function isFederatedSignInPath(path: string) {
 }
 
 /** Runs AFTER better-auth's local two-factor hook, BEFORE nextCookies. */
-export function federatedMfa(): BetterAuthPlugin {
+export function federatedMfa(providerStamp?: (provider: string) => Promise<string | null>): BetterAuthPlugin {
   return {
     id: "flowline-federated-mfa",
-    hooks: { after: [{
+    init(ctx) {
+      const adapter = ctx.adapter;
+      return { context: { adapter: {
+        ...adapter,
+        // Better Auth's internal session middleware calls getSession directly,
+        // bypassing endpoint after-hooks. Fence the shared adapter read instead.
+        // Cookie caching and secondary session storage must remain disabled.
+        async findOne<T>(args: Parameters<typeof adapter.findOne>[0]): Promise<T | null> {
+          const row = await adapter.findOne<T>(args);
+          if (args.model !== "session" || !row) return row;
+          const session = row as unknown as { userId?: unknown; token?: unknown };
+          if (typeof session.userId !== "string" || typeof session.token !== "string") return null;
+          const [user] = await db.select().from(schema.user).where(eq(schema.user.id, session.userId));
+          if (!user || (user.twoFactorEnabled && !(await hasSessionMfa(session.token, user.id)))) return null;
+          return row;
+        },
+      } } };
+    },
+    hooks: { before: [{
+      matcher: (ctx) => ctx.path === "/link-social",
+      handler: createAuthMiddleware(async (ctx) => { await bindFederatedLink(ctx, providerStamp); }),
+    }], after: [{
       matcher: (ctx) => isFederatedSignInPath(ctx.path ?? "") || ["/sign-in/email", "/sign-in/username", "/sign-in/phone-number", "/two-factor/verify-totp", "/two-factor/verify-backup-code", "/two-factor/verify-otp"].includes(ctx.path ?? ""),
       handler: createAuthMiddleware(async (ctx) => {
         const data = ctx.context.newSession;
         if (!data) return;
+        const federated = isFederatedSignInPath(ctx.path);
+        const provider = ctx.path.split("/callback/")[1] ?? String(ctx.body?.provider ?? "");
+        const configStamp = federated ? await (providerStamp ?? (await import("./auth-dispatch")).federatedProviderStamp)(provider) : null;
+        if (federated && !configStamp) {
+          ctx.context.setNewSession(null);
+          deleteSessionCookie(ctx, true);
+          await ctx.context.internalAdapter.deleteSession(data.session.token);
+          throw ctx.redirect("/sign-in?error=signin_expired");
+        }
         const [user] = await db.select().from(schema.user).where(eq(schema.user.id, data.user.id));
         if (!user?.twoFactorEnabled) return;
-        if (!isFederatedSignInPath(ctx.path)) {
+        if (!federated) {
           // The local plugin already completed TOTP/backup verification or
           // authenticated a trusted-device signature before leaving newSession.
           if (data.user.twoFactorEnabled === true) await recordMfaAssurance(data.session.token, user.id, data.session.expiresAt);
           return;
         }
-        await ctx.context.internalAdapter.deleteSession(data.session.token);
         ctx.context.setNewSession(null);
         deleteSessionCookie(ctx, true);
+        await ctx.context.internalAdapter.deleteSession(data.session.token);
         const next = ctx.context.responseHeaders?.get("location") ?? (typeof ctx.body?.callbackURL === "string" ? ctx.body.callbackURL : "/app");
-        const token = await createFederatedChallenge(user.id, next);
+        const token = await createFederatedChallenge(user.id, next, undefined, db, { provider, configStamp: configStamp! });
         ctx.setCookie(FEDERATED_MFA_COOKIE, token, federatedCookieOptions());
         if (ctx.path.includes("/callback/")) throw ctx.redirect("/auth/step-up");
         return ctx.json({ twoFactorRedirect: true, url: "/auth/step-up" });

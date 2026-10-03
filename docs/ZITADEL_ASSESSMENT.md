@@ -1,5 +1,9 @@
 # ZITADEL identity assessment — 2026-10-01 and 2026-10-02
 
+## H3 authentication update — 2026-10-03
+
+The candidate based on `2c85f05` requires Flowline's local TOTP after ZITADEL sign-in whenever the account has an enrolled authenticator. The pending callback grants no usable session; all session reads require current-factor proof. Provider configuration/account-link changes invalidate pending challenges, and legacy unassured sessions must sign in again. ZITADEL identities are bound to issuer and subject; legacy bare-subject links require explicit re-linking. See [federated MFA](security/FEDERATED_MFA.md) and [readiness evidence](../artifacts/phase-4/h3-readiness/README.md). The older real-development callback below is historical and does not verify this MFA candidate or hosted Google sign-in.
+
 ## Current status — 2026-10-02
 
 Google consent is configured in Testing mode. The Google -> ZITADEL -> Flowline round-trip is UNVERIFIED; the last click timed out. Owner TOTP/bootstrap is UNVERIFIED. The owner plans to complete these checks tomorrow, 2026-10-03. No owner action is requested today. This setup is not production-ready: the Google round-trip and owner bootstrap are unverified, and Google consent remains in Testing mode.
