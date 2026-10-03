@@ -23,7 +23,7 @@
 | Complete owner admin setup privately | Owner completes Google → ZITADEL → Flowline sign-in round-trip and real platform-admin TOTP/bootstrap, then stores recovery material privately. | Both remain unverified in the coordinator record. No owner login/MFA was performed here. |
 | Approve recipient-specific invitations | After exact-artifact readiness and owner UAT, specify each recipient/workspace, number of invitations and expiry. | Not approved. No invitations sent. |
 
-**Current disposition:** Main `9641ad1`; PR #8 docs merged. PR #9 is draft/unmerged with full CI running. The local ARM64 artifact and DB-only proof cover exact tested code `7a315f7`, with no registry push or deployment. G4 is PARTIAL; review progression awaits verified no-cost availability. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO` · invitations not approved.
+**Current disposition:** Main `9641ad1`; PR #8 docs merged. PR #9 is draft/unmerged; full CI run `37081791704` failed in WebKit. Its unresolved `ECONNRESET` failure remains an additional merge blocker even if later documentation-head CI passes. The local ARM64 artifact and DB-only proof cover exact tested code `7a315f7`, with no registry push or deployment. G4 is PARTIAL; review progression also awaits verified no-cost availability. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO` · invitations not approved.
 
 ## Preserved earlier owner chronology — historical, superseded; do not act on its status
 # Owner actions — private beta
