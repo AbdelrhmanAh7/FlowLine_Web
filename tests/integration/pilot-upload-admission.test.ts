@@ -38,6 +38,11 @@ async function limits(workspace: number, installation: number) {
   vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", String(workspace));
   vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", String(BigInt(stored!.total) + BigInt(installation)));
 }
+async function fileLimits(workspace: number, installation: number) {
+  const [stored] = await db.select({ count: sql<string>`count(*)::text` }).from(schema.fileObject);
+  vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_FILES", String(workspace));
+  vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_FILES", String(BigInt(stored!.count) + BigInt(installation)));
+}
 const files = (workspaceId: string) => db.select().from(schema.fileObject).where(eq(schema.fileObject.workspaceId, workspaceId));
 const source = (user: Awaited<ReturnType<typeof makeUser>>, workspaceId: string, text: string) => addSource(db, user, workspaceId, { name: "retained.txt", mime: "text/plain", kind: "text", bytes: Buffer.from(text) });
 async function upload(workspaceId: string, text: string) {
@@ -47,6 +52,62 @@ async function upload(workspaceId: string, text: string) {
 }
 
 describe("atomic retained upload admission", () => {
+  it("empty file uploads consume count capacity while leaving the byte budget untouched", async () => {
+    const { ws } = await setup();
+    await limits(1024, 4096);
+    await fileLimits(1, 100);
+    const outcomes = await Promise.all([upload(ws.id, ""), upload(ws.id, "")]);
+    expect(outcomes.map(r => r.status).sort()).toEqual([201, 413]);
+    expect((await outcomes.find(r => r.status === 413)!.json()).error.code).toBe("UPLOAD_WORKSPACE_FILE_LIMIT");
+    const stored = await files(ws.id);
+    expect(stored).toHaveLength(1);
+    expect(stored[0]!.data.length).toBe(0);
+  });
+
+  it("one-byte uploads across knowledge and file routes cannot race past the workspace file count", async () => {
+    const { user, ws } = await setup();
+    await limits(1024, 4096);
+    await fileLimits(1, 100);
+    const outcomes = await Promise.allSettled([upload(ws.id, "x"), source(user, ws.id, "y")]);
+    expect(outcomes.map(r => r.status === "rejected" ? r.reason.status : r.value instanceof Response ? r.value.status : 201).sort()).toEqual([201, 413]);
+    const denied = outcomes.find(r => r.status === "rejected" || (r.value instanceof Response && r.value.status === 413))!;
+    expect(denied.status === "rejected" ? denied.reason.code : (await (denied.value as Response).json()).error.code).toBe("UPLOAD_WORKSPACE_FILE_LIMIT");
+    expect(await files(ws.id)).toHaveLength(1);
+  });
+
+  it("cross-workspace tiny uploads share the installation file count", async () => {
+    const a = await setup();
+    const b = await setup();
+    await limits(1024, 4096);
+    await fileLimits(100, 1);
+    const outcomes = await Promise.allSettled([source(a.user, a.ws.id, "x"), upload(b.ws.id, "y")]);
+    expect(outcomes.map(r => r.status === "rejected" ? r.reason.status : r.value instanceof Response ? r.value.status : 201).sort()).toEqual([201, 413]);
+    const denied = outcomes.find(r => r.status === "rejected" || (r.value instanceof Response && r.value.status === 413))!;
+    expect(denied.status === "rejected" ? denied.reason.code : (await (denied.value as Response).json()).error.code).toBe("UPLOAD_INSTALLATION_FILE_LIMIT");
+    expect((await files(a.ws.id)).length + (await files(b.ws.id)).length).toBe(1);
+  });
+
+  it("retained zero-byte legacy rows consume file capacity despite zero size metadata", async () => {
+    const { user, ws } = await setup();
+    await limits(1024, 4096);
+    await fileLimits(1, 100);
+    await db.insert(schema.fileObject).values({ workspaceId: ws.id, name: "empty legacy", mime: "text/plain", size: 0, sha256: "synthetic", data: Buffer.alloc(0), createdBy: user.id });
+    await expectHttpError(source(user, ws.id, "x"), 413, "UPLOAD_WORKSPACE_FILE_LIMIT");
+    expect(await files(ws.id)).toHaveLength(1);
+  });
+
+  it("deletion frees file count and malformed count configuration refuses writes", async () => {
+    const { user, ws } = await setup();
+    await limits(1024, 4096);
+    await fileLimits(1, 100);
+    const first = await source(user, ws.id, "x");
+    expect((await upload(ws.id, "y")).status).toBe(413);
+    await deleteSource(db, user, ws.id, first.id);
+    expect((await upload(ws.id, "y")).status).toBe(201);
+    vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_FILES", "0");
+    expect((await upload(ws.id, "z")).status).toBe(503);
+    expect(await files(ws.id)).toHaveLength(1);
+  });
   it("concurrent knowledge and file-route uploads share the workspace budget", async () => {
     const { user, ws } = await setup();
     await limits(6, 1024);
@@ -113,7 +174,7 @@ describe("atomic retained upload admission", () => {
     expect(await files(ws.id)).toHaveLength(1);
   });
 
-  it("Company Builder knowledge fixtures use the same budget and roll back their failed step", async () => {
+  it.each(["bytes", "files"])("Company Builder knowledge fixtures share the %s budget and roll back their failed step", async (budget) => {
     const { user, ws } = await setup();
     const session = await createSession(user, ws.id);
     for (const [questionId, value] of [
@@ -131,12 +192,15 @@ describe("atomic retained upload admission", () => {
     // fixture to exercise the retained-file branch without enabling a new product feature.
     const fixture = blueprint.body as CompanyBlueprint;
     await db.update(schema.cbBlueprint).set({ body: { ...fixture, tasks: fixture.tasks.map(task => ({ ...task, kind: "agent" as const, availability: "operational" as const })) } }).where(eq(schema.cbBlueprint.id, blueprint.id));
-    await limits(1, 1024);
-    await expectHttpError(install(user, ws.id, blueprint.id, { locale: "en" }), 413, "UPLOAD_WORKSPACE_STORAGE_LIMIT");
-    expect(await files(ws.id)).toHaveLength(0);
-    expect(await db.select().from(schema.knowledgeSource).where(eq(schema.knowledgeSource.workspaceId, ws.id))).toHaveLength(0);
+    await limits(budget === "bytes" ? 1 : 1024, 4096);
+    if (budget === "files") { await fileLimits(1, 100); await source(user, ws.id, "x"); }
+    const code = budget === "bytes" ? "UPLOAD_WORKSPACE_STORAGE_LIMIT" : "UPLOAD_WORKSPACE_FILE_LIMIT";
+    await expectHttpError(install(user, ws.id, blueprint.id, { locale: "en" }), 413, code);
+    const retained = budget === "bytes" ? 0 : 1;
+    expect(await files(ws.id)).toHaveLength(retained);
+    expect(await db.select().from(schema.knowledgeSource).where(eq(schema.knowledgeSource.workspaceId, ws.id))).toHaveLength(retained);
     const [installation] = await db.select().from(schema.cbInstallation).where(and(eq(schema.cbInstallation.workspaceId, ws.id), eq(schema.cbInstallation.blueprintId, blueprint.id)));
-    expect(installation).toMatchObject({ status: "failed", error: { code: "UPLOAD_WORKSPACE_STORAGE_LIMIT" } });
+    expect(installation).toMatchObject({ status: "failed", error: { code } });
     expect((await db.execute(sql`select count(*)::int as n from ${schema.cbInstalledItem} where ${schema.cbInstalledItem.installationId} = ${installation!.id} and ${schema.cbInstalledItem.kind} = 'knowledge'`)).rows[0]!.n).toBe(0);
   });
 });

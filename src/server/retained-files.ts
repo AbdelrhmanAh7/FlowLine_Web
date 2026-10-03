@@ -16,11 +16,13 @@ function limit(key: string, fallback: number): bigint {
   return BigInt(parsed);
 }
 
-/** Operational raw-byte circuit breakers, independent of subscription entitlements. */
+/** Operational raw-byte and retained-row circuit breakers, independent of subscription entitlements. */
 export function retainedFileLimits() {
   return {
     workspace: limit("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", 100 * MIB),
     installation: limit("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", 512 * MIB),
+    workspaceFiles: limit("FLOWLINE_UPLOAD_WORKSPACE_MAX_FILES", 512),
+    installationFiles: limit("FLOWLINE_UPLOAD_INSTALLATION_MAX_FILES", 4096),
   };
 }
 
@@ -37,10 +39,14 @@ export async function insertRetainedFile(tx: Tx, input: FileInput) {
   const [stored] = await tx.select({
     installation: sql<string>`coalesce(sum(octet_length(${schema.fileObject.data})), 0)::text`,
     workspace: sql<string>`coalesce(sum(case when ${schema.fileObject.workspaceId} = ${input.workspaceId} then octet_length(${schema.fileObject.data}) else 0 end), 0)::text`,
+    installationFiles: sql<string>`count(*)::text`,
+    workspaceFiles: sql<string>`count(*) filter (where ${schema.fileObject.workspaceId} = ${input.workspaceId})::text`,
   }).from(schema.fileObject);
   const bytes = BigInt(input.data.length);
   if (BigInt(stored!.workspace) + bytes > limits.workspace) throw new HttpError(413, "UPLOAD_WORKSPACE_STORAGE_LIMIT", "This workspace's retained upload storage is full");
   if (BigInt(stored!.installation) + bytes > limits.installation) throw new HttpError(413, "UPLOAD_INSTALLATION_STORAGE_LIMIT", "Retained upload storage is full; contact the administrator");
+  if (BigInt(stored!.workspaceFiles) + 1n > limits.workspaceFiles) throw new HttpError(413, "UPLOAD_WORKSPACE_FILE_LIMIT", "This workspace's retained file count is full");
+  if (BigInt(stored!.installationFiles) + 1n > limits.installationFiles) throw new HttpError(413, "UPLOAD_INSTALLATION_FILE_LIMIT", "Retained file count is full; contact the administrator");
   const [file] = await tx.insert(schema.fileObject).values({ ...input, size: input.data.length, sha256: createHash("sha256").update(input.data).digest("hex") })
     .returning({ id: schema.fileObject.id, name: schema.fileObject.name, mime: schema.fileObject.mime, size: schema.fileObject.size });
   return file!;

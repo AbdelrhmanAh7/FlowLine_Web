@@ -170,6 +170,8 @@
     "BODY_TOO_LARGE": "The request is too large. Reduce its contents and try again.",
     "UPLOAD_WORKSPACE_STORAGE_LIMIT": "This workspace's retained upload storage is full. Delete an unused knowledge source or ask the administrator for help.",
     "UPLOAD_INSTALLATION_STORAGE_LIMIT": "Upload storage is full. Ask the administrator to free storage before uploading again.",
+    "UPLOAD_WORKSPACE_FILE_LIMIT": "This workspace has reached its retained file limit. Delete an unused knowledge source or ask the administrator for help.",
+    "UPLOAD_INSTALLATION_FILE_LIMIT": "This server has reached its retained file limit. Ask the administrator to free capacity before uploading again.",
     "UPLOAD_STORAGE_CONFIG": "Uploads are unavailable until the administrator fixes the storage limits.",
     "KNOWLEDGE_WORKSPACE_QUEUE_LIMIT": "This workspace's indexing queue is full. Try again after sources finish indexing, or delete an unneeded queued source.",
     "KNOWLEDGE_INSTALLATION_QUEUE_LIMIT": "Knowledge indexing is busy. Try again after queued sources finish.",
