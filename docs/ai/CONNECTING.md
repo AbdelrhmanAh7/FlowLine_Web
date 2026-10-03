@@ -1,7 +1,8 @@
 # Connecting an AI provider
 
-Flowline runs AI on **your own provider account**. Nothing is configured on the server: each workspace owner adds
-its keys in the app, and the provider bills that account directly.
+Flowline runs hub AI on **your own provider account**. No model-provider key is configured in the server environment:
+each workspace owner adds its keys in the app, stored encrypted on the server, and the provider bills that account directly.
+The current private-beta exercise has an aggregate **$0** cap; a saved key or a paid-test control is not spend approval.
 
 ## Steps (owner)
 
@@ -26,7 +27,11 @@ its keys in the app, and the provider bills that account directly.
      four characters for keys of 32 characters or more; for shorter keys it shows only the date the key was set.
 4. The models the key can see are listed on the connection. Choose **Refresh models** at any time. If a refresh fails,
    the previous list is kept and marked out of date.
-5. Pick a **workspace default model**. AI steps without their own model use it, and so do agents and Copilot.
+5. Pick a **workspace default model**. Unpinned AI steps and Copilot use it unless policy plan/repair routes are set.
+   Publishing a flow or saving an agent version snapshots the default that exists at that moment, so changing it later
+   does not repin them. If there is no default then, the unpinned AI steps and the agent version (which stores no
+   route) use the workspace default as it is at run time, and fail as not configured while there is none. Steps with
+   a legacy `model` string are never snapshotted.
 6. Decide **who may use** the connection. By default only owners may use it. Connecting a key doesn't give members
    access: tick **Editors** to let them pick it.
 7. On an AI step, open **AI model** and search the picker. You can filter by capability, provider, cost information,
@@ -37,8 +42,8 @@ its keys in the app, and the provider bills that account directly.
 - **Where prices come from:** your price table first (**Settings → Usage & limits**, key `ai:<provider>/<model>`),
   then Flowline's dated catalogue of official prices (the source link is in the picker). An unknown price stays
   **unknown**; it is never assumed to be free.
-- **Spending cap:** with a cap set, calls whose price is unknown are **refused before anything is sent**, unless the
-  owner allows them in the routing policy.
+- **Spending cap:** with a workspace/plan cap, unknown-price calls are refused unless the owner allows them in the
+  routing policy. An agent's cost limit requires its separate unknown-cost opt-in too; see `ROUTING.md`.
 - **Routing policy:** under **AI Providers → Routing policy**, choose MANUAL, FALLBACK (explicitly listed backup
   routes), FREE_ONLY (verified zero prices only) or LOW_COST (the cheapest approved route under a price ceiling).
   Optionally add a no-training privacy rule and Copilot's planning and repair routes. See `ROUTING.md`.
@@ -55,7 +60,7 @@ its keys in the app, and the provider bills that account directly.
 
 - It never reads AI keys from server environment variables. It never uses a developer or platform key for your
   workspace.
-- It never shows, logs or stores the key outside the encrypted connection. That covers run details, usage records,
-  audit entries and the browser.
+- The key is entered in an uncontrolled secret field and sent for validation/storage, but is never returned after
+  saving or persisted in browser storage, run details, usage records or audit entries.
 - It never runs local models. Older workspaces that used local Ollama keep their settings and are listed in a
   migration banner. See `MIGRATION.md`.

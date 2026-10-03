@@ -1,23 +1,29 @@
 # AI Provider Hub — final report
 
+This is the **historical Wave C report**, with source corrections from the 2026-10-03 docs audit. Test counts,
+reviews, provider research and build statements below belong to their named revisions; they are not current-main
+certification. Audit baseline: `9641ad1`. Remote CI, current provider accounts/keys and current deployment state are
+unverified. The current private-beta brief has a **$0 aggregate cap** and prefers the existing owner Pi subject to
+approval; no paid VPS or provider spend is authorized. Current handoff: `NEXT_ACTION.md`.
+
 ## 1. Summary and artifact identity
 
-- **Branch:** `ai-hub`, from `phase-4` @ `1a9883f` (`docs/ai/IMPLEMENTATION_PLAN.md` §"Scope"; `NEXT_ACTION.md`). `1a9883f`
+- **Historical branch:** `ai-hub`, from `phase-4` @ `1a9883f` (`docs/ai/IMPLEMENTATION_PLAN.md` §"Scope"). `1a9883f`
   holds the Phase 4 work and is code-identical to the staging image `flowline:e42667d`.
 - **Final code SHA:** **`c2fd494`** (product code). Later commits on `ai-hub` change only evidence, docs and test
-  infrastructure (`FLOWLINE_TEST_NEXT=start`); the release record is the branch HEAD that contains this report.
+  infrastructure (`FLOWLINE_TEST_NEXT=start`). This identifies the historical report's code, not today's HEAD.
 - **No immutable image digest exists for this work.** Every gate below ran against the local test stack
   (`pnpm dev:test`, or a `next start` production build run manually) on the reviewer's machine, not a built/pushed
   release image. Compare Phase 3/4, where the verified artifact was a docker image with a `sha256:` digest
-  (`NEXT_ACTION.md` "Phase 3" / "Phase 4" sections). No equivalent `flowline:<sha>` image has been built or gated for
+  (`docs/implementation/RELEASE_REPORT.md` and `docs/implementation/PHASE4_BETA_REPORT.md`). No equivalent `flowline:<sha>` image was recorded for
   `ai-hub`. Any "final" SHA filled into this report identifies a **commit**, not an immutable build.
 - **Scope:** an owner-approved, cloud-only, multi-provider AI hub replacing the earlier Anthropic/local-inference
   requirement (`docs/ai/IMPLEMENTATION_PLAN.md` §"Scope"). Local inference (Ollama) is removed from execution; legacy
   configurations are preserved read-only and refused with a migration error (`docs/ai/MIGRATION.md`).
-- **Commits since the Phase 4 baseline (`1a9883f..HEAD`):** foundation + coverage + routing (Wave A/B), a combined
+- **Historical commits from the Phase 4 baseline through `c2fd494`:** foundation + coverage + routing (Wave A/B), a combined
   security design for credentials in the UI (`docs/security/CREDENTIALS_DESIGN.md`), three rounds of independent
   Codex security/protocol review and fixes (CXH-01…21), a Chrome exploratory QA pass and retest (CXQ-01…05), and test
-  fixes (TEST-03/04/05). Full list: `git log --oneline 1a9883f..HEAD`.
+  fixes (TEST-03/04/05). Product-code history: `git log --oneline 1a9883f..c2fd494`.
 
 ## 2. Verdicts
 
@@ -31,8 +37,9 @@
 - Routing policies MANUAL / FALLBACK / FREE_ONLY / LOW_COST, retries, circuit breaker, streaming, cancellation and
   budget/metering are implemented and integration-tested against deterministic test doubles
   (`docs/ai/ROUTING.md`; `SCOPE_MATRIX.md` AIH-13, AIH-14 "PASS (deterministic)").
-- One expand-only migration (`drizzle/0012_ai_hub.sql` plus later 0016–0019) adds `ai_connection`, `ai_model`,
-  `ai_connection_model`, `ai_attempt`, `ai_policy`, never converting legacy `workspace.ai_provider = 'ollama'`
+- The foundation migration (`drizzle/0012_ai_hub.sql`, followed by later security migrations) adds four tables:
+  `ai_connection`, `ai_model`, `ai_connection_model`, `ai_attempt`; `ai_policy` and `ai_default_route` are workspace
+  JSONB columns, not tables. Legacy `workspace.ai_provider = 'ollama'` is not silently converted
   (`docs/ai/IMPLEMENTATION_PLAN.md` §2 "Data model"; `docs/ai/MIGRATION.md`).
 - Gate evidence at the last **fully completed** merged browser run (`22de627`): lint/typecheck clean, unit 285,
   contract 465, integration 460/460 twice, Chromium 65/65, Firefox 24/24, WebKit 24/24, all first attempt
@@ -81,9 +88,9 @@ documented only and 1 retired provider recorded but never registered. Registry t
 
 ### LIVE CLOUD VERIFICATION = BLOCKED
 
-No owner API keys have been entered through the UI, and no owner-approved spend budget exists
-(`docs/ai/PROVIDERS.md` "LIVE VERIFIED… NOT RUN for any provider. Needs owner keys and a budget (Wave C, AIH-17)";
-`SCOPE_MATRIX.md` AIH-17 "PLANNED"). Every one of the following is **NOT RUN**:
+The historical report recorded no owner keys or approved spend budget. Current key/account state is unverified;
+no live certification evidence was located and the current cap is $0 (`SCOPE_MATRIX.md` AIH-17). Every one of the
+following was **NOT RUN** in this report:
 
 - All 20 connectable providers' auth/discovery/inference calls against real vendor endpoints.
 - All 5 protocol adapters (`openai-chat`, `openai-responses`, `anthropic-messages`, `gemini`, `cohere-v2`) against a
@@ -106,10 +113,10 @@ No owner API keys have been entered through the UI, and no owner-approved spend 
   correct-or-safe-refusal against a target of ≥10/12, so Copilot is labelled **Experimental** in the UI
   (`SCOPE_MATRIX.md` P4-02). This result is reported here as **historical** — it predates the AI hub and did not use
   a cloud connection.
-- A hosted-model benchmark (12 frozen cases, EN + AR, ≤3 routes + a stability repeat) is specified but **PLANNED**,
-  requiring an owner-approved, bounded budget (`SCOPE_MATRIX.md` AIH-16; `docs/ai/IMPLEMENTATION_PLAN.md` §5 "Copilot
-  benchmark: no paid calls without an explicit, bounded owner budget"). It has **not been run** against any cloud
-  provider.
+- The EN+AR hosted evaluation target remains unverified. The current `scripts/diag/copilot-benchmark-hub.mts`
+  implements the 12 historical **English** cases with a metadata-only default and explicit `--execute`; it requires
+  a dedicated staging workspace, USD budget 0, FREE_ONLY and no unknown-cost/alternative routes. Arabic evaluation
+  remains NOT RUN. The old `copilot-benchmark.mts` uses a pre-hub API and is historical, not the current runner.
 
 ### UI ONBOARDING — DONE (deterministic)
 
@@ -173,15 +180,15 @@ FIXED**, CXQ-01…04 spot-checks PASS, no raw key in HTML/URLs/storage/responses
 
 ### PRIVATE BETA — unchanged: still blocked by Phase 4 external items
 
-The AI hub does not remove any Phase 4 blocker. Per `SCOPE_MATRIX.md` (Phase 4 section) and `NEXT_ACTION.md`
-"Phase 4 — launch candidate & private beta: PAUSED for owner credentials":
+The AI hub does not remove the external Phase 4 blockers. The historical Phase 4 report records:
 
 - P4-08 live integration certification: BLOCKED, needs dedicated Sheets/Gmail/Slack/GitHub test accounts.
 - P4-10 real Google/GitHub sign-in: BLOCKED, needs OAuth apps.
 - P4-11 beta environment on a real host: PARTIAL, BLOCKED on domain/DNS + VPS.
 - P4-05/06 real email delivery: BLOCKED, needs a Resend/Postmark account.
 - P4-07 real Paddle sandbox flow: BLOCKED, needs a Paddle sandbox account + client-side token.
-- P4-17/18/20 manual Chrome QA / acceptance journeys / beta load check: PLANNED.
+- P4-17/18/20: Chrome QA performed with retest pending, acceptance journeys partial, and local beta load 5/5 on
+  `e42667d`; none establishes current-checkout or deployed-host acceptance.
 - Verdicts so far (unchanged by this work): CODE COMPLETE PASS · BETA INFRA VERIFIED BLOCKED · PRIVATE BETA READY
   NO · PUBLIC PRODUCTION NO.
 
@@ -265,7 +272,7 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
 - **Direct routes** call a provider's own API directly (e.g. OpenAI, Anthropic, Groq) with its own protocol.
   **Gateway routes** call an aggregator (OpenRouter, Vercel AI Gateway; Hugging Face Inference Providers also routes
   to an upstream) that fronts several underlying "serving providers"; the hub records `servingProvider` separately
-  from the connection's provider on gateway routes (`docs/ai/ROUTING.md` §6 "Where to see it"; `docs/ai/PROVIDERS.md`
+  from the connection's provider on gateway routes (`docs/ai/ROUTING.md` §7 "Where to see it"; `docs/ai/PROVIDERS.md`
   "Core providers" row for OpenRouter). The UI labels direct and gateway routes separately in the model picker
   (`docs/ai/CONNECTING.md` step 7).
 - **All model counts to date come from test doubles, not real vendor catalogues.** Discovery has only ever run
@@ -310,9 +317,9 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
      key → Check and save.
    - Settings → AI Providers → choose a **gateway** provider (e.g. OpenRouter) → Add connection → paste the key →
      Check and save (`docs/ai/CONNECTING.md` steps 1–4).
-2. **Approve a bounded benchmark budget** so the Copilot benchmark (12 frozen cases, EN+AR, ≤3 routes + a stability
-   repeat) can run on a hosted model instead of only the historical local `qwen2.5:7b` 5/12 result
-   (`SCOPE_MATRIX.md` AIH-16; `docs/ai/IMPLEMENTATION_PLAN.md` §5).
+2. **Verify a zero-cost benchmark route within the existing $0 cap.** Use the current hub runner's metadata preflight
+   before any authorized execution. Unknown cost, paid tests and automatic overage remain blocked; no budget
+   increase is requested by this report. EN+AR quality is still unverified.
 3. **Legal review before a public BYOK launch**, specifically:
    - Command Code Provider API: owner/legal must decide whether to approve it at all (sublicensing/transfer
      prohibition, "automated requests" ban, disputed plan coverage) (`docs/ai/PROVIDERS.md` "Unsuitable: the
@@ -321,14 +328,14 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
      Cloudflare §2.2.1(a), and terms only readable as search excerpts for xAI and Mistral
      (`docs/ai/PROVIDERS.md` "Legal review before a public BYOK launch").
 4. **Phase 4 externals**, unchanged by this work and still required before any private beta: dedicated
-   Sheets/Gmail/Slack/GitHub test accounts (P4-08), Google/GitHub OAuth apps (P4-10), a domain + VPS for
-   `beta.<domain>` (P4-11), a Resend/Postmark account (P4-05/06), a Paddle sandbox account + client-side token
+   Sheets/Gmail/Slack/GitHub test accounts (P4-08), configured sign-in (P4-10), an approved host/domain for
+   `beta.<domain>` (P4-11; existing owner Pi preferred, no paid VPS authorization), a Resend/Postmark account (P4-05/06), a Paddle sandbox account + client-side token
    (P4-07) (`SCOPE_MATRIX.md` Phase 4 rows; `NEXT_ACTION.md`).
 5. **Deployment steps**, in order, before any of the above matters operationally (`docs/ai/MIGRATION.md` "Upgrading
    an existing Phase 4 deployment: required order"):
    1. Set `FLOWLINE_PLATFORM_ENCRYPTION_KEY` (distinct from every workspace key); take a backup.
-   2. Deploy — migrations `0012`–`0019` run (expand-only).
-   3. Bootstrap the first platform admin (`scripts/admin/bootstrap.mts --email <admin>`), verify email, enrol TOTP.
+   2. For an authorized deployment, run all pending migrations in `drizzle/meta/_journal.json` (through `0024` here).
+   3. Bootstrap the first platform admin with the env-loaded command in `MIGRATION.md`, verify email, enrol TOTP.
    4. Import existing Google/Slack/GitHub OAuth apps, sign-in apps, email and Paddle credentials from environment,
       once each, in `/admin`.
    5. Run `scripts/admin/rewrap.mts` repeatedly until `remaining=0`; only then retire old keys (long-running on a
@@ -353,9 +360,9 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
 - **CXH-03's accepted limitation:** recovery after a worker death does not reuse a stored answer — a recovered
   request is re-sent, and both the original and the recovery charge remain in the ledger as separate attempts
   (`artifacts/ai-hub/wavec-84f2cc1/BUGS.md`).
-- **CXH-14's accepted limitation:** a transient OAuth refresh failure (e.g. 429) is correctly classified as
-  non-fatal, but there is still no in-step retry — the step itself still fails as retryable rather than
-  transparently succeeding (`artifacts/ai-hub/wavec-84f2cc1/BUGS.md`).
+- **CXH-14 follow-up:** `worker/handlers.ts` now retries transient credential refresh failures before sending the
+  action, bounded by `worker/retry.ts`; waits over 60 s are refused. This supersedes the earlier no-in-step-retry
+  limitation. Real-provider refresh behavior remains unverified.
 - **Ledger keys are not scoped per workspace** (noted while fixing TEST-05): request ids must be globally unique
   across all workspaces. All current product callers satisfy this (run/agent-run UUIDs, `randomUUID()`), but it is
   an implicit invariant rather than an enforced one — flagged as open P3 hardening, not changed, to avoid touching

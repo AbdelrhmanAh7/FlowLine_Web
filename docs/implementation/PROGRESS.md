@@ -1,3 +1,19 @@
+# Progress log
+
+## Current checkout — 2026-10-03
+
+Repository audit baseline: `9641ad1e684cad7b84bd2385751ea19b0a9d4060` (docs worktree `claude/docs-freshness`). Local history contains the Company Builder merge `9fdcb7d` and the later docs merge `9641ad1`; remote branch/CI state is unverified here.
+
+| Area | Repository state | Evidence |
+|---|---|---|
+| Phase 3/4 | Agents, knowledge, Copilot, access controls, email flows, invite-only beta and sandbox billing are implemented; historical gates do not certify this checkout | `src/server/`, `src/billing/`, `docs/implementation/RELEASE_REPORT.md`, `docs/implementation/PHASE4_BETA_REPORT.md` |
+| AI hub | Cloud BYOK, five protocols, routing and metering implemented; live certification and hosted Copilot quality remain unverified | `src/ai/hub/`, `docs/ai/AI_HUB_REPORT.md` |
+| Design system | Generated tokens, Arabic-first UI, light default, dark/system selection and protected copy editor | `src/design/`, `src/theme/config.ts`, `src/i18n/`, `src/app/admin/copy/` |
+| Company Builder | Outcome-first interview, draft installation, sample trials and reviewed activation implemented behind an off-by-default flag; live Gmail is not implemented | `src/company-builder/`, `src/server/company-builder/`, `docs/company-builder/VALIDATION_REPORT.md` |
+| Docs freshness | Scoped docs corrected against source; change ledger and unverifiable claims recorded | `docs/implementation/DOCS_FRESHNESS_20261003.md` |
+
+Private beta remains **NOT READY**, public production **NOT APPROVED**, aggregate spend cap **$0**. See `NEXT_ACTION.md` and `docs/implementation/OWNER_ACTIONS.md`. The phase logs below are historical results at their named revisions, not current test counts or runtime instructions. Legacy Ollama live tests are archived under `docs/ai/history/`.
+
 # Phase 1 progress log
 
 All times are 2026-09-27, local.
