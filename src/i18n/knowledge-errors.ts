@@ -6,6 +6,9 @@ const KEYS: Record<string, MessageKey> = {
   KNOWLEDGE_JSON_DEPTH_LIMIT: "knowledge.errors.jsonDepthLimit",
   KNOWLEDGE_CSV_COLUMN_LIMIT: "knowledge.errors.csvColumnLimit",
   KNOWLEDGE_CSV_ROW_LIMIT: "knowledge.errors.csvRowLimit",
+  KNOWLEDGE_WORKSPACE_CHUNK_STORAGE_LIMIT: "knowledge.errors.workspaceStorageLimit",
+  KNOWLEDGE_INSTALLATION_CHUNK_STORAGE_LIMIT: "knowledge.errors.installationStorageLimit",
+  KNOWLEDGE_CHUNK_STORAGE_CONFIG: "knowledge.errors.storageConfig",
 };
 
 /** Worker persists stable ids; product text is selected in the current UI language. */

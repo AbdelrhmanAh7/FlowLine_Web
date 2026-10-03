@@ -3249,7 +3249,10 @@
       "chunkLimit": "This source contains too much text or too many rows. Split it into smaller sources.",
       "jsonDepthLimit": "The JSON is nested too deeply. Simplify its structure.",
       "csvColumnLimit": "This CSV has too many columns. Remove columns you don't need.",
-      "csvRowLimit": "A CSV row contains too much text. Shorten it or split the content."
+      "csvRowLimit": "A CSV row contains too much text. Shorten it or split the content.",
+      "workspaceStorageLimit": "This workspace's indexed text storage is full. Delete unneeded sources before indexing again.",
+      "installationStorageLimit": "Indexed text storage is full. Ask the administrator to free space before indexing again.",
+      "storageConfig": "Indexing is unavailable until the administrator fixes the indexed text storage limits."
     },
     "status": {
       "pending": "pending",

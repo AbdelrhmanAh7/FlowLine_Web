@@ -1,0 +1,72 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90mC:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-chunk-admission-20261003[39m
+
+migrated postgres://***@127.0.0.1:50845/flowline_test_pilotchunk
+[seed-platform] test platform credentials ready
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-index-admission.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 640[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-upload-admission.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 438[2mms[22m[39m
+ [31m❯[39m [30m[45m integration [49m[39m tests/integration/pilot-chunk-admission.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 489[2mms[22m[39m
+   [31m❯[39m atomic indexed text storage [2m(7)[22m
+     [32m✓[39m concurrent workers admit only one source when their combined text exceeds workspace capacity[32m 104[2mms[22m[39m
+     [32m✓[39m installation text capacity is shared across workspaces[32m 78[2mms[22m[39m
+[31m     [31m×[31m reindex counts replacement bytes, preserves old generation on denial and hides failed sources[39m[32m 61[2mms[22m[39m
+     [32m✓[39m deleting indexed content frees capacity[32m 72[2mms[22m[39m
+     [32m✓[39m counts actual UTF-8 bytes and persists invalid configuration without losing old chunks[32m 62[2mms[22m[39m
+[31m     [31m×[31m a lost worker claim preserves the old generation without inserting replacement chunks[39m[32m 54[2mms[22m[39m
+     [32m✓[39m deletion while a worker waits for admission cannot recreate chunks[32m 56[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p3-knowledge.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 454[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (26)[39m
+[2m   Start at [22m 05:39:09
+[2m   Duration [22m 11.32s[2m (import 59%, tests 26%, transform 14%)[22m
+
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[45m integration [49m[39m tests/integration/pilot-chunk-admission.test.ts[2m > [22matomic indexed text storage[2m > [22mreindex counts replacement bytes, preserves old generation on denial and hides failed sources
+[31m[1mAssertionError[22m: expected { …(17) } to match object { status: 'ready', generation: 2 }
+(15 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  {[22m
+[32m-   "generation": 2,[39m
+[31m+   "generation": 3,[39m
+[2m    "status": "ready",[22m
+[2m  }[22m
+
+[36m [2m❯[22m tests/integration/pilot-chunk-admission.test.ts:[2m67:36[22m[39m
+    [90m 65|[39m     const first = await source(user, ws.id, "aaaa"); await drain();
+    [90m 66|[39m     await change(first.id, "bbbbb"); await reindexSource(db, ws.id, fi…
+    [90m 67|[39m     expect(await status(first.id)).toMatchObject({ status: "ready", ge…
+    [90m   |[39m                                    [31m^[39m
+    [90m 68|[39m     expect((await chunks(first.id)).map(c => c.text)).toEqual(["bbbbb"…
+    [90m 69|[39m     const old = await chunks(first.id);
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m integration [49m[39m tests/integration/pilot-chunk-admission.test.ts[2m > [22matomic indexed text storage[2m > [22ma lost worker claim preserves the old generation without inserting replacement chunks
+[31m[1mAssertionError[22m: expected { …(17) } to match object { status: 'indexing', …(2) }
+(14 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  {[22m
+[32m-   "generation": 1,[39m
+[31m+   "generation": 2,[39m
+[2m    "lockedBy": "synthetic-replacement-owner",[22m
+[2m    "status": "indexing",[22m
+[2m  }[22m
+
+[36m [2m❯[22m tests/integration/pilot-chunk-admission.test.ts:[2m108:36[22m[39m
+    [90m106|[39m     await drain();
+    [90m107|[39m     expect(await chunks(first.id)).toEqual(old);
+    [90m108|[39m     expect(await status(first.id)).toMatchObject({ status: "indexing",…
+    [90m   |[39m                                    [31m^[39m
+    [90m109|[39m   });
+    [90m110|[39m   it("deletion while a worker waits for admission cannot recreate chun…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
