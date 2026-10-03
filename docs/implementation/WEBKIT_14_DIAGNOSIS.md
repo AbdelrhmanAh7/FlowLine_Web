@@ -1,5 +1,7 @@
 # PR #14 WebKit diagnosis — 2026-10-03
 
+> **Status update:** the "Follow-up (2026-10-03, CI history)" section at the end of this file supersedes the "keep OPEN" decision below. The original analysis is kept as written; the follow-up adds CI evidence gathered after head `ec672d7` passed the full gate.
+
 ## Decision and limits
 
 **No demonstrated causal connection to the Drizzle dependency removal. A pre-existing WebKit/test timing problem is the leading explanation, not a proven root cause. Keep the gate failure OPEN.** The evidence does not justify reverting the dependency change or changing the Output tab, assertions, retries, or timeouts. No product or test fix is made: the missing action timeline prevents distinguishing a stalled browser action from a nearly exhausted test budget. The next experiment below is required before claiming a fix or a confirmed flake.
@@ -82,3 +84,63 @@ If rank 2 wins, fix the measured redundant wait or synchronization issue earlier
 - No TypeScript/application code changed, so typecheck/lint and additional tests were not run. No unit regression was invented for an unproven race. Browser reproduction, root-cause confirmation, exact CI tree comparison, and a passing final gate remain unverified.
 - `git diff --check`: passed. Read-only documentation/evidence verification: 12 local Markdown links resolve, all 18 downloaded-file hashes match the preserved inventory, and the retained excerpts contain no credential values. This verifies the handoff files, not application behavior.
 - Changed material is diagnosis/evidence and documentation only. The orchestrator should keep #14's failed gate visible, preserve the dependency change pending controlled evidence, and capture action timing before choosing a fix. This report supplies a bounded next experiment, not merge readiness.
+
+## Follow-up (2026-10-03, CI history)
+
+**Conclusion.** The #14 dependency change did not cause the WebKit failure in run 37093517476. A tree with identical runtime content passed all 78 WebKit tests (plus Chromium and Firefox) in run 37132314447. The failure is best explained as an intermittent, timing-sensitive WebKit/journey problem, but that is still **not proven**: it happened once, no trace was kept, it has not been reproduced, and `main` has no WebKit baseline. **Recommendation:** stop treating #25 as a blocker for #14, close it as "not attributable to #14", and track the journey flake in its own issue (see "Recommendation" below). Confidence is stated per claim further down.
+
+Method: read-only `gh` (run list, run view, job logs, artifact download) on `AbdelrhmanAh7/FlowLine_Web`. Nothing was re-run, posted, or changed in tests, timeouts, retries, or workflows. All 27 data rows are preserved in [followup-webkit-runs-20261003.json](../../artifacts/phase-4/webkit-pr14/followup-webkit-runs-20261003.json) because the CI artifacts expire after 14 days (`.github/actions/gate-report/action.yml:60`).
+
+### Scope of the search
+
+There are 114 Gate runs on record (2026-10-02 16:10Z to 2026-10-03 15:26Z). **27 executed WebKit tests** (full tier). Not counted: 2 cancelled runs; 5 `pr/cb-1-core` runs that exited after about a minute on `browser group manifest is inconsistent`; fast-tier runs where the webkit job is skipped; and the earliest single-job runs (the ones inspected were fast tier or failed during setup).
+
+**`main` has no WebKit result.** Its two Gate runs (37081206220 at `9641ad1`, 37078652764 at `9fdcb7d`) are push events on the fast tier with the webkit job skipped. The "unchanged main" comparison asked for in #25 therefore cannot be made from history.
+
+### Evidence table: the two runs that contain the #14 change
+
+| Run | Branch | PR head | CI merge SHA | WebKit result | webkit step | Failing spec |
+| --- | --- | --- | --- | --- | --- | --- |
+| 37093517476 | `codex/pilot-security-deps-round1` | `dd840db` | `f102788` | 77 passed, 1 failed | 557 s (shards 9.1 / 9.2 / 6.9 min) | `e2e/journey.spec.ts:9`, click at line 138 on the step-panel Output tab, 60 s test timeout |
+| 37132314447 | `codex/pilot-security-deps-round1` | `ec672d7` | `6b8083d` | 78 passed | 219 s (shards 3.4 / 3.6 / 2.9 min) | none |
+
+### Evidence table: every other WebKit failure (trees without the #14 change)
+
+| Run | Branch | PR head | WebKit result | Failing spec | Other jobs in the same run |
+| --- | --- | --- | --- | --- | --- |
+| 37132472664 | `codex/paid-pilot-federated-mfa-20261003` | `f06acea` | 77 passed, 1 failed | `zitadel-platform.spec.ts:24` (callback URL never reached) | chromium, firefox, integration also failed |
+| 37095815314 | `codex/pilot-security-redact-round1` | `151a6b1` | 75 passed, 3 failed | `hydration.spec.ts:61` x3 (`no verify email`) | chromium, firefox also failed |
+| 37094988325 | `codex/pilot-security-redact-round1` | `5f07d88` | 77 passed, 1 failed | `company-builder.spec.ts:31` (`cb-grant-trial` stayed `aria-disabled`, 180 s timeout) | chromium, firefox, integration also failed |
+| 37094196797 | `codex/pilot-security-redact-round1` | `09be0b3` | 22 passed, 56 failed | mass `no verify email` sign-up failures (includes `journey.spec.ts:27`, at sign-up, not the Output tab) | chromium, firefox, integration also failed |
+| 37081791704 | `codex/takeover-beta-20261003` | `7a315f7` | 77 passed, 1 failed | `phase3.spec.ts:43`, `apiRequestContext.get: read ECONNRESET` at line 88 | static, chromium, firefox, integration passed; the next commit `85d805d` passed WebKit |
+
+### Evidence table: passing WebKit runs
+
+21 runs passed 78/78: the #14 rerun `37132314447` above plus 20 runs on trees without the #14 change (`37132842360`, `37132313745`, `37100289007`, `37099595026`, `37098951245`, `37098120270`, `37097538824`, `37096736397`, `37090636510`, `37090561314`, `37083979064`, `37083233953`, `37081948593`, `37081798792`, `37079833196`, `37077650513`, `37070526747`, `37069577000`, `37068326693`, `37066206918`). The webkit step took 219 to 532 s (median 484 s) across passing runs.
+
+### Findings
+
+1. **The CI tree for the failed run is now verified.** The GitHub commits API shows `f102788` is a merge of `dd840db` into `9641ad1`, touching exactly the five #14 files (`pnpm-workspace.yaml`, `pnpm-lock.yaml`, `tests/unit/drizzle-tooling-prune.test.ts` and two Drizzle evidence files). This closes the "unverified CI tree" gap listed under "Decision and limits".
+2. **The failed and passing #14 runs have the same runtime content.** The compare API between `f102788` and `6b8083d` lists 8 files, all documentation or evidence (`WEBKIT_14_DIAGNOSIS.md`, `DEVELOPER_GUIDE.md`, `PHASE4_BETA_REPORT.md`, `TEST_PLAN.md`, three `artifacts/phase-4/webkit-pr14/` files, and the dependency-prune note under `artifacts/phase-4/paid-pilot-round1/`). `ec672d7` differs from `dd840db` only in those files (`git diff --stat dd840db ec672d7`). `main` was still `9641ad1` when checked.
+3. **The #14 diff cannot reach anything WebKit loads.** `git diff origin/main...HEAD` shows the lockfile gains 3 lines (the override and a blank) and loses 266. The removals are `@esbuild-kit/core-utils`, `@esbuild-kit/esm-loader`, `esbuild@0.18.20` with its 22 platform packages, `source-map-support`, `source-map@0.6.1` and `buffer-from`. No retained package changes version. `package.json`, Next, React, Playwright, tsx 4.23.15 and esbuild 0.25.12 / 0.28.2 are untouched. The removed packages are Drizzle Kit tooling (`db:generate`), not imported by `src/`, `worker/`, or the Next build (see "Code path and dependency causality", item 6). The build, all three stacks, Chromium and Firefox passed on the failed run.
+4. **The exact failure is rare in this history.** The journey Output-tab click timeout occurred in 1 of 27 WebKit executions: 1 of 2 with the #14 change, 0 of 25 without. The only other journey failure (37094196797) happened at sign-up inside a 56-failure outage, which is a different problem.
+5. **WebKit-only failures on other branches have different causes.** Of the other five failed executions, four coincide with Chromium/Firefox/integration failures in the same run (branch-specific breakage, not WebKit timing). One is WebKit-only (`phase3.spec.ts`, ECONNRESET). Across the whole history there are 2 WebKit-only single-spec failures in 27 executions (about 7%), in two different specs.
+6. **Timing is a weak signal.** The failed run's webkit step (557 s) was the longest of the 27, but only about 5% above the slowest passing run (532 s), and the passing #14 rerun was 2.5x faster (219 s). Runner speed varied about 2.5x across the day. This is consistent with a load-sensitive failure but does not show one.
+7. **The diagnostic evidence gap remains.** `.github/actions/gate-report/action.yml:54-58` uploads `artifacts/gates/**`, text reports, `error-context.md` and failure PNGs only. None of the 27 WebKit artifacts downloaded here contains a `trace.zip` or a Playwright JSON report, and the reports carry no per-test durations. The remaining budget at the moment the Output click started (hypotheses rank 1 versus rank 2 above) is still unmeasured.
+
+### Confidence
+
+| Claim | Confidence | Basis |
+| --- | --- | --- |
+| #14 is not a deterministic regression for WebKit | High | Identical runtime tree passed (WebKit 78/78, Chromium and Firefox green); removal-only lockfile diff; removed packages are not loaded at runtime or build |
+| #14 had no smaller, probabilistic effect | Moderate-high, by mechanism only | The counts cannot show this. With one failure among 27 executions, the chance that it lands on one of the two #14 executions by luck is 2/27 (about 7%), which is not significant but not negligible either |
+| The failure is an intermittent WebKit/journey timing issue | Moderate | Best fit to the paired result and the rarity; not reproduced, no trace, single occurrence |
+| It is a "pre-existing flake on main" | **Not established** | `main` has no WebKit baseline and 0 of 25 other trees showed this exact failure. Say "not attributable to #14", not "confirmed pre-existing" |
+| Root cause (frame scheduling, spent budget, layout race) | **Unknown** | Hypotheses 1 to 4 above are all still open |
+
+### Recommendation
+
+1. **Close #25 as "not attributable to #14; intermittent, root cause unproven"**, using the comment drafted by the orchestrator. Do not label it a confirmed pre-existing flake. #14's `gate` check is green at `ec672d7` on all browsers. The merge state was `BLOCKED` when checked, with a pending CodeRabbit status (the confirmation work is tracked in #28, unrelated to WebKit).
+2. **Open a separate test-reliability tracking issue** for the intermittent `journey.spec.ts` Output-tab click timeout (1 of 27 full-tier WebKit runs). `AGENTS.md` treats flaky tests as failures, so it must stay visible. Acceptance: on the next occurrence, capture the trace and per-step timings (this needs a follow-up change to upload `trace.zip` from the gate-report action), decide between hypotheses 1 and 2, then fix the synchronisation or the redundant wait. Do not raise the timeout, add retries, or force the click.
+3. **Optional, cheap, no code change:** dispatch the Gate workflow at the full tier on `main` two or three times to create the missing baseline. A journey failure on `main` proves the flake pre-exists; no failure keeps it "about 1 in 27, unproven". This is not needed to merge #14.
+4. **Preserve evidence before 2026-10-17** (14-day artifact retention). The JSON file above keeps the table; copy any raw report you need under `artifacts/phase-4/` and never commit trace payloads that may hold credentials.
