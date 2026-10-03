@@ -33,21 +33,34 @@ export function jsonNoStore<T>(data: T, init: ResponseInit = {}) {
  * Reads the request body with a hard byte cap enforced WHILE streaming (Content-Length can be absent or wrong,
  * e.g. chunked uploads), then returns an equivalent Request whose body is safe to parse (formData/json).
  */
-export async function capBody(req: Request, maxBytes: number, tooLarge: HttpError): Promise<Request> {
+export const BODY_READ_TIMEOUT_MS = 30_000;
+
+export async function capBody(req: Request, maxBytes: number, tooLarge: HttpError, timeoutMs = BODY_READ_TIMEOUT_MS): Promise<Request> {
   if (Number(req.headers.get("content-length") ?? 0) > maxBytes) throw tooLarge;
   const chunks: Uint8Array[] = [];
   let size = 0;
   if (req.body) {
     const reader = req.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) {
-        await reader.cancel().catch(() => {});
-        throw tooLarge;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new HttpError(408, "BODY_READ_TIMEOUT", "The request body took too long to arrive")), timeoutMs);
+    });
+    try {
+      // One deadline for the complete body: occasional bytes cannot extend it.
+      for (;;) {
+        const { done, value } = await Promise.race([reader.read(), deadline]);
+        if (done) break;
+        size += value.byteLength;
+        if (size > maxBytes) throw tooLarge;
+        chunks.push(value);
       }
-      chunks.push(value);
+    } catch (error) {
+      // Cancellation is best effort; an adversarial cancel hook must not delay refusal.
+      void reader.cancel().catch(() => {});
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      reader.releaseLock();
     }
   }
   return new Request(req.url, { method: req.method, headers: req.headers, body: size ? Buffer.concat(chunks) : null });
