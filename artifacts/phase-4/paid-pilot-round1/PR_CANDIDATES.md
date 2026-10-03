@@ -1,5 +1,9 @@
 # Paid-pilot PR candidate inventory
 
+ROUND 2 live amendment, 2026-10-03: redaction branch advanced from historical `09be0b3` below to `5f07d8811b84af511c7862f5af13b1feff4decc9` through independently Fable-reviewed test-only fixtures `6da59d7` and explicit CI test mode `5f07d88`. PR #15 now has18paths against main; assertions/product fail-closed behavior unchanged. GitHub validated549integration tests on6da59d7; newest full CI/current CodeRabbit coverage pending. Dependency PR #14 atdd840db is reviewed but full CI failed WebKit journey (77/78); not merge-ready. This amendment does not change frozen round-one source/evidence or assert readiness. Latest task/review/Actions state is PAID_PILOT_STATUS.md on `codex/paid-pilot-round2-20261003`.
+
+04:15UTC correction supersedes that amendment's current-head statement: `5f07d88` failed because a global beta flag intentionally disables Company Builder development trials/prototypes. Latest redaction `151a6b19094f9bdca5058b11f9636f47bfd29b34` restores the CI template and scopes registration open-mode to existing test-only browser cookies, with no locale cookie in Arabic;20paths against main. Independently reviewed before push; final GitHub full gate/current-head CodeRabbit still required. All failed evidence remains preserved.
+
 **Snapshot:** 2026-10-03 refresh. Primary checkout `FlowLine` has `HEAD`/`main` at `9641ad1e684cad7b84bd2385751ea19b0a9d4060`; the branch refs below were inventoried locally. This is a candidate/payload index, not a review or readiness claim. Changed-path counts include evidence files and are a conservative upper bound on reviewable files. Remote refs were not comprehensively checked; the only push state noted is the coordinator-reported update to the tool-roster branch.
 
 ## Local refs and intended payloads

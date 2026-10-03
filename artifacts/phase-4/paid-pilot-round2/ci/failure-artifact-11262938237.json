@@ -1,0 +1,13 @@
+{
+  "artifactId": 11262938237,
+  "zipSHA256": "d710e79aa5a3c028f21a76fbdc36e9957663080eea98ff4a09e5c363e7a10063",
+  "diagnostics": [
+    {
+      "path": "test-results/webkit-2-report.txt",
+      "logSHA256": "4714354e4a0935b7479eaf6b3d736b85500fdd277123efdf4e085529b6d7254a",
+      "excerpts": [
+        "  1) [webkit] \u203a e2e/journey.spec.ts:9:5 \u203a new user builds, saves, reopens, runs and inspects a flow @critical \n\n    Test timeout of 60000ms exceeded.\n\n    Error: locator.click: Test timeout of 60000ms exceeded."
+      ]
+    }
+  ]
+}

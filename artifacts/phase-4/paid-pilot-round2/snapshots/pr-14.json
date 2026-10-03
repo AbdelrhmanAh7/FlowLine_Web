@@ -1,0 +1,138 @@
+{
+  "at": "2026-10-03T03:47:52.384Z",
+  "pr": {
+    "number": 14,
+    "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/14",
+    "state": "OPEN",
+    "headRefOid": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+    "headRefName": "codex/pilot-security-deps-round1",
+    "baseRefName": "main",
+    "isDraft": false,
+    "reviews": {
+      "nodes": []
+    },
+    "reviewThreads": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "id": "IC_kwDOUvLGYc8AAAABY4wfOg",
+          "author": {
+            "login": "coderabbitai"
+          },
+          "createdAt": "2026-10-03T03:32:22Z",
+          "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- review_stack_entry_start -->\n\n<a href=\"https://app.coderabbit.ai/change-stack/AbdelrhmanAh7/FlowLine_Web/pull/14?cs_source=review_comment\"><img src=\"https://storage.googleapis.com/coderabbit_public_assets/review-stack-in-coderabbit-ui-dark.svg?v=2\" alt=\"Review in Change Stack →\" width=\"220\" height=\"32\"></a>\n\nNavigate logical layers of code changes, visualize relationships, and explore their blast radius.\n\n<!-- review_stack_entry_end -->\n<!-- recent_review_start -->\n\nNo actionable comments were generated in the recent review. 🎉\n\n<details>\n<summary>ℹ️ Recent review info</summary>\n\n<details>\n<summary>⚙️ Run configuration</summary>\n\n- **Configuration used**: Repository: AbdelrhmanAh7/FlowLine_Web/.coderabbit.yaml\n- **Review profile**: ASSERTIVE\n- **Plan**: Essentials\n- **Run ID**: `a8537bae-e999-4069-93fb-e7bc97588556`\n\n</details>\n\n<details>\n<summary>📥 Commits</summary>\n\nReviewing files that changed from the base of the PR and between 9641ad1e684cad7b84bd2385751ea19b0a9d4060 and dd840db6bf6f9329f61007152b3bb500b4d66b75.\n\n</details>\n\n<details>\n<summary>⛔ Files ignored due to path filters (1)</summary>\n\n* `pnpm-lock.yaml` is excluded by `!**/pnpm-lock.yaml`\n\n</details>\n\n<details>\n<summary>📒 Files selected for processing (4)</summary>\n\n* `artifacts/phase-4/paid-pilot-round1/check-drizzle-prune.mjs`\n* `artifacts/phase-4/paid-pilot-round1/security-dependency-prune.md`\n* `pnpm-workspace.yaml`\n* `tests/unit/drizzle-tooling-prune.test.ts`\n\n</details>\n\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.\n\n</details>\n\n---\n\n\n\n<!-- recent_review_end -->\n<!-- walkthrough_start -->\n\n<details>\n<summary>📝 Walkthrough</summary>\n\n## Walkthrough\n\nThe change adds a pnpm override that excludes `@esbuild-kit/esm-loader` for Drizzle Kit 0.31.11. Tests and a validation script check the dependency graph, Drizzle migration commands, schema declarations, and esbuild bundles.\n\n### Changes\n\n**Drizzle tooling dependency prune**\n\n|Layer / File(s)|Summary|\n|:---|:---|\n|**Scope the override and verify the dependency graph** <br> `pnpm-workspace.yaml`, `tests/unit/drizzle-tooling-prune.test.ts`|The pnpm override excludes `@esbuild-kit/esm-loader` for Drizzle Kit 0.31.11. Unit tests check the installed package and lockfile for the loader packages and esbuild versions.|\n|**Validate Drizzle commands and bundles** <br> `artifacts/phase-4/paid-pilot-round1/check-drizzle-prune.mjs`, `artifacts/phase-4/paid-pilot-round1/security-dependency-prune.md`|The script runs Drizzle generation and checks with a scratch configuration, checks generated migrations and table declarations, and bundles the worker and auth entry points. The report records validation evidence, limitations, and upgrade checks.|\n\n<!-- change_assessment_start -->\n**Priority:** ⬇️ Low\n\n**Estimated code review effort:** 2 (Simple) | ~12 minutes\n\n<!-- change_assessment_commit:\"dd840db6bf6f9329f61007152b3bb500b4d66b75\" -->\n**Change:** Other\n<!-- change_assessment_end -->\n\n</details>\n\n<!-- walkthrough_end -->\n<!-- final_review_risk_start -->\n**Merge Risk:** _⚪ Minimal_ · up to `dd840`\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"dd840db6bf6f9329f61007152b3bb500b4d66b75\",\"coveredCommitId\":\"dd840db6bf6f9329f61007152b3bb500b4d66b75\",\"kind\":\"reviewed\"} -->\n\nThe dependency prune is reflected in the lockfile, and no actionable issue remains from this review. Normal final checks can proceed.\n<!-- final_review_risk_end -->\n<!-- pre_merge_checks_walkthrough_start -->\n\n<details>\n<summary>🚥 Pre-merge checks | ✅ 5</summary>\n\n<details>\n<summary>✅ Passed checks (5 passed)</summary>\n\n|         Check name         | Status   | Explanation                                                                                                                                                                                               |\n| :------------------------: | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n|      Description Check     | ✅ Passed | Check skipped - CodeRabbit’s high-level summary is enabled.                                                                                                                                               |\n|         Title check        | ✅ Passed | The title clearly and concisely describes the main change: pruning the unused Drizzle loader dependency.                                                                                                  |\n|     Docstring Coverage     | ✅ Passed | No functions found in the changed files to evaluate docstring coverage. Skipping docstring coverage check. Docstring coverage is scoped to functions touched by this diff. Analyzed 0 functions across 2… |\n|     Linked Issues check    | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                                                                                                  |\n| Out of Scope Changes check | ✅ Passed | Check skipped because no linked issues were found for this pull request.                                                                                                                                  |\n\n</details>\n\n</details>\n\n<!-- pre_merge_checks_walkthrough_end -->\n<!-- finishing_touch_checkbox_start -->\n\n<details>\n<summary>✨ Finishing Touches</summary>\n\n<details open>\n<summary>📝 Generate docstrings</summary>\n\n- [ ] <!-- {\"checkboxId\":\"3e1879ae-f29b-4d0d-8e06-d12b7ba33d98\"} --> Commit to this branch\n- [ ] <!-- {\"checkboxId\":\"7962f53c-55bc-4827-bfbf-6a18da830691\"} --> Create a new PR\n\n</details>\n\n</details>\n\n<!-- finishing_touch_checkbox_end -->\n\n<!-- autopilot:start -->\n- [ ] <!-- {\"checkboxId\":\"2708ad07-9f24-4260-9c11-7dc76a49f2e3\"} --> <strong title=\"Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\">Autopilot</strong> · Keep fixing CodeRabbit findings and required CI, and resolving merge conflicts\n<!-- autopilot:end -->\n<!-- tips_start -->\n\n---\n\n\n\n\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>\n\n<!-- tips_end -->",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/14#issuecomment-5965094714"
+        }
+      ]
+    }
+  },
+  "runs": [
+    {
+      "id": 37093517476,
+      "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476",
+      "name": "Gate",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "isCurrentHead": true,
+      "createdAt": "2026-10-03T03:32:06Z",
+      "jobs": [
+        {
+          "id": 111118664226,
+          "name": "static",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T03:32:09Z",
+          "completedAt": "2026-10-03T03:34:31Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111118664226"
+        },
+        {
+          "id": 111118664388,
+          "name": "chromium",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T03:32:08Z",
+          "completedAt": "2026-10-03T03:41:28Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111118664388"
+        },
+        {
+          "id": 111118664389,
+          "name": "webkit",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T03:32:27Z",
+          "completedAt": "2026-10-03T03:44:29Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111118664389"
+        },
+        {
+          "id": 111118664417,
+          "name": "firefox",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T03:32:08Z",
+          "completedAt": "2026-10-03T03:39:46Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111118664417"
+        },
+        {
+          "id": 111118664521,
+          "name": "integration",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-10-03T03:32:10Z",
+          "completedAt": "2026-10-03T03:35:37Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111118664521"
+        },
+        {
+          "id": 111120696283,
+          "name": "gate",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-10-03T03:44:31Z",
+          "completedAt": "2026-10-03T03:44:35Z",
+          "url": "https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37093517476/job/111120696283"
+        }
+      ],
+      "timing": {
+        "billable": {
+          "UBUNTU": {
+            "total_ms": 0,
+            "jobs": 6,
+            "job_runs": [
+              {
+                "job_id": 111118664226,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111118664388,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111118664389,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111118664417,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111118664521,
+                "duration_ms": 0
+              },
+              {
+                "job_id": 111120696283,
+                "duration_ms": 0
+              }
+            ]
+          }
+        },
+        "run_duration_ms": 750000
+      }
+    }
+  ]
+}

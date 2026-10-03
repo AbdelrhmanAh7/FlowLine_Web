@@ -1,0 +1,13 @@
+{
+  "artifactId": 11262849824,
+  "zipSHA256": "8ab951eb388bdea1e4383ea2b14a5f148f8086c8bab3cc5434719bc012dfc75d",
+  "diagnostics": [
+    {
+      "path": "test-results/chromium-2-report.txt",
+      "logSHA256": "82c5e525624dfb214cd8af22c456fddd4dd0214c0dbb915f49c4775752e5fdf5",
+      "excerpts": [
+        "  1) [chromium] \u203a e2e/company-builder.spec.ts:31:5 \u203a company builder (first slice): outcome-first interview \u2192 plan \u2192 draft \u2192 sample trial \u2192 my acceptance \u2192 review \u2192 activation \u2192 history @critical \n\n    Test timeout of 180000ms exceeded.\n\n    Error: locator.click: Test timeout of 180000ms exceeded."
+      ]
+    }
+  ]
+}

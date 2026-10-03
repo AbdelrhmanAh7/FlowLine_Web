@@ -1,0 +1,86 @@
+[
+  {
+    "artifactId": 11263861012,
+    "artifactName": "flowline-gate-static-37094720833-1",
+    "originalPath": "artifacts/gates/ci-37094720833-1-static/summary.json",
+    "sha256": "d25e6445018696c2ab253d2f1087f19635d3642def57218e9bf69bc0407345e8",
+    "testedSha": "106bda8fb64c83705365019f4856e6d8db377152",
+    "ok": true,
+    "steps": [
+      {
+        "name": "lint",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 106116,
+        "log": "artifacts/gates/ci-37094720833-1-static/lint.log",
+        "totals": null
+      },
+      {
+        "name": "typecheck",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 98838,
+        "log": "artifacts/gates/ci-37094720833-1-static/typecheck.log",
+        "totals": null
+      },
+      {
+        "name": "evidence",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 2236,
+        "log": "artifacts/gates/ci-37094720833-1-static/evidence.log",
+        "totals": null
+      },
+      {
+        "name": "unit",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 105862,
+        "log": "artifacts/gates/ci-37094720833-1-static/unit.log",
+        "totals": {
+          "passed": 791
+        }
+      },
+      {
+        "name": "contract",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 75902,
+        "log": "artifacts/gates/ci-37094720833-1-static/contract.log",
+        "totals": {
+          "passed": 468
+        }
+      }
+    ],
+    "file": "flowline-gate-static-37094720833-1-summary.json"
+  },
+  {
+    "artifactId": 11262929119,
+    "artifactName": "flowline-gate-integration-37094720833-1",
+    "originalPath": "artifacts/gates/ci-37094720833-1-integration/summary.json",
+    "sha256": "1fba2005183cb58ecb55bf1f10245850d8d116b78e340cecdef6e275384b7484",
+    "testedSha": "106bda8fb64c83705365019f4856e6d8db377152",
+    "ok": true,
+    "steps": [
+      {
+        "name": "integration",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 137983,
+        "log": "artifacts/gates/ci-37094720833-1-integration/integration.log",
+        "totals": {
+          "passed": 549,
+          "failed": 0,
+          "skipped": 0
+        }
+      }
+    ],
+    "file": "flowline-gate-integration-37094720833-1-summary.json"
+  }
+]

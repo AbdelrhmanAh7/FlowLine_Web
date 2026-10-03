@@ -1,0 +1,12 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
+const n=Number(process.argv[2]);
+execFileSync('node',['artifacts/phase-4/paid-pilot-round2/snapshot-pr.mjs',String(n)],{stdio:['ignore','pipe','pipe'],maxBuffer:4*1024*1024});
+const s=JSON.parse(readFileSync(`artifacts/phase-4/paid-pilot-round2/snapshots/pr-${n}.json`));
+const p=s.pr;
+const reviews=p.reviews.nodes.filter(r=>r.author?.login==='coderabbitai');
+const latest=reviews.filter(r=>r.commit?.oid===p.headRefOid).at(-1);
+const bot=p.comments.nodes.filter(c=>c.author?.login==='coderabbitai').at(-1);
+const limited=bot&&/review limit reached|review rate limited|rate limit exceeded/i.test(bot.body);
+const summary=p.comments.nodes.find(c=>c.author?.login==='coderabbitai'&&/No actionable comments were generated in the recent review/.test(c.body)&&c.body.includes(`"coveredCommitId":"${p.headRefOid}"`)&&c.body.includes('"kind":"reviewed"'));
+console.log(JSON.stringify({at:s.at,number:n,head:p.headRefOid,phase:limited?'LIMITED':latest||summary?'REVIEWED':'PENDING',review:latest?{at:latest.submittedAt,head:latest.commit?.oid,body:latest.body}:summary?{head:p.headRefOid,body:'Explicit zero-actionable summary with exact-head reviewed coverage',url:summary.url}:null,threads:p.reviewThreads.nodes.filter(t=>!t.isResolved).map(t=>({id:t.id,path:t.path,comments:t.comments.nodes})),lastBot:limited?bot.body:null,runs:s.runs.map(r=>({id:r.id,status:r.status,conclusion:r.conclusion,head:r.headSha,jobs:r.jobs.map(j=>({name:j.name,status:j.status,conclusion:j.conclusion}))}))}));

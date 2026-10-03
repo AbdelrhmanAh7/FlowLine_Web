@@ -1,0 +1,18 @@
+**Decision: APPROVE** diff SHA256 `9c46c9557ca44a581aee1b0f2cc54f96bbd8b9c43beb34f6cd4f21a9c467b712` for commit and push to PR 15, after the current browser reports finish so the failures stay batched.
+
+Tools were disabled, so this is a reading of the exact diff plus the stated context. The approval holds only if three facts you asserted are true in the source. If any is false, treat this as BLOCK.
+
+1. **Cookie contract.** `src/server/beta.ts` reads an unsigned cookie named exactly `fl_test_beta_mode`, accepts the value `open`, and applies it inside the better-auth sign-up hook when `FLOWLINE_ENV=test`. The hand-built cookie in the config has no signature, so a signed or server-registered override would silently not apply and every registration journey would deny again.
+2. **No other global flag.** 5f07d88 added only the two template lines being reverted. Nothing in `gate.yml`, `setup-gate`, or the test-stack script also sets `FLOWLINE_BETA_MODE`. Otherwise the Company Builder guards keep denying.
+3. **Same cookie, same path.** The `/api/test/beta` endpoint used by the beta spec sets the same cookie name on path `/` for `localhost`, so its `invite_only` value replaces the `open` cookie rather than coexisting with it. Two same-named cookies with different paths would make the uninvited-denial assertions depend on header ordering.
+
+What the diff itself does correctly:
+
+- **Template revert** is exactly the two lines and nothing else, restoring the environment under which integration passed 549 after 6da59d7.
+- **Fixture layer** is the right place. The cookie rides with the `page`, `context`, and built-in `request` fixtures because Playwright applies `storageState` to all of them, so helpers like `setupUser` and `signUpVerified` inherit it.
+- **Arabic default** stays untested-by-locale: `AR_STATE` carries no `fl_locale` cookie, and the spec's RTL and language assertions are untouched.
+- **Manual contexts** in the Company Builder Arabic test and the arabic spec now pass the beta cookie explicitly, matching the existing rule that hand-made contexts don't inherit `use`.
+- **No weakening.** No assertion, skip, retry, or timeout changed. No product, engine, entitlement, or `beta.ts` change, so production behaviour is unaffected and the cookie is ignored outside `FLOWLINE_ENV=test`.
+- **TypeScript and module shape** follow the established pattern. `company-builder.spec.ts` already imports from the config, so the new import in `arabic.spec.ts` introduces no new side effect.
+
+Record in the ledger that 5f07d88 did not work and is reverted here, and that the only unaffected contexts are the public hydration test and the keyboard-surfaces API context, which pre-invites its email.

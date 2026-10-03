@@ -1,0 +1,13 @@
+{
+  "artifactId": 11263004893,
+  "zipSHA256": "e9a68f190f03762b9fc1947eb1683e512647846bab3f0a2c43092bd93f3202ed",
+  "diagnostics": [
+    {
+      "path": "test-results/webkit-2-report.txt",
+      "logSHA256": "af6a15210f26bc167ca43a21c5d4acf3e8acec414932803b2c51fb1b67230bd2",
+      "excerpts": [
+        "  1) [webkit] \u203a e2e/company-builder.spec.ts:31:5 \u203a company builder (first slice): outcome-first interview \u2192 plan \u2192 draft \u2192 sample trial \u2192 my acceptance \u2192 review \u2192 activation \u2192 history @critical \n\n    Test timeout of 180000ms exceeded.\n\n    Error: locator.click: Test timeout of 180000ms exceeded."
+      ]
+    }
+  ]
+}

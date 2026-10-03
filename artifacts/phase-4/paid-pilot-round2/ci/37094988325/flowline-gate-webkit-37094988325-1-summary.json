@@ -1,0 +1,53 @@
+{
+  "sha": "7e59730d5d61c4efe8861eee8d7b15b02a2c6552",
+  "shortSha": "7e59730",
+  "dirty": false,
+  "dirtyCount": 0,
+  "node": "v22.23.3",
+  "pnpm": "10.32.1",
+  "tier": "full",
+  "group": null,
+  "stacks": 3,
+  "totalStacks": 3,
+  "poolMax": 6,
+  "integrationShards": 4,
+  "startedAt": "2026-10-03T04:00:49.033Z",
+  "finishedAt": "2026-10-03T04:08:51.927Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "artifacts/gates/ci-37094988325-1-webkit",
+  "ok": false,
+  "steps": [
+    {
+      "name": "build",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 53169,
+      "log": "artifacts/gates/ci-37094988325-1-webkit/build.log",
+      "totals": null
+    },
+    {
+      "name": "stack",
+      "phase": 3,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 14992,
+      "log": "artifacts/gates/ci-37094988325-1-webkit/stack.log",
+      "totals": null,
+      "note": "3 stack(s) on this run's build"
+    },
+    {
+      "name": "webkit",
+      "phase": 4,
+      "status": "fail",
+      "rc": 1,
+      "durationMs": 412778,
+      "log": "artifacts/gates/ci-37094988325-1-webkit/webkit.log",
+      "totals": {
+        "passed": 77,
+        "failed": 1
+      }
+    }
+  ]
+}

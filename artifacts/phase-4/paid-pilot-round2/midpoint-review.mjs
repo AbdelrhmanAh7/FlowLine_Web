@@ -1,0 +1,13 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+const dir='artifacts/phase-4/paid-pilot-round2';
+const diff=execFileSync('git',['diff','--cached','--binary'],{maxBuffer:4*1024*1024});
+const hash=createHash('sha256').update(diff).digest('hex');
+const paths=execFileSync('git',['diff','--cached','--name-only'],{encoding:'utf8'}).trim().split('\n');
+if(paths.some(p=>!p.startsWith('artifacts/')&&!p.startsWith('docs/')))throw Error('Unexpected checkpoint source path');
+writeFileSync(`${dir}/MIDPOINT_REVIEW_MANIFEST.json`,JSON.stringify({at:new Date().toISOString(),hash,paths},null,2)+'\n');
+const prompt=readFileSync(`${dir}/MIDPOINT_REVIEW_PROMPT.md`,'utf8')+`\nExact staged binary SHA256: ${hash}\n${diff.toString('utf8')}`;
+const input=join(tmpdir(),'flowline-pilot-round2-midpoint-review.txt');writeFileSync(input,prompt);console.log(input);

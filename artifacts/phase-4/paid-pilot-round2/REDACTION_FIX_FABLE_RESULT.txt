@@ -1,0 +1,19 @@
+**Decision: APPROVE** the narrow fixture correction for commit and push to the existing PR15 branch, under the assumptions stated below. I reviewed the diff text only. Tools were disabled, so I could not recompute the SHA256 or open `src/server/beta.ts`. The hash you quoted is approved as the identifier of exactly this diff content, nothing more.
+
+**Why it is correct in scope**
+
+- Both files change only test fixtures. No assertion, skip, retry, or baseline is touched.
+- The production fail-closed behaviour in `beta.ts` stays untouched, and the dedicated beta-signup and beta-mode-security tests still cover denial plus missing or malformed modes.
+- Setting explicit `open` matches what these two suites actually exercise: email verification and SSO journeys for freshly created users, not beta admission.
+- Restore logic is right. Capturing the previous value at module scope and deleting when it was undefined avoids leaving a stale `open` in any shared process, which matters if Vitest ever runs with isolation off.
+- In the SSO file the env is set before the fake providers start and restored before they close, so ordering is sound.
+
+**One residual risk, which CI will expose**
+
+The fix only works if the better-auth hook reads `FLOWLINE_BETA_MODE` at call time. If `beta.ts` snapshots the env at module import, `beforeAll` runs too late, because `@/lib/auth` is already imported at the top of both files. The existing integration tests that cover missing and malformed modes almost certainly toggle the env at runtime, which implies call-time reads, so I rate this low. If the 9 cases still fail in the next CI run with the same error, that is the cause, and the correction would be to set the env at module scope next to the existing `FLOWLINE_EMAIL_PROVIDER` line. That would still be a test-only change.
+
+**Agreement on the rest of the slice**
+
+- Use the next slot for the PR15 changed-code re-review and displace resource. No extra CI dispatch or main-baseline run in this slice.
+- The PR14 WebKit output-tab timeout stays unclassified. Without an unchanged-main failure on the same spec it cannot be called pre-existing. Read-only diagnostics only.
+- No merges, and no owner permission is needed for this push.

@@ -1,0 +1,16 @@
+**Decision: APPROVE** diff `c14cbf12…aa158dd` for commit and push to the existing PR 15 branch. The hash is taken as you stated it, since I ran no tools. My approval covers the two added lines exactly as shown.
+
+Why it passes:
+
+- **Correct layer for the fix.** The failure is a config omission, not a product bug. Production code failing closed on a missing mode is the desired behaviour and stays untouched. The test environment declaring its mode explicitly is the right remedy.
+- **Consistent with the suite's documented contract.** The beta spec already states the test stack runs open for the rest of the suite and overrides to invite-only via the test cookie. The template now matches that assumption instead of relying on an accident.
+- **No assertion weakened.** Denial, invite and single-use code checks are unchanged. The unit security test deletes and stubs the env itself, so the template value cannot reach it. The non-test cookie bypass check is unaffected because the template still sets the test env.
+- **Scope is minimal.** Two lines in a committed template of placeholders. No production or staging config, no retries, no skips.
+- **Comment is accurate.** It names the override mechanism without overstating it.
+
+Two things to watch, neither a blocker:
+
+- **Verify the template is what CI materialises.** If the gate workflow or the setup action builds the env another way, the change is harmless but inert and the browser failures will recur. Read the next run's browser job rather than assuming.
+- **The earlier fixture fix is now partly redundant.** The explicit open in the SSO and email test files still works. Leave it alone this round. Consolidating is cleanup for a later prompt, not now.
+
+On timing, I agree with your recommendation. Let the current run report its integration job first, since that is the only clean evidence that the fixture fix cleared the nine integration failures. Then push this fix. The rereview at the next slot is acceptable. No budget request, no WebKit or baseline work, no owner question needed.

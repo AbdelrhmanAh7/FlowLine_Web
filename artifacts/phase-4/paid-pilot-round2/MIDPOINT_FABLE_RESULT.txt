@@ -1,0 +1,17 @@
+**Decision: APPROVE** staged diff SHA256 `704087b2c34c34a60f3041cfdad74b6c7c9545c7821eb946f8e063f497a2e9d4` for the backup commit and push to the existing non-main branch. I ran no tools, so the hash is accepted as you stated it and this is a reading of the appended diff text only. Approval covers nothing beyond that diff: no PR, CI request, merge, deploy, or payment acceptance.
+
+**Scope.** Every changed path is under `artifacts/` or `docs/`. No source, test, or workflow file moves on this branch, and the manifest script enforces that boundary before producing a prompt.
+
+**Secrets and data.** Nothing credential-like appears. Snapshots hold public GitHub comment bodies, node ids and run URLs. Failure excerpts contain only synthetic `@flowline-e2e.test` addresses and a localhost redirect. The log reader skips any archive path containing `.env`, reads only shard logs and browser report files, strips ANSI, bounds each excerpt to five lines, and masks common credential keys. Published headlines are first lines only.
+
+**Honesty.** The ledger states what actually happened, including the failed global-mode attempt, head-superseded cancellations, the absence of formal GitHub review objects, and that zero billable milliseconds is not a billing proof. Runner-minute sums check out against the per-job durations in the file (per-run and aggregate totals both reconcile). Posted PR comments match their committed copies. No readiness, production, or live-provider claim is made.
+
+**Helper logic.** The admission gate now requires either a CodeRabbit review whose commit equals the current head or a zero-actionable summary whose covered commit equals the current head, plus the one explicit PR 12 docs waiver pinned to a single SHA. The stale PR 15 summary covering `09be0` would correctly fail that check against head `151a6b1`. The poll script applies the same rule and surfaces the rate-limit reply.
+
+Three non-blocking notes for the next refresh, none of which changes the decision:
+
+- **Tested SHA vs head.** The CI summaries record the pull-request merge commit as the tested SHA, which differs from the branch head listed in the usage file. Statements like "validated on 6da59d7" are accurate in the ordinary CI sense but mean the merge of that head with main. One sentence in the ledger would remove any ambiguity.
+- **In-progress run entry.** The usage entry for the newest run shows zero completed jobs and an empty job list, yet the PR snapshot taken a minute later shows static and integration already finished. This looks like the disclosed read-only timeout at 04:16. Refresh it at closeout rather than leaving it as the final record.
+- **Empty diagnostics file.** One failure artifact file has no diagnostics and is not tied to a named job in the ledger. If it is the Firefox failure on the original PR 15 head, note that its report format did not match the extractor so the gap is explained rather than silent.
+
+Manifest and result metadata may now be appended as planned.

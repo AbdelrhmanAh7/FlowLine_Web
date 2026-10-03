@@ -1,0 +1,27 @@
+{
+  "artifactId": 11263798781,
+  "zipSHA256": "e7b4c04272c7b911999155b334070ae87e910015391026e8699482491de40f75",
+  "diagnostics": [
+    {
+      "path": "artifacts/gates/ci-37094196797-1-integration/integration/shard-3.log",
+      "logSHA256": "2fa6670c57d01e4ce9950c15251e3ace1a5c880dad26b24028405faa5ee4b801",
+      "excerpts": [
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso configuration > uses ZITADEL Basic client authentication with PKCE and preserves the selected provider\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso configuration > changing issuer or client id clears verification\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > happy path: test sign-in verifies the config, creates the user with the default role, and the cookie is a real better-auth session\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > once verified the config can be enabled; an existing member then signs in and keeps their role\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > never takes over an existing account by email \u2014 not a password user, not another workspace's SSO user\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > links don't survive a change of IdP: a new issuer can't sign in as a user linked under the old one (Codex CX3-01)\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > refuses a replayed or expired state\nError: Flowline is in private beta. Sign up with the email your invitation was sent to, or enter a beta access code.\n \u276f completeSso src/server/sso.ts:473:49\n    471|     } else {\n    472|       // Private beta: SSO can't create accounts that email/social sig\u2026",
+        " FAIL   integration  tests/integration/p3-sso.test.ts > sso sign-in > the callback route sets a session cookie that better-auth accepts, and redirects errors to sign-in\nAssertionError: expected 'http://localhost:3100/sign-in?sso_err\u2026' to contain '/w/ssows-3bc0d827/flows'\n\nExpected: \"/w/ssows-3bc0d827/flows\"\nReceived: \"http://localhost:3100/sign-in?sso_error=Flowline%20is%20in%20private%20beta.%20Sign%20up%20with%20the%20email%20your%20invitation%20was%20sent%20to%2C%20or%20enter%20a%20beta%20access%20code.\""
+      ]
+    },
+    {
+      "path": "artifacts/gates/ci-37094196797-1-integration/integration/shard-4.log",
+      "logSHA256": "6e6655d1d65d4ee24713615d3ab9745fed89030564d8352ced9758958b1596e5",
+      "excerpts": [
+        " FAIL   integration  tests/integration/email.test.ts > email account flows > sends verification on better-auth sign-up and blocks email sign-in until verified\nAssertionError: expected undefined to be defined\n \u276f lastToken tests/integration/email.test.ts:21:19\n     19|   const all = await db.select().from(schema.emailOutbox).where(eq(sche\u2026\n     20|   const message = all.filter((m) => m.plainText.includes(path)).at(-1)\u2026"
+      ]
+    }
+  ]
+}

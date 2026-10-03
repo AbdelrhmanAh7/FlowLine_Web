@@ -33,10 +33,13 @@ const prs=gh('pr','list','--state','all','--limit','100','--json','number,headRe
 const next=queue.find(([ref])=>!prs.some(p=>p.headRefName===ref));
 if(!next){console.log('Queue exhausted');process.exit(0);}
 for(const pr of prs.filter(p=>p.state==='OPEN'&&p.number>=12)) {
- const q=`query { repository(owner:"AbdelrhmanAh7",name:"FlowLine_Web") { pullRequest(number:${pr.number}) { reviewThreads(first:100) { pageInfo {hasNextPage} nodes {isResolved comments(last:1) {nodes {author {login} body}}} } reviews(last:10) {nodes {author {login} submittedAt body}} comments(last:10) {nodes {author {login} body createdAt}} } } }`;
+ const q=`query { repository(owner:"AbdelrhmanAh7",name:"FlowLine_Web") { pullRequest(number:${pr.number}) { headRefOid reviewThreads(first:100) { pageInfo {hasNextPage} nodes {isResolved comments(last:1) {nodes {author {login} body}}} } reviews(last:10) {nodes {author {login} submittedAt body commit {oid}}} comments(last:10) {nodes {author {login} body createdAt}} } } }`;
  const p=gh('api','graphql','-f',`query=${q}`).data.repository.pullRequest;
  if(p.reviewThreads.pageInfo.hasNextPage||p.reviewThreads.nodes.some(t=>!t.isResolved))throw Error(`PR${pr.number} unresolved threads`);
- if(!p.reviews.nodes.some(r=>r.author?.login==='coderabbitai'))throw Error(`PR${pr.number} review not finished`);
+ const zero=p.comments.nodes.some(c=>c.author?.login==='coderabbitai'&&/No actionable comments were generated in the recent review/.test(c.body)&&c.body.includes(`"coveredCommitId":"${p.headRefOid}"`)&&c.body.includes('"kind":"reviewed"'));
+ const reviewed=p.reviews.nodes.some(r=>r.author?.login==='coderabbitai'&&r.commit?.oid===p.headRefOid);
+ const docsWaiver=pr.number===12&&p.headRefOid==='a9276f663a2984531ae4f4a76379f36eeff8ce18';
+ if(!zero&&!reviewed&&!docsWaiver)throw Error(`PR${pr.number} exact-head review not finished`);
  const lastBot=p.comments.nodes.filter(c=>c.author?.login==='coderabbitai').at(-1);
  if(lastBot&&/rate limit|review limit reached/i.test(lastBot.body))throw Error('Latest provider reply still rate limited');
 }

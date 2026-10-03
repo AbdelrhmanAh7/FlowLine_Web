@@ -1,0 +1,52 @@
+{
+  "sha": "f10278806a20a80b0bedd683ce446c46e7d0e416",
+  "shortSha": "f102788",
+  "dirty": false,
+  "dirtyCount": 0,
+  "node": "v22.23.3",
+  "pnpm": "10.32.1",
+  "tier": "full",
+  "group": null,
+  "stacks": 3,
+  "totalStacks": 3,
+  "poolMax": 6,
+  "integrationShards": 4,
+  "startedAt": "2026-10-03T03:33:07.493Z",
+  "finishedAt": "2026-10-03T03:39:26.924Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "artifacts/gates/ci-37093517476-1-firefox",
+  "ok": true,
+  "steps": [
+    {
+      "name": "build",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 57922,
+      "log": "artifacts/gates/ci-37093517476-1-firefox/build.log",
+      "totals": null
+    },
+    {
+      "name": "stack",
+      "phase": 3,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 16915,
+      "log": "artifacts/gates/ci-37093517476-1-firefox/stack.log",
+      "totals": null,
+      "note": "3 stack(s) on this run's build"
+    },
+    {
+      "name": "firefox",
+      "phase": 4,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 302870,
+      "log": "artifacts/gates/ci-37093517476-1-firefox/firefox.log",
+      "totals": {
+        "passed": 78
+      }
+    }
+  ]
+}
