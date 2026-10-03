@@ -1,0 +1,929 @@
+diff --git a/docs/security/SECURITY_REVIEW_20261003.md b/docs/security/SECURITY_REVIEW_20261003.md
+index 7a971e6..31e7736 100644
+--- a/docs/security/SECURITY_REVIEW_20261003.md
++++ b/docs/security/SECURITY_REVIEW_20261003.md
+@@ -63,6 +63,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
+ 
+ ### H3 — Federated sign-in grants sessions without enforcing enrolled local TOTP
+ 
++**Status (2026-10-03): FIXED in source.** Workspace SSO and all better-auth federation callback/direct-sign-in paths require local TOTP for enrolled accounts. Only an opaque, expiring pending cookie survives the callback; no usable full session remains before the CSRF-protected step-up completes. Challenge consumption/session creation/MFA assurance are atomic, with user/factor-change fencing, rate limits and single-use pending challenges. Platform reads require exact-session MFA assurance; mutations still require their separate fresh session-bound TOTP elevation. Local password/TOTP and bootstrap completion record assurance too; workspace sign-in audit is emitted only after successful TOTP. Signed-token integration attacks cover ordinary users and active admins through workspace SSO, actual ZITADEL callbacks and GitHub callbacks, plus expiry/recovery/change/concurrency. Real-provider/browser validation remains outstanding.
++
+ **Locations:** `src/server/sso.ts:527`, `src/app/api/sso/callback/route.ts:25`, `src/lib/auth.ts:98`, `src/server/platform-access.ts:71`, `src/server/platform-http.ts:61`.
+ 
+ **Evidence:** Custom SSO directly calls `internalAdapter.createSession(user.id)` and writes the authenticated cookie. It never checks `twoFactorEnabled` or challenges the user. The installed better-auth 1.7.6 two-factor after-hook matches only `/sign-in/email`, `/sign-in/username` and `/sign-in/phone-number`, not social/OIDC callbacks (`../FlowLine/node_modules/better-auth/dist/plugins/two-factor/index.mjs:244`). Flowline adds no equivalent federated challenge or enforced IdP MFA assurance. Platform read access checks TOTP **enrollment**, verified email and session age; enrollment is not evidence that this session completed a factor.
+diff --git a/src/app/(auth)/auth-form.tsx b/src/app/(auth)/auth-form.tsx
+index 5dae1a4..fa39be0 100644
+--- a/src/app/(auth)/auth-form.tsx
++++ b/src/app/(auth)/auth-form.tsx
+@@ -122,6 +122,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
+     setError(null);
+     try {
+       const res = await authClient.signIn.social({ provider, callbackURL: destination });
++      if (!res?.error && (res?.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
++        window.location.assign(new URL("/auth/step-up", window.location.origin).href);
++      }
+       if (res?.error) {
+         setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
+       }
+diff --git a/src/app/(auth)/auth/step-up/page.tsx b/src/app/(auth)/auth/step-up/page.tsx
+new file mode 100644
+index 0000000..99f0db2
+--- /dev/null
++++ b/src/app/(auth)/auth/step-up/page.tsx
+@@ -0,0 +1,42 @@
++"use client";
++
++import { useQuery } from "@tanstack/react-query";
++import Link from "next/link";
++import { useState } from "react";
++import { Button, Field, Input, Logo } from "@/components/ui";
++import { LanguageSwitcher } from "@/components/language-switcher";
++import { ThemeSwitcher } from "@/components/theme-switcher";
++import { useT } from "@/i18n/client";
++import { api } from "@/lib/api";
++
++export default function FederatedStepUpPage() {
++  const t = useT();
++  const [pending, setPending] = useState(false);
++  const [error, setError] = useState(false);
++  const challenge = useQuery({ queryKey: ["federated-step-up"], queryFn: () => api<{ csrf: string }>("/api/federation/step-up"), retry: false });
++  async function verify(e: React.FormEvent<HTMLFormElement>) {
++    e.preventDefault();
++    if (!challenge.data) return;
++    const code = String(new FormData(e.currentTarget).get("code") ?? "").trim();
++    e.currentTarget.reset();
++    setPending(true); setError(false);
++    try {
++      const result = await api<{ next: string }>("/api/federation/step-up", { method: "POST", headers: { "content-type": "application/json", "x-flowline-csrf": challenge.data.csrf }, body: JSON.stringify({ code }) });
++      window.location.assign(new URL(result.next, window.location.origin).href);
++    } catch { setError(true); setPending(false); }
++  }
++  return <main className="flex min-h-dvh items-center justify-center px-4 py-10">
++    <div className="w-full max-w-[400px] space-y-5">
++      <div className="flex items-center justify-between"><Logo /><div className="flex gap-3"><LanguageSwitcher /><ThemeSwitcher /></div></div>
++      <h1 className="text-2xl font-semibold">{t("auth.twoFactorTitle")}</h1>
++      <p className="text-med">{t("auth.federatedFactorBody")}</p>
++      {challenge.isError && <p role="alert" className="text-danger">{t("auth.federatedFactorExpired")}</p>}
++      {error && <p role="alert" className="text-danger">{t("auth.twoFactorInvalid")}</p>}
++      <form onSubmit={verify} className="space-y-4">
++        <Field label={t("auth.twoFactorCode")} htmlFor="code"><Input id="code" name="code" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></Field>
++        <Button type="submit" variant="primary" loading={pending} disabled={!challenge.data}>{t("auth.twoFactorSubmit")}</Button>
++      </form>
++      <Link href="/sign-in" className="text-med">{t("auth.federatedFactorRestart")}</Link>
++    </div>
++  </main>;
++}
+diff --git a/src/app/admin/page.tsx b/src/app/admin/page.tsx
+index 9f0abe8..ddfb82f 100644
+--- a/src/app/admin/page.tsx
++++ b/src/app/admin/page.tsx
+@@ -23,7 +23,7 @@ export default async function AdminPage() {
+     await requirePlatformAdmin();
+   } catch (e) {
+     if (!(e instanceof HttpError) || e.status === 404) notFound();
+-    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
++    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" || e.code === "PLATFORM_MFA_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
+     if (!blocked) notFound();
+   }
+   if (blocked) {
+diff --git a/src/app/api/federation/step-up/route.ts b/src/app/api/federation/step-up/route.ts
+new file mode 100644
+index 0000000..51a3c19
+--- /dev/null
++++ b/src/app/api/federation/step-up/route.ts
+@@ -0,0 +1,25 @@
++import { NextResponse } from "next/server";
++import { z } from "zod";
++import { assertConfirmationPost, confirmationCsrf, requestCookie } from "@/server/auth-confirmation";
++import { completeFederatedChallenge, federatedChallenge, FEDERATED_MFA_COOKIE } from "@/server/federated-mfa";
++import { capBody, HttpError, jsonNoStore, parseBody, route } from "@/server/http";
++import { ssoSessionCookie } from "@/server/sso";
++
++export const dynamic = "force-dynamic";
++export const GET = route(async (req: Request) => {
++  const token = requestCookie(req, FEDERATED_MFA_COOKIE);
++  await federatedChallenge(token);
++  return jsonNoStore({ csrf: await confirmationCsrf(token) });
++});
++export const POST = route(async (req: Request) => {
++  const token = requestCookie(req, FEDERATED_MFA_COOKIE);
++  await assertConfirmationPost(req, token);
++  const bounded = await capBody(req, 2048, new HttpError(413, "BODY_TOO_LARGE", "Request too large"));
++  const { code } = await parseBody(bounded, z.object({ code: z.string().regex(/^\d{6}$/) }).strict());
++  const result = await completeFederatedChallenge(token, code);
++  const cookie = await ssoSessionCookie(result.session.token);
++  const res = NextResponse.json({ next: result.next }, { headers: { "cache-control": "no-store", "referrer-policy": "no-referrer" } });
++  res.cookies.set(cookie.name, cookie.value, cookie.options);
++  res.cookies.set(FEDERATED_MFA_COOKIE, "", { path: "/", maxAge: 0 });
++  return res;
++});
+diff --git a/src/app/api/sso/callback/route.ts b/src/app/api/sso/callback/route.ts
+index 6a93958..21fd647 100644
+--- a/src/app/api/sso/callback/route.ts
++++ b/src/app/api/sso/callback/route.ts
+@@ -3,6 +3,7 @@ import { HttpError } from "@/server/http";
+ import { completeSso, SSO_STATE_COOKIE, ssoSessionCookie } from "@/server/sso";
+ import { auth } from "@/lib/auth";
+ import { SSO_LINK_COOKIE } from "@/server/sso-link";
++import { FEDERATED_MFA_COOKIE, federatedCookieOptions } from "@/server/federated-mfa";
+ 
+ export const dynamic = "force-dynamic";
+ 
+@@ -26,6 +27,17 @@ export async function GET(req: Request) {
+   try {
+     const session = await auth.api.getSession({ headers: req.headers }).catch(() => null);
+     const result = await completeSso({ state, code, sessionToken: session?.session.token });
++    if (result.mfaRequired) {
++      const res = NextResponse.redirect(`${base}/auth/step-up`);
++      res.cookies.set(FEDERATED_MFA_COOKIE, result.mfaRequired, federatedCookieOptions());
++      // An ambient older session must not mask the pending factor in this browser.
++      const cookie = await ssoSessionCookie("");
++      res.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
++      res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
++      res.headers.set("cache-control", "no-store");
++      res.headers.set("referrer-policy", "no-referrer");
++      return res;
++    }
+     if (result.configurationVerified) {
+       const res = NextResponse.redirect(`${base}/w/${result.slug}/settings?tab=sso`);
+       res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
+diff --git a/src/i18n/messages/ar.json b/src/i18n/messages/ar.json
+index 054786e..7076902 100644
+--- a/src/i18n/messages/ar.json
++++ b/src/i18n/messages/ar.json
+@@ -198,6 +198,7 @@
+     "NOT_CONFIGURED": "هذا غير مُعدّ.",
+     "CSRF_TOKEN_INVALID": "أعد تحميل الصفحة وحاول مجددًا.",
+     "PLATFORM_REAUTH_REQUIRED": "سجّل الدخول مجددًا لاستخدام لوحة المنصة (تُرفض الجلسات الأقدم من 24 ساعة).",
++    "PLATFORM_MFA_REQUIRED": "سجّل الدخول من جديد وأكمل التحقّق بتطبيق المصادقة.",
+     "PLATFORM_TOTP_REQUIRED": "سجّل تطبيق مصادقة أولًا.",
+     "PLATFORM_EMAIL_UNVERIFIED": "أكّد بريدك الإلكتروني أولًا.",
+     "SETUP_CHALLENGE_INVALID": "رمز الإعداد هذا غير صالح أو منتهٍ أو مستخدم. اطلب رمزًا جديدًا من المشغّل.",
+@@ -572,6 +573,9 @@
+     "ssoMailboxVerify": "إرسال رابط التحقّق من البريد",
+     "ssoMailboxRefresh": "تحقّقت من بريدي — تحديث",
+     "ssoMailboxRequired": "تحقّق من ملكية بريدك أولًا باستخدام رابط Flowline.",
++    "federatedFactorBody": "تم التحقّق من مزوّد الهوية. أدخل رمز تطبيق المصادقة الخاص بحسابك في Flowline لإكمال تسجيل الدخول.",
++    "federatedFactorExpired": "انتهت صلاحية محاولة تسجيل الدخول أو تغيّرت إعدادات الحساب. سجّل الدخول من جديد.",
++    "federatedFactorRestart": "بدء تسجيل الدخول من جديد",
+     "twoFactorTitle": "التحقق بخطوتين",
+     "twoFactorBody": "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة.",
+     "twoFactorCode": "رمز المصادقة",
+diff --git a/src/i18n/messages/en.json b/src/i18n/messages/en.json
+index bf7da40..feeaf35 100644
+--- a/src/i18n/messages/en.json
++++ b/src/i18n/messages/en.json
+@@ -198,6 +198,7 @@
+     "NOT_CONFIGURED": "This isn't configured.",
+     "CSRF_TOKEN_INVALID": "Reload the page and try again.",
+     "PLATFORM_REAUTH_REQUIRED": "Sign in again to use the platform panel (sessions older than 24 hours are refused).",
++    "PLATFORM_MFA_REQUIRED": "Sign in again and complete your authenticator challenge.",
+     "PLATFORM_TOTP_REQUIRED": "Enrol an authenticator app first.",
+     "PLATFORM_EMAIL_UNVERIFIED": "Verify your email address first.",
+     "SETUP_CHALLENGE_INVALID": "This setup code is invalid, expired or already used. Ask the operator for a new one.",
+@@ -568,6 +569,9 @@
+     "ssoMailboxVerify": "Send email verification link",
+     "ssoMailboxRefresh": "I verified my email ? refresh",
+     "ssoMailboxRequired": "Verify email ownership using the Flowline link first.",
++    "federatedFactorBody": "The identity provider was verified. Enter the code from your Flowline authenticator app to finish signing in.",
++    "federatedFactorExpired": "This sign-in expired or your account settings changed. Sign in again.",
++    "federatedFactorRestart": "Start sign-in again",
+     "twoFactorTitle": "Two-step verification",
+     "twoFactorBody": "Enter the 6-digit code from your authenticator app.",
+     "twoFactorCode": "Authentication code",
+diff --git a/src/lib/auth.ts b/src/lib/auth.ts
+index 607dc90..3e0c759 100644
+--- a/src/lib/auth.ts
++++ b/src/lib/auth.ts
+@@ -11,6 +11,7 @@ import { allowSignUp, BETA_REFUSAL, betaMode } from "@/server/beta";
+ import { issueAccountToken } from "@/server/email/flows";
+ import { track } from "@/server/telemetry";
+ import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
++import { federatedMfa } from "@/server/federated-mfa";
+ 
+ /**
+  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
+@@ -95,7 +96,7 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
+       },
+     },
+     // TOTP two-factor (required for platform admins before the admin panel unlocks; available to every account).
+-    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), nextCookies()],
++    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), federatedMfa(), nextCookies()],
+   });
+ }
+ 
+diff --git a/src/server/federated-mfa.ts b/src/server/federated-mfa.ts
+new file mode 100644
+index 0000000..e013a07
+--- /dev/null
++++ b/src/server/federated-mfa.ts
+@@ -0,0 +1,149 @@
++import { randomUUID } from "node:crypto";
++import { and, eq, gt } from "drizzle-orm";
++import type { BetterAuthPlugin } from "better-auth";
++import { createAuthMiddleware } from "better-auth/api";
++import { deleteSessionCookie } from "better-auth/cookies";
++import { db, schema, type Db } from "@/db";
++import { randomToken, sha256Hex } from "./crypto";
++import { HttpError } from "./http";
++import { checkRate } from "./rate-limit";
++import { safePath } from "./email/redirect";
++import { audit, userActor } from "./audit";
++import type { Role } from "@/db/schema";
++
++export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
++const pendingId = (token: string) => `federated-mfa:${sha256Hex(token)}`;
++const assuranceId = (token: string) => `mfa-session:${sha256Hex(token)}`;
++const invalid = () => new HttpError(401, "FEDERATED_MFA_INVALID", "Restart sign-in to confirm your authenticator");
++interface WorkspaceSignIn { workspaceId: string; newMember: boolean; role: Role; configStamp: string; providerId: string; subject: string; initiator?: { sessionId: string; userId: string; sessionHash: string } }
++interface Pending { userId: string; next: string; userStamp: string; factorHash: string; workspace?: WorkspaceSignIn }
++type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
++
++export function federatedCookieOptions() {
++  return { httpOnly: true, sameSite: "lax" as const, secure: (process.env.BETTER_AUTH_URL ?? process.env.FLOWLINE_PUBLIC_URL ?? "").startsWith("https:"), path: "/", maxAge: 600 };
++}
++
++export function federatedDestination(value: string) {
++  if (value.startsWith("/")) return safePath(value, "/app");
++  try {
++    const url = new URL(value);
++    const origins = [process.env.FLOWLINE_PUBLIC_URL, process.env.BETTER_AUTH_URL].filter(Boolean).map((u) => new URL(u!).origin);
++    if (origins.includes(url.origin)) return safePath(`${url.pathname}${url.search}${url.hash}`, "/app");
++  } catch { /* invalid callback URL */ }
++  return "/app";
++}
++
++export async function recordMfaAssurance(token: string, userId: string, expiresAt: Date, tx: Db | Tx = db) {
++  // Deterministic PK + expiry avoids duplicates when an enrollment hook runs twice.
++  const id = assuranceId(token);
++  await tx.insert(schema.verification).values({ id, identifier: id, value: userId, expiresAt }).onConflictDoUpdate({ target: schema.verification.id, set: { value: userId, expiresAt } });
++}
++export async function hasSessionMfa(token: string, userId: string) {
++  const [proof] = await db.select().from(schema.verification).where(and(eq(schema.verification.identifier, assuranceId(token)), eq(schema.verification.value, userId), gt(schema.verification.expiresAt, new Date())));
++  return Boolean(proof);
++}
++
++/** Opaque pending state is the only cookie granted before local TOTP succeeds. */
++export async function createFederatedChallenge(userId: string, next: string, workspace?: WorkspaceSignIn, connection: Db | Tx = db) {
++  const [user] = await connection.select().from(schema.user).where(eq(schema.user.id, userId));
++  const [tf] = await connection.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, userId));
++  if (!user?.twoFactorEnabled || !tf || tf.verified === false) throw invalid();
++  const token = randomToken(32);
++  const value: Pending = { userId, next: federatedDestination(next), userStamp: user.updatedAt.toISOString(), factorHash: sha256Hex(tf.secret), ...(workspace ? { workspace } : {}) };
++  await connection.insert(schema.verification).values({ id: randomUUID(), identifier: pendingId(token), value: JSON.stringify(value), expiresAt: new Date(Date.now() + 600_000) });
++  return token;
++}
++
++export async function federatedChallenge(token: string) {
++  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) throw invalid();
++  const [row] = await db.select().from(schema.verification).where(and(eq(schema.verification.identifier, pendingId(token)), gt(schema.verification.expiresAt, new Date())));
++  if (!row) throw invalid();
++  const pending = JSON.parse(row.value) as Pending;
++  const [user] = await db.select().from(schema.user).where(eq(schema.user.id, pending.userId));
++  if (!user?.twoFactorEnabled || user.updatedAt.toISOString() !== pending.userStamp) throw invalid();
++  return { row, pending };
++}
++
++/** An adapter-created session is held unissued until consumption/assurance commit.
++ * Password recovery, enrollment changes and replay invalidate the challenge.
++ * Only TOTP is accepted here: IdP assertions/trusted-device cookies cannot skip it.
++ */
++export async function completeFederatedChallenge(token: string, code: string) {
++  const { row, pending } = await federatedChallenge(token);
++  if (!(await checkRate(`federated-mfa:${pending.userId}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Try again later");
++  const { verifyTotp } = await import("./platform-access");
++  if (await verifyTotp(pending.userId, code) === null) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "Enter the current authenticator code");
++  const { auth } = await import("@/lib/auth");
++  const ctx = await auth.$context;
++  // Adapter hooks/defaults run outside our locks, matching the ordinary SSO fence.
++  const session = await ctx.internalAdapter.createSession(pending.userId);
++  try {
++    return await db.transaction(async (tx) => {
++      const [fresh] = await tx.select().from(schema.verification).where(and(eq(schema.verification.id, row.id), gt(schema.verification.expiresAt, new Date()))).for("update");
++      if (!fresh || fresh.value !== row.value) throw invalid();
++      const [user] = await tx.select().from(schema.user).where(eq(schema.user.id, pending.userId)).for("update");
++      const [tf] = await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, pending.userId)).for("update");
++      if (!user?.twoFactorEnabled || user.updatedAt.toISOString() !== pending.userStamp || !tf || tf.verified === false || sha256Hex(tf.secret) !== pending.factorHash) throw invalid();
++      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("share");
++      if (!currentSession) throw invalid();
++      if (pending.workspace) {
++        const { workspaceId, configStamp, providerId, subject } = pending.workspace;
++        if (pending.workspace.initiator) {
++          const bound = pending.workspace.initiator;
++          const [initiator] = await tx.select().from(schema.session).where(and(eq(schema.session.id, bound.sessionId), eq(schema.session.userId, bound.userId), gt(schema.session.expiresAt, new Date()))).for("share");
++          if (!initiator || sha256Hex(initiator.token) !== bound.sessionHash) throw invalid();
++        }
++        const [cfg] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, workspaceId)).for("update");
++        const [member] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, user.id))).for("share");
++        const [link] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user.id))).for("share");
++        if (!user.emailVerified || !cfg?.enabled || cfg.updatedAt.toISOString() !== configStamp || !member || !link) throw invalid();
++        const firstVerification = !cfg.verifiedAt;
++        if (firstVerification) await tx.update(schema.ssoConfig).set({ verifiedAt: new Date(), updatedAt: new Date() }).where(eq(schema.ssoConfig.workspaceId, workspaceId));
++        await audit(tx, {
++          workspaceId, actor: userActor(user), action: "sso.signin", targetType: "user", targetId: user.id,
++          data: { email: user.email, newUser: false, newMember: false, role: member.role, testSignIn: false, firstVerification, localTotp: true },
++        });
++    }
++    await recordMfaAssurance(currentSession.token, user.id, currentSession.expiresAt, tx);
++    await tx.delete(schema.verification).where(eq(schema.verification.id, row.id));
++    return { session: currentSession, next: pending.next };
++    });
++  } catch (error) {
++    await db.delete(schema.session).where(eq(schema.session.token, session.token));
++    throw error;
++  }
++}
++
++export function isFederatedSignInPath(path: string) {
++  return path.startsWith("/callback/") || path.startsWith("/oauth2/callback/") || path === "/sign-in/social" || path === "/sign-in/oauth2";
++}
++
++/** Runs AFTER better-auth's local two-factor hook, BEFORE nextCookies. */
++export function federatedMfa(): BetterAuthPlugin {
++  return {
++    id: "flowline-federated-mfa",
++    hooks: { after: [{
++      matcher: (ctx) => isFederatedSignInPath(ctx.path ?? "") || ["/sign-in/email", "/sign-in/username", "/sign-in/phone-number", "/two-factor/verify-totp", "/two-factor/verify-backup-code", "/two-factor/verify-otp"].includes(ctx.path ?? ""),
++      handler: createAuthMiddleware(async (ctx) => {
++        const data = ctx.context.newSession;
++        if (!data) return;
++        const [user] = await db.select().from(schema.user).where(eq(schema.user.id, data.user.id));
++        if (!user?.twoFactorEnabled) return;
++        if (!isFederatedSignInPath(ctx.path)) {
++          // The local plugin already completed TOTP/backup verification or
++          // authenticated a trusted-device signature before leaving newSession.
++          if (data.user.twoFactorEnabled === true) await recordMfaAssurance(data.session.token, user.id, data.session.expiresAt);
++          return;
++        }
++        await ctx.context.internalAdapter.deleteSession(data.session.token);
++        ctx.context.setNewSession(null);
++        deleteSessionCookie(ctx, true);
++        const next = ctx.context.responseHeaders?.get("location") ?? (typeof ctx.body?.callbackURL === "string" ? ctx.body.callbackURL : "/app");
++        const token = await createFederatedChallenge(user.id, next);
++        ctx.setCookie(FEDERATED_MFA_COOKIE, token, federatedCookieOptions());
++        if (ctx.path.includes("/callback/")) throw ctx.redirect("/auth/step-up");
++        return ctx.json({ twoFactorRedirect: true, url: "/auth/step-up" });
++      }),
++    }] },
++  };
++}
+diff --git a/src/server/platform-access.ts b/src/server/platform-access.ts
+index af2ca9b..9ef2f2d 100644
+--- a/src/server/platform-access.ts
++++ b/src/server/platform-access.ts
+@@ -7,6 +7,7 @@ import { HttpError, notFound } from "./http";
+ import { platformAudit } from "./platform-audit";
+ import { checkRate } from "./rate-limit";
+ import { hotp, TOTP_PERIOD } from "./totp";
++import { hasSessionMfa } from "./federated-mfa";
+ 
+ /**
+  * The platform-admin trust boundary (docs/security/CREDENTIALS_DESIGN.md MUST 1–2).
+@@ -14,7 +15,7 @@ import { hotp, TOTP_PERIOD } from "./totp";
+  * - A separate principal (`platform_admin`, keyed by user id), checked against the DB on EVERY request.
+  * - Session cookies only: any request carrying an Authorization header (workspace API keys) is refused.
+  * - Everyone who isn't an active admin gets 404 — the panel's existence isn't confirmed.
+- * - Admins additionally need a verified email, an enrolled TOTP authenticator and a session ≤ 24 h old.
++ * - Admins additionally need a verified email, an enrolled TOTP authenticator, session-bound MFA assurance and a session ≤ 24 h old.
+  * - Writes need a step-up: a TOTP code verified in the last 10 minutes, bound to the SHA-256 of THIS session's token.
+  *   Workspace SSO never satisfies it (TOTP only).
+  */
+@@ -54,8 +55,8 @@ async function denied(userId: string | null, label: string, reason: string) {
+ }
+ 
+ /**
+- * Resolves the current platform admin or throws 404. `allowUnenrolled` is never used by panel routes; it exists for
+- * the setup flow, which runs BEFORE the admin row exists.
++ * Resolves the current platform admin or throws. Setup runs through its separate
++ * enrollment flow before the admin row exists; panel routes require MFA assurance.
+  */
+ export async function requirePlatformAdmin(req?: Request): Promise<PlatformAdminContext> {
+   const h = await requestHeaders(req);
+@@ -69,6 +70,7 @@ export async function requirePlatformAdmin(req?: Request): Promise<PlatformAdmin
+   }
+   if (!s.user.emailVerified) throw new HttpError(403, "PLATFORM_EMAIL_UNVERIFIED", "Verify your email address before using the platform panel");
+   if (!(await hasVerifiedTotp(s.user.id))) throw new HttpError(403, "PLATFORM_TOTP_REQUIRED", "Enrol an authenticator app before using the platform panel");
++  if (!(await hasSessionMfa(s.session.token, s.user.id))) throw new HttpError(403, "PLATFORM_MFA_REQUIRED", "Sign in again and complete your authenticator challenge");
+   if (Date.now() - new Date(s.session.createdAt).getTime() > PANEL_SESSION_MAX_AGE_MS) {
+     throw new HttpError(401, "PLATFORM_REAUTH_REQUIRED", "Sign in again to use the platform panel (sessions older than 24 hours are refused)");
+   }
+@@ -175,4 +177,3 @@ export async function consumeTotpStep(userId: string, step: number): Promise<boo
+ export async function dropStepUps(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string) {
+   await tx.delete(schema.platformStepup).where(eq(schema.platformStepup.userId, userId));
+ }
+-
+diff --git a/src/server/platform-setup-http.ts b/src/server/platform-setup-http.ts
+index c99223c..f81e03f 100644
+--- a/src/server/platform-setup-http.ts
++++ b/src/server/platform-setup-http.ts
+@@ -37,12 +37,12 @@ export async function readSetupBody<B>(req: Request, schema: ZodType<B>): Promis
+ }
+ 
+ /** A mutation that needs a live setup session (404 without one) and, optionally, the signed-in user. */
+-export function setupWrite<B>(schema: ZodType<B>, fn: (ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, body: B, user: { id: string; email: string; emailVerified: boolean } | null) => Promise<unknown>) {
++export function setupWrite<B>(schema: ZodType<B>, fn: (ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, body: B, user: { id: string; email: string; emailVerified: boolean; sessionToken: string; sessionExpiresAt: Date } | null) => Promise<unknown>) {
+   return route(async (req: Request) => {
+     const ch = await setupChallengeFrom(req);
+     if (!ch) throw notFound();
+     const body = await readSetupBody(req, schema);
+     const s = await auth.api.getSession({ headers: await requestHeaders(req) }).catch(() => null);
+-    return setupSecured(jsonNoStore(await fn(ch, body, s ? { id: s.user.id, email: s.user.email, emailVerified: s.user.emailVerified } : null)));
++    return setupSecured(jsonNoStore(await fn(ch, body, s ? { id: s.user.id, email: s.user.email, emailVerified: s.user.emailVerified, sessionToken: s.session.token, sessionExpiresAt: s.session.expiresAt } : null)));
+   });
+ }
+diff --git a/src/server/platform-setup.ts b/src/server/platform-setup.ts
+index 28585a7..81c3828 100644
+--- a/src/server/platform-setup.ts
++++ b/src/server/platform-setup.ts
+@@ -143,7 +143,7 @@ export async function setupConfigureEmail(ch: NonNullable<Awaited<ReturnType<typ
+  * present a fresh code. Creates (or re-activates) the admin, consumes the challenge and closes setup — all in one
+  * transaction under the setup lock.
+  */
+-export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, user: { id: string; email: string; emailVerified: boolean }, code: string) {
++export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, user: { id: string; email: string; emailVerified: boolean; sessionToken?: string; sessionExpiresAt?: Date }, code: string) {
+   if (!(await checkRate(`platform-setup-complete:${ch.id}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Too many attempts. Wait a few minutes and try again.");
+   if (user.email.toLowerCase() !== ch.email) throw new HttpError(403, "SETUP_WRONG_IDENTITY", "Sign in as the email address this setup code was issued for");
+   if (!user.emailVerified) throw new HttpError(403, "SETUP_EMAIL_UNVERIFIED", "Verify your email address first");
+@@ -168,6 +168,10 @@ export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof se
+     if (fresh.kind === "bootstrap") {
+       await tx.insert(schema.platformSetup).values({ id: 1, completedAt: new Date(), completedBy: user.id }).onConflictDoUpdate({ target: schema.platformSetup.id, set: { completedAt: new Date(), completedBy: user.id } });
+     }
++    if (user.sessionToken && user.sessionExpiresAt) {
++      const { recordMfaAssurance } = await import("./federated-mfa");
++      await recordMfaAssurance(user.sessionToken, user.id, user.sessionExpiresAt, tx);
++    }
+     await platformAudit(tx, { actor: { userId: user.id, label: user.email }, assurance: "session_totp_stepup", action: "admin.totp_enrolled", result: "ok", targetType: "platform_admin", targetId: user.id });
+     await platformAudit(tx, { actor: { userId: user.id, label: user.email }, assurance: "session_totp_stepup", action: "admin.granted", result: "ok", targetType: "platform_admin", targetId: user.id, data: { via: fresh.kind } });
+     if (fresh.kind === "bootstrap") await platformAudit(tx, { actor: { userId: user.id, label: user.email }, assurance: "session_totp_stepup", action: "setup.completed", result: "ok", targetType: "setup_challenge", targetId: fresh.id });
+diff --git a/src/server/sso.ts b/src/server/sso.ts
+index b0c1752..ded038a 100644
+--- a/src/server/sso.ts
++++ b/src/server/sso.ts
+@@ -312,14 +312,15 @@ export interface SsoSignInResult {
+   /** A GET callback may propose a link, but cannot persist it or issue a session. */
+   linkRequired?: string;
+   configurationVerified?: boolean;
++  mfaRequired?: string;
+ }
+ 
+ /**
+  * Completes an SSO sign-in: consumes the single-use state, exchanges the code
+- * (provider client authentication + PKCE), validates the id_token, finds-or-creates the user
+- * and workspace membership, creates a better-auth session, and (on the first
+- * success) marks the configuration verified. Any failure throws — no session,
+- * no membership.
++ * (provider client authentication + PKCE), and validates the id_token. A bound
++ * identity can sign in; enrolled users receive only a pending local-TOTP challenge.
++ * Unbound identities need independent mailbox ownership and explicit POST consent.
++ * Owner configuration tests validate OIDC without creating accounts or sessions.
+  */
+ export async function completeSso(opts: {
+   state: string;
+@@ -450,8 +451,8 @@ export async function completeSso(opts: {
+ 
+   // Identity is the IdP subject, linked per workspace IdP. An email match alone never signs anyone in:
+   // otherwise any workspace owner could point SSO at an IdP they control and take over an existing
+-  // account (and every other workspace it belongs to). Linking an existing account needs verified
+-  // domain ownership, which isn't built yet — such users keep signing in with their password.
++  // account (and every other workspace it belongs to). Linking requires independent
++  // Flowline mailbox ownership and explicit confirmation by the signed-in user.
+   if (!claims.sub)
+     throw new HttpError(
+       400,
+@@ -499,6 +500,32 @@ export async function completeSso(opts: {
+     throw new HttpError(500, "INTERNAL", "Couldn't create the user account");
+   if (!user.emailVerified) throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Verify your Flowline email before signing in");
+ 
++  if (user.twoFactorEnabled) {
++    const { createFederatedChallenge } = await import("./federated-mfa");
++    const mfaRequired = await db.transaction(async (tx) => {
++      let initiator: { sessionId: string; userId: string; sessionHash: string } | undefined;
++      if (pending.initiatorUserId) {
++        const [initiatorSession] = opts.sessionToken ? await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken), eq(schema.session.userId, pending.initiatorUserId), sql`${schema.session.expiresAt} > now()`)).for("share") : [];
++        if (!initiatorSession || !binding.sessionHash || sha256Hex(opts.sessionToken!) !== binding.sessionHash)
++          throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
++        initiator = { sessionId: initiatorSession.id, userId: initiatorSession.userId, sessionHash: binding.sessionHash };
++      }
++      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
++      const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
++      const [currentMember] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, user!.id))).for("share");
++      const [currentLink] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user!.id))).for("share");
++      if (!currentConfig?.enabled || currentConfig.updatedAt.toISOString() !== binding.configStamp)
++        throw new HttpError(400, "SSO_STATE_INVALID", "Restart SSO after a configuration change");
++      if (!currentUser?.emailVerified || !currentUser.twoFactorEnabled || !currentMember || !currentLink)
++        throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
++      return createFederatedChallenge(currentUser.id, `/w/${ws.slug}/flows`, {
++        workspaceId: ws.id, newMember: false, role: currentMember.role,
++        configStamp: binding.configStamp, providerId, subject, ...(initiator ? { initiator } : {}),
++      }, tx);
++    });
++    return { user: { id: user.id, email: user.email }, slug: ws.slug, sessionToken: "", sessionExpiresAt: new Date(), newUser, newMember: false, testSignIn: false, mfaRequired };
++  }
++
+   // Keep Better Auth's session hooks/defaults, but never return the token until
+   // the final locked authority check succeeds. No adapter hook runs under our locks.
+   const ctx = await auth.$context;
+diff --git a/tests/integration/platform-helpers.ts b/tests/integration/platform-helpers.ts
+index 3410669..51878a8 100644
+--- a/tests/integration/platform-helpers.ts
++++ b/tests/integration/platform-helpers.ts
+@@ -7,6 +7,7 @@ import { sha256Hex } from "@/server/crypto";
+ import { csrfTokenFor } from "@/server/platform-http";
+ import { ssoSessionCookie } from "@/server/sso";
+ import { totpCodeFor } from "@/server/totp";
++import { createFederatedChallenge, completeFederatedChallenge } from "@/server/federated-mfa";
+ 
+ /** Test support for the platform admin boundary: real better-auth sessions, real TOTP secrets, real CSRF tokens. */
+ export const ORIGIN = new URL(process.env.FLOWLINE_PUBLIC_URL ?? "http://localhost:3100").origin;
+@@ -33,6 +34,14 @@ export async function sessionFor(user: { id: string; email: string }): Promise<T
+   return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
+ }
+ 
++/** A fixture session that actually verifies local TOTP and has session-bound assurance. */
++export async function assuredSessionFor(user: { id: string; email: string }, secret: string): Promise<TestSession> {
++  const pending = await createFederatedChallenge(user.id, "/admin");
++  const { session } = await completeFederatedChallenge(pending, code(secret));
++  const c = await ssoSessionCookie(session.token);
++  return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
++}
++
+ /** Enrols a verified TOTP authenticator directly (same storage as better-auth's two-factor plugin). Returns the raw secret. */
+ export async function enrolTotp(userId: string): Promise<string> {
+   const ctx = await auth.$context;
+@@ -50,7 +59,7 @@ export async function makeAdmin(prefix = "admin") {
+   const user = await makeVerifiedUser(prefix);
+   const secret = await enrolTotp(user.id);
+   await db.insert(schema.platformAdmin).values({ userId: user.id, status: "active", grantedBy: "test" });
+-  const session = await sessionFor(user);
++  const session = await assuredSessionFor(user, secret);
+   return { user, secret, session };
+ }
+ 
+diff --git a/tests/integration/sec-federated-totp.test.ts b/tests/integration/sec-federated-totp.test.ts
+new file mode 100644
+index 0000000..02ba972
+--- /dev/null
++++ b/tests/integration/sec-federated-totp.test.ts
+@@ -0,0 +1,216 @@
++import { randomUUID } from "node:crypto";
++import { eq } from "drizzle-orm";
++import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => { throw new Error("No Next request context in service integration tests"); } }));
++import { db, schema } from "@/db";
++import { auth } from "@/lib/auth";
++import { GET as ssoCallback } from "@/app/api/sso/callback/route";
++import { GET as challengeGET, POST as challengePOST } from "@/app/api/federation/step-up/route";
++import { GET as platformGET } from "@/app/api/platform/me/route";
++import { confirmationCsrf } from "@/server/auth-confirmation";
++import { createFederatedChallenge, FEDERATED_MFA_COOKIE } from "@/server/federated-mfa";
++import { requirePlatformAdmin, requireStepUp, performStepUp } from "@/server/platform-access";
++import { ssoProviderId } from "@/server/sso";
++import { zitadelAccountId } from "@/server/zitadel-auth";
++import { addMember, closeDb, expectHttpError } from "./helpers";
++import { code, enrolTotp, makeVerifiedUser, ORIGIN, sessionFor } from "./platform-helpers";
++import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt } from "./federation-fixture";
++import { githubCallback, zitadelCallback } from "./zitadel-callback-fixture";
++
++afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
++afterAll(closeDb);
++const sessionRows = (userId: string) => db.select().from(schema.session).where(eq(schema.session.userId, userId));
++const platformContext = { params: Promise.resolve({}) };
++function cookieFrom(res: Response, name: string) {
++  return res.headers.getSetCookie().filter((c) => c.startsWith(`${name}=`) && !/Max-Age=0/.test(c)).at(-1)?.split(";")[0] ?? "";
++}
++async function challengeRequest(token: string, input: { code: string; origin?: string; csrf?: string }) {
++  return new Request(`${ORIGIN}/api/federation/step-up`, { method: "POST", headers: { cookie: `${FEDERATED_MFA_COOKIE}=${token}`, origin: input.origin ?? ORIGIN, "content-type": "application/json", "x-flowline-csrf": input.csrf ?? await confirmationCsrf(token) }, body: JSON.stringify({ code: input.code }) });
++}
++async function assertChallenge(response: Response, userId: string, secret: string, expectedNext: string, admin = false) {
++  expect(response.headers.get("location")).toContain("/auth/step-up");
++  expect(cookieFrom(response, (await auth.$context).authCookies.sessionToken.name)).toBe("");
++  expect(await sessionRows(userId)).toHaveLength(0);
++  const pendingCookie = cookieFrom(response, FEDERATED_MFA_COOKIE);
++  expect(pendingCookie).toBeTruthy();
++  const token = pendingCookie.slice(FEDERATED_MFA_COOKIE.length + 1);
++  expect(await auth.api.getSession({ headers: new Headers({ cookie: pendingCookie }) })).toBeNull();
++  expect((await platformGET(new Request(`${ORIGIN}/api/platform/me`, { headers: { cookie: pendingCookie } }), platformContext)).status).toBe(404);
++  expect((await challengeGET(new Request(`${ORIGIN}/api/federation/step-up`, { headers: { cookie: pendingCookie } }), undefined)).status).toBe(200);
++  const correct = code(secret);
++  const wrong = correct === "000000" ? "111111" : "000000";
++  expect((await challengePOST(await challengeRequest(token, { code: correct, origin: "https://attacker.example" }), undefined)).status).toBe(403);
++  expect((await challengePOST(await challengeRequest(token, { code: correct, csrf: "wrong" }), undefined)).status).toBe(403);
++  expect((await challengePOST(await challengeRequest(token, { code: wrong }), undefined)).status).toBe(403);
++  expect(await sessionRows(userId)).toHaveLength(0);
++  const success = await challengePOST(await challengeRequest(token, { code: correct }), undefined);
++  expect(success.status).toBe(200);
++  expect((await success.json()).next).toBe(expectedNext);
++  const ctx = await auth.$context;
++  const fullCookie = cookieFrom(success, ctx.authCookies.sessionToken.name);
++  const session = await auth.api.getSession({ headers: new Headers({ cookie: fullCookie }) });
++  expect(session?.user.id).toBe(userId);
++  expect(await sessionRows(userId)).toHaveLength(1);
++  expect((await challengePOST(await challengeRequest(token, { code: correct }), undefined)).status).toBe(401);
++  expect(await sessionRows(userId)).toHaveLength(1);
++  if (admin) {
++    const request = new Request(`${ORIGIN}/api/platform/me`, { headers: { cookie: fullCookie } });
++    expect((await platformGET(request, platformContext)).status).toBe(200);
++    const principal = await requirePlatformAdmin(request);
++    await expectHttpError(requireStepUp(principal), 403, "STEP_UP_REQUIRED");
++    await performStepUp(principal, code(secret));
++    await expect(requireStepUp(principal)).resolves.toBeUndefined();
++    const other = await sessionFor({ id: userId, email: session!.user.email });
++    const unassured = await platformGET(new Request(`${ORIGIN}/api/platform/me`, { headers: { cookie: other.cookie } }), platformContext);
++    expect(unassured.status).toBe(403);
++    expect((await unassured.json()).error.code).toBe("PLATFORM_MFA_REQUIRED");
++  }
++}
++
++describe("H3: workspace SSO enforces enrolled local TOTP", () => {
++  beforeEach(() => { mockTenantIdp(); });
++  for (const admin of [false, true]) it(`grants no usable session to an enrolled ${admin ? "administrator" : "ordinary user"} until local TOTP`, async () => {
++    const { ws } = await configuredTenant();
++    const user = await makeVerifiedUser("workspace-totp");
++    const secret = await enrolTotp(user.id);
++    if (admin) await db.insert(schema.platformAdmin).values({ userId: user.id, status: "active", grantedBy: "test" });
++    await addMember(ws.id, user.id, "viewer");
++    // Models an independently mailbox-approved existing link; this test attacks session issuance.
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: ssoProviderId(ws.id, ISSUER, "test-client"), accountId: "attacker-subject" });
++    const attempt = await oidcAttempt(ws.slug, user.email);
++    const response = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
++    await assertChallenge(response, user.id, secret, `/w/${ws.slug}/flows`, admin);
++  });
++});
++
++describe("H3: actual global ZITADEL callbacks enforce local TOTP", () => {
++  for (const admin of [false, true]) it(`single-factor ZITADEL cannot bypass the ${admin ? "admin" : "user"}'s enrolled authenticator`, async () => {
++    const user = await makeVerifiedUser("global-totp");
++    const secret = await enrolTotp(user.id);
++    if (admin) await db.insert(schema.platformAdmin).values({ userId: user.id, status: "active", grantedBy: "test" });
++    const issuer = "https://platform-idp.example";
++    const subject = randomUUID();
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "zitadel", accountId: zitadelAccountId(issuer, subject) });
++    const { response } = await zitadelCallback({ issuer, subject, email: user.email, next: admin ? "/admin" : "/app" });
++    await assertChallenge(response, user.id, secret, admin ? "/admin" : "/app", admin);
++  });
++  it("M7: replacing a global issuer cannot reuse its subject binding, while legitimate non-enrolled sign-in still works", async () => {
++    const user = await makeVerifiedUser("global-issuer-owner");
++    const subject = randomUUID();
++    const issuer = "https://first-platform-idp.example";
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "zitadel", accountId: zitadelAccountId(issuer, subject) });
++    const first = await zitadelCallback({ issuer, subject, email: user.email, next: "/app" });
++    expect(new URL(first.response.headers.get("location")!, ORIGIN).href).toBe(`${ORIGIN}/app`);
++    expect(await sessionRows(user.id)).toHaveLength(1);
++    const second = await zitadelCallback({ issuer: "https://replacement-platform-idp.example", subject, email: user.email, next: "/app" });
++    expect(second.response.headers.get("location")).toMatch(/[?&]error=/);
++    const ctx = await auth.$context;
++    expect(cookieFrom(second.response, ctx.authCookies.sessionToken.name)).toBe("");
++    expect(await sessionRows(user.id)).toHaveLength(1);
++  });
++});
++
++describe("H3: built-in social-provider callbacks enforce the same local factor", () => {
++  for (const admin of [false, true]) it(`GitHub cannot bypass the enrolled ${admin ? "administrator" : "user"}'s TOTP`, async () => {
++    const user = await makeVerifiedUser("github-totp");
++    const secret = await enrolTotp(user.id);
++    if (admin) await db.insert(schema.platformAdmin).values({ userId: user.id, status: "active", grantedBy: "test" });
++    const subject = Math.floor(Math.random() * 1_000_000_000);
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: "github", accountId: String(subject) });
++    const next = admin ? "/admin" : "/app";
++    await assertChallenge(await githubCallback({ subject, email: user.email, next }), user.id, secret, next, admin);
++  });
++});
++
++describe("pending factor lifetime and consumption", () => {
++  it("refuses expired, recovered and changed-enrollment challenges; concurrent completions create exactly one session", async () => {
++    const user = await makeVerifiedUser("pending-totp");
++    const secret = await enrolTotp(user.id);
++    const expired = await createFederatedChallenge(user.id, "/app");
++    const { sha256Hex } = await import("@/server/crypto");
++    await db.update(schema.verification).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.verification.identifier, `federated-mfa:${sha256Hex(expired)}`));
++    expect((await challengePOST(await challengeRequest(expired, { code: code(secret) }), undefined)).status).toBe(401);
++    const recovered = await createFederatedChallenge(user.id, "/app");
++    await db.update(schema.user).set({ updatedAt: new Date(Date.now() + 1000) }).where(eq(schema.user.id, user.id));
++    expect((await challengePOST(await challengeRequest(recovered, { code: code(secret) }), undefined)).status).toBe(401);
++    const changed = await createFederatedChallenge(user.id, "/app");
++    await enrolTotp(user.id);
++    expect((await challengePOST(await challengeRequest(changed, { code: code(secret) }), undefined)).status).toBe(403);
++    expect(await sessionRows(user.id)).toHaveLength(0);
++    const current = await enrolTotp(user.id);
++    const pending = await createFederatedChallenge(user.id, "/app");
++    const [a, b] = await Promise.all([challengePOST(await challengeRequest(pending, { code: code(current) }), undefined), challengePOST(await challengeRequest(pending, { code: code(current) }), undefined)]);
++    expect([a.status, b.status].sort()).toEqual([200, 401]);
++    expect(await sessionRows(user.id)).toHaveLength(1);
++  });
++});
++
++describe("H3 pending workspace authority fences", () => {
++  it("refuses factor completion after the session that initiated SSO is revoked", async () => {
++    mockTenantIdp();
++    const { ws } = await configuredTenant();
++    const user = await makeVerifiedUser("pending-initiator");
++    const secret = await enrolTotp(user.id);
++    await addMember(ws.id, user.id, "viewer");
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: ssoProviderId(ws.id, ISSUER, "test-client"), accountId: "attacker-subject" });
++    const initiator = await sessionFor(user);
++    const attempt = await oidcAttempt(ws.slug, user.email, initiator);
++    const response = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}; ${initiator.cookie}` } }));
++    const pending = cookieFrom(response, FEDERATED_MFA_COOKIE).slice(FEDERATED_MFA_COOKIE.length + 1);
++    expect(pending).toBeTruthy();
++    expect(cookieFrom(response, (await auth.$context).authCookies.sessionToken.name)).toBe("");
++    await db.delete(schema.session).where(eq(schema.session.token, initiator.token));
++    const rejected = await challengePOST(await challengeRequest(pending, { code: code(secret) }), undefined);
++    expect(rejected.status).toBe(401);
++    expect(cookieFrom(rejected, (await auth.$context).authCookies.sessionToken.name)).toBe("");
++    expect(await sessionRows(user.id)).toHaveLength(0);
++  });
++
++  for (const change of ["configuration", "disabled", "membership", "binding", "mailbox"] as const) {
++    it(`refuses a pending factor after ${change} changes and removes the unissued session`, async () => {
++      mockTenantIdp();
++      const { ws } = await configuredTenant();
++      const user = await makeVerifiedUser("pending-authority");
++      const secret = await enrolTotp(user.id);
++      await addMember(ws.id, user.id, "viewer");
++      const providerId = ssoProviderId(ws.id, ISSUER, "test-client");
++      await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId, accountId: "attacker-subject" });
++      const attempt = await oidcAttempt(ws.slug, user.email);
++      const response = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
++      const pending = cookieFrom(response, FEDERATED_MFA_COOKIE).slice(FEDERATED_MFA_COOKIE.length + 1);
++      expect(pending).toBeTruthy();
++      expect(await sessionRows(user.id)).toHaveLength(0);
++      if (change === "configuration") await db.update(schema.ssoConfig).set({ updatedAt: new Date(Date.now() + 1000) }).where(eq(schema.ssoConfig.workspaceId, ws.id));
++      if (change === "disabled") await db.update(schema.ssoConfig).set({ enabled: false }).where(eq(schema.ssoConfig.workspaceId, ws.id));
++      if (change === "membership") await db.delete(schema.workspaceMember).where(eq(schema.workspaceMember.userId, user.id));
++      if (change === "binding") await db.delete(schema.account).where(eq(schema.account.userId, user.id));
++      if (change === "mailbox") await db.update(schema.user).set({ emailVerified: false }).where(eq(schema.user.id, user.id));
++      const rejected = await challengePOST(await challengeRequest(pending, { code: code(secret) }), undefined);
++      expect(rejected.status).toBe(401);
++      expect(cookieFrom(rejected, (await auth.$context).authCookies.sessionToken.name)).toBe("");
++      expect(await sessionRows(user.id)).toHaveLength(0);
++    });
++  }
++
++  it("rechecks authority after Better Auth's adapter hooks and never publishes a stale session", async () => {
++    mockTenantIdp();
++    const { ws } = await configuredTenant();
++    const user = await makeVerifiedUser("factor-adapter-race");
++    const secret = await enrolTotp(user.id);
++    await addMember(ws.id, user.id, "viewer");
++    await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: ssoProviderId(ws.id, ISSUER, "test-client"), accountId: "attacker-subject" });
++    const attempt = await oidcAttempt(ws.slug, user.email);
++    const response = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
++    const pending = cookieFrom(response, FEDERATED_MFA_COOKIE).slice(FEDERATED_MFA_COOKIE.length + 1);
++    expect(pending).toBeTruthy();
++    const ctx = await auth.$context;
++    const createSession = ctx.internalAdapter.createSession.bind(ctx.internalAdapter);
++    vi.spyOn(ctx.internalAdapter, "createSession").mockImplementationOnce(async (...args) => {
++      const session = await createSession(...args);
++      await db.update(schema.ssoConfig).set({ enabled: false }).where(eq(schema.ssoConfig.workspaceId, ws.id));
++      return session;
++    });
++    expect((await challengePOST(await challengeRequest(pending, { code: code(secret) }), undefined)).status).toBe(401);
++    expect(await sessionRows(user.id)).toHaveLength(0);
++  });
++});
+diff --git a/tests/integration/sec-platform.test.ts b/tests/integration/sec-platform.test.ts
+index 6f57c0b..85a6aa3 100644
+--- a/tests/integration/sec-platform.test.ts
++++ b/tests/integration/sec-platform.test.ts
+@@ -47,7 +47,7 @@ import { createWorkspace } from "@/server/workspaces";
+ import { startFake, type Fake } from "../contract/helpers";
+ import { seedPlatformCredential, seedSetting, unseedPlatformCredential, unseedSetting } from "../fixtures/platform-seed";
+ import { closeDb, makeUser, unique } from "./helpers";
+-import { code, jsonOf, makeAdmin, makeVerifiedUser, platformReq, resetTotpReplay, sessionFor, type TestSession } from "./platform-helpers";
++import { code, jsonOf, makeAdmin, makeVerifiedUser, platformReq, resetTotpReplay, sessionFor, assuredSessionFor, type TestSession } from "./platform-helpers";
+ 
+ type Handler = (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>;
+ 
+@@ -161,7 +161,7 @@ describe("platform admin boundary", () => {
+     const ok = await stepUp(a.session, a.secret);
+     expect(ok.status).toBe(200);
+     // The same code again (another session of the same admin) is a replay.
+-    const other = await sessionFor(a.user);
++    const other = await assuredSessionFor(a.user, a.secret);
+     expect((await stepUp(other, a.secret)).body.error.code).toBe("STEP_UP_INVALID");
+     // Elevation is bound to the first session only.
+     as(other);
+diff --git a/tests/integration/sec-signin.test.ts b/tests/integration/sec-signin.test.ts
+index fef42b6..b4ff763 100644
+--- a/tests/integration/sec-signin.test.ts
++++ b/tests/integration/sec-signin.test.ts
+@@ -118,5 +118,7 @@ describe("email sign-in with an authenticator", () => {
+     expect(ok.headers.getSetCookie().some((c) => /session_token=/.test(c))).toBe(true);
+     const sessions = await db.select().from(schema.session).where(eq(schema.session.userId, user.id));
+     expect(sessions.length).toBe(1);
++    const { hasSessionMfa } = await import("@/server/federated-mfa");
++    expect(await hasSessionMfa(sessions[0]!.token, user.id)).toBe(true);
+   });
+ });
+diff --git a/tests/integration/zitadel-callback-fixture.ts b/tests/integration/zitadel-callback-fixture.ts
+new file mode 100644
+index 0000000..ee78fde
+--- /dev/null
++++ b/tests/integration/zitadel-callback-fixture.ts
+@@ -0,0 +1,59 @@
++import { randomUUID } from "node:crypto";
++import { vi, expect } from "vitest";
++import { authFor } from "@/lib/auth";
++import * as egress from "@/server/egress";
++import { jwks, signedToken } from "./federation-fixture";
++import { ORIGIN } from "./platform-helpers";
++
++/** Real better-auth OIDC callbacks (including PKCE/state/nonce/JWKS), no server. */
++export async function zitadelCallback(opts: { issuer: string; subject: string; email: string; next?: string }) {
++  let jwt = "";
++  const discovery = { issuer: opts.issuer, authorization_endpoint: `${opts.issuer}/authorize`, token_endpoint: `${opts.issuer}/oauth/v2/token`, userinfo_endpoint: `${opts.issuer}/oidc/v1/userinfo`, jwks_uri: `${opts.issuer}/jwks`, id_token_signing_alg_values_supported: ["RS256"], token_endpoint_auth_methods_supported: ["client_secret_basic"] };
++  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
++    const url = new URL(input instanceof Request ? input.url : String(input));
++    if (url.pathname === "/api/identity/zitadel/discovery") return Response.json(discovery);
++    if (url.origin === opts.issuer && url.pathname === "/jwks") return Response.json(jwks);
++    throw new Error(`Unexpected native-fetch request: ${url.pathname}`);
++  }));
++  vi.spyOn(egress, "safeFetch").mockImplementation(async (url, init) => {
++    const target = new URL(String(url));
++    let body: unknown;
++    if (target.origin !== opts.issuer) throw new Error("Wrong issuer transport");
++    if (target.pathname === "/oauth/v2/token") {
++      expect(new URLSearchParams(String(init?.body)).get("code_verifier")).toBeTruthy();
++      expect(new Headers(init?.headers).get("authorization")).toMatch(/^Basic /);
++      body = { access_token: "synthetic-access-token", id_token: jwt, expires_in: 300 };
++    } else if (target.pathname === "/oidc/v1/userinfo") body = { sub: opts.subject, email: opts.email, email_verified: true, name: "Verified federated user" };
++    else throw new Error(`Unexpected egress request: ${target.pathname}`);
++    return { status: 200, json: () => body } as Awaited<ReturnType<typeof egress.safeFetch>>;
++  });
++  const instance = await authFor(`callback-fixture:${randomUUID()}`, {}, { issuer: opts.issuer, clientId: "test-zitadel-client", clientSecret: "synthetic-zitadel-secret" });
++  expect((await instance.$context).socialProviders.some((p) => p.id === "zitadel")).toBe(true);
++  const start = await instance.handler(new Request(`${ORIGIN}/api/auth/sign-in/social`, { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ provider: "zitadel", callbackURL: opts.next ?? "/app" }) }));
++  expect(start.status).toBe(200);
++  const authorization = new URL((await start.json()).url);
++  const nonce = authorization.searchParams.get("nonce");
++  expect(nonce).toBeTruthy();
++  expect(authorization.searchParams.get("code_challenge_method")).toBe("S256");
++  jwt = signedToken({ iss: opts.issuer, sub: opts.subject, aud: "test-zitadel-client", nonce, exp: Math.floor(Date.now() / 1000) + 300, iat: Math.floor(Date.now() / 1000), email: opts.email, email_verified: true });
++  const cookie = start.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
++  const response = await instance.handler(new Request(`${ORIGIN}/api/auth/callback/zitadel?state=${authorization.searchParams.get("state")}&code=synthetic-code`, { headers: { cookie } }));
++  return { response, instance };
++}
++
++/** Real built-in social-provider callback, with only HTTP transport replaced. */
++export async function githubCallback(opts: { subject: number; email: string; next: string }) {
++  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
++    const url = new URL(input instanceof Request ? input.url : String(input));
++    if (url.href === "https://github.com/login/oauth/access_token") return Response.json({ access_token: "synthetic-github-token", token_type: "bearer", scope: "read:user,user:email" });
++    if (url.href === "https://api.github.com/user") return Response.json({ id: opts.subject, name: "Social factor test", login: "factor-test", email: opts.email });
++    if (url.href === "https://api.github.com/user/emails") return Response.json([{ email: opts.email, verified: true, primary: true }]);
++    throw new Error(`Unexpected GitHub fixture request: ${url.pathname}`);
++  }));
++  const instance = await authFor(`github-callback:${randomUUID()}`, { github: { clientId: "test-github-client", clientSecret: "synthetic-github-secret" } });
++  const start = await instance.handler(new Request(`${ORIGIN}/api/auth/sign-in/social`, { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ provider: "github", callbackURL: opts.next }) }));
++  expect(start.status).toBe(200);
++  const authorization = new URL((await start.json()).url);
++  const cookie = start.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
++  return instance.handler(new Request(`${ORIGIN}/api/auth/callback/github?state=${authorization.searchParams.get("state")}&code=synthetic-code`, { headers: { cookie } }));
++}
+diff --git a/tests/unit/federated-mfa.test.ts b/tests/unit/federated-mfa.test.ts
+new file mode 100644
+index 0000000..7ad3c93
+--- /dev/null
++++ b/tests/unit/federated-mfa.test.ts
+@@ -0,0 +1,29 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++vi.mock("@/db", () => ({ db: {}, schema: {} }));
++import { federatedDestination, isFederatedSignInPath } from "@/server/federated-mfa";
++import ar from "@/i18n/messages/ar.json";
++import en from "@/i18n/messages/en.json";
++afterEach(() => vi.unstubAllEnvs());
++describe("federated challenge boundaries", () => {
++  it("ships readable Arabic source copy and English for consent, ownership and step-up", () => {
++    for (const key of Object.keys(ar.auth).filter((k) => k.startsWith("ssoLink") || k.startsWith("ssoMailbox") || k.startsWith("federatedFactor") || k === "ssoOwnershipRequired" || k === "ssoRestart" || k === "ssoAccountExists")) {
++      expect(ar.auth[key as keyof typeof ar.auth], key).toMatch(/\p{Script=Arabic}/u);
++      expect(en.auth[key as keyof typeof en.auth], key).toMatch(/[A-Za-z]/);
++    }
++    expect(ar.errors.PLATFORM_MFA_REQUIRED).toMatch(/\p{Script=Arabic}/u);
++  });
++  it("covers all callback families and direct social/OAuth sign-ins", () => {
++    for (const path of ["/callback/google", "/callback/github", "/callback/zitadel", "/oauth2/callback/zitadel", "/sign-in/social", "/sign-in/oauth2"])
++      expect(isFederatedSignInPath(path), path).toBe(true);
++    for (const path of ["/get-session", "/link-social", "/sign-in/email", "/two-factor/verify-totp", ""])
++      expect(isFederatedSignInPath(path), path).toBe(false);
++  });
++  it("preserves same-origin destinations and refuses open redirects", () => {
++    vi.stubEnv("FLOWLINE_PUBLIC_URL", "https://flowline.example");
++    vi.stubEnv("BETTER_AUTH_URL", "https://flowline.example");
++    expect(federatedDestination("https://flowline.example/w/alpha/flows?q=1")).toBe("/w/alpha/flows?q=1");
++    expect(federatedDestination("/w/alpha/flows")).toBe("/w/alpha/flows");
++    for (const next of ["https://attacker.example", "//attacker.example", "/\\attacker.example", "/\u0000x", "bad-url"])
++      expect(federatedDestination(next)).toBe("/app");
++  });
++});
+diff --git a/tests/unit/zitadel-review-fixes.test.ts b/tests/unit/zitadel-review-fixes.test.ts
+index 2cb7b91..d76af17 100644
+--- a/tests/unit/zitadel-review-fixes.test.ts
++++ b/tests/unit/zitadel-review-fixes.test.ts
+@@ -74,6 +74,7 @@ describe("authFor (ZITADEL provider readiness)", () => {
+     vi.doMock("@/server/email/flows", () => ({ issueAccountToken: vi.fn() }));
+     vi.doMock("@/server/telemetry", () => ({ track: vi.fn() }));
+     vi.doMock("@/server/zitadel-auth", () => ({ zitadelProvider: () => ({}) }));
++    vi.doMock("@/server/federated-mfa", () => ({ federatedMfa: () => ({}) }));
+     process.env.BETTER_AUTH_URL = "https://flowline.example";
+   });
+   afterEach(() => { vi.useRealTimers(); });

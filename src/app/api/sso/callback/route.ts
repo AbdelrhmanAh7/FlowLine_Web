@@ -3,6 +3,7 @@ import { HttpError } from "@/server/http";
 import { completeSso, SSO_STATE_COOKIE, ssoSessionCookie } from "@/server/sso";
 import { auth } from "@/lib/auth";
 import { SSO_LINK_COOKIE } from "@/server/sso-link";
+import { FEDERATED_MFA_COOKIE, federatedCookieOptions } from "@/server/federated-mfa";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,17 @@ export async function GET(req: Request) {
   try {
     const session = await auth.api.getSession({ headers: req.headers }).catch(() => null);
     const result = await completeSso({ state, code, sessionToken: session?.session.token });
+    if (result.mfaRequired) {
+      const res = NextResponse.redirect(`${base}/auth/step-up`);
+      res.cookies.set(FEDERATED_MFA_COOKIE, result.mfaRequired, federatedCookieOptions());
+      // An ambient older session must not mask the pending factor in this browser.
+      const cookie = await ssoSessionCookie("");
+      res.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
+      res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
+      res.headers.set("cache-control", "no-store");
+      res.headers.set("referrer-policy", "no-referrer");
+      return res;
+    }
     if (result.configurationVerified) {
       const res = NextResponse.redirect(`${base}/w/${result.slug}/settings?tab=sso`);
       res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
