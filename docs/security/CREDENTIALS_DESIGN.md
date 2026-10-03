@@ -83,7 +83,7 @@ The two reviews agree on all of these.
    - uncontrolled, cleared on success, close and navigation;
    - never in the TanStack cache, mutation retries, offline drafts, URLs or RSC payloads.
 10. **Endpoints:**
-    - `route()` CSRF + strict Origin, body caps, `Cache-Control: no-store`;
+    - `route()` CSRF + strict Origin, body caps and shared read deadline, `Cache-Control: no-store`; layered ingress/hosting policy: [REQUEST_BODY_LIMITS.md](REQUEST_BODY_LIMITS.md);
     - distributed `checkRate` limits: test 5/min, writes 20/min, step-up 5/5 min, bootstrap/MFA attempts;
     - fixed error codes.
 

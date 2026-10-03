@@ -32,6 +32,12 @@ public sign-up, no live payments, one host. Every command below uses files in th
 The proxy returns 404 for `/api/test/*`, `/api/debug/*`, `/api/ops/*` and dev endpoints. Test-only routes also
 refuse to run unless `FLOWLINE_ENV=test`, and the beta runs with `FLOWLINE_ENV=beta`.
 
+The owned ingress applies route-specific body caps (16 KiB public email/beta, 64 KiB auth, 1 MiB default, with explicit webhook/credential/upload budgets), a 10-second absolute upload-read deadline and a 5-second header deadline. It enables HTTP/1.1 and HTTP/2; HTTP/3 is disabled because Caddy 2.10 does not carry these read deadlines into its HTTP/3 server. Exact paths, application safeguards and hosting requirements are in [REQUEST_BODY_LIMITS.md](../security/REQUEST_BODY_LIMITS.md). The PR #16 follow-up is source/unit-checked only; these new ingress controls have not been runtime-validated with Caddy or deployed.
+
+Before deployment, validate/adapt this file with the selected Caddy 2.10 image and test byte boundaries, chunked overflow, stalled/slow-drip uploads and valid multipart bodies on both enabled protocols. Verify direct web access is blocked. An approved tunnel/CDN must preserve this ingress path and enforce client-side upload/header deadlines before forwarding; targeting `web:3000` bypasses these controls. Its trusted-peer/client-IP configuration must also be verified separately before relying on per-IP admission.
+
+Port 80 has an explicit 308 HTTPS redirect site so it receives the global read deadlines too; verify redirect behavior and incomplete-header timeouts on both public TCP listeners when accepting the deployment.
+
 **Topology (P4-13):** one web instance and one worker. Rate limits live in PostgreSQL (a sliding window, global), so
 adding web instances later wouldn't loosen them, but the beta deliberately runs a single web instance.
 
