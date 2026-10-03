@@ -1,0 +1,55 @@
+{
+  "baseSha": "f035f88089048b2cff307d3bd16262de34d7799a",
+  "reviewableDiffSha256": "36af70a040375c6390cfe122934d0db34ee0b302d37fef9e67422bf3377981a6",
+  "reviewableFiles": [
+    "e2e/fakes/provider-server.ts",
+    "src/i18n/engine-text.ts",
+    "src/i18n/messages/ar.json",
+    "src/i18n/messages/en.json",
+    "tests/contract/helpers.ts",
+    "tests/integration/p2-actions.test.ts",
+    "tests/integration/p2-review-fixes.test.ts",
+    "tests/unit/i18n-engine-text.test.ts",
+    "worker/handlers.ts"
+  ],
+  "checks": {
+    "integration": {
+      "passed": 28,
+      "files": 2,
+      "addedCases": 6,
+      "skipped": 0,
+      "attempts": [
+        "integration-1790992628314.json",
+        "integration-1790992671749.json"
+      ]
+    },
+    "units": {
+      "passed": 27,
+      "files": 2,
+      "skipped": 0,
+      "command": "pnpm exec vitest run --project unit tests/unit/i18n-engine-text.test.ts tests/unit/i18n.test.ts --fileParallelism=false"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm exec tsc --noEmit --incremental false"
+    },
+    "targetedEslint": {
+      "passed": true
+    },
+    "sourceWhitespace": {
+      "passed": true
+    }
+  },
+  "limits": [
+    "No CI gates",
+    "No real provider proof",
+    "No browser gate",
+    "No CodeRabbit review",
+    "No worker commit/push"
+  ],
+  "review": {
+    "by": "root",
+    "initialSourceDiffSha256": "276f31795a652307f125c8f132dda3848eeb92b4786a94b6a5da7bab1061f231",
+    "subsequentChange": "new read-only test fixture gets required timeoutMs5000; assertions unchanged"
+  }
+}

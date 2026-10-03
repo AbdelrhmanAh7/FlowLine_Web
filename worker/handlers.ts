@@ -116,7 +116,7 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
   };
   const review = async (): Promise<NodeOutcome | null> => {
     const g = await checkGate(ctx.db, gate);
-    if (g.status === "pending") return { kind: "pause", status: "uncertain", message: `No response from ${new URL(url).host} — the request may have been applied. Mark it done, retry, or fail.`, meta: { reviewId: g.approvalId } };
+    if (g.status === "pending") return { kind: "pause", status: "uncertain", message: `Unconfirmed outcome from ${new URL(url).host} — the request may have been applied. Mark it done, retry, or fail.`, meta: { reviewId: g.approvalId } };
     if (g.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", "The request's outcome was unknown and a reviewer failed the step");
     if (g.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { resolvedBy: "review" } };
     await consumeRetry(ctx.db, g.approvalId);
@@ -156,7 +156,8 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
       if (e instanceof EgressError) throw new NodeError(e.code, e.message);
       if (env.signal.aborted) throw e;
       const pe = e instanceof ProviderError ? e : new ProviderError((e as Error).name === "TimeoutError" ? "timeout" : "response_lost", (e as Error).message);
-      if (pe.outcomeUnknown && sideEffect === "non_idempotent") {
+      // A server can apply a write and then return 5xx. A response is not proof of non-application.
+      if ((pe.outcomeUnknown || pe.kind === "server") && sideEffect === "non_idempotent") {
         await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_uncertain", nodeId: node.id, data: { kind: pe.kind } });
         const r = await review();
         if (r) return { ...r, attempts: attempt } as NodeOutcome;
@@ -344,7 +345,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
   const review = async (): Promise<NodeOutcome | "retry"> => {
     const gate = await checkGate(ctx.db, { ...gateBase, kind: "review" });
     if (gate.status === "pending") {
-      return { kind: "pause", status: "uncertain", message: `${action.title} may or may not have been applied by ${provider.name} (lost response). Check it and choose: mark done, retry, or fail.`, meta: { ...meta, reviewId: gate.approvalId } };
+      return { kind: "pause", status: "uncertain", message: `${action.title} may or may not have been applied by ${provider.name} (unconfirmed outcome). Check it and choose: mark done, retry, or fail.`, meta: { ...meta, reviewId: gate.approvalId } };
     }
     if (gate.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", `${action.title} outcome was unknown and a reviewer failed the step`);
     if (gate.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { ...meta, resolvedBy: "review" } };
@@ -423,7 +424,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
         await markConnectionUnhealthy(ctx.db, connectionId, "expired", pe.message);
         throw new NodeError("CONNECTION_AUTH", `${provider.name} rejected the connection (${pe.message}). Flows using it are paused until it's reconnected.`);
       }
-      if (pe.outcomeUnknown) {
+      if (pe.outcomeUnknown || (pe.kind === "server" && action.sideEffect === "non_idempotent")) {
         if (action.sideEffect !== "non_idempotent" && attempt < max) {
           await sleep(backoffMs(attempt), env.signal);
           continue;
@@ -432,7 +433,8 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
           const r = await resolveUnknown();
           if (r !== "retry") return r;
           if (attempt < max) continue;
-          throw new NodeError("PROVIDER_TIMEOUT", `${provider.name} kept failing to respond`);
+          if (pe.kind !== "server") throw new NodeError("PROVIDER_TIMEOUT", `${provider.name} kept failing to respond`);
+          // Verified not applied, but exhausted: preserve the actual server failure below.
         }
       }
       if (pe.retryable && attempt < max) {

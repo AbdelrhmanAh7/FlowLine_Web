@@ -300,10 +300,10 @@ const SHAPES: readonly Shape[] = [
   ["APPROVAL_REQUIRED", /^Waiting for approval to run (.+)$/s, "runs.errorShape.approvalWait", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
   ["APPROVAL_REJECTED", /^(.+?) was rejected: (.*)$/s, "runs.errorShape.approvalRejectedNote", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), note: m[2]! })],
   ["APPROVAL_REJECTED", /^(.+) was rejected$/s, "runs.errorShape.approvalRejected", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
-  ["OUTCOME_UNKNOWN", /^No response from (.+?) — the request may have been applied\. Mark it done, retry, or fail\.$/, "runs.errorShape.outcomeHttp", (m) => ({ host: m[1]! })],
+  ["OUTCOME_UNKNOWN", /^(?:No response|Unconfirmed outcome) from (.+?) — the request may have been applied\. Mark it done, retry, or fail\.$/, "runs.errorShape.outcomeHttp", (m) => ({ host: m[1]! })],
   [
     "OUTCOME_UNKNOWN",
-    /^(.+?) may or may not have been applied by (.+?) \(lost response\)\. Check it and choose: mark done, retry, or fail\.$/,
+    /^(.+?) may or may not have been applied by (.+?) \((?:lost response|unconfirmed outcome)\)\. Check it and choose: mark done, retry, or fail\.$/,
     "runs.errorShape.outcomeAction",
     (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), provider: m[2]! }),
   ],

@@ -1,0 +1,15 @@
+{
+  "baseSha": "f035f88089048b2cff307d3bd16262de34d7799a",
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-safe-retry-1790992628314",
+  "database": "flowline_test_pilotretry",
+  "tests": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project integration tests/integration/p2-actions.test.ts tests/integration/p2-review-fixes.test.ts --fileParallelism=false",
+      "exitCode": 1
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "containerId": "dc343ff75711cee16022c0516074c41b6cff1cec2e73e438a0b0a83cbb90b617"
+}
