@@ -37,6 +37,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 
 ### H1 — Workspace SSO links a signed-in global account through an unconsented GET
 
+**Status (2026-10-03): FIXED in source.** GET callbacks only propose linking and never attach a login method or grant a new session for the proposed identity. The signed-in member must confirm the displayed issuer through exact-origin, session-bound CSRF POST with fresh password/TOTP assurance (fresh sign-in for accounts without a local credential). The initiating live session, account, membership and configuration are rechecked under transaction locks. Regression coverage includes absent consent, logout/revocation and configuration replacement; browser/provider validation remains outstanding.
+
 **Locations:** `src/app/api/sso/start/route.ts:14`, `src/app/api/sso/start/route.ts:20`, `src/server/sso.ts:243`, `src/server/sso.ts:271`, `src/server/sso.ts:454`, `src/server/sso.ts:460`, `src/app/api/sso/callback/route.ts:22`.
 
 **Evidence:** The public GET start endpoint captures the current user and stores only `initiatorUserId`. Enabled SSO does not require membership in that workspace. Callback links an existing email-matched account whenever that stored user ID matches. There is no explicit link intent, fresh reauthentication, link-confirmation screen or callback check of the initiating session. The state cookie is HttpOnly/SameSite=Lax and validates the browser, but a top-level cross-site GET can legitimately begin this flow in that browser.
@@ -48,6 +50,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 **Test to add:** Two unrelated tenants and an attacker-controlled IdP; navigate cross-site as a signed-in victim and complete valid OIDC. Assert no account link or victim session is granted without an approved POST. Repeat after logout, session revocation and configuration replacement. Confirm subsequent attacker sign-in cannot access the victim's workspace.
 
 ### H2 — Tenant-controlled SSO can pre-hijack a future global account's email
+
+**Status (2026-10-03): FIXED in source.** Tenant assertions cannot create global users, verify Flowline email or attach methods by email. Linking requires a fresh real Flowline mailbox verification tied to the exact pending proposal, followed by H1's explicit signed-in confirmation. Owner configuration tests validate OIDC without provisioning identities or sessions. Approved bindings have a distinct namespace; unproven historical bindings fail closed and password recovery removes them while preserving mailbox-approved methods. Attack regressions include undelivered invitations, pre-created historical identities, real mailbox recovery and a second tenant; live email/IdP validation remains outstanding.
 
 **Locations:** `src/server/sso.ts:98`, `src/server/sso.ts:413`, `src/server/sso.ts:473`, `src/server/sso.ts:475`, `src/server/sso.ts:481`, `src/server/beta.ts:85`, `src/server/members.ts:39`, `src/server/members.ts:45`, `src/server/email/flows.ts:174`.
 
@@ -156,6 +160,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 **Test to add:** Beta/production with absent, empty and misspelled mode fail closed for password, social and custom SSO signup; explicitly approved open development/test mode remains supported; test-mode cookie overrides never affect beta.
 
 ### M7 — Global ZITADEL account bindings omit issuer identity
+
+**Status (2026-10-03): FIXED in source.** Account IDs now encode the validated `(issuer, subject)` pair. Bare legacy subjects fail closed and require explicit signed-in relinking; no issuer is guessed from current settings. Pending callbacks additionally fence issuer, setting revision and client ID. Unit and DB-adapter integration regressions added; real-provider validation remains outstanding.
 
 **Locations:** `src/server/zitadel-auth.ts:18`, `src/server/zitadel-auth.ts:52`, `src/server/zitadel-config.ts:35`, `src/server/platform-setting-schemas.ts:39`, `src/server/sso.ts:292`.
 

@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { BASE_URL, EN_STATE } from "../playwright.config";
-import { connectAiApi, setupUser, signUpVerified, uniqueEmail } from "./helpers";
+import { connectAiApi, setupUser, signUpVerified, uniqueEmail, verificationLink, PASSWORD } from "./helpers";
 import { FAKE_PROVIDER } from "./stack";
 
 /**
@@ -287,7 +287,7 @@ test("mobile: Agents and Knowledge fit a phone; Copilot and editing stay disable
   await expect(page.getByRole("button", { name: "Copilot", exact: true })).toHaveAttribute("aria-disabled", "true");
 });
 
-test("SSO: owner configures the fake IdP, test sign-in links their account and verifies; members then sign in; existing accounts are never taken over", async ({ page, browser }) => {
+test("SSO: owner tests configuration without linking; mailbox-proven members explicitly confirm; existing accounts are never taken over", async ({ page, browser }) => {
   test.setTimeout(120_000);
   const { workspace, email: ownerEmail } = await setupUser(page);
   const domain = ownerEmail.split("@")[1]!;
@@ -303,10 +303,10 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await page.getByRole("button", { name: "Save SSO settings" }).click();
   await expect(page.getByText("Configured — not verified")).toBeVisible();
 
-  // Test sign-in as the owner's own identity → linked, still the owner.
+  // Test sign-in validates the provider, without attaching a login method.
   await idpUser(ownerEmail);
   await page.getByRole("button", { name: "Test sign-in" }).click();
-  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/flows`));
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/settings\\?tab=sso`));
   await page.goto(`/w/${workspace.slug}/settings?tab=sso`);
   await expect(page.getByText(/^Verified /).first()).toBeVisible();
   await expect(page.getByText("e2e-sso-secret")).toHaveCount(0);
@@ -314,8 +314,9 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await page.getByRole("button", { name: "Save SSO settings" }).click();
   await expect(page.getByText("Enabled", { exact: true })).toBeVisible();
 
-  // A new person signs in from the sign-in page and joins with the default role.
-  const fresh = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
+  // Tenant email alone cannot create a global account. The person registers,
+  // proves their mailbox, accepts membership and explicitly approves federation.
+  const fresh = await browser.newContext({ baseURL: BASE_URL, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
   const p2 = await fresh.newPage();
   const newcomer = `sso-${randomUUID().slice(0, 8)}@${domain}`;
   // Beta admission is separate from SSO role assignment: this synthetic newcomer is invited.
@@ -325,9 +326,32 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await p2.goto("/sign-in");
   await p2.getByLabel("Workspace slug").fill(workspace.slug);
   await p2.getByRole("button", { name: "Sign in with SSO" }).click();
+  await expect(p2).toHaveURL(/\/sign-in\?sso_error=/);
+  await expect(p2.getByRole("alert").filter({ hasText: "verify your email ownership" })).toContainText("verify your email ownership");
+  const invitation = await (await page.request.post(`/api/workspaces/${workspace.id}/invites`, { data: { email: newcomer, role: "editor" } })).json();
+  await signUpVerified(p2.request, newcomer);
+  expect((await p2.request.post(`/api/invites/${new URL(invitation.url).pathname.split("/").at(-1)}`)).ok()).toBeTruthy();
+  await p2.goto("/sign-in");
+  await p2.getByLabel("Workspace slug").fill(workspace.slug);
+  await p2.getByRole("button", { name: "Sign in with SSO" }).click();
+  await expect(p2).toHaveURL(/\/sso\/link$/);
+  await expect(p2.getByRole("button", { name: "Confirm linking my account to this provider" })).toBeDisabled();
+  await p2.getByRole("button", { name: "Send email verification link" }).click();
+  await expect(p2.getByText("We sent a verification link to your account email.", { exact: false })).toBeVisible();
+  const verify = await p2.request.post("/api/email", { data: { action: "verify", token: new URL(await verificationLink(p2.request, newcomer)).searchParams.get("token") } });
+  expect((await verify.json()).status).toBe("done");
+  await p2.getByRole("button", { name: "I verified my email — refresh" }).click();
+  await p2.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await p2.getByRole("button", { name: "Confirm linking my account to this provider" }).click();
   await expect(p2).toHaveURL(new RegExp(`/w/${workspace.slug}/flows`));
   await page.goto(`/w/${workspace.slug}/settings`);
   await expect(page.getByTestId(`member-${newcomer}`)).toContainText(/editor/i);
+  const signedOut = await p2.request.post("/api/auth/sign-out", { data: {} });
+  expect(signedOut.ok(), await signedOut.text()).toBeTruthy();
+  await p2.goto("/sign-in");
+  await p2.getByLabel("Workspace slug").fill(workspace.slug);
+  await p2.getByRole("button", { name: "Sign in with SSO" }).click();
+  await expect(p2).toHaveURL(new RegExp(`/w/${workspace.slug}/flows`));
 
   // An existing password account in the domain is NOT signed in by the IdP asserting its email.
   const victim = await newUserContext(browser, `victim-${randomUUID().slice(0, 8)}@${domain}`);
@@ -338,7 +362,7 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   await p3.getByLabel("Workspace slug").fill(workspace.slug);
   await p3.getByRole("button", { name: "Sign in with SSO" }).click();
   await expect(p3).toHaveURL(/\/sign-in\?sso_error=/);
-  await expect(p3.getByRole("alert").filter({ hasText: "SSO can't take over an existing account" })).toBeVisible();
+  await expect(p3.getByRole("alert").filter({ hasText: "An account with this email already exists" })).toBeVisible();
 
   // Unknown workspace → honest refusal.
   await p3.getByLabel("Workspace slug").fill(`no-such-${randomUUID().slice(0, 6)}`);

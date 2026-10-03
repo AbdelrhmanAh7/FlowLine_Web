@@ -19,7 +19,7 @@ test("ZITADEL setup saves, tests PKCE/Basic sign-in and enables only after verif
   await expect(page.getByLabel("Client secret", { exact: true })).toHaveValue("");
   await page.request.post(`${FAKE_PROVIDER}/__fake/oidc/user`, { data: { email } });
   await page.getByRole("button", { name: "Test sign-in" }).click();
-  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/flows$`));
+  await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/settings\\?tab=sso$`));
   await page.goto(`/w/${workspace.slug}/settings?tab=sso`);
   await expect(page.getByText(/^Verified /).first()).toBeVisible();
   await page.getByLabel("SSO enabled").check();
