@@ -2,6 +2,11 @@
 {$BETA_DOMAIN} {
 	encode zstd gzip
 
+	# Preserve the explicit 5 MiB upload + multipart budget; application routes use tighter caps.
+	request_body {
+		max_size 6MiB
+	}
+
 	# Internal-only endpoints are never exposed through the proxy.
 	@internal path /api/test/* /api/debug/* /api/ops/* /_next/webpack-hmr*
 	respond @internal 404

@@ -166,6 +166,7 @@
     "RATE_LIMITED": "Too many attempts — wait a minute and try again.",
     "INTERNAL": "We couldn't complete the request. Check the current status before trying again.",
     "BAD_JSON": "The request couldn't be read. Refresh the page and try again.",
+    "BODY_TOO_LARGE": "The request is too large. Reduce its contents and try again.",
     "VALIDATION": "Some values aren't valid. Check them and try again.",
     "CROSS_SITE_REQUEST": "The request was refused because it didn't come from Flowline itself. Refresh the page and try again.",
     "INVITE_USED": "This invitation was already used.",
@@ -3231,6 +3232,12 @@
       "table": "table"
     },
     "indexingFailed": "Indexing failed: {error}",
+    "errors": {
+      "chunkLimit": "This source contains too much text or too many rows. Split it into smaller sources.",
+      "jsonDepthLimit": "The JSON is nested too deeply. Simplify its structure.",
+      "csvColumnLimit": "This CSV has too many columns. Remove columns you don't need.",
+      "csvRowLimit": "A CSV row contains too much text. Shorten it or split the content."
+    },
     "status": {
       "pending": "pending",
       "indexing": "Indexing…",
