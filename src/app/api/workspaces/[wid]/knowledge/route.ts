@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db";
 import { requireUser, requireWorkspace } from "@/server/access";
-import { capBody, HttpError, json, route } from "@/server/http";
+import { capBody, HttpError, json, route, UPLOAD_BODY_READ_TIMEOUT_MS } from "@/server/http";
 import { addSource, KNOWLEDGE_MAX_BYTES, listSources } from "@/server/knowledge";
 
 type Ctx = { params: Promise<{ wid: string }> };
@@ -19,8 +19,9 @@ export const POST = route(async (raw0, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "knowledge.manage");
   const type = raw0.headers.get("content-type") ?? "";
-  // Multipart/JSON overhead on top of the 5MB content limit; enforced while streaming, before any parsing.
-  const req = await capBody(raw0, KNOWLEDGE_MAX_BYTES + 64 * 1024, new HttpError(413, "SOURCE_TOO_LARGE", "Knowledge sources are limited to 5MB"));
+  // Multipart/JSON overhead on top of the 5MB content limit; enforced while streaming, before any parsing. Only an
+  // authorized member reaches the longer upload deadline (the checks above run before any body byte is read).
+  const req = await capBody(raw0, KNOWLEDGE_MAX_BYTES + 64 * 1024, new HttpError(413, "SOURCE_TOO_LARGE", "Knowledge sources are limited to 5MB"), UPLOAD_BODY_READ_TIMEOUT_MS);
   if (type.includes("multipart/form-data")) {
     const form = await req.formData().catch(() => null);
     const file = form?.get("file");
