@@ -6,16 +6,25 @@
 //   pnpm wt rm <name|path>                                        remove a registered, unlocked lane if clean and pushed/merged
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
 //                                                                 (not while agents are starting lanes)
-// Removal never forces: main, locked, dirty or unpushed work is kept. External lanes require an exact path for rm.
+// Removal never forces: main, locked, dirty or unpushed work is kept. Bare names select managed lanes only.
+// External lanes require an explicit path for rm; path comparisons ignore case on Windows.
 // Prune clears stale registrations first; list/prune skip missing or locked lanes and report per-lane errors.
 // The branch itself is never deleted.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, symlinkSync, unlinkSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const git = (args, cwd) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+
+export function samePath(a, b, platform = process.platform) {
+  const normalize = (path) => {
+    const absolute = resolve(path.replace(/\\/g, "/")).replace(/\\/g, "/");
+    return platform === "win32" ? absolute.toLowerCase() : absolute;
+  };
+  return normalize(a) === normalize(b);
+}
 
 function worktrees(root) {
   const out = git(["worktree", "list", "--porcelain"], root);
@@ -38,9 +47,9 @@ function unlinkModules(path) {
   if (existsSync(nm) && lstatSync(nm).isSymbolicLink()) unlinkSync(nm);
 }
 
-function remove(w, root) {
+function remove(w, root, platform) {
   const path = resolve(w.worktree);
-  if (path === root) throw new Error(`refusing to remove main checkout: ${path}`);
+  if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
   if (Object.hasOwn(w, "locked")) throw new Error(`refusing to remove locked worktree: ${path}`);
   const s = state(path);
   if (s.dirty || !s.pushed) {
@@ -53,7 +62,7 @@ function remove(w, root) {
   return true;
 }
 
-export function main(argv = process.argv.slice(2)) {
+export function main(argv = process.argv.slice(2), platform = process.platform) {
   const root = resolve(git(["rev-parse", "--path-format=absolute", "--git-common-dir"]), "..");
   const dir = join(root, ".claude", "worktrees");
   const [cmd, name, ...rest] = argv;
@@ -69,24 +78,22 @@ export function main(argv = process.argv.slice(2)) {
     console.log(path);
   } else if (cmd === "rm" && name) {
     const entries = worktrees(root);
-    const lane = resolve(dir, name);
-    const rel = relative(dir, lane);
-    const inside = rel && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
-    const w = entries.find((w) => resolve(w.worktree) === resolve(name))
-      ?? entries.find((w) => inside && resolve(w.worktree) === lane);
+    const explicitPath = isAbsolute(name) || /[/\\]/.test(name);
+    const target = explicitPath ? resolve(name) : resolve(dir, name);
+    const w = entries.find((w) => samePath(w.worktree, target, platform));
     if (!w) throw new Error(`not a registered worktree: ${name}`);
-    if (remove(w, root)) git(["worktree", "prune"], root);
+    if (remove(w, root, platform)) git(["worktree", "prune"], root);
   } else if (cmd === "list" || cmd === "prune") {
     if (cmd === "prune") git(["worktree", "prune"], root);
     let failed = false;
     for (const w of worktrees(root)) {
-      if (resolve(w.worktree) === root) continue;
+      if (samePath(w.worktree, root, platform)) continue;
       try {
         if (Object.hasOwn(w, "locked") || !existsSync(w.worktree)) {
           console.log(`kept ${w.worktree}: ${Object.hasOwn(w, "locked") ? "locked" : "missing directory (possibly prunable)"}`);
           continue;
         }
-        if (cmd === "prune") remove(w, root);
+        if (cmd === "prune") remove(w, root, platform);
         else {
           const s = state(w.worktree);
           console.log(`${w.worktree} | ${w.branch?.replace("refs/heads/", "") ?? "detached"} | dirty=${s.dirty} | pushed=${s.pushed}`);
@@ -104,7 +111,7 @@ export function main(argv = process.argv.slice(2)) {
   return 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && samePath(process.argv[1], fileURLToPath(import.meta.url))) {
   try {
     process.exitCode = main();
   } catch (error) {

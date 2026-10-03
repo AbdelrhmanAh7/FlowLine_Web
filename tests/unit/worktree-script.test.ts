@@ -1,7 +1,7 @@
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error TS7016: this standalone Node CLI has no TypeScript declaration file.
-import { main } from "../../scripts/worktree.mjs";
+import { main, samePath } from "../../scripts/worktree.mjs";
 
 const mocks = vi.hoisted(() => ({
   git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(),
@@ -66,6 +66,40 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("worktree removal safeguards", () => {
+  it("a bare name selects the managed lane despite a colliding external registration", () => {
+    const collision = resolve("lane");
+    entries = entry(root) + entry(collision) + entry(lane);
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(mocks.unlink.mock.calls).toEqual([[join(lane, "node_modules")]]);
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args))
+      .toEqual([["worktree", "remove", lane]]);
+    expect(main(["rm", "./lane"])).toBe(0);
+    expect(mocks.unlink).toHaveBeenLastCalledWith(join(collision, "node_modules"));
+  });
+
+  it("does not fall back to a colliding external registration when the managed lane is absent", () => {
+    entries = entry(root) + entry(resolve("lane"));
+    expect(() => main(["rm", "lane"])).toThrow(/not a registered worktree/);
+    expectUntouched();
+  });
+
+  it("matches a mixed-case lane name on Windows", () => {
+    expect(main(["rm", "LaNe"], "win32")).toBe(0);
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+  });
+
+  it("matches a mixed-case explicit external path on Windows", () => {
+    entries = entry(root) + entry(external);
+    expect(main(["rm", external.toUpperCase()], "win32")).toBe(0);
+    expect(mocks.unlink).toHaveBeenCalledWith(join(external, "node_modules"));
+  });
+
+  it("rejects a mixed-case main registration before inspecting or unlinking it on Windows", () => {
+    entries = entry(root.toUpperCase()) + entry(lane);
+    expect(() => main(["rm", root], "win32")).toThrow(/main checkout/);
+    expectUntouched();
+  });
+
   it("rejects an existing but unregistered path without touching its junction", () => {
     expect(() => main(["rm", external])).toThrow(/not a registered worktree/);
     expectUntouched();
@@ -117,6 +151,15 @@ describe("worktree removal safeguards", () => {
 });
 
 describe("worktree iteration", () => {
+  it.each(["list", "prune"])("%s skips a mixed-case main registration on Windows", (cmd) => {
+    entries = entry(root.toUpperCase()) + entry(lane);
+    expect(main([cmd], "win32")).toBe(0);
+    expect(calls().some(({ args, cwd }) => args[0] === "status" && cwd === root.toUpperCase())).toBe(false);
+    expect(mocks.exists).not.toHaveBeenCalledWith(root.toUpperCase());
+    expect(mocks.unlink).not.toHaveBeenCalledWith(join(root.toUpperCase(), "node_modules"));
+    expect(calls().some(({ args, cwd }) => args[0] === "status" && cwd === lane)).toBe(true);
+  });
+
   it("prunes registrations first, skips remaining prunable/missing and locked entries, and removes later lanes", () => {
     entries = entry(root) + entry(stale, "prunable gitdir file points to non-existent location")
       + entry(locked, "locked") + entry(lane);
@@ -148,5 +191,17 @@ describe("worktree iteration", () => {
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
+  });
+});
+
+describe("path identity", () => {
+  it("resolves relative segments and normalizes both separators", () => {
+    expect(samePath(`${lane}/../lane`, lane.replace(/\\/g, "/"), "linux")).toBe(true);
+    expect(samePath(lane.replace(/\//g, "\\"), lane, "win32")).toBe(true);
+  });
+
+  it("folds case only on Windows", () => {
+    expect(samePath(lane.toUpperCase(), lane, "win32")).toBe(true);
+    expect(samePath(lane.toUpperCase(), lane, "linux")).toBe(false);
   });
 });

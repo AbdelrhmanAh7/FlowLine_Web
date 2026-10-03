@@ -1,5 +1,11 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Branch maintenance — 2026-10-03
+
+On `claude/ci-trim-20261003`, four tooling defects are fixed locally: bare worktree names select only managed lanes, all worktree path comparisons fold case on Windows (including the main-checkout guard), root code/config files require documentation, and `docs-not-needed` requires a non-empty same-line `Docs not needed because: <reason>` PR body entry. PR body edits rerun the check; the body is supplied through an environment variable and filenames through paginated JSON. AGENTS.md, the developer guide and PR template describe the exact behavior.
+
+Focused validation: 60 tests passed across `worktree-script.test.ts` and `docs-check-script.test.ts`; no-cache ESLint passed for both scripts and test files; Python PyYAML parsed `docs.yml` and verified the `edited` trigger and PR-body environment wiring. Evidence: [local validation](../../artifacts/phase-4/ci-trim-defects/VALIDATION.md). Changes remain uncommitted and unpushed. GitHub Actions and real worktree removal are unverified; worktree tests mock Git/filesystem operations. No Docker, browsers, gate, build or installs ran. This maintenance result does not establish beta readiness.
+
 ## Current execution — 2026-09-30
 
 The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.
