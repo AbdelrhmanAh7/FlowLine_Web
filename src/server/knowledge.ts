@@ -6,6 +6,7 @@ import type { CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { HttpError, notFound } from "./http";
 import { insertRetainedFile } from "./retained-files";
+import { admitKnowledgeIndex, lockKnowledgeAdmission } from "./knowledge-admission";
 
 /**
  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
@@ -67,6 +68,7 @@ export async function addSource(db: Db, user: CurrentUser, workspaceId: string, 
   if (!mime) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload text, Markdown, CSV, JSON or PDF");
   const name = input.name.trim().slice(0, 120) || "Untitled";
   return db.transaction(async (tx) => {
+    await admitKnowledgeIndex(tx, workspaceId);
     const file = await insertRetainedFile(tx, { workspaceId, name, mime, data: input.bytes, createdBy: user.id });
     const [src] = await tx
       .insert(schema.knowledgeSource)
@@ -106,15 +108,20 @@ export async function setEnabled(db: Db, user: CurrentUser, workspaceId: string,
 
 /** Re-index: bumps the generation; the worker rebuilds chunks and drops the old generation. */
 export async function reindexSource(db: Db, workspaceId: string, sourceId: string) {
-  const s = await requireSource(db, workspaceId, sourceId);
-  if (!s.fileId) throw new HttpError(409, "NO_CONTENT", "This source has no stored content to re-index");
-  const [row] = await db
-    .update(schema.knowledgeSource)
-    .set({ status: "pending", error: null, lockedBy: null })
-    .where(eq(schema.knowledgeSource.id, s.id))
-    .returning();
-  await db.execute(sql`select pg_notify('flowline_runs', 'knowledge')`);
-  return publicSource(row!);
+  await requireSource(db, workspaceId, sourceId);
+  return db.transaction(async (tx) => {
+    await lockKnowledgeAdmission(tx);
+    const [s] = await tx.select().from(schema.knowledgeSource)
+      .where(and(eq(schema.knowledgeSource.id, sourceId), eq(schema.knowledgeSource.workspaceId, workspaceId), isNull(schema.knowledgeSource.deletedAt)))
+      .for("update");
+    if (!s) throw notFound("Knowledge source not found");
+    if (!s.fileId) throw new HttpError(409, "NO_CONTENT", "This source has no stored content to re-index");
+    await admitKnowledgeIndex(tx, workspaceId, s.id);
+    const [row] = await tx.update(schema.knowledgeSource).set({ status: "pending", error: null, lockedBy: null })
+      .where(eq(schema.knowledgeSource.id, s.id)).returning();
+    await tx.execute(sql`select pg_notify('flowline_runs', 'knowledge')`);
+    return publicSource(row!);
+  });
 }
 
 /* ───────────── indexing (worker) ───────────── */
