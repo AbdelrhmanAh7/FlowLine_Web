@@ -10,17 +10,21 @@ import { getTableName, type SQL } from "drizzle-orm";
 const state = vi.hoisted(() => ({
   enabled: true, exists: true, factor: "encrypted-factor-1", verified: true,
   proofs: new Map<string, { value: string; expiresAt: Date }>(),
+  pending: new Map<string, { id: string; identifier: string; value: string }>(),
   configStamp: "unit-config" as string | null,
 }));
-vi.mock("@/server/auth-dispatch", () => ({ federatedProviderStamp: async () => state.configStamp }));
+// Like the real stamp: only a known sign-in provider id has a configuration; anything else (such as a route
+// pattern's literal ":id") has none. A stamp that ignored its argument hid the callback-provider regression.
+vi.mock("@/server/auth-dispatch", () => ({ federatedProviderStamp: async (provider: string) => ["google", "github", "zitadel"].includes(provider) ? state.configStamp : null }));
 vi.mock("@/db", async () => ({
   schema: await import("@/db/schema"),
   db: {
     select: () => ({ from: (table: Parameters<typeof getTableName>[0]) => ({ where: async (sql: SQL) => {
       const { params } = new PgDialect().sqlToQuery(sql);
       switch (getTableName(table)) {
-        case "user": return state.exists ? [{ id: params[0], twoFactorEnabled: state.enabled }] : [];
+        case "user": return state.exists ? [{ id: params[0], twoFactorEnabled: state.enabled, updatedAt: new Date(0) }] : [];
         case "two_factor": return [{ secret: state.factor, verified: state.verified }];
+        case "account": return [];
         case "verification": {
           const proof = state.proofs.get(String(params[0]));
           return proof && proof.value === params[1] && proof.expiresAt > new Date(String(params[2])) ? [proof] : [];
@@ -28,10 +32,16 @@ vi.mock("@/db", async () => ({
         default: throw new Error(`Unexpected read: ${getTableName(table)}`);
       }
     } }) }),
-    insert: () => ({ values: (row: { id: string; value: string; expiresAt: Date }) => ({ onConflictDoUpdate: async () => { state.proofs.set(row.id, row); } }) }),
+    insert: () => ({ values: (row: { id: string; identifier: string; value: string; expiresAt: Date }) => {
+      const save = async () => {
+        if (row.identifier.startsWith("federated-mfa:")) state.pending.set(row.identifier, row);
+        else state.proofs.set(row.id, row);
+      };
+      return { then: (...args: Parameters<Promise<void>["then"]>) => save().then(...args), onConflictDoUpdate: save };
+    } }),
   },
 }));
-import { federatedMfa, hasSessionMfa, recordMfaAssurance } from "@/server/federated-mfa";
+import { FEDERATED_MFA_COOKIE, federatedMfa, hasSessionMfa, recordMfaAssurance } from "@/server/federated-mfa";
 import { sha256Hex } from "@/server/crypto";
 import { totpCodeFor } from "@/server/totp";
 import { assertFederatedLinkSession } from "@/server/federated-link";
@@ -60,6 +70,7 @@ async function fixture() {
 beforeEach(() => {
   Object.assign(state, { enabled: true, exists: true, factor: "encrypted-factor-1", verified: true, configStamp: "unit-config" });
   state.proofs.clear();
+  state.pending.clear();
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -98,6 +109,40 @@ describe("MFA fence through the installed Better Auth session middleware (no dat
       else expect(callback.status === 401 || callback.headers.get("location")?.includes("error=")).toBe(true);
     });
   }
+
+  for (const configured of [true, false]) it(`${configured ? "issues the pending local-factor challenge for" : "fails closed on"} an enrolled user's real GitHub sign-in callback (hooks see the route pattern, not the URL)`, async () => {
+    // Regression: the hook parsed the provider out of ctx.path, which is "/callback/:id" inside Better Auth hooks.
+    const { instance, ctx, user, session } = await fixture();
+    await ctx.internalAdapter.createAccount({ userId: user.id, accountId: "12345", providerId: "github" });
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.href === "https://github.com/login/oauth/access_token") return Response.json({ access_token: "synthetic-token", token_type: "bearer", scope: "read:user,user:email" });
+      if (url.href === "https://api.github.com/user") return Response.json({ id: 12345, email: user.email, name: "MFA", login: "synthetic-user" });
+      if (url.href === "https://api.github.com/user/emails") return Response.json([{ email: user.email, verified: true, primary: true }]);
+      throw new Error(`Unexpected provider request: ${url.pathname}`);
+    }));
+    const start = await instance.handler(new Request(`${origin}/api/auth/sign-in/social`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ provider: "github", callbackURL: "/app" }) }));
+    expect(start.status).toBe(200);
+    const authorization = new URL((await start.json()).url);
+    const cookie = start.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+    if (!configured) state.configStamp = null; // provider revoked/replaced while the user was at the provider
+    const callback = await instance.handler(new Request(`${origin}/api/auth/callback/github?state=${authorization.searchParams.get("state")}&code=synthetic-code`, { headers: { cookie } }));
+    const live = (name: string) => callback.headers.getSetCookie().filter((c) => c.startsWith(`${name}=`) && !/Max-Age=0/i.test(c));
+    expect(live(ctx.authCookies.sessionToken.name)).toHaveLength(0);
+    // The provider session is never kept: only the pre-existing session row (created by the fixture) remains.
+    const sessions = await ctx.adapter.findMany<{ token: string }>({ model: "session", where: [{ field: "userId", value: user.id }] });
+    expect(sessions.map((row) => row.token)).toEqual([session.token]);
+    if (!configured) {
+      expect(callback.headers.get("location")).toContain("/sign-in?error=signin_expired");
+      expect(live(FEDERATED_MFA_COOKIE)).toHaveLength(0);
+      expect(state.pending.size).toBe(0);
+      return;
+    }
+    expect(callback.headers.get("location")).toContain("/auth/step-up");
+    expect(live(FEDERATED_MFA_COOKIE)).toHaveLength(1);
+    const [pending] = [...state.pending.values()];
+    expect(JSON.parse(pending!.value).global).toEqual({ provider: "github", configStamp: "unit-config" });
+  });
 
   it("rejects pre-MFA sessions in server reads, HTTP get-session, and account linking", async () => {
     const { instance, headers } = await fixture();

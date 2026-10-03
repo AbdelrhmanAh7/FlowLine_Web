@@ -10,7 +10,7 @@ import { checkRate } from "./rate-limit";
 import { safePath } from "./email/redirect";
 import { audit, userActor } from "./audit";
 import type { Role } from "@/db/schema";
-import { bindFederatedLink } from "./federated-link";
+import { bindFederatedLink, federatedProviderId } from "./federated-link";
 
 export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
 const pendingId = (token: string) => `federated-mfa:${sha256Hex(token)}`;
@@ -178,7 +178,8 @@ export function federatedMfa(providerStamp?: (provider: string) => Promise<strin
         const data = ctx.context.newSession;
         if (!data) return;
         const federated = isFederatedSignInPath(ctx.path);
-        const provider = ctx.path.split("/callback/")[1] ?? String(ctx.body?.provider ?? "");
+        // ctx.path is the route pattern ("/callback/:id"); the provider is the route param or the request body.
+        const provider = federatedProviderId(ctx);
         const configStamp = federated ? await (providerStamp ?? (await import("./auth-dispatch")).federatedProviderStamp)(provider) : null;
         if (federated && !configStamp) {
           ctx.context.setNewSession(null);

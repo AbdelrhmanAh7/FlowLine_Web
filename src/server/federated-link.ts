@@ -4,11 +4,25 @@ import { sha256Hex } from "./crypto";
 
 const invalid = () => new APIError("UNAUTHORIZED", { code: "SSO_LINK_INVALID", message: "Restart account linking while signed in" });
 
+/**
+ * The provider a Better Auth hook/database-hook context belongs to.
+ *
+ * `ctx.path` inside hooks is the ROUTE PATTERN ("/callback/:id"), never the concrete URL, so the provider can
+ * only come from the route param (callbacks) or the JSON body (direct sign-in/link endpoints). Parsing the
+ * path yields the literal ":id", which maps to no provider and made every federated callback fail closed.
+ */
+export function federatedProviderId(ctx: { params?: unknown; body?: unknown }): string {
+  const params = (ctx.params ?? {}) as Record<string, unknown>;
+  const body = (ctx.body ?? {}) as Record<string, unknown>;
+  const value = params.id ?? params.providerId ?? body.provider ?? body.providerId;
+  return typeof value === "string" ? value : "";
+}
+
 /** Trusted OAuth state, never caller-supplied additionalData. */
 export async function bindFederatedLink(ctx: GenericEndpointContext, providerStamp?: (provider: string) => Promise<string | null>) {
   const session = await getAuthoritativeSessionFromCtx(ctx);
   if (!session) throw invalid();
-  const stamp = await (providerStamp ?? (await import("./auth-dispatch")).federatedProviderStamp)(String(ctx.body?.provider ?? ""));
+  const stamp = await (providerStamp ?? (await import("./auth-dispatch")).federatedProviderStamp)(federatedProviderId(ctx));
   if (!stamp) throw invalid();
   Object.assign(ctx.context, { flowlineLinkConfigStamp: stamp }); // direct ID-token request only
   await addOAuthServerContext({ flowlineLinkSessionHash: sha256Hex(session.session.token), flowlineLinkConfigStamp: stamp });
@@ -26,7 +40,7 @@ export async function assertFederatedLinkSession(ctx: GenericEndpointContext | n
     token = ctx.context.session?.session.token;
     userId = ctx.context.session?.user.id;
     configStamp = (ctx.context as { flowlineLinkConfigStamp?: unknown }).flowlineLinkConfigStamp;
-    provider = String(ctx.body?.provider ?? "");
+    provider = federatedProviderId(ctx);
   } else if (ctx.path?.startsWith("/callback/")) {
     const state = await getOAuthState();
     if (!state?.link) return; // Keep the existing implicit-link policy.
@@ -35,7 +49,7 @@ export async function assertFederatedLinkSession(ctx: GenericEndpointContext | n
     if (!token || typeof hash !== "string" || sha256Hex(token) !== hash) throw invalid();
     userId = state.link.userId;
     configStamp = state.serverContext?.flowlineLinkConfigStamp;
-    provider = ctx.path.slice("/callback/".length);
+    provider = federatedProviderId(ctx); // "/callback/:id" is a pattern; the provider is ctx.params.id
   } else return;
   if (!token || !userId) throw invalid();
   // Do not reuse ctx.context.session: logout/revocation/enrollment can occur
