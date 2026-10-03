@@ -1,8 +1,14 @@
 # G2 independent-review handoff
 
-Status: **IMPLEMENTATION REVIEW-READY; DV2-02 PARTIAL**. No commits, push, PR/thread actions, owner contact, helpers, browser/full gates, package installs, secret scan, environment-content reads or actual DB access. Frozen evidence remains unchanged. Old environment/database rotations were not repeated.
+Status: **REVIEWED PRIMARY PROOF PASS; DV2-02 PARTIAL OVERALL**. Coordinator reports APPROVE_SECRET_PROCESSING and executed reviewed HEAD `1431bfbb4916652a618408335e062d2ecf39e3ab`. This author only read the two sanitized proof JSON artifacts for this update; no real env/DB processing, code change, test rerun, rotation, commit/push or helper action occurred. Frozen evidence remains unchanged.
 
 Own checkout: `C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-security-20261003`. Coordinator committed the prior candidate as `49f1cd431635b527acef7a763b15aa39f687fd58`, parent main `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. This author made no commit. Revised validation covers that HEAD plus the uncommitted strict-parser/tests/history-restoration delta. Crypto remains identical to main. File hashes bind the tested implementation in `focused-results.json`; there is no app/schema/migration change.
+
+## Coordinator proof completed
+
+[primary-persisted-proof.json](primary-persisted-proof.json) reports PASS at execution HEAD `1431bfbb4916652a618408335e062d2ecf39e3ab`: **2070/2070** selected old v1 connection rows rejected by raw AES-GCM and app `decryptLegacyV1`, selected old rows unchanged, committed synthetic connection persistence/readback and exact cleanup passed, recorded replacement identity matched and no active fallback. All old rows have inferred-old-schema-v1 provenance because the old schema lacks `legacy_crypto`; the new schema has it. No marker or migration provenance is claimed. The artifact's `candidateSha=9fdcb7d...` is the pinned crypto context; `worktreeBaseSha=1431bfbb...` is the actual execution HEAD.
+
+[named-config-audit.json](named-config-audit.json) is AUDIT_ONLY at the same identities: all three present primary files have zero affected/invalid keys and no fallback; named ai-hub/design files are absent. **Ai-hub proof remains BLOCKED** by missing protected config, with no retirement claim. Staging containers are not freshly certified. Other secret tables and HTTP/provider/browser flows remain outside scope; old ciphertext validity cannot be positively reauthenticated without the old key, which was not loaded. Preservation covers selected old rows only. No rotations were repeated. [Current status](DV2-02-STATUS.md) supersedes the pre-execution planning paragraphs below. Final evidence/status review and draft PR blockers remain coordinator-owned.
 
 ## Exact focused checks (safe without real secrets)
 
@@ -16,11 +22,11 @@ node node_modules\eslint\bin\eslint.js scripts/security/dv2-02-verifier.ts scrip
 git diff --check
 ```
 
-Final results: **55 passed / 0 failed / 0 skipped**, one file; focused TypeScript exit 0; full worktree TypeScript exit 0; scoped ESLint exit 0 with no warnings; whitespace check exit 0. Full typecheck covers HEAD `49f1cd4` (parent main `9fdcb7d`) plus this correction; it does not validate concurrent root changes. No full gate or actual PostgreSQL proof was run. Maintained imports are extensionless and neither config enables `allowImportingTsExtensions`; normal local dependency resolution works in CI.
+Author validation: **55 passed / 0 failed / 0 skipped**, one file; focused TypeScript exit 0; full worktree TypeScript exit 0; scoped ESLint exit 0 with no warnings; whitespace check exit 0. These checks cover HEAD `49f1cd4` (parent main `9fdcb7d`) plus the parser/history correction; they do not validate concurrent root changes. Root's later actual PostgreSQL proof is recorded above. No full gate was run; no tests rerun for this unchanged-code documentation update.
 
-## Independent review blockers corrected; re-review pending
+## Independent review blockers corrected and coordinator-approved
 
-Prior review returned **BLOCK_SECRET_PROCESSING**. That block remains in force until the coordinator receives **APPROVE_SECRET_PROCESSING** for the revised exact diff. P1 now validates every decoded dotenv line before calling Node's permissive parser: unique ASCII variable names, assignments with optional horizontal whitespace, empty/unquoted values, literal single-line single/double quotes, blank lines, full-line/inline comments, UTF8/BOM and UTF16LE. Export/nonassignment/invalid-name/backtick/multiline/unterminated-quote/trailing-garbage/duplicate syntax fails with a fixed content-free error. Parsed key completeness is checked, and truncated UTF16LE fails encoding validation. Unsupported syntax is rejected; no fallback line can silently disappear.
+Prior review returned BLOCK_SECRET_PROCESSING; the coordinator subsequently reports APPROVE_SECRET_PROCESSING for corrected HEAD `1431bfbb`. P1 validates every decoded dotenv line before Node's permissive parser: unique ASCII variable names, assignments with horizontal whitespace, empty/unquoted values, literal single-line single/double quotes, blank/comment lines, UTF8/BOM and UTF16LE. Export/nonassignment/invalid-name/backtick/multiline/unterminated-quote/trailing-garbage/duplicate syntax fails with a content-free error; assignment completeness and truncated encoding checks prevent dropped fallback lines.
 
 Twenty-one new synthetic regressions preserve positive quoted/unquoted/comments/empty/CRLF/encoding cases and require malformed fallback assignments, unfinished quotes, export and garbage lines to stop before audit completion or any DB client construction. P2 restores the exact main baseline historical `Targeted Chromium: 25/25.` line. Every non-DV2-02 line of current BUGS was compared to baseline and is identical; only the current DV2-02 paragraph/row differs. No frozen record/assertion was edited to claim validation. Ai-hub proof remains **BLOCKED** due absent named config, with no retirement claim.
 
@@ -30,9 +36,9 @@ Schema delta: coordinator supplied read-only metadata reports 2,070 old matching
 
 No executable verifier or focused config remains under evidence: maintained files are in `scripts/security/`. Invalid-selector CLI smoke returned the fixed sanitized INCOMPLETE message/exit 1 before any env processing.
 
-## Coordinator-only commands AFTER independent review
+## Reviewed commands executed by root (reference only)
 
-Do not execute these until the coordinator independently reviews this exact diff/hashes. They internally process real local configuration; arguments contain only public selectors and DB names. No env loader or command-line key is used.
+Root executed these after approval; this documentation worker did not rerun them. They internally process only named configuration, with public arguments and no command-line key.
 
 ```powershell
 node node_modules\tsx\dist\cli.mjs scripts/security/dv2-02-verifier.ts --primary --old-db flowline_test --new-db flowline_test_beta20260930main
@@ -49,12 +55,12 @@ node node_modules\tsx\dist\cli.mjs scripts/security/dv2-02-verifier.ts --aihub -
 
 ## Scope and blockers
 
-- Independent review is pending; this worker returns before real-secret processing/DB writes as instructed.
-- Live persisted-data proof and current connection-schema persistence are unexecuted. The primary file exists; its contents/DB/key state were not inspected.
+- Reviewed primary proof is completed by root at `1431bfbb`; this worker still performs no env/DB processing.
+- Ai-hub proof remains BLOCKED by missing named protected config; staging containers are not freshly certified. Absent design files establish no retirement/current verification.
 - All selected old-key connection rows must be supported/rejected, with a nonempty scope. Malformed/unknown rows fail; unmarked v1 fails when its schema has the marker column. Absent-column v1 has explicit inferred provenance only. Without an old key, the verifier cannot independently establish historical ciphertext validity. Other secret tables are outside the scope.
-- Persistence exercises current app `encryptSecretV2`/`openSecret` with real `workspace`/`connection` tables, not HTTP service/provider/browser flows. The current focused tests use SQL doubles, so do not report actual DB persistence yet.
+- Root's persistence proof exercises app `encryptSecretV2`/`openSecret` with real `workspace`/`connection` tables and committed fixture readback/cleanup; HTTP service/provider/browser flows remain unverified.
 - If the DB connection fails during cleanup, proof fails and the new disposable DB may retain a synthetic fixture. Cleanup targets only the generated workspace and never an old DB. The coordinator must account for failed proof resources before any retry.
 - Named-file audit is exactly the seven files in the prior audit (primary/aihub/design); it cannot certify absent files or running staging containers. No secret scan beyond those files is implemented or run.
-- Current BUGS stays PARTIAL until reviewed proof is executed and all required target coverage is honestly accounted for. Historical records cannot substitute for fresh proof.
+- Current BUGS remains PARTIAL overall despite primary PASS because unavailable ai-hub coverage and staging-container certification remain unresolved. Historical records cannot substitute for fresh proof.
 
 Resources: one focused Vitest worker, generated keys only, synthetic SQL clients, zero sockets/DBs/containers/browser sessions/helpers; primary node_modules borrowed through this worktree's junction, no installs or package changes. The original .vite/.vite-temp cache directory is preserved at `%TEMP%\flowline-security-20261003-node-modules-cache`. No helper or app process remains. Returned within the 12-minute delta window, before `2026-10-03T00:50:00Z`.
