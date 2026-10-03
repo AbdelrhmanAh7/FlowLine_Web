@@ -1,0 +1,116 @@
+﻿name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          browsers: chromium
+
+      - name: Locate CI Chromium
+        shell: bash
+        run: |
+          echo "CHROME_PATH=$(pnpm exec node -e 'process.stdout.write(require("@playwright/test").chromium.executablePath())')" >> "$GITHUB_ENV"
+
+      - name: Start production test stack
+        shell: bash
+        env:
+          FLOWLINE_COMPANY_BUILDER: "on"
+          FLOWLINE_TEST_NEXT: start
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/lighthouse
+          nohup node scripts/dev-test.mjs > artifacts/lighthouse/test-stack.log 2>&1 < /dev/null &
+          echo "$!" > artifacts/lighthouse/test-stack.pid
+          for attempt in $(seq 1 180); do
+            if curl --fail --silent http://localhost:3100/api/health?require=worker > /dev/null; then
+              echo "Production test stack is healthy."
+              exit 0
+            fi
+            if ! kill -0 "$(cat artifacts/lighthouse/test-stack.pid)" 2>/dev/null; then
+              cat artifacts/lighthouse/test-stack.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/lighthouse/test-stack.log
+          echo "Timed out waiting for the production test stack." >&2
+          exit 1
+
+      - name: Run Lighthouse CI (Arabic)
+        env:
+          LHCI_LOCALE: ar
+        run: npx --yes @lhci/cli@0.15.1 autorun --config=./lighthouserc.cjs
+
+      - name: Run Lighthouse CI (English)
+        env:
+          LHCI_LOCALE: en
+        run: npx --yes @lhci/cli@0.15.1 autorun --config=./lighthouserc.cjs
+
+      - name: Write Lighthouse summary
+        if: always()
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import { existsSync, readFileSync } from 'node:fs';
+          const scores = new Map();
+          for (const locale of ['ar', 'en']) {
+            const manifestPath = `artifacts/lighthouse/${locale}/manifest.json`;
+            if (!existsSync(manifestPath)) continue;
+            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+            for (const item of manifest) {
+              if (!item.jsonPath || !existsSync(item.jsonPath)) continue;
+              const report = JSON.parse(readFileSync(item.jsonPath, 'utf8'));
+              const url = new URL(report.finalUrl).pathname || '/';
+              const key = `${locale} ${url}`;
+              scores.set(key, report.categories);
+            }
+          }
+          console.log('## Lighthouse CI');
+          console.log('');
+          console.log('Category thresholds are warnings (`warn`) and do not block merges. Scores are from the latest run for each locale and route.');
+          console.log('');
+          console.log('| Locale / route | Performance | Accessibility | Best practices | SEO |');
+          console.log('| --- | ---: | ---: | ---: | ---: |');
+          const fmt = (category) => category ? `${Math.round(category.score * 100)}%` : '—';
+          for (const [key, categories] of scores) {
+            console.log(`| ${key} | ${fmt(categories.performance)} | ${fmt(categories.accessibility)} | ${fmt(categories['best-practices'])} | ${fmt(categories.seo)} |`);
+          }
+          if (!scores.size) console.log('| No report manifest was produced | — | — | — | — |');
+          console.log('');
+          console.log('Thresholds: performance ≥ 80%, accessibility ≥ 95%, best practices ≥ 90%, SEO ≥ 90%.');
+          NODE
+
+      - name: Stop production test stack
+        if: always()
+        run: pnpm stop:test
+
+      - name: Upload Lighthouse reports and stack log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: flowline-lighthouse-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/lighthouse/**
+            .lighthouseci/**
+          if-no-files-found: warn
+          retention-days: 14
