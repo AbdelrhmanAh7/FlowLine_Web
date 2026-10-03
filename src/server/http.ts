@@ -29,8 +29,11 @@ export function jsonNoStore<T>(data: T, init: ResponseInit = {}) {
   return NextResponse.json(data, { ...init, headers });
 }
 
+/** Total body-read budget, not an idle timeout. The beta ingress uses the same duration. */
+export const BODY_READ_TIMEOUT_MS = 10_000;
+
 /**
- * Reads the request body with a hard byte cap enforced WHILE streaming (Content-Length can be absent or wrong,
+ * Reads the request body with a hard byte cap and deadline WHILE streaming (Content-Length can be absent or wrong,
  * e.g. chunked uploads), then returns an equivalent Request whose body is safe to parse (formData/json).
  */
 export async function capBody(req: Request, maxBytes: number, tooLarge: HttpError): Promise<Request> {
@@ -39,24 +42,44 @@ export async function capBody(req: Request, maxBytes: number, tooLarge: HttpErro
   let size = 0;
   if (req.body) {
     const reader = req.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) {
-        await reader.cancel().catch(() => {});
-        throw tooLarge;
+    const timeout = new HttpError(408, "BODY_READ_TIMEOUT", "Request body took too long to arrive");
+    const expires = performance.now() + BODY_READ_TIMEOUT_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(timeout), BODY_READ_TIMEOUT_MS);
+    });
+    try {
+      for (;;) {
+        // Also check elapsed time when already-queued chunks keep the timer from running.
+        if (performance.now() >= expires) throw timeout;
+        const { done, value } = await Promise.race([reader.read(), deadline]);
+        if (performance.now() >= expires) throw timeout;
+        if (done) break;
+        size += value.byteLength;
+        if (size > maxBytes) throw tooLarge;
+        chunks.push(value);
       }
-      chunks.push(value);
+    } catch (error) {
+      // A tee/adapter can leave cancellation pending forever. Never let cleanup hold the response open.
+      void reader.cancel().catch(() => {});
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      reader.releaseLock();
     }
   }
   return new Request(req.url, { method: req.method, headers: req.headers, body: size ? Buffer.concat(chunks) : null });
 }
 
-export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T> {
+/** General JSON ceiling; upload routes retain their explicit content/overhead budget. */
+export const JSON_BODY_MAX_BYTES = 1024 * 1024;
+
+export async function parseBody<T>(req: Request, schema: ZodType<T>, maxBytes = JSON_BODY_MAX_BYTES): Promise<T> {
+  // Outside the JSON catch: a streaming overflow must remain 413, never BAD_JSON.
+  const capped = await capBody(req, maxBytes, new HttpError(413, "BODY_TOO_LARGE", "Request body is too large"));
   let body: unknown;
   try {
-    body = await req.json();
+    body = await capped.json();
   } catch {
     throw new HttpError(400, "BAD_JSON", "Request body must be JSON");
   }

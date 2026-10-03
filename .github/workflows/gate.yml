@@ -1,7 +1,9 @@
 name: Gate
 
 on:
+  # No `labeled` and no `paths-ignore`: every run that reports `gate` is a real evaluation (see the note on `jobs`).
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -20,43 +22,77 @@ concurrency:
   group: gate-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Jobs run in parallel, each on its own runner (own Postgres, own test stacks); the final `gate` job is the single
-# required check. Shared setup: .github/actions/setup-gate. Per-job summary and artifacts: .github/actions/gate-report.
-# Tier: full for a PR into main or a dispatch with tier=full, otherwise fast.
+# Main's ruleset requires the `gate` check (this file's final combiner job) and `docs` (docs.yml). To keep both reliable:
+# - `gate` must be reported for every code or docs change, so there is no `paths-ignore`; the `changes` job classifies the
+#   change set (scripts/ci/changed-scope.mjs) and a docs-only change skips the test jobs while `gate` still passes.
+# - GitHub counts a skipped job as passing, so no run that does nothing may ever report `gate`: there is no `labeled`
+#   trigger (a label added after a real failure would otherwise start a no-op run whose skipped `gate` masks it). The only
+#   skipped `gate` is on a draft PR, which cannot merge, and leaving draft always starts a new real run.
+# - The full tier starts only from workflow_dispatch tier=full (Actions > Gate > Run workflow, or
+#   `gh workflow run gate.yml --ref <branch> -f tier=full`); that run reports the same job names on the branch head.
+# Checks share one setup; browser jobs run in parallel on isolated runners. Shared setup/report:
+# .github/actions/{setup-gate,gate-report}. Run the full tier once just before merging; drafts allocate no runners.
 jobs:
-  static:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-static
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+  # Classifies the change set. docs-only (docs/**, artifacts/**, **/*.md outside design-reference/) skips the test jobs; anything
+  # else, an unusable file list on a push, or a manual dispatch runs them. A PR file-list API failure fails this job, and
+  # so the gate, instead of guessing. Draft PRs allocate no runner.
+  changes:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          sparse-checkout: scripts/ci
 
-      # lint, typecheck, evidence, unit and contract use no database, no browser and no fixed port.
-      - uses: ./.github/actions/setup-gate
+      - name: Classify the change set
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          files="$RUNNER_TEMP/changed-files.json"
+          case "$EVENT" in
+            pull_request)
+              gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/files?per_page=100" > "$files"
+              node scripts/ci/changed-scope.mjs < "$files"
+              ;;
+            push)
+              # The compare API returns at most 300 files, only on its first page (--paginate adds commits, not files), so
+              # changed-scope.mjs treats a result with 300 files or more as code and warns. The PR files API stops at 3000.
+              # A new branch (all-zero base) or a force-pushed base that no longer exists has no usable comparison.
+              if [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+                && gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/compare/$BEFORE...$GITHUB_SHA?per_page=100" > "$files"; then
+                node scripts/ci/changed-scope.mjs < "$files"
+              else
+                echo "::warning::No usable base commit for this push, so the test jobs run."
+                node scripts/ci/changed-scope.mjs "--assume-code=push without a usable base commit"
+              fi
+              ;;
+            *)
+              node scripts/ci/changed-scope.mjs "--assume-code=$EVENT runs the selected tier"
+              ;;
+          esac
 
-      - name: Run gate (static, unit, contract)
-        run: pnpm gate --only=static,unit,contract --out="$GATE_OUT"
-
-      - name: Report
-        if: always()
-        uses: ./.github/actions/gate-report
-        with:
-          job: static
-          out: ${{ env.GATE_OUT }}
-          tier: ${{ env.GATE_TIER }}
-
-  integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  checks:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     env:
-      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-integration
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-checks
+      GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -65,26 +101,28 @@ jobs:
           postgres: "true"
           sandbox-image: "true"
 
-      - name: Run gate (integration)
-        run: pnpm gate --only=integration --out="$GATE_OUT"
+      - name: Run gate (static, unit, contract, integration)
+        run: pnpm gate --only=static,unit,contract,integration --out="$GATE_OUT"
 
       - name: Report
         if: always()
         uses: ./.github/actions/gate-report
         with:
-          job: integration
+          job: checks
           out: ${{ env.GATE_OUT }}
           tier: ${{ env.GATE_TIER }}
 
   chromium:
-    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+      GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -107,15 +145,16 @@ jobs:
 
   firefox:
     # Full tier only; skipped by design on the fast tier.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
-    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && github.event_name == 'workflow_dispatch' && inputs.tier == 'full' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-firefox
       GATE_TIER: full
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -137,15 +176,16 @@ jobs:
 
   webkit:
     # Full tier only; skipped by design on the fast tier.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
-    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && github.event_name == 'workflow_dispatch' && inputs.tier == 'full' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-webkit
       GATE_TIER: full
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -165,17 +205,20 @@ jobs:
           out: ${{ env.GATE_OUT }}
           tier: ${{ env.GATE_TIER }}
 
-  # The single required check: every job must have succeeded; only firefox and webkit may be skipped, and only on
-  # the fast tier.
+  # The single required check (`gate`). Runs for every non-draft run, even when jobs failed or were skipped (always()).
+  # PASS only when `changes` succeeded and either (a) code=false and every test job was skipped by design (docs-only), or
+  # (b) code=true and every test job succeeded; firefox/webkit may be skipped only on the fast tier. A failed, cancelled or
+  # skipped `changes`, or any unexpected result, fails it. Draft PRs do not run it (they cannot merge).
   gate:
-    needs: [static, integration, chromium, firefox, webkit]
-    if: always()
-    runs-on: ubuntu-latest
+    needs: [changes, checks, chromium, firefox, webkit]
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
-      R_STATIC: ${{ needs.static.result }}
-      R_INTEGRATION: ${{ needs.integration.result }}
+      GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
+      R_CHANGES: ${{ needs.changes.result }}
+      R_CODE: ${{ needs.changes.outputs.code }}
+      R_CHECKS: ${{ needs.checks.result }}
       R_CHROMIUM: ${{ needs.chromium.result }}
       R_FIREFOX: ${{ needs.firefox.result }}
       R_WEBKIT: ${{ needs.webkit.result }}
@@ -188,11 +231,20 @@ jobs:
             echo
             echo "| Job | Result |"
             echo "| --- | --- |"
-            for pair in "static:$R_STATIC" "integration:$R_INTEGRATION" "chromium:$R_CHROMIUM" "firefox:$R_FIREFOX" "webkit:$R_WEBKIT"; do
+            echo "| changes | $R_CHANGES (code=${R_CODE:-none}) |"
+            if [ "$R_CHANGES" != "success" ]; then
+              ok=0
+            elif [ "$R_CODE" != "true" ] && [ "$R_CODE" != "false" ]; then
+              ok=0
+            fi
+            for pair in "checks:$R_CHECKS" "chromium:$R_CHROMIUM" "firefox:$R_FIREFOX" "webkit:$R_WEBKIT"; do
               name="${pair%%:*}"
               result="${pair#*:}"
               note=""
-              if [ "$result" = "success" ]; then
+              if [ "$R_CODE" = "false" ]; then
+                # Docs-only: test jobs are skipped by design; one that ran anyway is not trusted as a pass.
+                if [ "$result" = "skipped" ]; then note=" (docs-only: skipped by design)"; else ok=0; fi
+              elif [ "$result" = "success" ]; then
                 :
               elif [ "$result" = "skipped" ] && [ "$GATE_TIER" = "fast" ] && { [ "$name" = "firefox" ] || [ "$name" = "webkit" ]; }; then
                 note=" (fast tier: skipped by design)"
@@ -202,6 +254,10 @@ jobs:
               echo "| $name | $result$note |"
             done
             echo
+            if [ "$R_CHANGES" = "success" ] && [ "$R_CODE" = "false" ]; then
+              echo "docs-only change: test jobs skipped by design"
+              echo
+            fi
             if [ "$ok" = 1 ]; then echo "Result: **PASS**"; else echo "Result: **FAIL**"; fi
           } >> "$GITHUB_STEP_SUMMARY"
           [ "$ok" = 1 ]
