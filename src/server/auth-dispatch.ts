@@ -7,6 +7,8 @@ import { markPlatformSecretVerified, resolvePlatformCredential } from "./platfor
 import { activeZitadelConfig } from "./zitadel-config";
 import type { ZitadelApp } from "./zitadel-auth";
 import { zitadelLocalUrl } from "./zitadel-url";
+import { capAuthBody } from "./public-body";
+import { HttpError } from "./http";
 
 /**
  * Sign-in dispatch for better-auth (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -171,6 +173,14 @@ function withNoReferrer(res: Response): Response {
 
 /** Handles one /api/auth/* request with the right better-auth instance. */
 export async function dispatchAuth(request: Request, method: "GET" | "POST"): Promise<Response> {
+  if (method === "POST") {
+    try {
+      request = await capAuthBody(request);
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return Response.json({ code: error.code }, { status: error.status, headers: { "cache-control": "no-store" } });
+    }
+  }
   const path = new URL(request.url).pathname.replace(/^\/api\/auth/, "");
   const callback = /^\/callback\/([a-z]+)$/.exec(path);
   if (callback) {

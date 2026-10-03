@@ -9,7 +9,7 @@ import { NodeError } from "@/engine/execute";
  * code and the JSON input via stdin. If Docker isn't available the node reports
  * itself unavailable; user code is NEVER executed in the server/worker process.
  */
-export const SANDBOX_IMAGE = process.env.FLOWLINE_CODE_IMAGE ?? "node:22-alpine";
+export const SANDBOX_IMAGE = process.env.FLOWLINE_CODE_IMAGE ?? "node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402";
 export const CODE_MEMORY_MB = 128;
 export const CODE_MAX_OUTPUT = 256 * 1024;
 

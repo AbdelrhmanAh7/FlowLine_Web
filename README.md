@@ -64,7 +64,7 @@ Never presented as live-verified: nothing above claims a real provider, OAuth ex
 
 ## Requirements
 
-- Node.js ≥ 22 (developed on 25.6) and pnpm 10 (`npm i -g pnpm@10`; Node 25 no longer ships corepack)
+- Node.js 22 LTS and pnpm 10 (`npm i -g pnpm@10`); CI and the release image use the same supported Node major.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - No provider credentials in `.env`: AI keys are added per workspace (Settings → AI Providers); OAuth apps, email and
   Paddle billing are entered through `/admin` after bootstrap (`scripts/admin/bootstrap.mts`).
@@ -134,6 +134,8 @@ test stack and a manually run production build, not a pushed release image).
 
 ## Security notes
 
+- Request bodies have layered ingress byte/read-time limits and application streaming guards; see
+  [`REQUEST_BODY_LIMITS.md`](docs/security/REQUEST_BODY_LIMITS.md) for route budgets and the unverified hosting boundary.
 - Every server access goes through `src/server/access.ts`: non-members get 404, and missing capabilities get 403.
 - Credentials use a v2 encryption envelope (per-secret data key, AES-256-GCM with AAD, separate key rings for
   platform and workspace secrets); API keys are stored hashed and shown once (`docs/security/CREDENTIALS_DESIGN.md`).

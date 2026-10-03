@@ -135,8 +135,6 @@ function guardedLookup(port: number, host: string) {
   };
 }
 
-const CREDENTIAL_HEADERS = /^(authorization|proxy-authorization|cookie|x-api-key|api-key|x-auth-token|private-token|x-snowflake-authorization-token-type)$/i;
-
 export interface SafeFetchOptions {
   method?: string;
   headers?: Record<string, string>;
@@ -186,17 +184,19 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
         if (!loc) throw new EgressError("EGRESS_INVALID_URL", "Redirect without Location");
         if (hop >= maxRedirects) throw new EgressError("EGRESS_TOO_MANY_REDIRECTS", `More than ${maxRedirects} redirects`);
         const next = checkUrl(new URL(loc, url));
-        const keepsBody = body !== null && (res.status === 307 || res.status === 308);
-        // A body (token exchanges carry client secrets / refresh tokens in it) never follows a redirect to another
-        // origin. Stripping it would silently change the request, so the redirect is refused instead.
-        if (next.origin !== url.origin && keepsBody) throw new EgressError("EGRESS_REDIRECT_REFUSED", `Refused a ${res.status} redirect to a different origin for a request with a body`);
-        // Credentials never follow a redirect to a different origin.
-        if (next.origin !== url.origin && reqHeaders) reqHeaders = Object.fromEntries(Object.entries(reqHeaders).filter(([k]) => !CREDENTIAL_HEADERS.test(k)));
-        url = next;
+        // Determine the actual redirected request first: PUT/PATCH retain bodies on 301/302 too.
         if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === "POST")) {
           method = "GET";
           body = null;
+          if (reqHeaders) reqHeaders = Object.fromEntries(Object.entries(reqHeaders).filter(([k]) => !/^(content-type|content-length|transfer-encoding)$/i.test(k)));
         }
+        const keepsBody = body !== null;
+        // A body (token exchanges carry client secrets / refresh tokens in it) never follows a redirect to another
+        // origin. Stripping it would silently change the request, so the redirect is refused instead.
+        if (next.origin !== url.origin && keepsBody) throw new EgressError("EGRESS_REDIRECT_REFUSED", `Refused a ${res.status} redirect to a different origin for a request with a body`);
+        // Any user/provider header can contain credentials. No supplied headers cross origins.
+        if (next.origin !== url.origin) reqHeaders = undefined;
+        url = next;
         continue;
       }
       const chunks: Uint8Array[] = [];
