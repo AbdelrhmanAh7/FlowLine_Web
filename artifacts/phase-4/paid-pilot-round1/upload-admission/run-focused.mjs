@@ -1,7 +1,7 @@
 // Local-only focused verifier: cached image, generated credentials, uniquely owned disposable container.
 // Never loads .env files, starts a browser/web service, or calls a real provider.
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -11,14 +11,20 @@ const attempt = Date.now();
 const container = `flowline-pilot-upload-admission-${attempt}`;
 const password = randomBytes(24).toString("hex");
 const command = (bin, args, opts = {}) => spawnSync(bin, args, { cwd, encoding: "utf8", ...opts });
-const checked = (bin, args, opts) => {
+const checked = (bin, args, opts, trim = true) => {
   const result = command(bin, args, opts);
   if (result.status !== 0) throw new Error(`${bin} failed (${result.status}): ${result.stderr || result.stdout}`);
-  return result.stdout.trim();
+  return trim ? result.stdout.trim() : result.stdout;
 };
 const result = { baseSha: "a9f7597c90b98128a1cebf46a949810e0586c31d", scope: "isolated synthetic Postgres integration; no external providers", container, database: "flowline_test_pilotupload", tests: [], cleanup: false };
 let created = false;
 try {
+  result.testedSha = checked("git", ["rev-parse", "HEAD"]);
+  const status = checked("git", ["status", "--porcelain", "--untracked-files=all"]);
+  result.dirty = status.length > 0;
+  result.trackedDiffSha256 = createHash("sha256").update(checked("git", ["diff", "--binary", "HEAD"], undefined, false)).digest("hex");
+  // A tracked diff digest cannot identify untracked source or migrations.
+  if (status.split("\n").some(line => /^\?\? (src|tests|worker|scripts|drizzle)\//.test(line))) throw new Error("Untracked source/migration files prevent source provenance; track them before running");
   result.image = checked("docker", ["image", "inspect", "postgres:17.6-alpine", "--format", "{{.Id}}"]);
   result.containerId = checked("docker", ["run", "-d", "--pull=never", "--name", container, "--label", "flowline.proof=pilot-upload-admission", "-e", `POSTGRES_PASSWORD=${password}`, "-e", "POSTGRES_USER=pilot_upload", "-e", "POSTGRES_DB=flowline_test_pilotupload", "-p", "127.0.0.1::5432", "postgres:17.6-alpine"]);
   created = true;
@@ -39,7 +45,7 @@ try {
     GOOGLE_OAUTH_CLIENT_ID: "pilot-upload-admission-google-client", GOOGLE_OAUTH_CLIENT_SECRET: "pilot-upload-admission-google-synthetic-secret",
   };
   for (const key of ["ZITADEL_ISSUER", "ZITADEL_CLIENT_ID", "ZITADEL_CLIENT_SECRET"]) delete env[key];
-  const args = ["node_modules/vitest/vitest.mjs", "run", "--project", "integration", "tests/integration/pilot-upload-admission.test.ts", "tests/integration/p3-knowledge.test.ts", "--fileParallelism=false"];
+  const args = ["node_modules/vitest/vitest.mjs", "run", "--project", "integration", "tests/integration/pilot-upload-admission.test.ts", "tests/integration/retained-file-locking.test.ts", "tests/integration/p3-knowledge.test.ts", "--fileParallelism=false"];
   const run = command(process.execPath, args, { env });
   const output = `${run.stdout ?? ""}${run.stderr ?? ""}`.replaceAll(password, "[generated credential redacted]");
   writeFileSync(`${evidence}integration-${attempt}.log`, output);

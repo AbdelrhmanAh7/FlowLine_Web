@@ -5,7 +5,7 @@ import { extractKnowledge, KnowledgeExtractionError, KNOWLEDGE_MAX_CHUNKS } from
 import type { CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { HttpError, notFound } from "./http";
-import { insertRetainedFile } from "./retained-files";
+import { insertRetainedFile, lockRetainedFileAccounting } from "./retained-files";
 
 /**
  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
@@ -90,6 +90,7 @@ export async function requireSource(db: Db, workspaceId: string, sourceId: strin
 export async function deleteSource(db: Db, user: CurrentUser, workspaceId: string, sourceId: string) {
   const s = await requireSource(db, workspaceId, sourceId);
   await db.transaction(async (tx) => {
+    await lockRetainedFileAccounting(tx);
     await tx.update(schema.knowledgeSource).set({ deletedAt: new Date(), enabled: false }).where(eq(schema.knowledgeSource.id, s.id));
     await tx.delete(schema.knowledgeChunk).where(eq(schema.knowledgeChunk.sourceId, s.id));
     if (s.fileId) await tx.delete(schema.fileObject).where(eq(schema.fileObject.id, s.fileId));

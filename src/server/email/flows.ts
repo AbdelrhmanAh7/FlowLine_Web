@@ -4,6 +4,7 @@ import { getAdapter } from "@/billing/service";
 import { db, schema } from "@/db";
 import { randomToken, sha256Hex } from "@/server/crypto";
 import { HttpError } from "@/server/http";
+import { lockRetainedFileAccounting } from "@/server/retained-files";
 import { sendEmail } from "./index";
 import { safePath } from "./redirect";
 import { renderEmail, requestLocale, type TemplateKind } from "./templates";
@@ -122,6 +123,9 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
   return db.transaction(async (tx) => {
+    // Deletion cascades into retained files. Accounting must precede even the
+    // token lock, and especially the workspace locks below (including shared W).
+    if (purpose === "delete") await lockRetainedFileAccounting(tx);
     const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
