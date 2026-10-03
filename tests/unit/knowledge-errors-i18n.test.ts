@@ -18,6 +18,9 @@ describe("resource limit UI messages", () => {
     const error = new ApiError(413, "BODY_TOO_LARGE", "Request body is too large");
     expect(apiErrorMessage(arabic, error)).toBe(ar.errors.BODY_TOO_LARGE);
     expect(apiErrorMessage(english, error)).toBe(en.errors.BODY_TOO_LARGE);
+    const timeout = new ApiError(408, "BODY_READ_TIMEOUT", "Request body took too long to arrive");
+    expect(apiErrorMessage(arabic, timeout)).toBe(ar.errors.BODY_READ_TIMEOUT);
+    expect(apiErrorMessage(english, timeout)).toBe(en.errors.BODY_READ_TIMEOUT);
     expect(knowledgeErrorText(arabic, "legacy diagnostic")).toBe("legacy diagnostic");
   });
   it("emits a stable code from actual limited extraction", async () => {

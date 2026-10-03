@@ -35,6 +35,12 @@ Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` a
 
 Provider credentials use uncontrolled `SecretInput` plus `takeSecret`; never store them in controlled form state, drafts, URLs, query caches or evidence. Follow `docs/security/CREDENTIALS_DESIGN.md`. Account login/recovery forms have their existing dedicated handling; do not generalize that exception to provider secrets.
 
+Use `parseBody`/`capBody` before parsing untrusted bodies. The shared reader has a 10-second total read deadline and byte caps; deploy/beta Caddy applies the earlier socket deadline and route caps. Keep new route exceptions aligned with [REQUEST_BODY_LIMITS.md](security/REQUEST_BODY_LIMITS.md), which documents direct-Next.js and hosting limitations. Focused checks (one worker, no DB/browser):
+
+```powershell
+pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/http-capbody.test.ts tests/unit/proxy-body-limits.test.ts tests/unit/public-body-budget.test.ts tests/unit/public-route-body-budget.test.ts tests/unit/knowledge-errors-i18n.test.ts tests/unit/platform-units.test.ts --maxWorkers 1 --no-file-parallelism
+```
+
 Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. Flowline's owner configures platform authentication through the complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` environment tuple; never expose it to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
 
 ## Verification and handoff

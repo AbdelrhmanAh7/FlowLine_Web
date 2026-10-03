@@ -1,10 +1,56 @@
+# Socket-level upload deadline, including stalled/chunked bodies, before Next.js.
+# Keep read_body aligned with BODY_READ_TIMEOUT_MS in src/server/http.ts.
+{
+	servers {
+		# Caddy 2.10 does not pass these read deadlines to its HTTP/3 server.
+		protocols h1 h2
+		timeouts {
+			read_header 5s
+			read_body 10s
+		}
+	}
+}
+
+# Declare port 80 so it also receives servers.timeouts; Caddy's implicit redirect
+# server is created after global server options are applied.
+http://{$BETA_DOMAIN} {
+	redir https://{$BETA_DOMAIN}{uri} 308
+}
+
 # Automatic HTTPS (Let's Encrypt) for the beta domain. Only this proxy is public.
 {$BETA_DOMAIN} {
 	encode zstd gzip
 
-	# Preserve the explicit 5 MiB upload + multipart budget; application routes use tighter caps.
-	request_body {
-		max_size 6MiB
+	# Install byte limits before reverse_proxy reads/forwards the body (also for chunked uploads).
+	# Limits layer by minimum. Only these two exact collection routes escape the 1 MiB default;
+	# knowledge JSON text submissions retain the same budget as multipart uploads.
+	@ordinary_body not path_regexp ^/api/workspaces/[^/]+/(files|knowledge)/?$
+	request_body @ordinary_body {
+		max_size 1MiB
+	}
+	@upload_body path_regexp ^/api/workspaces/[^/]+/(files|knowledge)/?$
+	request_body @upload_body {
+		max_size 5308416
+	}
+	@public_body path_regexp ^/api/(email|beta/check)/?$
+	request_body @public_body {
+		max_size 16KiB
+	}
+	@auth_body path_regexp ^/api/auth(/|$)
+	request_body @auth_body {
+		max_size 64KiB
+	}
+	@webhook_body path_regexp ^/api/(hooks/[^/]+|billing/webhook)/?$
+	request_body @webhook_body {
+		max_size 256KiB
+	}
+	@platform_body path_regexp ^/api/platform(/|$)
+	request_body @platform_body {
+		max_size 16KiB
+	}
+	@credential_body path_regexp ^/api/(platform/setup(/|$)|workspaces/[^/]+/oauth-apps/[^/]+/?$)
+	request_body @credential_body {
+		max_size 8KiB
 	}
 
 	# Internal-only endpoints are never exposed through the proxy.

@@ -134,6 +134,8 @@ test stack and a manually run production build, not a pushed release image).
 
 ## Security notes
 
+- Request bodies have layered ingress byte/read-time limits and application streaming guards; see
+  [`REQUEST_BODY_LIMITS.md`](docs/security/REQUEST_BODY_LIMITS.md) for route budgets and the unverified hosting boundary.
 - Every server access goes through `src/server/access.ts`: non-members get 404, and missing capabilities get 403.
 - Credentials use a v2 encryption envelope (per-secret data key, AES-256-GCM with AAD, separate key rings for
   platform and workspace secrets); API keys are stored hashed and shown once (`docs/security/CREDENTIALS_DESIGN.md`).

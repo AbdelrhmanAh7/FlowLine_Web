@@ -1,5 +1,7 @@
 # Request and knowledge parsing resource controls
 
+The original test record below is historical. The proxy/deadline follow-up on base `a9f7597` is recorded separately in [proxy-body-limits.md](proxy-body-limits.md), with the current [layered request policy](../../../docs/security/REQUEST_BODY_LIMITS.md).
+
 - Base/tested HEAD: `9641ad1e684cad7b84bd2385751ea19b0a9d4060`, branch `codex/pilot-security-resource-round1`. Tested source was an uncommitted dirty diff, no new candidate SHA claimed.
 - M4 source: shared JSON parser ceiling 1 MiB, email/beta JSON ceiling 16 KiB, every auth POST ceiling 64 KiB before cloning/Better Auth parsing, shared trusted `X-Real-IP` admission 60 requests/minute before expensive parsing, beta proxy ceiling 6 MiB preserving upload overhead. Admission deliberately ignores untrusted forwarding chains; absent/invalid proxy identity still gets byte caps but has no per-IP admission, so approved proxy isolation remains required.
 - M5 partial source: knowledge extractor aborts CSV above 2,000 rows, 200 columns, or 4,000 characters of expanded row text. JSON depth is checked before parse (64 levels); compact stringify avoids indentation amplification; all formats stop constructing chunks at 2,000 rather than materializing arbitrarily many pieces.
@@ -11,7 +13,7 @@
 
 ## Remaining findings
 
-M4 remains **PARTIAL**: body read deadlines and deployed trusted-proxy/no-direct-web exposure must be validated; some authenticated custom JSON readers do not use the shared parser (the proxy ceiling bounds the approved deployment path). The proxy syntax is based on [Caddy request_body documentation](https://caddyserver.com/docs/caddyfile/directives/request_body), not an executed proxy acceptance check.
+M4 remains **PARTIAL for deployment verification**: the follow-up adds Caddy route caps and socket read deadlines plus the shared `capBody` deadline. Some authenticated custom JSON readers still rely on ingress. Caddy runtime behavior, deployed trusted-proxy/no-direct-web exposure and any provider/tunnel client deadlines remain unverified. The old blanket 6 MiB proxy ceiling above describes the original run only; see [proxy-body-limits.md](proxy-body-limits.md) for the follow-up evidence and outstanding acceptance checks.
 
 M5 remains **PARTIAL**: no atomic aggregate workspace/installation storage reservations, shared upload/queue concurrency quotas, retained-source accounting or dedicated parser CPU/heap isolation. CSV/JSON still run on the worker with a 5 MiB admitted file; source/queue starvation needs that subsequent work.
 
