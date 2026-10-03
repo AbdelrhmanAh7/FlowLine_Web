@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { GET as authConfigGET } from "@/app/api/auth-config/route";
 import { db, schema } from "@/db";
 import { currentSnapshot, instanceForCallback } from "@/server/auth-dispatch";
@@ -7,6 +7,7 @@ import { sha256Hex } from "@/server/crypto";
 import { revokePlatformSecret, platformCredentialStatus } from "@/server/platform-secrets";
 import { seedPlatformCredential, unseedPlatformCredential } from "../fixtures/platform-seed";
 import { closeDb } from "./helpers";
+import * as zitadelConfig from "@/server/zitadel-config";
 
 const SYSTEM = { userId: null, label: "zitadel-test", assurance: "system" as const };
 const issuer = "https://test-instance.zitadel.cloud";
@@ -40,6 +41,14 @@ describe("platform ZITADEL sign-in availability", () => {
     await db.insert(schema.signinAttempt).values({ stateHash: sha256Hex(state), provider: "zitadel", revision: app.revision, secretId: app.id, expiresAt: new Date(Date.now() + 60_000) });
     await db.insert(schema.verification).values({ id: crypto.randomUUID(), identifier: `signin-issuer:${sha256Hex(state)}`, value: JSON.stringify([issuer, 1, "12345@tenant"]), expiresAt: new Date(Date.now() + 60_000) });
     expect((await instanceForCallback("zitadel", state))?.revision).toBe(app.revision);
+    const originalConfig = (await zitadelConfig.activeZitadelConfig())!;
+    for (const mutation of [{ issuer: "https://replacement.zitadel.cloud" }, { issuerRevision: 2 }, { clientId: "replacement-client" }]) {
+      const lookup = vi.spyOn(zitadelConfig, "activeZitadelConfig")
+        .mockResolvedValueOnce(originalConfig)
+        .mockResolvedValueOnce({ ...originalConfig, ...mutation });
+      try { expect(await instanceForCallback("zitadel", state)).toBeNull(); }
+      finally { lookup.mockRestore(); }
+    }
     await db.update(schema.platformSetting).set({ value: "https://replacement.zitadel.cloud", revision: 2 }).where(eq(schema.platformSetting.key, "signin.zitadel.issuer"));
     expect(await instanceForCallback("zitadel", state)).toBeNull();
     await db.update(schema.platformSetting).set({ value: issuer, revision: 2 }).where(eq(schema.platformSetting.key, "signin.zitadel.issuer"));

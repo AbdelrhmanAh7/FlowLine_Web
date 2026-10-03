@@ -129,6 +129,7 @@ export async function instanceForCallback(provider: string, state: string | null
   let zitadel = snap.zitadel;
   if (provider === "zitadel") {
     if (!zitadel) return null;
+    if (zitadel.issuer !== app.issuer || snap.zitadelIssuerRevision !== app.issuerRevision || zitadel.clientId !== app.clientId) return null;
     zitadel = { ...zitadel, clientSecret: secret };
   } else social[provider] = { clientId: app.clientId, clientSecret: secret };
   const key = `${snap.key}|callback:${keyPart(provider, app.id, attempt.revision)}`;

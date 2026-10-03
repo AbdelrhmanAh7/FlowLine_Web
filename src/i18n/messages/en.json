@@ -566,7 +566,7 @@
     "ssoMailboxBody": "Verify ownership using a link Flowline sends to your account email before linking this provider.",
     "ssoMailboxSent": "We sent a verification link to your account email. Open it in this browser, then return to confirm the link.",
     "ssoMailboxVerify": "Send email verification link",
-    "ssoMailboxRefresh": "I verified my email ? refresh",
+    "ssoMailboxRefresh": "I verified my email — refresh",
     "ssoMailboxRequired": "Verify email ownership using the Flowline link first.",
     "twoFactorTitle": "Two-step verification",
     "twoFactorBody": "Enter the 6-digit code from your authenticator app.",

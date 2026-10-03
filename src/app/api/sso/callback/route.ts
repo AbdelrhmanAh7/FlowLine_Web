@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const bound = req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(`${SSO_STATE_COOKIE}=`))?.slice(SSO_STATE_COOKIE.length + 1);
   if (!bound || bound !== state) return fail("This sign-in was started in a different browser — start again");
   try {
-    const session = await auth.api.getSession({ headers: req.headers }).catch(() => null);
+    const session = await auth.api.getSession({ headers: req.headers });
     const result = await completeSso({ state, code, sessionToken: session?.session.token });
     if (result.configurationVerified) {
       const res = NextResponse.redirect(`${base}/w/${result.slug}/settings?tab=sso`);

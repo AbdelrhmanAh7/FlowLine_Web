@@ -9,7 +9,7 @@ import { HttpError } from "./http";
 import { checkRate } from "./rate-limit";
 import { verifyTotp } from "./platform-access";
 import { ssoProviderId } from "./sso";
-import { issueAccountToken } from "./email/flows";
+import { deliverAccountToken, prepareAccountToken } from "./email/flows";
 
 export const SSO_LINK_COOKIE = "fl_sso_link";
 interface LinkIntent {
@@ -57,12 +57,19 @@ export async function ssoLinkDetails(token: string, sessionToken: string) {
 export async function sendSsoLinkVerification(token: string, sessionToken: string, req?: Request) {
   const { intent, user } = await ssoLinkDetails(token, sessionToken);
   await requireWorkspace(user, intent.workspaceId, "viewer");
-  return db.transaction(async (tx) => {
-    const [pending] = await tx.select().from(schema.verification).where(and(eq(schema.verification.identifier, identifier(token)), gt(schema.verification.expiresAt, new Date()))).for("update");
-    if (!pending || pending.value !== JSON.stringify(intent)) throw invalid();
-    const proof = await issueAccountToken("verify", user, req, { callbackURL: "/sso/link" });
-    await tx.update(schema.verification).set({ value: JSON.stringify({ ...intent, mailboxTokenId: proof.id }) }).where(eq(schema.verification.id, pending.id));
-  });
+  const proof = await prepareAccountToken("verify", user, req, { callbackURL: "/sso/link" });
+  try {
+    await db.transaction(async (tx) => {
+      const [pending] = await tx.select().from(schema.verification).where(and(eq(schema.verification.identifier, identifier(token)), gt(schema.verification.expiresAt, new Date()))).for("update");
+      if (!pending || pending.value !== JSON.stringify(intent)) throw invalid();
+      await tx.update(schema.verification).set({ value: JSON.stringify({ ...intent, mailboxTokenId: proof.id }) }).where(eq(schema.verification.id, pending.id));
+    });
+  } catch (error) {
+    // The attachment transaction has rolled back; cleanup must not be rolled back with it.
+    await db.delete(schema.emailToken).where(eq(schema.emailToken.id, proof.id));
+    throw error;
+  }
+  await deliverAccountToken(proof, req);
 }
 
 /** Only called by the explicit, exact-origin + CSRF-protected POST confirmation. */
