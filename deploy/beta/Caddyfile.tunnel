@@ -7,6 +7,10 @@
 # TLS is terminated at Cloudflare; never use the direct-ingress Caddyfile for this HTTP origin.
 http://{$BETA_DOMAIN}:8080 {
 	encode zstd gzip
+	# Allow the supported 5 MiB upload plus multipart overhead; bound request admission.
+	request_body {
+		max_size 6MiB
+	}
 	@internal path /api/test/* /api/debug/* /api/ops/* /_next/webpack-hmr*
 	respond @internal 404
 	@missingVisitorIp not header CF-Connecting-IP *
