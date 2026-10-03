@@ -1,0 +1,207 @@
+{
+  "observedAt": "2026-10-03T02:57:03.714Z",
+  "main": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "coordinatorCheckpoint": "186504708ec7595325984e055c7c3d8b75182670",
+  "combinedBackup": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+  "testedImplementation": "4a907b84c630388befe77044bf18c318826737ed",
+  "combinedSourceTreeUnchangedByEvidenceCommit": true,
+  "candidates": [
+    {
+      "branch": "paid-pilot-lighthouse",
+      "recordedSource": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "remoteHead": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5"
+    },
+    {
+      "branch": "paid-pilot-p3",
+      "recordedSource": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "remoteHead": "c1ba48220fca07da7d9b0be3844732c14e06df20"
+    },
+    {
+      "branch": "paid-pilot-copilot",
+      "recordedSource": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "remoteHead": "0c58c4d39a353957973b12036fa6e0ae415799f1"
+    },
+    {
+      "branch": "paid-pilot-hubspot",
+      "recordedSource": "d5fa51e33fe807a075138e2660074335412df723",
+      "remoteHead": "d5fa51e33fe807a075138e2660074335412df723"
+    },
+    {
+      "branch": "codex/pilot-security-report-round1",
+      "recordedSource": "bc46dc257e28602e76f82d71b791ade401306643",
+      "remoteHead": "a9276f663a2984531ae4f4a76379f36eeff8ce18"
+    },
+    {
+      "branch": "codex/pilot-security-runtime-round1",
+      "recordedSource": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "remoteHead": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352"
+    },
+    {
+      "branch": "codex/pilot-security-deps-round1",
+      "recordedSource": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "remoteHead": "dd840db6bf6f9329f61007152b3bb500b4d66b75"
+    },
+    {
+      "branch": "codex/pilot-security-redact-round1",
+      "recordedSource": "09be0b3641a139409fad242e9617eec9b0db1975",
+      "remoteHead": "09be0b3641a139409fad242e9617eec9b0db1975"
+    },
+    {
+      "branch": "codex/pilot-sandbox-env-round1",
+      "recordedSource": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "remoteHead": "571d1c62d83d7f01461739ad1ed4e830c04d7796"
+    },
+    {
+      "branch": "codex/pilot-security-resource-round1",
+      "recordedSource": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "remoteHead": "a9f7597c90b98128a1cebf46a949810e0586c31d"
+    },
+    {
+      "branch": "codex/paid-pilot-upload-admission-20261003",
+      "recordedSource": "360078e9d3357267711f006888b578f5a0c6c434",
+      "remoteHead": "360078e9d3357267711f006888b578f5a0c6c434"
+    },
+    {
+      "branch": "codex/paid-pilot-index-admission-20261003",
+      "recordedSource": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "remoteHead": "e437af28b177f9998bca582de7b9752ab7e8429e"
+    },
+    {
+      "branch": "codex/pilot-retained-count-round1",
+      "recordedSource": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "remoteHead": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe"
+    },
+    {
+      "branch": "codex/paid-pilot-chunk-admission-20261003",
+      "recordedSource": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "remoteHead": "c6739566558981c0b59d5a3564603ef651c4b0bd"
+    },
+    {
+      "branch": "codex/paid-pilot-body-deadline-20261003",
+      "recordedSource": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "remoteHead": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e"
+    },
+    {
+      "branch": "codex/pilot-security-auth-round1",
+      "recordedSource": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "remoteHead": "08355ae423aa91c7d2b6f106878603d3c2f98ecb"
+    },
+    {
+      "branch": "codex/paid-pilot-federated-mfa-20261003",
+      "recordedSource": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "remoteHead": "2c85f058c2bf382ee861a2c2007af129705c62c6"
+    },
+    {
+      "branch": "codex/paid-pilot-monitor-20261003",
+      "recordedSource": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "remoteHead": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797"
+    },
+    {
+      "branch": "codex/paid-pilot-safe-retry-main-20261003",
+      "recordedSource": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "remoteHead": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1"
+    },
+    {
+      "branch": "paid-pilot-tool-roster",
+      "recordedSource": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "remoteHead": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef"
+    },
+    {
+      "branch": "codex/paid-pilot-product-20261003",
+      "recordedSource": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "remoteHead": "6bfbbe7938854ed05340f971c787d8993afcacc3"
+    },
+    {
+      "branch": "codex/paid-pilot-deploy-align-20261003",
+      "recordedSource": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "remoteHead": "f1921e58c5115a8fd3939587db9a713e546f6c04"
+    },
+    {
+      "branch": "codex/paid-pilot-combined-20261003",
+      "recordedSource": "4a907b84c630388befe77044bf18c318826737ed",
+      "remoteHead": "de79ab296e772e5f285b33c4cd0ac9056b73f250"
+    },
+    {
+      "branch": "codex/paid-pilot-safe-retry-20261003",
+      "recordedSource": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "remoteHead": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82"
+    },
+    {
+      "branch": "codex/paid-pilot-round1-20261003",
+      "recordedSource": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+      "remoteHead": "186504708ec7595325984e055c7c3d8b75182670"
+    }
+  ],
+  "publication": "Only reviewed non-main branch backups were pushed by this lead session. No PR, merge, workflow dispatch or CodeRabbit review requested by this lead session.",
+  "concurrentRemoteActivity": {
+    "unrequestedByThisLead": true,
+    "prs": [
+      {
+        "number": 12,
+        "base": "main",
+        "head": "a9276f663a2984531ae4f4a76379f36eeff8ce18"
+      },
+      {
+        "number": 13,
+        "base": "main",
+        "head": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352"
+      }
+    ],
+    "gateRuns": [
+      {
+        "id": 37090125829,
+        "head": "bc46dc257e28602e76f82d71b791ade401306643",
+        "conclusion": "cancelled"
+      },
+      {
+        "id": 37090561314,
+        "head": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+        "conclusion": "success",
+        "jobs": [
+          "static",
+          "integration",
+          "chromium",
+          "firefox",
+          "webkit",
+          "gate"
+        ]
+      },
+      {
+        "id": 37090636510,
+        "head": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+        "conclusion": "success",
+        "jobs": [
+          "static",
+          "integration",
+          "chromium",
+          "firefox",
+          "webkit",
+          "gate"
+        ]
+      }
+    ],
+    "limitations": "Observed through read-only API. Actor login is owner account; originating session, cost entitlement, CodeRabbit and owner acceptance are not proven. Preserve advanced report ref; never force-reset it."
+  },
+  "cleanup": {
+    "pnpmStopTestExit": 0,
+    "ownedEmptyCwdRemoved": true,
+    "existingEnvFilesRead": false,
+    "checkedPorts": [
+      3100,
+      4010,
+      4011,
+      38991,
+      38992,
+      38993
+    ],
+    "listeners": 0,
+    "testLaunchers": 0,
+    "ownedVerificationAndRecoveryContainersRemoved": true,
+    "preservedInheritedContainers": [
+      "mizano-redis",
+      "mizano-postgres",
+      "flowline-db-1"
+    ]
+  },
+  "verdict": "NOT READY; round report, not FINAL"
+}

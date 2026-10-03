@@ -2,13 +2,13 @@
 
 Started **2026-10-03 01:13 UTC**; refreshed **02:46 UTC**, before the **02:53 UTC** refresh deadline. Hard stop **03:03 UTC**. Binding authority: [PAID_PILOT_BRIEF.md](PAID_PILOT_BRIEF.md). Non-interactive: [owner steps remain BLOCKED](OWNER_ACTIONS.md).
 
-**NOT READY for the first paid pilot. Round report, not FINAL:** internal acceptance work remains open as well as owner dependencies. Main is unchanged at `9641ad1e684cad7b84bd2385751ea19b0a9d4060`. No production deployment, DNS change, live payment, invitations or paid API traffic occurred.
+**NOT READY for the first paid pilot. Round report, not FINAL:** internal acceptance work remains open as well as owner dependencies. Main is unchanged at `9641ad1e684cad7b84bd2385751ea19b0a9d4060`. This lead round performed no production deployment, DNS change, live payment, invitations or paid API traffic.
 
 ## Preservation and publication
 
 Lead branch: `codex/paid-pilot-round1-20261003`. Existing dirty/untracked takeover work and inherited worktrees are preserved. Three bounded workers use fresh worktrees; only the lead commits/pushes. Another actor advanced the original auth lane; our H3 follow-up uses its immutable commit in a fresh worktree.
 
-Reviewed slices are backed up as new remote branches without PRs. Gate triggers on main pushes, PRs and manual dispatch; Lighthouse triggers on main-targeted PRs/manual dispatch. Independently inspected new branch pushes do not trigger those inspected workflows; no CodeRabbit review was requested or observed. **Backup is not a CI gate or merge readiness.** Main was not merged/pushed. Existing draft PRs #9–#11 and open field issue #6 remain unchanged.
+Reviewed slices are backed up as new remote branches without PRs. Gate triggers on main pushes, PRs and manual dispatch; Lighthouse triggers on main-targeted PRs/manual dispatch. Independently inspected new branch pushes do not trigger those inspected workflows; no CodeRabbit review was requested by this lead. **Backup is not a CI gate or merge readiness.** Main was not merged/pushed. Existing draft PRs #9–#11 and open field issue #6 remain unchanged.
 
 **New PRs, CI dispatch and CodeRabbit remain BLOCKED under$0.** PR #8's fresh report said zero included reviews; a later coordinator note did not establish numeric headroom/overage prevention. Private-repository billing API reads returned404/missing `user` scope; computer-use inventory exposed no browsers. Proposed PR bodies stay local; draft PRs also trigger CI. This round requested **zero CodeRabbit reviews**, within the shared maximum3/rolling hour. PP-01/09 specify remedies. Never bypass gates, grant token scopes or activate overage.
 
@@ -62,11 +62,11 @@ Current `97567e8` also passed84 focused units/13files, full typecheck and target
 | Claude Fable |One tools-disabled bounded readiness decision. |Completed: NOT READY; provider/payment/policy/deployment acceptance missing. No quota warning. |
 | CodeRabbit |Zero review requests. |Allowance/overage evidence absent; BLOCKED. |
 
-Detailed `ai-tool-usage.md` lives on the tool-roster branch. Blocked $0 routes supersede target tool-share percentages; no paid alternative used. Assistant subscriptions do not establish customer API entitlement. Fresh read-only GitHub check at02:28UTC verified20 reviewed backup refs and zero round-branch Actions runs in the latest30; latest run predates this round. Combined/coordinator final backup is being finalized below; source slices are already off-laptop.
+Detailed `ai-tool-usage.md` lives on the tool-roster branch. Blocked $0 routes supersede target tool-share percentages; no paid alternative used. Assistant subscriptions do not establish customer API entitlement. Fresh read-only GitHub check at02:28UTC verified20 reviewed backup refs and zero round-branch Actions runs in the latest30; latest run predates this round. Combined/coordinator backups completed at closeout below; the earlier02:28 remote inventory is a historical snapshot, superseded by the final read-only check.
 
 ## Next round / remaining acceptance
 
-1. Finish final evidence/branch backup and stop owned resources. Queue/index admission is completed in source `e437af28b177f9998bca582de7b9752ab7e8429e` (19DB/24units); retained file counts `0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe` (17DB/36units) and indexed text storage `c6739566558981c0b59d5a3564603ef651c4b0bd` (26DB/32units) are independently reviewed/pushed. These remain operational circuit breakers, not approved commercial limits; refresh this ledger at closeout and stop only owned resources.
+1. Final evidence/branch backups and owned-resource cleanup are complete (see closeout below). Queue/index admission is completed in source `e437af28b177f9998bca582de7b9752ab7e8429e` (19DB/24units); retained file counts `0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe` (17DB/36units) and indexed text storage `c6739566558981c0b59d5a3564603ef651c4b0bd` (26DB/32units) are independently reviewed/pushed. These remain operational circuit breakers, not approved commercial limits; refresh this ledger at closeout and stop only owned resources.
 2. Internal work: global parser CPU/heap/concurrency and lower OS authority, full disk/index/row/backup capacity assessment, WebKit root cause, final application Node22/ARM64 build/evidence. Raw-file bytes/counts, admitted index queue and indexed text bytes are now bounded, but M5/L3 acceptance remains PARTIAL.
 3. After PP-01/09 quota evidence, submit manifest PRs in dependency order (<=150 files), obtain exact-head CodeRabbit/remote CI, then merge and remove only eligible worktrees.
 4. Owner PP-02–08: privately complete real identity/providers/AI with verified free allowance, actual sandbox payment journeys, approved target deploy/restore/rollback/alerts, historical-data cleanup, price/terms/support and EN/AR3–5-customer UAT. Full launch inventory remains12 workflow integrations/20 executed AI adapters; scope was not narrowed.
@@ -94,3 +94,10 @@ Passing local tests or CI alone cannot establish readiness to sell.
 | Five templates/onboarding/support/policies | Deterministic local templates tested; explicit owner decision and drafts supplied | PP-07 terms/support/legal entity/retention and EN/AR 3-5-customer UAT; invitations separately authorized |
 
 Verdict remains **NOT READY**. This is not FINAL because internal acceptance work remains. Resume from the exact source/manifest/evidence; preserve inherited work and do not repeat owner-fulfilled Company Builder merge approval.
+
+## Round closeout (02:58 UTC)
+
+- Reviewed coordinator checkpoint `186504708ec7595325984e055c7c3d8b75182670` and combined source/evidence backup `de79ab296e772e5f285b33c4cd0ac9056b73f250` are pushed. Tested implementation stays `4a907b84c630388befe77044bf18c318826737ed`; the combined evidence commit changes no source/test/lock/CI/deploy inputs. [Remote/cleanup proof](../../artifacts/phase-4/paid-pilot-round1/CLOSEOUT.json).
+- Final read-only API check discovered concurrent PRs #12/#13 and three Gate runs not initiated by this lead session. Runtime head `56f96d9ee31498d2a38d1b4516dadcc49b7ac352` passed all six full-tier jobs in run37090636510. Report remote advanced independently to `a9276f663a2984531ae4f4a76379f36eeff8ce18` and passed full-tier run37090561314; our original `bc46dc2` run was cancelled. These exact narrow heads have remote CI evidence; the combined candidate and remaining slices do not. No inference about quotas, costs, CodeRabbit or acceptance. Preserve the advanced remote ref; do not force-reset it.
+- `pnpm stop:test` completed from an owned empty temporary cwd at scoped unused ports, with no existing env file read. Zero listeners on3100/4010/4011/38991/38992/38993; zero marked test launchers. Owned verification/recovery containers and private recovery files were removed; the three inherited containers were preserved. Combined checkout is clean; inherited primary untracked work remains preserved.
+- No further source lanes this round. Resume internal acceptance and PP-01 through PP-09 from this ledger; **NOT READY**, not FINAL.
