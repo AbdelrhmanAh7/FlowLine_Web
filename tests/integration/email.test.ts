@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, schema } from "@/db";
 import { auth } from "@/lib/auth";
 import { sha256Hex } from "@/server/crypto";
@@ -12,7 +12,16 @@ import { createWorkspace } from "@/server/workspaces";
 import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
 process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
-afterAll(closeDb);
+const previousBetaMode = process.env.FLOWLINE_BETA_MODE;
+beforeAll(() => {
+  // Account verification here exercises explicitly open registration, not beta admission.
+  process.env.FLOWLINE_BETA_MODE = "open";
+});
+afterAll(async () => {
+  if (previousBetaMode === undefined) delete process.env.FLOWLINE_BETA_MODE;
+  else process.env.FLOWLINE_BETA_MODE = previousBetaMode;
+  await closeDb();
+});
 
 async function lastToken(email: string, path: string) {
   const [mail] = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, email)).orderBy(schema.emailOutbox.createdAt).limit(100);
