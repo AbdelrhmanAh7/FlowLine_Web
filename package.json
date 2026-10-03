@@ -27,6 +27,7 @@
     "check": "pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract && pnpm test:integration",
     "check:evidence": "node scripts/check-evidence-secrets.mjs",
     "gate": "node scripts/gate.mjs",
+    "wt": "node scripts/worktree.mjs",
     "gate:full": "node scripts/gate.mjs --tier=full",
     "dev:test": "node scripts/dev-test.mjs",
     "stop:test": "node scripts/stop-test-stack.mjs",
