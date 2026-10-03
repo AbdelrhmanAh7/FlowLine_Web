@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## PR #14 diagnostic checkpoint — 2026-10-03
+
+Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, remains **FAIL**: WebKit 77 passed / 1 failed; Chromium and Firefox jobs succeeded. The journey found the Output tab and then hit its whole-test deadline during click actionability. Offline inspection of PR head `dd840db` found no loader import path linking the Drizzle prune to this failure. Pre-existing WebKit/test timing is suspected, not proven; the missing trace/JSON prevents root-cause confirmation. [Diagnosis and next experiment](WEBKIT_14_DIAGNOSIS.md). Follow-up (CI history, 27 full-tier WebKit runs): not attributable to #14; head `ec672d7` passed WebKit 78/78 in run `37132314447`, and the intermittent journey timeout is tracked in issue #35 ([follow-up](WEBKIT_14_DIAGNOSIS.md)). This docs-only investigation makes no readiness claim and does not close the earlier WebKit incidents recorded below or elsewhere.
+
 ## PR #16 request-body follow-up — 2026-10-03
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
