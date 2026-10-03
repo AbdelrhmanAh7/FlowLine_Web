@@ -1,7 +1,7 @@
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error TS7016: this standalone Node CLI has no TypeScript declaration file.
-import { main, samePath } from "../../scripts/worktree.mjs";
+import { assertLaneName, main, samePath } from "../../scripts/worktree.mjs";
 
 const mocks = vi.hoisted(() => ({
   git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(),
@@ -55,6 +55,7 @@ beforeEach(() => {
     if (args.join(" ") === "worktree list --porcelain") return entries;
     if (args.join(" ") === "worktree prune") return "";
     if (args[0] === "worktree" && args[1] === "remove") return "";
+    if (args[0] === "worktree" && args[1] === "add") return "";
     if (cwd === stale || cwd === locked) throw new Error("must not inspect missing/locked lane");
     if (cwd === broken) throw new Error("cannot inspect lane");
     if (args[0] === "status") return dirty;
@@ -147,6 +148,63 @@ describe("worktree removal safeguards", () => {
       `unlink ${join(lane, "node_modules")}`, `worktree remove ${lane}`, "worktree prune",
     ]);
     expect(calls().find(({ args }) => args[1] === "remove")?.cwd).toBe(root);
+  });
+});
+
+describe("worktree add lane names", () => {
+  const managed = (name: string) => join(root, ".claude", "worktrees", name);
+  const BS = String.fromCharCode(92);
+
+  it.each(["lane", "lane-2", "feature.x_1", "A1", "9lives", "a..b", "x"])("accepts the bare name %s and branches from it", (name) => {
+    expect(main(["add", name])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args, cwd }) => ({ args, cwd }))).toEqual([
+      { args: ["worktree", "add", "-b", name, managed(name), "origin/main"], cwd: root },
+    ]);
+    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(managed(name), "node_modules"), "junction");
+    expect(console.log).toHaveBeenCalledWith(managed(name));
+  });
+
+  it.each([
+    "feat/x", "feat/x/y", "../../sibling", "../sibling", "..", ".", "./lane", "lane/", "/abs/lane",
+    `a${BS}b`, `..${BS}..${BS}sibling`, `C:${BS}lane`, "C:lane", "lane:stream",
+    "", " ", " lane", "lane ", "a b", "lane\n", "lane\nx", "lane\r", "lane\0", "-lane", "--branch", ".hidden", "_lane", "~lane", "lane*", "lane?", "naïve", "العربية",
+  ])("rejects %j before any git or filesystem access", (name) => {
+    expect(() => main(["add", name])).toThrow(/invalid lane name/);
+    expect(mocks.git).not.toHaveBeenCalled();
+    expect(mocks.exists).not.toHaveBeenCalled();
+    expect(mocks.stat).not.toHaveBeenCalled();
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(mocks.symlink).not.toHaveBeenCalled();
+  });
+
+  it("rejects a bad name even when --branch and --base are given", () => {
+    expect(() => main(["add", "feat/x", "--branch", "feat/x", "--base", "origin/main"])).toThrow(/invalid lane name/);
+    expect(mocks.git).not.toHaveBeenCalled();
+  });
+
+  it("explains how to get a slashed branch and which characters are allowed", () => {
+    expect(() => main(["add", "feat/x"])).toThrow(/letters, digits.*--branch feat\/x/);
+    expect(() => assertLaneName("../../sibling")).toThrow('invalid lane name "../../sibling"');
+  });
+
+  it("keeps slashed branch names available through --branch while the lane stays bare", () => {
+    expect(main(["add", "lane2", "--branch", "feat/x", "--base", "origin/dev"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
+      .toEqual([["worktree", "add", "-b", "feat/x", managed("lane2"), "origin/dev"]]);
+    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(managed("lane2"), "node_modules"), "junction");
+  });
+
+  it("a created lane can be addressed by the same bare name in rm", () => {
+    expect(main(["add", "lane"])).toBe(0);
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+  });
+
+  it("without a name prints usage and does nothing", () => {
+    expect(main(["add"])).toBe(2);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
+    expect(mocks.symlink).not.toHaveBeenCalled();
+    expect(calls().some(({ args }) => args[1] === "add")).toBe(false);
   });
 });
 

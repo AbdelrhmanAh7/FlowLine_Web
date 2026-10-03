@@ -67,6 +67,8 @@ jobs:
               node scripts/ci/changed-scope.mjs < "$files"
               ;;
             push)
+              # The compare API returns at most 300 files, only on its first page (--paginate adds commits, not files), so
+              # changed-scope.mjs treats a result with 300 files or more as code and warns. The PR files API stops at 3000.
               # A new branch (all-zero base) or a force-pushed base that no longer exists has no usable comparison.
               if [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
                 && gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/compare/$BEFORE...$GITHUB_SHA?per_page=100" > "$files"; then

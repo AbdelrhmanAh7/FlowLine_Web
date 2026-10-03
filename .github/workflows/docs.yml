@@ -1,8 +1,11 @@
 name: Docs
 
 # AGENTS.md "Docs (mandatory)": code/config changes need Markdown outside artifacts/,
-# or the docs-not-needed label plus a non-empty "Docs not needed because: <reason>" body line.
-# No install: fetch the PR file list as JSON and run the fixture-tested Node checker.
+# or the docs-not-needed label plus a "Docs not needed because: <reason>" body line with a real reason (the literal
+# <reason> placeholder does not count).
+# No install: fetch the PR file list as JSON and run the fixture-tested Node checker. GitHub's PR files API stops at
+# 3000 files, so a list that long may have dropped code files: the checker assumes code changed (docs or a waiver
+# required) and says so in the step summary.
 # Required on main. It re-evaluates on every label and body edit (the waiver depends on both) and is skipped only for
 # drafts (which cannot merge), so a label or edit on a ready PR always re-checks instead of skipping.
 on:

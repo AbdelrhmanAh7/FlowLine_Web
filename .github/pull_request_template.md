@@ -4,7 +4,7 @@
 
 ## Docs updated (mandatory — AGENTS.md "Docs (mandatory)")
 
-<!-- List every .md you changed and what you changed in it. To waive a docs update, add the docs-not-needed label AND an unindented plain-text line using exactly this prefix: `Docs not needed because: <reason>`. Replace <reason> with a non-empty explanation on that same line. A label alone, whitespace-only reason, or other format does not waive the check. -->
+<!-- List every .md you changed and what you changed in it. To waive a docs update, add the docs-not-needed label AND an unindented plain-text line using exactly this prefix: `Docs not needed because: <reason>`. Replace <reason> with a real explanation on that same line. A label alone, a whitespace-only reason, the unfilled `<reason>` placeholder (or the bare word reason), or another format does not waive the check. -->
 
 - [ ] Area doc for the code touched (`docs/<area>/…`, `README.md`, `docs/DEVELOPER_GUIDE.md` for commands/setup)
 - [ ] Progress / status ledger for the active phase (`docs/implementation/…`)

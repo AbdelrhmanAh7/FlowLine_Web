@@ -5,13 +5,24 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error TS7016: this standalone Node CLI has no TypeScript declaration file.
-import { classifyScope, collectPaths, FILE_LIST_LIMIT, isDocsPath } from "../../scripts/ci/changed-scope.mjs";
+import { classifyScope, collectChanges, collectPaths, COMPARE_FILE_LIMIT, isDocsPath, PR_FILE_LIMIT } from "../../scripts/ci/changed-scope.mjs";
 
 const script = fileURLToPath(new URL("../../scripts/ci/changed-scope.mjs", import.meta.url));
 
 type Page = unknown;
 const prPages = (files: string[]): Page[] => files.map((filename) => [{ filename }]);
 const comparePage = (files: string[]): Page => ({ status: "ahead", commits: [], files: files.map((filename) => ({ filename })) });
+// Later pages of a paginated compare result carry commits only: GitHub returns `files` on the first page (observed 2026-10-03).
+const commitsOnlyPage = (): Page => ({ status: "ahead", total_commits: 174, commits: [{ sha: "abc" }] });
+const docsFiles = (count: number) => Array.from({ length: count }, (_, i) => `docs/f${i}.md`);
+const chunk = <T>(items: T[], size = 100): T[][] => {
+  const pages: T[][] = [];
+  for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size));
+  return pages;
+};
+// A PR files listing arrives as many pages of 100 files each.
+const prPagesOf = (files: string[]): Page[] => chunk(files.map((filename) => ({ filename })));
+const renamedDocs = (count: number) => Array.from({ length: count }, (_, i) => ({ filename: `docs/new-${i}.md`, previous_filename: `docs/old-${i}.md`, status: "renamed" }));
 
 const fixtures: { name: string; pages: Page[]; code: boolean }[] = [
   { name: "docs/ only", pages: prPages(["docs/DEVELOPER_GUIDE.md", "docs/design-system/forms.png"]), code: false },
@@ -42,6 +53,26 @@ const fixtures: { name: string; pages: Page[]; code: boolean }[] = [
   { name: "mixed PR and compare page shapes", pages: [[{ filename: "docs/a.md" }], comparePage(["src/lib.ts"])], code: true },
   { name: "no pages", pages: [], code: true },
   { name: "empty pages", pages: [[], comparePage([])], code: true },
+  // Compare API: 300 files is the cap, so a result that size may be truncated (CodeRabbit, PR #20).
+  { name: "compare: 299 docs-only files are docs-only", pages: [comparePage(docsFiles(COMPARE_FILE_LIMIT - 1))], code: false },
+  { name: "compare: 300 docs-only files are treated as code", pages: [comparePage(docsFiles(COMPARE_FILE_LIMIT))], code: true },
+  { name: "compare: 301 docs-only files are treated as code", pages: [comparePage(docsFiles(COMPARE_FILE_LIMIT + 1))], code: true },
+  { name: "compare: 3000 docs-only files are treated as code", pages: [comparePage(docsFiles(PR_FILE_LIMIT))], code: true },
+  { name: "compare: later commit-only pages do not break a docs-only first page", pages: [comparePage(docsFiles(3)), commitsOnlyPage(), commitsOnlyPage()], code: false },
+  { name: "compare: later commit-only pages do not hide the 300-file cap", pages: [comparePage(docsFiles(COMPARE_FILE_LIMIT)), commitsOnlyPage()], code: true },
+  { name: "compare: code on the first page with commit-only pages after it", pages: [comparePage(["src/a.ts"]), commitsOnlyPage()], code: true },
+  { name: "compare: commit-only pages without any file list are code", pages: [commitsOnlyPage(), commitsOnlyPage()], code: true },
+  { name: "compare: the same 299 files repeated on two pages are not double counted", pages: [comparePage(docsFiles(COMPARE_FILE_LIMIT - 1)), comparePage(docsFiles(COMPARE_FILE_LIMIT - 1))], code: false },
+  { name: "compare: 299 docs-to-docs renames (598 paths) are 299 files, so docs-only", pages: [{ status: "ahead", commits: [], files: renamedDocs(COMPARE_FILE_LIMIT - 1) }], code: false },
+  { name: "compare: 300 docs-to-docs renames are treated as code", pages: [{ status: "ahead", commits: [], files: renamedDocs(COMPARE_FILE_LIMIT) }], code: true },
+  // PR files API: 3000 is the cap; the compare cap of 300 does not apply to it.
+  { name: "PR: 300 docs-only files are docs-only", pages: prPagesOf(docsFiles(COMPARE_FILE_LIMIT)), code: false },
+  { name: "PR: 2999 docs-only files are docs-only", pages: prPagesOf(docsFiles(PR_FILE_LIMIT - 1)), code: false },
+  { name: "PR: 3000 docs-only files are treated as code", pages: prPagesOf(docsFiles(PR_FILE_LIMIT)), code: true },
+  { name: "PR: 3000 docs-only files on one page are treated as code", pages: [docsFiles(PR_FILE_LIMIT).map((filename) => ({ filename }))], code: true },
+  { name: "PR: 1500 docs-to-docs renames (3000 paths) are 1500 files, so docs-only", pages: chunk(renamedDocs(1500)), code: false },
+  { name: "PR: 3000 docs-to-docs renames are treated as code", pages: chunk(renamedDocs(PR_FILE_LIMIT)), code: true },
+  { name: "PR: 2999 docs files plus a compare-shaped page of 299 are each under their limit", pages: [...prPagesOf(docsFiles(PR_FILE_LIMIT - 1)), comparePage(docsFiles(COMPARE_FILE_LIMIT - 1))], code: false },
 ];
 
 const run = (input: string, args: string[] = [], env: Record<string, string> = {}) => {
@@ -97,7 +128,7 @@ describe("changed-scope CLI fixtures", () => {
   });
 
   it("assumes code when GitHub may have truncated the file list", () => {
-    const files = Array.from({ length: FILE_LIST_LIMIT }, (_, i) => ({ filename: `docs/f${i}.md` }));
+    const files = Array.from({ length: PR_FILE_LIMIT }, (_, i) => ({ filename: `docs/f${i}.md` }));
     const result = run(JSON.stringify([files]));
     expect(result.status, result.stderr).toBe(0);
     expect(result.output).toBe("code=true\n");
@@ -146,6 +177,81 @@ describe("changed-scope CLI fixtures", () => {
   it("keeps an error message on one workflow-command line", () => {
     const result = run(JSON.stringify([{ message: "x" }]));
     expect(result.stderr.trim().split(/\r?\n/)).toHaveLength(1);
+  });
+});
+
+describe("GitHub file-list caps", () => {
+  const warning = (stderr: string) => stderr.split(/\r?\n/).filter((line) => line.startsWith("::warning::"));
+
+  it("has the documented limits: 3000 for a PR, 300 for a comparison", () => {
+    expect(PR_FILE_LIMIT).toBe(3000);
+    expect(COMPARE_FILE_LIMIT).toBe(300);
+  });
+
+  it("warns once, with counts only, and runs the tests when a compare result reaches 300 files", () => {
+    const result = run(JSON.stringify([comparePage(docsFiles(COMPARE_FILE_LIMIT)), commitsOnlyPage()]));
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.output).toBe("code=true\n");
+    expect(warning(result.stderr)).toEqual([
+      "::warning::300 files listed, list may be truncated (GitHub lists at most 300 files per comparison), so the test jobs run.",
+    ]);
+    expect(result.stderr.trim().split(/\r?\n/)).toHaveLength(1);
+    expect(result.summary).toContain("code=true");
+    expect(result.summary).toContain("300 files listed, list may be truncated (GitHub lists at most 300 files per comparison), assuming code");
+    expect(result.summary).not.toContain("docs-only change: test jobs skipped by design");
+  });
+
+  it("does not warn for 299 compare files, which stay docs-only", () => {
+    const result = run(JSON.stringify([comparePage(docsFiles(COMPARE_FILE_LIMIT - 1)), commitsOnlyPage()]));
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.output).toBe("code=false\n");
+    expect(result.stderr).toBe("");
+    expect(result.summary).toContain("docs-only change: test jobs skipped by design");
+  });
+
+  it("also warns when a PR file list reaches 3000, but not at 300 or 2999", () => {
+    const at = run(JSON.stringify(prPagesOf(docsFiles(PR_FILE_LIMIT))));
+    expect(at.output).toBe("code=true\n");
+    expect(warning(at.stderr)).toEqual([
+      "::warning::3000 files listed, list may be truncated (GitHub lists at most 3000 files per pull request), so the test jobs run.",
+    ]);
+    for (const count of [COMPARE_FILE_LIMIT, PR_FILE_LIMIT - 1]) {
+      const below = run(JSON.stringify(prPagesOf(docsFiles(count))));
+      expect(below.output, `${count} PR files`).toBe("code=false\n");
+      expect(below.stderr, `${count} PR files`).toBe("");
+    }
+  });
+
+  it("warns at the cap even when a code file is already visible, and still reports code files", () => {
+    const result = run(JSON.stringify([comparePage([...docsFiles(COMPARE_FILE_LIMIT - 1), "src/lib.ts"])]));
+    expect(result.output).toBe("code=true\n");
+    expect(warning(result.stderr)).toHaveLength(1);
+    expect(result.summary).toContain("(code files changed)");
+    expect(result.summary).toContain(JSON.stringify("src/lib.ts"));
+  });
+
+  it("never puts a file name or newline into the warning", () => {
+    const names = Array.from({ length: COMPARE_FILE_LIMIT }, (_, i) => `docs/evil\n::error::x${i}.md`);
+    const result = run(JSON.stringify([comparePage(names)]));
+    expect(result.output).toBe("code=true\n");
+    expect(result.stderr).not.toContain("evil");
+    expect(result.stderr.trim().split(/\r?\n/)).toHaveLength(1);
+  });
+
+  it("counts compare entries by distinct filename and PR entries across pages", () => {
+    const compare = collectChanges([comparePage(docsFiles(5)), comparePage(docsFiles(5)), commitsOnlyPage()]);
+    expect(compare).toMatchObject({ prFiles: 0, compareFiles: 5 });
+    expect(compare.paths).toHaveLength(10);
+    expect(collectChanges(prPagesOf(docsFiles(250)))).toMatchObject({ prFiles: 250, compareFiles: 0 });
+    expect(collectChanges([[{ filename: "docs/b.md", previous_filename: "docs/a.md" }]])).toMatchObject({ prFiles: 1, compareFiles: 0 });
+  });
+
+  it("classifyScope applies the limit that matches the listing it was given", () => {
+    const paths = docsFiles(COMPARE_FILE_LIMIT);
+    expect(classifyScope(paths).code).toBe(false);
+    expect(classifyScope(paths, { prFiles: 0, compareFiles: COMPARE_FILE_LIMIT })).toMatchObject({ code: true, warning: expect.stringContaining("per comparison") });
+    expect(classifyScope(paths, { prFiles: 0, compareFiles: COMPARE_FILE_LIMIT - 1 })).toMatchObject({ code: false, warning: null });
+    expect(classifyScope(paths, { prFiles: PR_FILE_LIMIT, compareFiles: 0 })).toMatchObject({ code: true, warning: expect.stringContaining("per pull request") });
   });
 });
 

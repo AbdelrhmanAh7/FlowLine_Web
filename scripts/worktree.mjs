@@ -2,6 +2,9 @@
 // Worktrees for agent lanes live under .claude/worktrees/<name> (git-ignored; also where Claude Code's own worktree
 // isolation puts them), never beside the repo. node_modules is linked to the main checkout's install.
 //   pnpm wt add <name> [--base origin/main] [--branch <branch>]   create (branch defaults to <name>)
+//                                                                 <name> is a bare lane name: letters, digits, . _ -
+//                                                                 (no / or \, so the path stays inside .claude/worktrees/);
+//                                                                 use --branch for a branch such as feat/x
 //   pnpm wt list                                                  state of every worktree
 //   pnpm wt rm <name|path>                                        remove a registered, unlocked lane if clean and pushed/merged
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
@@ -17,6 +20,16 @@ import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const git = (args, cwd) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+
+// A lane name becomes one path segment under .claude/worktrees/ and the default branch name. Separators or `..` would
+// create a nested lane that `rm <name>` cannot address, or escape the managed directory, so only bare names are allowed.
+const LANE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function assertLaneName(name) {
+  if (!LANE_NAME.test(name)) {
+    throw new Error(`invalid lane name ${JSON.stringify(name)}: use letters, digits, '.', '_' and '-' only, starting with a letter or digit (no '/' or '\\'). For a branch like feat/x, run: pnpm wt add <lane> --branch feat/x`);
+  }
+}
 
 export function samePath(a, b, platform = process.platform) {
   const normalize = (path) => {
@@ -63,6 +76,8 @@ function remove(w, root, platform) {
 }
 
 export function main(argv = process.argv.slice(2), platform = process.platform) {
+  // Validate before any git or filesystem access.
+  if (argv[0] === "add" && argv[1] !== undefined) assertLaneName(argv[1]);
   const root = resolve(git(["rev-parse", "--path-format=absolute", "--git-common-dir"]), "..");
   const dir = join(root, ".claude", "worktrees");
   const [cmd, name, ...rest] = argv;
