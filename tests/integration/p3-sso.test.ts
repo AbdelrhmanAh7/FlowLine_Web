@@ -14,11 +14,14 @@ import { addMember, closeDb, expectHttpError, makeUser, unique } from "./helpers
 const CLIENT_ID = "flowline-test";
 const CLIENT_SECRET = "sso-test-secret-not-logged";
 const DOMAIN = "flowline.test";
+const previousBetaMode = process.env.FLOWLINE_BETA_MODE;
 
 let fake: Awaited<ReturnType<typeof startFakeProviders>>;
 let issuer: string;
 
 beforeAll(async () => {
+  // These SSO journeys test explicitly open registration; missing config must fail closed.
+  process.env.FLOWLINE_BETA_MODE = "open";
   fake = await startFakeProviders();
   process.env.FLOWLINE_ENV = "test";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `${process.env.FLOWLINE_EGRESS_ALLOWLIST ?? ""},127.0.0.1:${fake.port},localhost:${fake.port}`;
@@ -26,6 +29,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (previousBetaMode === undefined) delete process.env.FLOWLINE_BETA_MODE;
+  else process.env.FLOWLINE_BETA_MODE = previousBetaMode;
   await fake.close();
   await closeDb();
 });

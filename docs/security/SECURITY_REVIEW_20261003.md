@@ -16,6 +16,8 @@ Reviewed application revision **`e690de6d7197abcc4e905dad831721448e8525ec`**, br
 
 Severity reflects the application impact and prerequisites, rather than mechanically copying advisory ratings. H1 and H2 are separate: explicit linking consent fixes H1 but does not fix the creation of a globally trusted account using an untrusted tenant IdP in H2. H3 also remains relevant after both linking fixes.
 
+**Remediation update — 2026-10-03:** H4, M1, M2, M3, M6 and M8 are fixed locally on `codex/sec-redaction-h4`; their status lines below distinguish these changes from the original review evidence. `pnpm -s lint`, `pnpm -s typecheck` and `pnpm -s test` passed (74 unit files / 791 tests). See [regression validation](../../artifacts/phase-4/security-remediation/validation.md). No deployment, provider/DB acceptance, CI gate or historical aggregate cleanup is claimed; H1–H3 and the other findings remain open.
+
 ## Method and evidence limits
 
 - Inspected all **109 API route files**, their authentication/authorization entry points, shared access helpers, selected downstream queries and worker execution paths. Reviewed workspace pages/layout authorization and searched application/server files for server actions; no `"use server"` declarations were found in those directories.
@@ -71,6 +73,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 
 ### H4 — Aggregate run output bypasses known-secret redaction and encryption
 
+**Status:** Fixed locally on `codex/sec-redaction-h4`: aggregate output is redacted with the complete runtime secret set before persistence. Raw execution values and their secret snapshot remain in existing context-bound encrypted step data; approval resumes and reused reruns restore that snapshot without resolving credentials for public projections. Legacy encrypted steps without a snapshot fall back to their public copy. Four worker/engine/projection regressions failed on the old code, then passed (ordinary detail, v1, logs, encrypted resume and reuse). No schema change or raw aggregate column is needed. Historical aggregates still require controlled remediation; DB/provider/CI acceptance remains pending.
+
 **Locations:** `worker/handlers.ts:314`, `worker/runner.ts:205`, `worker/runner.ts:208`, `worker/runner.ts:238`, `src/engine/execute.ts:145`, `src/server/runs.ts:394`, `src/app/api/v1/runs/[rid]/route.ts:22`.
 
 **Evidence:** Runtime credentials populate `hctx.secrets`; step input/output/log/error/meta are redacted using that list, and raw resume data is encrypted separately. However, the final `run.output` is persisted directly as `result.output`. Output nodes copy their raw result into that aggregate before `onStepDone` persists a redacted copy. Run detail applies `redact(publicRun)` without the credential list; API v1 returns that projection. Generic secrets in ordinary strings/keys do not match token patterns, as the synthetic probe confirmed.
@@ -85,6 +89,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 
 ### M1 — Cross-origin redirects still forward some bodies and credential headers
 
+**Status:** Fixed locally on `codex/sec-redaction-h4`: redirected method/body are computed first, all cross-origin body-retaining hops are refused, and permitted cross-origin hops drop every supplied header. Seven regressions failed on the old code; all eleven mocked redirect tests passed after the fix, preserving POST 307/308 refusal and same-origin behavior. CI/independent acceptance remains pending.
+
 **Locations:** `src/server/egress.ts:138`, `src/server/egress.ts:189`, `src/server/egress.ts:194`, `src/server/egress.ts:196`, `worker/handlers.ts:142`, `src/integrations/http.ts:51`.
 
 **Evidence/exploit:** `keepsBody` recognizes only 307/308, although PUT/PATCH preserve their bodies on 301/302. The credential-header denylist omits `x-goog-api-key` and other custom secret headers. A redirecting public endpoint can send a credential-bearing HTTP-node request to another public origin. A local synthetic PUT/302 probe received both the body marker and `x-goog-api-key`; Authorization was removed. This is credential forwarding, not a demonstrated private-address SSRF bypass. The AI hub and email/ZITADEL transports use zero redirects and are not exposed through this specific path.
@@ -95,6 +101,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 
 ### M2 — Redaction fails open beyond depth 30
 
+**Status:** Fixed locally on `codex/sec-redaction-h4`: depth overflow replaces the entire unexamined subtree with `[REDACTED_LIMIT]`. Depth 29–33 object/array and cyclic-input regressions failed on the old code (5 failures), then passed. CI/independent candidate acceptance remains pending.
+
 **Locations:** `src/server/redact.ts:43`, `src/server/redact.ts:44`, `src/engine/expression.ts:85`, `worker/runner.ts:205`.
 
 **Evidence/exploit:** At depth greater than 30, `redact` returns the original subtree unchanged. Value normalization limits serialized size, not JSON nesting. A provider-controlled or user-produced nested object can place a sensitive key/known credential beyond the cutoff, causing plaintext step storage and projection even when the correct secret list was passed. The 32-wrapper synthetic probe reproduced this independently of H4.
@@ -104,6 +112,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 **Test to add:** Known credentials, password/token keys and arrays at depths 29–33, nested output under the value-size cap, and cyclic input. Every budget-exceeded case must remain secret-free.
 
 ### M3 — Multiline database error parameters can escape log scrubbing
+
+**Status:** Fixed locally on `codex/sec-redaction-h4`: the shared scrubber omits the complete parameter tail, including LF/CRLF and nested causes. Three new regressions (including captured API logging) failed on the old code, then passed. Auth and worker use the same scrubber; no application server was started. CI/independent acceptance remains pending.
 
 **Locations:** `src/server/redact.ts:20`, `src/server/redact.ts:24`, `src/server/http.ts:118`, `src/lib/auth.ts:93`, `worker/index.ts:39`.
 
@@ -135,6 +145,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 
 ### M6 — Missing or malformed beta mode silently opens registration
 
+**Status:** Fixed locally on `codex/sec-redaction-h4`: only the two exact enum values are accepted; missing/invalid configuration defaults to `invite_only` and emits a configuration error without echoing environment values. Beta/production shared-gate and password/social create-hook regressions failed on the old code, then passed; custom SSO uses the same `allowSignUp` gate. Explicit development/test open mode and test-only cookie isolation remain covered. CI/independent acceptance remains pending.
+
 **Locations:** `src/server/beta.ts:23`, `src/server/beta.ts:28`, `src/server/beta.ts:82`, `src/lib/auth.ts:81`, `deploy/beta/docker-compose.beta.yml:11`.
 
 **Evidence/exploit:** Any mode other than the exact string `invite_only`, including an unset/typo value, becomes `open` even with `FLOWLINE_ENV=beta`. The deployment manifest fixes the environment to beta but does not itself require the invitation mode. If an operator omits/mistypes the setting, an external visitor can register without an invitation through the normal signup hook. Current deployed values were deliberately not read; this is a fail-open configuration finding.
@@ -154,6 +166,8 @@ Severity reflects the application impact and prerequisites, rather than mechanic
 **Test to add:** Issuers A and B return the same subject and verified email; a user linked under A must not receive a session under B merely because the operator changed settings. Test both environment and DB configuration, and callbacks pending during an issuer change.
 
 ### M8 — Failed billing event processing is acknowledged as successful delivery
+
+**Status:** Fixed locally on `codex/sec-redaction-h4`: failed synchronous processing returns HTTP 503 with `received: false` and Retry-After, after the failed-event transaction commits. Signed cancellation/payment-failure regressions failed on the old route, then passed through recovery and successful duplicate delivery with one final audit/application. Existing DB integration assertions were strengthened but not run (owner prohibited servers/environment files). CI/independent acceptance remains pending.
 
 **Locations:** `src/billing/service.ts:275`, `src/billing/service.ts:305`, `src/billing/service.ts:313`, `src/app/api/billing/webhook/route.ts:23`, `src/server/company-builder/entitlement.ts:31`.
 

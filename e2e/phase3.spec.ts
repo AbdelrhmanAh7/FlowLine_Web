@@ -318,6 +318,9 @@ test("SSO: owner configures the fake IdP, test sign-in links their account and v
   const fresh = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
   const p2 = await fresh.newPage();
   const newcomer = `sso-${randomUUID().slice(0, 8)}@${domain}`;
+  // Beta admission is separate from SSO role assignment: this synthetic newcomer is invited.
+  const invited = await page.request.post(`/api/workspaces/${workspace.id}/invites`, { data: { email: newcomer, role: "editor" } });
+  expect(invited.ok(), await invited.text()).toBeTruthy();
   await idpUser(newcomer);
   await p2.goto("/sign-in");
   await p2.getByLabel("Workspace slug").fill(workspace.slug);
