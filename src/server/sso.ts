@@ -312,14 +312,15 @@ export interface SsoSignInResult {
   /** A GET callback may propose a link, but cannot persist it or issue a session. */
   linkRequired?: string;
   configurationVerified?: boolean;
+  mfaRequired?: string;
 }
 
 /**
  * Completes an SSO sign-in: consumes the single-use state, exchanges the code
- * (provider client authentication + PKCE), validates the id_token, finds-or-creates the user
- * and workspace membership, creates a better-auth session, and (on the first
- * success) marks the configuration verified. Any failure throws — no session,
- * no membership.
+ * (provider client authentication + PKCE), and validates the id_token. A bound
+ * identity can sign in; enrolled users receive only a pending local-TOTP challenge.
+ * Unbound identities need independent mailbox ownership and explicit POST consent.
+ * Owner configuration tests validate OIDC without creating accounts or sessions.
  */
 export async function completeSso(opts: {
   state: string;
@@ -450,8 +451,8 @@ export async function completeSso(opts: {
 
   // Identity is the IdP subject, linked per workspace IdP. An email match alone never signs anyone in:
   // otherwise any workspace owner could point SSO at an IdP they control and take over an existing
-  // account (and every other workspace it belongs to). Linking an existing account needs verified
-  // domain ownership, which isn't built yet — such users keep signing in with their password.
+  // account (and every other workspace it belongs to). Linking requires independent
+  // Flowline mailbox ownership and explicit confirmation by the signed-in user.
   if (!claims.sub)
     throw new HttpError(
       400,
@@ -498,6 +499,32 @@ export async function completeSso(opts: {
   if (!user)
     throw new HttpError(500, "INTERNAL", "Couldn't create the user account");
   if (!user.emailVerified) throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Verify your Flowline email before signing in");
+
+  if (user.twoFactorEnabled) {
+    const { createFederatedChallenge } = await import("./federated-mfa");
+    const mfaRequired = await db.transaction(async (tx) => {
+      let initiator: { sessionId: string; userId: string; sessionHash: string } | undefined;
+      if (pending.initiatorUserId) {
+        const [initiatorSession] = opts.sessionToken ? await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken), eq(schema.session.userId, pending.initiatorUserId), sql`${schema.session.expiresAt} > now()`)).for("share") : [];
+        if (!initiatorSession || !binding.sessionHash || sha256Hex(opts.sessionToken!) !== binding.sessionHash)
+          throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+        initiator = { sessionId: initiatorSession.id, userId: initiatorSession.userId, sessionHash: binding.sessionHash };
+      }
+      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
+      const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
+      const [currentMember] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, user!.id))).for("share");
+      const [currentLink] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user!.id))).for("share");
+      if (!currentConfig?.enabled || currentConfig.updatedAt.toISOString() !== binding.configStamp)
+        throw new HttpError(400, "SSO_STATE_INVALID", "Restart SSO after a configuration change");
+      if (!currentUser?.emailVerified || !currentUser.twoFactorEnabled || !currentMember || !currentLink)
+        throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+      return createFederatedChallenge(currentUser.id, `/w/${ws.slug}/flows`, {
+        workspaceId: ws.id, newMember: false, role: currentMember.role,
+        configStamp: binding.configStamp, providerId, subject, ...(initiator ? { initiator } : {}),
+      }, tx);
+    });
+    return { user: { id: user.id, email: user.email }, slug: ws.slug, sessionToken: "", sessionExpiresAt: new Date(), newUser, newMember: false, testSignIn: false, mfaRequired };
+  }
 
   // Keep Better Auth's session hooks/defaults, but never return the token until
   // the final locked authority check succeeds. No adapter hook runs under our locks.

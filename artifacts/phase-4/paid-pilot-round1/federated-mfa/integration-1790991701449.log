@@ -1,0 +1,36 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-federated-mfa-20261003
+
+migrated postgres://***@127.0.0.1:55752/flowline_test_pilotmfa
+[seed-platform] test platform credentials ready
+ ❯ |integration| tests/integration/sec-platform.test.ts (12 tests | 1 failed) 1963ms
+   ❯ write-only platform credentials (5)
+     × a revoked integration app fails closed even though its env vars are still set 49ms
+
+ Test Files  1 failed | 6 passed (7)
+      Tests  1 failed | 61 passed (62)
+   Start at  04:41:43
+   Duration  24.45s (import 54%, tests 39%, transform 7%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/sec-platform.test.ts > write-only platform credentials > a revoked integration app fails closed even though its env vars are still set
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ tests/integration/sec-platform.test.ts:291:52
+    289|     const a = await makeAdmin("revoke-env");
+    290|     await stepUp(a.session, a.secret);
+    291|     expect(process.env.GOOGLE_OAUTH_CLIENT_SECRET).toBeTruthy(); // .e…
+       |                                                    ^
+    292|     await seedPlatformCredential("integration.google", { publicId: pro…
+    293|     const user = await makeUser("rev-env");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

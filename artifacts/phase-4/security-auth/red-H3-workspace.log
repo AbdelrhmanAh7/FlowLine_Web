@@ -1,0 +1,52 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-sec-auth
+
+migrated postgres://***@127.0.0.1:5433/flowline_test_secauth
+[seed-platform] test platform credentials ready
+ ❯ |integration| tests/integration/sec-federated-totp.test.ts (8 tests | 2 failed | 6 skipped) 173ms
+   ❯ H3: workspace SSO enforces enrolled local TOTP (2)
+     × grants no usable session to an enrolled ordinary user until local TOTP 116ms
+     × grants no usable session to an enrolled administrator until local TOTP 55ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 6 skipped (8)
+   Start at  04:26:40
+   Duration  5.90s (import 67%, transform 27%, tests 6%)
+
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/sec-federated-totp.test.ts > H3: workspace SSO enforces enrolled local TOTP > grants no usable session to an enrolled ordinary user until local TOTP
+AssertionError: expected 'http://localhost:3100/w/security-ebd7…' to contain '/auth/step-up'
+
+Expected: "/auth/step-up"
+Received: "http://localhost:3100/w/security-ebd729ac/flows"
+
+ ❯ assertChallenge tests/integration/sec-federated-totp.test.ts:31:44
+     29| }
+     30| async function assertChallenge(response: Response, userId: string, sec…
+     31|   expect(response.headers.get("location")).toContain("/auth/step-up");
+       |                                            ^
+     32|   expect(cookieFrom(response, (await auth.$context).authCookies.sessio…
+     33|   expect(await sessionRows(userId)).toHaveLength(0);
+ ❯ tests/integration/sec-federated-totp.test.ts:82:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |integration| tests/integration/sec-federated-totp.test.ts > H3: workspace SSO enforces enrolled local TOTP > grants no usable session to an enrolled administrator until local TOTP
+AssertionError: expected 'http://localhost:3100/w/security-0124…' to contain '/auth/step-up'
+
+Expected: "/auth/step-up"
+Received: "http://localhost:3100/w/security-01242d47/flows"
+
+ ❯ assertChallenge tests/integration/sec-federated-totp.test.ts:31:44
+     29| }
+     30| async function assertChallenge(response: Response, userId: string, sec…
+     31|   expect(response.headers.get("location")).toContain("/auth/step-up");
+       |                                            ^
+     32|   expect(cookieFrom(response, (await auth.$context).authCookies.sessio…
+     33|   expect(await sessionRows(userId)).toHaveLength(0);
+ ❯ tests/integration/sec-federated-totp.test.ts:82:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯

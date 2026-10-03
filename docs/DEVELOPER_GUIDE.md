@@ -46,6 +46,8 @@ pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/http-ca
 
 Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. Flowline's owner configures platform authentication through the complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` environment tuple; never expose it to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
 
+Federated sign-in for enrolled users issues only a pending local-TOTP challenge. The shared Better Auth adapter rejects unassured sessions for both application access and the library's account APIs; retain disabled session-cookie caching and authoritative DB reads. MFA proof is tied to the current factor and has a fixed expiry even when the session refreshes. See [FEDERATED_MFA.md](security/FEDERATED_MFA.md) before adding session storage, sign-in methods or account-linking paths.
+
 ## Verification and handoff
 
 Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only from `workflow_dispatch` with `tier=full`. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
@@ -65,6 +67,8 @@ Tests use port 3100 and isolated test databases, never the development database.
 For browser timeouts, distinguish the whole-test deadline from time spent on the final action. The current CI upload includes text reports, failure screenshots and error context, but excludes Playwright trace ZIPs and the native runner's `test-results/<browser>-<shard>-results.json`. A trace path in a text report does not mean that trace was uploaded. Preserve private diagnostic outputs before runner teardown and extract sanitized evidence. See [the PR #14 WebKit diagnosis](implementation/WEBKIT_14_DIAGNOSIS.md) for the exact three-stack comparison and isolated-journey commands; these require a dedicated test environment, not a shared laptop session with heavy checks prohibited.
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
+
+For the H3 security regression set without a database or browser, run `pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/mfa-session-fence.test.ts tests/unit/federated-mfa-lifecycle.test.ts tests/unit/auth-provider-fence.test.ts tests/unit/federated-mfa.test.ts tests/unit/auth-confirmation.test.ts tests/unit/zitadel-issuer-binding.test.ts tests/unit/zitadel-review-fixes.test.ts tests/unit/i18n.test.ts`. Use `pnpm` instead of `pnpm.cmd` off Windows. This focused command does not replace integration tests or the full main-target CI gate.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
 

@@ -8,13 +8,15 @@ import { POST as confirm } from "@/app/api/sso/link/route";
 import { confirmationCsrf } from "@/server/auth-confirmation";
 import { completeSso, ssoProviderId } from "@/server/sso";
 import * as egress from "@/server/egress";
+import * as platformAccess from "@/server/platform-access";
 import { confirmSsoLink, sendSsoLinkVerification, ssoLinkDetails, SSO_LINK_COOKIE } from "@/server/sso-link";
 import * as emailDelivery from "@/server/email";
 import * as emailFlows from "@/server/email/flows";
 import { sha256Hex } from "@/server/crypto";
+import { totpCodeFor } from "@/server/totp";
 import { createWorkspace } from "@/server/workspaces";
 import { addMember, closeDb, expectHttpError } from "./helpers";
-import { makeVerifiedUser, ORIGIN, sessionFor } from "./platform-helpers";
+import { assuredSessionFor, code, enrolTotp, makeVerifiedUser, ORIGIN, sessionFor } from "./platform-helpers";
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt, oidcSignIn, proveSsoMailbox } from "./federation-fixture";
 
 beforeEach(() => { mockTenantIdp(); });
@@ -88,6 +90,48 @@ describe("H1: a signed-in browser does not consent to account linking", () => {
     await expect(sendSsoLinkVerification(failed.token, failed.session.token)).rejects.toThrow("synthetic delivery failure");
     expect(await db.select().from(schema.emailToken).where(eq(schema.emailToken.userId, failed.user.id))).toHaveLength(0);
     expect((await ssoLinkDetails(failed.token, failed.session.token)).mailboxVerified).toBe(false);
+  });
+
+  // Written for CI; not executed during the resource-limited H3 review.
+  it("refuses linking if the local factor is replaced after code verification", async () => {
+    const { ws } = await configuredTenant(); workspaceId = ws.id;
+    const victim = await makeVerifiedUser("link-factor-race");
+    const secret = await enrolTotp(victim.id);
+    await addMember(ws.id, victim.id, "viewer");
+    const session = await assuredSessionFor(victim, secret);
+    const proposal = await oidcSignIn(ws.slug, victim.email, session);
+    await proveSsoMailbox(proposal.linkRequired!, session);
+    const verify = platformAccess.verifyTotp;
+    vi.spyOn(platformAccess, "verifyTotp").mockImplementationOnce(async (...args) => {
+      const verified = await verify(...args);
+      expect(verified).not.toBeNull();
+      await enrolTotp(victim.id);
+      return verified;
+    });
+    // The next step's code: `assuredSessionFor` already consumed the current step at the federated gate.
+    await expectHttpError(confirmSsoLink(proposal.linkRequired!, session.token, { code: code(secret, 1) }), 403, "SSO_LINK_INVALID");
+    expect(await links(victim.id)).toHaveLength(0);
+  });
+
+  // Written for CI; not executed locally. Codes are computed once so a 30 s boundary cannot change their steps.
+  it("refuses a TOTP code already used at a federated gate to confirm a link, then accepts the next code", async () => {
+    const { ws } = await configuredTenant(); workspaceId = ws.id;
+    const victim = await makeVerifiedUser("link-totp-replay");
+    const secret = await enrolTotp(victim.id);
+    await addMember(ws.id, victim.id, "viewer");
+    const at = Date.now();
+    const used = totpCodeFor(secret, at);
+    const next = totpCodeFor(secret, at + 30_000);
+    const session = await assuredSessionFor(victim, secret, at); // completes the federated challenge with `used`
+    const proposal = await oidcSignIn(ws.slug, victim.email, session);
+    await proveSsoMailbox(proposal.linkRequired!, session);
+    await expectHttpError(confirmSsoLink(proposal.linkRequired!, session.token, { code: used }), 403, "SSO_LINK_ASSURANCE");
+    expect(await links(victim.id)).toHaveLength(0);
+    // The refusal rolled back with the transaction, so the proposal is still pending and the next code confirms it.
+    await confirmSsoLink(proposal.linkRequired!, session.token, { code: next });
+    expect(await links(victim.id)).toHaveLength(1);
+    const marker = await db.select().from(schema.verification).where(eq(schema.verification.id, `totp-step:${victim.id}`));
+    expect(Number(marker[0]!.value)).toBe(Math.floor((at + 30_000) / 1000 / 30));
   });
 
   it("valid OIDC from an unrelated tenant GET grants no link/session; only explicit CSRF POST confirmation does", async () => {

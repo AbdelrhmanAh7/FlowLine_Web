@@ -8,6 +8,7 @@ import { randomToken, sha256Hex } from "./crypto";
 import { HttpError } from "./http";
 import { checkRate } from "./rate-limit";
 import { verifyTotp } from "./platform-access";
+import { consumeFederatedTotpStep } from "./federated-mfa";
 import { ssoProviderId } from "./sso";
 import { deliverAccountToken, prepareAccountToken } from "./email/flows";
 
@@ -45,9 +46,10 @@ export async function ssoLinkDetails(token: string, sessionToken: string) {
   const [user] = await db.select().from(schema.user).where(eq(schema.user.id, intent.userId));
   const [credential] = await db.select().from(schema.account).where(and(eq(schema.account.userId, intent.userId), eq(schema.account.providerId, "credential")));
   if (!user || user.email !== intent.email) throw invalid();
+  const [factor] = user.twoFactorEnabled ? await db.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, user.id)) : [];
   const [proof] = intent.mailboxTokenId ? await db.select().from(schema.emailToken).where(and(eq(schema.emailToken.id, intent.mailboxTokenId), eq(schema.emailToken.userId, user.id), eq(schema.emailToken.purpose, "verify"))) : [];
   const mailboxVerified = Boolean(user.emailVerified && proof?.consumedAt);
-  return { intent, session, user, needsTotp: user.twoFactorEnabled, needsPassword: Boolean(credential?.password), passwordHash: credential?.password, mailboxVerified };
+  return { intent, session, user, needsTotp: user.twoFactorEnabled, needsPassword: Boolean(credential?.password), passwordHash: credential?.password, factorHash: factor && factor.verified !== false ? sha256Hex(factor.secret) : null, mailboxVerified };
 }
 
 /** Fresh Flowline verification is required even for historical tenant-created
@@ -79,8 +81,10 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
   if (!details.mailboxVerified) throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Verify ownership through the Flowline email link");
   await requireWorkspace(user, intent.workspaceId, "viewer");
   if (!(await checkRate(`sso-link:${user.id}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Try again later");
+  let totpStep: number | null = null;
   if (details.needsTotp) {
-    if (await verifyTotp(user.id, assurance.code ?? "") === null) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your authenticator");
+    totpStep = await verifyTotp(user.id, assurance.code ?? "");
+    if (totpStep === null) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your authenticator");
   } else if (details.needsPassword) {
     if (!assurance.password || !(await verifyPassword({ hash: details.passwordHash!, password: assurance.password }))) throw new HttpError(403, "SSO_LINK_ASSURANCE", "Confirm with your password");
   } else if (Date.now() - session.createdAt.getTime() > 300_000) {
@@ -91,13 +95,18 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
     if (!pending || pending.value !== JSON.stringify(intent)) throw invalid();
     const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, sessionToken), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("update");
     const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user.id)).for("update");
+    const [currentFactor] = user.twoFactorEnabled ? await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, user.id)).for("share") : [];
+    const [currentCredential] = await tx.select().from(schema.account).where(and(eq(schema.account.userId, user.id), eq(schema.account.providerId, "credential"))).for("share");
+    if ((user.twoFactorEnabled && (!currentFactor || currentFactor.verified === false || sha256Hex(currentFactor.secret) !== details.factorHash)) || (currentCredential?.password ?? null) !== (details.passwordHash ?? null)) throw invalid();
     const [cfg] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, intent.workspaceId)).for("update");
     const [member] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, intent.workspaceId), eq(schema.workspaceMember.userId, user.id))).for("update");
-    if (!currentSession || !currentUser || !currentUser.emailVerified || currentUser.email !== intent.email || currentUser.twoFactorEnabled !== user.twoFactorEnabled || !cfg || cfg.updatedAt.toISOString() !== intent.configStamp || !member || (!cfg.enabled && member.role !== "owner")) throw invalid();
+    if (!currentSession || !currentUser || !currentUser.emailVerified || currentUser.email !== intent.email || currentUser.updatedAt.toISOString() !== user.updatedAt.toISOString() || currentUser.twoFactorEnabled !== user.twoFactorEnabled || !cfg || cfg.updatedAt.toISOString() !== intent.configStamp || !member || (!cfg.enabled && member.role !== "owner")) throw invalid();
     const providerId = ssoProviderId(intent.workspaceId, cfg.issuer, cfg.clientId);
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${providerId}:${intent.subject}`}))`);
     const [linked] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, intent.subject)));
     if (linked && linked.userId !== user.id) throw invalid();
+    // After every authority check, inside this transaction: a code already used at a federated gate cannot confirm a link.
+    if (totpStep !== null && !(await consumeFederatedTotpStep(tx, user.id, totpStep))) throw new HttpError(403, "SSO_LINK_ASSURANCE", "That code was already used. Confirm with the next code from your authenticator");
     if (!linked) await tx.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId, accountId: intent.subject });
     if (!cfg.verifiedAt) await tx.update(schema.ssoConfig).set({ verifiedAt: new Date(), updatedAt: new Date() }).where(eq(schema.ssoConfig.workspaceId, intent.workspaceId));
     await tx.delete(schema.verification).where(eq(schema.verification.id, pending.id));

@@ -23,7 +23,7 @@ export default async function AdminPage() {
     await requirePlatformAdmin();
   } catch (e) {
     if (!(e instanceof HttpError) || e.status === 404) notFound();
-    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
+    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" || e.code === "PLATFORM_MFA_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
     if (!blocked) notFound();
   }
   if (blocked) {

@@ -1,0 +1,12 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-sec-auth
+
+
+ Test Files  72 passed (72)
+      Tests  765 passed (765)
+   Start at  04:29:57
+   Duration  3.45s (transform 44%, import 35%, tests 20%, worker 1%)
+
+  Transform  |unit| transforming modules took 26.47s · 44% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns

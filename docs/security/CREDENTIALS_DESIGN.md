@@ -36,7 +36,8 @@ The two reviews agree on all of these.
    - Non-admins get **404**; API-key bearers are refused (session cookies only).
    - `emailVerified` is required.
 2. **MFA (TOTP)** is enrolled before the panel unlocks, using the better-auth `two-factor` plugin (installed, 1.7.6).
-   - **Step-up** (TOTP or password) is required before every write: a 10-minute elevation row bound to the session
+   - Every session read for an enrolled account requires proof for that exact session and current verified factor. Federated sign-in requires local TOTP before granting a usable session; pre-enrollment/legacy sessions require sign-in again. See [federated MFA](FEDERATED_MFA.md) for expiry, revocation and validation limits.
+   - **Step-up** (TOTP) is required before every write: a 10-minute elevation row bound to the session
      token hash.
    - The session must be ≤ 24 h old.
    - Workspace SSO never satisfies platform step-up.
