@@ -1,0 +1,220 @@
+{
+  "at": "2026-10-03T06:07:53.974Z",
+  "operation": "Read-only remote verification, no push",
+  "rows": [
+    {
+      "ref": "codex/paid-pilot-body-deadline-20261003",
+      "initial": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "local": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "remote": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-chunk-admission-20261003",
+      "initial": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "local": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "remote": "c6739566558981c0b59d5a3564603ef651c4b0bd",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-combined-20261003",
+      "initial": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+      "local": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+      "remote": "de79ab296e772e5f285b33c4cd0ac9056b73f250",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-deploy-align-20261003",
+      "initial": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "local": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "remote": "f1921e58c5115a8fd3939587db9a713e546f6c04",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-federated-mfa-20261003",
+      "initial": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "local": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "remote": "2c85f058c2bf382ee861a2c2007af129705c62c6",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-index-admission-20261003",
+      "initial": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "local": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "remote": "e437af28b177f9998bca582de7b9752ab7e8429e",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-monitor-20261003",
+      "initial": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "local": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "remote": "67d3bed6c4524d6fe62bc8f7b43b199114ea2797",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-product-20261003",
+      "initial": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "local": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "remote": "6bfbbe7938854ed05340f971c787d8993afcacc3",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-round1-20261003",
+      "initial": "794cbe2724b2beedb56703ac40560ccc732a8486",
+      "local": "794cbe2724b2beedb56703ac40560ccc732a8486",
+      "remote": "794cbe2724b2beedb56703ac40560ccc732a8486",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-round2-20261003",
+      "initial": "33c9aa3c9b4cc4ccf84e4a12347ea51119f996ce",
+      "local": "6c6f38cdef93a107ba1c5ad65a84a032f340e378",
+      "remote": "6c6f38cdef93a107ba1c5ad65a84a032f340e378",
+      "match": true,
+      "advancedSinceInitial": true
+    },
+    {
+      "ref": "codex/paid-pilot-safe-retry-20261003",
+      "initial": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "local": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "remote": "485a4f854b5df7b1f8d3776bb8c93dfe0b463c82",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-safe-retry-main-20261003",
+      "initial": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "local": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "remote": "b854d2c94ce31ec2503c58f6d883dcfd117edcb1",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/paid-pilot-upload-admission-20261003",
+      "initial": "360078e9d3357267711f006888b578f5a0c6c434",
+      "local": "360078e9d3357267711f006888b578f5a0c6c434",
+      "remote": "360078e9d3357267711f006888b578f5a0c6c434",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-retained-count-round1",
+      "initial": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "local": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "remote": "0bf0a49abe1cbf4dc4c8f5c71f7529a04ef874fe",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-sandbox-env-round1",
+      "initial": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "local": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "remote": "571d1c62d83d7f01461739ad1ed4e830c04d7796",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-security-auth-round1",
+      "initial": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "local": "448c68b74ee0be43868903ed8de49c29ad56b2a3",
+      "remote": "448c68b74ee0be43868903ed8de49c29ad56b2a3",
+      "match": true,
+      "advancedSinceInitial": true
+    },
+    {
+      "ref": "codex/pilot-security-deps-round1",
+      "initial": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "local": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "remote": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-security-redact-round1",
+      "initial": "09be0b3641a139409fad242e9617eec9b0db1975",
+      "local": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
+      "remote": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
+      "match": true,
+      "advancedSinceInitial": true
+    },
+    {
+      "ref": "codex/pilot-security-report-round1",
+      "initial": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "local": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "remote": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-security-resource-round1",
+      "initial": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "local": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "remote": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "codex/pilot-security-runtime-round1",
+      "initial": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "local": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "remote": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "paid-pilot-copilot",
+      "initial": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "local": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "remote": "0c58c4d39a353957973b12036fa6e0ae415799f1",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "paid-pilot-hubspot",
+      "initial": "d5fa51e33fe807a075138e2660074335412df723",
+      "local": "d5fa51e33fe807a075138e2660074335412df723",
+      "remote": "d5fa51e33fe807a075138e2660074335412df723",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "paid-pilot-lighthouse",
+      "initial": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "local": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "remote": "d4eae152b1931f08e1bc1c434eef3ca1f90bbde5",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "paid-pilot-p3",
+      "initial": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "local": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "remote": "c1ba48220fca07da7d9b0be3844732c14e06df20",
+      "match": true,
+      "advancedSinceInitial": false
+    },
+    {
+      "ref": "paid-pilot-tool-roster",
+      "initial": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "local": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "remote": "287096749d8107a7c9a8fe2ce20ec0d77fb861ef",
+      "match": true,
+      "advancedSinceInitial": false
+    }
+  ],
+  "allMatch": true,
+  "main": {
+    "local": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+    "remote": "9641ad1e684cad7b84bd2385751ea19b0a9d4060"
+  },
+  "leadCheckpoint": "Final evidence commit will advance the lead ref; verify that exact final SHA after its push. All product branch heads are already remote."
+}

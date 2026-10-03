@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-03T06:27:26.347829+00:00",
+  "stagedDiffSha256": "e9a914160d5d10c2e1c3a3029064b92ab67c79522ac43834124632dfee60878c",
+  "scope": "docs/artifacts only",
+  "pushBranch": "codex/paid-pilot-round2-20261003",
+  "noOpenPr": true,
+  "gatePushTrigger": "main only"
+}

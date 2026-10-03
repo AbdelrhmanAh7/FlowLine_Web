@@ -1,0 +1,21 @@
+**Decision 15: APPROVE** the staged checkpoint for a backup commit and push to the lead non-main branch. No merge, no PR, no CI dispatch. I cannot recompute the binary SHA256 without tools, so the commit must carry exactly the diff shown; the hash `3db227b6…8772` is accepted as its identity.
+
+**What I verified in the staged diff**
+
+- **Content class is right.** Every path is under `artifacts/` or `docs/implementation/`. No product source, test, config, workflow, or lockfile is touched. The two new `.mjs` files are lead helper scripts, consistent with the stated scope.
+- **CI evidence is internally consistent.** Run 37095815314 summaries show chromium 140/4, firefox 75/3, webkit 75/3; the three failure-artifact excerpts show exactly 3 hydration cases per browser plus 1 Chromium SSO case. Runs 37096736397 and 37097538824 show all six jobs passing, and the status table's unit/contract/integration/browser counts match the summaries. The tested-SHA-is-synthetic-merge caveat is recorded.
+- **Usage totals add up.** Previous 206.25 plus 31.73 (37096736397) plus 31.10 (37095815314, previously counted as 0) equals 269.08; rounded 233 + 35 + 35 = 303. The in-progress run at 04:45 is correctly excluded, and the status says so.
+- **Review accounting is consistent.** Log, openings JSONL, and status agree on three attempts in the current window (04:33:40, 04:44:18, 04:54:58), nine total, six completed, next slot 05:33:41 UTC. The 03:54 "Action not completed" attempt is retained as counted but not completed.
+- **Thread dispositions match.** The pr-16 snapshot shows both threads resolved with the exact reply bodies in the two `resource-thread-*.json` files, and both replies state "not repaired" and M4 PARTIAL/BLOCKED, as decision 14 required.
+- **Decision 14's Caddyfile caveat holds.** The worktree Caddyfile has no global options block and no `request_body` directive, matching the recorded verification scope.
+- **Hydration correction is loud.** The 04:15 entry is relabeled historical with the wrong claim called out, and the 04:30 correction and PR_CANDIDATES amendment restate it.
+- **No secrets or customer data.** Only synthetic `@flowline-e2e.test` addresses, RFC 5737 IPs, public GitHub ids, and a test DB name.
+
+**Non-blocking notes, fix later or leave**
+
+- `request-redaction-review.mjs` rewrites the sibling primary checkout's `coderabbit-requests.log` with the deduplicated union. That adds a dirty change to the primary. It loses no lines, but record it so "dirty primary preserved" stays accurate.
+- `resolve-resource-threads.mjs` would, if rerun against the now-resolved snapshot, overwrite `RESOURCE_THREAD_DISPOSITIONS.json` with empty records. Do not rerun it.
+- `REDACTION_REMAINING_FABLE_RESULT.txt` carries a mojibake `?` in the diff hash reference. The full hash survives in PAID_PILOT_STATUS, so evidence is intact. Several copied GitHub bodies have the same emoji replacement. Cosmetic.
+- Decision 13 asked for the SSO fixture overlap to be noted in the beta report. It is noted in PAID_PILOT_STATUS only. Add a line to PHASE4_BETA_REPORT in a later checkpoint.
+
+**Process.** Commit and push this exact staged diff as a backup to `codex/paid-pilot-round2-20261003` before 06:40 UTC. Append this decision as evidence in the next checkpoint. Auth PR 17 stays pending on its own CI and review. Main unchanged, no merge, M4 deployed proof remains BLOCKED.

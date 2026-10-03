@@ -1,0 +1,20 @@
+**APPROVE** — docs/thread-level disposition only, with the conditions below. No new CI.
+
+**What the evidence supports**
+- Gate job 111144511327: `steps: []`, `runnerId: 0`, 4 s wall time, billable `total_ms: 0` for all six jobs, annotation level `failure`: "job was not started because recent account payments have failed or your spending limit needs to be increased." This is an infrastructure/billing non-start, not a test failure and not a cancellation. The $0 guard is correctly triggered; "stop all dispatch/rerun regardless of failure vs cancellation" follows.
+- PR19 at head `9d7f0c4`: `static`, `integration`, `chromium` succeeded; `firefox`/`webkit` skipped (fast tier, base is a `codex/*` branch, correct); `gate` failed → the single required check is red. Per AGENTS.md the PR is **not gated**. The ledger must say "not gated / not mergeable", never "passed except billing".
+- CodeRabbit review on exact head `9d7f0c4`, 1 actionable Minor, and "0 included reviews remain" — a further push would get no CR review anyway, consistent with stopping.
+- PP09 blocked, owner read-only verification of Billing & plans, no request to raise spend: consistent with decisions-delegated (owner keeps spend) and the no-loophole rule.
+
+**Minor finding — accept as valid, but word it precisely**
+- The `http.ts` supplied to me is the *worktree* version: `capBody` (lines 36–54) has no deadline/`BODY_READ_TIMEOUT` at all. It therefore does **not** confirm the finding at head; it only confirms the mechanism (`capBody` throws an `HttpError`, and any route catch of `instanceof HttpError → 413` collapses the status/code). The 408 path and the webhook catch exist only in CodeRabbit's quoted snippet from `src/app/api/hooks/[token]/route.ts`, which is untrusted data. Ledger wording: "Finding plausible and accepted; mechanism confirmed in `http.ts`; webhook route catch at head not independently re-read in this round." Do not write "source confirms".
+- Proposed next-slice fix (preserve `e.status`/`e.code` for `BODY_READ_TIMEOUT`, keep 413 for oversize, add route-level timeout + oversize regressions, fresh full CI + review) is correct in shape.
+
+**Conditions**
+1. **Thread handling:** reply with the deferral text. Prefer leaving the thread **unresolved** (it is not fixed; the CodeRabbit workflow is "Fixed in <sha>"). If you do resolve it, the reply must state verbatim that it is *not repaired* and link the PR-body follow-up — otherwise it reads as hiding a known bug.
+2. **PR body:** add explicit "408 vs 413 webhook follow-up (deferred, unfixed)" and "gate red: billing non-start, PR not gated/not mergeable, CI stopped under $0 guard".
+3. **The 06:40 push is a loophole risk.** Pushing to any branch that `gate.yml` triggers on (PR head branches, main) **is a CI dispatch** and violates the binding stop you just declared. Push the ledger only to a target that cannot start a workflow run (verify `gate.yml` `on:` triggers/path filters first); if that cannot be verified before 06:30, record the ledger locally (commit, no push) and note "push withheld under $0 guard". Do not use the push to "test" whether billing recovered.
+4. WebKit: keep as "four blobs unchanged, root cause unproven (ECONNRESET vs PR14 Output-tab timeout)" — no instrumentation, no dispatch. Correct.
+5. Remote deferrals (MFA, monitor retry, Lighthouse, P3 Copilot/HubSpot roster): fine as listed; none are gated by this round.
+
+**Blocked anyway:** any rerun, re-dispatch, `workflow_dispatch`, settings/scope/budget/billing change, support ticket, or new PR opening. Fable has no code push this round — confirmed consistent.

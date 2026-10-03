@@ -1,0 +1,15 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+const d='artifacts/phase-4/paid-pilot-round2';
+const run=(a)=>execFileSync('gh',a,{encoding:'utf8',maxBuffer:4*1024*1024});
+const head='9d7f0c426f0d952aa46296a9f32ee5c30b6c263e';
+const body='Valid finding, deferred and NOT repaired per Fable decision21. This resolution records deferral only. Independent git show of exact head '+head+' now confirms capBody throws 408/BODY_READ_TIMEOUT and the webhook catch maps every HttpError to413 while dropping the code. Next slice must preserve timeout status/code, retain413 for oversized bodies, and add route-level timeout and oversize regressions with fresh CI/review. No code push this round. PR19 is NOT GATED / NOT MERGEABLE: GitHub refused to start the required gate job due an account billing/spending-limit condition. All CI dispatches/reruns stopped under the $0 guard; no billing/settings change. Follow-up: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/19 .';
+writeFileSync(`${d}/body-thread-reply.json`,JSON.stringify({body}));
+const reply=JSON.parse(run(['api','repos/AbdelrhmanAh7/FlowLine_Web/pulls/19/comments/4171977623/replies','--method','POST','--input',`${d}/body-thread-reply.json`]));
+const resolution=JSON.parse(run(['api','graphql','-f','query=mutation {resolveReviewThread(input:{threadId:"PRRT_kwDOUvLGYc6okovO"}){thread{id isResolved}}}']));
+const original=readFileSync(`${d}/worker-a/paid-pilot-body-deadline-20261003.md`,'utf8');
+writeFileSync(`${d}/BODY_UPDATED_PR_BODY.md`,original+'\n**BLOCKED: NOT GATED / NOT MERGEABLE.** Fast static/integration/Chromium jobs passed; Firefox/WebKit correctly skipped. Required gate37102200387 failed without starting (runner0, no steps): GitHub account billing/spending-limit annotation. All CI stopped under $0 guard; no settings change or rerun.\n\n**408 vs413 webhook follow-up: deferred, unfixed.** Valid Minor at exact head9d7f0c4: timeout HttpError is mapped to413 and loses its code. Source independently read via git show. Preserve timeout status/code while retaining oversized413, add route regressions and obtain fresh CI/review in a later authorized round. Thread resolution records deferral, not repair.\n');
+run(['pr','edit','19','--body-file',`${d}/BODY_UPDATED_PR_BODY.md`]);
+writeFileSync(`${d}/BODY_THREAD_DISPOSITIONS.json`,JSON.stringify({at:new Date().toISOString(),head,reply:reply.html_url,resolution,disposition:'VALID; DEFERRED; NOT REPAIRED',independentSourceRead:'git show exact head: http.ts and webhook route'},null,2)+'\n');
+execFileSync('node',[`${d}/snapshot-pr.mjs`,'19'],{stdio:'ignore'});
+console.log('PR19 replied, resolved with explicit deferral, body updated, final snapshot refreshed');

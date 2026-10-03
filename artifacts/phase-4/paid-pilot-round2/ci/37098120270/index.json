@@ -1,0 +1,210 @@
+[
+  {
+    "artifactId": 11265775670,
+    "artifactName": "flowline-gate-firefox-37098120270-1",
+    "originalPath": "artifacts/gates/ci-37098120270-1-firefox/summary.json",
+    "sha256": "d55c5743d856254c9984ec038e31c5c4685e9e7b011e2404a8568e255c3cd7a2",
+    "testedSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+    "ok": true,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 66269,
+        "log": "artifacts/gates/ci-37098120270-1-firefox/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 20070,
+        "log": "artifacts/gates/ci-37098120270-1-firefox/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "firefox",
+        "phase": 4,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 341563,
+        "log": "artifacts/gates/ci-37098120270-1-firefox/firefox.log",
+        "totals": {
+          "passed": 78
+        }
+      }
+    ],
+    "file": "flowline-gate-firefox-37098120270-1-summary.json"
+  },
+  {
+    "artifactId": 11265645911,
+    "artifactName": "flowline-gate-chromium-37098120270-1",
+    "originalPath": "artifacts/gates/ci-37098120270-1-chromium/summary.json",
+    "sha256": "ed652044ba78da44d87cc94f024251f14edc673b4eb509e2a11b8a96218ac412",
+    "testedSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+    "ok": false,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 45294,
+        "log": "artifacts/gates/ci-37098120270-1-chromium/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 12817,
+        "log": "artifacts/gates/ci-37098120270-1-chromium/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "chromium",
+        "phase": 4,
+        "status": "fail",
+        "rc": 1,
+        "durationMs": 277896,
+        "log": "artifacts/gates/ci-37098120270-1-chromium/chromium.log",
+        "totals": {
+          "passed": 143,
+          "failed": 1
+        }
+      }
+    ],
+    "file": "flowline-gate-chromium-37098120270-1-summary.json"
+  },
+  {
+    "artifactId": 11265331061,
+    "artifactName": "flowline-gate-integration-37098120270-1",
+    "originalPath": "artifacts/gates/ci-37098120270-1-integration/summary.json",
+    "sha256": "eb28bab1e8684c11c3c98f7de5186027f2d8b65cffaed5b0a4cef07dcd0c5e7d",
+    "testedSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+    "ok": true,
+    "steps": [
+      {
+        "name": "integration",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 149968,
+        "log": "artifacts/gates/ci-37098120270-1-integration/integration.log",
+        "totals": {
+          "passed": 563,
+          "failed": 0,
+          "skipped": 0
+        }
+      }
+    ],
+    "file": "flowline-gate-integration-37098120270-1-summary.json"
+  },
+  {
+    "artifactId": 11264987733,
+    "artifactName": "flowline-gate-static-37098120270-1",
+    "originalPath": "artifacts/gates/ci-37098120270-1-static/summary.json",
+    "sha256": "2fbf9e96e35510fe5ffc81cd612866c3e1bc9c0c8e3315fa1603bd973cf80a32",
+    "testedSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+    "ok": true,
+    "steps": [
+      {
+        "name": "lint",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 109171,
+        "log": "artifacts/gates/ci-37098120270-1-static/lint.log",
+        "totals": null
+      },
+      {
+        "name": "typecheck",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 107090,
+        "log": "artifacts/gates/ci-37098120270-1-static/typecheck.log",
+        "totals": null
+      },
+      {
+        "name": "evidence",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 2622,
+        "log": "artifacts/gates/ci-37098120270-1-static/evidence.log",
+        "totals": null
+      },
+      {
+        "name": "unit",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 108077,
+        "log": "artifacts/gates/ci-37098120270-1-static/unit.log",
+        "totals": {
+          "passed": 762
+        }
+      },
+      {
+        "name": "contract",
+        "phase": 1,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 77044,
+        "log": "artifacts/gates/ci-37098120270-1-static/contract.log",
+        "totals": {
+          "passed": 468
+        }
+      }
+    ],
+    "file": "flowline-gate-static-37098120270-1-summary.json"
+  },
+  {
+    "artifactId": 11264584025,
+    "artifactName": "flowline-gate-webkit-37098120270-1",
+    "originalPath": "artifacts/gates/ci-37098120270-1-webkit/summary.json",
+    "sha256": "e916486b68fc06f5696ff8806d91b21610914bf4e5d2ba319876f141712d2fbf",
+    "testedSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+    "ok": true,
+    "steps": [
+      {
+        "name": "build",
+        "phase": 2,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 64777,
+        "log": "artifacts/gates/ci-37098120270-1-webkit/build.log",
+        "totals": null
+      },
+      {
+        "name": "stack",
+        "phase": 3,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 18797,
+        "log": "artifacts/gates/ci-37098120270-1-webkit/stack.log",
+        "totals": null,
+        "note": "3 stack(s) on this run's build"
+      },
+      {
+        "name": "webkit",
+        "phase": 4,
+        "status": "pass",
+        "rc": 0,
+        "durationMs": 477996,
+        "log": "artifacts/gates/ci-37098120270-1-webkit/webkit.log",
+        "totals": {
+          "passed": 78
+        }
+      }
+    ],
+    "file": "flowline-gate-webkit-37098120270-1-summary.json"
+  }
+]

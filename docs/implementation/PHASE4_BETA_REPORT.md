@@ -126,3 +126,6 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Paid-pilot round2 candidate evidence, 2026-10-03 (not merged or accepted)
+PR15 candidate037af94 has a synthetic SSO newcomer with a pending CI workspace invitation before federation. This fixture overlaps invitation admission and SSO role assignment rather than isolating default-role assignment from admission. The exact-head full GitHub gate passed; this is fake-provider CI evidence only, not live identity-provider or beta acceptance. PR16 proxy read deadline/tighter public-route matchers remain valid deferred M4 findings; both review threads were replied to and resolved as dispositions, not product repairs. M4 stays PARTIAL and deployed proxy proof BLOCKED. No production deployment or invitation to a real person occurred.

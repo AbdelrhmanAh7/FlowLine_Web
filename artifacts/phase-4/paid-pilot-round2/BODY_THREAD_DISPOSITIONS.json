@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-03T06:24:56.890Z",
+  "head": "9d7f0c426f0d952aa46296a9f32ee5c30b6c263e",
+  "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/19#discussion_r4171999870",
+  "resolution": {
+    "data": {
+      "resolveReviewThread": {
+        "thread": {
+          "id": "PRRT_kwDOUvLGYc6okovO",
+          "isResolved": true
+        }
+      }
+    }
+  },
+  "disposition": "VALID; DEFERRED; NOT REPAIRED",
+  "independentSourceRead": "git show exact head: http.ts and webhook route"
+}

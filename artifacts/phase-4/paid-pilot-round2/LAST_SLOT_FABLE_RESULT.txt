@@ -1,0 +1,23 @@
+**Decision: APPROVE — one body-deadline PR opening at 9d7f0c4 (base a9f7597), not before 06:10:30 UTC, under the guards below. Do not BLOCK all new reviews this round.**
+
+**Why one opening is justified (evidence-based, not blind)**
+
+- The provider's own statement at 05:55:46 — "0 included reviews remain… allowance 3 reviews per hour" — is consistent with exactly one counting model visible in the evidence: three *completed* CodeRabbit reviews inside the trailing 60 minutes (PR17 initial 05:09:03, PR17 448c68b summary ≈05:38, PR18 05:55:46). Your own request journal (2 slots: 05:35:12, 05:47:47) is *not* consistent with "0 remain", so the journal is demonstrably the wrong basis for this provider; the completed-review clock is the conservative one and it matches the observation.
+- Under that model the oldest completion (05:09:03) leaves the window at 06:09:03. 06:10:30 adds margin. After that, 2 completions remain in-window → 1 slot. This is the only slot that can be claimed with evidentiary support; it is not a guess at an unadvertised reset.
+- No rate-limit refusal, no billing prompt, no quota cancellation has been observed on PR18 or earlier; the "0 remain" line is informational in a successful review, not a refusal.
+
+**Binding guards for this opening**
+
+1. Earliest trigger 06:10:30 UTC. Opening the PR relies on the automatic initial review only — no `@coderabbitai review`, no manual duplicate, no retry.
+2. If the automatic review is refused, deferred to a next window, or any billing/overage/scopes prompt appears: stop. Record it honestly in the ledger ("review not obtained; provider refusal at HH:MM"), mark the PR BLOCKED-next. No second attempt this round. (Note the provider says 7-day *attempts* set the allowance; a refused attempt may lower future allowance, which is why exactly one attempt and zero retries.)
+3. No commits pushed to the new PR after opening this round — any push triggers another automatic review and would be a blind consumption. Actionable findings get the decision-19 treatment (reply valid/deferred/not repaired, resolve) — no fix re-reviews after 06:30 as you stated.
+4. The 06:40 ledger push: if `codex/paid-pilot-round2-20261003` has an open PR, that push will itself trigger an automatic review. Under the completed-review model the ≈05:38 completion rolls off at ≈06:38, so a second slot *may* exist by 06:40 — but only if the 06:10 review has completed and is the only new in-window completion. Treat that as unverified; if the ledger branch has no open PR, no slot is consumed and no issue arises.
+5. MFA, monitor/retry, Lighthouse and later items stay deferred and backed up; they cannot fit a review slot before cutoff and must not be opened.
+6. PR18 stays exactly as recorded: both threads disposed as valid/deferred/not repaired per decision 19, Major scaling risk disclosed not accepted, no code push, BLOCKED on M5/scale acceptance. Cached independent exact-diff approval and backup verification for 9d7f0c4 are accepted as the pre-conditions you state; I have no evidence contradicting them.
+
+**Record as unknown (do not claim)**
+
+- Numeric provider balance, whether the window is rolling or fixed-hour, whether it keys on request time or completion time, and whether refused attempts count toward the 7-day allowance. The completed-review model is the best-fitting hypothesis for the observed "0 remain", not a provider spec.
+- Whether the automatic review for the new PR will complete before the 06:30 launch cutoff (≈20 min window; prior reviews took ~8–15 min from trigger). If it does not complete by 06:30, the PR is marked "review pending at cutoff", not reviewed.
+
+No owner question is needed: this stays within existing sandbox/no-billing bounds and changes no scope, scopes, or spend.

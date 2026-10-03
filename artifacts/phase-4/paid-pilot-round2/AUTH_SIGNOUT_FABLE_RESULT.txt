@@ -1,0 +1,16 @@
+**Decision: APPROVE** (for commit/push to trigger fresh full CI; not a merge approval).
+
+**What the diff does**
+- Replaces the bare `p2.request.post("/api/auth/sign-out")` with `{ data: {} }`. Playwright serialises an object `data` as JSON and sets `content-type: application/json` unless overridden, so the request now carries a media type that better-call's `getBody` accepts instead of a possibly-present-but-empty body with no content-type (the 415 path you traced).
+- Keeps the exact same assertion (`.ok()` must be truthy) and adds `await signedOut.text()` as the expect message. Playwright's `expect(value, message)` form is supported, so on failure the report will show the response body rather than just `Received: false`. The `.text()` call is independent of `.ok()` (status is already known), so it doesn't affect the assertion.
+
+**Checks against the evidence/rules**
+- Failure site matches the CI excerpt (`phase3.spec.ts:346`, `Received: false`), and the diff touches only that line pair. One file, test-only, no product source changed, no assertion deleted or weakened, no baseline changed.
+- Cookie jar is unchanged: `p2.request` still shares `p2`'s context, so the sign-out still targets the newcomer session and the subsequent `/sign-in` + SSO flow is unaffected.
+- better-auth's sign-out endpoint has no body schema, so an empty JSON object is accepted rather than rejected by validation; this matches the browser client's JSON contract, which is the behaviour the e2e should model.
+- The 415 explanation is an inference from the installed better-call 1.4 source and the Next request-body behaviour, not a recorded response code. The diff is still correct to push: if the inference is right, CI goes green; if wrong, the new diagnostic prints the actual body so the next iteration is evidence-based. Either way nothing is hidden.
+
+**Caveats for the commit/PR message**
+- State the 415 as an inference, not a confirmed response; cite the full CI run as the arbiter.
+- Merge remains gated on a fresh full CI pass on the new SHA, plus replies on all 5 CodeRabbit threads after that run and this review. No queue advance until both.
+- I cannot verify the SHA-256 of the diff file from here; treat the hash as the lead's responsibility to match the exact hunk shown above before pushing.

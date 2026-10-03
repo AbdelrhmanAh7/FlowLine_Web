@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-03T06:01:38.908Z",
+  "head": "360078e9d3357267711f006888b578f5a0c6c434",
+  "records": [
+    {
+      "thread": "PRRT_kwDOUvLGYc6okg3a",
+      "path": "artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/18#discussion_r4171942985",
+      "resolution": {
+        "data": {
+          "resolveReviewThread": {
+            "thread": {
+              "id": "PRRT_kwDOUvLGYc6okg3a",
+              "isResolved": true
+            }
+          }
+        }
+      },
+      "disposition": "VALID; DEFERRED; NOT REPAIRED"
+    },
+    {
+      "thread": "PRRT_kwDOUvLGYc6okg3d",
+      "path": "src/server/retained-files.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/18#discussion_r4171943116",
+      "resolution": {
+        "data": {
+          "resolveReviewThread": {
+            "thread": {
+              "id": "PRRT_kwDOUvLGYc6okg3d",
+              "isResolved": true
+            }
+          }
+        }
+      },
+      "disposition": "VALID; DEFERRED; NOT REPAIRED"
+    }
+  ]
+}

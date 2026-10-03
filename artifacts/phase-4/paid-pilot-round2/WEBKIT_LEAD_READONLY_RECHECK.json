@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-03T06:06:31.967Z",
+  "main": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "rows": [
+    {
+      "path": "e2e/tools/browser-docker.sh",
+      "currentMainBlob": "2982c4e7e3fb0a44e41ad56f10a99f3826a70b00",
+      "failingCandidateBlob": "2982c4e7e3fb0a44e41ad56f10a99f3826a70b00",
+      "match": true
+    },
+    {
+      "path": "scripts/gate-browser-native.mjs",
+      "currentMainBlob": "e303957952027e5a4e48601a208b3916a35da1b8",
+      "failingCandidateBlob": "e303957952027e5a4e48601a208b3916a35da1b8",
+      "match": true
+    },
+    {
+      "path": "worker/index.ts",
+      "currentMainBlob": "99c9188a5fd073995a11fd6b542bfa36bba05cd3",
+      "failingCandidateBlob": "99c9188a5fd073995a11fd6b542bfa36bba05cd3",
+      "match": true
+    },
+    {
+      "path": "scripts/gate.mjs",
+      "currentMainBlob": "1d266bb2bd9628b5504527e72f8f0bec2b3c86a9",
+      "failingCandidateBlob": "1d266bb2bd9628b5504527e72f8f0bec2b3c86a9",
+      "match": true
+    }
+  ],
+  "disposition": "ROOT_CAUSE_UNPROVEN",
+  "limits": "Read-only source and preserved findings; no raw trace/log re-extraction, instrumentation, CI dispatch, stack, browser, build or tests. Original ECONNRESET incident is distinct from PR14 Output-tab timeout. Native runner path excludes Docker-network patch as a causal fix; finally(done) is not persisted success. Missing socket reuse/request arrival/process-resource evidence prevents a causal diagnosis."
+}

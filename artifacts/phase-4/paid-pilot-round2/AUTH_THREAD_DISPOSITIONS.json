@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-03T05:47:29.315Z",
+  "head": "448c68b74ee0be43868903ed8de49c29ad56b2a3",
+  "records": [
+    {
+      "id": "4171792701",
+      "thread": "PRRT_kwDOUvLGYc6okMGR",
+      "path": "src/app/api/sso/callback/route.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#discussion_r4171905686",
+      "resolution": "Already auto-resolved before lead reply"
+    },
+    {
+      "id": "4171792710",
+      "thread": "PRRT_kwDOUvLGYc6okMGY",
+      "path": "src/i18n/messages/en.json",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#discussion_r4171905747",
+      "resolution": "Already auto-resolved before lead reply"
+    },
+    {
+      "id": "4171792715",
+      "thread": "PRRT_kwDOUvLGYc6okMGe",
+      "path": "src/server/auth-dispatch.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#discussion_r4171905787",
+      "resolution": "Already auto-resolved before lead reply"
+    },
+    {
+      "id": "4171792719",
+      "thread": "PRRT_kwDOUvLGYc6okMGg",
+      "path": "src/server/sso-link.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#discussion_r4171905849",
+      "resolution": "Already auto-resolved before lead reply"
+    },
+    {
+      "id": "4171792725",
+      "thread": "PRRT_kwDOUvLGYc6okMGk",
+      "path": "tests/integration/sec-sso-link-consent.test.ts",
+      "reply": "https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/17#discussion_r4171905932",
+      "resolution": "Already auto-resolved before lead reply"
+    }
+  ]
+}

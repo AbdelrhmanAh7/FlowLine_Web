@@ -1,0 +1,13 @@
+{
+  "artifactId": 11264889546,
+  "zipSHA256": "55e716fc793fed2967ed6bdda6a48d0e09b6d6d60701ad662028424aa8fab144",
+  "diagnostics": [
+    {
+      "path": "test-results/chromium-3-report.txt",
+      "logSHA256": "b9877501b3145c6c22654a2d8bdbf4a030ff7c3eba2f339e4a1d633952d929d5",
+      "excerpts": [
+        "  1) [chromium] \u203a e2e/phase3.spec.ts:290:5 \u203a SSO: owner tests configuration without linking; mailbox-proven members explicitly confirm; existing accounts are never taken over \n\n    Test timeout of 120000ms exceeded.\n\n    Error: locator.click: Test ended.\n    Call log:\n      - waiting for getByRole('button', { name: 'I verified my email \u2014 refresh' })\n\n\n      338 |   const verify = await p2.request.post(\"/api/email\", { data: { action: \"verify\", token: new URL(await verificationLink(p2.request, newcomer)).searchParams.get(\"token\") } });\n      339 |   expect((await verify.json()).status).toBe(\"done\");\n    > 340 |   await p2.getByRole(\"button\", { name: \"I verified my email \u2014 refresh\" }).click();\n          |                                                                           ^\n      341 |   await p2.getByLabel(\"Password\", { exact: true }).fill(PASSWORD);\n      342 |   await p2.getByRole(\"button\", { name: \"Confirm linking my account to this provider\" }).click();\n      343 |   await expect(p2).toHaveURL(new RegExp(`/w/${workspace.slug}/flows`));\n        at /home/runner/work/FlowLine_Web/FlowLine_Web/e2e/phase3.spec.ts:340:75\n\n    attachment #1: screenshot (image/png) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    test-results/chromium-3/phase3-SSO-owner-tests-con-1306f-counts-are-never-taken-over-chromium/test-failed-2.png\n    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+ROUND2 CLOSEOUT 2026-10-03: see docs/implementation/PAID_PILOT_STATUS.md final override. Auth latest448c68b fullPASS; #18 valid Major deferred/unfixed and acceptanceBLOCKED; #19 required gate billing non-start NOT GATED, valid Minor deferred/unfixed. ALL CI stopped under $0 guard. Twelve CR attempts/ten completed events; Fable21 decisions/23 calls before final exact-stage review22. No paid settings change.
+
 # Round-2 AI/tool usage
 
 Restart update: one Codex lead, zero parallel workers and zero local heavy jobs. The older pilot lead process was still staging this worktree and was stopped to enforce the owner's sequential restart. Fable decisions now include the restart ruling and the independent checkpoint review (seven total through that review), with no limit warning. Future recorded review decisions increment that count; numeric subscription headroom is unverified. Two completed CodeRabbit reviews and three conservatively counted attempts preceded this restart's new openings. The shared request log is mirrored into the committed ledger snapshot on every new opening; both copies are unioned for slot admission. No billing route was enabled.

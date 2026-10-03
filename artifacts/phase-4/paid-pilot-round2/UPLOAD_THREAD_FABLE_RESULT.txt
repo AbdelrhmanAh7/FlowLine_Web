@@ -1,0 +1,25 @@
+**APPROVE — deferral of both threads, with the conditions below. No code change on this clock.**
+
+## Why deferral is acceptable here
+
+**Thread 2 — `src/server/retained-files.ts` (Major, performance).** Finding is VALID as stated: `sum(octet_length(data))` over all of `file_object` runs under a single installation-wide `pg_advisory_xact_lock`, cost is row-proportional (octet_length reads TOAST raw-size metadata, not payload), and the byte caps do not bound row count (many tiny files → unbounded rows under the serialized section). But:
+- The candidate already discloses this honestly in the README ("The installation lock may serialize uploads and the aggregate query scans retained files; these conservative tradeoffs favor correct admission for the bounded pilot") and labels itself PARTIAL M5. No fake-success/honesty rule is violated.
+- The correct fix (maintained installation + workspace counters, updated transactionally on every insert/delete/cascade path, with migration + backfill and new concurrency/rollback regressions) is a schema change under the drizzle-migration rule and cannot be implemented, reviewed and gated in ~30 minutes. A generated-length column would not remove the scan or the serialization — agree with CodeRabbit; do not ship it as a "fix".
+- Correctness of admission (the M5 goal this PR actually addresses) is not disputed; the gap is scale, and PR18 is already BLOCKED pending complete M5/scale acceptance. Deferral changes nothing about mergeability.
+
+**Thread 1 — `run-focused.mjs` (Minor).** VALID, and actually a little worse than CodeRabbit states: `baseSha` is a hard-coded string literal, not computed, so a rerun on any checkout would stamp the same value. Additionally the helper spreads `...process.env` into the test env despite the comment "Never loads .env files" — it inherits whatever the invoking shell carries. Both justify "DO NOT RUN until fixed," but neither affects shipped code, and the immutable GitHub run `37100978121` (head `360078e…`, gate PASS, fast tier) is the authoritative evidence. The alternative "minimal runner metadata fix" is rejected for this slot: it changes an executable evidence artifact, needs its own review + CI, and would spend a CodeRabbit review the plan does not have (0 included reviews remain).
+
+## Minimum required actions (all docs/thread-level)
+
+1. **Thread 2 reply (do not say fixed):** acknowledge valid Major; state scan-under-lock is row-count proportional and unbounded by byte caps; link the M5 ledger item; follow-up = counters (`installation`/`workspace` retained-byte columns or table), transactional maintenance on all insert/delete/cascade paths incl. knowledge-source deletion and failed Company Builder install rollback, drizzle migration + backfill, concurrency + deletion + backfill-fault regressions; note generated-length column is explicitly rejected as a non-fix. Resolve as **deferred**.
+2. **Thread 1 reply:** acknowledge; note `baseSha` is a literal and env is inherited; mark helper DO NOT RUN; follow-up = compute `git rev-parse HEAD`, tracked-file diff digest, refuse untracked `src/`/`tests/` changes, and allowlist env rather than spread `process.env`; authoritative evidence remains the immutable CI run on the tested SHA. Resolve as **deferred**.
+3. **PR body / ledger:** keep PR18 **BLOCKED** with the Major entry retained at Major priority (resolving the thread must not downgrade it). Add one explicit sentence: scaling risk is *disclosed, not accepted*; acceptance requires the counter implementation or an explicit owner decision for the bounded pilot. Do not claim scale proof (none measured).
+4. **Do not push commits** to PR18 before cutoff — any push burns a review you don't have and re-triggers the stack.
+
+## What would make me BLOCK instead
+- Resolving either thread with "Fixed in <sha>" or any wording implying the scan is bounded.
+- Downgrading/removing the Major ledger item.
+- Shipping the generated-length column or a partial counter on this clock.
+- Re-running `run-focused.mjs` to produce fresh evidence before the identity/env fix.
+
+None of these are in the proposed disposition, so the deferral stands as APPROVED.

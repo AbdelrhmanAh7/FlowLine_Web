@@ -1,0 +1,71 @@
+{
+  "sha": "03826a8b5a8b4c60edd5cce1536d189d54297c3d",
+  "shortSha": "03826a8",
+  "dirty": false,
+  "dirtyCount": 0,
+  "node": "v22.23.3",
+  "pnpm": "10.32.1",
+  "tier": "fast",
+  "group": null,
+  "stacks": 3,
+  "totalStacks": 3,
+  "poolMax": 6,
+  "integrationShards": 4,
+  "startedAt": "2026-10-03T05:48:16.631Z",
+  "finishedAt": "2026-10-03T05:49:28.284Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "artifacts/gates/ci-37100978121-1-static",
+  "ok": true,
+  "steps": [
+    {
+      "name": "lint",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 71652,
+      "log": "artifacts/gates/ci-37100978121-1-static/lint.log",
+      "totals": null
+    },
+    {
+      "name": "typecheck",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 68808,
+      "log": "artifacts/gates/ci-37100978121-1-static/typecheck.log",
+      "totals": null
+    },
+    {
+      "name": "evidence",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 1556,
+      "log": "artifacts/gates/ci-37100978121-1-static/evidence.log",
+      "totals": null
+    },
+    {
+      "name": "unit",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 70108,
+      "log": "artifacts/gates/ci-37100978121-1-static/unit.log",
+      "totals": {
+        "passed": 812
+      }
+    },
+    {
+      "name": "contract",
+      "phase": 1,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 55971,
+      "log": "artifacts/gates/ci-37100978121-1-static/contract.log",
+      "totals": {
+        "passed": 468
+      }
+    }
+  ]
+}

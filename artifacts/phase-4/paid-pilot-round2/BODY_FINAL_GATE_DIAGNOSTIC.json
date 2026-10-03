@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-03T06:18:01.635Z",
+  "run": 37102200387,
+  "job": {
+    "id": 111144511327,
+    "conclusion": "failure",
+    "startedAt": "2026-10-03T06:15:31Z",
+    "completedAt": "2026-10-03T06:15:35Z",
+    "steps": [],
+    "runnerId": 0
+  },
+  "check": {
+    "id": 111144511327,
+    "status": "completed",
+    "conclusion": "failure",
+    "title": null,
+    "summary": null,
+    "text": null
+  },
+  "annotations": [
+    {
+      "title": "",
+      "message": "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings",
+      "level": "failure"
+    },
+    {
+      "title": "",
+      "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+      "level": "notice"
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 import hashlib, io, json, re, subprocess, sys, zipfile
 from pathlib import Path
 artifact_id=int(sys.argv[1])
+context=min(30, max(5, int(sys.argv[2]))) if len(sys.argv)>2 else 5
 raw=subprocess.check_output(['gh','api',f'repos/AbdelrhmanAh7/FlowLine_Web/actions/artifacts/{artifact_id}/zip'])
 archive=zipfile.ZipFile(io.BytesIO(raw))
 rows=[]
@@ -14,7 +15,7 @@ for name in archive.namelist():
     found=[i for i,line in enumerate(lines) if re.search(r'^\s*(?:FAIL\s+|\d+\) \[(?:chromium|firefox|webkit)\])',line)]
     excerpts=[]
     for i in found:
-        excerpt='\n'.join(lines[i:min(len(lines),i+5)])
+        excerpt='\n'.join(lines[i:min(len(lines),i+context)])
         excerpt=re.sub(r'(?i)(authorization|password|api[_-]?key|client[_-]?secret)\s*[:=]\s*\S+',r'\1=[REDACTED]',excerpt)
         excerpts.append(excerpt)
     if excerpts: rows.append({'path':name,'logSHA256':hashlib.sha256(archive.read(name)).hexdigest(),'excerpts':excerpts})

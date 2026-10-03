@@ -1,0 +1,35 @@
+{
+  "sha": "356a92bdaf5eca55a95adcd071521fc47b29f594",
+  "shortSha": "356a92b",
+  "dirty": false,
+  "dirtyCount": 0,
+  "node": "v22.23.3",
+  "pnpm": "10.32.1",
+  "tier": "fast",
+  "group": null,
+  "stacks": 3,
+  "totalStacks": 3,
+  "poolMax": 6,
+  "integrationShards": 4,
+  "startedAt": "2026-10-03T05:11:04.573Z",
+  "finishedAt": "2026-10-03T05:13:25.849Z",
+  "browsersMode": "sequential",
+  "failFast": false,
+  "out": "artifacts/gates/ci-37098951245-1-integration",
+  "ok": true,
+  "steps": [
+    {
+      "name": "integration",
+      "phase": 2,
+      "status": "pass",
+      "rc": 0,
+      "durationMs": 139754,
+      "log": "artifacts/gates/ci-37098951245-1-integration/integration.log",
+      "totals": {
+        "passed": 563,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  ]
+}

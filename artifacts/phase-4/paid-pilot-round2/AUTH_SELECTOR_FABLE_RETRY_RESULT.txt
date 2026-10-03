@@ -1,0 +1,20 @@
+**Verdict: APPROVE** the one-file diff to `e2e/phase3.spec.ts` as written, for commit and push to the existing PR 17 head. Full fresh CI remains required before any further step.
+
+**What I could and could not verify**
+- Shell and file tools are disabled in this session, so I could not open the spec, confirm the surrounding lines, or recompute the SHA256 you quoted. The review below is based on the failure artifact excerpt and the diff text you supplied. Treat the hash as unverified by me.
+
+**Why the fix is correct**
+- The strict-mode violation is real and environmental. Next.js injects an empty `__next-route-announcer__` div with role alert after client-side navigation, so `getByRole("alert")` matches two nodes once the sign-in page re-renders with the error. The product alert itself is correct.
+- `filter({ hasText })` narrows to elements whose text contains the substring, case-insensitively, with whitespace normalised. The empty announcer can never match, so the locator resolves to exactly one element and strict mode is satisfied.
+- The assertion is not weakened. If the error message were missing or wrong, the filtered locator resolves to zero elements and `toContainText` fails after the same 10 s timeout. A wrong alert cannot satisfy it, which is the property `.first()` would have lost.
+- The redundancy between the filter text and the asserted text is harmless and matches the precedent already in this spec for other alerts, which keeps the file consistent.
+- Scope is exactly as described: one line, no product source, no retry, timeout, baseline, or coverage change.
+
+**Residual risks, none blocking**
+- If the route announcer ever announced text containing the same substring, strict mode would trip again. It announces the page title, so this is negligible.
+- Lint on the longer line has not run locally. Line 328 in the same block is already longer, so the static tier should accept it. CI will confirm.
+- The original failure was only in the Chromium shard. The announcer timing is browser-independent in principle, so the fix is still appropriate even though Firefox and WebKit passed.
+
+**Process notes**
+- Pushing a new head to PR 17 invalidates the pending review on the old head. Per your rule, that consumes a new request slot, so keep the rolling-hour count at or under 3.
+- No merge, and no paid route, provider, or invite action outside CI. No restacking of the queued MFA PR is needed since the parent branch content changes only in a test file.

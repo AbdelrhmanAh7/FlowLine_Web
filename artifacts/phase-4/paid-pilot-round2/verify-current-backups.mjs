@@ -1,0 +1,10 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+const dir='artifacts/phase-4/paid-pilot-round2';
+const initial=JSON.parse(readFileSync(`${dir}/RESTART_BACKUPS.json`,'utf8'));
+const remote=new Map(execFileSync('git',['ls-remote','--heads','origin'],{encoding:'utf8'}).trim().split('\n').map(l=>l.trim().split(/\s+/)).map(([sha,ref])=>[ref.replace(/^refs\/heads\//,''),sha]));
+const rows=initial.rows.map(r=>{const local=execFileSync('git',['rev-parse',r.ref],{encoding:'utf8'}).trim();return {ref:r.ref,initial:r.local,local,remote:remote.get(r.ref),match:local===remote.get(r.ref),advancedSinceInitial:local!==r.local};});
+const result={at:new Date().toISOString(),operation:'Read-only remote verification, no push',rows,allMatch:rows.every(r=>r.match),main:{local:execFileSync('git',['rev-parse','main'],{encoding:'utf8'}).trim(),remote:remote.get('main')},leadCheckpoint:'Final evidence commit will advance the lead ref; verify that exact final SHA after its push. All product branch heads are already remote.'};
+writeFileSync(`${dir}/CURRENT_BACKUPS_VERIFICATION.json`,JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({at:result.at,rows:rows.length,allMatch:result.allMatch,advanced:rows.filter(r=>r.advancedSinceInitial),main:result.main}));
+if(!result.allMatch||result.main.local!==result.main.remote)throw Error('Ref drift');

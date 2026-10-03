@@ -1,3 +1,5 @@
+ROUND2 CLOSEOUT 2026-10-03: see docs/implementation/PAID_PILOT_STATUS.md final override. Auth latest448c68b fullPASS; #18 valid Major deferred/unfixed and acceptanceBLOCKED; #19 required gate billing non-start NOT GATED, valid Minor deferred/unfixed. ALL CI stopped under $0 guard. Twelve CR attempts/ten completed events; Fable21 decisions/23 calls before final exact-stage review22. No paid settings change.
+
 # Paid-pilot PR candidate inventory
 
 ROUND 2 live amendment, 2026-10-03: redaction branch advanced from historical `09be0b3` below to `5f07d8811b84af511c7862f5af13b1feff4decc9` through independently Fable-reviewed test-only fixtures `6da59d7` and explicit CI test mode `5f07d88`. PR #15 now has18paths against main; assertions/product fail-closed behavior unchanged. GitHub validated549integration tests on6da59d7; newest full CI/current CodeRabbit coverage pending. Dependency PR #14 atdd840db is reviewed but full CI failed WebKit journey (77/78); not merge-ready. This amendment does not change frozen round-one source/evidence or assert readiness. Latest task/review/Actions state is PAID_PILOT_STATUS.md on `codex/paid-pilot-round2-20261003`.
