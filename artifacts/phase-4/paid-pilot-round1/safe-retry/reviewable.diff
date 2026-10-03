@@ -1,0 +1,316 @@
+diff --git a/e2e/fakes/provider-server.ts b/e2e/fakes/provider-server.ts
+index 7d102b9..0c3d92d 100644
+--- a/e2e/fakes/provider-server.ts
++++ b/e2e/fakes/provider-server.ts
+@@ -382,7 +382,7 @@ interface RecordedRequest {
+   time: string;
+ }
+ 
+-type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
++type FaultMode = "429" | "500" | "500_after_commit" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
+ interface Fault {
+   provider: string;
+   pattern: RegExp;
+@@ -398,6 +398,7 @@ interface Ctx {
+   requests: RecordedRequest[];
+   faults: Fault[];
+   dropAfterCommit: boolean;
++  serverErrorAfterCommit: WeakSet<ServerResponse>;
+   heldSockets: Set<import("node:net").Socket>;
+   /**
+    * Registered OAuth clients per provider (credential-rotation tests). When a provider has an entry, its token endpoint
+@@ -411,6 +412,11 @@ interface Ctx {
+ }
+ 
+ function json(ctx: Ctx, req: IncomingMessage, res: ServerResponse, status: number, body: unknown, extraHeaders: Record<string, string> = {}) {
++  if (ctx.serverErrorAfterCommit.has(res)) {
++    ctx.serverErrorAfterCommit.delete(res);
++    status = 500;
++    body = { error: "internal fake error after applying action" };
++  }
+   if (ctx.dropAfterCommit) {
+     ctx.dropAfterCommit = false;
+     req.socket.destroy();
+@@ -2246,7 +2252,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
+   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+   const { privateKey: altPrivateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+   const publicJwk = { ...(publicKey.export({ format: "jwk" }) as Record<string, unknown>), kid: "fake-oidc-key-1", alg: "RS256", use: "sig" };
+-  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
++  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, serverErrorAfterCommit: new WeakSet(), heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
+ 
+   const server: Server = createServer((req, res) => {
+     void (async () => {
+@@ -2354,7 +2360,8 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
+           });
+           return;
+         }
+-        if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
++        if (fault.mode === "500_after_commit") ctx.serverErrorAfterCommit.add(res);
++        else if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
+         else ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
+       }
+ 
+diff --git a/src/i18n/engine-text.ts b/src/i18n/engine-text.ts
+index 22ce78e..5a07efc 100644
+--- a/src/i18n/engine-text.ts
++++ b/src/i18n/engine-text.ts
+@@ -300,10 +300,10 @@ const SHAPES: readonly Shape[] = [
+   ["APPROVAL_REQUIRED", /^Waiting for approval to run (.+)$/s, "runs.errorShape.approvalWait", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+   ["APPROVAL_REJECTED", /^(.+?) was rejected: (.*)$/s, "runs.errorShape.approvalRejectedNote", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), note: m[2]! })],
+   ["APPROVAL_REJECTED", /^(.+) was rejected$/s, "runs.errorShape.approvalRejected", (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!) })],
+-  ["OUTCOME_UNKNOWN", /^No response from (.+?) — the request may have been applied\. Mark it done, retry, or fail\.$/, "runs.errorShape.outcomeHttp", (m) => ({ host: m[1]! })],
++  ["OUTCOME_UNKNOWN", /^(?:No response|Unconfirmed outcome) from (.+?) — the request may have been applied\. Mark it done, retry, or fail\.$/, "runs.errorShape.outcomeHttp", (m) => ({ host: m[1]! })],
+   [
+     "OUTCOME_UNKNOWN",
+-    /^(.+?) may or may not have been applied by (.+?) \(lost response\)\. Check it and choose: mark done, retry, or fail\.$/,
++    /^(.+?) may or may not have been applied by (.+?) \((?:lost response|unconfirmed outcome)\)\. Check it and choose: mark done, retry, or fail\.$/,
+     "runs.errorShape.outcomeAction",
+     (m, t, ctx) => ({ title: actionName(t, ctx, m[1]!), provider: m[2]! }),
+   ],
+diff --git a/src/i18n/messages/ar.json b/src/i18n/messages/ar.json
+index 5979ccf..9389f69 100644
+--- a/src/i18n/messages/ar.json
++++ b/src/i18n/messages/ar.json
+@@ -1973,8 +1973,8 @@
+       "approvalWait": "بانتظار الموافقة لتشغيل {title}",
+       "approvalRejected": "رُفض {title}",
+       "approvalRejectedNote": "رُفض {title}: {note}",
+-      "outcomeHttp": "لم تصل استجابة من {host} — قد يكون الطلب قد نُفّذ. اختر: وضع علامة مكتمل، أو إعادة المحاولة، أو إفشال الخطوة.",
+-      "outcomeAction": "قد يكون {provider} نفّذ {title} أو لم ينفّذه (ضاعت الاستجابة). تحقّق منه ثم اختر: وضع علامة مكتمل، أو إعادة المحاولة، أو إفشال الخطوة.",
++      "outcomeHttp": "تعذّر تأكيد نتيجة الطلب لدى {host} — قد يكون الطلب قد نُفّذ. اختر: وضع علامة مكتمل، أو إعادة المحاولة، أو إفشال الخطوة.",
++      "outcomeAction": "قد يكون {provider} نفّذ {title} أو لم ينفّذه (تعذّر تأكيد النتيجة). تحقّق منه ثم اختر: وضع علامة مكتمل، أو إعادة المحاولة، أو إفشال الخطوة.",
+       "outcomeSubflow": "توقّف تنفيذ «{name}» في منتصفه وربما نفّذ جزءًا من خطوات لها أثر خارجي. تحقّق، ثم اختر: وضع علامة مكتمل، أو إعادة المحاولة، أو إفشال الخطوة.",
+       "outcomeFailedHttp": "كانت نتيجة الطلب غير معروفة وأفشل أحد المراجعين الخطوة",
+       "outcomeFailedAction": "كانت نتيجة {title} غير معروفة وأفشل أحد المراجعين الخطوة",
+diff --git a/src/i18n/messages/en.json b/src/i18n/messages/en.json
+index 569e4fe..dc8dbf5 100644
+--- a/src/i18n/messages/en.json
++++ b/src/i18n/messages/en.json
+@@ -1901,7 +1901,7 @@
+       "approvalRejected": "{title} was rejected",
+       "approvalRejectedNote": "{title} was rejected: {note}",
+       "outcomeHttp": "No response from {host} — the request may have been applied. Mark it done, retry, or fail.",
+-      "outcomeAction": "{title} may or may not have been applied by {provider} (lost response). Check it and choose: mark done, retry, or fail.",
++      "outcomeAction": "{title} may or may not have been applied by {provider} (unconfirmed outcome). Check it and choose: mark done, retry, or fail.",
+       "outcomeSubflow": "\"{name}\" was interrupted and may have partly run steps with external effects. Check, then mark done, retry, or fail.",
+       "outcomeFailedHttp": "The request's outcome was unknown and a reviewer failed the step",
+       "outcomeFailedAction": "{title} outcome was unknown and a reviewer failed the step",
+diff --git a/tests/contract/helpers.ts b/tests/contract/helpers.ts
+index dbdddda..ce2a989 100644
+--- a/tests/contract/helpers.ts
++++ b/tests/contract/helpers.ts
+@@ -22,7 +22,7 @@ export interface Fake {
+   lastRequest(provider: string): Promise<RecordedRequest>;
+   state<T = unknown>(provider: string): Promise<T>;
+   reset(): Promise<void>;
+-  fault(f: { provider: string; pathPattern: string; mode: "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay"; times?: number; retryAfterSec?: number; delayMs?: number }): Promise<void>;
++  fault(f: { provider: string; pathPattern: string; mode: "429" | "500" | "500_after_commit" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay"; times?: number; retryAfterSec?: number; delayMs?: number }): Promise<void>;
+   /** Registers a client the provider accepts (this id + one of these secrets); an empty list removes that client. Once any client is registered, unknown clients get invalid_client. */
+   oauthClient(provider: string, clientId: string, secrets: string[]): Promise<void>;
+   /** Forces the provider's next token response(s) to be an OAuth error with this description. */
+diff --git a/tests/integration/p2-actions.test.ts b/tests/integration/p2-actions.test.ts
+index c5b2bcd..512736e 100644
+--- a/tests/integration/p2-actions.test.ts
++++ b/tests/integration/p2-actions.test.ts
+@@ -130,6 +130,55 @@ describe("Sheets step fails, then re-run from that step: no duplicated effects",
+ });
+ 
+ describe("lost responses on non-idempotent actions", () => {
++  it("500 after commit is verified without resending a non-idempotent Slack message", async () => {
++    const { user, conn, flowOf } = await setup("ServerApplied");
++    const slack = await conn("slack");
++    const flow = await flowOf(chain(trigger({}), action("m", "slack.post_message", slack.id, '{ "channel": "C_SALES", "text": "server applied once" }')));
++    await fake.reset();
++    const before = await slackMessages();
++    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500_after_commit", times: 1 });
++    const run = await enqueueRun(user, flow.id);
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("succeeded");
++    expect((await byNode(run.id)).m!.meta).toMatchObject({ verifiedAfterLostResponse: true });
++    expect((await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage")).toHaveLength(1);
++    expect(await slackMessages()).toBe(before + 1);
++  });
++
++  it("500 after commit without provider verification asks for review; done never resends", async () => {
++    const { user, ws, conn, flowOf } = await setup("ServerReview");
++    const hub = await conn("hubspot");
++    const flow = await flowOf(chain(trigger({}), action("deal", "hubspot.create_deal", hub.id, '{ "dealname": "server applied", "amount": "100" }')));
++    await fake.reset();
++    await fake.fault({ provider: "hubspot", pathPattern: "/crm/v3/objects/deals", mode: "500_after_commit", times: 1 });
++    const run = await enqueueRun(user, flow.id);
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("waiting_approval");
++    expect((await byNode(run.id)).deal!.status).toBe("uncertain");
++    const sends = async () => (await fake.requests("hubspot")).filter(r => r.method === "POST");
++    expect(await sends()).toHaveLength(1);
++    const [review] = await db.select().from(schema.approval).where(and(eq(schema.approval.runId, run.id), eq(schema.approval.kind, "review")));
++    await decide(db, { workspaceId: ws.id, approvalId: review!.id, userId: user.id, decision: "done" });
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("succeeded");
++    expect(await sends()).toHaveLength(1);
++  });
++
++  it("verified-not-applied with no attempts left preserves the server error", async () => {
++    const { user, conn, flowOf } = await setup("ServerExhausted");
++    const slack = await conn("slack");
++    const flow = await flowOf(chain(trigger({}), action("m", "slack.post_message", slack.id, '{ "channel": "C_SALES", "text": "not applied" }', { retry: { maxAttempts: 1 } })));
++    await fake.reset();
++    const before = await slackMessages();
++    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500", times: 1 });
++    const run = await enqueueRun(user, flow.id);
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("failed");
++    expect((await byNode(run.id)).m!.error?.code).toBe("PROVIDER_SERVER");
++    expect((await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage")).toHaveLength(1);
++    expect(await slackMessages()).toBe(before);
++  });
++
+   it("drop after commit → verified with the provider → success, exactly one row", async () => {
+     const { user, conn, flowOf } = await setup("Lost");
+     const sheets = await conn("google_sheets");
+diff --git a/tests/integration/p2-review-fixes.test.ts b/tests/integration/p2-review-fixes.test.ts
+index 0ea642f..1e5cc23 100644
+--- a/tests/integration/p2-review-fixes.test.ts
++++ b/tests/integration/p2-review-fixes.test.ts
+@@ -48,13 +48,13 @@ const trigger = (payload: unknown) => node("t", "trigger.manual", { samplePayloa
+ const out = () => node("o", "output", { key: "r", expression: "" });
+ const slackPost = (id: string, connId: string, mapping: string, extra: Record<string, unknown> = {}) =>
+   node(id, "integration.action", { actionId: "slack.post_message", connectionId: connId, inputMapping: mapping, requireApproval: false, retry: { maxAttempts: 1 }, ...extra });
+-const httpPost = (id: string, channel: string) =>
++const httpPost = (id: string, channel: string, sideEffect = "non_idempotent") =>
+   node(id, "http.request", {
+     method: "POST",
+     url: `"${fake.url}/slack/chat.postMessage"`,
+     headers: '{ "authorization": "Bearer test-token" }',
+     body: `{ "channel": "${channel}", "text": "via http" }`,
+-    sideEffect: "non_idempotent",
++    sideEffect,
+     timeoutMs: 5000,
+     retry: { maxAttempts: 3 },
+   });
+@@ -94,6 +94,43 @@ async function crashDuring(runId: string, done: Record<string, unknown>, running
+ }
+ 
+ describe("M1 — non-idempotent HTTP requests are never blindly re-sent", () => {
++  it("500 after commit sends one POST, asks for review, and marking done never sends again", async () => {
++    const channel = unique("C_HTTP_500");
++    const { user, ws, flowOf } = await setup("Http500");
++    const flow = await flowOf(chain(trigger({}), httpPost("h", channel), out()));
++    await fake.reset();
++    await fake.fault({ provider: "slack", pathPattern: "chat.postMessage", mode: "500_after_commit", times: 1 });
++    const run = await enqueueRun(user, flow.id);
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("waiting_approval");
++    expect((await stepOf(run.id, "h")).status).toBe("uncertain");
++    expect(await posts(channel)).toHaveLength(1);
++    const sends = async () => (await fake.requests("slack")).filter(r => r.method === "POST" && r.path === "/chat.postMessage");
++    expect(await sends()).toHaveLength(1);
++    const [review] = await reviewsOf(run.id);
++    await decide(db, { workspaceId: ws.id, approvalId: review!.id, userId: user.id, decision: "done" });
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("succeeded");
++    expect(await sends()).toHaveLength(1);
++    expect(await posts(channel)).toHaveLength(1);
++  });
++
++  for (const effect of ["none", "idempotent"] as const) it(`keeps ordinary 500 retries for ${effect} HTTP requests`, async () => {
++    const { user, flowOf } = await setup("SafeHttp500");
++    const request = effect === "none"
++      ? node("h", "http.request", { method: "GET", url: `"${fake.url}/slack/conversations.list"`, headers: '{ "authorization": "Bearer test-token" }', timeoutMs: 5000, retry: { maxAttempts: 2 } })
++      : httpPost("h", unique("C_IDEM"), "idempotent");
++    const flow = await flowOf(chain(trigger({}), request, out()));
++    await fake.reset();
++    const path = effect === "none" ? "conversations.list" : "chat.postMessage";
++    await fake.fault({ provider: "slack", pathPattern: path, mode: "500", times: 1 });
++    const run = await enqueueRun(user, flow.id);
++    await claimAndProcess(run.id);
++    expect((await freshRun(run.id)).status).toBe("succeeded");
++    expect((await fake.requests("slack")).filter(r => r.path.endsWith(path))).toHaveLength(2);
++    expect(await reviewsOf(run.id)).toHaveLength(0);
++  });
++
+   it("a worker that died mid-request leads to a review, not a second POST", async () => {
+     const channel = unique("C_HTTP");
+     const { user, ws, flowOf } = await setup("HttpCrash");
+diff --git a/tests/unit/i18n-engine-text.test.ts b/tests/unit/i18n-engine-text.test.ts
+index 242f69f..bbd8130 100644
+--- a/tests/unit/i18n-engine-text.test.ts
++++ b/tests/unit/i18n-engine-text.test.ts
+@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
+ import { NODE_DEFINITIONS } from "@/engine/nodes";
+ import type { FlowGraph } from "@/engine/types";
+ import { checkConnection, validateGraph } from "@/engine/validate";
+-import { connectionReason, denyReasonText, issueMessage, nodeText, notPreviewedReason, runLabel } from "@/i18n/engine-text";
++import { connectionReason, denyReasonText, issueMessage, nodeText, notPreviewedReason, runLabel, stepErrorText } from "@/i18n/engine-text";
+ import { createTranslator } from "@/i18n/translate";
+ import { duration, timeAgo } from "@/lib/format";
+ import { ALL_CAPABILITIES, denyReason, type Role } from "@/lib/permissions";
+@@ -89,6 +89,17 @@ const issues = BAD_GRAPHS.flatMap((g) => {
+ });
+ 
+ describe("engine text in the UI language", () => {
++  it("translates new and historical unknown-outcome reviews without claiming a missing response", () => {
++    for (const t of [en, ar]) {
++      for (const prefix of ["No response", "Unconfirmed outcome"]) {
++        expect(stepErrorText(t, { code: "OUTCOME_UNKNOWN", message: `${prefix} from provider.example — the request may have been applied. Mark it done, retry, or fail.` })).toBe(t("runs.errorShape.outcomeHttp", { host: "provider.example" }));
++      }
++      for (const reason of ["lost response", "unconfirmed outcome"]) {
++        expect(stepErrorText(t, { code: "OUTCOME_UNKNOWN", message: `Post message may or may not have been applied by Slack (${reason}). Check it and choose: mark done, retry, or fail.` })).toMatch(t("runs.errorShape.outcomeAction", { title: "Post message", provider: "Slack" }));
++      }
++    }
++  });
++
+   it("the fixture graphs cover the validation codes", () => {
+     const codes = new Set(issues.map((i) => i.code));
+     for (const c of ["EMPTY_FLOW", "INVALID_JSON", "INVALID_SCHEDULE", "EMPTY_EXPRESSION", "INVALID_EXPRESSION", "INVALID_OUTPUT_KEY", "RESERVED_OUTPUT_KEY", "DUPLICATE_OUTPUT_KEY", "EMPTY_MAPPING", "INVALID_FIELD", "DUPLICATE_FIELD", "INVALID_CONFIG", "MISSING_FILE", "MISSING_SUBFLOW", "UNBOUNDED_LOOP", "INVALID_SCHEMA", "MISSING_ACTION", "MISSING_CONNECTION", "APPROVAL_UNSTABLE_INPUT", "SETUP_REQUIRED", "UNKNOWN_REFERENCE", "REFERENCE_NOT_UPSTREAM", "UNCONNECTED_INPUT", "MERGE_NEEDS_INPUTS", "INVALID_EDGE", "MULTIPLE_TRIGGERS", "UNKNOWN_NODE", "NO_STEPS", "DUPLICATE_NODE_ID"]) {
+diff --git a/worker/handlers.ts b/worker/handlers.ts
+index cc47ed5..ed64f16 100644
+--- a/worker/handlers.ts
++++ b/worker/handlers.ts
+@@ -116,7 +116,7 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
+   };
+   const review = async (): Promise<NodeOutcome | null> => {
+     const g = await checkGate(ctx.db, gate);
+-    if (g.status === "pending") return { kind: "pause", status: "uncertain", message: `No response from ${new URL(url).host} — the request may have been applied. Mark it done, retry, or fail.`, meta: { reviewId: g.approvalId } };
++    if (g.status === "pending") return { kind: "pause", status: "uncertain", message: `Unconfirmed outcome from ${new URL(url).host} — the request may have been applied. Mark it done, retry, or fail.`, meta: { reviewId: g.approvalId } };
+     if (g.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", "The request's outcome was unknown and a reviewer failed the step");
+     if (g.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { resolvedBy: "review" } };
+     await consumeRetry(ctx.db, g.approvalId);
+@@ -156,7 +156,8 @@ async function httpRequest(ctx: HandlerContext, node: FlowNode, cfg: Record<stri
+       if (e instanceof EgressError) throw new NodeError(e.code, e.message);
+       if (env.signal.aborted) throw e;
+       const pe = e instanceof ProviderError ? e : new ProviderError((e as Error).name === "TimeoutError" ? "timeout" : "response_lost", (e as Error).message);
+-      if (pe.outcomeUnknown && sideEffect === "non_idempotent") {
++      // A server can apply a write and then return 5xx. A response is not proof of non-application.
++      if ((pe.outcomeUnknown || pe.kind === "server") && sideEffect === "non_idempotent") {
+         await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "step_uncertain", nodeId: node.id, data: { kind: pe.kind } });
+         const r = await review();
+         if (r) return { ...r, attempts: attempt } as NodeOutcome;
+@@ -344,7 +345,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
+   const review = async (): Promise<NodeOutcome | "retry"> => {
+     const gate = await checkGate(ctx.db, { ...gateBase, kind: "review" });
+     if (gate.status === "pending") {
+-      return { kind: "pause", status: "uncertain", message: `${action.title} may or may not have been applied by ${provider.name} (lost response). Check it and choose: mark done, retry, or fail.`, meta: { ...meta, reviewId: gate.approvalId } };
++      return { kind: "pause", status: "uncertain", message: `${action.title} may or may not have been applied by ${provider.name} (unconfirmed outcome). Check it and choose: mark done, retry, or fail.`, meta: { ...meta, reviewId: gate.approvalId } };
+     }
+     if (gate.status === "rejected") throw new NodeError("OUTCOME_UNKNOWN", `${action.title} outcome was unknown and a reviewer failed the step`);
+     if (gate.resolution === "done") return { kind: "ok", output: { confirmedByReviewer: true }, meta: { ...meta, resolvedBy: "review" } };
+@@ -423,7 +424,7 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
+         await markConnectionUnhealthy(ctx.db, connectionId, "expired", pe.message);
+         throw new NodeError("CONNECTION_AUTH", `${provider.name} rejected the connection (${pe.message}). Flows using it are paused until it's reconnected.`);
+       }
+-      if (pe.outcomeUnknown) {
++      if (pe.outcomeUnknown || (pe.kind === "server" && action.sideEffect === "non_idempotent")) {
+         if (action.sideEffect !== "non_idempotent" && attempt < max) {
+           await sleep(backoffMs(attempt), env.signal);
+           continue;
+@@ -432,7 +433,8 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
+           const r = await resolveUnknown();
+           if (r !== "retry") return r;
+           if (attempt < max) continue;
+-          throw new NodeError("PROVIDER_TIMEOUT", `${provider.name} kept failing to respond`);
++          if (pe.kind !== "server") throw new NodeError("PROVIDER_TIMEOUT", `${provider.name} kept failing to respond`);
++          // Verified not applied, but exhausted: preserve the actual server failure below.
+         }
+       }
+       if (pe.retryable && attempt < max) {

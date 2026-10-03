@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import type { FlowGraph } from "@/engine/types";
 import { checkConnection, validateGraph } from "@/engine/validate";
-import { connectionReason, denyReasonText, issueMessage, nodeText, notPreviewedReason, runLabel } from "@/i18n/engine-text";
+import { connectionReason, denyReasonText, issueMessage, nodeText, notPreviewedReason, runLabel, stepErrorText } from "@/i18n/engine-text";
 import { createTranslator } from "@/i18n/translate";
 import { duration, timeAgo } from "@/lib/format";
 import { ALL_CAPABILITIES, denyReason, type Role } from "@/lib/permissions";
@@ -89,6 +89,17 @@ const issues = BAD_GRAPHS.flatMap((g) => {
 });
 
 describe("engine text in the UI language", () => {
+  it("translates new and historical unknown-outcome reviews without claiming a missing response", () => {
+    for (const t of [en, ar]) {
+      for (const prefix of ["No response", "Unconfirmed outcome"]) {
+        expect(stepErrorText(t, { code: "OUTCOME_UNKNOWN", message: `${prefix} from provider.example — the request may have been applied. Mark it done, retry, or fail.` })).toBe(t("runs.errorShape.outcomeHttp", { host: "provider.example" }));
+      }
+      for (const reason of ["lost response", "unconfirmed outcome"]) {
+        expect(stepErrorText(t, { code: "OUTCOME_UNKNOWN", message: `Post message may or may not have been applied by Slack (${reason}). Check it and choose: mark done, retry, or fail.` })).toMatch(t("runs.errorShape.outcomeAction", { title: "Post message", provider: "Slack" }));
+      }
+    }
+  });
+
   it("the fixture graphs cover the validation codes", () => {
     const codes = new Set(issues.map((i) => i.code));
     for (const c of ["EMPTY_FLOW", "INVALID_JSON", "INVALID_SCHEDULE", "EMPTY_EXPRESSION", "INVALID_EXPRESSION", "INVALID_OUTPUT_KEY", "RESERVED_OUTPUT_KEY", "DUPLICATE_OUTPUT_KEY", "EMPTY_MAPPING", "INVALID_FIELD", "DUPLICATE_FIELD", "INVALID_CONFIG", "MISSING_FILE", "MISSING_SUBFLOW", "UNBOUNDED_LOOP", "INVALID_SCHEMA", "MISSING_ACTION", "MISSING_CONNECTION", "APPROVAL_UNSTABLE_INPUT", "SETUP_REQUIRED", "UNKNOWN_REFERENCE", "REFERENCE_NOT_UPSTREAM", "UNCONNECTED_INPUT", "MERGE_NEEDS_INPUTS", "INVALID_EDGE", "MULTIPLE_TRIGGERS", "UNKNOWN_NODE", "NO_STEPS", "DUPLICATE_NODE_ID"]) {

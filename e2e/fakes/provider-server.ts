@@ -382,7 +382,7 @@ interface RecordedRequest {
   time: string;
 }
 
-type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
+type FaultMode = "429" | "500" | "500_after_commit" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
 interface Fault {
   provider: string;
   pattern: RegExp;
@@ -398,6 +398,7 @@ interface Ctx {
   requests: RecordedRequest[];
   faults: Fault[];
   dropAfterCommit: boolean;
+  serverErrorAfterCommit: WeakSet<ServerResponse>;
   heldSockets: Set<import("node:net").Socket>;
   /**
    * Registered OAuth clients per provider (credential-rotation tests). When a provider has an entry, its token endpoint
@@ -411,6 +412,11 @@ interface Ctx {
 }
 
 function json(ctx: Ctx, req: IncomingMessage, res: ServerResponse, status: number, body: unknown, extraHeaders: Record<string, string> = {}) {
+  if (ctx.serverErrorAfterCommit.has(res)) {
+    ctx.serverErrorAfterCommit.delete(res);
+    status = 500;
+    body = { error: "internal fake error after applying action" };
+  }
   if (ctx.dropAfterCommit) {
     ctx.dropAfterCommit = false;
     req.socket.destroy();
@@ -2246,7 +2252,7 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const { privateKey: altPrivateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const publicJwk = { ...(publicKey.export({ format: "jwk" }) as Record<string, unknown>), kid: "fake-oidc-key-1", alg: "RS256", use: "sig" };
-  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
+  const ctx: Ctx = { state: seed(), requests: [], faults: [], dropAfterCommit: false, serverErrorAfterCommit: new WeakSet(), heldSockets: new Set(), oauthClients: new Map(), oauthErrors: [], oidc: { privateKey, altPrivateKey, publicJwk } };
 
   const server: Server = createServer((req, res) => {
     void (async () => {
@@ -2354,7 +2360,8 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
           });
           return;
         }
-        if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
+        if (fault.mode === "500_after_commit") ctx.serverErrorAfterCommit.add(res);
+        else if (fault.mode === "delay") await new Promise((r) => setTimeout(r, fault.delayMs ?? 1000));
         else ctx.dropAfterCommit = true; // drop_after_commit: handler runs, response is never sent
       }
 
