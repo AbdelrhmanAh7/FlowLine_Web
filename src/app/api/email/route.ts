@@ -6,6 +6,7 @@ import { sha256Hex } from "@/server/crypto";
 import { consumeAccountToken, issueAccountToken, requestToken, sendNotice, tokenState } from "@/server/email/flows";
 import { safePath } from "@/server/email/redirect";
 import { json, parseBody, route } from "@/server/http";
+import { admitPublicBody, PUBLIC_JSON_MAX_BYTES } from "@/server/public-body";
 
 const body = z.discriminatedUnion("action", [
   z.object({ action: z.enum(["forgot", "resend"]), email: z.email().max(254), callbackURL: z.string().max(1000).nullish() }),
@@ -14,7 +15,8 @@ const body = z.discriminatedUnion("action", [
 ]);
 
 export const POST = route(async (request) => {
-  const input = await parseBody(request, body);
+  await admitPublicBody(request, "email");
+  const input = await parseBody(request, body, PUBLIC_JSON_MAX_BYTES);
   if (input.action === "forgot" || input.action === "resend") {
     await requestToken(input.action === "forgot" ? "reset" : "verify", input.email.trim().toLowerCase(), request, { callbackURL: input.action === "resend" ? input.callbackURL : null });
     return json({ status: "sent_if_eligible" });

@@ -53,10 +53,15 @@ export async function capBody(req: Request, maxBytes: number, tooLarge: HttpErro
   return new Request(req.url, { method: req.method, headers: req.headers, body: size ? Buffer.concat(chunks) : null });
 }
 
-export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T> {
+/** General JSON ceiling; upload routes retain their explicit content/overhead budget. */
+export const JSON_BODY_MAX_BYTES = 1024 * 1024;
+
+export async function parseBody<T>(req: Request, schema: ZodType<T>, maxBytes = JSON_BODY_MAX_BYTES): Promise<T> {
+  // Outside the JSON catch: a streaming overflow must remain 413, never BAD_JSON.
+  const capped = await capBody(req, maxBytes, new HttpError(413, "BODY_TOO_LARGE", "Request body is too large"));
   let body: unknown;
   try {
-    body = await req.json();
+    body = await capped.json();
   } catch {
     throw new HttpError(400, "BAD_JSON", "Request body must be JSON");
   }
