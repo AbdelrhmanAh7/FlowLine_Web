@@ -19,6 +19,8 @@ for UI changes. Skipped or flaky tests count as failures.
 Responsive checks at 1440, 1024, 375 (+ 320 edge) for the monitor-first pages. Keyboard: every critical journey
 reachable by keyboard; shortcuts don't fire while typing.
 
+**2026-10-03 reliability investigation:** PR #14 run `37093517476` has WebKit 77 passed / 1 failed at the journey's Output click, with Chromium and Firefox job success. Output was present; the overall 60-second test deadline expired during actionability. Root cause remains unconfirmed, with a pre-existing WebKit/test timing issue favored over the dependency prune. See [WEBKIT_14_DIAGNOSIS.md](WEBKIT_14_DIAGNOSIS.md) for evidence, hypotheses and the required timing experiment. No acceptance assertion, timeout, retry policy or browser requirement has changed; a passing repeat alone cannot close this failure.
+
 ## 3. Performance and load targets (p3§21)
 
 Measured against the **production build** (the release image), not `next dev`. The tool is

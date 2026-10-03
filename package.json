@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "concurrently -k -n web,worker -c magenta,cyan \"next dev -p 3000\" \"node scripts/with-env.mjs .env tsx watch worker/index.ts\"",
@@ -27,6 +27,7 @@
     "check": "pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract && pnpm test:integration",
     "check:evidence": "node scripts/check-evidence-secrets.mjs",
     "gate": "node scripts/gate.mjs",
+    "wt": "node scripts/worktree.mjs",
     "gate:full": "node scripts/gate.mjs --tier=full",
     "dev:test": "node scripts/dev-test.mjs",
     "stop:test": "node scripts/stop-test-stack.mjs",

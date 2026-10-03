@@ -7,6 +7,8 @@ import { markPlatformSecretVerified, resolvePlatformCredential } from "./platfor
 import { activeZitadelConfig } from "./zitadel-config";
 import type { ZitadelApp } from "./zitadel-auth";
 import { zitadelLocalUrl } from "./zitadel-url";
+import { capAuthBody } from "./public-body";
+import { HttpError } from "./http";
 
 /**
  * Sign-in dispatch for better-auth (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -67,9 +69,10 @@ function keyPart(p: string, appId: string, revision: number) {
 }
 
 /** Request-local snapshot of the CURRENT sign-in apps. */
-export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; zitadel: ZitadelApp | null; revisions: Partial<Record<Provider, number>>; appIds: Partial<Record<Provider, string>> }> {
+export async function currentSnapshot(): Promise<{ key: string; social: SocialConfig; zitadel: ZitadelApp | null; zitadelIssuerRevision?: number; revisions: Partial<Record<Provider, number>>; appIds: Partial<Record<Provider, string>> }> {
   const social: SocialConfig = {};
   let zitadel: ZitadelApp | null = null;
+  let zitadelIssuerRevision: number | undefined;
   const revisions: Partial<Record<Provider, number>> = {};
   const appIds: Partial<Record<Provider, string>> = {};
   const parts: string[] = [];
@@ -79,6 +82,7 @@ export async function currentSnapshot(): Promise<{ key: string; social: SocialCo
     if (p === "zitadel") {
       if (!app.issuer || !zitadelLocalUrl("discovery")) continue;
       zitadel = { issuer: app.issuer, clientId: app.clientId, clientSecret: app.secret };
+      zitadelIssuerRevision = app.issuerRevision;
       parts.push(`issuer:r${app.issuerRevision}`);
       // The fingerprint never leaves this internal factory key; it makes secret-only env changes rebuild auth.
       parts.push(`credential-secret:${app.secretFingerprint}`);
@@ -87,7 +91,7 @@ export async function currentSnapshot(): Promise<{ key: string; social: SocialCo
     appIds[p] = app.id;
     parts.push(keyPart(p, app.id, app.revision));
   }
-  return { key: parts.length ? sha256Hex(parts.join("|")) : "", social, zitadel, revisions, appIds };
+  return { key: parts.length ? sha256Hex(parts.join("|")) : "", social, zitadel, zitadelIssuerRevision, revisions, appIds };
 }
 
 /** Public: which sign-in methods are configured right now (read per request). */
@@ -113,6 +117,10 @@ export async function instanceForCallback(provider: string, state: string | null
   if (!app) return null; // revoked / cleared since the attempt started
   // The attempt must belong to THIS app (not merely to a revision number a cleared-and-reconfigured app reuses).
   if (!attempt.secretId || attempt.secretId !== app.id) return null;
+  if (provider === "zitadel") {
+    const [fence] = await db.select().from(schema.verification).where(eq(schema.verification.identifier, `signin-issuer:${sha256Hex(state)}`));
+    if (!fence || fence.expiresAt <= new Date() || fence.value !== JSON.stringify([app.issuer, app.issuerRevision, app.clientId])) return null;
+  }
   let secret: string;
   if (attempt.revision === app.revision) secret = app.secret;
   else if (app.previous && app.previous.revision === attempt.revision && app.previous.validUntil > new Date()) secret = app.previous.secret;
@@ -123,13 +131,14 @@ export async function instanceForCallback(provider: string, state: string | null
   let zitadel = snap.zitadel;
   if (provider === "zitadel") {
     if (!zitadel) return null;
+    if (zitadel.issuer !== app.issuer || snap.zitadelIssuerRevision !== app.issuerRevision || zitadel.clientId !== app.clientId) return null;
     zitadel = { ...zitadel, clientSecret: secret };
   } else social[provider] = { clientId: app.clientId, clientSecret: secret };
   const key = `${snap.key}|callback:${keyPart(provider, app.id, attempt.revision)}`;
   return { instance: await authFor(key, social, zitadel ?? undefined), revision: attempt.revision, source: app.source };
 }
 
-async function recordAttempt(provider: string, responseBody: unknown, revision: number | undefined, secretId: string | undefined) {
+async function recordAttempt(provider: string, responseBody: unknown, revision: number | undefined, secretId: string | undefined, zitadel: ZitadelApp | null, issuerRevision: number | undefined) {
   if (!revision || !secretId || !(PROVIDERS as readonly string[]).includes(provider)) return;
   const url = (responseBody as { url?: unknown } | null)?.url;
   if (typeof url !== "string") return;
@@ -142,6 +151,12 @@ async function recordAttempt(provider: string, responseBody: unknown, revision: 
   if (!state) return;
   await db.delete(schema.signinAttempt).where(lt(schema.signinAttempt.expiresAt, new Date()));
   await db.insert(schema.signinAttempt).values({ stateHash: sha256Hex(state), provider, revision, secretId, expiresAt: new Date(Date.now() + ATTEMPT_TTL_MS) }).onConflictDoNothing();
+  if (provider === "zitadel" && zitadel) {
+    const app = await signinApp("zitadel");
+    // Re-read only to fence a concurrently replaced issuer; never bind a start to a new snapshot.
+    if (app?.id !== secretId || app.revision !== revision || app.issuer !== zitadel.issuer || app.clientId !== zitadel.clientId || app.issuerRevision !== issuerRevision) return;
+    await db.insert(schema.verification).values({ id: crypto.randomUUID(), identifier: `signin-issuer:${sha256Hex(state)}`, value: JSON.stringify([app.issuer, app.issuerRevision, app.clientId]), expiresAt: new Date(Date.now() + ATTEMPT_TTL_MS) });
+  }
 }
 
 function refused(): Response {
@@ -158,6 +173,14 @@ function withNoReferrer(res: Response): Response {
 
 /** Handles one /api/auth/* request with the right better-auth instance. */
 export async function dispatchAuth(request: Request, method: "GET" | "POST"): Promise<Response> {
+  if (method === "POST") {
+    try {
+      request = await capAuthBody(request);
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return Response.json({ code: error.code }, { status: error.status, headers: { "cache-control": "no-store" } });
+    }
+  }
   const path = new URL(request.url).pathname.replace(/^\/api\/auth/, "");
   const callback = /^\/callback\/([a-z]+)$/.exec(path);
   if (callback) {
@@ -174,6 +197,7 @@ export async function dispatchAuth(request: Request, method: "GET" | "POST"): Pr
     if (!pinned) return refused();
     const res = await toNextJsHandler(pinned.instance)[method](request);
     await db.delete(schema.signinAttempt).where(eq(schema.signinAttempt.stateHash, sha256Hex(state!)));
+    await db.delete(schema.verification).where(eq(schema.verification.identifier, `signin-issuer:${sha256Hex(state!)}`));
     // A completed sign-in (redirect without an error and with a session cookie) verifies exactly that revision.
     const location = res.headers.get("location") ?? "";
     if (res.status >= 300 && res.status < 400 && !/[?&]error=/.test(location) && /session_token/.test(res.headers.get("set-cookie") ?? "")) {
@@ -207,7 +231,7 @@ export async function dispatchAuth(request: Request, method: "GET" | "POST"): Pr
     const res = await toNextJsHandler(instance).POST(request);
     if (res.ok) {
       try {
-        await recordAttempt(provider, await res.clone().json(), snap.revisions[provider as Provider], snap.appIds[provider as Provider]);
+        await recordAttempt(provider, await res.clone().json(), snap.revisions[provider as Provider], snap.appIds[provider as Provider], snap.zitadel, snap.zitadelIssuerRevision);
       } catch {
         /* non-JSON response: nothing to record */
       }

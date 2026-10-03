@@ -1,0 +1,44 @@
+PR #14 offline diagnosis, 2026-10-03
+Local source HEAD: dd840db6bf6f9329f61007152b3bb500b4d66b75
+Base: 9641ad1e684cad7b84bd2385751ea19b0a9d4060
+CI evidence SHA: f10278806a20a80b0bedd683ce446c46e7d0e416
+The following is a recorded summary of tool output, not a new gate run.
+
+Command:
+pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/drizzle-tooling-prune.test.ts tests/unit/dv2-r01-r02-tooltip-tabs.test.ts
+
+Exit: 1
+Vitest: 5.0.2
+Test Files: 1 failed | 1 passed (2)
+Tests: 1 failed | 11 passed (12)
+Duration: 221ms
+
+FAIL tests/unit/drizzle-tooling-prune.test.ts:17:65
+Drizzle Kit unused loader removal > keeps the audited Kit version and verifies its shipped runtime never references the removed loader
+AssertionError: expected [Function] to throw an error
+expect(() => kitRequire.resolve("@esbuild-kit/esm-loader")).toThrow();
+
+Interpretation verified with read-only package resolution:
+- node_modules is a junction to C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine\node_modules.
+- Installed Drizzle Kit is 0.31.11; api.js, api.mjs, bin.cjs, index.js, index.mjs, utils.js, utils.mjs have no @esbuild-kit/esm-loader or @esbuild-kit/core-utils references.
+- Both removed packages still resolve from installed Kit (esm-loader 2.6.5, core-utils 3.3.2).
+- Retained esbuild resolves to 0.25.12 and tsx to 4.23.15.
+- The lockfile pruning assertion passes. This shared installation does not reflect the PR's pruned graph.
+- All 10 tab/tooltip logic tests pass. They do not exercise browser geometry/rAF scheduling.
+
+Read-only Git checks:
+- git status --short: clean at entry (Git warned that the user-level ignore file was inaccessible).
+- git branch --show-current: claude/pr14-webkit-diag.
+- git rev-parse HEAD: dd840db6bf6f9329f61007152b3bb500b4d66b75.
+- git rev-parse origin/main and git merge-base origin/main HEAD: 9641ad1e684cad7b84bd2385751ea19b0a9d4060.
+- git diff origin/main...HEAD: only pnpm-workspace.yaml, pnpm-lock.yaml, the prune unit test and two Drizzle evidence files differ.
+- git diff origin/main...HEAD -- src worker e2e next.config.ts package.json playwright.config.ts .github scripts: empty.
+- git cat-file -t f10278806a20a80b0bedd683ce446c46e7d0e416: exit 128, could not get object info.
+
+No typecheck/lint was run for the documentation-only change. No new unit test was added for an unproven race.
+git diff --check: exit 0.
+Read-only Node verification of local Markdown links in the five changed Markdown files: 12 checked, 0 broken.
+Read-only SHA-256 comparison against download-inventory.json: all 18 downloaded files match.
+Retained evidence credential-keyword inspection: only a source comment saying "no secrets" matched; numbered excerpts were also reviewed directly.
+No network, installs, Docker, databases, browsers, Playwright execution, builds, gates, commits, pushes or GitHub writes.
+Read-only exploratory commands initially used a few nonexistent guessed file paths, unsupported Windows rg path globs, and a node -e quoting form that failed parsing. They were corrected using discovered paths, rg file filters, and stdin scripts; they did not run any validation workload or mutate code.

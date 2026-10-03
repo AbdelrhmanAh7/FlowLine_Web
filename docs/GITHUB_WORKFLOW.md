@@ -17,7 +17,7 @@ Every piece of work is tracked on GitHub so its state is visible without reading
 | Area | `area: auth`, `billing`, `ai-hub`, `knowledge`, `engine`, `ui`, `i18n`, `infra`, `company-builder` | code areas touched |
 | Priority | `priority: P0`–`P3` | P0 blocks release or is security-critical; P1 needed for the current milestone |
 | Status | `status: blocked`, `needs-owner`, `needs-coderabbit`, `ready-to-merge` | why an item is not moving |
-| Workflow | `full-gate`, `docs-not-needed`, `stacked` | `full-gate` runs the full CI tier on a PR into main (add once before merging); `docs-not-needed` waives the docs check and needs a `Docs not needed because: <reason>` line; `stacked` marks a PR whose base is another PR |
+| Workflow | `docs-not-needed`, `stacked` (`full-gate`: obsolete) | `docs-not-needed` waives the docs check and needs an unindented `Docs not needed because: <reason>` PR body line with a real reason; `stacked` marks a PR whose base is another PR. `full-gate` does nothing since PR #20 (Gate has no `labeled` trigger; the full tier runs only from a manual dispatch, see Merging into main): delete the label, or repurpose it as a plain "full tier run recorded" marker, so nobody expects it to start CI |
 
 ## Merging into main
 
@@ -26,5 +26,5 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 1. Every CodeRabbit thread gets a reply; fixes are answered with `Fixed in <sha>: …` and a `@coderabbitai` verification request (one PR-level comment listing the threads saves chat budget).
 2. A thread is resolved only after CodeRabbit confirms the fix; if it disagrees, fix again.
 3. CodeRabbit budget for Flowline: at most 3 reviews per rolling hour (2 are reserved for another project); automatic re-review is off, so request `@coderabbitai review` after each fix push.
-4. Add `full-gate` on the final candidate; merge when it is green, then move the item to Done and close the issue.
+4. Run the full CI tier once on the final candidate, just before merging: Actions → Gate → Run workflow, choose the branch and set `tier` to `full` (or `gh workflow run gate.yml --ref <branch> -f tier=full`). Labels never start CI. The owner verifies that run passed; merge when it and the required `gate` and `docs` checks are green, then move the item to Done and close the issue.
 5. Stacked PRs merge top-down after their base.

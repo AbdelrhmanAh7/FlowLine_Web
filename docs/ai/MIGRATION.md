@@ -57,7 +57,7 @@ are in the private beta runbook.
 
 1. **Before deploying:** set `FLOWLINE_PLATFORM_ENCRYPTION_KEY`, a key that differs from every workspace key. Take a
    backup.
-2. **Deploy:** run all pending migrations in `drizzle/meta/_journal.json` (through `0023` in this checkout), not only
+2. **Deploy:** run all pending migrations in `drizzle/meta/_journal.json` (through `0024` in this checkout), not only
    the hub/security range `0012`–`0019`. That range includes expand-only schema changes and data steps that mark legacy ciphertext and
    invalidate unproven prices and key verifications. They are tested from a Phase 4 database in
    `tests/integration/sec-upgrade.test.ts`.

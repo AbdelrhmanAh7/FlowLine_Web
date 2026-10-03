@@ -31,7 +31,7 @@ export async function POST(req: Request, { params }: Ctx) {
   try {
     raw = await (await capBody(req, WEBHOOK_MAX_BYTES, new HttpError(413, "PAYLOAD_TOO_LARGE", "Payload too large (256KB max)"))).text();
   } catch (e) {
-    if (e instanceof HttpError) return reply(413, { error: e.message });
+    if (e instanceof HttpError) return reply(e.status, { error: e.message, code: e.code });
     throw e;
   }
 

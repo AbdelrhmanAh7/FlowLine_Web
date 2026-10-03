@@ -4,6 +4,7 @@ import { getAdapter } from "@/billing/service";
 import { db, schema } from "@/db";
 import { randomToken, sha256Hex } from "@/server/crypto";
 import { HttpError } from "@/server/http";
+import { lockRetainedFileAccounting } from "@/server/retained-files";
 import { sendEmail } from "./index";
 import { safePath } from "./redirect";
 import { renderEmail, requestLocale, type TemplateKind } from "./templates";
@@ -57,18 +58,30 @@ async function sendTemplate(kind: TemplateKind, to: string, link: string, key: s
  * `callbackURL` (verification only): a same-origin path the verify page links to once the email is confirmed — e.g.
  * `/sign-in?next=invite:…` so an invited person lands back on their invitation after signing in.
  */
-export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
+export async function prepareAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
   await checkEmailRate(purpose, user.email, request);
   const token = randomToken(32);
   const [row] = await db.insert(schema.emailToken).values({ tokenHash: sha256Hex(token), userId: user.id, purpose, expiresAt: new Date(Date.now() + lifetime[purpose]) }).returning({ id: schema.emailToken.id });
   const path = purpose === "verify" ? "/verify-email" : purpose === "reset" ? "/reset-password" : "/account/delete";
   const callback = purpose === "verify" ? safePath(opts.callbackURL, "") : "";
   const link = publicUrl(`${path}?token=${encodeURIComponent(token)}${callback && callback !== "/" ? `&callbackURL=${encodeURIComponent(callback)}` : ""}`);
-  try { await sendTemplate(purpose, user.email, link, row!.id, request); }
+  return { id: row!.id, purpose, email: user.email, link };
+}
+
+/** Delivery must occur after any transaction attaching this token has committed. */
+export async function deliverAccountToken(prepared: Awaited<ReturnType<typeof prepareAccountToken>>, request?: Request) {
+  try { await sendTemplate(prepared.purpose, prepared.email, prepared.link, prepared.id, request); }
   catch (error) {
-    await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id));
+    await db.delete(schema.emailToken).where(eq(schema.emailToken.id, prepared.id));
     throw error;
   }
+}
+
+/** Ordinary account flows retain their prepare-and-deliver API. */
+export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
+  const prepared = await prepareAccountToken(purpose, user, request, opts);
+  await deliverAccountToken(prepared, request);
+  return { id: prepared.id };
 }
 
 export async function sendNotice(kind: "passwordChanged" | "emailVerified" | "emailChanged", to: string, request?: Request) {
@@ -122,6 +135,9 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
   return db.transaction(async (tx) => {
+    // Deletion cascades into retained files. Accounting must precede even the
+    // token lock, and especially the workspace locks below (including shared W).
+    if (purpose === "delete") await lockRetainedFileAccounting(tx);
     const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
@@ -177,6 +193,11 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
+      // Historical tenant-created identities have no independently proven mailbox
+      // ownership. Recovery removes those methods; explicitly mailbox-approved
+      // links retain normal recovery behaviour.
+      await tx.delete(schema.account).where(and(eq(schema.account.userId, row.userId), sql`${schema.account.providerId} like 'sso:%'`, sql`${schema.account.providerId} not like 'sso:approved:%'`));
+      await tx.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, row.userId));
       // Any other outstanding reset link for this account stops working too.
       await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.userId, row.userId), eq(schema.emailToken.purpose, "reset"), isNull(schema.emailToken.consumedAt)));
     } else {

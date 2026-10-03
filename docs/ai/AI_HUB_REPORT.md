@@ -334,7 +334,7 @@ owner decisions of 2026-09-29. Status per `SCOPE_MATRIX.md` SEC-01…06:
 5. **Deployment steps**, in order, before any of the above matters operationally (`docs/ai/MIGRATION.md` "Upgrading
    an existing Phase 4 deployment: required order"):
    1. Set `FLOWLINE_PLATFORM_ENCRYPTION_KEY` (distinct from every workspace key); take a backup.
-   2. For an authorized deployment, run all pending migrations in `drizzle/meta/_journal.json` (through `0023` here).
+   2. For an authorized deployment, run all pending migrations in `drizzle/meta/_journal.json` (through `0024` here).
    3. Bootstrap the first platform admin with the env-loaded command in `MIGRATION.md`, verify email, enrol TOTP.
    4. Import existing Google/Slack/GitHub OAuth apps, sign-in apps, email and Paddle credentials from environment,
       once each, in `/admin`.

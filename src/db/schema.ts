@@ -607,6 +607,17 @@ export const kvEntry = pgTable(
   (t) => [primaryKey({ columns: [t.workspaceId, t.namespace, t.key] })],
 );
 
+/** Trigger-maintained raw-byte totals: one installation row and one row per workspace with files. */
+export const retainedFileCounter = pgTable("retained_file_counter", {
+  scope: text("scope").primaryKey(), // installation | workspace UUID
+  workspaceId: uuid("workspace_id").references(() => workspace.id, { onDelete: "cascade" }),
+  totalBytes: bigint("total_bytes", { mode: "bigint" }).notNull().default(sql`0`),
+  fileCount: bigint("file_count", { mode: "bigint" }).notNull().default(sql`0`),
+}, (t) => [
+  check("retained_file_counter_scope", sql`${t.scope} = coalesce(${t.workspaceId}::text, 'installation')`),
+  check("retained_file_counter_nonnegative", sql`${t.totalBytes} >= 0 and ${t.fileCount} >= 0`),
+]);
+
 /** Uploaded files for CSV/JSON/PDF processing (size-capped). */
 export const fileObject = pgTable("file_object", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1011,7 +1022,7 @@ export const ssoState = pgTable("sso_state", {
   nonce: text("nonce").notNull(),
   codeVerifierEnc: text("code_verifier_enc").notNull(),
   keyId: text("key_id").notNull(),
-  /** The signed-in user who started this sign-in, if any — the only account an email match may link to. */
+  /** Initiator of a possible proposal only. A link is persisted exclusively by POST confirmation. */
   initiatorUserId: text("initiator_user_id"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });

@@ -68,8 +68,8 @@ current owner credentials, live account state and remote CI are unverified in th
 
 ## Requirements
 
-- Node.js ≥22 and pnpm **10.32.1** (`npm i -g pnpm@10.32.1`), as declared in `package.json`.
-  Next.js **16.3.6**, React **19.3.0**; the release Dockerfile uses Node 25.
+- Node.js 22.x (`engines` in `package.json`; CI and the release image use Node 22 LTS) and pnpm **10.32.1**
+  (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
   Platform ZITADEL sign-in optionally uses the complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`,
@@ -137,14 +137,18 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | Live (real PostgreSQL and SaaS certification; missing SaaS credentials → BLOCKED; no AI suite) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
-CI in `.github/workflows/gate.yml` runs the fast tier for pushes to main and PRs targeting other branches, the full
-tier for PRs targeting main, and the selected tier for manual dispatch. Its final `gate` job combines the results.
-Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See `docs/DEVELOPER_GUIDE.md`.
+CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,
+Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets
+docs-only changes pass `gate` without the test jobs, and the final `gate` job combines the results (main also requires
+the `docs` check). Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
+`docs/DEVELOPER_GUIDE.md`.
 Historical gate results and tested revisions are in `docs/implementation/PHASE4_BETA_REPORT.md` and
 `docs/ai/AI_HUB_REPORT.md`; they do not certify the current checkout or a current release image.
 
 ## Security notes
 
+- Request bodies have layered ingress byte/read-time limits and application streaming guards; see
+  [`REQUEST_BODY_LIMITS.md`](docs/security/REQUEST_BODY_LIMITS.md) for route budgets and the unverified hosting boundary.
 - Every server access goes through `src/server/access.ts`: non-members get 404, and missing capabilities get 403.
 - Credentials use a v2 encryption envelope (per-secret data key, AES-256-GCM with AAD, separate key rings for
   platform and workspace secrets); API keys are stored hashed and shown once (`docs/security/CREDENTIALS_DESIGN.md`).

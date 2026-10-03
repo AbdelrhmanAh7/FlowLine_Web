@@ -1,1 +1,5 @@
 saveExact: true
+# Drizzle Kit 0.31.11 publishes bundled tsx and never imports this abandoned loader.
+# Remove only its unused declaration; re-evaluate on every Kit version change.
+overrides:
+  "drizzle-kit@0.31.11>@esbuild-kit/esm-loader": "-"

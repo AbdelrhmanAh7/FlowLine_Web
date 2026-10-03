@@ -17,7 +17,8 @@ const PATTERNS: [RegExp, string][] = [
   [/(postgres(?:ql)?:\/\/[^:\s/]+:)[^@\s]+@/gi, "$1[REDACTED]@"],
   [/\b(sk-ant-|sk-proj-|sk-)[A-Za-z0-9_-]{16,}/g, "[REDACTED_API_KEY]"],
   // Drizzle/pg "Failed query … params: …" errors carry bound values (session tokens, emails): never log them.
-  [/(\bparams:\s*).*/g, "$1[omitted]"],
+  // The parameter tail can contain arbitrary newlines and nested error text.
+  [/(\bparams:)[\s\S]*/gi, "$1 [omitted]"],
 ];
 
 /** Loggable text for an error (message + causes), with bound query params and known secret shapes removed. */
@@ -41,7 +42,8 @@ export function redactString(s: string, secrets: readonly string[] = []): string
 }
 
 export function redact<T>(value: T, secrets: readonly string[] = [], depth = 0): T {
-  if (depth > 30) return value;
+  // Unexamined data must never escape the traversal budget, including cyclic inputs.
+  if (depth > 30) return "[REDACTED_LIMIT]" as T;
   if (typeof value === "string") return redactString(value, secrets) as T;
   if (Array.isArray(value)) return value.map((v) => redact(v, secrets, depth + 1)) as T;
   if (value instanceof Date) return value; // timestamps carry no secrets; a plain-object copy would lose them

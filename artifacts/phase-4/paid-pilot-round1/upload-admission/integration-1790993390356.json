@@ -1,0 +1,15 @@
+{
+  "baseSha": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-upload-admission-1790993390356",
+  "database": "flowline_test_pilotupload",
+  "tests": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project integration tests/integration/pilot-upload-admission.test.ts tests/integration/p3-knowledge.test.ts --fileParallelism=false",
+      "exitCode": 1
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "containerId": "3694f4092a8b1201cf62a446373af03a10d76d5c4eff9d45b5defde567c98526"
+}

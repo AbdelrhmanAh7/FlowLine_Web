@@ -21,7 +21,7 @@ x-app: &app
 
 services:
   caddy:
-    image: caddy:2.10-alpine
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
     restart: unless-stopped
     ports: ["80:80", "443:443"]
     environment:
@@ -36,7 +36,7 @@ services:
     logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
 
   db:
-    image: postgres:17.6-alpine
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
     restart: unless-stopped
     environment:
       POSTGRES_USER: flowline
@@ -80,7 +80,7 @@ services:
 
   # Nightly logical backup with retention; copies can also be pushed off-host (see the runbook).
   backup:
-    image: postgres:17.6-alpine
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
     restart: unless-stopped
     environment:
       PGPASSWORD: ${BETA_DB_PASSWORD:?}
