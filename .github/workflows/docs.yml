@@ -1,0 +1,46 @@
+name: Docs
+
+# AGENTS.md "Docs (mandatory)": a PR that changes code, tests, scripts, schema, CI or deploy files must also update
+# at least one Markdown doc outside artifacts/. Escape hatch: the `docs-not-needed` label, with the reason in the PR body.
+# No checkout or install: reads the PR file list from the API, so a run costs well under a runner minute.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'docs-not-needed') }}
+    steps:
+      - name: Require a docs update with code changes
+        run: |
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+          code=$(printf '%s\n' "$files" | grep -E '^(src|scripts|e2e|tests|drizzle|deploy|\.github)/|^package\.json$' || true)
+          docs=$(printf '%s\n' "$files" | grep -E '\.md$' | grep -v -E '^artifacts/' || true)
+          {
+            echo "## Docs check"
+            echo
+            echo "Code files changed: $(printf '%s' "$code" | grep -c . || true)"
+            echo "Docs changed: $(printf '%s' "$docs" | grep -c . || true)"
+            if [ -n "$docs" ]; then printf '%s\n' "$docs" | sed 's/^/- /'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$code" ] || [ -n "$docs" ]; then exit 0; fi
+          if [ "$WAIVED" = "true" ]; then
+            echo "Waived by the docs-not-needed label; the PR body must say why." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::error::This PR changes code but no Markdown doc. Update the docs this change affects (AGENTS.md 'Docs (mandatory)'), or add the docs-not-needed label and explain why in the PR body."
+          exit 1

@@ -10,6 +10,7 @@ This guide applies to developers and AI agents. Start with [AGENTS.md](../AGENTS
 4. Use shared controls and semantic design tokens. Provide keyboard operation, visible focus and narrow-screen layouts.
 5. Enforce server validation, authorization and the existing mutation/CSRF guards. Client validation is only feedback.
 6. Add meaningful tests for changed behavior, run the required gates and record exact evidence and remaining external checks.
+7. Update every Markdown doc the change affects in the same PR (AGENTS.md "Docs (mandatory)"); the `Docs` workflow fails a code PR with no `.md` change unless it carries the `docs-not-needed` label and explains why.
 
 ## Localization
 
@@ -39,10 +40,14 @@ Preserve invitation-only signup when configured, verification requirements and t
 
 ## Verification and handoff
 
-Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` uses the fast tier for PRs not targeting main (stacked PRs) and pushes to main; PRs targeting main run the full tier; workflow_dispatch selects fast or full. The workflow runs parallel jobs (`static`, `integration`, `chromium`, and `firefox`/`webkit` on the full tier only); the final `gate` job is the single required check and its summary lists every job's result. Open the PR's **Checks** tab and select a job (or **Gate**) to see its step summary; each job uploads its own `flowline-gate-<job>-*` artifact with per-step logs and `summary.json`. To rerun the full tier, use **Actions → Gate → Run workflow**, choose the branch, set **tier** to `full`, and start the run. The `fast` dispatch option is available for a targeted rerun. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
+Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only when a PR into main carries the `full-gate` label or a dispatch selects `tier=full`. Add `full-gate` once, on the final candidate, just before merging. Draft PRs and docs-only changes (`docs/`, `artifacts/`, `*.md`, `design-reference/`) skip the gate. Jobs: `checks` (static, unit, contract and integration on one runner), `chromium`, and `firefox`/`webkit` on the full tier only; the final `gate` job combines their results and its summary lists every job. Open the PR's **Checks** tab and select a job (or **Gate**) to see its step summary; each job uploads its own `flowline-gate-<job>-*` artifact with per-step logs and `summary.json`. To rerun the full tier, use **Actions → Gate → Run workflow**, choose the branch, set **tier** to `full`, and start the run. The `fast` dispatch option is available for a targeted rerun. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
 
 Tests use port 3100 and isolated test databases, never the development database. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
+
+## Worktrees
+
+Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install; `pnpm wt list` shows each worktree's dirty/pushed state; `pnpm wt rm <name>` removes one once it is clean and its HEAD is on a remote branch, and `pnpm wt prune` does that for all (not while agents are starting lanes). Removal never forces and never deletes the branch.
