@@ -1,0 +1,32 @@
+{
+  "testedBaseSha": "a7c2aef3b7e1dd4df422a7f0e652259e55fe5731",
+  "dirty": true,
+  "recordedAtUtc": "2026-10-03T00:02:30Z",
+  "mode": "DETERMINISTIC_SCORER_AND_NO_SERVER_HARNESS_LOAD_ONLY",
+  "checks": [
+    { "command": "node node_modules/vitest/vitest.mjs run --project unit tests/unit/field-validation-v2.test.ts --maxWorkers 1 --no-file-parallelism --configLoader runner --no-cache", "exitCode": 0, "testsPassed": 61, "testsFailed": 0, "testsSkipped": 0 },
+    { "command": "node node_modules/typescript/bin/tsc --noEmit", "exitCode": 0, "scope": "current checkout global typecheck" },
+    { "command": "node node_modules/eslint/bin/eslint.js scripts/field-validation/v2/*.ts tests/unit/field-validation-v2.test.ts src/server/field-validation-identity.ts src/app/api/test/field-identity/route.ts --no-cache", "exitCode": 0 },
+    { "command": "node node_modules/@playwright/test/cli.js test --config scripts/field-validation/v2/field.config.ts --list", "exitCode": 0, "with": "FIELD_BASE_URL=loopback dedicated port; FLOWLINE_TEST_DB=flowline_test_field_ci; no app server", "testsDiscovered": 1 }
+  ],
+  "testedFileSha256": {
+    "scripts/field-validation/v2/isolation.ts": "931124b01790c24ba407462a517f0f1e97ee8c0bd71bc8c32dd6c38b3fc034dc",
+    "scripts/field-validation/v2/field.spec.ts": "1e51c1f8d8376da678690fcec083c885f6e3273c9c81dc6b6c112df9e9d2af3e",
+    "scripts/field-validation/v2/signup.ts": "f619cc5dc39fa95b4449143be2bbccd70136899463792165936d62538823b5df",
+    "scripts/field-validation/v2/scoring.ts": "aa3cfd9a4d1ce2b0c7d4bc1b324ce4e3a6c1e6011d0e45646204cffea059ac81",
+    "scripts/field-validation/v2/packet.ts": "4a5398830884ff7b7df27e3b2b166098de768ad912c634ae1cac1a4d947359b2",
+    "src/server/field-validation-identity.ts": "81ec8d3efdbbb24a211a8f9aec7a9aeaba89ad52f3d53de37dd07d10e196a9be",
+    "src/app/api/test/field-identity/route.ts": "2678eaf93fc82d966192f9599810c1b5f7e86ec3772c1aef4dd893d0d9532e7f",
+    "tests/unit/field-validation-v2.test.ts": "ffcc648b1607d0364d2f5a63a6820519d67535aeed4967bda9fde26c3cb53a58"
+  },
+  "apiFieldRun": "NOT_RUN",
+  "browserRun": "NOT_RUN",
+  "providerLiveRun": "NOT_RUN",
+  "ci": "NOT_RUN",
+  "issue6": "OPEN",
+  "limits": [
+    "The identity route and preflight were unit-tested but not exercised against a running API/database",
+    "The candidate consequential draft lacks explicit owner qualification by source inspection; no observed field score",
+    "No product acceptance, Gmail delivery, cancellation, refund or payment proof"
+  ]
+}

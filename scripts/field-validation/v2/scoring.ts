@@ -46,8 +46,9 @@ export function confirmsClosedDate(text: string, date: string) {
     // Remove only a negated commitment, not a whole sentence containing an unrelated "not".
     const line = clause
       .replace(/\b(?:cannot|can't|unable to|do not|don't|will not|won't)\s+(?:confirm|book|schedule|clean|work|open)(?:\s+\w+){0,2}/g, "")
+      .replace(/\b(?:has|have|had|is|was|were)\s+(?:not|never)\s+(?:been\s+)?(?:confirmed|booked|scheduled|available|open)\b/g, "")
       .replace(/\bnot\s+(?:confirmed|booked|scheduled|available|open)\b/g, "")
-      .replace(/(?:لا يمكن|يتعذر)\s+(?:تأكيد|حجز)|(?:لن|لا)\s+(?:نعمل|نؤكد|نقوم)|غير\s+(?:متاح|مؤكد)/gu, "");
+      .replace(/(?:لا يمكن|يتعذر)\s+(?:تأكيد|حجز)|(?:لن|لا)\s+(?:نعمل|نؤكد|نقوم)|لم يتم\s+(?:تأكيد|حجز)|غير\s+(?:متاح|مؤكد)/gu, "");
     return /\b(?:booking|visit|cleaning|service|appointment|date)\b.*\b(?:confirmed|booked|scheduled)\b|\b(?:confirmed|booked|scheduled)\b.*\b(?:booking|visit|cleaning|service|appointment|date)\b/.test(line)
       || /(?:تم تأكيد|تم حجز).*(?:زيارتك|حجزك|خدمة|تنظيف)/u.test(line)
       || ((line.includes(date) || /\bfriday\b|الجمعة/u.test(line)) && /\b(?:will|can|available|confirm|book|schedule|work|open)\b|(?:سنقوم|سنؤكد|سنعمل|متاح|مؤكد|تم تأكيد|تم حجز)/u.test(line));

@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import type fixture from "./packet.json";
 
 export type Packet = typeof fixture;
 export const PACKET_VERSION = "20261003-v2";
-export const PACKET_DIRECTORY = fileURLToPath(new URL(".", import.meta.url));
+export const PACKET_DIRECTORY = resolve("scripts/field-validation/v2");
 
 /** Verify the actual bytes before parsing, running trials, or recording any score. */
 export function verifyPacket(bytes: Uint8Array, manifest: string) {
@@ -19,5 +19,5 @@ export function verifyPacket(bytes: Uint8Array, manifest: string) {
 }
 
 export function loadPacket() {
-  return verifyPacket(readFileSync(new URL("./packet.json", import.meta.url)), readFileSync(new URL("./SHA256SUMS", import.meta.url), "utf8"));
+  return verifyPacket(readFileSync(resolve(PACKET_DIRECTORY, "packet.json")), readFileSync(resolve(PACKET_DIRECTORY, "SHA256SUMS"), "utf8"));
 }

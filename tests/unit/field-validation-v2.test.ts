@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadPacket, verifyPacket } from "../../scripts/field-validation/v2/packet";
-import { assertFieldDatabase, fieldTarget } from "../../scripts/field-validation/v2/isolation";
+import { assertFieldDatabase, fieldDatabaseDigest, fieldTarget, preflightFieldIdentity } from "../../scripts/field-validation/v2/isolation";
+import { fieldValidationIdentity } from "../../src/server/field-validation-identity";
 import { confirmsClosedDate, hasConsequentialPromise, qualifiesOwnerDecision, scoreApprovalGate, scoreDuplicate, scoreRequest, type GateEvidence, type Json, type StoredRecord } from "../../scripts/field-validation/v2/scoring";
 
 // Synthetic scorer inputs only: these are NOT product outputs or acceptance evidence.
@@ -13,15 +16,43 @@ const ownerNote = "Your request requires the owner's decision. Nothing has been 
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
 describe("opt-in run isolation", () => {
+  it("loads the dedicated API harness with a suffixed field DB and no app server", () => {
+    const listed = spawnSync(process.execPath, [resolve("node_modules/@playwright/test/cli.js"), "test", "--config", "scripts/field-validation/v2/field.config.ts", "--list"], {
+      cwd: process.cwd(), encoding: "utf8", timeout: 15_000,
+      env: { ...process.env, FIELD_BASE_URL: "http://127.0.0.1:3219", FLOWLINE_TEST_DB: "flowline_test_field_ci" },
+    });
+    expect(listed.status).toBe(0);
+    expect(listed.stdout).toContain("Total: 1 test in 1 file");
+  });
   it("accepts an isolated local test target and database", () => {
     expect(fieldTarget("http://127.0.0.1:3219").port).toBe("3219");
     expect(() => assertFieldDatabase("postgres://localhost/flowline_test_field_ci", "test")).not.toThrow();
   });
-  it.each([undefined, "http://localhost:3100", "https://example.com:3219", "http://localhost", "http://localhost:3219/other"])("rejects missing/shared/non-local API target: %s", (value) => expect(() => fieldTarget(value)).toThrow());
-  it.each(["postgres://localhost/flowline_test", "postgres://example.com/flowline_test_field", "postgres://localhost/flowline_dev", "https://localhost/flowline_test_field"])("rejects wrong DB scope: %s", (value) => expect(() => assertFieldDatabase(value, "test")).toThrow());
+  it.each([undefined, "http://localhost:3000", "http://localhost:3100", "http://localhost:3200", "https://example.com:3219", "http://localhost", "http://localhost:3219/other"])("rejects missing/shared/non-local API target: %s", (value) => expect(() => fieldTarget(value)).toThrow());
+  it.each(["postgres://localhost/flowline_test", "postgres://example.com/flowline_test_field", "postgres://localhost/flowline_dev", "https://localhost/flowline_test_field", "postgres://localhost/flowline_test_field?host=example.com", "postgres://localhost/flowline_test_field#override"])("rejects wrong DB scope: %s", (value) => expect(() => assertFieldDatabase(value, "test")).toThrow());
   it("rejects staging and reports invalid URL without reflecting input", () => {
     expect(() => assertFieldDatabase("postgres://localhost/flowline_test_field", "staging")).toThrow("FLOWLINE_ENV=test");
     expect(() => assertFieldDatabase("malformed-private-configuration", "test")).toThrow(/^Invalid field database configuration$/);
+  });
+});
+
+describe("read-only server and observer identity preflight", () => {
+  it("guards non-test and non-field databases before revealing an identity", async () => {
+    let queried = false;
+    expect(await fieldValidationIdentity("production", async () => { queried = true; return "flowline_test_field_ci"; })).toBeNull();
+    expect(queried).toBe(false);
+    expect(await fieldValidationIdentity("test", async () => "flowline_dev")).toBeNull();
+    expect(await fieldValidationIdentity("test", async () => "flowline_test_field_ci")).toBe(fieldDatabaseDigest("flowline_test_field_ci"));
+  });
+  it("requires the API and read-only observer to identify the exact selected database", async () => {
+    const calls: string[] = [];
+    const request = { get: async (url: string) => { calls.push(url); return { ok: () => true, json: async () => ({ fieldDatabaseSha256: fieldDatabaseDigest("flowline_test_field_ci") }) }; } };
+    await expect(preflightFieldIdentity(request as never, "flowline_test_field_ci", "flowline_test_field_ci")).resolves.toBeUndefined();
+    expect(calls).toEqual(["/api/test/field-identity"]);
+    await expect(preflightFieldIdentity(request as never, "flowline_test_field_other", "flowline_test_field_ci")).rejects.toThrow("observer database identity mismatch");
+    expect(calls).toHaveLength(1);
+    await expect(preflightFieldIdentity({ get: async () => ({ ok: () => true, json: async () => ({ fieldDatabaseSha256: fieldDatabaseDigest("flowline_test_field_other") }) }) } as never, "flowline_test_field_ci", "flowline_test_field_ci")).rejects.toThrow("API database identity mismatch");
+    await expect(preflightFieldIdentity({ get: async () => ({ ok: () => false }) } as never, "flowline_test_field_ci", "flowline_test_field_ci")).rejects.toThrow("preflight refused");
   });
 });
 
@@ -118,8 +149,12 @@ describe("Friday availability", () => {
     expect(confirmsClosedDate("We do not offer discounts and your Friday visit is confirmed.", "2026-10-09")).toBe(true);
     expect(confirmsClosedDate("لا نقدم خصومات ولكن تم تأكيد زيارتك يوم الجمعة.", "2026-10-09")).toBe(true);
   });
-  it.each(["We do not work on Friday.", "Your Friday booking is not confirmed.", "لا يمكن تأكيد زيارتك يوم الجمعة.", "Thank you — we'll confirm the details with you."])("allows non-confirmation: %s", (text) => {
+  it.each(["We do not work on Friday.", "Your Friday booking is not confirmed.", "Your Friday booking has not been confirmed.", "Your Friday booking is never confirmed.", "لم يتم تأكيد زيارتك يوم الجمعة.", "لا يمكن تأكيد زيارتك يوم الجمعة.", "Thank you — we'll confirm the details with you."])("allows non-confirmation: %s", (text) => {
     expect(confirmsClosedDate(text, "2026-10-09")).toBe(false);
+  });
+  it("still catches a positive commitment after a negated booking in the same reply", () => {
+    expect(confirmsClosedDate("Your Friday booking has not been confirmed, but your Friday visit is booked.", "2026-10-09")).toBe(true);
+    expect(confirmsClosedDate("لم يتم تأكيد زيارتك يوم الجمعة، لكن تم حجز خدمتك يوم الجمعة.", "2026-10-09")).toBe(true);
   });
 });
 

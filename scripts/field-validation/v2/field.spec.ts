@@ -3,9 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { Client } from "pg";
-import { signUpVerified, uniqueEmail } from "../../../e2e/helpers";
 import { loadPacket } from "./packet";
-import { assertFieldDatabase } from "./isolation";
+import { assertFieldDatabase, preflightFieldIdentity } from "./isolation";
+import { signUpFieldUser, uniqueFieldEmail } from "./signup";
 import { scoreApprovalGate, scoreDuplicate, scoreRequest, type Json, type OutboxRow, type StoredRecord } from "./scoring";
 
 // Derived from 719056c:artifacts/company-builder/validation/20261001-d224cfb/flowline-field/field.spec.ts.
@@ -13,23 +13,29 @@ import { scoreApprovalGate, scoreDuplicate, scoreRequest, type Json, type Outbox
 test("v2 field packet through real API/worker and persisted storage (sample only)", async ({ request }) => {
   const { packet, sha256 } = loadPacket(); // Must succeed BEFORE any side effect or score is recorded.
   const databaseUrl = process.env.DATABASE_URL;
-  assertFieldDatabase(databaseUrl, process.env.FLOWLINE_ENV);
+  const expectedDatabase = assertFieldDatabase(databaseUrl, process.env.FLOWLINE_ENV);
   const runName = process.env.FIELD_RUN;
   if (!runName || !/^[A-Za-z0-9_-]{1,80}$/.test(runName)) throw new Error("FIELD_RUN must name a new bounded run");
   const out = resolve("artifacts/phase-4/takeover-20261003/field/runs", runName);
-  mkdirSync(out, { recursive: false }); // Parent prepared by operator; refuse existing run/evidence overwrite.
-  const codeSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const dirty = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim().length > 0;
   const client = new Client({ connectionString: databaseUrl });
   try { await client.connect(); } catch { await client.end(); throw new Error("Field test database connection failed"); }
   try {
-    await client.query("SET default_transaction_read_only = on");
+    let observedDatabase: string;
+    try {
+      await client.query("SET default_transaction_read_only = on");
+      const observed = await client.query<{ name: string }>("SELECT current_database() AS name");
+      observedDatabase = observed.rows[0]?.name ?? "";
+    } catch { throw new Error("Field observer identity preflight failed"); }
+    await preflightFieldIdentity(request, observedDatabase, expectedDatabase);
+    mkdirSync(out, { recursive: false }); // Parent prepared by operator; refuse existing run/evidence overwrite.
+    const codeSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    const dirty = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim().length > 0;
     const json = async (method: "get" | "post" | "patch", url: string, data?: unknown): Promise<Json> => {
       const response = await request[method](url, data === undefined ? {} : { data });
       if (!response.ok()) throw new Error(`Field API ${method} failed (${response.status()})`); // No response/credential dump.
       return response.json();
     };
-    await signUpVerified(request, uniqueEmail("field-v2"));
+    await signUpFieldUser(request, uniqueFieldEmail());
     const ws = (await json("post", "/api/workspaces", { name: "Synthetic field validation v2" })).workspace as { id: string };
     await json("post", "/api/onboarding", { goal: "sales", skipped: false });
     await json("patch", `/api/workspaces/${ws.id}`, { timezone: packet.company.timezone });

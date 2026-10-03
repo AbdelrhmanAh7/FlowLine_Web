@@ -14,16 +14,15 @@ and requires explicit owner-decision qualification for VP-05/VP-06. Any later pa
 ## Deterministic CI coverage
 
 `tests/unit/field-validation-v2.test.ts` is discovered by the existing `unit` project (`tests/unit/**/*.test.ts`).
-Candidate `719056c`'s `.github/workflows/gate.yml` static job includes that unit project.
-No workflow changes or weakening of existing assertions is needed. This older worktree has no gate workflow or Company Builder stack yet;
-the coordinator must combine the lane with the candidate. CI has **not** run for these uncommitted changes.
+The current `.github/workflows/gate.yml` static job includes that unit project.
+No workflow changes or weakening of existing assertions is needed. CI has **not** run for the post-review changes.
 
 Focused commands, using the existing dependencies:
 
 ```powershell
 node node_modules/vitest/vitest.mjs run --project unit tests/unit/field-validation-v2.test.ts --maxWorkers 1 --no-file-parallelism --configLoader runner --no-cache
 node node_modules/typescript/bin/tsc -p scripts/field-validation/v2/tsconfig.json --noEmit
-node node_modules/eslint/bin/eslint.js scripts/field-validation/v2/*.ts tests/unit/field-validation-v2.test.ts --no-cache
+node node_modules/eslint/bin/eslint.js scripts/field-validation/v2/*.ts tests/unit/field-validation-v2.test.ts src/server/field-validation-identity.ts src/app/api/test/field-identity/route.ts --no-cache
 ```
 
 The tests use explicitly synthetic scorer inputs and mutation counterexamples. They do not mock product acceptance,
@@ -45,12 +44,17 @@ call a provider, or claim a field score. Scoring imports no product evaluator an
 `field.spec.ts` adapts the old harness into a maintained, dedicated API suite. It uses Playwright's **request** fixture only;
 it creates no browser and starts no server. It creates/verifies a synthetic user through the real endpoints and executes the real worker.
 No user acceptance verdict is posted. Failure scores are saved and then fail the test.
+Before signup or any API write, it checks the observer's `current_database()` and calls a read-only test-only identity route
+that queries the API server's actual `current_database()`. Both must match the selected `flowline_test_field` database exactly.
+Non-test environments and non-field databases return 404; the route returns only a SHA256 digest of the validated name,
+never a database URL or name. Ports 3000, 3100 and 3200 are refused even before the identity request.
+The standalone synthetic signup helper uses the real test outbox and avoids the shared E2E stack's import-time database grammar.
 
 A future authorized operator needs the combined Company Builder candidate, an **already running isolated** test stack,
 its matching local `flowline_test_field` or `flowline_test_field_<suffix>` database, `FLOWLINE_ENV=test`, and
-`FIELD_BASE_URL` on a dedicated loopback port (3100 refused). Supply `DATABASE_URL` through protected process configuration;
+`FIELD_BASE_URL` on a dedicated loopback port (3000/3100/3200 refused). Supply `DATABASE_URL` through protected process configuration;
 this harness never reads an env file. Prepare the parent `artifacts/phase-4/takeover-20261003/field/runs/`,
-set a new alphanumeric/underscore/hyphen `FIELD_RUN`, then run:
+set a new alphanumeric/underscore/hyphen `FIELD_RUN`, then run from the repository root:
 
 ```powershell
 node node_modules/@playwright/test/cli.js test --config scripts/field-validation/v2/field.config.ts
@@ -62,8 +66,8 @@ database is permitted; its observer connection is read-only. A new run directory
 
 ## Limits and blockers
 
-- This lane ran only deterministic scorer tests and scoped static checks. The real API/worker/storage scenario is **NOT RUN**:
-  the starting main predates Company Builder, and local stack/browser execution is prohibited by the lane brief.
+- This lane ran only deterministic scorer tests, a no-server harness module-load check, and scoped static checks.
+  The real API/worker/storage scenario is **NOT RUN** because local stack/browser execution is prohibited by the lane brief.
 - Candidate `719056c` has a generic consequential draft note (`REFUND_NOTE` in `src/company-builder/packs/customer-follow-up.ts`)
   that names a team member but does not explicitly qualify the current request for an owner decision. By source inspection,
   VP-05/VP-06 are expected to fail this v2 qualification until the product draft is fixed; this is **not** an observed field result.
