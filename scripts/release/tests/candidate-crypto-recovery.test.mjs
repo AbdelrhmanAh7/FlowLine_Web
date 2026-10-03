@@ -3,17 +3,18 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { digest } from "../lib/safe-recovery.mjs";
 
-const candidateSha = process.env.FLOWLINE_RECOVERY_CANDIDATE_SHA;
-const candidateDir = process.env.FLOWLINE_RECOVERY_CANDIDATE_DIR;
-assert.ok(/^[a-f0-9]{40}$/.test(candidateSha ?? "") && candidateDir, "explicit archived candidate directory and SHA required");
-const path = join(candidateDir, "src/server/crypto.ts");
-const tracked = spawnSync("git", ["show", `${candidateSha}:src/server/crypto.ts`], { maxBuffer: 1024 * 1024, windowsHide: true });
-assert.ok(tracked.status === 0 && digest(tracked.stdout) === digest(readFileSync(path)), "crypto must be exact candidate code");
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const path = join(repo, "src/server/crypto.ts");
+const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8", windowsHide: true });
+const candidateSha = head.stdout?.trim();
+assert.ok(head.status === 0 && /^[a-f0-9]{40}$/.test(candidateSha ?? ""), "current checkout HEAD is required");
+const tracked = spawnSync("git", ["show", `${candidateSha}:src/server/crypto.ts`], { cwd: repo, maxBuffer: 1024 * 1024, windowsHide: true });
+assert.ok(tracked.status === 0 && digest(tracked.stdout) === digest(readFileSync(path)), "crypto must match current checkout HEAD");
 const crypto = await import(pathToFileURL(path).href);
 const workspaceKey = randomBytes(32).toString("base64"), platformKey = randomBytes(32).toString("base64");
 process.env.FLOWLINE_ENCRYPTION_KEY = workspaceKey;
@@ -25,7 +26,12 @@ const platformCtx = { ...wsCtx, workspaceId: "platform", scope: "platform", revi
 const value = { token: randomBytes(24).toString("base64") };
 const ws = crypto.encryptSecretV2(value, wsCtx), platform = crypto.encryptSecretV2(value, platformCtx);
 const refuses = (f) => { let failed = false; try { f(); } catch { failed = true; } assert.ok(failed, "mismatch must be refused"); };
-after(() => { delete process.env.FLOWLINE_ENCRYPTION_KEY; delete process.env.FLOWLINE_PLATFORM_ENCRYPTION_KEY; });
+after(() => {
+  delete process.env.FLOWLINE_ENCRYPTION_KEY;
+  delete process.env.FLOWLINE_PLATFORM_ENCRYPTION_KEY;
+  delete process.env.FLOWLINE_ENCRYPTION_KEYS_OLD;
+  delete process.env.FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD;
+});
 
 test("candidate workspace encrypted envelope survives serialization with exact recovered key", () => {
   const row = JSON.parse(JSON.stringify(ws));

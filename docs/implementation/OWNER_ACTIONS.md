@@ -1,57 +1,32 @@
 # Owner actions — FlowLine private beta
 
-**State checked 2026-10-03.** Main and beta-candidate status below are separate. No deployment, tunnel, DNS change,
-payment activation or invitation is approved by this list.
+**Current state checked against the coordinator record 2026-10-03.** This ledger separates merged main, the local ARM64 artifact, and remaining beta approvals. No Pi deployment, DNS/tunnel exposure, payment activation or invitations are approved.
 
-## Verified Git and readiness state
+## Current verified state
 
-- Local `main` and `origin/main` were both observed at `9324b1fed677f03e8c044eb1373b8577167abeb5` (main
-  consolidation; `MERGED: YES` for that consolidation).
-- The active primary checkout was at `719056cefa9d9810f93ea8c917da2bda82fe2e4a`, branch
-  `codex/cb-review-repair-20261003`, one commit ahead of its locally recorded `origin/pr/cb-1-core`. That candidate
-  is not established as merged to main. No fresh remote PR/review/CI check was performed here.
-- The local ARM64 image build at `719056c` **FAILED** during Next page-data collection after reporting 31 workers;
-  Docker ended with EOF. There is no verified image digest or usable ARM64 artifact from that run. Root owns builds;
-  this G4 work did not start another build.
-- No Pi/host/domain/tunnel/DNS state was inspected or verified. `BETA INFRA VERIFIED: NO` and
-  `PRIVATE BETA READY: NO`. `PUBLIC PRODUCTION APPROVED: NO`.
-- Local recovery scripts and docs are preparation only until their focused tests/proof are recorded. The DB-only proof
-  cannot establish application, migration, ARM64 image, off-device backup or Pi restore readiness.
+- Main contains the PR #2 stack at `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`; PR #2 is merged. Reviewed head `719056cefa9d9810f93ea8c917da2bda82fe2e4a` passed full-tier CI: [run 37077650513](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37077650513), all six jobs green. The four-file tail review on PR #7 completed with no actionable findings; PR #7 remains review-only and unmerged.
+- The current beta worktree is based on merge commit `5be15b8e782ae46b82ba3dfbb735e85c6ba929de`. Root reported a local `linux/arm64` image built from exactly that SHA: immutable manifest digest `sha256:64405e0a42269fc3ac9b53cdf91608d91517eac5e80095f6b36b30f85511a273` and local image ID `sha256:e0092d1e5d39ab87540ed20950ef51010f163099a1a6b25c20aae5f9dce0fe0e`. No registry push or Pi deployment occurred. This image does not include the final recovery test-entry/documentation fixes being prepared in this worktree; root controls any final rebuild. Image evidence does not establish Pi readiness.
+- Earlier `719056c` ARM64 build failed at page-data collection with 31 workers and Docker EOF. Keep that failed attempt as historical evidence; it is superseded by the separate successful `5be15b8` local image build above, not erased or conflated with it.
+- Disposable proof `RECOVERY-c7e21a267ae1f720a1e22f88e81ed139.json` passed 18 DB-only checks: encrypted restore, wrong-key refusal, nonempty-target preservation, ciphertext/key-id preservation, candidate-key decryption and cleanup of only its owned resources. It does not certify application, migrations, off-device backup, Pi restore or a deployed artifact.
+- The current patch adds CI-discovered unit coverage for recovery/config Node suites and checked-out crypto; these final changes are not yet in a published PR or image. No full/browser gates were run here.
+- `MERGED: YES` for PR #2 at main SHA above. The beta follow-up patch remains unmerged. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO`.
 
-## Owner decisions and inputs still required
+## Owner inputs and approvals still required
 
-| Action | Exact input or approval needed | State and boundary |
+| Action | Exact input or approval needed | Current boundary |
 |---|---|---|
-| Select existing domain/hostname | Confirm the domain already owned, `beta.<domain>`, and the chosen sending subdomain/provider. Identify who can provide read-only DNS records. | Pending. No purchase or nameserver change. Existing A/AAAA/MX/TXT and mail-auth records must be inventoried first. |
-| Authorize read-only Pi inspection | Exact SSH host/user and secure access method outside chat; confirm that inspection may list OS/architecture, RAM/storage, Docker/Compose, firewall, running services/ports and other workloads. | Pending. Do not send a private key in chat. No login until the owner authorizes the access route. No restart, install or config edit. |
-| Approve DNS and internet exposure | After the read-only inventory: approve an exact record diff, beta hostname, named Cloudflare Tunnel route/account, origin, firewall/service changes, cost (expected $0 only if verified), risk and rollback. | Pending. No tunnel creation, credentials, DNS writes or endpoint exposure. Exact values cannot be prepared until the domain and host are verified. |
-| Approve one beta deployment | Exact source SHA, locally verified immutable `linux/arm64` image digest, migration plan, Pi services/config paths, backup and clean-restore plan, rollback, expected cost, invite-only mode, sandbox billing and live billing disabled. | Pending. Current 719 build failed; no deployable artifact. Approval must not imply public production or invitations. |
-| Complete external provider setup and consent | Named test accounts/resources, exact callbacks/scopes, platform/customer UI, and owner consent at each sensitive step for Google/GitHub, Sheets/Gmail, Slack, email and Paddle sandbox. | Not complete/live-verified. No real customer data. No live payments. Test credentials only in their intended protected UI/storage. |
-| Decide hosted AI test budget | Either identify a verified no-cost free-quota route with automatic overage disabled, or separately approve a bounded aggregate amount covering retries and benchmark repeats. | Current aggregate cap remains **$0**; no billable AI calls, billing activation or top-ups. Copilot quality stays Experimental until a valid evaluation passes. |
-| Finish real platform-admin MFA and recovery storage | Owner completes authenticator setup privately on the current approved admin setup page and stores recovery material in the owner’s protected storage. | Prior handoff described MFA as in progress; completion is **not verified in this takeover**. No code or access here substitutes for confirmation. |
-| Approve recipient-specific beta invitations | After readiness and owner UAT, name each recipient/workspace, exact invitation count and expiry. | Not approved; no real invitations. |
+| Select the existing beta domain | Confirm an already-owned domain, exact `beta.<domain>` hostname, and chosen sending subdomain/provider; identify an owner-approved read-only DNS view. | Pending. No purchase or nameserver changes. Inventory existing A/AAAA/MX/TXT and mail-auth records before proposing edits. |
+| Authorize read-only Pi inspection | Exact SSH host/user and a secure access method outside chat; authorize inspection of OS/architecture, RAM/storage, Docker/Compose, firewall, running services/ports and other workloads. | Pending. No private keys in chat. No install, restart, configuration change or Pi deployment. |
+| Approve DNS and named-tunnel exposure | After inspection, approve the exact DNS diff, Cloudflare account/zone and named tunnel route, origin, service/firewall changes, verified cost, risks and rollback. | Pending. No tunnel creation, DNS write, credentials or internet exposure. |
+| Approve a specific beta deployment | Exact source SHA, image digest/architecture, migration state/plan, named Pi services and protected config paths, data/off-device backup and clean-restore plan, rollback, verified cost, invite-only mode and sandbox-only billing with live billing disabled. | Pending. The successful local `5be15b8` image is not Pi or release certification; root will decide whether the final frozen patch requires a rebuild. Approval cannot imply production or invitations. |
+| Complete named provider setup and consent | Dedicated test accounts/resources, verified callbacks and least scopes, intended Flowline UI/storage, and owner consent for Google/GitHub, Sheets/Gmail, Slack, email and Paddle sandbox journeys. | Not live-verified. No real customer data or live payments. |
+| Hosted AI validation | Use only a verified free route with paid overage disabled. | Aggregate cap remains **$0**. No new spending proposal, billable calls, billing activation or top-ups. If a route is not verifiably free, keep the test blocked and Copilot Experimental. |
+| Complete owner admin setup privately | Owner completes Google → ZITADEL → Flowline sign-in round-trip and real platform-admin TOTP/bootstrap, then stores recovery material privately. | Both remain unverified in the coordinator record. No owner login/MFA was performed here. |
+| Approve recipient-specific invitations | After exact-artifact readiness and owner UAT, specify each recipient/workspace, number of invitations and expiry. | Not approved. No invitations sent. |
 
-## Actions Codex can prepare without those approvals
+**Current disposition:** PR #2 stack merged to main `9fdcb7d`; local ARM64 image exists for source `5be15b8` only; final beta patch publication/image status pending root. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO` · invitations not approved.
 
-- Keep the Pi + named Cloudflare Tunnel configuration as a review template only.
-- Validate recovery scripts against mocks and uniquely labelled, network-isolated, disposable PostgreSQL resources. Never
-  use, stop or remove inherited containers/databases. Remove only resources created by the current proof after positively
-  rechecking their random run ID, container IDs, labels, network/ports and private scratch-root ownership.
-- Record sanitized local evidence with source SHA; never include environment contents, keys, plaintext, ciphertext or
-  database dumps.
-
-**Current disposition:** Main consolidation `MERGED: YES` at the observed SHA above; active 719 candidate
-`MERGED: NO / not established`; no fresh GitHub status check. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` ·
-`PUBLIC PRODUCTION APPROVED: NO` · real invitations: **not approved**.
-
-## Coordinator verification — 2026-10-03
-
-PR #2 is now MERGED into main `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. Its reviewed head `719056cefa9d9810f93ea8c917da2bda82fe2e4a` passed full-tier CI https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37077650513 . The four-file tail review in #7 is complete with zero actionable findings under the saved owner amendment; #7 remains review-only and unmerged. The earlier pending merge observations above are superseded by this verification. Google -> ZITADEL -> FlowLine owner sign-in round-trip and real platform-admin TOTP/bootstrap remain UNVERIFIED; owner must complete those privately.
-
-The disposable recovery proof `RECOVERY-c7e21a267ae1f720a1e22f88e81ed139.json` passed 18 checks, including encrypted-data restore, wrong-key refusal, nonempty-target preservation and cleanup. It proves DB-only synthetic recovery, not Pi/application/off-device certification. ARM64 rebuild with bounded worker configuration is pending.
-
-## Preserved earlier owner chronology — superseded status, do not act
-
+## Preserved earlier owner chronology — historical, superseded; do not act on its status
 # Owner actions — private beta
 
 ## Tomorrow (2026-10-03) — owner in Chrome
