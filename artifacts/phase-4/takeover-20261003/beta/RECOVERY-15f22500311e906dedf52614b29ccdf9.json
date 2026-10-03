@@ -1,0 +1,10 @@
+{
+  "candidateSha": "719056cefa9d9810f93ea8c917da2bda82fe2e4a",
+  "runId": "15f22500311e906dedf52614b29ccdf9",
+  "scope": "DB-only synthetic fixture + actual candidate crypto; no app/worker/migration/ARM certification",
+  "status": "BLOCKED",
+  "checks": [],
+  "cleanup": [],
+  "at": "2026-10-02T23:51:37.478Z",
+  "code": "PROOF_FAILED"
+}
