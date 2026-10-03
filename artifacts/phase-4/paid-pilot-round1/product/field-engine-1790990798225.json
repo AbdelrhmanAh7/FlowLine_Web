@@ -1,0 +1,221 @@
+{
+  "scope": "synthetic executeGraph plus in-memory data.store; NOT API/worker/browser/provider/human acceptance",
+  "packetSha256": "b4a278f96c2d1acbf8d4fb0a0ce0b465fc05276e6ac76b5111e27fbd5fdf1d4f",
+  "scorerSha256": "aa3cfd9a4d1ce2b0c7d4bc1b324ce4e3a6c1e6011d0e45646204cffea059ac81",
+  "frozenFieldSource": "46a26297ec915d958b16e6c492c5787a24a38ba7",
+  "passed": true,
+  "persistedInMemoryRecords": 10,
+  "scores": [
+    {
+      "id": "VP-01",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "date": true,
+          "phone": true,
+          "missing": true,
+          "quote:Deep cleaning for a 2-bedroom apartment costs 1500 EGP.": true,
+          "followUp": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-02",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "date": true,
+          "phone": true,
+          "missing": true,
+          "noInvented:EGP": true,
+          "noInvented:1500": true,
+          "noInvented:900": true,
+          "followUp": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-03",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "date": true,
+          "phone": true,
+          "missing": true,
+          "quote:Office cleaning starts at 900 EGP per visit.": true,
+          "followUp": true,
+          "language": true,
+          "closedDateNoConfirmation": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-04",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "date": true,
+          "phone": true,
+          "phoneDisplay": true,
+          "missing": true,
+          "followUp": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-05",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "quotesPolicy": true,
+          "noConsequentialPromise": true,
+          "ownerDecisionQualified": true,
+          "draftConsequential": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-06",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "date": true,
+          "quote:Cancellations are free up to 24 hours before the visit.": true,
+          "noConsequentialPromise": true,
+          "ownerDecisionQualified": true,
+          "draftConsequential": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-07",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "reason": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-08",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "recipient": true,
+          "reviewRequired": true,
+          "service": true,
+          "quote:We work Saturday to Thursday, 9:00 to 18:00.": true,
+          "noInvented:50%": true,
+          "noInvented:discount": true,
+          "suspiciousFlagged": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-09",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "reason": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    },
+    {
+      "id": "VP-10",
+      "status": "succeeded",
+      "fieldScore": {
+        "checks": {
+          "outcome": true,
+          "reason": true,
+          "consequential": true,
+          "recordExists": true,
+          "recordStatus": true
+        },
+        "passed": true,
+        "failed": []
+      },
+      "failedProductChecks": []
+    }
+  ]
+}

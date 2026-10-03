@@ -2464,6 +2464,9 @@
       "testNote": "Run “Test sign-in” as an owner to verify this configuration before it can be enabled. You’ll be signed in as the identity the provider returns: if its email is yours, your account is linked; SSO never takes over another existing account."
     },
     "billing": {
+      "providerCharges": "Use your own supported API accounts and keys. AI and integration provider charges are separate from your Flowline subscription and are billed by those providers.",
+      "ledgerLimitations": "These amounts use the prices configured in this workspace. They are not your provider invoice, and unpriced calls do not show their full cost. Set spending limits with each provider too.",
+      "executionCounting": "Each accepted workflow or agent run counts once, including failed or cancelled runs. Worker recovery does not add another execution; starting a new run does.",
       "title": "Plan & billing",
       "ownerOnly": "Only workspace owners can manage billing",
       "requestFailed": "Billing request failed",
@@ -2471,7 +2474,7 @@
       "cancelRequested": "Cancellation requested — it applies when the provider confirms",
       "viewOnly": "Only workspace owners and editors can view billing.",
       "loadError": "Couldn't load billing",
-      "notConfigured": "Billing isn't configured on this installation. Plans come from environment configuration; no payment provider key is set.",
+      "notConfigured": "Billing is not configured on this installation. A platform administrator must configure plans and a sandbox payment provider.",
       "mode": {
         "test": "Test mode",
         "sandbox": "Sandbox",
@@ -3688,6 +3691,7 @@
     }
   },
   "companyBuilder": {
+    "refundDecisionNote": "The business owner will review and decide on your refund or cancellation request. Nothing has been refunded or cancelled yet.",
     "nav": "Digital team",
     "title": "Your digital team",
     "promise": "Build a digital team that knows your work.",

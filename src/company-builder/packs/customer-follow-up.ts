@@ -1,5 +1,6 @@
 import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
 import type { FlowGraph, FlowNode } from "@/engine/types";
+import { createTranslator } from "@/i18n/translate";
 import { lit, sameJson, type PackCheck, type PackFixture, type PackParams, type TaskPack } from "./types";
 
 /**
@@ -40,8 +41,8 @@ const GREETING = { en: "Hello,", ar: "مرحبًا،" };
  * is added to every such draft; the draft itself still waits for the named reviewer like every reply.
  */
 export const REFUND_NOTE = {
-  en: "A member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.",
-  ar: "سيراجع أحد أفراد فريقنا طلبك ويؤكد لك الخطوة التالية. لم يتم أي استرداد أو إلغاء حتى الآن.",
+  en: createTranslator("en")("companyBuilder.refundDecisionNote"),
+  ar: createTranslator("ar")("companyBuilder.refundDecisionNote"),
 };
 const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
 

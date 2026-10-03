@@ -1,0 +1,13 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-product-20261003
+
+migrated postgres://***@127.0.0.1:52209/flowline_test_pilotproduct
+[seed-platform] test platform credentials ready
+
+ Test Files  2 passed (2)
+      Tests  17 passed (17)
+   Start at  04:25:21
+   Duration  8.88s (tests 47%, import 39%, transform 14%)
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
