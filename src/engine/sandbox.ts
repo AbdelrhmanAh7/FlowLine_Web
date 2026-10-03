@@ -1,5 +1,6 @@
 import { fork, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
 import { EXPRESSION_MAX_DEPTH, EXPRESSION_MAX_LENGTH, EXPRESSION_TIMEOUT_MS, ExpressionError, VALUE_MAX_BYTES } from "./expression";
 
 /** Heap cap for the sandbox process. */
@@ -14,7 +15,17 @@ let nextId = 1;
 let queue: Promise<unknown> = Promise.resolve();
 
 function spawnChild() {
-  const c = fork(CHILD, [], { execArgv: [`--max-old-space-size=${SANDBOX_HEAP_MB}`], stdio: ["ignore", "ignore", "ignore", "ipc"] });
+  // Parsing needs no worker credentials, proxy configuration, PATH or Node preload hooks.
+  // This reduces environment exposure; it does not confine filesystem/network/OS authority.
+  const env: NodeJS.ProcessEnv = { NODE_ENV: "production" };
+  // libuv on Windows otherwise silently copies these omitted names from the parent.
+  if (process.platform === "win32") {
+    for (const key of ["HOMEDRIVE", "HOMEPATH", "LOGONSERVER", "PATH", "SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "USERDOMAIN", "USERNAME", "USERPROFILE", "WINDIR"]) env[key] = "";
+    // Node requires this OS installation path on Windows to initialize its runtime.
+    env.SYSTEMROOT = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? "";
+  }
+  if (process.env.FLOWLINE_ENV === "test") env.FLOWLINE_SANDBOX_TEST_INSPECTION = "1";
+  const c = fork(CHILD, [], { env, cwd: dirname(CHILD), execArgv: [`--max-old-space-size=${SANDBOX_HEAP_MB}`], stdio: ["ignore", "ignore", "ignore", "ipc"] });
   c.on("exit", () => {
     if (child === c) child = null;
   });
@@ -74,6 +85,14 @@ export function extractPdfTextIsolated(base64: string, timeoutMs = 20_000): Prom
   const run = queue.then(() => once("", null, undefined, timeoutMs, { op: "pdf_text", base64 }));
   queue = run.catch(() => {});
   return run as Promise<{ text: string; pages: number }>;
+}
+
+/** Test-only real-child proof. Returns nonempty variable names, never their values. */
+export function sandboxEnvironmentKeysForTest(): Promise<string[]> {
+  if (process.env.FLOWLINE_ENV !== "test") return Promise.reject(new Error("Sandbox inspection is test-only"));
+  const run = queue.then(() => once("", null, undefined, EXPRESSION_TIMEOUT_MS, { op: "test_environment_keys" }));
+  queue = run.catch(() => {});
+  return run as Promise<string[]>;
 }
 
 /** Stop the sandbox process (worker shutdown / tests). */

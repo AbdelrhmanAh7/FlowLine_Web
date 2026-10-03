@@ -63,7 +63,9 @@ async function pdfText({ base64, maxBytes }) {
 process.on("message", async (req) => {
   let res;
   try {
-    res = req.op === "pdf_text" ? await pdfText(req) : await evaluate(req);
+    if (req.op === "test_environment_keys" && process.env.FLOWLINE_SANDBOX_TEST_INSPECTION === "1") {
+      res = { ok: true, json: JSON.stringify(Object.keys(process.env).filter((key) => process.env[key] !== "").sort()) };
+    } else res = req.op === "pdf_text" ? await pdfText(req) : await evaluate(req);
   } catch (e) {
     res = { ok: false, code: "EXPRESSION_RUNTIME", message: describe(e) };
   }
