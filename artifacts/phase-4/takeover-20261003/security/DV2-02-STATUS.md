@@ -1,6 +1,6 @@
 # DV2-02 review-ready implementation; real proof pending
 
-- Worktree base SHA: `9324b1fed677f03e8c044eb1373b8577167abeb5`; root candidate context: `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. Their `src/server/crypto.ts` Git blob is identical (`f344947921d47a6a8cc0804e52df0d84cff41c2d`). Tests exercise that crypto file plus the uncommitted verifier/test diff, not the entire root candidate stack.
+- Current coordinator-committed candidate HEAD: `49f1cd431635b527acef7a763b15aa39f687fd58`, parent main `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. Crypto Git blob remains `f344947921d47a6a8cc0804e52df0d84cff41c2d`. Tests/full typecheck cover this HEAD plus the uncommitted parser/history correction, not concurrent root changes.
 - Frozen source records inspected by metadata: primary `artifacts/beta-execution/20260930T122429Z/key-reuse-audit.json`, `key-rotation.json`, and `BUGS.md`; current copied `artifacts/design-v2/BUGS.md`; and takeover `common.txt`.
 - No real local `.env*` contents or encryption-key values were read or processed. Tests used generated in-memory keys only. No database or environment file was changed. Frozen evidence was not edited.
 
@@ -22,7 +22,7 @@ All selected old-key connection candidates must be supported and rejected; empty
 
 Schema detection supports the coordinator-reported old schema without `legacy_crypto`: only v1 is accepted with `legacyCrypto=null` and explicit inferred provenance. No column marker is manufactured; raw AES-GCM and app `decryptLegacyV1` rejection are both required. Old/new schema metadata and inference count are reported, with the provenance limit stated. Existing-column false/null v1 markers still fail, as do changing metadata and a missing marker in the new DB. The maintained verifier/configs now live in `scripts/security/`, outside evidence; imports are extensionless.
 
-Focused validation: 34/34 tests, focused verifier/test TypeScript check, full worktree TypeScript check, and scoped ESLint pass. Full typecheck covers base 9324b1f plus this delta, not the updated primary stack. Exact commands, output summary, source hashes and proof commands are in `SECURITY_HANDOFF.md` / `focused-results.json`. No independent review or real-secret/DB proof has run.
+Revised validation: 55/55 tests, focused verifier/test TypeScript check, full worktree TypeScript check, and scoped ESLint pass. Strict syntax validation precedes permissive dotenv parsing, audit completion and DB access; malformed fallback/quote/export/garbage cases fail with no content output. Historical Chromium 25/25 text is restored exactly; all unrelated BUGS lines equal main baseline. The prior independent review's BLOCK_SECRET_PROCESSING remains until revised approval. Ai-hub proof is BLOCKED; absence proves no retirement. Exact commands/results/hashes are in `SECURITY_HANDOFF.md` / `focused-results.json`. No real-secret/DB proof has run.
 
 ## Status
 

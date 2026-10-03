@@ -263,9 +263,28 @@ export function auditEnvironment(env: ProcessEnv, exposedId = EXPOSED_WORKSPACE_
   return { affectedKeyCount, invalidKeyCount, oldFallbackPresent: Boolean(env.FLOWLINE_ENCRYPTION_KEYS_OLD?.trim() || env.FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD?.trim()) };
 }
 export function parseNamedEnvironmentBytes(bytes: Buffer): ProcessEnv {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe && bytes.length % 2 !== 0) throw new Error("unsupported named environment encoding");
   const text = bytes[0] === 0xff && bytes[1] === 0xfe ? bytes.subarray(2).toString("utf16le") : bytes.toString("utf8").replace(/^\uFEFF/, "");
   if (text.includes("\0") || text.includes("\uFFFD")) throw new Error("unsupported named environment encoding");
-  return parseEnv(text);
+  // Required dotenv subset: blank/comment lines and unique NAME=value assignments,
+  // optional horizontal whitespace, single-line single/double quotes, inline comments,
+  // or empty/unquoted values. No export, multiline quotes, backtick quoting or garbage lines.
+  // Validate the ENTIRE file before the permissive Node parser can drop malformed fallbacks.
+  const names = new Set<string>();
+  for (const line of text.split(/\r?\n/)) {
+    if (/^[ \t]*(?:#.*)?$/.test(line)) continue;
+    const assignment = /^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*)$/.exec(line);
+    if (!assignment || line.includes("\r") || names.has(assignment[1])) throw new Error("invalid dotenv syntax");
+    names.add(assignment[1]);
+    const value = assignment[2];
+    if (value.startsWith("'") || value.startsWith('"')) {
+      const closing = value.indexOf(value[0], 1);
+      if (closing < 0 || !/^[ \t]*(?:#.*)?$/.test(value.slice(closing + 1))) throw new Error("invalid dotenv syntax");
+    } else if (/["'`]/.test(value.split("#", 1)[0])) throw new Error("invalid dotenv syntax");
+  }
+  const parsed = parseEnv(text);
+  if (Object.keys(parsed).length !== names.size || [...names].some((name) => !Object.hasOwn(parsed, name))) throw new Error("dotenv parser omitted an assignment");
+  return parsed;
 }
 function namedEnvironment(name: typeof NAMED_FILES[number]): ProcessEnv | null {
   const path = resolve(PARENT, name);

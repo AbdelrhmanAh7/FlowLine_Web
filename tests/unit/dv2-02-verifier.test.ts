@@ -230,6 +230,48 @@ describe("DV2-02 pure audit processor", () => {
   });
 });
 
+describe("DV2-02 strict dotenv prevalidation", () => {
+  function requiredText() {
+    const replacement = randomBytes(32);
+    return { replacement, text: `FLOWLINE_ENV=test\nFLOWLINE_ENCRYPTION_KEY=${replacement.toString("base64")}\nDATABASE_URL=postgres://fixture:fixture@127.0.0.1:5432/${options.newDatabase}\n` };
+  }
+  it("keeps positive quoted/unquoted/comment/empty assignment cases with required fields", () => {
+    const { text } = requiredText();
+    const parsed = parseNamedEnvironmentBytes(Buffer.from(`\t# ignored quotes \" ' \n${text}FLOWLINE_ENCRYPTION_KEYS_OLD= # empty\nFLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD = '' # empty too\nQUOTED = \"hash#equal=value\" # comment\nSINGLE='spaces and # hash'\nUNQUOTED = text with spaces # comment\nEMPTY=\nDOUBLE_EMPTY=\"\"\n`));
+    expect(validateProcessEnvironment(options, parsed).pathname).toBe(`/${options.newDatabase}`);
+    expect(parsed).toMatchObject({ FLOWLINE_ENCRYPTION_KEYS_OLD: "", FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD: "", QUOTED: "hash#equal=value", SINGLE: "spaces and # hash", UNQUOTED: "text with spaces", EMPTY: "", DOUBLE_EMPTY: "" });
+  });
+  it.each([
+    "FLOWLINE_ENCRYPTION_KEYS_OLD fixture", "FLOWLINE_ENCRYPTION_KEYS_OLD: fixture",
+    "FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD 'fixture'", "FLOWLINE_ENCRYPTION_KEYS_OLD=\"unfinished",
+    "FLOWLINE_ENCRYPTION_KEYS_OLD='unfinished", "FLOWLINE_ENCRYPTION_KEYS_OLD=\"closed\" trailing",
+    "FLOWLINE_ENCRYPTION_KEYS_OLD='closed' trailing", "FLOWLINE_ENCRYPTION_KEYS_OLD=bare\"unfinished",
+    "export FLOWLINE_ENCRYPTION_KEYS_OLD=fixture", "export", "garbage line", "BAD-NAME=fixture",
+    "=missing-name", "1BAD=fixture", "FLOWLINE_ENCRYPTION_KEYS_OLD=`fixture`",
+    "FLOWLINE_ENCRYPTION_KEYS_OLD=\"multi\nline\"", "FLOWLINE_ENCRYPTION_KEYS_OLD=\nFLOWLINE_ENCRYPTION_KEYS_OLD=fixture",
+  ])("rejects malformed synthetic case %#: no partial audit or DB access", async (badLine) => {
+    const { replacement, text } = requiredText(); activate(replacement);
+    expect(validateProcessEnvironment(options, parseNamedEnvironmentBytes(Buffer.from(text))).pathname).toBe(`/${options.newDatabase}`);
+    const bytes = Buffer.from(`${text}${badLine}\n`), makeClient = vi.fn(), completedAudit = vi.fn();
+    const read = vi.fn((name: typeof NAMED_FILES[number]) => name === "FlowLine/.env" ? parseNamedEnvironmentBytes(Buffer.from(text)) : parseNamedEnvironmentBytes(bytes));
+    expect(() => { const result = auditNamedEnvironments(read); completedAudit(result); }).toThrow("invalid dotenv syntax");
+    expect(read).toHaveBeenCalledTimes(2); expect(completedAudit).not.toHaveBeenCalled();
+    await expect((async () => verifyDatabases(options, parseNamedEnvironmentBytes(bytes), replacement, makeClient))()).rejects.toThrow("invalid dotenv syntax");
+    expect(makeClient).not.toHaveBeenCalled();
+    try { parseNamedEnvironmentBytes(bytes); } catch (error) { expect((error as Error).message).toBe("invalid dotenv syntax"); }
+  });
+  it.each(["utf8-bom", "utf16le"])("refuses unfinished fallback after decoding %s", (encoding) => {
+    const { text } = requiredText(), broken = `${text}FLOWLINE_ENCRYPTION_KEYS_OLD=\"unfinished\n`;
+    const bytes = encoding === "utf8-bom" ? Buffer.from(`\uFEFF${broken}`) : Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(broken, "utf16le")]);
+    expect(() => parseNamedEnvironmentBytes(bytes)).toThrow("invalid dotenv syntax");
+  });
+  it("supports CRLF and refuses truncated UTF16LE rather than silently dropping bytes", () => {
+    const { text } = requiredText();
+    expect(parseNamedEnvironmentBytes(Buffer.from(text.replaceAll("\n", "\r\n"))).FLOWLINE_ENV).toBe("test");
+    expect(() => parseNamedEnvironmentBytes(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le"), Buffer.from([0x22])]))).toThrow("unsupported named environment encoding");
+  });
+});
+
 describe("DV2-02 schema metadata regressions", () => {
   it("supports absent old marker only as reported v1 inference, retaining both required decrypt checks", async () => {
     const old = randomBytes(32), row = fixture("v1", old), replacement = randomBytes(32); activate(replacement);

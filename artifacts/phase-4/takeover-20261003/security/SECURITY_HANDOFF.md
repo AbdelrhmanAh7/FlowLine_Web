@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTATION REVIEW-READY; DV2-02 PARTIAL**. No commits, push, PR/thread actions, owner contact, helpers, browser/full gates, package installs, secret scan, environment-content reads or actual DB access. Frozen evidence remains unchanged. Old environment/database rotations were not repeated.
 
-Own checkout: `C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-security-20261003`, base `9324b1fed677f03e8c044eb1373b8577167abeb5`. Root context `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`; crypto source is identical between these SHAs. Changes are the verifier, focused tests/configs, sanitized results/status/handoff, and the current `artifacts/design-v2/BUGS.md` correction. There is no app/schema/migration change. File hashes bind the tested uncommitted implementation in `focused-results.json`.
+Own checkout: `C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-security-20261003`. Coordinator committed the prior candidate as `49f1cd431635b527acef7a763b15aa39f687fd58`, parent main `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d`. This author made no commit. Revised validation covers that HEAD plus the uncommitted strict-parser/tests/history-restoration delta. Crypto remains identical to main. File hashes bind the tested implementation in `focused-results.json`; there is no app/schema/migration change.
 
 ## Exact focused checks (safe without real secrets)
 
@@ -16,7 +16,13 @@ node node_modules\eslint\bin\eslint.js scripts/security/dv2-02-verifier.ts scrip
 git diff --check
 ```
 
-Final results: **34 passed / 0 failed / 0 skipped**, one file; focused TypeScript exit 0; full worktree TypeScript exit 0; scoped ESLint exit 0 with no warnings; whitespace check exit 0. Full typecheck covers this worktree's base plus maintained verifier/tests, not the entire updated primary stack. No full gate or actual PostgreSQL proof was run. Maintained imports are extensionless and neither config enables `allowImportingTsExtensions`; normal local dependency resolution works in CI.
+Final results: **55 passed / 0 failed / 0 skipped**, one file; focused TypeScript exit 0; full worktree TypeScript exit 0; scoped ESLint exit 0 with no warnings; whitespace check exit 0. Full typecheck covers HEAD `49f1cd4` (parent main `9fdcb7d`) plus this correction; it does not validate concurrent root changes. No full gate or actual PostgreSQL proof was run. Maintained imports are extensionless and neither config enables `allowImportingTsExtensions`; normal local dependency resolution works in CI.
+
+## Independent review blockers corrected; re-review pending
+
+Prior review returned **BLOCK_SECRET_PROCESSING**. That block remains in force until the coordinator receives **APPROVE_SECRET_PROCESSING** for the revised exact diff. P1 now validates every decoded dotenv line before calling Node's permissive parser: unique ASCII variable names, assignments with optional horizontal whitespace, empty/unquoted values, literal single-line single/double quotes, blank lines, full-line/inline comments, UTF8/BOM and UTF16LE. Export/nonassignment/invalid-name/backtick/multiline/unterminated-quote/trailing-garbage/duplicate syntax fails with a fixed content-free error. Parsed key completeness is checked, and truncated UTF16LE fails encoding validation. Unsupported syntax is rejected; no fallback line can silently disappear.
+
+Twenty-one new synthetic regressions preserve positive quoted/unquoted/comments/empty/CRLF/encoding cases and require malformed fallback assignments, unfinished quotes, export and garbage lines to stop before audit completion or any DB client construction. P2 restores the exact main baseline historical `Targeted Chromium: 25/25.` line. Every non-DV2-02 line of current BUGS was compared to baseline and is identical; only the current DV2-02 paragraph/row differs. No frozen record/assertion was edited to claim validation. Ai-hub proof remains **BLOCKED** due absent named config, with no retirement claim.
 
 Meaningful controls include successful decryption under each generated old key before replacement, all three persisted formats, original-AAD wrap authentication (including a falsifier with unchanged key bytes/misleading public id), old fallback retained, malformed/unsupported rows, DB identity mismatch, changed old rows, committed readback, rollback, exact cleanup failure, lost-COMMIT-acknowledgement cleanup, and sanitized driver errors. Audit processor uses synthetic strings/buffers and an injected reader, never actual files.
 
