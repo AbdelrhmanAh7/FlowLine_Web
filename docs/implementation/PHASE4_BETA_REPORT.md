@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## PR #16 request-body follow-up — 2026-10-03
+
+PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
+
 ## Branch maintenance — 2026-10-03
 
 On `claude/ci-trim-20261003`, four tooling defects are fixed locally: bare worktree names select only managed lanes, all worktree path comparisons fold case on Windows (including the main-checkout guard), root code/config files require documentation, and `docs-not-needed` requires a non-empty same-line `Docs not needed because: <reason>` PR body entry. PR body edits rerun the check; the body is supplied through an environment variable and filenames through paginated JSON. AGENTS.md, the developer guide and PR template describe the exact behavior.
