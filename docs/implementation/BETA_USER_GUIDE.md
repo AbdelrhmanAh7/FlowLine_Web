@@ -15,9 +15,8 @@
 - تعديل المسارات يتم من شاشة الحاسوب أو الجهاز اللوحي. على الهاتف يمكنك المتابعة والتشغيل فقط.
 
 ## ٣. ربط التطبيقات
-التكاملات **المعتمدة في هذه النسخة**: Google Sheets، وGmail، وSlack، وGitHub، وPostgreSQL.
-- من **التكاملات** اضغط «ربط» واتبع خطوات تسجيل الدخول لدى مزوّد الخدمة.
-- التكاملات الأخرى (HubSpot، Zendesk، Airtable، Snowflake، Stripe، Notion، Linear) متاحة، لكنها **لم يُتحقَّق منها بعد مع حسابات حقيقية** في هذه النسخة، ولذلك تظهر عليها علامة واضحة. استخدمها بحذر.
+التكاملات المنفذة التي قد تتاح عند إعداد اتصال مدعوم تشمل Google Sheets، وGmail، وSlack، وGitHub، وPostgreSQL، وHubSpot، وZendesk، وAirtable، وSnowflake، وStripe، وNotion، وLinear. **لم يُتحقَّق من أيٍّ منها بحساب حقيقي حديث لهذه التجربة المدفوعة.** لا تستخدم تكاملاً مع بيانات حقيقية حتى يُسجَّل له ملف اعتماد حديث باسم المزود وبالحساب الذي جرى اختباره؛ وجوده في الكتالوج أو إمكانية إعداد اتصال لا يثبت جاهزيته.
+- من **التكاملات** اضغط «ربط» واتبع خطوات تسجيل الدخول لدى مزوّد الخدمة، واستخدم بيانات اصطناعية إلى أن يكتمل اعتماد المزود لهذه التجربة.
 - إذا ألغيتَ الصلاحية لدى المزوّد، يتوقف المسار المعتمد عليه مؤقتاً ويظهر تنبيه، ولا تتأثر بقية مساراتك. أعد الربط من التكاملات.
 
 ## ٤. الموافقات والأدوار
@@ -33,7 +32,7 @@
 - **جودة المقترحات ما زالت قيد القياس.** «تم التشغيل دون أخطاء» في المعاينة لا يعني أن النتيجة صحيحة، فراجع المخرجات دائماً قبل الموافقة.
 
 ## ٧. الخصوصية والحساب
-- بياناتك تُستخدم لتشغيل مساراتك فقط، ولا تُستخدم لتدريب أي نموذج. لا نجمع محتوى مساراتك في الإحصاءات.
+- تنص مسودة سياسة Flowline الحالية ([الخصوصية والسلامة](PRIVACY_AND_SAFETY.md)) على أن Flowline لا تستخدم محتوى المسارات لتحليلاتها أو لتدريب نماذجها. قد تُرسل ميزات الذكاء الاصطناعي نصوصاً إلى مزود خارجي؛ لم تُعتمد بعد شروط معالجة بيانات المزودين لهذه التجربة. راجع شروط المزود وإعداداته قبل الاستخدام، ولا تفترض أن المزود لا يستخدم البيانات للتدريب.
 - **حذف الحساب**: من إعدادات الحساب. ستصلك رسالة تأكيد، والرابط صالح ٣٠ دقيقة. إذا كنت المالك الوحيد لمساحة عمل فيها أعضاء آخرون فانقل الملكية أولاً.
 
 ## ٨. المساعدة والإبلاغ عن مشكلة
@@ -58,14 +57,13 @@ user menu.
 2. **First workflow:** start from a credential-free template, run it, and inspect each step in Run history. Editing
    works on tablet and desktop; mobile is for monitoring.
 3. **Integrations:**
-   - Certified for the beta: Google Sheets, Gmail, Slack, GitHub, PostgreSQL.
-   - The others are available but marked "not yet verified live".
-   - If you revoke access at the provider, only the flows that use it pause.
+   - Implemented integrations that may be configured include Google Sheets, Gmail, Slack, GitHub, PostgreSQL, HubSpot, Zendesk, Airtable, Snowflake, Stripe, Notion, and Linear. **None has fresh real-account certification for this paid pilot.** Do not use an integration with real data until a current certification artifact names the provider and tested account; catalog availability or a configurable connection does not establish readiness.
+   - Use synthetic data until that provider's pilot certification is complete. If you revoke access at the provider, only the flows that use it pause.
 4. **Roles:** owner, editor, viewer. Viewers can't approve or edit.
 5. **Agents** answer from your Knowledge with sources, and ask before running "Ask" tools.
 6. **Copilot is experimental:** it proposes drafts only; nothing runs without your approval. "Ran without errors"
    doesn't mean correct, so check the output before approving.
 7. **Privacy:**
-   - Your data runs your workflows and isn't used to train models.
+   - Flowline's current policy draft ([Privacy & Safety](PRIVACY_AND_SAFETY.md)) says Flowline does not use workflow content for its own analytics or model training. AI features may send text to an external provider; provider data-handling terms have not yet been approved for this pilot. Review the provider's terms and settings before use, and do not assume the provider does not train on submitted data.
    - Deleting your account takes an emailed confirmation link.
 8. **Help:** use "Report an issue", and include the Request ID shown with any error.
