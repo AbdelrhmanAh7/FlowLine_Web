@@ -1,0 +1,15 @@
+{
+  "baseSha": "360078e9d3357267711f006888b578f5a0c6c434",
+  "sourceDiffSha256": "9e9f87f93ab03813627ce1ae0609d3d3abf45643944064b691370d00fdbbd3e4",
+  "results": {
+    "newQueueIntegration": 8,
+    "existingUploadIntegration": 7,
+    "existingKnowledgeIntegration": 4,
+    "newQueueUnits": 8,
+    "existingI18nUnits": 16,
+    "typecheckExit": 0,
+    "targetedLintExit": 0
+  },
+  "scope": "synthetic local tests only; no real provider, deployed, browser, CI, pricing or policy acceptance",
+  "state": "M5 PARTIAL: pending/indexing source admission and raw-byte limits only; aggregate chunk storage, global parser concurrency/CPU/heap and OS authority remain open"
+}

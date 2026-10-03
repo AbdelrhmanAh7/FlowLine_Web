@@ -1,0 +1,12 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90mC:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-index-admission-20261003[39m
+
+migrated postgres://***@127.0.0.1:62279/flowline_test_pilotindex
+[seed-platform] test platform credentials ready
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-index-admission.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 571[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p3-knowledge.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 435[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m   Start at [22m 05:29:03
+[2m   Duration [22m 8.93s[2m (import 61%, tests 20%, transform 19%)[22m

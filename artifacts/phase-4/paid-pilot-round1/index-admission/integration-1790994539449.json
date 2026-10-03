@@ -1,0 +1,15 @@
+{
+  "baseSha": "360078e9d3357267711f006888b578f5a0c6c434",
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-index-admission-1790994539449",
+  "database": "flowline_test_pilotindex",
+  "tests": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project integration tests/integration/pilot-index-admission.test.ts tests/integration/p3-knowledge.test.ts --fileParallelism=false",
+      "exitCode": 0
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "containerId": "48c3d0710f4bb387d700a99ee3a53fcd2b5208116f9bf72ae1d508290e7ea751"
+}

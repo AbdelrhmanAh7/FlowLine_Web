@@ -1,0 +1,1 @@
+Initial unit invocation failed before tests: knowledge-admission imported the runtime database through @/db; DATABASE_URL was not set. Corrected to a schema-only import. The database and source were not bypassed; all eight limit/projection unit cases then ran and passed. Initial invocation also ran all 16 existing i18n cases successfully.

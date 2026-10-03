@@ -14,6 +14,7 @@ import { canonicalJson, sha256Hex } from "@/server/crypto";
 import { testFeaturesEnabled } from "@/server/faults";
 import { HttpError, notFound } from "@/server/http";
 import { insertRetainedFile } from "@/server/retained-files";
+import { admitKnowledgeIndex } from "@/server/knowledge-admission";
 import { requireBlueprint } from "./blueprints";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -150,6 +151,7 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
         const info = String(task.params.approvedInfo ?? "").trim();
         const knowledge = await step(task, "knowledge", sha256Hex(`knowledge:${info}`), async (tx) => {
           const bytes = Buffer.from(info, "utf8");
+          await admitKnowledgeIndex(tx, workspaceId);
           const name = tKey(t, "companyBuilder.knowledgeName", "Approved customer answers").slice(0, 120);
           const file = await insertRetainedFile(tx, { workspaceId, name, mime: "text/plain", data: bytes, createdBy: user.id });
           const [src] = await tx.insert(schema.knowledgeSource).values({ workspaceId, name, kind: "text", fileId: file!.id, mime: "text/plain", size: bytes.length, status: "pending", createdBy: user.id }).returning({ id: schema.knowledgeSource.id });
