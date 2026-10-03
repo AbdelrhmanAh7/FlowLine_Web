@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
 import { extractKnowledge, KnowledgeExtractionError, KNOWLEDGE_MAX_CHUNKS } from "./knowledge-extract";
@@ -7,6 +7,7 @@ import { audit, userActor } from "./audit";
 import { HttpError, notFound } from "./http";
 import { insertRetainedFile } from "./retained-files";
 import { admitKnowledgeIndex, lockKnowledgeAdmission } from "./knowledge-admission";
+import { admitKnowledgeChunks, KnowledgeStorageError } from "./knowledge-storage";
 
 /**
  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
@@ -144,6 +145,13 @@ export async function indexNextSource(db: Db, workerId: string): Promise<boolean
     if (pieces.length > KNOWLEDGE_MAX_CHUNKS) throw new Error(`This source is too large to index (${pieces.length} chunks; limit ${KNOWLEDGE_MAX_CHUNKS})`);
     const generation = s!.generation + 1;
     await db.transaction(async (tx) => {
+      await admitKnowledgeChunks(tx, s!.workspaceId, id, pieces.map(p => p.text.slice(0, 4000)));
+      // Lock the live claim before touching old chunks, matching deletion's source-
+      // then-chunks order. A delete/reindex while waiting must not recreate content.
+      const live = await tx.select({ id: schema.knowledgeSource.id }).from(schema.knowledgeSource)
+        .where(and(mine, isNull(schema.knowledgeSource.deletedAt))).for("update");
+      if (live.length === 0) throw new Error("lost the indexing claim");
+      await tx.delete(schema.knowledgeChunk).where(eq(schema.knowledgeChunk.sourceId, id));
       for (let i = 0; i < pieces.length; i += 200) {
         await tx.insert(schema.knowledgeChunk).values(
           pieces.slice(i, i + 200).map((p, j) => ({ sourceId: id, workspaceId: s!.workspaceId, generation, ordinal: i + j, text: p.text.slice(0, 4000), locator: p.locator })),
@@ -155,12 +163,11 @@ export async function indexNextSource(db: Db, workerId: string): Promise<boolean
         .where(mine)
         .returning({ id: schema.knowledgeSource.id });
       if (done.length === 0) throw new Error("lost the indexing claim");
-      await tx.delete(schema.knowledgeChunk).where(and(eq(schema.knowledgeChunk.sourceId, id), lt(schema.knowledgeChunk.generation, generation)));
     });
   } catch (e) {
     await db
       .update(schema.knowledgeSource)
-      .set({ status: "failed", error: e instanceof KnowledgeExtractionError ? e.code : (e as Error).message.slice(0, 300), lockedBy: null })
+      .set({ status: "failed", error: e instanceof KnowledgeExtractionError || e instanceof KnowledgeStorageError ? e.code : (e as Error).message.slice(0, 300), lockedBy: null })
       .where(mine);
   }
   return true;

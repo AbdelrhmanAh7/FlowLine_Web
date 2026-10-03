@@ -1,0 +1,14 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90mC:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-chunk-admission-20261003[39m
+
+migrated postgres://***@127.0.0.1:50910/flowline_test_pilotchunk
+[seed-platform] test platform credentials ready
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-chunk-admission.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 502[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-index-admission.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 532[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p3-knowledge.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 436[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-upload-admission.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 433[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m26 passed[39m[22m[90m (26)[39m
+[2m   Start at [22m 05:40:01
+[2m   Duration [22m 11.07s[2m (import 61%, tests 25%, transform 15%)[22m

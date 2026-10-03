@@ -1,0 +1,15 @@
+{
+  "baseSha": "e437af28b177f9998bca582de7b9752ab7e8429e",
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-chunk-admission-1790995197605",
+  "database": "flowline_test_pilotchunk",
+  "tests": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project integration tests/integration/pilot-chunk-admission.test.ts tests/integration/pilot-index-admission.test.ts tests/integration/pilot-upload-admission.test.ts tests/integration/p3-knowledge.test.ts --fileParallelism=false",
+      "exitCode": 0
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "containerId": "136cfd0b32d312ca1401a659e62368626373a404ae9e1bd68660c139197f50ab"
+}

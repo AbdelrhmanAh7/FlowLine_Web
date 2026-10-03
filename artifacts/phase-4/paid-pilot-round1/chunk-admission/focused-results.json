@@ -1,0 +1,17 @@
+{
+  "baseSha": "e437af28b177f9998bca582de7b9752ab7e8429e",
+  "sourceDiffSha256": "00f46ca9b2ce12c9e32c2a94664e6f00302f75ef2bde18cb8baddf20067d8e05",
+  "results": {
+    "newChunkIntegration": 7,
+    "existingQueueIntegration": 8,
+    "existingUploadIntegration": 7,
+    "existingKnowledgeIntegration": 4,
+    "newChunkUnits": 8,
+    "existingQueueUnits": 8,
+    "existingI18nUnits": 16,
+    "typecheckExit": 0,
+    "targetedLintExit": 0
+  },
+  "preservedFailure": "First24/26 DB: two new fixture assertions assumed indexed generation1, but schema starts1 and worker increments it. Corrected new assertions to require initial+1 on replacement and exact old generation on denial/lost claim. No production or existing assertions changed.",
+  "state": "M5 PARTIAL; actual retained raw bytes, file/source admission and indexed text bytes bounded. Global parser CPU/heap/concurrency, storage/index/row overhead, disk headroom and lower OS authority remain open."
+}
