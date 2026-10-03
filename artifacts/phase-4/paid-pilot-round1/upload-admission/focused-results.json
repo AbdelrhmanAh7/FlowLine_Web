@@ -1,0 +1,64 @@
+{
+  "baseSha": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+  "reviewableDiffSha256": "7d9f7ba0737b38b8f0ad86cdba80c158bc74f6693c6d2e2770fc195eafbf2619",
+  "reviewableFiles": [
+    "src/app/api/workspaces/[wid]/files/route.ts",
+    "src/components/builder/node-config.tsx",
+    "src/components/company-builder/session.tsx",
+    "src/i18n/errors.ts",
+    "src/i18n/messages/ar.json",
+    "src/i18n/messages/en.json",
+    "src/server/company-builder/install.ts",
+    "src/server/knowledge.ts",
+    "src/server/retained-files.ts",
+    "tests/integration/pilot-upload-admission.test.ts",
+    "tests/unit/retained-files.test.ts"
+  ],
+  "scope": "PARTIAL M5: retained raw file bytes across three production insertion paths only",
+  "checks": {
+    "integration": {
+      "passed": 11,
+      "files": 2,
+      "addedCases": 7,
+      "skipped": 0,
+      "attempts": [
+        "integration-1790993390356.json",
+        "integration-1790993458152.json",
+        "integration-1790993528074.json"
+      ]
+    },
+    "units": {
+      "passed": 24,
+      "files": 2,
+      "addedCases": 8,
+      "skipped": 0,
+      "command": "pnpm exec vitest run --project unit tests/unit/retained-files.test.ts tests/unit/i18n.test.ts --fileParallelism=false"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm exec tsc --noEmit --incremental false"
+    },
+    "targetedEslint": {
+      "passed": true
+    },
+    "sourceWhitespace": {
+      "passed": true
+    },
+    "allOwnedContainersRemoved": true
+  },
+  "operationalDefaultsBytes": {
+    "workspace": 104857600,
+    "installation": 536870912
+  },
+  "limits": [
+    "Chunks/row overhead/file count not bounded",
+    "Queue/parser CPU/heap/global storage remain open",
+    "No CI/CodeRabbit/browser/deployed proof",
+    "No worker commit/push"
+  ],
+  "testFixture": "Company Builder stored approved agent is synthetic; current deterministic planner still installs workflows only.",
+  "review": {
+    "author": "pilot_product",
+    "independent": "awaiting root review"
+  }
+}
