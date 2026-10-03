@@ -1,0 +1,40 @@
+name: Docs
+
+# AGENTS.md "Docs (mandatory)": code/config changes need Markdown outside artifacts/,
+# or the docs-not-needed label plus a "Docs not needed because: <reason>" body line with a real reason (the literal
+# <reason> placeholder does not count).
+# No install: fetch the PR file list as JSON and run the fixture-tested Node checker. GitHub's PR files API stops at
+# 3000 files, so a list that long may have dropped code files: the checker assumes code changed (docs or a waiver
+# required) and says so in the step summary.
+# Required on main. It re-evaluates on every label and body edit (the waiver depends on both) and is skipped only for
+# drafts (which cannot merge), so a label or edit on a ready PR always re-checks instead of skipping.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'docs-not-needed') }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require a docs update with code changes
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/files" > "$RUNNER_TEMP/docs-files.json"
+          node scripts/ci/docs-check.mjs < "$RUNNER_TEMP/docs-files.json"

@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Role } from "@/db/schema";
@@ -8,8 +8,9 @@ import { requireWorkspace } from "./access";
 import { audit, userActor } from "./audit";
 import { contextId, encryptSecretV2, openSecret, randomToken, type SecretContext } from "./crypto";
 import { EgressError, safeFetch } from "./egress";
-import { allowSignUp, BETA_REFUSAL } from "./beta";
 import { HttpError } from "./http";
+import { proposeSsoLink } from "./sso-link";
+import { sha256Hex } from "./crypto";
 import {
   assertIssuerUrl,
   basicClientAuthorization,
@@ -228,6 +229,7 @@ export async function startSso(opts: {
   slug: string;
   email?: string;
   user: CurrentUser | null;
+  sessionToken?: string;
 }) {
   const [ws] = await db
     .select()
@@ -259,7 +261,7 @@ export async function startSso(opts: {
   const nonce = randomToken(24);
   const verifier = randomToken(48);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
-  const enc = encryptSecretV2(verifier, ssoVerifierContext(state, ws.id));
+  const enc = encryptSecretV2({ verifier, configStamp: cfg.updatedAt.toISOString(), sessionHash: opts.sessionToken ? sha256Hex(opts.sessionToken) : null }, ssoVerifierContext(state, ws.id));
   await db
     .insert(schema.ssoState)
     .values({
@@ -290,7 +292,9 @@ export async function startSso(opts: {
  * under the old one; the account holder has to link again while signed in.
  */
 export function ssoProviderId(workspaceId: string, issuer: string, clientId: string) {
-  return `sso:${workspaceId}:${createHash("sha256").update(`${issuer}
+  // Only mailbox-proven, explicitly confirmed links use this namespace.
+  // Legacy sso:<workspace>:<hash> bindings are unproven and never inherited.
+  return `sso:approved:${workspaceId}:${createHash("sha256").update(`${issuer}
 ${clientId}`).digest("hex").slice(0, 24)}`;
 }
 
@@ -305,6 +309,9 @@ export interface SsoSignInResult {
   newUser: boolean;
   newMember: boolean;
   testSignIn: boolean;
+  /** A GET callback may propose a link, but cannot persist it or issue a session. */
+  linkRequired?: string;
+  configurationVerified?: boolean;
 }
 
 /**
@@ -317,6 +324,7 @@ export interface SsoSignInResult {
 export async function completeSso(opts: {
   state: string;
   code: string;
+  sessionToken?: string;
 }): Promise<SsoSignInResult> {
   const pending = await db.transaction(async (tx) => {
     const [st] = await tx
@@ -351,10 +359,14 @@ export async function completeSso(opts: {
     ssoSecretContext(cfg.workspaceId),
   );
   // Pending states are short-lived and always written as v2 (never legacy).
-  const verifier = openSecret<string>(
+  const binding = openSecret<{ verifier: string; configStamp: string; sessionHash: string | null }>(
     { ciphertext: pending.codeVerifierEnc, keyId: pending.keyId, legacy: false },
     ssoVerifierContext(pending.state, pending.workspaceId),
   );
+  // Old in-flight states have no configuration/session fence and must be restarted.
+  if (!binding || typeof binding !== "object" || binding.configStamp !== cfg.updatedAt.toISOString())
+    throw new HttpError(400, "SSO_STATE_INVALID", "Restart SSO after a configuration change");
+  const verifier = binding.verifier;
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: opts.code,
@@ -418,6 +430,24 @@ export async function completeSso(opts: {
     jwks: jwksRes.json<Jwks>(),
   });
 
+  if (!cfg.enabled) {
+    // An owner's configuration test validates OIDC only; it cannot create a
+    // globally trusted identity using the tenant's email assertion.
+    if (!pending.initiatorUserId || !opts.sessionToken || !binding.sessionHash || sha256Hex(opts.sessionToken) !== binding.sessionHash)
+      throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+    const [initiator] = await db.select().from(schema.user).where(eq(schema.user.id, pending.initiatorUserId));
+    if (!initiator) throw notConfigured();
+    await requireWorkspace(initiator, ws.id, "sso.manage");
+    await db.transaction(async (tx) => {
+      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken!), eq(schema.session.userId, initiator.id), sql`${schema.session.expiresAt} > now()`)).for("update");
+      const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
+      const [member] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, initiator.id))).for("update");
+      if (!currentSession || !currentConfig || currentConfig.updatedAt.toISOString() !== binding.configStamp || member?.role !== "owner") throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+      await tx.update(schema.ssoConfig).set({ verifiedAt: new Date(), updatedAt: new Date() }).where(eq(schema.ssoConfig.workspaceId, ws.id));
+    });
+    return { user: { id: initiator.id, email: initiator.email }, slug: ws.slug, sessionToken: "", sessionExpiresAt: new Date(), newUser: false, newMember: false, testSignIn: true, configurationVerified: true };
+  }
+
   // Identity is the IdP subject, linked per workspace IdP. An email match alone never signs anyone in:
   // otherwise any workspace owner could point SSO at an IdP they control and take over an existing
   // account (and every other workspace it belongs to). Linking an existing account needs verified
@@ -429,6 +459,7 @@ export async function completeSso(opts: {
       "The identity token has no subject",
     );
   const providerId = ssoProviderId(ws.id, cfg.issuer, cfg.clientId);
+  const subject = claims.sub;
   const email = claims.email;
   const [linked] = await db
     .select({ userId: schema.account.userId })
@@ -440,7 +471,7 @@ export async function completeSso(opts: {
       ),
     );
   let user: typeof schema.user.$inferSelect | undefined;
-  let newUser = false;
+  const newUser = false;
   if (linked) {
     [user] = await db
       .select()
@@ -458,97 +489,52 @@ export async function completeSso(opts: {
         "An account with this email already exists — sign in with your password first, then start SSO to link it. SSO can't take over an existing account.",
       );
     if (existing) {
-      // Linking: the signed-in account holder started this sign-in AND the IdP asserted their email.
-      await db
-        .insert(schema.account)
-        .values({
-          id: randomUUID(),
-          userId: existing.id,
-          providerId,
-          accountId: claims.sub,
-        });
-      user = existing;
+      const token = await proposeSsoLink({ user: existing, workspaceId: ws.id, issuer: cfg.issuer, clientId: cfg.clientId, subject: claims.sub, configStamp: binding.configStamp, sessionHash: binding.sessionHash, sessionToken: opts.sessionToken });
+      return { user: { id: existing.id, email: existing.email }, slug: ws.slug, sessionToken: "", sessionExpiresAt: new Date(), newUser: false, newMember: false, testSignIn: !cfg.enabled, linkRequired: token };
     } else {
-      // Private beta: SSO can't create accounts that email/social sign-up couldn't (P4-12).
-      if (!(await allowSignUp(email)).ok) throw new HttpError(403, "BETA_INVITE_REQUIRED", BETA_REFUSAL);
-      user = await db.transaction(async (tx) => {
-        const [created] = await tx
-          .insert(schema.user)
-          .values({
-            id: randomUUID(),
-            email,
-            name: claims.name?.trim().slice(0, 80) || email.split("@")[0]!,
-            emailVerified: true,
-          })
-          .onConflictDoNothing({ target: schema.user.email })
-          .returning();
-        if (!created)
-          throw new HttpError(
-            409,
-            "SSO_ACCOUNT_EXISTS",
-            "An account with this email already exists — sign in with your password. SSO can't take over an existing account.",
-          );
-        await tx
-          .insert(schema.account)
-          .values({
-            id: randomUUID(),
-            userId: created.id,
-            providerId,
-            accountId: claims.sub!,
-          });
-        return created;
-      });
+      throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Create and verify your Flowline account before linking workspace SSO");
     }
-    newUser = !existing;
   }
   if (!user)
     throw new HttpError(500, "INTERNAL", "Couldn't create the user account");
+  if (!user.emailVerified) throw new HttpError(403, "SSO_EMAIL_OWNERSHIP_REQUIRED", "Verify your Flowline email before signing in");
 
-  let newMember = false;
-  let role: Role;
-  const [member] = await db
-    .select({ role: schema.workspaceMember.role })
-    .from(schema.workspaceMember)
-    .where(
-      sql`${schema.workspaceMember.workspaceId} = ${ws.id} and ${schema.workspaceMember.userId} = ${user.id}`,
-    );
-  if (member) {
-    role = member.role; // existing members keep their role
-  } else {
-    role = cfg.defaultRole;
-    const inserted = await db
-      .insert(schema.workspaceMember)
-      .values({ workspaceId: ws.id, userId: user.id, role })
-      .onConflictDoNothing()
-      .returning();
-    newMember = inserted.length > 0;
-  }
-
-  // A real better-auth session row; the route sets the signed cookie better-auth expects.
+  // Keep Better Auth's session hooks/defaults, but never return the token until
+  // the final locked authority check succeeds. No adapter hook runs under our locks.
   const ctx = await auth.$context;
   const session = await ctx.internalAdapter.createSession(user.id);
-
-  const firstSuccess = !cfg.verifiedAt;
-  if (firstSuccess)
-    await db
-      .update(schema.ssoConfig)
-      .set({ verifiedAt: new Date(), updatedAt: new Date() })
-      .where(eq(schema.ssoConfig.workspaceId, ws.id));
-  await audit(db, {
-    workspaceId: ws.id,
-    actor: userActor({ id: user.id, email: user.email }),
-    action: "sso.signin",
-    targetType: "user",
-    targetId: user.id,
-    data: {
-      email: user.email,
-      newUser,
-      newMember,
-      role,
-      testSignIn: !cfg.enabled,
-      firstVerification: firstSuccess,
-    },
-  });
+  const newMember = false;
+  try {
+    await db.transaction(async (tx) => {
+      if (pending.initiatorUserId) {
+        const [initiatorSession] = opts.sessionToken ? await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken), eq(schema.session.userId, pending.initiatorUserId), sql`${schema.session.expiresAt} > now()`)).for("share") : [];
+        if (!initiatorSession || !binding.sessionHash || sha256Hex(opts.sessionToken!) !== binding.sessionHash)
+          throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+      }
+      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
+      const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
+      const [currentMember] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, user!.id))).for("share");
+      const [currentLink] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user!.id))).for("share");
+      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user!.id), sql`${schema.session.expiresAt} > now()`)).for("share");
+      if (!currentConfig?.enabled || currentConfig.updatedAt.toISOString() !== binding.configStamp)
+        throw new HttpError(400, "SSO_STATE_INVALID", "Restart SSO after a configuration change");
+      if (!currentUser?.emailVerified || currentUser.twoFactorEnabled !== user!.twoFactorEnabled || !currentMember || !currentLink || !currentSession)
+        throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
+      const firstSuccess = !currentConfig.verifiedAt;
+      if (firstSuccess) await tx.update(schema.ssoConfig).set({ verifiedAt: new Date(), updatedAt: new Date() }).where(eq(schema.ssoConfig.workspaceId, ws.id));
+      await audit(tx, {
+        workspaceId: ws.id,
+        actor: userActor({ id: currentUser.id, email: currentUser.email }),
+        action: "sso.signin", targetType: "user", targetId: currentUser.id,
+        data: { email: currentUser.email, newUser, newMember, role: currentMember.role, testSignIn: false, firstVerification: firstSuccess },
+      });
+    });
+  } catch (error) {
+    // The adapter used its own transaction. Remove its unissued session on every
+    // failed authority check/audit transaction; no cookie/token escaped to a caller.
+    await db.delete(schema.session).where(eq(schema.session.token, session.token));
+    throw error;
+  }
   return {
     user: { id: user.id, email: user.email },
     slug: ws.slug,

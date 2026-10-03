@@ -1,0 +1,533 @@
+{
+  "generated": "2026-10-03",
+  "source": "gh run list/view and gh run download (flowline-gate-webkit-<run>-1 artifacts, 14-day retention) on AbdelrhmanAh7/FlowLine_Web, workflow Gate",
+  "scope": "every Gate run with a WebKit job that executed tests (excludes 2 cancelled runs, 5 pr/cb-1-core runs that exited in about 1 minute with 'browser group manifest is inconsistent', and fast-tier runs where WebKit is skipped)",
+  "mainBranch": "Gate runs on main (37081206220 at 9641ad1, 37078652764 at 9fdcb7d) are fast tier: webkit job skipped, so no WebKit result exists for main",
+  "executions": 27,
+  "passed": 21,
+  "failed": 6,
+  "rows": [
+    {
+      "run": 37132842360,
+      "branch": "claude/docs-freshness",
+      "prHeadSha": "b72aa6b168d643f6d78c9f3d19ed0567cb99a613",
+      "ciMergeSha": "57905388084a0fc6bc02e431d1c28b68fa1209b3",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 265,
+      "shardMinutes": [
+        4.1,
+        4.4,
+        3.4
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37132472664,
+      "branch": "codex/paid-pilot-federated-mfa-20261003",
+      "prHeadSha": "f06acea9ef17dbef26e176dd09621c08de713557",
+      "ciMergeSha": "bc66132d639e44f7a811886970e22337067bbca1",
+      "webkitResult": "fail",
+      "totals": {
+        "passed": 77,
+        "failed": 1
+      },
+      "webkitSeconds": 271,
+      "shardMinutes": [
+        4.2,
+        4.5,
+        3.6
+      ],
+      "failure": {
+        "specs": [
+          "e2e/zitadel-platform.spec.ts:24 (URL never reached callback)"
+        ],
+        "others": "chromium, firefox, integration also failed"
+      },
+      "containsPr14Change": false
+    },
+    {
+      "run": 37132314447,
+      "branch": "codex/pilot-security-deps-round1",
+      "prHeadSha": "ec672d75cbad5e6af2086776225064146a754d9b",
+      "ciMergeSha": "6b8083d0d5ed1233c90e74f9fc4ffaa6af313125",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 219,
+      "shardMinutes": [
+        3.4,
+        3.6,
+        2.9
+      ],
+      "failure": null,
+      "containsPr14Change": true
+    },
+    {
+      "run": 37132313745,
+      "branch": "codex/pilot-security-resource-round1",
+      "prHeadSha": "b63ffed903c96b335d913369c3ba2d33e4e6d7f1",
+      "ciMergeSha": "eb24f688c60f51582af4b12c52f0df940e14afde",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 266,
+      "shardMinutes": [
+        4.1,
+        4.4,
+        3.3
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37100289007,
+      "branch": "codex/pilot-security-auth-round1",
+      "prHeadSha": "448c68b74ee0be43868903ed8de49c29ad56b2a3",
+      "ciMergeSha": "aafd03909b36c75b05c20d7d3a30c866f1e5efbb",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 487,
+      "shardMinutes": [
+        7.9,
+        8.1,
+        6.1
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37099595026,
+      "branch": "codex/pilot-security-auth-round1",
+      "prHeadSha": "3743e34f3e50744b572eccd7ca728eeaf41e3906",
+      "ciMergeSha": "f9a546fbe8ffdb898dd3cc2ebc70d4156267c2ce",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 345,
+      "shardMinutes": [
+        5.6,
+        5.7,
+        4.5
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37098951245,
+      "branch": "codex/pilot-security-auth-round1",
+      "prHeadSha": "5863f6e4861af533e607f5dc77cf26d1591e5caf",
+      "ciMergeSha": "356a92bdaf5eca55a95adcd071521fc47b29f594",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 532,
+      "shardMinutes": [
+        8.7,
+        8.8,
+        6.5
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37098120270,
+      "branch": "codex/pilot-security-auth-round1",
+      "prHeadSha": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+      "ciMergeSha": "0cdec7331fec5792f031fa6e896c3bc6eb6f1b21",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 478,
+      "shardMinutes": [
+        7.8,
+        7.9,
+        5.9
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37097538824,
+      "branch": "codex/pilot-security-resource-round1",
+      "prHeadSha": "a9f7597c90b98128a1cebf46a949810e0586c31d",
+      "ciMergeSha": "1df19f627316cf27a2f7fdd25e379a691883e03b",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 486,
+      "shardMinutes": [
+        7.9,
+        8.1,
+        6.1
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37096736397,
+      "branch": "codex/pilot-security-redact-round1",
+      "prHeadSha": "037af94a6465e3f57d37bdeb354e1bd66ef41da7",
+      "ciMergeSha": "ad23f61a423dc2e83f0682b2f604f0e4cfdfefda",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 416,
+      "shardMinutes": [
+        6.8,
+        6.9,
+        5.3
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37095815314,
+      "branch": "codex/pilot-security-redact-round1",
+      "prHeadSha": "151a6b19094f9bdca5058b11f9636f47bfd29b34",
+      "ciMergeSha": "16792df01f4a375d9e753ecdb574610363efbcde",
+      "webkitResult": "fail",
+      "totals": {
+        "passed": 75,
+        "failed": 3
+      },
+      "webkitSeconds": 387,
+      "shardMinutes": [
+        6.1,
+        6.4,
+        4.7
+      ],
+      "failure": {
+        "specs": [
+          "e2e/hydration.spec.ts:61 x3 (no verify email)"
+        ],
+        "others": "chromium, firefox also failed"
+      },
+      "containsPr14Change": false
+    },
+    {
+      "run": 37094988325,
+      "branch": "codex/pilot-security-redact-round1",
+      "prHeadSha": "5f07d8811b84af511c7862f5af13b1feff4decc9",
+      "ciMergeSha": "7e59730d5d61c4efe8861eee8d7b15b02a2c6552",
+      "webkitResult": "fail",
+      "totals": {
+        "passed": 77,
+        "failed": 1
+      },
+      "webkitSeconds": 413,
+      "shardMinutes": [
+        5.5,
+        6.9,
+        4.3
+      ],
+      "failure": {
+        "specs": [
+          "e2e/company-builder.spec.ts:31 (cb-grant-trial stayed aria-disabled, 180s test timeout)"
+        ],
+        "others": "chromium, firefox, integration also failed"
+      },
+      "containsPr14Change": false
+    },
+    {
+      "run": 37094196797,
+      "branch": "codex/pilot-security-redact-round1",
+      "prHeadSha": "09be0b3641a139409fad242e9617eec9b0db1975",
+      "ciMergeSha": "b7d0229a4665f4bd0536f41b9d1b51c1d679ca0c",
+      "webkitResult": "fail",
+      "totals": {
+        "failed": 56,
+        "passed": 22
+      },
+      "webkitSeconds": 324,
+      "shardMinutes": [
+        5.4,
+        4.3,
+        4.4
+      ],
+      "failure": {
+        "specs": [
+          "56 specs, 48+ 'no verify email' sign-up failures (includes journey.spec.ts:27, at sign-up, not Output tab)"
+        ],
+        "others": "chromium, firefox, integration also failed"
+      },
+      "containsPr14Change": false
+    },
+    {
+      "run": 37093517476,
+      "branch": "codex/pilot-security-deps-round1",
+      "prHeadSha": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+      "ciMergeSha": "f10278806a20a80b0bedd683ce446c46e7d0e416",
+      "webkitResult": "fail",
+      "totals": {
+        "passed": 77,
+        "failed": 1
+      },
+      "webkitSeconds": 557,
+      "shardMinutes": [
+        9.1,
+        9.2,
+        6.9
+      ],
+      "failure": {
+        "specs": [
+          "e2e/journey.spec.ts:9, click at :138 on step-panel Output tab (60s test timeout)"
+        ],
+        "others": "all other jobs passed"
+      },
+      "containsPr14Change": true
+    },
+    {
+      "run": 37090636510,
+      "branch": "codex/pilot-security-runtime-round1",
+      "prHeadSha": "56f96d9ee31498d2a38d1b4516dadcc49b7ac352",
+      "ciMergeSha": "af4b8e531048aafb1ee16c25b79c526a5346d35d",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 489,
+      "shardMinutes": [
+        7.9,
+        8.1,
+        6
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37090561314,
+      "branch": "codex/pilot-security-report-round1",
+      "prHeadSha": "a9276f663a2984531ae4f4a76379f36eeff8ce18",
+      "ciMergeSha": "728b002737d275cef15b268759981a0a5c795403",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 384,
+      "shardMinutes": [
+        6.2,
+        6.4,
+        4.8
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37083979064,
+      "branch": "codex/takeover-field-20261003",
+      "prHeadSha": "46a26297ec915d958b16e6c492c5787a24a38ba7",
+      "ciMergeSha": "88e62f102c5d40d489adc067496ffb4352651a2e",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 521,
+      "shardMinutes": [
+        8.5,
+        8.7,
+        6.6
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37083233953,
+      "branch": "codex/takeover-beta-20261003",
+      "prHeadSha": "85d805d96ee2c1b207017345b4f08dbd1e43b127",
+      "ciMergeSha": "b45accfb41b9d27b9b36d6a1c4392286ca5e078d",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 485,
+      "shardMinutes": [
+        7.9,
+        8.1,
+        6.1
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37081948593,
+      "branch": "codex/takeover-security-20261003",
+      "prHeadSha": "c6e264eae4b645923c85d5cd448701381a3e56c6",
+      "ciMergeSha": "1d1b5afdd20f085a978c9f49eaf5b26cac403134",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 493,
+      "shardMinutes": [
+        8.1,
+        8.2,
+        6
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37081798792,
+      "branch": "codex/takeover-field-20261003",
+      "prHeadSha": "9d76c84342bcd1c6f8b6f79a2f200759c02e130c",
+      "ciMergeSha": "07bdac5ab0af5668dd3c47a57e9ba75972186faf",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 504,
+      "shardMinutes": [
+        8.2,
+        8.4,
+        6.4
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37081791704,
+      "branch": "codex/takeover-beta-20261003",
+      "prHeadSha": "7a315f7146784a4ac23b48e1ba06f46a762a21a7",
+      "ciMergeSha": "6a57f97b30ea95c536793199f107e58eb4fa4e68",
+      "webkitResult": "fail",
+      "totals": {
+        "passed": 77,
+        "failed": 1
+      },
+      "webkitSeconds": 483,
+      "shardMinutes": [
+        7.8,
+        8,
+        6
+      ],
+      "failure": {
+        "specs": [
+          "e2e/phase3.spec.ts:43, ECONNRESET at :88"
+        ],
+        "others": "static, chromium, firefox, integration passed"
+      },
+      "containsPr14Change": false
+    },
+    {
+      "run": 37079833196,
+      "branch": "codex/takeover-docs-20261003",
+      "prHeadSha": "6df937e003f508c1ab23048f8939ef24547559b0",
+      "ciMergeSha": "03393b96adfd3e911e0f278417df78e7d92aa077",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 483,
+      "shardMinutes": [
+        7.9,
+        8,
+        6.1
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37077650513,
+      "branch": "pr/cb-1-core",
+      "prHeadSha": "719056cefa9d9810f93ea8c917da2bda82fe2e4a",
+      "ciMergeSha": "668d9b78fa35fdc48efd1ee1b8e79cd3cfe55cc8",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 484,
+      "shardMinutes": [
+        7.8,
+        8,
+        6
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37070526747,
+      "branch": "pr/cb-1-core",
+      "prHeadSha": "294063bcdd164e94723368badf03b20463120698",
+      "ciMergeSha": "d34958935c189bc319507b70f05304ef8422aa18",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 426,
+      "shardMinutes": [
+        7,
+        7.1,
+        5.4
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37069577000,
+      "branch": "pr/cb-1-core",
+      "prHeadSha": "df7234546d8618ed469c5afedaa7295228992b64",
+      "ciMergeSha": "07e1723a3706a8e19e0100753d1e99b4f6c24e5b",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 337,
+      "shardMinutes": [
+        5.5,
+        5.6,
+        4.3
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37068326693,
+      "branch": "pr/cb-1-core",
+      "prHeadSha": "1cd1789e78aeb9db231989b2616e1fa2e528b35e",
+      "ciMergeSha": "ea285007405a0546e01cb3d1447790ef6182eb55",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 489,
+      "shardMinutes": [
+        8,
+        8.1,
+        6
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    },
+    {
+      "run": 37066206918,
+      "branch": "pr/cb-1-core",
+      "prHeadSha": "f3a4e3bc8e2632f8aab2614516afedd95a725938",
+      "ciMergeSha": "e793b1fdf295194c3c65983bcfcdb123486e057e",
+      "webkitResult": "pass",
+      "totals": {
+        "passed": 78
+      },
+      "webkitSeconds": 493,
+      "shardMinutes": [
+        8.1,
+        8.2,
+        6.1
+      ],
+      "failure": null,
+      "containsPr14Change": false
+    }
+  ]
+}

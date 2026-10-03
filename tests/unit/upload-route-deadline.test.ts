@@ -4,9 +4,12 @@ const deps = vi.hoisted(() => ({
   requireUser: vi.fn(),
   requireWorkspace: vi.fn(),
   insert: vi.fn(),
+  insertRetainedFile: vi.fn(),
   addSource: vi.fn(),
 }));
-vi.mock("@/db", () => ({ db: { insert: deps.insert, select: vi.fn() }, schema: { fileObject: {} } }));
+// Since #18 the files route stores uploads through insertRetainedFile inside db.transaction.
+vi.mock("@/db", () => ({ db: { insert: deps.insert, select: vi.fn(), transaction: async (fn: (tx: unknown) => unknown) => fn({}) }, schema: { fileObject: {} } }));
+vi.mock("@/server/retained-files", () => ({ insertRetainedFile: deps.insertRetainedFile }));
 vi.mock("@/server/access", () => ({ requireUser: deps.requireUser, requireWorkspace: deps.requireWorkspace }));
 vi.mock("@/server/knowledge", () => ({ KNOWLEDGE_MAX_BYTES: 5 * 1024 * 1024, addSource: deps.addSource, listSources: vi.fn() }));
 
@@ -25,6 +28,7 @@ beforeEach(() => {
   deps.requireUser.mockResolvedValue({ id: "user" });
   deps.requireWorkspace.mockResolvedValue({ workspace: { id: "workspace" } });
   deps.insert.mockReturnValue({ values: () => ({ returning: async () => [{ id: "file", name: "a.txt", mime: "text/plain", size: 5 }] }) });
+  deps.insertRetainedFile.mockResolvedValue({ id: "file", name: "a.txt", mime: "text/plain", size: 5 });
   deps.addSource.mockResolvedValue({ id: "source" });
 });
 afterEach(() => vi.useRealTimers());
@@ -35,6 +39,7 @@ function upload(body: ReadableStream<Uint8Array>, headers: Record<string, string
 
 function expectNoDownstreamWork() {
   expect(deps.insert).not.toHaveBeenCalled();
+  expect(deps.insertRetainedFile).not.toHaveBeenCalled();
   expect(deps.addSource).not.toHaveBeenCalled();
 }
 

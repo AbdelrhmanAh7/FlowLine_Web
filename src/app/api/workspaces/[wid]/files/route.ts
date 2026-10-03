@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, requireWorkspace } from "@/server/access";
 import { capBody, HttpError, json, route, UPLOAD_BODY_READ_TIMEOUT_MS } from "@/server/http";
+import { insertRetainedFile } from "@/server/retained-files";
 
 type Ctx = { params: Promise<{ wid: string }> };
 
@@ -37,9 +37,6 @@ export const POST = route(async (raw, { params }: Ctx) => {
   const isPdf = bytes.subarray(0, 5).toString("latin1") === "%PDF-";
   if (!ALLOWED.has(mime) && !isPdf) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload a PDF, CSV, JSON or plain-text file");
   if (mime === "application/pdf" && !isPdf) throw new HttpError(415, "UNSUPPORTED_TYPE", "The file is not a valid PDF");
-  const [row] = await db
-    .insert(schema.fileObject)
-    .values({ workspaceId: workspace.id, name: file.name.slice(0, 120) || "upload", mime: isPdf ? "application/pdf" : mime, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), data: bytes, createdBy: user.id })
-    .returning({ id: schema.fileObject.id, name: schema.fileObject.name, mime: schema.fileObject.mime, size: schema.fileObject.size });
+  const row = await db.transaction(tx => insertRetainedFile(tx, { workspaceId: workspace.id, name: file.name.slice(0, 120) || "upload", mime: isPdf ? "application/pdf" : mime, data: bytes, createdBy: user.id }));
   return json({ file: row }, { status: 201 });
 });

@@ -1,0 +1,103 @@
+{
+  "inspectedAt": "2026-10-03",
+  "localHead": "dd840db6bf6f9329f61007152b3bb500b4d66b75",
+  "localBase": "9641ad1e684cad7b84bd2385751ea19b0a9d4060",
+  "ciRun": "37093517476",
+  "ciSha": "f10278806a20a80b0bedd683ce446c46e7d0e416",
+  "ciGitObjectAvailable": false,
+  "fileCount": 18,
+  "tracePresent": false,
+  "playwrightJsonReportPresent": false,
+  "files": [
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/build.log",
+      "bytes": 5832,
+      "sha256": "8e5d5b9100ff466e8f018125b74c344cba8c5c047a0462c16ad582b0b793f4ad"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/progress.log",
+      "bytes": 592,
+      "sha256": "a349af683a3c66ab6a3531052204c5b8f99dbbe56504d0cdda3efc7664682d1f"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/screenshots-webkit-1/ambient-ar-dark.png",
+      "bytes": 222739,
+      "sha256": "3b91d6b930b93891f003d0961532d83c88b485e95e4413780896cbb8ce8af5cb"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/screenshots-webkit-1/ambient-ar-light.png",
+      "bytes": 175648,
+      "sha256": "79f24052dd2dab880c865aae701aa36e83fac9cb699a49e220126f3deeb6fed2"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/screenshots-webkit-1/ambient-en-dark.png",
+      "bytes": 197852,
+      "sha256": "6cb7d25ff7afb6322f4e25a833588f6f4c44f5d68408be6894484f587d9af688"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/screenshots-webkit-1/ambient-en-light.png",
+      "bytes": 245168,
+      "sha256": "34a581e7ccded61a672115f930ab8f0a75e383a149dc6d785670cdcea393367c"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/stack-1.log",
+      "bytes": 1699,
+      "sha256": "68e2706fbd508ea870f1f9180ad948dd48e802437660d019489bdda0fae9b1df"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/stack-2.log",
+      "bytes": 1504,
+      "sha256": "a099d1fc45776ab2105bdb555cb0eb28727f2530bd0c952afb137a24c6d0a101"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/stack-3.log",
+      "bytes": 4227,
+      "sha256": "32222b70b656ae21be7b2ed797244f1d05f33915e87dbe60a53c3f8d437cf1c9"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/stack.log",
+      "bytes": 202,
+      "sha256": "5585688e5edf8fa7d0ea72835a5e60c61b51257d2090a820ca2c8f83f48b8d08"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/summary.json",
+      "bytes": 1216,
+      "sha256": "8a46db6bd9018e93acb72f9c7db77c70d9100125d74c3b6b015862456a745fef"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/artifacts/gates/ci-37093517476-1-webkit/webkit.log",
+      "bytes": 252,
+      "sha256": "c95e92f9ec0eaa359571653d3c8aa26369f33c8673a266fd996c81634ea0cbb0"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/failed.log",
+      "bytes": 6119,
+      "sha256": "3ca3f2d86e82243dc8347f9db2c3653bed0475e0d5bd1021981c901bae60f783"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/test-results/webkit-1-report.txt",
+      "bytes": 5708,
+      "sha256": "a9bdc3aef544abdeb3a67ac330230e5ba97a63c480fbe3fe0a959a77f693cca5"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/test-results/webkit-2-report.txt",
+      "bytes": 7310,
+      "sha256": "4714354e4a0935b7479eaf6b3d736b85500fdd277123efdf4e085529b6d7254a"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/test-results/webkit-2/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-webkit/error-context.md",
+      "bytes": 15833,
+      "sha256": "1d5b7e929637eec0acf67c55ba0f9e7921c6f77fa225d269f056938c8fbd5810"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/test-results/webkit-2/journey-new-user-builds-sa-cd6c7-ns-runs-and-inspects-a-flow-webkit/test-failed-1.png",
+      "bytes": 244212,
+      "sha256": "2a52bcd2cc78468df005215bfeba5f197a40b1c12833fc122de1a5c73ff43567"
+    },
+    {
+      "path": "artifacts/gates/webkit-37093517476/test-results/webkit-3-report.txt",
+      "bytes": 3838,
+      "sha256": "7b23172d18948e66e942ee38e76478065b95a38c9262cdcf0c843721467a10dc"
+    }
+  ]
+}

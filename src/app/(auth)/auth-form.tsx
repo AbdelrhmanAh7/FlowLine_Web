@@ -14,6 +14,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button, Field, Input, Logo } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import type { Translator } from "@/i18n/translate";
+import type { MessageKey } from "@/i18n/types";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -26,7 +27,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [ssoSlug, setSsoSlug] = useState("");
-  const [error, setError] = useState<string | null>(params.get("sso_error") ?? (params.get("error") === "signin_expired" ? t("auth.signinExpired") : null));
+  const ssoError = params.get("sso_error");
+  const [error, setError] = useState<string | null>((ssoError && t.has(ssoError) ? t(ssoError as MessageKey) : ssoError) ?? (params.get("error") === "signin_expired" ? t("auth.signinExpired") : null));
   // Accounts with an authenticator (platform admins) finish sign-in with a TOTP code.
   const [twoFactor, setTwoFactor] = useState(false);
   const [pending, setPending] = useState(false);
