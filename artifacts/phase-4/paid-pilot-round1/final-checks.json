@@ -1,0 +1,25 @@
+{
+  "testedSha": "4a907b84c630388befe77044bf18c318826737ed",
+  "checks": {
+    "integration": {
+      "files": 18,
+      "passed": 162,
+      "metadata": "artifacts/phase-4/paid-pilot-round1/combined/integration-1790995351509.json",
+      "scope": "local provider doubles"
+    },
+    "unit": {
+      "files": 15,
+      "passed": 112,
+      "rawLog": "artifacts/phase-4/paid-pilot-round1/combined/unit-final.log"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "rawLog": "artifacts/phase-4/paid-pilot-round1/combined/typecheck-final.log"
+    },
+    "targetedLint": {
+      "exitCode": 0,
+      "rawLog": "artifacts/phase-4/paid-pilot-round1/combined/eslint-final.log"
+    }
+  },
+  "limits": "Focused checks on Node25 host; no local full gate, browser, real provider, application build, CI, deployment or sale acceptance."
+}

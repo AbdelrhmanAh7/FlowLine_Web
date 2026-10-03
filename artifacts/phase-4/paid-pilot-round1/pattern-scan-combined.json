@@ -1,0 +1,8 @@
+{
+  "scope": "changed Git text blobs, UTF8/UTF16/NUL and base64 diff artifacts; pattern-only supplement",
+  "scanned": 307,
+  "skipped": [],
+  "findings": [],
+  "classified": [],
+  "limitations": "No comparison to actual credentials, arbitrary formats, compressed artifacts or remote CI gate. Secret values are never printed."
+}

@@ -1,0 +1,48 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90mC:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-combined-20261003[39m
+
+migrated postgres://***@127.0.0.1:62907/flowline_test_pilotcombined
+[seed-platform] test platform credentials ready
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p2-actions.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 4278[2mms[22m[39m
+   [32m✓[39m Sheets step fails, then re-run from that step: no duplicated effects [2m(1)[22m
+     [33m[2m✓[22m[39m upstream message, rows and billing are not repeated[33m 433[2mms[22m[39m
+   [32m✓[39m connections: expiry, pausing, reconnect, refresh, isolation [2m(5)[22m
+     [33m[2m✓[22m[39m 429 with Retry-After is retried; persistent 5xx fails after bounded attempts[33m 2199[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p2-execution.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 3418[2mms[22m[39m
+   [32m✓[39m AI nodes (deterministic provider double) [2m(3)[22m
+     [33m[2m✓[22m[39m retries a provider 5xx with backoff, then succeeds; a malformed response fails clearly[33m 386[2mms[22m[39m
+   [32m✓[39m limits, races and cancellation [2m(6)[22m
+     [33m[2m✓[22m[39m cancels a queued run immediately and a running run mid-request[33m 2115[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p2-review-fixes.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 1635[2mms[22m[39m
+   [32m✓[39m M1 — non-idempotent HTTP requests are never blindly re-sent [2m(5)[22m
+     [33m[2m✓[22m[39m keeps ordinary 500 retries for none HTTP requests[33m 364[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p3-billing.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 1587[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/runs.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 1472[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/hubspot.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 900[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p2-triggers.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1206[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/sec-federated-totp.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 1170[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-upload-admission.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 757[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-index-admission.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 549[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p2-engine.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1340[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-chunk-admission.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 504[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p4-beta-access.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 910[2mms[22m[39m
+   [32m✓[39m private beta access [2m(5)[22m
+     [33m[2m✓[22m[39m a beta code admits exactly as many sign-ups as it allows; expired, revoked and wrong codes are refused[33m 330[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/pilot-rerun-idempotency.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 725[2mms[22m[39m
+   [32m✓[39m paid pilot rerun request identity [2m(2)[22m
+     [33m[2m✓[22m[39m a new request, a different step, or a different revision remains a distinct rerun[33m 438[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/p3-knowledge.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 439[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/copilot-benchmark.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 469[2mms[22m[39m
+   [32m✓[39m Copilot benchmark runner with the local AI test double [2m(1)[22m
+     [33m[2m✓[22m[39m uses one encrypted workspace connection, scores all frozen cases, and writes both reports[33m 463[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/tenancy.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 318[2mms[22m[39m
+ [32m✓[39m [30m[45m integration [49m[39m tests/integration/flows.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 264[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m      Tests [22m [1m[32m162 passed[39m[22m[90m (162)[39m
+[2m   Start at [22m 05:42:34
+[2m   Duration [22m 47.44s[2m (tests 52%, import 44%, transform 4%)[22m
+
+[90mstderr[2m | tests/integration/sec-federated-totp.test.ts[2m > [22m[2mH3: actual global ZITADEL callbacks enforce local TOTP[2m > [22m[2mM7: replacing a global issuer cannot reuse its subject binding, while legitimate non-enrolled sign-in still works
+[22m[39m[auth] account_not_linked
+

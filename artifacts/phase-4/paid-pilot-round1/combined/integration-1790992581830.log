@@ -1,0 +1,11 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-combined-20261003
+
+migrated postgres://***@127.0.0.1:59326/flowline_test_pilotcombined
+[seed-platform] test platform credentials ready
+
+ Test Files  1 passed (1)
+      Tests  19 passed (19)
+   Start at  04:56:25
+   Duration  7.68s (import 44%, tests 39%, transform 17%)
+

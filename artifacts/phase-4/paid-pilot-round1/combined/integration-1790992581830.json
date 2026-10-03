@@ -1,0 +1,13 @@
+{
+  "testedSha": "2c5d7a9524f09e642cf0386c43921e45f1c76ddb",
+  "sourceDirty": "",
+  "scope": "focused combined API/service/worker/DB with local provider doubles; no browser, real provider, runtime22 or deployment gate",
+  "files": [
+    "p3-billing.test.ts"
+  ],
+  "attempt": 1790992581830,
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "command": "node node_modules/vitest/vitest.mjs run --project integration --fileParallelism=false tests/integration/p3-billing.test.ts",
+  "exitCode": 0
+}

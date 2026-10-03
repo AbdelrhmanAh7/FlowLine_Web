@@ -1,0 +1,314 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-combined-20261003
+
+migrated postgres://***@127.0.0.1:57530/flowline_test_pilotcombined
+[seed-platform] test platform credentials ready
+ ❯ |integration| tests/integration/p3-billing.test.ts (19 tests | 18 failed) 310ms
+   ❯ billing: checkout and subscription lifecycle (4)
+     × checkout + webhooks link the subscription and put plan entitlements in force 52ms
+     × upgrade and downgrade (subscription.updated) change entitlements 12ms
+     × cancel at period end, then deletion falls back to free-plan entitlements 11ms
+     × payment failed → past_due with free-plan entitlements; invoice.paid restores 10ms
+   ❯ billing: webhook robustness (5)
+     × a duplicate event id is acknowledged without re-applying 9ms
+     × an out-of-order (older) event is recorded as ignored_stale and does not change state 10ms
+     × a replayed old signature and a bad signature both get 401 9ms
+     × an unknown customer is recorded and acknowledged without state change 9ms
+   ❯ billing: same-second webhook ordering (3)
+     × a same-second updated delivered after deleted does not reactivate the subscription (canonical fetch) 9ms
+     × the reverse order (updated then deleted in the same second) also ends in the canonical state 8ms
+     × a provider outage during a same-second event fails the event without changing state; a redelivery applies 8ms
+   ❯ billing: provider failures change nothing (2)
+     × a 5xx during checkout surfaces 502 and stores no account 14ms
+     × a 5xx during plan change surfaces 502 and leaves the plan untouched 8ms
+   ❯ billing: usage reconciliation (4)
+     × reports ledger totals once per period + metric; re-running reports nothing new 9ms
+     × reports only newly accrued usage (monotonic deltas) on later reconciles 8ms
+     × a provider failure mid-reconcile leaves no rows and the retry does not double-report 8ms
+     × concurrent reconciles for one workspace report the usage exactly once 8ms
+   ❯ billing: permissions (1)
+     × manage endpoints are owner-only (403 for editor/viewer), non-members get 404 8ms
+
+ Test Files  1 failed | 14 passed (15)
+      Tests  18 failed | 110 passed (128)
+   Start at  04:53:10
+   Duration  37.60s (tests 54%, import 42%, transform 4%)
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: checkout and subscription lifecycle > checkout + webhooks link the subscription and put plan entitlements in force
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:98:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: checkout and subscription lifecycle > upgrade and downgrade (subscription.updated) change entitlements
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:117:41
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: checkout and subscription lifecycle > cancel at period end, then deletion falls back to free-plan entitlements
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:139:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: checkout and subscription lifecycle > payment failed → past_due with free-plan entitlements; invoice.paid restores
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:156:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: webhook robustness > a duplicate event id is acknowledged without re-applying
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:176:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: webhook robustness > an out-of-order (older) event is recorded as ignored_stale and does not change state
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:188:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: webhook robustness > a replayed old signature and a bad signature both get 401
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:203:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: webhook robustness > an unknown customer is recorded and acknowledged without state change
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:214:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: same-second webhook ordering > a same-second updated delivered after deleted does not reactivate the subscription (canonical fetch)
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:233:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: same-second webhook ordering > the reverse order (updated then deleted in the same second) also ends in the canonical state
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:257:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: same-second webhook ordering > a provider outage during a same-second event fails the event without changing state; a redelivery applies
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:270:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: provider failures change nothing > a 5xx during checkout surfaces 502 and stores no account
+AssertionError: expected 400 to be 502 // Object.is equality
+
+- Expected
++ Received
+
+- 502
++ 400
+
+ ❯ expectHttpError tests/integration/helpers.ts:35:22
+     33|     expect(err).toBeInstanceOf(HttpError);
+     34|     const e = err as HttpError;
+     35|     expect(e.status).toBe(status);
+       |                      ^
+     36|     if (code !== undefined) expect(e.code).toBe(code);
+     37|     return e;
+ ❯ tests/integration/p3-billing.test.ts:316:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: provider failures change nothing > a 5xx during plan change surfaces 502 and leaves the plan untouched
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:322:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: usage reconciliation > reports ledger totals once per period + metric; re-running reports nothing new
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:332:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: usage reconciliation > reports only newly accrued usage (monotonic deltas) on later reconciles
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:369:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: usage reconciliation > a provider failure mid-reconcile leaves no rows and the retry does not double-report
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:413:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: usage reconciliation > concurrent reconciles for one workspace report the usage exactly once
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:442:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/18]⎯
+
+ FAIL  |integration| tests/integration/p3-billing.test.ts > billing: permissions > manage endpoints are owner-only (403 for editor/viewer), non-members get 404
+Error: Billing isn't configured for this installation
+ ❯ requirePlans src/billing/service.ts:76:19
+     74| async function requirePlans(): Promise<BillingPlansConfig> {
+     75|   const cfg = await loadBillingPlans();
+     76|   if (!cfg) throw new HttpError(400, "BILLING_NOT_CONFIGURED", "Billin…
+       |                   ^
+     77|   return cfg;
+     78| }
+ ❯ startCheckout src/billing/service.ts:164:15
+ ❯ subscribedWorkspace tests/integration/p3-billing.test.ts:79:19
+ ❯ tests/integration/p3-billing.test.ts:464:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/18]⎯
+

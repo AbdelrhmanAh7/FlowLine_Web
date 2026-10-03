@@ -1,0 +1,34 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-pilot-combined-20261003
+
+migrated postgres://***@127.0.0.1:57478/flowline_test_pilotcombined
+[seed-platform] This value isn't valid for this setting
+No test files found, exiting with code 1
+
+filter: tests/integration/p3-billing.test.ts
+projects: integration
+
+|integration| 
+
+include: tests/integration/**/*.test.ts
+exclude:  **/node_modules/**, **/.git/**
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: Command failed: npx tsx scripts/test/seed-platform.mts
+ ❯ genericNodeError node:internal/errors:998:15
+ ❯ wrappedFn node:internal/errors:543:14
+ ❯ checkExecSyncError node:child_process:925:11
+ ❯ execSync node:child_process:997:15
+ ❯ Object.setup tests/integration/global-setup.ts:12:3
+ ❯ TestProject._initializeGlobalSetup ../FlowLine/node_modules/.pnpm/vitest@5.0.2_@types+node@26_7426e3bbeb285da9308f7fd6d4dab047/node_modules/vitest/dist/chunks/index.C-uw7tH9.js:12113:50
+ ❯ Vitest.initializeGlobalSetup ../FlowLine/node_modules/.pnpm/vitest@5.0.2_@types+node@26_7426e3bbeb285da9308f7fd6d4dab047/node_modules/vitest/dist/chunks/index.C-uw7tH9.js:21214:35
+ ❯ ../FlowLine/node_modules/.pnpm/vitest@5.0.2_@types+node@26_7426e3bbeb285da9308f7fd6d4dab047/node_modules/vitest/dist/chunks/index.C-uw7tH9.js:21054:6
+ ❯ ../FlowLine/node_modules/.pnpm/vitest@5.0.2_@types+node@26_7426e3bbeb285da9308f7fd6d4dab047/node_modules/vitest/dist/chunks/index.C-uw7tH9.js:21083:11
+ ❯ ../FlowLine/node_modules/.pnpm/vitest@5.0.2_@types+node@26_7426e3bbeb285da9308f7fd6d4dab047/node_modules/vitest/dist/chunks/index.C-uw7tH9.js:20945:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 57984, stdout: null, stderr: null }
+
+
+

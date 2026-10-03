@@ -1,0 +1,27 @@
+{
+  "testedSha": "40fb97cecf8fcb6ade3e2883b7f420385a6b3e74",
+  "sourceDirty": "",
+  "scope": "focused combined API/service/worker/DB with local provider doubles; no browser, real provider, runtime22 or deployment gate",
+  "files": [
+    "flows.test.ts",
+    "runs.test.ts",
+    "p2-triggers.test.ts",
+    "p2-engine.test.ts",
+    "p2-execution.test.ts",
+    "p2-actions.test.ts",
+    "p2-review-fixes.test.ts",
+    "tenancy.test.ts",
+    "p3-billing.test.ts",
+    "hubspot.test.ts",
+    "copilot-benchmark.test.ts",
+    "p3-knowledge.test.ts",
+    "pilot-rerun-idempotency.test.ts",
+    "p4-beta-access.test.ts",
+    "sec-federated-totp.test.ts"
+  ],
+  "attempt": 1790993308058,
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94",
+  "command": "node node_modules/vitest/vitest.mjs run --project integration --fileParallelism=false tests/integration/flows.test.ts tests/integration/runs.test.ts tests/integration/p2-triggers.test.ts tests/integration/p2-engine.test.ts tests/integration/p2-execution.test.ts tests/integration/p2-actions.test.ts tests/integration/p2-review-fixes.test.ts tests/integration/tenancy.test.ts tests/integration/p3-billing.test.ts tests/integration/hubspot.test.ts tests/integration/copilot-benchmark.test.ts tests/integration/p3-knowledge.test.ts tests/integration/pilot-rerun-idempotency.test.ts tests/integration/p4-beta-access.test.ts tests/integration/sec-federated-totp.test.ts",
+  "exitCode": 0
+}
