@@ -1,0 +1,403 @@
+diff --git a/src/app/api/workspaces/[wid]/files/route.ts b/src/app/api/workspaces/[wid]/files/route.ts
+index 33dd9a9..ec0b287 100644
+--- a/src/app/api/workspaces/[wid]/files/route.ts
++++ b/src/app/api/workspaces/[wid]/files/route.ts
+@@ -1,8 +1,8 @@
+-import { createHash } from "node:crypto";
+ import { desc, eq } from "drizzle-orm";
+ import { db, schema } from "@/db";
+ import { requireUser, requireWorkspace } from "@/server/access";
+ import { capBody, HttpError, json, route } from "@/server/http";
++import { insertRetainedFile } from "@/server/retained-files";
+ 
+ type Ctx = { params: Promise<{ wid: string }> };
+ 
+@@ -36,9 +36,6 @@ export const POST = route(async (raw, { params }: Ctx) => {
+   const isPdf = bytes.subarray(0, 5).toString("latin1") === "%PDF-";
+   if (!ALLOWED.has(mime) && !isPdf) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload a PDF, CSV, JSON or plain-text file");
+   if (mime === "application/pdf" && !isPdf) throw new HttpError(415, "UNSUPPORTED_TYPE", "The file is not a valid PDF");
+-  const [row] = await db
+-    .insert(schema.fileObject)
+-    .values({ workspaceId: workspace.id, name: file.name.slice(0, 120) || "upload", mime: isPdf ? "application/pdf" : mime, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), data: bytes, createdBy: user.id })
+-    .returning({ id: schema.fileObject.id, name: schema.fileObject.name, mime: schema.fileObject.mime, size: schema.fileObject.size });
++  const row = await db.transaction(tx => insertRetainedFile(tx, { workspaceId: workspace.id, name: file.name.slice(0, 120) || "upload", mime: isPdf ? "application/pdf" : mime, data: bytes, createdBy: user.id }));
+   return json({ file: row }, { status: 201 });
+ });
+diff --git a/src/components/builder/node-config.tsx b/src/components/builder/node-config.tsx
+index 050d944..f949382 100644
+--- a/src/components/builder/node-config.tsx
++++ b/src/components/builder/node-config.tsx
+@@ -11,6 +11,7 @@ import { checkCron } from "@/engine/validate";
+ import { useT } from "@/i18n/client";
+ import { intlLocale } from "@/i18n/config";
+ import { detailText } from "@/i18n/engine-text";
++import { apiErrorMessage } from "@/i18n/errors";
+ import { actionDescription, actionTitle } from "@/i18n/integration-text";
+ import type { MessageKey } from "@/i18n/types";
+ import { api, ApiError } from "@/lib/api";
+@@ -285,7 +286,7 @@ function FileForm({ node, cfg, set, readOnly }: FormProps) {
+       await qc.invalidateQueries({ queryKey: ["files", workspace.id] });
+       set({ fileId: b.file.id });
+     } catch (e) {
+-      setUploadError((e as Error).message);
++      setUploadError(apiErrorMessage(t, e, t("config.file.uploadFailed")));
+     }
+   };
+   return (
+diff --git a/src/components/company-builder/session.tsx b/src/components/company-builder/session.tsx
+index 8db6a1f..e7df38d 100644
+--- a/src/components/company-builder/session.tsx
++++ b/src/components/company-builder/session.tsx
+@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
+ import { useWorkspace } from "@/components/shell/workspace-context";
+ import { Button, ErrorState, InlineConfirmation, Skeleton } from "@/components/ui";
+ import { useT } from "@/i18n/client";
++import { apiErrorMessage } from "@/i18n/errors";
+ import { api, ApiError } from "@/lib/api";
+ import { can, type Role } from "@/lib/permissions";
+ import { ExperimentPanel, ExperimentTracker, reportHelp, type HelpTopic } from "./experiment";
+@@ -48,6 +49,7 @@ export function CompanyBuilderSession({ sessionId }: { sessionId: string }) {
+   const refresh = () => qc.invalidateQueries({ queryKey: ["cb-session", sessionId] });
+ 
+   const errorText = (e: unknown) => {
++    if (e instanceof ApiError && ["UPLOAD_WORKSPACE_STORAGE_LIMIT", "UPLOAD_INSTALLATION_STORAGE_LIMIT", "UPLOAD_STORAGE_CONFIG"].includes(e.code)) return apiErrorMessage(t, e);
+     if (e instanceof ApiError && t.has(`companyBuilder.errors.${e.code}`)) return cbt(t, `errors.${e.code}`);
+     return t("companyBuilder.errors.generic");
+   };
+diff --git a/src/i18n/errors.ts b/src/i18n/errors.ts
+index a7abdc8..8ae969a 100644
+--- a/src/i18n/errors.ts
++++ b/src/i18n/errors.ts
+@@ -11,6 +11,9 @@ const KNOWN = new Set([
+   "INTERNAL",
+   "BAD_JSON",
+   "BODY_TOO_LARGE",
++  "UPLOAD_WORKSPACE_STORAGE_LIMIT",
++  "UPLOAD_INSTALLATION_STORAGE_LIMIT",
++  "UPLOAD_STORAGE_CONFIG",
+   "CROSS_SITE_REQUEST",
+   "INVITE_USED",
+   "INVITE_REVOKED",
+diff --git a/src/i18n/messages/ar.json b/src/i18n/messages/ar.json
+index c35c765..18cfbeb 100644
+--- a/src/i18n/messages/ar.json
++++ b/src/i18n/messages/ar.json
+@@ -167,6 +167,9 @@
+     "INTERNAL": "تعذّر إكمال الطلب. راجع الحالة الحالية قبل المحاولة مجددًا.",
+     "BAD_JSON": "تعذّرت قراءة الطلب. حدّث الصفحة وحاول مجددًا.",
+     "BODY_TOO_LARGE": "حجم الطلب كبير جدًا. قلّل محتواه وحاول مجددًا.",
++    "UPLOAD_WORKSPACE_STORAGE_LIMIT": "مساحة الاحتفاظ بالملفات في مساحة العمل ممتلئة. احذف مصدر معرفة غير مستخدم أو اطلب المساعدة من المسؤول.",
++    "UPLOAD_INSTALLATION_STORAGE_LIMIT": "مساحة الملفات ممتلئة. اطلب من المسؤول توفير مساحة قبل رفع ملفات جديدة.",
++    "UPLOAD_STORAGE_CONFIG": "رفع الملفات غير متاح حتى يصحّح المسؤول حدود التخزين.",
+     "VALIDATION": "بعض القيم غير صالحة. راجعها وحاول مجددًا.",
+     "CROSS_SITE_REQUEST": "رُفض الطلب لأنه لم يصدر من Flowline نفسه. حدّث الصفحة وحاول مجددًا.",
+     "INVITE_USED": "استُخدمت هذه الدعوة من قبل.",
+diff --git a/src/i18n/messages/en.json b/src/i18n/messages/en.json
+index 79155d3..104e728 100644
+--- a/src/i18n/messages/en.json
++++ b/src/i18n/messages/en.json
+@@ -167,6 +167,9 @@
+     "INTERNAL": "We couldn't complete the request. Check the current status before trying again.",
+     "BAD_JSON": "The request couldn't be read. Refresh the page and try again.",
+     "BODY_TOO_LARGE": "The request is too large. Reduce its contents and try again.",
++    "UPLOAD_WORKSPACE_STORAGE_LIMIT": "This workspace's retained upload storage is full. Delete an unused knowledge source or ask the administrator for help.",
++    "UPLOAD_INSTALLATION_STORAGE_LIMIT": "Upload storage is full. Ask the administrator to free storage before uploading again.",
++    "UPLOAD_STORAGE_CONFIG": "Uploads are unavailable until the administrator fixes the storage limits.",
+     "VALIDATION": "Some values aren't valid. Check them and try again.",
+     "CROSS_SITE_REQUEST": "The request was refused because it didn't come from Flowline itself. Refresh the page and try again.",
+     "INVITE_USED": "This invitation was already used.",
+diff --git a/src/server/company-builder/install.ts b/src/server/company-builder/install.ts
+index 3a0c22c..d7f548a 100644
+--- a/src/server/company-builder/install.ts
++++ b/src/server/company-builder/install.ts
+@@ -1,4 +1,3 @@
+-import { createHash } from "node:crypto";
+ import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+ import { db, schema } from "@/db";
+ import type { AgentToolSpec } from "@/db/schema";
+@@ -14,6 +13,7 @@ import { audit, userActor } from "@/server/audit";
+ import { canonicalJson, sha256Hex } from "@/server/crypto";
+ import { testFeaturesEnabled } from "@/server/faults";
+ import { HttpError, notFound } from "@/server/http";
++import { insertRetainedFile } from "@/server/retained-files";
+ import { requireBlueprint } from "./blueprints";
+ 
+ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+@@ -151,10 +151,7 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
+         const knowledge = await step(task, "knowledge", sha256Hex(`knowledge:${info}`), async (tx) => {
+           const bytes = Buffer.from(info, "utf8");
+           const name = tKey(t, "companyBuilder.knowledgeName", "Approved customer answers").slice(0, 120);
+-          const [file] = await tx
+-            .insert(schema.fileObject)
+-            .values({ workspaceId, name, mime: "text/plain", size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), data: bytes, createdBy: user.id })
+-            .returning({ id: schema.fileObject.id });
++          const file = await insertRetainedFile(tx, { workspaceId, name, mime: "text/plain", data: bytes, createdBy: user.id });
+           const [src] = await tx.insert(schema.knowledgeSource).values({ workspaceId, name, kind: "text", fileId: file!.id, mime: "text/plain", size: bytes.length, status: "pending", createdBy: user.id }).returning({ id: schema.knowledgeSource.id });
+           await tx.execute(sql`select pg_notify('flowline_runs', 'knowledge')`);
+           return { refId: src!.id, baseRevision: null };
+diff --git a/src/server/knowledge.ts b/src/server/knowledge.ts
+index 3fa5f0b..055bb70 100644
+--- a/src/server/knowledge.ts
++++ b/src/server/knowledge.ts
+@@ -1,4 +1,3 @@
+-import { createHash } from "node:crypto";
+ import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+ import type { Db } from "@/db";
+ import { schema } from "@/db";
+@@ -6,6 +5,7 @@ import { extractKnowledge, KnowledgeExtractionError, KNOWLEDGE_MAX_CHUNKS } from
+ import type { CurrentUser } from "./access";
+ import { audit, userActor } from "./audit";
+ import { HttpError, notFound } from "./http";
++import { insertRetainedFile } from "./retained-files";
+ 
+ /**
+  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
+@@ -67,10 +67,7 @@ export async function addSource(db: Db, user: CurrentUser, workspaceId: string,
+   if (!mime) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload text, Markdown, CSV, JSON or PDF");
+   const name = input.name.trim().slice(0, 120) || "Untitled";
+   return db.transaction(async (tx) => {
+-    const [file] = await tx
+-      .insert(schema.fileObject)
+-      .values({ workspaceId, name, mime, size: input.bytes.length, sha256: createHash("sha256").update(input.bytes).digest("hex"), data: input.bytes, createdBy: user.id })
+-      .returning({ id: schema.fileObject.id });
++    const file = await insertRetainedFile(tx, { workspaceId, name, mime, data: input.bytes, createdBy: user.id });
+     const [src] = await tx
+       .insert(schema.knowledgeSource)
+       .values({ workspaceId, name, kind: mime === "text/csv" ? "table" : input.kind, fileId: file!.id, mime, size: input.bytes.length, status: "pending", createdBy: user.id })
+diff --git a/src/server/retained-files.ts b/src/server/retained-files.ts
+new file mode 100644
+index 0000000..6cbd686
+--- /dev/null
++++ b/src/server/retained-files.ts
+@@ -0,0 +1,47 @@
++import { createHash } from "node:crypto";
++import { sql } from "drizzle-orm";
++import type { Db } from "@/db";
++import * as schema from "@/db/schema";
++import { HttpError } from "./http";
++
++type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
++type FileInput = Pick<typeof schema.fileObject.$inferInsert, "workspaceId" | "name" | "mime" | "createdBy"> & { data: Buffer };
++const MIB = 1024 * 1024;
++
++function limit(key: string, fallback: number): bigint {
++  const value = process.env[key];
++  if (value === undefined) return BigInt(fallback);
++  const parsed = Number(value);
++  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(parsed)) throw new HttpError(503, "UPLOAD_STORAGE_CONFIG", "Upload storage limits need administrator attention");
++  return BigInt(parsed);
++}
++
++/** Operational raw-byte circuit breakers, independent of subscription entitlements. */
++export function retainedFileLimits() {
++  return {
++    workspace: limit("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", 100 * MIB),
++    installation: limit("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", 512 * MIB),
++  };
++}
++
++/** All production file inserts use this transaction-scoped admission lock.
++ * One installation lock serializes writers across routes/workspaces. The sum is
++ * read AFTER acquiring it, in the default READ COMMITTED transaction, so a waiting
++ * writer sees the preceding commit. Count actual bytea bytes, not caller metadata.
++ * Deletes can only free capacity; they need no admission lock. No reservation can
++ * survive a failed/rolled-back insert. This does not account for chunks/row overhead.
++ */
++export async function insertRetainedFile(tx: Tx, input: FileInput) {
++  const limits = retainedFileLimits();
++  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('flowline:retained-upload-budget', 0))`);
++  const [stored] = await tx.select({
++    installation: sql<string>`coalesce(sum(octet_length(${schema.fileObject.data})), 0)::text`,
++    workspace: sql<string>`coalesce(sum(case when ${schema.fileObject.workspaceId} = ${input.workspaceId} then octet_length(${schema.fileObject.data}) else 0 end), 0)::text`,
++  }).from(schema.fileObject);
++  const bytes = BigInt(input.data.length);
++  if (BigInt(stored!.workspace) + bytes > limits.workspace) throw new HttpError(413, "UPLOAD_WORKSPACE_STORAGE_LIMIT", "This workspace's retained upload storage is full");
++  if (BigInt(stored!.installation) + bytes > limits.installation) throw new HttpError(413, "UPLOAD_INSTALLATION_STORAGE_LIMIT", "Retained upload storage is full; contact the administrator");
++  const [file] = await tx.insert(schema.fileObject).values({ ...input, size: input.data.length, sha256: createHash("sha256").update(input.data).digest("hex") })
++    .returning({ id: schema.fileObject.id, name: schema.fileObject.name, mime: schema.fileObject.mime, size: schema.fileObject.size });
++  return file!;
++}
+diff --git a/tests/integration/pilot-upload-admission.test.ts b/tests/integration/pilot-upload-admission.test.ts
+new file mode 100644
+index 0000000..d8233ae
+--- /dev/null
++++ b/tests/integration/pilot-upload-admission.test.ts
+@@ -0,0 +1,142 @@
++import { and, eq, sql } from "drizzle-orm";
++import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
++const holder = vi.hoisted(() => ({ headers: new Headers() }));
++vi.mock("next/headers", () => ({ headers: async () => holder.headers, cookies: async () => ({ get: () => undefined }) }));
++import { db, schema } from "@/db";
++import { POST as uploadPOST } from "@/app/api/workspaces/[wid]/files/route";
++import { auth } from "@/lib/auth";
++import type { CompanyBlueprint } from "@/company-builder/model";
++import { addSource, deleteSource } from "@/server/knowledge";
++import { insertRetainedFile } from "@/server/retained-files";
++import { ssoSessionCookie } from "@/server/sso";
++import { createWorkspace } from "@/server/workspaces";
++import { approveBlueprint, generateDeterministic } from "@/server/company-builder/blueprints";
++import { install } from "@/server/company-builder/install";
++import { answer, createSession } from "@/server/company-builder/sessions";
++import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
++
++const owned: string[] = [];
++afterEach(async () => {
++  vi.unstubAllEnvs();
++  for (const id of owned.splice(0)) await db.delete(schema.workspace).where(eq(schema.workspace.id, id));
++});
++afterAll(closeDb);
++async function setup() {
++  const user = await makeUser("storage-owner");
++  const ws = await createWorkspace(user, unique("Storage"));
++  owned.push(ws.id);
++  await as(user);
++  return { user, ws };
++}
++async function as(user: { id: string }) {
++  const session = await (await auth.$context).internalAdapter.createSession(user.id);
++  const cookie = await ssoSessionCookie(session.token);
++  holder.headers = new Headers({ cookie: `${cookie.name}=${cookie.value}` });
++}
++async function limits(workspace: number, installation: number) {
++  const [stored] = await db.select({ total: sql<string>`coalesce(sum(octet_length(${schema.fileObject.data})), 0)::text` }).from(schema.fileObject);
++  vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", String(workspace));
++  vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", String(BigInt(stored!.total) + BigInt(installation)));
++}
++const files = (workspaceId: string) => db.select().from(schema.fileObject).where(eq(schema.fileObject.workspaceId, workspaceId));
++const source = (user: Awaited<ReturnType<typeof makeUser>>, workspaceId: string, text: string) => addSource(db, user, workspaceId, { name: "retained.txt", mime: "text/plain", kind: "text", bytes: Buffer.from(text) });
++async function upload(workspaceId: string, text: string) {
++  const body = new FormData();
++  body.append("file", new File([text], "upload.txt", { type: "text/plain" }));
++  return uploadPOST(new Request(`http://localhost:3100/api/workspaces/${workspaceId}/files`, { method: "POST", body }), { params: Promise.resolve({ wid: workspaceId }) });
++}
++
++describe("atomic retained upload admission", () => {
++  it("concurrent knowledge and file-route uploads share the workspace budget", async () => {
++    const { user, ws } = await setup();
++    await limits(6, 1024);
++    const outcomes = await Promise.allSettled([upload(ws.id, "1234"), source(user, ws.id, "5678")]);
++    const statuses = outcomes.map(result => result.status === "rejected" ? result.reason.status : result.value instanceof Response ? result.value.status : 201);
++    expect(statuses.sort()).toEqual([201, 413]);
++    const denied = outcomes.find(result => result.status === "rejected" || (result.value instanceof Response && result.value.status === 413))!;
++    const code = denied.status === "rejected" ? denied.reason.code : ((await (denied.value as Response).json()).error.code);
++    expect(code).toBe("UPLOAD_WORKSPACE_STORAGE_LIMIT");
++    const stored = await files(ws.id);
++    expect(stored).toHaveLength(1);
++    expect(stored[0]!.data.length).toBe(4);
++  });
++
++  it("simultaneous uploads in different workspaces share the installation budget", async () => {
++    const a = await setup();
++    const b = await setup();
++    await limits(100, 6);
++    const outcomes = await Promise.allSettled([source(a.user, a.ws.id, "1234"), upload(b.ws.id, "5678")]);
++    expect(outcomes.map(r => r.status === "rejected" ? r.reason.status : r.value instanceof Response ? r.value.status : 201).sort()).toEqual([201, 413]);
++    const denied = outcomes.find(r => r.status === "rejected" || (r.value instanceof Response && r.value.status === 413))!;
++    expect(denied.status === "rejected" ? denied.reason.code : (await (denied.value as Response).json()).error.code).toBe("UPLOAD_INSTALLATION_STORAGE_LIMIT");
++    expect((await files(a.ws.id)).length + (await files(b.ws.id)).length).toBe(1);
++  });
++
++  it("deleting a retained knowledge source frees capacity for another upload", async () => {
++    const { user, ws } = await setup();
++    await limits(6, 1024);
++    const first = await source(user, ws.id, "123456");
++    await expectHttpError(source(user, ws.id, "x"), 413, "UPLOAD_WORKSPACE_STORAGE_LIMIT");
++    await deleteSource(db, user, ws.id, first.id);
++    expect(await files(ws.id)).toHaveLength(0);
++    expect((await upload(ws.id, "abcdef")).status).toBe(201);
++    expect((await files(ws.id))[0]!.data.length).toBe(6);
++  });
++
++  it("counts actual retained bytes even when legacy size metadata understates them", async () => {
++    const { user, ws } = await setup();
++    await limits(6, 1024);
++    await db.insert(schema.fileObject).values({ workspaceId: ws.id, name: "legacy", mime: "text/plain", size: 0, sha256: "synthetic", data: Buffer.from("1234"), createdBy: user.id });
++    await expectHttpError(source(user, ws.id, "abc"), 413, "UPLOAD_WORKSPACE_STORAGE_LIMIT");
++    expect(await files(ws.id)).toHaveLength(1);
++  });
++
++  it("rollbacks leave no reservation; invalid configuration fails closed", async () => {
++    const { user, ws } = await setup();
++    await limits(4, 1024);
++    await expect(db.transaction(async tx => {
++      await insertRetainedFile(tx, { workspaceId: ws.id, name: "rolled back", mime: "text/plain", data: Buffer.from("1234"), createdBy: user.id });
++      throw new Error("synthetic rollback");
++    })).rejects.toThrow("synthetic rollback");
++    expect((await upload(ws.id, "1234")).status).toBe(201);
++    vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", "0");
++    expect((await upload(ws.id, "x")).status).toBe(503);
++    expect(await files(ws.id)).toHaveLength(1);
++  });
++
++  it("keeps non-member uploads at 404 before revealing storage state", async () => {
++    const { user, ws } = await setup();
++    await limits(1, 1024);
++    await source(user, ws.id, "a");
++    await as(await makeUser("storage-outsider"));
++    expect((await upload(ws.id, "x")).status).toBe(404);
++    expect(await files(ws.id)).toHaveLength(1);
++  });
++
++  it("Company Builder knowledge fixtures use the same budget and roll back their failed step", async () => {
++    const { user, ws } = await setup();
++    const session = await createSession(user, ws.id);
++    for (const [questionId, value] of [
++      ["offering", "Office cleaning requests arrive by email"], ["first_outcome", "customer"], ["situation", "improve"],
++      ["cust_channel", "email"], ["cust_reviewer", "owner"], ["cust_details", ["service", "date", "phone"]],
++      ["team", "small"], ["tools", ["gmail"]], ["cust_next", "reply"], ["cust_services", "office cleaning"],
++      ["cust_info", "Approved policy information that is longer than one byte."], ["other_areas", ["finance"]],
++    ] as [string, unknown][]) {
++      const [row] = await db.select().from(schema.cbSession).where(eq(schema.cbSession.id, session.id));
++      await answer(ws.id, session.id, { questionId, value, unknown: false, revision: row!.revision });
++    }
++    const { row: blueprint } = await generateDeterministic(user, ws.id, session.id, "en");
++    await approveBlueprint(user, ws.id, blueprint.id);
++    // The current planner installs workflows only. Model an existing approved agent
++    // fixture to exercise the retained-file branch without enabling a new product feature.
++    const fixture = blueprint.body as CompanyBlueprint;
++    await db.update(schema.cbBlueprint).set({ body: { ...fixture, tasks: fixture.tasks.map(task => ({ ...task, kind: "agent" as const, availability: "operational" as const })) } }).where(eq(schema.cbBlueprint.id, blueprint.id));
++    await limits(1, 1024);
++    await expectHttpError(install(user, ws.id, blueprint.id, { locale: "en" }), 413, "UPLOAD_WORKSPACE_STORAGE_LIMIT");
++    expect(await files(ws.id)).toHaveLength(0);
++    expect(await db.select().from(schema.knowledgeSource).where(eq(schema.knowledgeSource.workspaceId, ws.id))).toHaveLength(0);
++    const [installation] = await db.select().from(schema.cbInstallation).where(and(eq(schema.cbInstallation.workspaceId, ws.id), eq(schema.cbInstallation.blueprintId, blueprint.id)));
++    expect(installation).toMatchObject({ status: "failed", error: { code: "UPLOAD_WORKSPACE_STORAGE_LIMIT" } });
++    expect((await db.execute(sql`select count(*)::int as n from ${schema.cbInstalledItem} where ${schema.cbInstalledItem.installationId} = ${installation!.id} and ${schema.cbInstalledItem.kind} = 'knowledge'`)).rows[0]!.n).toBe(0);
++  });
++});
+diff --git a/tests/unit/retained-files.test.ts b/tests/unit/retained-files.test.ts
+new file mode 100644
+index 0000000..310c2e7
+--- /dev/null
++++ b/tests/unit/retained-files.test.ts
+@@ -0,0 +1,30 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { retainedFileLimits } from "@/server/retained-files";
++import { apiErrorMessage } from "@/i18n/errors";
++import { createTranslator } from "@/i18n/translate";
++import { ApiError } from "@/lib/api";
++
++afterEach(() => vi.unstubAllEnvs());
++describe("retained upload operational limits", () => {
++  it("defaults to 100 MiB per workspace and 512 MiB per installation, with explicit byte overrides", () => {
++    vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", undefined);
++    vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", undefined);
++    expect(retainedFileLimits()).toEqual({ workspace: 100n * 1024n * 1024n, installation: 512n * 1024n * 1024n });
++    vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", "6");
++    vi.stubEnv("FLOWLINE_UPLOAD_INSTALLATION_MAX_BYTES", "12");
++    expect(retainedFileLimits()).toEqual({ workspace: 6n, installation: 12n });
++  });
++
++  for (const bad of ["0", "-1", "1.5", "", "unlimited", "9007199254740992"]) it(`fails closed for an invalid configured limit (${bad || "empty"})`, () => {
++    vi.stubEnv("FLOWLINE_UPLOAD_WORKSPACE_MAX_BYTES", bad);
++    expect(() => retainedFileLimits()).toThrow("Upload storage limits need administrator attention");
++  });
++
++  it("projects storage failures into the current English/Arabic UI language", () => {
++    for (const code of ["UPLOAD_WORKSPACE_STORAGE_LIMIT", "UPLOAD_INSTALLATION_STORAGE_LIMIT", "UPLOAD_STORAGE_CONFIG"]) {
++      const error = new ApiError(413, code, "raw server text");
++      expect(apiErrorMessage(createTranslator("ar"), error)).toMatch(/[\u0600-\u06ff]/);
++      expect(apiErrorMessage(createTranslator("en"), error)).not.toBe("raw server text");
++    }
++  });
++});
