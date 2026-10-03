@@ -122,6 +122,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setError(null);
     try {
       const res = await authClient.signIn.social({ provider, callbackURL: destination });
+      if (!res?.error && (res?.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+        window.location.assign(new URL("/auth/step-up", window.location.origin).href);
+      }
       if (res?.error) {
         setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
       }

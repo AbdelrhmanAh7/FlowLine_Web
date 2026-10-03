@@ -118,5 +118,7 @@ describe("email sign-in with an authenticator", () => {
     expect(ok.headers.getSetCookie().some((c) => /session_token=/.test(c))).toBe(true);
     const sessions = await db.select().from(schema.session).where(eq(schema.session.userId, user.id));
     expect(sessions.length).toBe(1);
+    const { hasSessionMfa } = await import("@/server/federated-mfa");
+    expect(await hasSessionMfa(sessions[0]!.token, user.id)).toBe(true);
   });
 });

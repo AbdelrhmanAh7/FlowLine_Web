@@ -1,0 +1,15 @@
+{
+  "baseSha": "08355ae423aa91c7d2b6f106878603d3c2f98ecb",
+  "inheritedSourceSha": "8fa9c195e2914d06519cdaaef753e04aa60c50ca",
+  "scope": "isolated synthetic Postgres integration; no external providers",
+  "container": "flowline-pilot-mfa-1790991853913",
+  "database": "flowline_test_pilotmfa",
+  "tests": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --project integration tests/integration/sec-federated-totp.test.ts tests/integration/sec-sso-email-prehijack.test.ts tests/integration/sec-sso-link-consent.test.ts tests/integration/sec-zitadel-issuer-binding.test.ts tests/integration/p3-sso.test.ts tests/integration/sec-platform.test.ts tests/integration/sec-signin.test.ts --fileParallelism=false",
+      "exitCode": 0
+    }
+  ],
+  "cleanup": true,
+  "image": "sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94"
+}

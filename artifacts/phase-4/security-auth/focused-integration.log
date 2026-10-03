@@ -1,0 +1,10 @@
+
+ RUN  v5.0.2 C:/Users/Abdelrahman/Desktop/Personal_Project/FL-wt-sec-auth
+
+migrated postgres://***@127.0.0.1:5433/flowline_test_secauth
+[seed-platform] test platform credentials ready
+
+ Test Files  7 passed (7)
+      Tests  29 passed (29)
+   Start at  04:31:09
+   Duration  19.19s (import 59%, tests 35%, transform 6%)

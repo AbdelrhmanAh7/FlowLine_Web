@@ -7,6 +7,7 @@ import { sha256Hex } from "@/server/crypto";
 import { csrfTokenFor } from "@/server/platform-http";
 import { ssoSessionCookie } from "@/server/sso";
 import { totpCodeFor } from "@/server/totp";
+import { createFederatedChallenge, completeFederatedChallenge } from "@/server/federated-mfa";
 
 /** Test support for the platform admin boundary: real better-auth sessions, real TOTP secrets, real CSRF tokens. */
 export const ORIGIN = new URL(process.env.FLOWLINE_PUBLIC_URL ?? "http://localhost:3100").origin;
@@ -33,6 +34,14 @@ export async function sessionFor(user: { id: string; email: string }): Promise<T
   return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
 }
 
+/** A fixture session that actually verifies local TOTP and has session-bound assurance. */
+export async function assuredSessionFor(user: { id: string; email: string }, secret: string): Promise<TestSession> {
+  const pending = await createFederatedChallenge(user.id, "/admin");
+  const { session } = await completeFederatedChallenge(pending, code(secret));
+  const c = await ssoSessionCookie(session.token);
+  return { userId: user.id, email: user.email, token: session.token, cookie: `${c.name}=${encodeURIComponent(c.value)}` };
+}
+
 /** Enrols a verified TOTP authenticator directly (same storage as better-auth's two-factor plugin). Returns the raw secret. */
 export async function enrolTotp(userId: string): Promise<string> {
   const ctx = await auth.$context;
@@ -50,7 +59,7 @@ export async function makeAdmin(prefix = "admin") {
   const user = await makeVerifiedUser(prefix);
   const secret = await enrolTotp(user.id);
   await db.insert(schema.platformAdmin).values({ userId: user.id, status: "active", grantedBy: "test" });
-  const session = await sessionFor(user);
+  const session = await assuredSessionFor(user, secret);
   return { user, secret, session };
 }
 

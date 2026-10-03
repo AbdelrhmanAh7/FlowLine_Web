@@ -11,6 +11,7 @@ import { allowSignUp, BETA_REFUSAL, betaMode } from "@/server/beta";
 import { issueAccountToken } from "@/server/email/flows";
 import { track } from "@/server/telemetry";
 import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
+import { federatedMfa } from "@/server/federated-mfa";
 
 /**
  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -95,7 +96,7 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
       },
     },
     // TOTP two-factor (required for platform admins before the admin panel unlocks; available to every account).
-    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), nextCookies()],
+    plugins: [twoFactor({ issuer: "Flowline" }), ...(zitadel ? [genericOAuth({ config: [zitadelProvider(zitadel)] })] : []), federatedMfa(), nextCookies()],
   });
 }
 

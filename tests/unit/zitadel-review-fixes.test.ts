@@ -74,6 +74,7 @@ describe("authFor (ZITADEL provider readiness)", () => {
     vi.doMock("@/server/email/flows", () => ({ issueAccountToken: vi.fn() }));
     vi.doMock("@/server/telemetry", () => ({ track: vi.fn() }));
     vi.doMock("@/server/zitadel-auth", () => ({ zitadelProvider: () => ({}) }));
+    vi.doMock("@/server/federated-mfa", () => ({ federatedMfa: () => ({}) }));
     process.env.BETTER_AUTH_URL = "https://flowline.example";
   });
   afterEach(() => { vi.useRealTimers(); });
