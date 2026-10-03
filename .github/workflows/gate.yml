@@ -2,8 +2,19 @@ name: Gate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    paths-ignore:
+      - 'docs/**'
+      - 'artifacts/**'
+      - '**/*.md'
+      - 'design-reference/**'
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'artifacts/**'
+      - '**/*.md'
+      - 'design-reference/**'
   workflow_dispatch:
     inputs:
       tier:
@@ -17,44 +28,22 @@ permissions:
   contents: read
 
 concurrency:
-  group: gate-${{ github.ref }}
+  # An unrelated `labeled` event gets its own group, so its no-op run never cancels a real gate run.
+  group: gate-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-gate' && format('-noop-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Jobs run in parallel, each on its own runner (own Postgres, own test stacks); the final `gate` job is the single
-# required check. Shared setup: .github/actions/setup-gate. Per-job summary and artifacts: .github/actions/gate-report.
-# Tier: full for a PR into main or a dispatch with tier=full, otherwise fast.
+# Checks share one setup; browser jobs run in parallel on isolated runners. The final `gate` job combines results
+# (main currently has no enforced required check). Shared setup/report: .github/actions/{setup-gate,gate-report}.
+# Full tier: dispatch tier=full or a full-gate label on a PR into main; otherwise fast.
+# Apply full-gate once just before merging; drafts and unrelated labeled events allocate no runners.
 jobs:
-  static:
+  checks:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (github.event.action != 'labeled' || github.event.label.name == 'full-gate')) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
-      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-static
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-
-      # lint, typecheck, evidence, unit and contract use no database, no browser and no fixed port.
-      - uses: ./.github/actions/setup-gate
-
-      - name: Run gate (static, unit, contract)
-        run: pnpm gate --only=static,unit,contract --out="$GATE_OUT"
-
-      - name: Report
-        if: always()
-        uses: ./.github/actions/gate-report
-        with:
-          job: static
-          out: ${{ env.GATE_OUT }}
-          tier: ${{ env.GATE_TIER }}
-
-  integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-integration
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-checks
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main' && contains(github.event.pull_request.labels.*.name, 'full-gate'))) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -65,24 +54,25 @@ jobs:
           postgres: "true"
           sandbox-image: "true"
 
-      - name: Run gate (integration)
-        run: pnpm gate --only=integration --out="$GATE_OUT"
+      - name: Run gate (static, unit, contract, integration)
+        run: pnpm gate --only=static,unit,contract,integration --out="$GATE_OUT"
 
       - name: Report
         if: always()
         uses: ./.github/actions/gate-report
         with:
-          job: integration
+          job: checks
           out: ${{ env.GATE_OUT }}
           tier: ${{ env.GATE_TIER }}
 
   chromium:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (github.event.action != 'labeled' || github.event.label.name == 'full-gate')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main' && contains(github.event.pull_request.labels.*.name, 'full-gate'))) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -107,7 +97,7 @@ jobs:
 
   firefox:
     # Full tier only; skipped by design on the fast tier.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
+    if: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (github.event.action != 'labeled' || github.event.label.name == 'full-gate'))) && ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main' && contains(github.event.pull_request.labels.*.name, 'full-gate'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -137,7 +127,7 @@ jobs:
 
   webkit:
     # Full tier only; skipped by design on the fast tier.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
+    if: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (github.event.action != 'labeled' || github.event.label.name == 'full-gate'))) && ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main' && contains(github.event.pull_request.labels.*.name, 'full-gate'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -165,17 +155,16 @@ jobs:
           out: ${{ env.GATE_OUT }}
           tier: ${{ env.GATE_TIER }}
 
-  # The single required check: every job must have succeeded; only firefox and webkit may be skipped, and only on
-  # the fast tier.
+  # Every selected job must succeed; only firefox/webkit may be skipped, and only on the fast tier.
+  # Match the PR guard even with always(), so intentionally skipped runs allocate no combiner runner.
   gate:
-    needs: [static, integration, chromium, firefox, webkit]
-    if: always()
+    needs: [checks, chromium, firefox, webkit]
+    if: ${{ always() && (github.event_name != 'pull_request' || (github.event.pull_request.draft == false && (github.event.action != 'labeled' || github.event.label.name == 'full-gate'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main')) && 'full' || 'fast' }}
-      R_STATIC: ${{ needs.static.result }}
-      R_INTEGRATION: ${{ needs.integration.result }}
+      GATE_TIER: ${{ ((github.event_name == 'workflow_dispatch' && inputs.tier == 'full') || (github.event_name == 'pull_request' && github.base_ref == 'main' && contains(github.event.pull_request.labels.*.name, 'full-gate'))) && 'full' || 'fast' }}
+      R_CHECKS: ${{ needs.checks.result }}
       R_CHROMIUM: ${{ needs.chromium.result }}
       R_FIREFOX: ${{ needs.firefox.result }}
       R_WEBKIT: ${{ needs.webkit.result }}
@@ -188,7 +177,7 @@ jobs:
             echo
             echo "| Job | Result |"
             echo "| --- | --- |"
-            for pair in "static:$R_STATIC" "integration:$R_INTEGRATION" "chromium:$R_CHROMIUM" "firefox:$R_FIREFOX" "webkit:$R_WEBKIT"; do
+            for pair in "checks:$R_CHECKS" "chromium:$R_CHROMIUM" "firefox:$R_FIREFOX" "webkit:$R_WEBKIT"; do
               name="${pair%%:*}"
               result="${pair#*:}"
               note=""
