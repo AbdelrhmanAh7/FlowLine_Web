@@ -14,4 +14,4 @@
 
 ## Checks
 
-<!-- Focused checks run locally (commands + results). CI: fast tier by default; add the full-gate label once, just before merging into main. -->
+<!-- Focused checks run locally (commands + results). CI: fast tier by default; run the full tier once, just before merging, via Actions → Gate → Run workflow (tier=full). Labels do not start Gate. -->
