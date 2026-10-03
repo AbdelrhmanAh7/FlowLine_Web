@@ -343,7 +343,8 @@ test("SSO: owner tests configuration without linking; mailbox-proven members exp
   await expect(p2).toHaveURL(new RegExp(`/w/${workspace.slug}/flows`));
   await page.goto(`/w/${workspace.slug}/settings`);
   await expect(page.getByTestId(`member-${newcomer}`)).toContainText(/editor/i);
-  expect((await p2.request.post("/api/auth/sign-out")).ok()).toBeTruthy();
+  const signedOut = await p2.request.post("/api/auth/sign-out", { data: {} });
+  expect(signedOut.ok(), await signedOut.text()).toBeTruthy();
   await p2.goto("/sign-in");
   await p2.getByLabel("Workspace slug").fill(workspace.slug);
   await p2.getByRole("button", { name: "Sign in with SSO" }).click();
