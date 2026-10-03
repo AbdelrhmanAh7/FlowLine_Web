@@ -1,0 +1,38 @@
+{
+  "database": "flowline_test_field_takeover_f7acfb6c30",
+  "run": "takeover-f7acfb6c30",
+  "sourceSha": "9d76c84342bcd1c6f8b6f79a2f200759c02e130c",
+  "browser": false,
+  "externalProviders": false,
+  "dbRemoved": false,
+  "created": true,
+  "steps": [
+    {
+      "phase": "migration",
+      "exit": 0
+    }
+  ],
+  "ownedProcessesStopped": true,
+  "port": 64152,
+  "status": "INCOMPLETE",
+  "failedPhase": "field-identity-and-worker-readiness",
+  "error": "Bounded operator failed; raw config, output and driver errors suppressed",
+  "processes": [
+    {
+      "role": "bounded",
+      "exit": 0,
+      "errorCategories": []
+    },
+    {
+      "role": "bounded",
+      "exit": null,
+      "errorCategories": []
+    },
+    {
+      "role": "worker",
+      "exit": null,
+      "errorCategories": []
+    }
+  ],
+  "finishedAt": "2026-10-03T00:36:58.150Z"
+}

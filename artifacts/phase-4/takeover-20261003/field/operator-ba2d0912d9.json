@@ -1,0 +1,55 @@
+{
+  "database": "flowline_test_field_takeover_ba2d0912d9",
+  "run": "takeover-ba2d0912d9",
+  "sourceSha": "9d76c84342bcd1c6f8b6f79a2f200759c02e130c",
+  "browser": false,
+  "externalProviders": false,
+  "dbRemoved": false,
+  "created": true,
+  "steps": [
+    {
+      "phase": "migration",
+      "exit": 0
+    },
+    {
+      "phase": "field-identity-and-worker-readiness",
+      "passed": true
+    },
+    {
+      "phase": "api-only-field-run",
+      "exit": 1
+    }
+  ],
+  "ownedProcessesStopped": true,
+  "port": 54409,
+  "readiness": {
+    "errorCode": "FIXED_STARTUP_ERROR",
+    "httpStatus": 200,
+    "identityMatches": true,
+    "workerCount": 1
+  },
+  "status": "FAIL",
+  "processes": [
+    {
+      "role": "bounded",
+      "exit": 0,
+      "errorCategories": []
+    },
+    {
+      "role": "bounded",
+      "exit": null,
+      "errorCategories": []
+    },
+    {
+      "role": "worker",
+      "exit": null,
+      "errorCategories": []
+    },
+    {
+      "role": "bounded",
+      "exit": 1,
+      "errorCategories": []
+    }
+  ],
+  "finishedAt": "2026-10-03T00:42:37.479Z"
+}

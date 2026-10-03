@@ -1,0 +1,15 @@
+{
+  "database": "flowline_test_field_takeover_db79e0a0b4",
+  "run": "takeover-db79e0a0b4",
+  "sourceSha": "9d76c84342bcd1c6f8b6f79a2f200759c02e130c",
+  "browser": false,
+  "externalProviders": false,
+  "dbRemoved": false,
+  "created": false,
+  "steps": [],
+  "ownedProcessesStopped": true,
+  "status": "INCOMPLETE",
+  "failedPhase": "preflight",
+  "error": "Bounded operator failed; raw config, output and driver errors suppressed",
+  "finishedAt": "2026-10-03T00:22:57.491Z"
+}

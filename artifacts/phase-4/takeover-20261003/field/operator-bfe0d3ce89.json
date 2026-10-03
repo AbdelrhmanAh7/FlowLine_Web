@@ -1,0 +1,21 @@
+{
+  "database": "flowline_test_field_takeover_bfe0d3ce89",
+  "run": "takeover-bfe0d3ce89",
+  "sourceSha": "9d76c84342bcd1c6f8b6f79a2f200759c02e130c",
+  "browser": false,
+  "externalProviders": false,
+  "dbRemoved": false,
+  "created": true,
+  "steps": [
+    {
+      "phase": "migration",
+      "exit": 0
+    }
+  ],
+  "ownedProcessesStopped": true,
+  "port": 53505,
+  "status": "INCOMPLETE",
+  "failedPhase": "health",
+  "error": "Bounded operator failed; raw config, output and driver errors suppressed",
+  "finishedAt": "2026-10-03T00:23:23.701Z"
+}
