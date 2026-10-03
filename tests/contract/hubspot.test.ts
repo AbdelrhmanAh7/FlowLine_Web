@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { apiKeyCreds, expectProviderError, makeCtx, provider, queryOf, runAction, startFake, type Fake } from "./helpers";
 
 const p = provider("hubspot");
@@ -18,6 +18,64 @@ describe("hubspot identity", () => {
     const r = await fake.lastRequest("hubspot");
     expect(r.path).toBe("/account-info/v3/details");
     expect(r.headers["x-auth-scheme"]).toBe("bearer");
+  });
+
+  it("distinguishes a second portal for same-account reconnect enforcement", async () => {
+    expect(await p.identity(makeCtx(p, { type: "api_key", token: "second-account-token" }))).toEqual({ accountId: "123456", label: "Portal 123456" });
+  });
+});
+
+describe("hubspot.list_contacts", () => {
+  beforeEach(async () => { await fake.reset(); });
+
+  type Page = { contacts: { id: string; properties: Record<string, string | null> }[]; nextAfter: string | null };
+
+  it("reads selected properties and follows next-record cursors without overlap or writes", async () => {
+    const ctx = makeCtx(p, apiKeyCreds);
+    for (const email of ["page-one@example.com", "page-two@example.com"]) {
+      await runAction("hubspot.upsert_contact", ctx, { email });
+    }
+    const before = await fake.state("hubspot");
+    const pages: Page[] = [];
+    let after: string | undefined;
+    for (let i = 0; i < 3; i++) {
+      const page = await runAction<Page>("hubspot.list_contacts", ctx, { limit: 1, after, properties: ["email"] });
+      pages.push(page);
+      after = page.nextAfter ?? undefined;
+    }
+    expect(pages.map((page) => page.contacts[0]!.properties.email)).toEqual(["alice@example.com", "page-one@example.com", "page-two@example.com"]);
+    expect(pages.map((page) => page.nextAfter)).toEqual(["601", "602", null]);
+    expect(new Set(pages.flatMap((page) => page.contacts.map((c) => c.id))).size).toBe(3);
+    expect(await fake.state("hubspot")).toEqual(before);
+    const r = await fake.lastRequest("hubspot");
+    expect(r.method).toBe("GET");
+    expect(r.path).toBe("/crm/v3/objects/contacts");
+    expect(r.headers["x-auth-scheme"]).toBe("bearer");
+    expect(Object.fromEntries(queryOf(r))).toEqual({ limit: "1", after: "602", properties: "email", archived: "false" });
+    expect(pages[0]!.contacts[0]!.properties).toEqual({ email: "alice@example.com" });
+  });
+
+  it("keeps defined-but-unset properties null and omits undefined properties", async () => {
+    const ctx = makeCtx(p, apiKeyCreds);
+    await runAction("hubspot.upsert_contact", ctx, { email: "unset@example.com" });
+    const page = await runAction<Page>("hubspot.list_contacts", ctx, { after: "601", properties: ["email", "firstname", "undefined_property"] });
+    expect(page).toEqual({ contacts: [{ id: "601", properties: { email: "unset@example.com", firstname: null } }], nextAfter: null });
+  });
+
+  it("returns an empty final page", async () => {
+    expect(await runAction("hubspot.list_contacts", makeCtx(p, apiKeyCreds), { after: "999999" })).toEqual({ contacts: [], nextAfter: null });
+  });
+
+  it("refuses revoked credentials at the HTTP boundary", async () => {
+    await expectProviderError(runAction("hubspot.list_contacts", makeCtx(p, { type: "api_key", token: "revoked-token" }), {}), "auth");
+  });
+
+  it.each(["429", "500"] as const)("classifies HTTP %s for bounded retries", async (mode) => {
+    await fake.fault({ provider: "hubspot", pathPattern: "^/crm/v3/objects/contacts$", mode, retryAfterSec: 1 });
+    const e = await expectProviderError(runAction("hubspot.list_contacts", makeCtx(p, apiKeyCreds), {}), mode === "429" ? "rate_limit" : "server");
+    expect(e.retryable).toBe(true);
+    expect(e.message).toBe(`HubSpot request failed (${e.kind})`);
+    if (mode === "429") expect(e.retryAfterMs).toBe(1000);
   });
 });
 

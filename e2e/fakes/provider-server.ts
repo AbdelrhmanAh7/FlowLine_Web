@@ -932,10 +932,31 @@ const slack: Handler = (ctx, req, res, path, url, body) => {
   return json(ctx, req, res, 200, { ok: false, error: "unknown_method" });
 };
 
-const hubspot: Handler = (ctx, req, res, path, url, body) => {
+const hubspot: Handler = (ctx, req, res, path, url, body, account) => {
   const s = ctx.state;
   if (req.method === "GET" && path === "/account-info/v3/details") {
-    return json(ctx, req, res, 200, { portalId: 987654, accountType: "TEST", timeZone: "UTC", dataHostingLocation: "na1" });
+    return json(ctx, req, res, 200, { portalId: account === "a" ? 987654 : 123456, accountType: "TEST", timeZone: "UTC", dataHostingLocation: "na1" });
+  }
+  if (req.method === "GET" && path === "/crm/v3/objects/contacts") {
+    const limit = Number(url.searchParams.get("limit") ?? 10);
+    const after = url.searchParams.get("after");
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100 || (after !== null && !/^\d+$/.test(after))) {
+      return json(ctx, req, res, 400, { status: "error", message: "Invalid pagination" });
+    }
+    const properties = (url.searchParams.get("properties") ?? "email,firstname,lastname").split(",");
+    const defined = new Set(["email", "firstname", "lastname", ...s.hubspotContacts.flatMap((c) => Object.keys(c.properties))]);
+    const sorted = [...s.hubspotContacts].sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0);
+    // HubSpot's after cursor is the NEXT record ID, rather than an array offset.
+    const remaining = sorted.filter((c) => after === null || BigInt(c.id) >= BigInt(after));
+    const results = remaining.slice(0, limit).map((c) => ({
+      id: c.id,
+      properties: Object.fromEntries(properties.filter((key) => defined.has(key)).map((key) => [key, c.properties[key] ?? null])),
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      archived: false,
+    }));
+    const nextContact = remaining[limit];
+    return json(ctx, req, res, 200, { results, ...(nextContact ? { paging: { next: { after: nextContact.id } } } : {}) });
   }
   if (req.method === "POST" && path === "/crm/v3/objects/contacts/batch/upsert") {
     const inputs = (j(body).inputs as { id: string; properties: Record<string, unknown> }[]) ?? [];

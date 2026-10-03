@@ -1053,8 +1053,12 @@
       }
     },
     "hubspot": {
-      "description": "Upsert contacts and create deals in HubSpot.",
+      "description": "List, read and upsert contacts and create deals in HubSpot.",
       "actions": {
+        "list_contacts": {
+          "title": "List contacts",
+          "description": "Read one page of contacts with selected properties. Pass nextAfter as after to read the next page; null means there are no more pages."
+        },
         "upsert_contact": {
           "title": "Upsert contact",
           "description": "Create or update a contact, keyed by email. Extra HubSpot properties (firstname, lastname…) can be set via properties."
@@ -1070,7 +1074,8 @@
       },
       "fields": {
         "token": {
-          "label": "Private app token"
+          "label": "Private app token",
+          "help": "Use a private app token with permission to read contacts. Contact and deal writes need their matching write permissions. Live verification is pending."
         }
       }
     },
