@@ -189,10 +189,17 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     if (purpose === "reset") {
       if (!value || value.length < 8 || value.length > 128) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
       const hashed = await hashPassword(value);
+      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the token row above, then
+      // the USER row, then the user's sessions, then their account rows. Federated sign-in, link confirmation and
+      // challenge completion lock the same rows user-first; taking an account or session lock before the user row
+      // here could deadlock against them (issue #41). The hash is computed first so the user lock is held only for
+      // the writes. Reset mutates no retained file, so it takes no retained-file accounting lock.
+      const [locked] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, row.userId)).for("update");
+      if (!locked) return "invalid";
+      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
-      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       // Historical tenant-created identities have no independently proven mailbox
       // ownership. Recovery removes those methods; explicitly mailbox-approved
       // links retain normal recovery behaviour.
