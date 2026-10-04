@@ -36,12 +36,13 @@ const ASK: Record<"en" | "ar", Record<(typeof FU_DETAILS)[number], string>> = {
 const GREETING = { en: "Hello,", ar: "مرحبًا،" };
 /**
  * Refund / cancellation requests are CONSEQUENTIAL (owner decision 2026-10-01): Flowline may identify them, quote the
- * approved policy lines and prepare a draft, but a person always decides. This fixed sentence (no numbers, no promise)
- * is added to every such draft; the draft itself still waits for the named reviewer like every reply.
+ * approved policy lines and prepare a draft, but the BUSINESS OWNER decides this specific request. This fixed sentence
+ * (no numbers, names the owner as the decision maker, promises no outcome) is added to every such draft; the draft
+ * itself still waits for the named reviewer like every reply.
  */
 export const REFUND_NOTE = {
-  en: "A member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.",
-  ar: "سيراجع أحد أفراد فريقنا طلبك ويؤكد لك الخطوة التالية. لم يتم أي استرداد أو إلغاء حتى الآن.",
+  en: "The business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.",
+  ar: "قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع. لم يتم أي استرداد أو إلغاء.",
 };
 const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
 

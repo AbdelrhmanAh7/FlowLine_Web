@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { executeGraph } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
 import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
-import { customerFollowUpPack as pack } from "@/company-builder/packs/customer-follow-up";
+import { customerFollowUpPack as pack, REFUND_NOTE } from "@/company-builder/packs/customer-follow-up";
 import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
 import { memoryStore } from "../fixtures/company-builder/store-stub";
 
@@ -179,11 +179,39 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         expect(o.follow_up_record).toMatchObject({ consequential: "refund_or_cancellation", requires_human_decision: true, status: "awaiting_review" });
         const text = String(reply.body);
         expect(text).toContain("Cancellations are free up to 24 hours before the visit."); // approved policy line only
-        expect(text).toMatch(/Nothing has been refunded or cancelled yet|لم يتم أي استرداد أو إلغاء حتى الآن/);
+        expect(text).toMatch(/The business owner decides this refund or cancellation request\.|قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع\./);
+        expect(text).toMatch(/Nothing has been refunded or cancelled\.|لم يتم أي استرداد أو إلغاء\./);
         for (const promise of [/we (will|have) refund/i, /refund (has been|was) (issued|processed|made)/i, /you will (get|receive) your money/i, /تم (الاسترداد|استرداد المبلغ|إلغاء)/]) expect(text).not.toMatch(promise);
         expect(failing(o, req)).toEqual([]);
       });
     }
+    it("REF-NOTE: the fixed note names the business owner as the decision maker and promises no outcome (ar and en)", () => {
+      expect(Object.keys(REFUND_NOTE).sort()).toEqual(["ar", "en"]);
+      // The owner, never "our team", decides THIS request.
+      expect(REFUND_NOTE.en).toMatch(/business owner/i);
+      expect(REFUND_NOTE.en).toContain("The business owner decides this refund or cancellation request.");
+      expect(REFUND_NOTE.ar).toContain("قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع.");
+      expect(REFUND_NOTE.en).not.toMatch(/member of our team|our team will|next step/i);
+      expect(REFUND_NOTE.ar).not.toMatch(/فريقنا|الخطوة التالية/);
+      for (const lang of ["en", "ar"] as const) {
+        const note = REFUND_NOTE[lang];
+        expect(note, lang).not.toBe("");
+        expect(note, lang).not.toMatch(/\d/); // no numbers, like every fixed approved sentence
+        for (const promise of [
+          /we (will|have|are going to) (refund|cancel)/i,
+          /will be (refunded|cancelled)/i,
+          /refund (has been|was|is|will be) (issued|processed|made|approved)/i,
+          /cancellation is (approved|confirmed|accepted)/i,
+          /your (refund|cancellation) is (approved|confirmed)/i,
+          /you will (get|receive) your money/i,
+          /تم (الاسترداد|الإلغاء|إلغاء)/,
+          /سيتم (الاسترداد|الإلغاء|إلغاء)/,
+          /تمت الموافقة/,
+          /الموافقة على/,
+          /ستصلك (أموالك|المبلغ)/,
+        ]) expect(note, `${lang}: ${promise}`).not.toMatch(promise);
+      }
+    });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
       for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);
     });
