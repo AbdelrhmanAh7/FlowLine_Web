@@ -11,6 +11,7 @@ import { safePath } from "./email/redirect";
 import { audit, userActor } from "./audit";
 import type { Role } from "@/db/schema";
 import { bindFederatedLink, federatedProviderId } from "./federated-link";
+import { lockUserThenSessions, type SessionLock } from "./federated-locks";
 import { TOTP_PERIOD } from "./totp";
 
 export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
@@ -129,7 +130,13 @@ export async function completeFederatedChallenge(token: string, code: string) {
     const result = await db.transaction(async (tx) => {
       const [fresh] = await tx.select().from(schema.verification).where(and(eq(schema.verification.id, row.id), gt(schema.verification.expiresAt, new Date()))).for("update");
       if (!fresh || fresh.value !== row.value) throw invalid();
-      const [user] = await tx.select().from(schema.user).where(eq(schema.user.id, pending.userId)).for("update");
+      // Lock order (docs/security/FEDERATED_MFA.md, "Lock order"): own pending row above, then user, then sessions (the
+      // unissued one, then the SSO initiator), then factor/accounts, tenant authority, replay marker. `confirmSsoLink`
+      // takes the same user-then-session order; an inverted order deadlocks the two (issue #37).
+      const initiatorBinding = pending.workspace?.initiator;
+      const sessionLocks: SessionLock[] = [{ by: { token: session.token }, mode: "share" }];
+      if (initiatorBinding) sessionLocks.push({ by: { id: initiatorBinding.sessionId }, userId: initiatorBinding.userId, mode: "share" });
+      const { user, sessions: [currentSession, initiator] } = await lockUserThenSessions(tx, pending.userId, "update", sessionLocks);
       const [tf] = await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, pending.userId)).for("update");
       if (!user?.twoFactorEnabled || user.updatedAt.toISOString() !== pending.userStamp || !tf || tf.verified === false || sha256Hex(tf.secret) !== pending.factorHash) throw invalid();
       const accounts = await tx.select().from(schema.account).where(eq(schema.account.userId, user.id)).for("share");
@@ -142,15 +149,10 @@ export async function completeFederatedChallenge(token: string, code: string) {
         const { federatedProviderStamp } = await import("./auth-dispatch");
         if (await federatedProviderStamp(pending.global.provider) !== pending.global.configStamp) throw invalid();
       }
-      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("share");
       if (!currentSession) throw invalid();
       if (pending.workspace) {
         const { workspaceId, configStamp, providerId, subject } = pending.workspace;
-        if (pending.workspace.initiator) {
-          const bound = pending.workspace.initiator;
-          const [initiator] = await tx.select().from(schema.session).where(and(eq(schema.session.id, bound.sessionId), eq(schema.session.userId, bound.userId), gt(schema.session.expiresAt, new Date()))).for("share");
-          if (!initiator || sha256Hex(initiator.token) !== bound.sessionHash) throw invalid();
-        }
+        if (initiatorBinding && (!initiator || sha256Hex(initiator.token) !== initiatorBinding.sessionHash)) throw invalid();
         const [cfg] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, workspaceId)).for("update");
         const [member] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, workspaceId), eq(schema.workspaceMember.userId, user.id))).for("share");
         const [link] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user.id))).for("share");
