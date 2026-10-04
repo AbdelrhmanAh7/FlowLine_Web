@@ -102,8 +102,9 @@ can be applied without re-running everything.
 
 ## 6. Test-only features
 
-`FLOWLINE_ENV=test` enables `POST /api/test/faults` (save/load/run fault injection) and
-disables auth rate limits. In any other environment the route returns 404 and
+`FLOWLINE_ENV=test` enables `POST /api/test/faults` (save/load/run fault injection), the read-only
+`GET /api/test/field-identity` (a digest of the connected `flowline_test_field*` database name, used only by the opt-in
+field-validation suite in `scripts/field-validation/v2/`) and disables auth rate limits. In any other environment these routes return 404 and
 `consumeFault()` does nothing. E2E and integration tests run against the separate `flowline_test`
 database and the `.next-test` build directory on port 3100. No demo data is seeded into dev.
 

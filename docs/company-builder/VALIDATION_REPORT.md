@@ -319,6 +319,12 @@ part of the build.
 
 Same frozen packet as runs 1–3, so this is a regression check, not a held-out or customer evaluation.
 
+**Follow-up (issue #6, 2026-10-04).** The six scoring and coverage gaps CodeRabbit found in this harness (policy text scored as a
+cancellation promise, the approval side of the review gate, persisted records after the duplicate trial, the packet digest, a Friday
+confirmation, and the owner-decision qualification in VP-05/VP-06) are fixed in a NEW harness and packet, version `20261003-v2`, under
+`scripts/field-validation/v2/` ([README](../../scripts/field-validation/v2/README.md)). The runs above, the frozen packet and `VF-02` are not
+rescored or edited. The v2 harness is covered by deterministic unit tests only; **no v2 run is recorded by that change**, so no v2 score exists yet.
+
 ### 10.5 Status and remaining blockers
 
 **OVERALL COMPANY BUILDER: INCOMPLETE. LIVE GMAIL: NOT IMPLEMENTED / NOT VERIFIED. REAL CLI: UNVERIFIED.
