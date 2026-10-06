@@ -122,10 +122,10 @@ describe("ai-implementers.yml (Mac mini hub)", () => {
     expect(byJob.start).toMatch(/github\.event\.schedule == '0 \*\/2 \* \* \*'/);
   });
 
-  it("cleans git credential helper on checkout across persistent runner jobs", () => {
+  it("cleans git credential helper on checkout across persistent runner jobs, ignoring absent key errors", () => {
     for (const job of ["start", "rescue", "mention"]) {
-      expect(byJob[job]).toContain("git config --local --unset-all credential.helper");
-      expect(byJob[job]).toContain("git config --local --unset-all http.https://github.com/.extraheader");
+      expect(byJob[job]).toMatch(/git config --local --unset-all credential\.helper.*\|\| \[ \$\? -eq 5 \]/);
+      expect(byJob[job]).toMatch(/git config --local --unset-all http\.https:\/\/github\.com\/\.extraheader.*\|\| \[ \$\? -eq 5 \]/);
     }
   });
 

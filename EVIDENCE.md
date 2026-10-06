@@ -29,7 +29,7 @@ Issue #60 reported that following the merge of PR #54 ("ci(ai-implementers): run
 | Requirement ID | Description | Status | Verification Method |
 |---|---|---|---|
 | **REQ-FL-60-1** | The CI pipeline must run successfully after merging PR #54 | **PASS** | Verified live runs of `ai-implementers.yml` and `Gate` on default branch `main` (`bc59cab`) passed successfully. Local test suite passes. |
-| **REQ-FL-60-2** | The "start" check must pass without manual intervention | **PASS** | Automated credential hygiene in `.github/workflows/ai-implementers.yml` unsets existing `credential.helper` and `http.extraheader` before runner execution. Validated in `tests/unit/ci-workflows.test.ts`. |
+| **REQ-FL-60-2** | The "start" check must pass without manual intervention | **PASS** | Automated credential hygiene in `.github/workflows/ai-implementers.yml` unsets existing `credential.helper` and `http.extraheader` before runner execution. Validated via configuration and unit-test validation in `tests/unit/ci-workflows.test.ts`. |
 | **REQ-FL-60-3** | The fix must be implemented on a new branch, not on the default branch | **PASS** | Developed on branch `ai/60` branched from `main`. |
 | **REQ-FL-60-4** | Reverts are not allowed unless the fix cannot be implemented in one PR | **PASS** | No revert of PR #54 performed; 24/7 schedule and free-engine order preserved in a single PR fix. |
 
