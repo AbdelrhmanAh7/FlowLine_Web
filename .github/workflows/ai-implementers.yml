@@ -38,12 +38,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || true
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
       - name: Ensure labels exist
         run: source "$HUB_BIN/common.sh" && ensure_labels "$GITHUB_REPOSITORY"
       - id: pick
         name: Pick the oldest ai-ready issue
         run: echo "issue=$("$HUB_BIN/pick.sh" "$GITHUB_REPOSITORY")" >> "$GITHUB_OUTPUT"
-      - name: Implement with local Claude (fallback Codex)
+      - name: Implement with AI engines (free first, fallback Claude/Codex)
         if: steps.pick.outputs.issue != ''
         env:
           ISSUE: ${{ steps.pick.outputs.issue }}
@@ -66,6 +70,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || true
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
       - name: Rescue one stalled handoff
         run: |
           rc=0; "$HUB_BIN/rescue.sh" "$GITHUB_REPOSITORY" || rc=$?
@@ -96,6 +104,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || true
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
       - name: Answer with local Claude
         env:
           ISSUE: ${{ github.event.issue.number }}

@@ -28,3 +28,13 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 3. CodeRabbit budget for Flowline: at most 3 reviews per rolling hour (2 are reserved for another project); automatic re-review is off, so request `@coderabbitai review` after each fix push.
 4. Run the full CI tier once on the final candidate, just before merging: Actions → Gate → Run workflow, choose the branch and set `tier` to `full` (or `gh workflow run gate.yml --ref <branch> -f tier=full`). Labels never start CI. The owner verifies that run passed; merge when it and the required `gate` and `docs` checks are green, then move the item to Done and close the issue.
 5. Stacked PRs merge top-down after their base.
+
+## AI implementers (Mac mini hub)
+
+The repo runs autonomous AI implementers on the owner's self-hosted runner (`[self-hosted, macmini]`):
+
+- **Workflow:** `.github/workflows/ai-implementers.yml`.
+- **Schedule:** 24/7 runs every 2 hours (`cron: "0 */2 * * *"`) picking the oldest `ai-ready` issue; a rescue job runs every 3 hours (`30 */3 * * *`), and an automerge job runs hourly (`15 * * * *`).
+- **Engines:** Free engines first (Gemini via agy, OpenRouter free via Command Code, local models) before falling back to Claude and Codex.
+- **Persistent runner git hygiene:** Self-hosted runners reuse checkout workspaces across runs. To prevent git config collisions (such as `credential.helper` accumulating multiple values across runs causing exit code 5), every checkout step cleans local git credentials (`credential.helper` and `http.https://github.com/.extraheader`) before executing scripts.
+
