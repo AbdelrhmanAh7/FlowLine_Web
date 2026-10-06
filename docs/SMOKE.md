@@ -1,0 +1,1 @@
+- 2026-10-06 Mac mini hub smoke test
