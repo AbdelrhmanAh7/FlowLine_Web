@@ -26,7 +26,7 @@ const triggerTypes = (text: string, event: string) => {
 
 describe("workflow files", () => {
   it("finds the workflows and composite actions", () => {
-    expect(workflowFiles.sort()).toEqual([".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
+    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
@@ -38,7 +38,15 @@ describe("workflow files", () => {
   it.each(allFiles)("%s uses no floating runner image", (file) => {
     const text = read(file);
     expect(text).not.toMatch(/ubuntu-latest|windows-latest|macos-latest/);
-    for (const match of text.matchAll(/^\s*runs-on:\s*(\S+)/gm)) expect(match[1]).toBe("ubuntu-24.04");
+    // ai-implementers.yml is the one exception: it runs on the owner's Mac mini self-hosted runner.
+    const runner = file === ".github/workflows/ai-implementers.yml" ? "[self-hosted, macmini]" : "ubuntu-24.04";
+    for (const match of text.matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)) expect(match[1]).toBe(runner);
+  });
+
+  it("keeps the self-hosted AI implementers away from fork and pull-request events", () => {
+    const text = stripComments(read(".github/workflows/ai-implementers.yml"));
+    expect(text).not.toMatch(/^ {2}pull_request(_target|_review|_review_comment)?:/m);
+    expect(jobs(text).mention).toMatch(/author_association == 'OWNER'/);
   });
 });
 
