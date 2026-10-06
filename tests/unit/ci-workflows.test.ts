@@ -124,8 +124,19 @@ describe("ai-implementers.yml (Mac mini hub)", () => {
 
   it("cleans git credential helper on checkout across persistent runner jobs, ignoring absent key errors", () => {
     for (const job of ["start", "rescue", "mention"]) {
-      expect(byJob[job]).toMatch(/git config --local --unset-all credential\.helper.*\|\| \[ \$\? -eq 5 \]/);
-      expect(byJob[job]).toMatch(/git config --local --unset-all http\.https:\/\/github\.com\/\.extraheader.*\|\| \[ \$\? -eq 5 \]/);
+      const jobText = stripComments(byJob[job]);
+
+      const checkoutIdx = jobText.indexOf("uses: actions/checkout@");
+      const cleanIdx = jobText.indexOf("name: Clean git credentials");
+
+      expect(checkoutIdx).toBeGreaterThan(-1);
+      expect(cleanIdx).toBeGreaterThan(checkoutIdx); // Clean must follow checkout
+
+      const nextStepIdx = jobText.indexOf("- name:", cleanIdx + 1);
+      const cleanStepText = nextStepIdx > -1 ? jobText.slice(cleanIdx, nextStepIdx) : jobText.slice(cleanIdx);
+
+      expect(cleanStepText).toMatch(/git config --local --unset-all credential\.helper.*\|\| \[ \$\? -eq 5 \]/);
+      expect(cleanStepText).toMatch(/git config --local --unset-all http\.https:\/\/github\.com\/\.extraheader.*\|\| \[ \$\? -eq 5 \]/);
     }
   });
 
