@@ -193,6 +193,7 @@ design-reference/  Design slide renders and extracted tokens
 - [`docs/ai/AI_HUB_REPORT.md`](docs/ai/AI_HUB_REPORT.md) — AI hub verdicts, evidence and owner actions needed
 - [`docs/ai/PROVIDERS.md`](docs/ai/PROVIDERS.md), [`docs/ai/CONNECTING.md`](docs/ai/CONNECTING.md), [`docs/ai/ROUTING.md`](docs/ai/ROUTING.md), [`docs/ai/MIGRATION.md`](docs/ai/MIGRATION.md) — provider coverage, how to connect a key, routing policies, migration off local inference
 - [`docs/security/CREDENTIALS_DESIGN.md`](docs/security/CREDENTIALS_DESIGN.md) — platform admin panel and credential domains
+- [`docs/security/REPO_SECURITY_SETTINGS.md`](docs/security/REPO_SECURITY_SETTINGS.md) — GitHub secret scanning, push protection, Dependabot, CodeQL and Copilot review settings
 - [`NEXT_ACTION.md`](NEXT_ACTION.md) — current resume state and outstanding owner actions
 - [`AGENTS.md`](AGENTS.md) — project rules for contributors and agents
 - [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) — feature workflow, localization, checks and mandatory docs updates

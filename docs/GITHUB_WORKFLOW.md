@@ -28,3 +28,7 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 3. CodeRabbit budget for Flowline: at most 3 reviews per rolling hour (2 are reserved for another project); automatic re-review is off, so request `@coderabbitai review` after each fix push.
 4. Run the full CI tier once on the final candidate, just before merging: Actions → Gate → Run workflow, choose the branch and set `tier` to `full` (or `gh workflow run gate.yml --ref <branch> -f tier=full`). Labels never start CI. The owner verifies that run passed; merge when it and the required `gate` and `docs` checks are green, then move the item to Done and close the issue.
 5. Stacked PRs merge top-down after their base.
+
+## Security scanning and second reviewer
+
+Secret scanning with push protection, Dependabot alerts and CodeQL default setup are on (Dependabot update PRs are off to save the CodeRabbit budget). Automatic Copilot code review is not on yet; enabling it is an owner action. State, owner steps and how to handle a push-protection block or an alert: [REPO_SECURITY_SETTINGS.md](security/REPO_SECURITY_SETTINGS.md). Once Copilot reviews, its threads must be answered and resolved before merge like any other conversation.

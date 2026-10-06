@@ -26,6 +26,11 @@ These checks remain unverified from the repository. Confirm the running app and 
    - Owner action: sign in to dedicated test accounts and grant only the requested test access. For GitHub, use a separate private test repository, never FlowLine_Web as a side-effect target. Do not use a personal Gmail connector. Proceed only where accounts, scopes and test actions are already within the approved brief.
    - Claude verifies after: the resulting connection state and bounded read/action/result/revoke/reconnect evidence required by the brief. A saved configuration or successful consent alone is not live certification.
 
+5. **Automatic Copilot code review (issue #24)**
+   - Purpose: add Copilot as a second automatic reviewer next to CodeRabbit. Secret scanning, push protection, Dependabot alerts and CodeQL default setup were enabled by the owner on 2026-10-03; only this item remains.
+   - Page: Settings → Rules → Rulesets → `main protection` → add *Automatically request Copilot code review* (PRs into main only, to save Copilot Pro premium requests), or Settings → Copilot → Code review.
+   - Claude verifies after: the ruleset lists the `copilot_code_review` rule (read-only `gh api`, see [REPO_SECURITY_SETTINGS.md](../security/REPO_SECURITY_SETTINGS.md)) and the next PR into main gets a Copilot review.
+
 This dated section is the current owner-action plan and supersedes older handoff/action status below it. Those entries are retained as history only.
 
 ## Current source handoff — Company Builder integrated
