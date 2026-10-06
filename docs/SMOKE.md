@@ -1,1 +1,2 @@
 - 2026-10-06 Mac mini hub smoke test
+- 2026-10-06 sensitive-path test: auth tokens are rotated every 90 days
