@@ -2,7 +2,7 @@
 
 ## `pnpm wt` tests and docs (issue #67) — 2026-10-08
 
-`pnpm wt rm` gains the alias `remove` and now refuses a dirty or unpushed lane with exit 1 and `refusing to remove <path>: <reason>` (it used to print `kept …` and exit 0; `prune` still keeps and continues). A scratch-clone acceptance test showed every fresh lane counted as dirty (git lists the `node_modules` symlink as untracked) and a dangling link blocked removal; both are fixed in `scripts/worktree.mjs`. Usage and safety rules: [developer guide](../DEVELOPER_GUIDE.md#worktrees). Tests: `tests/unit/worktree-script.test.ts`, `tests/integration/worktree-cli.test.ts`; evidence in the root `EVIDENCE.md`.
+`pnpm wt rm` gains the alias `remove` and now refuses a dirty or unpushed lane with exit 1 and `refusing to remove <path>: <reason>` (it used to print `kept …` and exit 0; `prune` still keeps and continues). A scratch-clone acceptance test showed every fresh lane counted as dirty (git lists the `node_modules` symlink as untracked) and a dangling link blocked removal; both are fixed in `scripts/worktree.mjs`. Usage and safety rules: [developer guide](../DEVELOPER_GUIDE.md#worktrees). Tests: `tests/unit/worktree-script.test.ts`, `tests/integration/worktree-cli.test.ts`; evidence in [artifacts/phase-4/worktree/EVIDENCE.md](../../artifacts/phase-4/worktree/EVIDENCE.md).
 
 ## H3 security readiness review — 2026-10-03
 
