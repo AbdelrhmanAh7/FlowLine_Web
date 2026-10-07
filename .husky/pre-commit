@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+# FlowLine pre-commit: FAST, staged files only - lint-staged runs
+# `eslint --fix` on staged TS/JS (config: "lint-staged" in package.json).
+#
+# Full CI (lint, typecheck, evidence, unit, contract, integration, browser)
+# runs on the Mac mini via the hub's `localci` job, which posts the GitHub
+# commit statuses under the workflows' job names.
+# Escape hatch: HUSKY=0 git commit ...
+#
+# Linked-worktree safe and non-interactive: a worktree without node_modules
+# skips with a one-line note instead of failing or installing anything.
+if [ ! -x node_modules/.bin/lint-staged ] || [ ! -x node_modules/.bin/eslint ]; then
+  echo "pre-commit: node_modules missing in this worktree; skipping staged lint (localci runs full CI)"
+  exit 0
+fi
+# lint-staged reads and re-stages the index itself, so git's hook environment
+# (GIT_INDEX_FILE etc.) is deliberately kept.
+node_modules/.bin/lint-staged </dev/null

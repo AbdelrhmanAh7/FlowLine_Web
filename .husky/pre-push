@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+# FlowLine pre-push: typecheck + unit tests (+ the sub-second evidence secret
+# check) only - no database, integration, contract, browser or build.
+#
+# Full CI (the `gate` fast tier: lint, typecheck, evidence, unit, contract,
+# integration, Chromium) runs on the Mac mini via the hub's `localci` job,
+# which posts the GitHub commit statuses under the workflows' job names.
+# Escape hatches: HUSKY=0 git push ...  (or SKIP_LOCAL_CI=1 git push ...)
+#
+# Linked-worktree safe and non-interactive: a worktree without node_modules
+# skips with a one-line note instead of failing or installing anything.
+set -eu
+
+if [ "${SKIP_LOCAL_CI:-0}" = "1" ]; then
+  echo "pre-push: local checks skipped via SKIP_LOCAL_CI=1"
+  exit 0
+fi
+
+if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/vitest ]; then
+  echo "pre-push: node_modules missing in this worktree; skipping typecheck + unit tests (localci runs full CI)"
+  exit 0
+fi
+
+# Tests spawn git (e.g. worktree and changed-scope scripts); a hook's GIT_DIR
+# (set in linked worktrees) would make those calls resolve the wrong tree.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH GIT_PREFIX
+
+echo "pre-push: typecheck + unit tests..."
+node_modules/.bin/tsc --noEmit </dev/null
+node_modules/.bin/vitest run --project unit </dev/null
+node scripts/check-evidence-secrets.mjs </dev/null
+echo "pre-push: typecheck + unit tests passed (full CI runs on localci)"
