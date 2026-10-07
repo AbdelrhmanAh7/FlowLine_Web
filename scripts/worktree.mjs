@@ -81,8 +81,11 @@ function remove(w, root, platform, refuse = false) {
 }
 
 export function main(argv = process.argv.slice(2), platform = process.platform) {
-  // Validate before any git or filesystem access.
-  if (argv[0] === "add" && argv[1] !== undefined) assertLaneName(argv[1]);
+  // Validate before any git or filesystem access. rm/remove also take explicit paths, so only bare names are checked.
+  const explicitPath = (arg) => isAbsolute(arg) || /[/\\]/.test(arg);
+  if (argv[1] !== undefined && (argv[0] === "add" || ((argv[0] === "rm" || argv[0] === "remove") && !explicitPath(argv[1])))) {
+    assertLaneName(argv[1]);
+  }
   const root = resolve(git(["rev-parse", "--path-format=absolute", "--git-common-dir"]), "..");
   const dir = join(root, ".claude", "worktrees");
   const [cmd, name, ...rest] = argv;
@@ -98,8 +101,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     console.log(path);
   } else if ((cmd === "rm" || cmd === "remove") && name) {
     const entries = worktrees(root);
-    const explicitPath = isAbsolute(name) || /[/\\]/.test(name);
-    const target = explicitPath ? resolve(name) : resolve(dir, name);
+    const target = explicitPath(name) ? resolve(name) : resolve(dir, name);
     const w = entries.find((w) => samePath(w.worktree, target, platform));
     if (!w) throw new Error(`not a registered worktree: ${name}`);
     remove(w, root, platform, true);

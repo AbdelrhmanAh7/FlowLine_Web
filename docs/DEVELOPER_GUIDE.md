@@ -78,70 +78,23 @@ For a handoff, describe the concrete changed behavior, files/configuration, vali
 
 ## Worktrees
 
-The `pnpm wt` helper manages Git worktrees for agent lanes under `.claude/worktrees/` (git-ignored), with `node_modules` linked to the main install. It never creates folders beside the repo.
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm wt add <name> [--base <ref>] [--branch <branch>]` | Create a new lane. `<name>` must be a bare lane name (letters, digits, `.`, `_`, `-`, starting with a letter or digit). The branch defaults to `<name>`; use `--branch` for slashed branch names like `feat/x`. |
-| `pnpm wt list` | Show each registered lane's path, branch, dirty status, and pushed status. |
-| `pnpm wt rm <name\|path>` | Remove a registered, unlocked lane if clean and pushed/merged. Bare names select managed lanes only; external lanes require an explicit path. |
-| `pnpm wt prune` | Run `git worktree prune` first, then remove every lane that is clean and pushed/merged (including external worktrees). Do not run while agents are starting lanes. |
-
-### Usage Examples
+`pnpm wt` (`scripts/worktree.mjs`) manages agent lanes under `.claude/worktrees/<name>` (git-ignored), never folders beside the repo. Each lane gets a `node_modules` symlink to the main install. Run it from any checkout of the repo.
 
 ```bash
-# Create a new lane (branch defaults to lane name)
-pnpm wt add my-feature
-
-# Create a lane with a custom branch name
-pnpm wt add my-feature --branch feat/my-feature
-
-# Create a lane based on a different base branch
-pnpm wt add my-feature --base origin/develop --branch feat/my-feature
-
-# List all registered worktrees
-pnpm wt list
-
-# Remove a managed lane by bare name
-pnpm wt rm my-feature
-
-# Remove an external worktree by explicit path
-pnpm wt rm /path/to/external/worktree
-pnpm wt rm ../relative/external
-
-# Prune all clean, pushed worktrees (including external)
-pnpm wt prune
+pnpm wt add my-lane                          # .claude/worktrees/my-lane on new branch my-lane from origin/main; prints the path
+pnpm wt add my-lane --branch feat/my-lane    # slashed branch name; the lane name stays bare
+pnpm wt add my-lane --base origin/main       # --base picks the start point (default origin/main)
+pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false> per lane
+pnpm wt remove my-lane                       # same as: pnpm wt rm my-lane
+pnpm wt rm ./path/to/external-lane           # external lanes need an explicit path
+pnpm wt prune                                # git worktree prune, then remove every clean, pushed lane
 ```
 
-### Safety Rules
+Safety rules (covered by `tests/unit/worktree-script.test.ts` and the scratch-clone acceptance test `tests/integration/worktree-cli.test.ts`):
 
-- **Lane names must be bare**: No `/`, `\`, `..`, absolute paths, or leading `.`/`_`/`~`. Use `--branch` for slashed branch names.
-- **Removal never forces**: The main checkout, locked worktrees, dirty worktrees, and unpushed work are always kept.
-- **Dirty worktree removal is refused with a clear message**: `kept <path>: N uncommitted change(s)`
-- **Unpushed worktree removal is refused**: `kept <path>: HEAD not on any remote branch`
-- **Branch is never deleted**: Only the worktree is removed; the Git branch remains.
-- **Path comparisons**: Resolve and normalize separators; case-insensitive only on Windows.
-- **External worktrees**: Require an explicit path (absolute or containing `/` or `\`) for `rm`; bare names never match external registrations.
-- **Prune safety**: Runs `git worktree prune` first, then applies the same clean/pushed checks. Skips missing directories and locked entries. Reports per-entry errors, continues processing, exits nonzero if any entry failed.
-
-### Lane Name Validation
-
-Valid lane names match `^[A-Za-z0-9][A-Za-z0-9._-]*$`:
-
-```bash
-# Valid
-pnpm wt add lane
-pnpm wt add lane-2
-pnpm wt add feature.x_1
-pnpm wt add A1
-pnpm wt add 9lives
-
-# Invalid (rejected before any git operation)
-pnpm wt add feat/x           # use --branch feat/x instead
-pnpm wt add ../sibling       # path traversal not allowed
-pnpm wt add /abs/path        # absolute paths not allowed
-pnpm wt add .hidden          # leading dot not allowed
-pnpm wt add "lane name"      # spaces not allowed
-```
+- **Lane names are bare:** `<name>` must match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Anything else (`feat/x`, `../sibling`, `.hidden`, spaces) fails with `invalid lane name "<name>"` and exit 1 before git runs; `rm`/`remove` apply the same check to a bare name (not to an explicit path). Use `--branch feat/x` for a slashed branch.
+- **Existing branch:** `add` does not reuse a branch. Git's `fatal: a branch named '<branch>' already exists` is printed, the exit code is 1 and no lane is created.
+- **Remove refuses dirty or unpushed work:** `rm`/`remove` checks the lane before touching it. Any modified, staged or untracked file counts as a change, except the lane's own `node_modules` link. A dirty lane fails with exit 1 and `refusing to remove <path>: N uncommitted change(s); commit or discard them first`. A lane whose HEAD is on no remote branch fails with `refusing to remove <path>: HEAD not on any remote branch; push it first`. Nothing is unlinked or removed.
+- **Never forced:** the main checkout and locked worktrees are refused too (exit 1). Removal never uses `--force` and never deletes the branch.
+- **Name vs path:** `rm`/`remove` accept only registered worktrees. A bare name resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external lane needs an explicit path (absolute or containing `/` or `\`). Relative paths resolve from the current directory, with no managed-lane fallback. Path comparisons normalize separators and ignore case only on Windows.
+- **list and prune:** missing directories and locked entries are reported and skipped, not inspected. `prune` keeps dirty or unpushed lanes with `kept <path>: <reason>` and moves on; do not run it while agents are starting lanes. Both report per-lane errors, continue, and exit nonzero if any lane failed.
