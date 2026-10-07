@@ -19,10 +19,10 @@ Owner enabled the first four on 2026-10-03 16:20 UTC ([issue comment](https://gi
 
 ## Pending owner action: Copilot code review
 
-Copilot Pro adds automatic Copilot code review as a second reviewer next to CodeRabbit (GitHub offers it on Copilot Pro, Pro+ and Max, or with a Business or Enterprise licence). GitHub provides two independent sources; the owner picks one and records which, because the verification differs. Copilot Pro premium requests are limited, so the ruleset scoped to main is the cheaper choice:
+Copilot Pro adds automatic Copilot code review as a second reviewer next to CodeRabbit (GitHub offers it on Copilot Pro, Pro+ and Max, or with a Business or Enterprise licence). GitHub provides two independent sources; the owner picks one and records which, because the verification differs. Every review and re-review consumes Copilot AI credits from the owner's plan (GitHub's docs, read 2026-10-07, estimate about $0.05–1 per review at the *Lite* effort level and $0.25–5 at *Balanced*; *Max* is listed as coming soon; the level is set under Settings → Copilot → Code review → *Review effort level*), so the ruleset scoped to main is the cheaper choice:
 
-1. **Repository ruleset**: Settings → Rules → Rulesets → **main protection** (targets the default branch) → Branch rules → **Automatically request Copilot code review**. Leave *Review new pushes* off (each push would use another premium request) and *Review draft pull requests* off (implementer PRs start as drafts; Copilot then reviews when the PR is marked ready).
-2. **Account setting**: profile picture → Copilot settings → Code review → **Automatic Copilot code review** (same optional *Review new pushes* and *Review draft pull requests*). This covers every PR the owner's account creates in any repository, so it uses more premium requests.
+1. **Repository ruleset**: Settings → Rules → Rulesets → **main protection** (targets the default branch) → Branch rules → **Automatically request Copilot code review**. Leave *Review new pushes* off (each push would consume more AI credits) and *Review draft pull requests* off (implementer PRs start as drafts; Copilot then reviews when the PR is marked ready).
+2. **Account setting**: profile picture → Copilot settings → Code review → **Automatic Copilot code review** (same optional *Review new pushes* and *Review draft pull requests*). This covers every PR the owner's account creates in any repository, so it consumes more AI credits.
 
 ### Verifying it, by source
 
@@ -51,3 +51,10 @@ gh api -i repos/AbdelrhmanAh7/FlowLine_Web/vulnerability-alerts | head -1   # 20
 gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'   # copilot_code_review appears only for the ruleset source
 gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'   # copilot-pull-request-reviewer[bot] once Copilot reviewed PR N (either source)
 ```
+
+### In the GitHub UI (repository admin)
+
+- [ ] Settings → Code security: *Secret scanning* and *Push protection* enabled; *Dependabot alerts* enabled; *Code scanning* shows the CodeQL default setup (no `codeql.yml` in `.github/workflows/`).
+- [ ] Security tab: the *Dependabot*, *Code scanning* and *Secret scanning* alert lists open (an empty list with the feature on is fine; "not enabled" is not).
+- [ ] Copilot review source: Settings → Rules → Rulesets → *main protection* lists *Automatically request Copilot code review*, or the owner's Copilot settings → Code review show *Automatic Copilot code review* on.
+- [ ] The latest PR into main has a Copilot review next to CodeRabbit's.
