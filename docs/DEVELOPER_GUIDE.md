@@ -60,8 +60,8 @@ Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`;
 
 `pnpm install` runs `prepare: husky`, which installs the hooks in `.husky/` (husky sets `core.hooksPath=.husky/_`, a path that only exists in a checkout where `pnpm install` ran). They are deliberately fast; the full CI runs on the owner's Mac mini through the hub's `localci` job, which posts the GitHub commit statuses under the workflows' job names.
 
-- `pre-commit` (staged files only, about 1-5 s): `lint-staged` runs `eslint --fix` on staged `*.{ts,tsx,js,jsx,mjs,cjs}` (config: `"lint-staged"` in `package.json`; the repo has no Prettier). Fixes are re-staged; remaining errors block the commit.
-- `pre-push` (about 20 s): `tsc --noEmit`, `vitest run --project unit` and `node scripts/check-evidence-secrets.mjs`. No database, integration, contract, browser or build.
+- `pre-commit` (staged files only, about 1-5 s; hard limit 60 s): `lint-staged` runs `eslint --fix` on staged `*.{ts,tsx,js,jsx,mjs,cjs}` (config: `"lint-staged"` in `package.json`; the repo has no Prettier). Fixes are re-staged; remaining errors block the commit.
+- `pre-push` (about 10-25 s; hard limit 290 s, the 5-minute rule): `tsc --noEmit`, `vitest related --run --project unit <files the push changes>` (the whole unit project when the base is unknown or `package.json`, the lockfile, `vitest.config.mts` or a tsconfig changes) and `node scripts/check-evidence-secrets.mjs`. No database, integration, contract, browser or build.
 
 Both hooks work in linked worktrees (they drop git's hook environment before running tools), never prompt, and in a worktree without `node_modules` print a one-line skip note and exit 0 instead of installing anything. Bypass deliberately with `HUSKY=0` (any hook) or `SKIP_LOCAL_CI=1` (pre-push). A skipped or bypassed hook is not evidence; the `gate` and `docs` checks still decide merges.
 
