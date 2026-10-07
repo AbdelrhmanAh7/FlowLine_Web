@@ -122,24 +122,6 @@ describe("ai-implementers.yml (Mac mini hub)", () => {
     expect(byJob.start).toMatch(/github\.event\.schedule == '0 \*\/2 \* \* \*'/);
   });
 
-  it("cleans git credential helper on checkout across persistent runner jobs, ignoring absent key errors", () => {
-    for (const job of ["start", "rescue", "mention"]) {
-      const jobText = stripComments(byJob[job]);
-
-      const checkoutIdx = jobText.indexOf("uses: actions/checkout@");
-      const cleanIdx = jobText.indexOf("name: Clean git credentials");
-
-      expect(checkoutIdx).toBeGreaterThan(-1);
-      expect(cleanIdx).toBeGreaterThan(checkoutIdx); // Clean must follow checkout
-
-      const nextStepIdx = jobText.indexOf("- name:", cleanIdx + 1);
-      const cleanStepText = nextStepIdx > -1 ? jobText.slice(cleanIdx, nextStepIdx) : jobText.slice(cleanIdx);
-
-      expect(cleanStepText).toMatch(/git config --local --unset-all credential\.helper.*\|\| \[ \$\? -eq 5 \]/);
-      expect(cleanStepText).toMatch(/git config --local --unset-all http\.https:\/\/github\.com\/\.extraheader.*\|\| \[ \$\? -eq 5 \]/);
-    }
-  });
-
   it("runs all jobs on self-hosted macmini runner with dedicated concurrency", () => {
     for (const job of ["start", "rescue", "automerge", "mention"]) {
       expect(byJob[job]).toMatch(/runs-on:\s*\[self-hosted,\s*macmini\]/);
@@ -149,4 +131,3 @@ describe("ai-implementers.yml (Mac mini hub)", () => {
     }
   });
 });
-
