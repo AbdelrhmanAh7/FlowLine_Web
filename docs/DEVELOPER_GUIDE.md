@@ -78,6 +78,70 @@ For a handoff, describe the concrete changed behavior, files/configuration, vali
 
 ## Worktrees
 
-Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
+The `pnpm wt` helper manages Git worktrees for agent lanes under `.claude/worktrees/` (git-ignored), with `node_modules` linked to the main install. It never creates folders beside the repo.
 
-`pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm wt add <name> [--base <ref>] [--branch <branch>]` | Create a new lane. `<name>` must be a bare lane name (letters, digits, `.`, `_`, `-`, starting with a letter or digit). The branch defaults to `<name>`; use `--branch` for slashed branch names like `feat/x`. |
+| `pnpm wt list` | Show each registered lane's path, branch, dirty status, and pushed status. |
+| `pnpm wt rm <name\|path>` | Remove a registered, unlocked lane if clean and pushed/merged. Bare names select managed lanes only; external lanes require an explicit path. |
+| `pnpm wt prune` | Run `git worktree prune` first, then remove every lane that is clean and pushed/merged (including external worktrees). Do not run while agents are starting lanes. |
+
+### Usage Examples
+
+```bash
+# Create a new lane (branch defaults to lane name)
+pnpm wt add my-feature
+
+# Create a lane with a custom branch name
+pnpm wt add my-feature --branch feat/my-feature
+
+# Create a lane based on a different base branch
+pnpm wt add my-feature --base origin/develop --branch feat/my-feature
+
+# List all registered worktrees
+pnpm wt list
+
+# Remove a managed lane by bare name
+pnpm wt rm my-feature
+
+# Remove an external worktree by explicit path
+pnpm wt rm /path/to/external/worktree
+pnpm wt rm ../relative/external
+
+# Prune all clean, pushed worktrees (including external)
+pnpm wt prune
+```
+
+### Safety Rules
+
+- **Lane names must be bare**: No `/`, `\`, `..`, absolute paths, or leading `.`/`_`/`~`. Use `--branch` for slashed branch names.
+- **Removal never forces**: The main checkout, locked worktrees, dirty worktrees, and unpushed work are always kept.
+- **Dirty worktree removal is refused with a clear message**: `kept <path>: N uncommitted change(s)`
+- **Unpushed worktree removal is refused**: `kept <path>: HEAD not on any remote branch`
+- **Branch is never deleted**: Only the worktree is removed; the Git branch remains.
+- **Path comparisons**: Resolve and normalize separators; case-insensitive only on Windows.
+- **External worktrees**: Require an explicit path (absolute or containing `/` or `\`) for `rm`; bare names never match external registrations.
+- **Prune safety**: Runs `git worktree prune` first, then applies the same clean/pushed checks. Skips missing directories and locked entries. Reports per-entry errors, continues processing, exits nonzero if any entry failed.
+
+### Lane Name Validation
+
+Valid lane names match `^[A-Za-z0-9][A-Za-z0-9._-]*$`:
+
+```bash
+# Valid
+pnpm wt add lane
+pnpm wt add lane-2
+pnpm wt add feature.x_1
+pnpm wt add A1
+pnpm wt add 9lives
+
+# Invalid (rejected before any git operation)
+pnpm wt add feat/x           # use --branch feat/x instead
+pnpm wt add ../sibling       # path traversal not allowed
+pnpm wt add /abs/path        # absolute paths not allowed
+pnpm wt add .hidden          # leading dot not allowed
+pnpm wt add "lane name"      # spaces not allowed
+```

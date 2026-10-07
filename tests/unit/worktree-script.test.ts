@@ -140,6 +140,22 @@ describe("worktree removal safeguards", () => {
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
 
+  it("prints a clear message when refusing to remove a dirty worktree", () => {
+    dirty = " M file1.ts\n M file2.ts";
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("2 uncommitted change(s)"));
+    expect(mocks.unlink).not.toHaveBeenCalled();
+  });
+
+  it("prints a clear message when refusing to remove an unpushed worktree", () => {
+    pushed = "";
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("HEAD not on any remote branch"));
+    expect(mocks.unlink).not.toHaveBeenCalled();
+  });
+
   it("checks clean and pushed before unlinking, then removes without force", () => {
     expect(main(["rm", "lane"])).toBe(0);
     expect(events).toEqual([
@@ -206,6 +222,36 @@ describe("worktree add lane names", () => {
     expect(mocks.symlink).not.toHaveBeenCalled();
     expect(calls().some(({ args }) => args[1] === "add")).toBe(false);
   });
+
+  it("propagates git error when branch already exists on add", () => {
+    mocks.git.mockImplementation((_command, args) => {
+      if (args[0] === "rev-parse" && args[1] === "--path-format=absolute") return join(root, ".git");
+      if (args.join(" ") === "worktree list --porcelain") return entries;
+      if (args[0] === "worktree" && args[1] === "add") {
+        const err = new Error("fatal: a branch named 'existing-branch' already exists") as Error & { status: number };
+        err.status = 128;
+        throw err;
+      }
+      return "";
+    });
+    expect(() => main(["add", "lane", "--branch", "existing-branch"])).toThrow(/branch named 'existing-branch' already exists/);
+    expect(mocks.symlink).not.toHaveBeenCalled();
+  });
+
+  it("propagates git error when worktree path already exists on add", () => {
+    mocks.git.mockImplementation((_command, args) => {
+      if (args[0] === "rev-parse" && args[1] === "--path-format=absolute") return join(root, ".git");
+      if (args.join(" ") === "worktree list --porcelain") return entries;
+      if (args[0] === "worktree" && args[1] === "add") {
+        const err = new Error("fatal: 'path' already exists") as Error & { status: number };
+        err.status = 128;
+        throw err;
+      }
+      return "";
+    });
+    expect(() => main(["add", "lane"])).toThrow(/already exists/);
+    expect(mocks.symlink).not.toHaveBeenCalled();
+  });
 });
 
 describe("worktree iteration", () => {
@@ -250,6 +296,26 @@ describe("worktree iteration", () => {
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
+
+  it("prune prints a clear message and keeps a dirty worktree", () => {
+    dirty = " M file.ts";
+    entries = entry(root) + entry(lane);
+    expect(main(["prune"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("1 uncommitted change(s)"));
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([]);
+  });
+
+  it("prune prints a clear message and keeps an unpushed worktree", () => {
+    pushed = "";
+    entries = entry(root) + entry(lane);
+    expect(main(["prune"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("HEAD not on any remote branch"));
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([]);
+  });
 });
 
 describe("path identity", () => {
@@ -261,5 +327,59 @@ describe("path identity", () => {
   it("folds case only on Windows", () => {
     expect(samePath(lane.toUpperCase(), lane, "win32")).toBe(true);
     expect(samePath(lane.toUpperCase(), lane, "linux")).toBe(false);
+  });
+});
+
+describe("argument parsing and option handling", () => {
+  const managed = (name: string) => join(root, ".claude", "worktrees", name);
+
+  it("uses --base option when provided", () => {
+    expect(main(["add", "lane", "--base", "origin/develop"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
+      .toEqual([["worktree", "add", "-b", "lane", managed("lane"), "origin/develop"]]);
+  });
+
+  it("uses --branch option when provided", () => {
+    expect(main(["add", "lane", "--branch", "feature/custom"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
+      .toEqual([["worktree", "add", "-b", "feature/custom", managed("lane"), "origin/main"]]);
+  });
+
+  it("rejects unknown command with usage", () => {
+    expect(main(["unknown"])).toBe(2);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
+  });
+
+  it("rejects rm without name with usage", () => {
+    expect(main(["rm"])).toBe(2);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
+  });
+
+  it("rejects unknown flag gracefully (treated as positional)", () => {
+    // Unknown flags are not parsed specially; they become part of rest
+    // This test documents current behavior: --unknown is ignored
+    expect(main(["add", "lane", "--unknown", "value"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
+      .toEqual([["worktree", "add", "-b", "lane", managed("lane"), "origin/main"]]);
+  });
+
+  it("assertLaneName validates exported function directly", () => {
+    expect(() => assertLaneName("valid-name")).not.toThrow();
+    expect(() => assertLaneName("invalid/name")).toThrow(/invalid lane name/);
+    expect(() => assertLaneName("")).toThrow(/invalid lane name/);
+  });
+});
+
+describe("list command output format", () => {
+  it("shows branch name and dirty/pushed status for each lane", () => {
+    entries = entry(root) + entry(lane);
+    expect(main(["list"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
+  });
+
+  it("shows detached HEAD when no branch", () => {
+    entries = entry(root) + entry(lane, "").replace("branch refs/heads/lane", "");
+    expect(main(["list"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | detached | dirty=0 | pushed=true`);
   });
 });
