@@ -144,6 +144,11 @@ describe("worktree removal safeguards", () => {
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
 
+  it.each(["rm", "remove"])("@issue-67 %s rejects an invalid bare name before any git call", (cmd) => {
+    for (const name of [".hidden", "..", "a b", "-lane"]) expect(() => main([cmd, name])).toThrow(/invalid lane name/);
+    expect(mocks.git).not.toHaveBeenCalled();
+  });
+
   it("@issue-67 remove is an alias of rm", () => {
     expect(main(["remove", "lane"])).toBe(0);
     expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);

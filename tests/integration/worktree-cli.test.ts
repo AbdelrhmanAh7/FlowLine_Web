@@ -89,6 +89,12 @@ describe("pnpm wt in a scratch clone", () => {
     expect(existsSync(lanePath("taken"))).toBe(false);
   });
 
+  it("@e2e @issue-67 AC1: remove rejects an invalid bare lane name", () => {
+    const r = wt("remove", ".hidden");
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('invalid lane name ".hidden"');
+  });
+
   it("@e2e @issue-67 AC1: create rejects an invalid lane name before running git", () => {
     const r = wt("add", "feat/x");
     expect(r.code).toBe(1);
