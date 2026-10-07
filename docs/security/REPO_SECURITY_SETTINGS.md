@@ -4,7 +4,7 @@ Issue [#24](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/24). The reposi
 
 ## Current state
 
-Owner enabled the first four on 2026-10-03 16:20 UTC ([issue comment](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/24)). Re-checked 2026-10-06 with read-only `gh api` queries (commands below).
+Owner enabled the first four on 2026-10-03 16:20 UTC ([issue comment](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/24)). Re-checked 2026-10-07 with read-only `gh api` queries (commands below); unchanged since 2026-10-03.
 
 | Setting | State | Where |
 | --- | --- | --- |
@@ -14,17 +14,23 @@ Owner enabled the first four on 2026-10-03 16:20 UTC ([issue comment](https://gi
 | Dependabot alerts | **enabled** | Settings → Code security |
 | Dependabot security-update PRs | **off on purpose**: each PR would get an automatic CodeRabbit review and use the shared review budget ([GITHUB_WORKFLOW.md](../GITHUB_WORKFLOW.md), rule 3). Turn on later if wanted | Settings → Code security |
 | Dependabot version updates | off (no `.github/dependabot.yml`), same reason | repo file |
-| CodeQL code scanning | **default setup, configured** (languages: actions, javascript-typescript, python; query suite `default`; first run 37136327901). No CodeQL workflow file in `.github/workflows/`, and none should be added while default setup is on | Settings → Code security |
-| Copilot automatic code review | **not enabled** (owner-only, pending per the issue). The `main protection` ruleset has no Copilot review rule; the owner's personal Copilot setting cannot be read from the repo API | Settings → Copilot → Code review, or a ruleset rule |
+| CodeQL code scanning | **default setup, configured** (languages as the API lists them: `actions`, `javascript`, `javascript-typescript`, `python`, `typescript`; query suite `default`; first run 37136327901). No CodeQL workflow file in `.github/workflows/`, and none should be added while default setup is on | Settings → Code security |
+| Copilot automatic code review | **not enabled** (owner-only, pending per the issue; #24 stays open for it). The `main protection` ruleset has no Copilot review rule (its rules on 2026-10-07: `deletion`, `non_fast_forward`, `pull_request`, `required_status_checks`); the owner's account-level setting cannot be read from the repo API and has not been reported as on | Settings → Rules → Rulesets (rule), or Copilot settings → Code review (account) |
 
 ## Pending owner action: Copilot code review
 
-Copilot Pro adds automatic Copilot code review as a second reviewer next to CodeRabbit. Copilot Pro premium requests are limited, so enable it only for PRs into main:
+Copilot Pro adds automatic Copilot code review as a second reviewer next to CodeRabbit (GitHub offers it on Copilot Pro, Pro+ and Max, or with a Business or Enterprise licence). GitHub provides two independent sources; the owner picks one and records which, because the verification differs. Copilot Pro premium requests are limited, so the ruleset scoped to main is the cheaper choice:
 
-1. Settings → Rules → Rulesets → **main protection** (targets the default branch) → add the rule **Automatically request Copilot code review**. Optionally tick *Review new pushes* (each push then uses another premium request; leave it off to save budget).
-2. Or, per account: Settings → Copilot → Code review → automatic review for your own PRs (applies to every branch, so it uses more requests).
+1. **Repository ruleset**: Settings → Rules → Rulesets → **main protection** (targets the default branch) → Branch rules → **Automatically request Copilot code review**. Leave *Review new pushes* off (each push would use another premium request) and *Review draft pull requests* off (implementer PRs start as drafts; Copilot then reviews when the PR is marked ready).
+2. **Account setting**: profile picture → Copilot settings → Code review → **Automatic Copilot code review** (same optional *Review new pushes* and *Review draft pull requests*). This covers every PR the owner's account creates in any repository, so it uses more premium requests.
 
-After it is on, record the date here and in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
+### Verifying it, by source
+
+- Ruleset: `gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'` lists `copilot_code_review` (rule parameters: `review_on_push`, `review_draft_pull_requests`).
+- Account setting: no repository API exposes a personal Copilot setting, and the ruleset command above stays unchanged. The record is the owner's statement of the toggle state on the settings page (text is enough; no screenshot of account details).
+- Either source: the next PR into main gets a review from the Copilot reviewer. `gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]` (shown as Copilot in the PR UI).
+
+After it is on, record the date and the source in the table above and in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md), then close issue #24, which stays open until then (PR #59 references it without closing it).
 
 ## Rules for contributors and agents
 
@@ -42,5 +48,6 @@ Read-only; needs `gh` signed in with repo access:
 gh api repos/AbdelrhmanAh7/FlowLine_Web --jq '{visibility, security_and_analysis}'
 gh api repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/default-setup --jq '{state, languages, query_suite}'
 gh api -i repos/AbdelrhmanAh7/FlowLine_Web/vulnerability-alerts | head -1   # 204 = Dependabot alerts on
-gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'   # copilot_code_review once enabled
+gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'   # copilot_code_review appears only for the ruleset source
+gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'   # copilot-pull-request-reviewer[bot] once Copilot reviewed PR N (either source)
 ```

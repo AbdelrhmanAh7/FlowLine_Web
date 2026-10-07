@@ -27,9 +27,12 @@ These checks remain unverified from the repository. Confirm the running app and 
    - Claude verifies after: the resulting connection state and bounded read/action/result/revoke/reconnect evidence required by the brief. A saved configuration or successful consent alone is not live certification.
 
 5. **Automatic Copilot code review (issue #24)**
-   - Purpose: add Copilot as a second automatic reviewer next to CodeRabbit. Secret scanning, push protection, Dependabot alerts and CodeQL default setup were enabled by the owner on 2026-10-03; only this item remains.
-   - Page: Settings → Rules → Rulesets → `main protection` → add *Automatically request Copilot code review* (PRs into main only, to save Copilot Pro premium requests), or Settings → Copilot → Code review.
-   - Claude verifies after: the ruleset lists the `copilot_code_review` rule (read-only `gh api`, see [REPO_SECURITY_SETTINGS.md](../security/REPO_SECURITY_SETTINGS.md)) and the next PR into main gets a Copilot review.
+   - Purpose: add Copilot as a second automatic reviewer next to CodeRabbit. Secret scanning, push protection, Dependabot alerts and CodeQL default setup were enabled by the owner on 2026-10-03; only this item remains, so issue #24 stays open until it is done (PR #59 references the issue without closing it).
+   - Page, one of two sources (GitHub treats them as independent, and the verification differs):
+     - Repository ruleset: Settings → Rules → Rulesets → `main protection` → Branch rules → *Automatically request Copilot code review*. Leave *Review new pushes* and *Review draft pull requests* off: PRs into main only, one review each, to save Copilot Pro premium requests (implementer PRs start as drafts, so Copilot reviews when the PR is marked ready).
+     - Account setting: profile picture → Copilot settings → Code review → *Automatic Copilot code review*. This reviews every PR the owner's account creates in any repository, so it uses more premium requests.
+   - Owner action: turn on one source, then state which one and the date in a reply; for the account setting also the toggle state as shown on the settings page, because no repository API exposes it. If #24 should not be queued to an AI engineer again, remove `ai-ready` (the dispatcher's own note says this stops it). Close #24 once a Copilot review has appeared.
+   - Claude verifies after, by source: ruleset → `gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'` lists `copilot_code_review`; account setting → the owner's stated toggle state is the record, since the ruleset command stays unchanged and the repo API cannot show the personal setting. For either source: the next PR into main has a review by the Copilot reviewer (`gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]`, shown as Copilot in the UI). Commands and recorded state: [REPO_SECURITY_SETTINGS.md](../security/REPO_SECURITY_SETTINGS.md).
 
 This dated section is the current owner-action plan and supersedes older handoff/action status below it. Those entries are retained as history only.
 
