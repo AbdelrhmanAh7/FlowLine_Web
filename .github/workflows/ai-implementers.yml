@@ -38,6 +38,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || [ $? -eq 5 ]
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || [ $? -eq 5 ]
       - name: Ensure labels exist
         run: source "$HUB_BIN/common.sh" && ensure_labels "$GITHUB_REPOSITORY"
       - id: pick
@@ -66,6 +70,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || [ $? -eq 5 ]
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || [ $? -eq 5 ]
       - name: Rescue one stalled handoff
         run: |
           rc=0; "$HUB_BIN/rescue.sh" "$GITHUB_REPOSITORY" || rc=$?
@@ -96,6 +104,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Clean git credentials
+        run: |
+          git config --local --unset-all credential.helper 2>/dev/null || [ $? -eq 5 ]
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || [ $? -eq 5 ]
       - name: Answer with local Claude
         env:
           ISSUE: ${{ github.event.issue.number }}
