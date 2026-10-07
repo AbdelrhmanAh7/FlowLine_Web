@@ -65,6 +65,7 @@ describe("email account flows", () => {
     await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
     await issueAccountToken("reset", user);
     const token = await lastToken(user.email, "/reset-password");
+    await expect(consumeAccountToken("reset", token, "short")).rejects.toMatchObject({ code: "PASSWORD_LENGTH" });
     expect(await consumeAccountToken("reset", token, "fresh-password-123")).toBe("done");
     expect(await consumeAccountToken("reset", token, "another-password")).toBe("used");
     const [account] = await db.select().from(schema.account).where(eq(schema.account.userId, user.id));

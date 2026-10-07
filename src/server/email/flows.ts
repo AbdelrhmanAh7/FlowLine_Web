@@ -134,15 +134,31 @@ export async function tokenState(purpose: Purpose, token: string): Promise<Token
 export async function consumeAccountToken(purpose: Purpose, token: string, value?: string, currentUserId?: string): Promise<TokenState | "done" | "transfer_required"> {
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
+
+  let hashed: string | undefined;
+  if (purpose === "reset") {
+    if (!value || value.length < 8 || value.length > 128) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
+    hashed = await hashPassword(value);
+  }
+
+  const [unlockedToken] = await db.select({ id: schema.emailToken.id, userId: schema.emailToken.userId }).from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose)));
+  if (!unlockedToken || !unlockedToken.userId) return "invalid";
+
   return db.transaction(async (tx) => {
     // Deletion cascades into retained files. Accounting must precede even the
     // token lock, and especially the workspace locks below (including shared W).
     if (purpose === "delete") await lockRetainedFileAccounting(tx);
-    const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
+
+    const [lockedUser] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, unlockedToken.userId!)).for("update");
+    if (!lockedUser) return "invalid";
+
+    const [row] = await tx.select().from(schema.emailToken).where(eq(schema.emailToken.id, unlockedToken.id)).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
     if (row.expiresAt <= new Date()) return "expired";
     if (!row.userId || (purpose === "delete" && row.userId !== currentUserId)) return "invalid";
+    if (row.userId !== lockedUser.id) return "invalid";
+
     if (purpose === "delete") {
       // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
       // before reading ownership: two co-owners deleting their accounts at once must not both pass the
@@ -187,11 +203,9 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       return "done";
     }
     if (purpose === "reset") {
-      if (!value || value.length < 8 || value.length > 128) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
-      const hashed = await hashPassword(value);
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
-      else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
+      else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed! });
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       // Historical tenant-created identities have no independently proven mailbox
       // ownership. Recovery removes those methods; explicitly mailbox-approved
