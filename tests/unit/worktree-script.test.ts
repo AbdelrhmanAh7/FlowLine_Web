@@ -131,29 +131,37 @@ describe("worktree removal safeguards", () => {
     expectUntouched();
   });
 
-  it.each(["dirty", "unpushed"])("keeps %s work without unlinking or pruning", (state) => {
-    if (state === "dirty") dirty = " M file.ts";
-    else pushed = "";
-    expect(main(["rm", "lane"])).toBe(0);
+  it.each([
+    ["rm", "dirty", " M file1.ts\n M file2.ts", "2 uncommitted change(s); commit or discard them first"],
+    ["remove", "dirty", "?? draft.txt", "1 uncommitted change(s)"],
+    ["rm", "unpushed", "", "HEAD not on any remote branch; push it first"],
+  ])("@issue-67 %s refuses %s work with a clear message, without unlinking or removing", (cmd, state, status, message) => {
+    dirty = status;
+    if (state === "unpushed") pushed = "";
+    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: ${message}`);
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
 
-  it("prints a clear message when refusing to remove a dirty worktree", () => {
-    dirty = " M file1.ts\n M file2.ts";
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("2 uncommitted change(s)"));
-    expect(mocks.unlink).not.toHaveBeenCalled();
+  it("@issue-67 remove is an alias of rm", () => {
+    expect(main(["remove", "lane"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
   });
 
-  it("prints a clear message when refusing to remove an unpushed worktree", () => {
-    pushed = "";
+  it("@issue-67 ignores the helper's own node_modules link when counting changes", () => {
+    dirty = "?? node_modules";
     expect(main(["rm", "lane"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("HEAD not on any remote branch"));
-    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+    dirty = "?? node_modules/\n?? node_modules2";
+    expect(() => main(["rm", "lane"])).toThrow("2 uncommitted change(s)");
+  });
+
+  it("@issue-67 unlinks a dangling node_modules link (lstat, not exists)", () => {
+    mocks.exists.mockReturnValue(false);
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(mocks.stat).toHaveBeenCalledWith(join(lane, "node_modules"), { throwIfNoEntry: false });
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
   });
 
   it("checks clean and pushed before unlinking, then removes without force", () => {

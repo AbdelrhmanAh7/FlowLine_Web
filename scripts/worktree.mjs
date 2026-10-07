@@ -6,7 +6,8 @@
 //                                                                 (no / or \, so the path stays inside .claude/worktrees/);
 //                                                                 use --branch for a branch such as feat/x
 //   pnpm wt list                                                  state of every worktree
-//   pnpm wt rm <name|path>                                        remove a registered, unlocked lane if clean and pushed/merged
+//   pnpm wt rm|remove <name|path>                                 remove a registered, unlocked lane if clean and pushed/merged;
+//                                                                 a dirty or unpushed lane is refused (exit 1)
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
 //                                                                 (not while agents are starting lanes)
 // Removal never forces: main, locked, dirty or unpushed work is kept. Bare names select managed lanes only.
@@ -48,7 +49,8 @@ function worktrees(root) {
 }
 
 function state(path) {
-  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter(Boolean).length;
+  // The node_modules link made by `add` is a symlink, which the `node_modules/` ignore rule (directories only) misses.
+  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter((l) => l && l !== "?? node_modules").length;
   const head = git(["rev-parse", "HEAD"], path);
   const pushed = git(["branch", "-r", "--contains", head], path).length > 0;
   return { dirty, head, pushed };
@@ -56,17 +58,20 @@ function state(path) {
 
 function unlinkModules(path) {
   const nm = join(path, "node_modules");
-  // A junction/symlink is removed as a link only, so the shared install is never touched.
-  if (existsSync(nm) && lstatSync(nm).isSymbolicLink()) unlinkSync(nm);
+  // A junction/symlink is removed as a link only, so the shared install is never touched; lstat also sees a dangling link.
+  if (lstatSync(nm, { throwIfNoEntry: false })?.isSymbolicLink()) unlinkSync(nm);
 }
 
-function remove(w, root, platform) {
+// An explicit rm refuses (throws) when work would be kept; prune only reports it and moves on.
+function remove(w, root, platform, refuse = false) {
   const path = resolve(w.worktree);
   if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
   if (Object.hasOwn(w, "locked")) throw new Error(`refusing to remove locked worktree: ${path}`);
   const s = state(path);
   if (s.dirty || !s.pushed) {
-    console.log(`kept ${path}: ${s.dirty ? `${s.dirty} uncommitted change(s)` : "HEAD not on any remote branch"}`);
+    const reason = s.dirty ? `${s.dirty} uncommitted change(s); commit or discard them first` : "HEAD not on any remote branch; push it first";
+    if (refuse) throw new Error(`refusing to remove ${path}: ${reason}`);
+    console.log(`kept ${path}: ${reason}`);
     return false;
   }
   unlinkModules(path);
@@ -91,13 +96,14 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     git(["worktree", "add", "-b", opt("--branch", name), path, opt("--base", "origin/main")], root);
     symlinkSync(join(root, "node_modules"), join(path, "node_modules"), "junction");
     console.log(path);
-  } else if (cmd === "rm" && name) {
+  } else if ((cmd === "rm" || cmd === "remove") && name) {
     const entries = worktrees(root);
     const explicitPath = isAbsolute(name) || /[/\\]/.test(name);
     const target = explicitPath ? resolve(name) : resolve(dir, name);
     const w = entries.find((w) => samePath(w.worktree, target, platform));
     if (!w) throw new Error(`not a registered worktree: ${name}`);
-    if (remove(w, root, platform)) git(["worktree", "prune"], root);
+    remove(w, root, platform, true);
+    git(["worktree", "prune"], root);
   } else if (cmd === "list" || cmd === "prune") {
     if (cmd === "prune") git(["worktree", "prune"], root);
     let failed = false;
@@ -120,7 +126,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     }
     return failed ? 1 : 0;
   } else {
-    console.error("usage: pnpm wt add <name> [--base <ref>] [--branch <branch>] | list | rm <name|path> | prune");
+    console.error("usage: pnpm wt add <name> [--base <ref>] [--branch <branch>] | list | rm|remove <name|path> | prune");
     return 2;
   }
   return 0;
