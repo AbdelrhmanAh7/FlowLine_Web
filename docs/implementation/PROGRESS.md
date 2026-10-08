@@ -11,6 +11,7 @@ Repository audit baseline: `9641ad1e684cad7b84bd2385751ea19b0a9d4060` (docs work
 | Design system | Generated tokens, Arabic-first UI, light default, dark/system selection and protected copy editor | `src/design/`, `src/theme/config.ts`, `src/i18n/`, `src/app/admin/copy/` |
 | Company Builder | Outcome-first interview, draft installation, sample trials and reviewed activation implemented behind an off-by-default flag; live Gmail is not implemented | `src/company-builder/`, `src/server/company-builder/`, `docs/company-builder/VALIDATION_REPORT.md` |
 | Docs freshness | Scoped docs corrected against source; change ledger and unverifiable claims recorded | `docs/implementation/DOCS_FRESHNESS_20261003.md` |
+| Landing demo media (#99, 2026-10-08) | Local recording pipeline (real UI → Screen-Studio-style AV1/H.264, AR + EN) and the generated `public/media/demo/` with `manifest.json`; the landing embed is #100 | `scripts/demo/`, `tools/demo-video/`, `docs/landing/DEMO_MEDIA.md`, `artifacts/issue-99/EVIDENCE.md` |
 
 Private beta remains **NOT READY**, public production **NOT APPROVED**, aggregate spend cap **$0**. See `NEXT_ACTION.md` and `docs/implementation/OWNER_ACTIONS.md`. The phase logs below are historical results at their named revisions, not current test counts or runtime instructions. Legacy Ollama live tests are archived under `docs/ai/history/`.
 

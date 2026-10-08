@@ -76,6 +76,17 @@ For the H3 security regression set without a database or browser, run `pnpm.cmd 
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
 
+## Landing demo media
+
+The landing demo videos in `public/media/demo/` are generated from the real UI by a local-only pipeline (never CI):
+`pnpm demo:setup` once (installs the isolated Remotion package in `tools/demo-video`, which has its own lockfile, is not a
+workspace member and is excluded from the root `tsc`, ESLint and Vitest), `pnpm demo:doctor` to check the machine,
+`pnpm demo:build [--only hero --locale ar]` to record and encode (it starts its own stack on `:3190` with the
+`flowline_test_demo` database), and `pnpm demo:verify` before committing the result. Run them outside agent sandboxes.
+Scenarios use roles, test ids and message keys, so a UI-only change re-records without script edits; regenerate at UI
+freezes. Unit tests: `tests/unit/demo-*.test.ts`; compositor math: `cd tools/demo-video && node --test src/camera.test.ts`.
+Full guide, budgets and troubleshooting: [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md).
+
 ## Worktrees
 
 Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
