@@ -13,7 +13,9 @@ if (!env.E2E_ARMY_URL && !existsSync(".env.test")) {
 }
 if (!env.E2E_ARMY_CLI && spawnSync("agy", ["--version"], { stdio: "ignore" }).status === 0) env.E2E_ARMY_CLI = "agy";
 if (env.E2E_ARMY_CLI !== "agy" && env.E2E_ARMY_CLI !== "claude") env.E2E_ARMY_NOAGENT = "1";
-console.log(`e2e-army: ${env.E2E_ARMY_URL ?? "test stack on :3100"} · model ${env.E2E_ARMY_NOAGENT ? "none (agent tests skip)" : env.E2E_ARMY_CLI}`);
+const target = env.E2E_ARMY_URL ? "custom URL" : "test stack on :3100";
+const model = env.E2E_ARMY_NOAGENT ? "none (agent tests skip)" : (env.E2E_ARMY_CLI === "claude" ? "claude" : "agy");
+console.log(`e2e-army: ${target} · model ${model}`);
 
 const child = spawn("e2e", ["run", "--reporter", "list", ...process.argv.slice(2)], { stdio: "inherit", env, shell: process.platform === "win32", detached: process.platform !== "win32" });
 const timer = setTimeout(() => {

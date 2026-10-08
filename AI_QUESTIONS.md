@@ -90,3 +90,9 @@ action pins.
 The hub runs its own FlowLine suite and this branch's `e2e-army/*.e2e.ts` in one `e2e run`, within its 270 s budget.
 Until the hub drops the tests that are now in this repo, the sign-in and canvas steps run twice. Should
 `ops/verify/e2e-army/tests/FlowLine_Web.e2e.ts` keep only its `fl-user` setup and leave the tests to the repo?
+
+## 5. Review resolution: CodeQL clear-text logging in scripts/e2e-army.mjs
+
+CodeQL flagged line 16 of `scripts/e2e-army.mjs` for clear-text logging of sensitive data from `process.env`.
+Resolved by replacing raw env logging with sanitized constant string descriptors (`custom URL` vs `test stack on :3100`, and `claude` / `agy` / `none (agent tests skip)`), eliminating data flow of raw environment variables to `console.log`.
+
