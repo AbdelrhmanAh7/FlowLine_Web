@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BUDGET } from "../../scripts/demo/clips";
 import { av1Args, encodeWithBudget, h264Args } from "../../scripts/demo/deliver";
-import { codecString, parsePsnr, parseProbe, type Probe } from "../../scripts/demo/ffmpeg";
+import { codecString, parseProbe, psnrRgb, type Probe } from "../../scripts/demo/ffmpeg";
 import { budgetReport, hashName, mergeManifest, staleFiles, validateManifest, writeManifest, readManifest, type Manifest, type ManifestFile } from "../../scripts/demo/manifest";
 
 const fixture = (): Manifest => JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/demo-manifest.json"), "utf8"));
@@ -190,6 +190,8 @@ describe("encoder args and codec strings", () => {
   it("derives RFC 6381 strings", () => {
     expect(codecString(probe({}))).toBe("avc1.64002A");
     expect(codecString(probe({ level: 40 }))).toBe("avc1.640028");
+    expect(codecString(probe({ profile: "100" }))).toBe("avc1.64002A"); // Remotion's ffprobe reports profile_idc
+    expect(codecString(probe({ codec: "av1", profile: "0", level: 8 }))).toBe("av01.0.08M.08");
     expect(codecString(probe({ codec: "av1", profile: "Main", level: 9 }))).toBe("av01.0.09M.08");
     expect(codecString(probe({ codec: "av1", profile: "Main", level: null }))).toBe("av01.0.09M.08");
     expect(codecString(probe({ codec: "av1", profile: "Main", level: null, width: 1280, height: 720, fps: 30 }))).toBe("av01.0.08M.08");
@@ -201,8 +203,8 @@ describe("encoder args and codec strings", () => {
       format: { duration: "16.016000", bit_rate: "1200000" },
     }));
     expect(p).toMatchObject({ fps: 60, durationS: 16.016, bitrate: 1200000, hasAudio: false, level: 42 });
-    expect(parsePsnr("PSNR y:48.1 u:50 v:50 average:48.23 min:48 max:49")).toBe(48.23);
-    expect(parsePsnr("PSNR y:inf u:inf v:inf average:inf min:inf max:inf")).toBe(99);
-    expect(() => parsePsnr("nothing")).toThrow();
+    expect(psnrRgb(Uint8Array.of(10, 20, 30), Uint8Array.of(10, 20, 30))).toBe(99);
+    expect(psnrRgb(Uint8Array.of(0, 0, 0, 0), Uint8Array.of(0, 0, 0, 255))).toBeCloseTo(6.02, 1);
+    expect(() => psnrRgb(Uint8Array.of(1), Uint8Array.of(1, 2))).toThrow();
   });
 });

@@ -118,7 +118,7 @@ export class Recorder {
     const size = { width: Math.round(VIEWPORT.w * VIEWPORT.dsf), height: Math.round(VIEWPORT.h * VIEWPORT.dsf) };
     const disposable = await this.page.screencast.start({
       size,
-      quality: 90,
+      quality: 95,
       onFrame: ({ data, timestamp }) => {
         const ts = timestamp / 1000; // epoch milliseconds
         this.t0 ??= ts;

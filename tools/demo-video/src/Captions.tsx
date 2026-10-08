@@ -73,7 +73,8 @@ export const StepChips: React.FC<Common & { chips: { tIn: number; tOut: number; 
   return (
     <div
       dir={locale === "ar" ? "rtl" : "ltr"}
-      style={{ position: "absolute", left: 0, right: 0, top: 44 * f, display: "flex", justifyContent: "center", gap: 14 * f, opacity: a, pointerEvents: "none" }}
+      // Sits in the 72 px margin above the floating window, so the wide shot never covers the app's toolbar.
+      style={{ position: "absolute", left: 0, right: 0, top: 10 * f, display: "flex", justifyContent: "center", gap: 12 * f, opacity: a, pointerEvents: "none" }}
     >
       {chips.items.map((it, i) => {
         const isActive = i === active;
@@ -83,17 +84,17 @@ export const StepChips: React.FC<Common & { chips: { tIn: number; tOut: number; 
             key={i}
             style={{
               ...glass(palette, f, 999),
-              ...type(locale, f, 26, 28),
+              ...type(locale, f, 23, 24),
               display: "flex",
               alignItems: "center",
-              gap: 10 * f,
-              padding: `${9 * f}px ${24 * f}px`,
+              gap: 8 * f,
+              padding: `${5 * f}px ${20 * f}px`,
               backdropFilter: `blur(${14 * f}px)`,
               ...(isActive ? { background: palette.accentBg, border: `${2 * f}px solid ${palette.accentBorder}`, color: palette.accent } : {}),
               ...(!isActive ? { color: done ? palette.textMuted : palette.pillText, opacity: done ? 1 : 0.72 } : {}),
             }}
           >
-            {done ? <Check size={20 * f} color={palette.textMuted} /> : null}
+            {done ? <Check size={18 * f} color={palette.textMuted} /> : null}
             <span>{it.text}</span>
           </div>
         );

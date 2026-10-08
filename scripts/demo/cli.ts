@@ -22,7 +22,7 @@ import { checkAccent, verify } from "./verify";
 
 const REMOTION = join(TOOL, "node_modules/.bin/remotion");
 
-type Flags = { only: ClipId[]; locales: Locale[]; themes: Theme[]; skipRecord: boolean; concurrency: number; rebuild: boolean };
+type Flags = { only: ClipId[]; locales: Locale[]; themes: Theme[]; skipRecord: boolean; skipRender: boolean; concurrency: number; rebuild: boolean };
 
 export function parseFlags(argv: string[]): Flags {
   const get = (name: string) => {
@@ -38,7 +38,7 @@ export function parseFlags(argv: string[]): Flags {
   for (const t of themes) if (!THEMES.includes(t)) throw new Error(`--theme: "${t}" is not light, dark or all`);
   const concurrency = Number(get("concurrency") ?? 2);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error("--concurrency must be 1-8");
-  return { only, locales, themes, skipRecord: argv.includes("--skip-record"), concurrency, rebuild: argv.includes("--rebuild") };
+  return { only, locales, themes, skipRecord: argv.includes("--skip-record") || argv.includes("--skip-render"), skipRender: argv.includes("--skip-render"), concurrency, rebuild: argv.includes("--rebuild") };
 }
 
 /** The app's own @fontsource files (OFL), copied into the compositor's public/fonts for a render. */
@@ -176,17 +176,17 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
   const spec = CLIPS[clip];
   try {
     const composed = join(dir, "composed.mp4");
-    await run(REMOTION, ["render", "src/index.ts", "Demo", composed, `--props=${join(dir, "props.json")}`, "--codec=h264", "--crf=12", "--x264-preset=medium", "--color-space=bt709", "--image-format=png", `--concurrency=${flags.concurrency}`, "--muted", "--log=error"], TOOL);
+    if (!flags.skipRender || !existsSync(composed)) await run(REMOTION, ["render", "src/index.ts", "Demo", composed, `--props=${join(dir, "props.json")}`, "--codec=h264", "--crf=12", "--x264-preset=medium", "--color-space=bt709", "--image-format=png", `--concurrency=${flags.concurrency}`, "--muted", "--log=error"], TOOL);
     const still = async (out: string, t: number, scale = 1) =>
       run(REMOTION, ["still", "src/index.ts", "Demo", out, `--frame=${Math.min(Math.round(t * spec.fps), Math.round(ev.duration * spec.fps) - 1)}`, `--props=${join(dir, "props.poster.json")}`, "--image-format=jpeg", "--jpeg-quality=82", `--scale=${scale}`, "--log=error"], TOOL);
     const poster = join(dir, "poster.jpg");
-    await still(poster, sb.posterT);
+    if (!flags.skipRender || !existsSync(poster)) await still(poster, sb.posterT);
     // Chapter stills (walkthrough): a clean frame of each chapter's first scene, 1280x720 to stay inside 70 KB.
     const chapterStills: { chapter: string; index: number; file: string }[] = [];
     for (const [i, c] of sb.chapterMarks.entries()) {
       const card = sb.chapters[i];
       const file = join(dir, `chapter${i + 1}.jpg`);
-      await still(file, (card ? card.t1 : c.t) + 1.2, 2 / 3);
+      if (!flags.skipRender || !existsSync(file)) await still(file, (card ? card.t1 : c.t) + 1.2, 2 / 3);
       chapterStills.push({ chapter: c.id, index: i + 1, file });
     }
     if (clip === "hero") await checkAccent(join(dir, "composed.mp4"), ev, props);
@@ -266,7 +266,7 @@ async function build(argv: string[]) {
 const [cmd, ...rest] = process.argv.slice(2);
 const main = cmd === "doctor" ? () => doctor() : cmd === "build" ? () => build(rest) : cmd === "verify" ? () => verify(rest) : null;
 if (!main) {
-  console.error("usage: tsx scripts/demo/cli.ts doctor | build [--only hero,run] [--locale ar|en|all] [--theme light|dark|all] [--skip-record] [--concurrency 2] [--rebuild] | verify");
+  console.error("usage: tsx scripts/demo/cli.ts doctor | build [--only hero,run] [--locale ar|en|all] [--theme light|dark|all] [--skip-record] [--skip-render] [--concurrency 2] [--rebuild] | verify");
   process.exit(2);
 }
 main().then(

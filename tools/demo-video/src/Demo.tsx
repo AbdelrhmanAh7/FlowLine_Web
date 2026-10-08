@@ -101,7 +101,8 @@ const Scene: React.FC<DemoProps & { overlay?: boolean }> = (props) => {
             ...(win ? { borderRadius: 18, boxShadow: `${palette.shadow}, 0 0 0 1px ${palette.hairline}` } : {}),
           }}
         >
-          {src ? <OffthreadVideo src={staticFile(src)} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Placeholder />}
+          {/* toneMapped off: the master is already BT.709; Remotion's tone mapping shifts the accent by ~2 levels. */}
+          {src ? <OffthreadVideo src={staticFile(src)} muted toneMapped={false} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Placeholder />}
         </div>
       </div>
       {showFx ? (

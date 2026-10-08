@@ -16,11 +16,12 @@ export const hero: Scenario = {
     rec.beat("chip1");
     await rec.click(runButton(ctx), "run", { dur: 1.25 });
     rec.beat("run");
+    await rec.hold(0.5); // the ripple reads on the button before the camera moves on
     // Pan along the flow while the steps light up (each target is a few nodes wide: about 1.4-1.5x).
     for (const id of ORDER) {
       const b = await rec.box(nodeCard(page, id));
       await rec.focus(grow(b, 400, 180), `node-${id}`);
-      await holdUntil(ctx, rec.now() + 1.05);
+      await holdUntil(ctx, rec.now() + 0.95);
     }
     const dock = await runFinished(ctx);
     rec.beat("results");

@@ -49,11 +49,10 @@ export const nodeCard = (page: Page, id: string) => page.locator(`.react-flow__n
 /** The toolbar Run button. */
 export const runButton = (ctx: Pick<ScenarioCtx, "page" | "t">) => ctx.page.getByTestId("builder").getByRole("button", { name: ctx.t("builder.run"), exact: true });
 
-/** Waits for the run dock to report the finished run (the step strip shows the last step done). */
+/** Waits for the run dock header to report the finished run as succeeded. */
 export async function runFinished(ctx: Pick<ScenarioCtx, "page" | "t">) {
   const dock = ctx.page.getByTestId("run-dock");
-  await dock.getByText(ctx.t("runDock.openInspector")).waitFor({ state: "visible", timeout: 20_000 });
-  await ctx.page.getByText(ctx.t("builder.runToast.succeeded", { number: 1 })).first().waitFor({ state: "visible", timeout: 20_000 });
+  await dock.getByText(ctx.t("runStatus.succeeded"), { exact: true }).first().waitFor({ state: "visible", timeout: 20_000 });
   return dock;
 }
 

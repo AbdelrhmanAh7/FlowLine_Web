@@ -9,7 +9,7 @@ import sharp from "sharp";
 import type { DemoProps, EventsFile } from "../../tools/demo-video/src/props";
 import { BUDGET, CLIPS, VIEWPORT, workKey, type ClipId } from "./clips";
 import { sampleTimes } from "./deliver";
-import { extractFrame, probe, psnrAt, codecString } from "./ffmpeg";
+import { codecString, extractFrame, probe, psnrAt, psnrRgb } from "./ffmpeg";
 import { budgetReport, readManifest, staleFiles, type ManifestFile } from "./manifest";
 import { OUT, ROOT, WORK, themeTokens } from "./paths";
 
@@ -19,15 +19,6 @@ const TMP = join(WORK, "verify");
 async function rawRgb(png: string) {
   const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   return { data, w: info.width, h: info.height };
-}
-
-/** PSNR (dB) of two same-sized RGB images; identical images read 99. */
-export function psnrRgb(a: Uint8Array, b: Uint8Array): number {
-  if (a.length !== b.length) throw new Error("psnr: size mismatch");
-  let se = 0;
-  for (let i = 0; i < a.length; i++) se += (a[i]! - b[i]!) ** 2;
-  const mse = se / a.length;
-  return mse === 0 ? 99 : 10 * Math.log10((255 * 255) / mse);
 }
 
 const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
