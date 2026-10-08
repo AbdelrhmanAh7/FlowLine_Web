@@ -22,7 +22,7 @@ function render(node: ReactElement, locale: Locale = "en") {
 }
 /** The <button> elements of a markup string: attributes and inner HTML. */
 function buttons(html: string) {
-  return [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]!, text: m[2]!.replace(/<[^>]*>/g, "").trim() }));
+  return [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]!, text: m[2]!.split(/<[^>]*>/).join("").trim() }));
 }
 const classOf = (attrs: string) => /class="([^"]*)"/.exec(attrs)?.[1] ?? "";
 const has = (attrs: string, token: string) => classOf(attrs).split(/\s+/).includes(token);
