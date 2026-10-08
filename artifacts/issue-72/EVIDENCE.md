@@ -34,3 +34,7 @@ Carries REQ-FL-66-5 ("a failed or abandoned MFA step writes an audit entry") fro
 - `expired` is recorded once: a late request deletes the expired row (`delete … returning`) and records it, and `pruneOnce` deletes and records the rest before the generic `verification` cleanup.
 - `rate_limited` is recorded at most once per user per five minutes (its own rate-limit key), so the audit cannot be flooded. `invalid_code` is already bounded by the five-per-five-minutes limit.
 - Refusals from changed authority (recovery, factor change, unlink, revoked configuration or membership) are not MFA failures and stay unaudited. Unknown or malformed tokens have no actor and are not recorded.
+
+## Review round 1 (PR #73)
+
+- Finding: `docs/implementation/PHASE4_BETA_REPORT.md` appeared to drop the sentence recording the two known lock-order gaps (password-reset recovery; member role change/removal against the SSO audit insert). Cause: the #66/#72 summary had been appended to the same Markdown line, so the line diff showed the whole line as removed, though the sentence was still in it. Fix: the original line is restored byte-for-byte (no diff against `origin/main`), and the #66/#72 summary is a new paragraph that says the two gaps are unchanged. The gaps stay documented in `docs/security/FEDERATED_MFA.md` ("Known gaps"), which this branch does not change. Docs-only; no code or test change.
