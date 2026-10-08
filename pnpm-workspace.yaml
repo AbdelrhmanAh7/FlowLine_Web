@@ -3,3 +3,4 @@ saveExact: true
 # Remove only its unused declaration; re-evaluate on every Kit version change.
 overrides:
   "drizzle-kit@0.31.11>@esbuild-kit/esm-loader": "-"
+  "source-map-js": ">=1.2.2"
