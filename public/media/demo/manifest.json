@@ -1,0 +1,492 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-08T18:32:43Z",
+  "uiCommit": "865c6748484eb68b67d93ff032cc7c731627c981",
+  "tooling": {
+    "playwright": "1.63.0",
+    "remotion": "4.0.534"
+  },
+  "clips": {
+    "hero": {
+      "shape": "window",
+      "aspect": "16/9",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "durationS": 16,
+      "loop": true
+    },
+    "templates": {
+      "shape": "wide",
+      "aspect": "16/9",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "durationS": 7,
+      "loop": true
+    },
+    "build": {
+      "shape": "square",
+      "aspect": "1/1",
+      "width": 1080,
+      "height": 1080,
+      "fps": 30,
+      "durationS": 8,
+      "loop": true
+    },
+    "run": {
+      "shape": "wide",
+      "aspect": "16/9",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "durationS": 7,
+      "loop": true
+    },
+    "history": {
+      "shape": "square",
+      "aspect": "1/1",
+      "width": 1080,
+      "height": 1080,
+      "fps": 30,
+      "durationS": 6,
+      "loop": true
+    },
+    "walkthrough": {
+      "shape": "window",
+      "aspect": "16/9",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "durationS": 53,
+      "loop": false,
+      "chapters": [
+        {
+          "id": "templates",
+          "t": 0.02
+        },
+        {
+          "id": "shape",
+          "t": 12
+        },
+        {
+          "id": "run",
+          "t": 25
+        },
+        {
+          "id": "inspect",
+          "t": 38
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "path": "hero.ar.light.av1.e9c86093.mp4",
+      "bytes": 658371,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "sha256": "e9c8609348538f06856d96090d00f5d574676ce5c0a89f0f7c3ad97eff463127",
+      "bitrate": 329185
+    },
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "path": "hero.ar.light.h264.544b6acd.mp4",
+      "bytes": 1199589,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "sha256": "544b6acd095100add0791a7fe00dcc1b8e88585be420fca637121cf6542a83f0",
+      "bitrate": 599794
+    },
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "path": "hero.ar.light.poster.55fe89ad.jpg",
+      "bytes": 74352,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "55fe89ad7daf70e3997895905e5496c608e189c210f1034f49451677f1721c66"
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "path": "hero.en.light.av1.22e59333.mp4",
+      "bytes": 709086,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "sha256": "22e59333388f7f44fed914f0f1ddc189822093c9a5f6ac33431db03f9721781a",
+      "bitrate": 354543
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "path": "hero.en.light.h264.b1871427.mp4",
+      "bytes": 1250013,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "sha256": "b187142760332346c686d6e514c3091ba1c401784171545072e732dc0002c2a9",
+      "bitrate": 625006
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "path": "hero.en.light.poster.32e39bdc.jpg",
+      "bytes": 76391,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "32e39bdc02883936e383c0f218aae33e775de230c88cbe0aa467f2b53d698e9e"
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "path": "templates.ar.light.av1.ef958d42.mp4",
+      "bytes": 427480,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.05M.08\"",
+      "sha256": "ef958d42b40366f016deaf9368ff1c5b1ebb9ab386252a64ca14d237bebf780b",
+      "bitrate": 488548
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "path": "templates.ar.light.h264.10959013.mp4",
+      "bytes": 585342,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "109590134f72b20783bfc957cd9eb1ac3365e53482e3ccf928bf11a86d927011",
+      "bitrate": 668962
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "path": "templates.ar.light.poster.f5519328.jpg",
+      "bytes": 78752,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "f55193283e0cb2ab6ff89e93a6629e1887b7abefbdc51abf1deb05307a99c5c3"
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "path": "templates.en.light.av1.f227ff68.mp4",
+      "bytes": 425191,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.05M.08\"",
+      "sha256": "f227ff681bd786ab1d87067e98bc976efc72f919d6a5c77fc4414dcde6d1173b",
+      "bitrate": 485932
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "path": "templates.en.light.h264.1ca3a4c5.mp4",
+      "bytes": 668705,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "1ca3a4c59e8125ec06dc4bd96376c44c07c04f5183fc4a3615d6c1b405494f3f",
+      "bitrate": 764234
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "path": "templates.en.light.poster.445572e2.jpg",
+      "bytes": 82305,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "445572e2aa7cc5558ff237db6423821e47074ff44c1f2a8b27bfcabe0a74c9d6"
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "path": "build.ar.light.av1.9211ba3d.mp4",
+      "bytes": 265321,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "sha256": "9211ba3d29c9fdfa6e5878be9f6937606d13cbd69435662d6164be233eab0b3a",
+      "bitrate": 245857
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "path": "build.ar.light.h264.448f1318.mp4",
+      "bytes": 443385,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "448f13183e3fd2e1a322176b9f8586d109527834e750b9b25f3929f9f8f731c5",
+      "bitrate": 410858
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "path": "build.ar.light.poster.346a2d5f.jpg",
+      "bytes": 34998,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "346a2d5f826db577e6583d1206292ebf09199486abc195afb7a524ebf609be14"
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "path": "build.en.light.av1.0cd8727a.mp4",
+      "bytes": 277900,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "sha256": "0cd8727a1184fef4548d3bd3fb2602663bc686980f958c4925dc9f8a799f9ccc",
+      "bitrate": 277900
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "path": "build.en.light.h264.c461d01a.mp4",
+      "bytes": 429427,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "c461d01af9647f76a4d398b9639a32cdfabc321a0f046efc8d921338c835b230",
+      "bitrate": 429427
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "path": "build.en.light.poster.d5ef7f36.jpg",
+      "bytes": 44675,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "d5ef7f36850cdebe3a7f41cded94345e1a69fe0f5d0255e35c7375cf22159f1e"
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "path": "run.ar.light.av1.4aa8abf2.mp4",
+      "bytes": 198697,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.05M.08\"",
+      "sha256": "4aa8abf248cbb6a3448bc074f04603281a8f72b6d02e12627254ef81b527dce7",
+      "bitrate": 227082
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "path": "run.ar.light.h264.ff42dd82.mp4",
+      "bytes": 362363,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "ff42dd82a70546df08c1daf96f00704420fe19902bda9c0b875141198d201aef",
+      "bitrate": 414129
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "path": "run.ar.light.poster.75a325b4.jpg",
+      "bytes": 39104,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "75a325b4db1cf047c8a40572f553a0d7a5d3ca62c3a5a435161cad273c408b8b"
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "path": "run.en.light.av1.66cb3028.mp4",
+      "bytes": 279844,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.05M.08\"",
+      "sha256": "66cb3028b754a2cd06513a25d37d77dbcdbd0e582e1f61d1997e110cbfe6fc6b",
+      "bitrate": 319821
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "path": "run.en.light.h264.61c0e574.mp4",
+      "bytes": 408530,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "61c0e574fe0b59f6ed7fd257bd4b225f3dc56e03bece74e3bb4d6cb989340e64",
+      "bitrate": 466891
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "path": "run.en.light.poster.eb1362b1.jpg",
+      "bytes": 40623,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "eb1362b1f9b2cd6b0114c8f61a6c4e605b424f31ef30c9273585617c47c73063"
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "path": "history.ar.light.av1.e5fb7336.mp4",
+      "bytes": 177789,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "sha256": "e5fb7336ff7f5140f160785f45b1a68de599daad8f5ce1322529fa3fe64e0e8a",
+      "bitrate": 237052
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "path": "history.ar.light.h264.35b0c906.mp4",
+      "bytes": 293208,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "35b0c906fe91fdb857ad3886c39c9c3d930242c8d7e9d00075d44c870daea44a",
+      "bitrate": 390944
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "path": "history.ar.light.poster.c5bfd9aa.jpg",
+      "bytes": 37033,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "c5bfd9aa81cb962e1fb2d2d1f14739dc9dd474619a8b31c7da6589cc5cb7fc13"
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "path": "history.en.light.av1.02f23e3b.mp4",
+      "bytes": 198168,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "sha256": "02f23e3b1d9d44cb4f620d69abee002baf27db5031a9de07e450fbf4d19611a3",
+      "bitrate": 264224
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "path": "history.en.light.h264.304fe5df.mp4",
+      "bytes": 317431,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "sha256": "304fe5dfc28515a2caadbe3368de327c77670c347daba66989683807fa37d89d",
+      "bitrate": 423241
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "path": "history.en.light.poster.ede3a1f3.jpg",
+      "bytes": 38938,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "ede3a1f363ffa3f22a78a541b668c30e1936a9bd7d32a9f6e29ecd9f005bf188"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.50822e85.vtt",
+      "bytes": 918,
+      "kind": "captions",
+      "lang": "ar"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.av1.fb149202.mp4",
+      "bytes": 2978472,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "sha256": "fb149202f749781cf55477880e94538bfbb1dd4ca03e0e230a91c38b461b0b97",
+      "bitrate": 449580
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.h264.aa1de552.mp4",
+      "bytes": 4426630,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "sha256": "aa1de552d7ca4b2d0a41e615663e394d942e9ab0c50ce5d29185e663e6f32fd7",
+      "bitrate": 668170
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.poster.97f82677.jpg",
+      "bytes": 74255,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "97f82677ed33708fcd23a48d6bfd6000a0ed980c394ce4511905da823967609c"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.ch4.0cbe2b42.jpg",
+      "bytes": 6262,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "inspect"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.ch3.49ee7f10.jpg",
+      "bytes": 33562,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "run"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.ch2.a74d687b.jpg",
+      "bytes": 51973,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "shape"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "path": "walkthrough.ar.light.ch1.fb5ea04d.jpg",
+      "bytes": 65399,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "templates"
+    }
+  ]
+}
