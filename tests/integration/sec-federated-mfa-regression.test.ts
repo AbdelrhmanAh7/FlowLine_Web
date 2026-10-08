@@ -175,4 +175,28 @@ describe("@issue-66 federated MFA enforcement (H3 regression)", () => {
     expect(cookieFrom(replayed, await sessionCookieName())).toBe("");
     expect(await sessionRows(user.id)).toHaveLength(1);
   });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: an MFA-enrolled member with no linked federated identity gets no session from the SSO callback", async () => {
+    const { ws } = await configuredTenant();
+    const user = await makeVerifiedUser("i66-ws-nolink");
+    await enrolTotp(user.id);
+    await addMember(ws.id, user.id, "viewer");
+    const attempt = await oidcAttempt(ws.slug, user.email);
+    const res = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
+    expect(res.headers.get("location")).not.toBe(`${ORIGIN}/w/${ws.slug}/flows`);
+    await expectNoUsableSession(res, user.id);
+    expect(await signInAudits(ws.id, user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: the MFA step refuses a missing, malformed or unknown pending token", async () => {
+    const { user } = await workspaceMember("i66-ws-badtoken", true);
+    const noCookie = await challengePOST(new Request(`${ORIGIN}/api/federation/step-up`, { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ code: "123456" }) }), undefined);
+    expect(noCookie.status).toBe(401);
+    await expectNoUsableSession(noCookie, user.id);
+    for (const token of ["garbage", "A".repeat(43)]) {
+      const res = await submitCode(token, "123456");
+      expect(res.status).toBe(401);
+      await expectNoUsableSession(res, user.id);
+    }
+  });
 });
