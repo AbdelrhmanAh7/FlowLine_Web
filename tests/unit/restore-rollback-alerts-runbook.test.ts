@@ -46,7 +46,10 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
       expect(row, `alert row ${alert} has an owner placeholder`).toMatch(/<owner>/);
       expect(row, `alert row ${alert} has a numeric threshold`).toMatch(/\d/);
     }
-    expect(decisions.split("\n").filter((line) => /^(\d+\.|-) \S/.test(line)).length).toBeGreaterThanOrEqual(3);
+    const items = decisions.split("\n").filter((line) => /^(\d+\.|-) \S/.test(line));
+    expect(items.length).toBeGreaterThanOrEqual(3);
+    // REQ-FL-68-5: each open decision carries a default so work is not blocked.
+    for (const item of items) expect(item, "owner decision has a default").toMatch(/Default: \S/);
   });
 
   it("@issue-68 AC2: has no secrets, real identifiers or LIVE-trading content and keeps NileQuant PAPER only", () => {
