@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, lte, sql } from "drizzle-orm";
 import type { BetterAuthPlugin } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { deleteSessionCookie } from "better-auth/cookies";
@@ -13,6 +13,7 @@ import type { Role } from "@/db/schema";
 import { bindFederatedLink, federatedProviderId } from "./federated-link";
 import { lockUserThenSessions, type SessionLock } from "./federated-locks";
 import { TOTP_PERIOD } from "./totp";
+import { auditFederatedMfaFailure, type FederatedMfaFailure } from "./federated-mfa-audit";
 
 export const FEDERATED_MFA_COOKIE = "fl_federated_mfa";
 const pendingId = (token: string) => `federated-mfa:${sha256Hex(token)}`;
@@ -102,10 +103,18 @@ export async function createFederatedChallenge(userId: string, next: string, wor
   return token;
 }
 
+/** Failure audit never replaces the refusal: a failed audit write must not change the error the caller sees. */
+const refused = (pending: Pending, reason: FederatedMfaFailure) => auditFederatedMfaFailure(db, pending, reason).catch(() => {});
+
 export async function federatedChallenge(token: string) {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) throw invalid();
   const [row] = await db.select().from(schema.verification).where(and(eq(schema.verification.identifier, pendingId(token)), gt(schema.verification.expiresAt, new Date())));
-  if (!row) throw invalid();
+  if (!row) {
+    // An expired challenge is consumed and audited once here; one nobody comes back to is audited by the retention sweep.
+    const [expired] = await db.delete(schema.verification).where(and(eq(schema.verification.identifier, pendingId(token)), lte(schema.verification.expiresAt, new Date()))).returning({ value: schema.verification.value });
+    if (expired) await refused(JSON.parse(expired.value) as Pending, "expired");
+    throw invalid();
+  }
   const pending = JSON.parse(row.value) as Pending;
   const [user] = await db.select().from(schema.user).where(eq(schema.user.id, pending.userId));
   if (!user?.twoFactorEnabled || user.updatedAt.toISOString() !== pending.userStamp) throw invalid();
@@ -118,14 +127,22 @@ export async function federatedChallenge(token: string) {
  */
 export async function completeFederatedChallenge(token: string, code: string) {
   const { row, pending } = await federatedChallenge(token);
-  if (!(await checkRate(`federated-mfa:${pending.userId}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Try again later");
+  if (!(await checkRate(`federated-mfa:${pending.userId}`, 5, 300))) {
+    // One rate_limited audit per user and window, so a client hammering the endpoint cannot flood the audit.
+    if (await checkRate(`federated-mfa-audit:${pending.userId}`, 1, 300)) await refused(pending, "rate_limited");
+    throw new HttpError(429, "RATE_LIMITED", "Try again later");
+  }
   const { verifyTotp } = await import("./platform-access");
   const totpStep = await verifyTotp(pending.userId, code);
-  if (totpStep === null) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "Enter the current authenticator code");
+  if (totpStep === null) {
+    await refused(pending, "invalid_code");
+    throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "Enter the current authenticator code");
+  }
   const { auth } = await import("@/lib/auth");
   const ctx = await auth.$context;
   // Adapter hooks/defaults run outside our locks, matching the ordinary SSO fence.
   const session = await ctx.internalAdapter.createSession(pending.userId);
+  let replayed = false;
   try {
     const result = await db.transaction(async (tx) => {
       const [fresh] = await tx.select().from(schema.verification).where(and(eq(schema.verification.id, row.id), gt(schema.verification.expiresAt, new Date()))).for("update");
@@ -166,7 +183,8 @@ export async function completeFederatedChallenge(token: string, code: string) {
       }
       // Last, after every authority check, so a stale or revoked challenge never burns a code; a refusal here rolls the
       // transaction back and the catch below removes the unissued session.
-      if (!(await consumeFederatedTotpStep(tx, user.id, totpStep))) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "That code was already used. Enter the next code from your authenticator");
+      if (!(await consumeFederatedTotpStep(tx, user.id, totpStep))) replayed = true;
+      if (replayed) throw new HttpError(403, "FEDERATED_MFA_CODE_INVALID", "That code was already used. Enter the next code from your authenticator");
       await recordMfaAssurance(currentSession.token, user.id, currentSession.expiresAt, tx);
       await tx.delete(schema.verification).where(eq(schema.verification.id, row.id));
       return { session: currentSession, next: pending.next };
@@ -178,6 +196,8 @@ export async function completeFederatedChallenge(token: string, code: string) {
     return result;
   } catch (error) {
     await db.delete(schema.session).where(eq(schema.session.token, session.token));
+    // Written after the rollback, so the refused attempt is recorded even though its transaction left nothing behind.
+    if (replayed) await refused(pending, "replayed_code");
     throw error;
   }
 }
