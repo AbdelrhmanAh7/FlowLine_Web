@@ -186,7 +186,7 @@ describe("@issue-66 federated MFA enforcement (H3 regression)", () => {
 const workspaceFailures = (workspaceId: string, userId: string) => db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, workspaceId), eq(schema.auditEvent.action, "sso.mfa_failed"), eq(schema.auditEvent.targetId, userId)));
 const platformFailures = (userId: string) => db.select().from(schema.platformAuditEvent).where(and(eq(schema.platformAuditEvent.action, "signin.mfa_failed"), eq(schema.platformAuditEvent.actorUserId, userId)));
 const expire = (token: string) => db.update(schema.verification).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.verification.identifier, `federated-mfa:${sha256Hex(token)}`));
-const wrongCode = (secret: string) => ["000000", "111111", "222222", "333333"].find((c) => ![-1, 0, 1].some((o) => code(secret, o) === c))!;
+const wrongCode = (secret: string) => ["000000", "111111", "222222", "333333"].find((c) => ![-2, -1, 0, 1, 2].some((o) => code(secret, o) === c))!;
 /** AC3: a failure audit carries the actor and a bounded reason, never the code, the pending token or an error message. */
 function expectBounded(rows: object[], leaks: string[]) {
   const text = JSON.stringify(rows);

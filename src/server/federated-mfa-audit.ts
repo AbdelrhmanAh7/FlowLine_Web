@@ -35,7 +35,8 @@ export async function sweepAbandonedFederatedChallenges(tx: DbOrTx, now: Date) {
   for (const row of rows) {
     let pending: Challenge;
     try { pending = JSON.parse(row.value) as Challenge; } catch { continue; }
-    await auditFederatedMfaFailure(tx, pending, "expired", "system");
+    // A savepoint contains a failed audit write so it cannot abort the surrounding retention transaction.
+    try { await tx.transaction(async (auditTx) => { await auditFederatedMfaFailure(auditTx, pending, "expired", "system"); }); } catch { /* the row is already deleted; the other retention deletes must still commit */ }
   }
   return rows.length;
 }

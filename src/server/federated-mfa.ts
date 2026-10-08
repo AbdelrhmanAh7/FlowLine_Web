@@ -112,7 +112,11 @@ export async function federatedChallenge(token: string) {
   if (!row) {
     // An expired challenge is consumed and audited once here; one nobody comes back to is audited by the retention sweep.
     const [expired] = await db.delete(schema.verification).where(and(eq(schema.verification.identifier, pendingId(token)), lte(schema.verification.expiresAt, new Date()))).returning({ value: schema.verification.value });
-    if (expired) await refused(JSON.parse(expired.value) as Pending, "expired");
+    if (expired) {
+      let stale: Pending | undefined;
+      try { stale = JSON.parse(expired.value) as Pending; } catch { /* unparseable: nothing to audit */ }
+      if (stale) await refused(stale, "expired");
+    }
     throw invalid();
   }
   const pending = JSON.parse(row.value) as Pending;
