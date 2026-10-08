@@ -20,6 +20,18 @@ What it changed: bare worktree names select only managed lanes and `pnpm wt add`
 
 Verification: unit/fixture tests (`worktree-script`, `docs-check-script`, `changed-scope`, `ci-workflows`) and the [pre-merge local validation](../../artifacts/phase-4/ci-trim-defects/VALIDATION.md) (written while the work was uncommitted). Live: the full-tier `workflow_dispatch` run [37137969499](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37137969499) on `050407f` passed all jobs, including the upgraded `pnpm/action-setup` v6 and `actions/setup-node` v7. No other live run is recorded here, and real worktree removal is unverified (tests mock Git/filesystem). This does not establish beta readiness.
 
+### Toolchain & CI update — Node 24 (Issue #74)
+
+Status: **implemented on ai/74**, awaiting PR merge.
+
+What it changed:
+- CI composite setup action (`.github/actions/setup-gate/action.yml`) updated to `node-version: 24` and code-sandbox pull updated to `node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`.
+- `package.json` `engines.node` aligned to `24.x`.
+- `Dockerfile` base image aligned to `node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20`.
+- `src/server/code-sandbox.ts` default `SANDBOX_IMAGE` aligned to `node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`.
+- Release input policy unit test (`tests/unit/release-input-policy.test.ts`) updated to enforce Node 24 across package support, CI setup, Dockerfile base and sandbox image.
+- Verification: unit tests (97 files, 1,247 tests), contract tests (23 files, 468 tests), linting, TypeScript typechecking, and Next.js production build all pass cleanly on Node 24. Live CI pipeline verification occurs on PR `gate` run.
+
 ## Current execution — 2026-09-30
 
 The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.
