@@ -17,7 +17,7 @@ import { makeVerifiedUser } from "./platform-helpers";
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt } from "./federation-fixture";
 import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
 
-// Written for CI (two real PostgreSQL connections); NOT executed locally.
+// Two real PostgreSQL connections (run locally against a throwaway cluster and in CI).
 //
 // Issue #47: `consumeAccountToken("delete")` locked the user's workspaces FOR UPDATE, wrote its audit rows and only
 // then deleted the user row. A workspace SSO sign-in of the same user locks the user row first and inserts its own
@@ -141,18 +141,25 @@ for (const first of ["sso", "deletion"] as const) {
 // user row. A deletion holding the user row FOR UPDATE while waiting for that workspace deadlocked with it, so deletion
 // takes the user row FOR NO KEY UPDATE: it still excludes the SSO paths' FOR SHARE / FOR UPDATE, not key-share.
 
-/** A shared workspace (owned by someone else, so it survives) with a runnable flow, the user as its editor, a
- * sole-member workspace of the user and a valid account-deletion token. */
+/** A shared workspace (owned by someone else, so it survives) with a runnable flow and one run of the owner's, the
+ * user as its editor, a sole-member workspace of the user and a valid account-deletion token.
+ *
+ * The user re-runs the owner's run at its original revision: the same locks as any enqueue (flow and workspace FOR
+ * UPDATE, then a run row whose created_by key-share-locks the user) without a new flow_version. A version the user
+ * authored in a surviving workspace makes the final user delete fail on its own, with or without a competitor: the
+ * ON DELETE SET NULL of flow_version.created_by is refused by the flow_version_immutable trigger (23514). That is a
+ * separate defect from the lock order (docs/security/FEDERATED_MFA.md, "Lock order"), not something this test hides. */
 async function runFixture() {
   const owner = await makeUser("delete-run-owner");
   const ws = await createWorkspace(owner, unique("Shared runs"));
   const flow = await createFlow(owner, ws.id, { templateId: "lead-qualifier", name: unique("Runnable") });
+  const original = await enqueueRun(owner, flow.id);
   const user = await makeUser("delete-during-run");
   await addMember(ws.id, user.id, "editor");
   const solo = await createWorkspace(user, unique("Solo"));
   const token = randomBytes(32).toString("base64url");
   await db.insert(schema.emailToken).values({ userId: user.id, tokenHash: sha256Hex(token), purpose: "delete", expiresAt: new Date(Date.now() + 60_000) });
-  return { ws, flow, solo, user, token };
+  return { ws, flow, original, solo, user, token };
 }
 
 for (const first of ["run", "deletion"] as const) {
@@ -166,7 +173,7 @@ for (const first of ["run", "deletion"] as const) {
       const deleteDb = drizzle(deleteClient, { schema });
       const pid = async (client: typeof runClient) => (await client.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
       let runDone = false;
-      const startRun = () => routing.run(runDb, () => enqueueRun(f.user, f.flow.id)).finally(() => { runDone = true; });
+      const startRun = () => routing.run(runDb, () => enqueueRun(f.user, f.flow.id, { rerunOf: f.original })).finally(() => { runDone = true; });
       const startDeletion = () => routing.run(deleteDb, () => consumeAccountToken("delete", f.token, undefined, f.user.id));
       // Run first: pause right after it locked the workspace. Deletion first: pause right after it locked the user row.
       const pause = first === "run"
@@ -200,7 +207,7 @@ for (const first of ["run", "deletion"] as const) {
         pause.resume();
         const [run, deletion] = await Promise.allSettled(first === "run" ? [holding, waiting] : [waiting, holding]);
         expect(deletion).toEqual({ status: "fulfilled", value: "done" });
-        expect(run).toMatchObject({ status: "fulfilled", value: { flowId: f.flow.id, status: "queued" } });
+        expect(run).toMatchObject({ status: "fulfilled", value: { flowId: f.flow.id, flowVersionId: f.original.flowVersionId, status: "queued" } });
       } finally {
         pause.resume();
         await Promise.allSettled([holding, waiting]);
@@ -208,8 +215,8 @@ for (const first of ["run", "deletion"] as const) {
         routing.restore();
         await Promise.all([runClient.end(), deleteClient.end()]);
       }
-      // The run survives in the shared workspace without its creator; the account and its sole workspace are gone.
-      const runs = await db.select().from(schema.run).where(eq(schema.run.flowId, f.flow.id));
+      // The re-run survives in the shared workspace without its creator; the account and its sole workspace are gone.
+      const runs = await db.select().from(schema.run).where(and(eq(schema.run.flowId, f.flow.id), eq(schema.run.rerunOfRunId, f.original.id)));
       expect(runs).toHaveLength(1);
       expect(runs[0]!.createdBy).toBeNull();
       expect(await db.select().from(schema.user).where(eq(schema.user.id, f.user.id))).toHaveLength(0);
