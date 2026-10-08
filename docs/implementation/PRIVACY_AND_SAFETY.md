@@ -60,6 +60,11 @@ document text, email addresses, tokens and keys. This is enforced in `src/server
 - **Account deletion:** requested in account settings and confirmed by an emailed single-use link (P4-06). It deletes
   the user, their sessions and OAuth links. Workspaces they solely own are deleted with their content. The last owner
   of a shared workspace must transfer ownership first. Audit entries keep the actor id, not the email.
+  **Known gap (found 2026-10-08 by issue #47's integration test on a throwaway test database; not observed in production):**
+  deletion fails and deletes nothing for a user who authored a flow version (a save, publish or the snapshot a manual
+  run pins) in a workspace that survives the deletion. Deleting the user sets `flow_version.created_by` to null
+  (`ON DELETE SET NULL`), which the `flow_version_immutable` trigger (`drizzle/0002_flow_version_immutable.sql`) refuses
+  with `23514`. The fix needs a migration and is not part of issue #47.
 - **Workspace deletion:** cascades to its flows, runs, connections (credentials destroyed), knowledge, agents and
   billing account records.
 - **Backups:** deleted data persists in backups until they rotate out (≤ `BACKUP_RETENTION_DAYS`).

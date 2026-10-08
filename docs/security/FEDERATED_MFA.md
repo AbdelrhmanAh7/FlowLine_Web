@@ -60,8 +60,9 @@ The other workspace lockers take no user-row lock at all: `changeRole`/`removeMe
 The final `DELETE` of the user still needs the full row lock, so it waits for open transactions that inserted rows referencing the user; that wait existed before this change.
 
 `tests/unit/account-deletion-lock-order.test.ts` pins the statement order and the `FOR NO KEY UPDATE` mode against a mocked database (it fails on the previous code).
-`tests/integration/account-deletion-lock-order.test.ts` runs the real deletion against the real direct SSO sign-in (`@issue-47 AC1`, `AC2`) and against the real `enqueueRun` of the same user (`AC5`, `AC6`) on two connections in both directions and requires both to finish without `40P01`.
-The integration test is written for CI and was **not executed** locally.
+`tests/integration/account-deletion-lock-order.test.ts` runs the real deletion against the real direct SSO sign-in (`@issue-47 AC1`, `AC2`) and against the real `enqueueRun` of the same user (`AC5`, `AC6`: a re-run of another member's run at its original revision) on two connections in both directions and requires both to finish without `40P01`.
+It passes against a throwaway local PostgreSQL 16 database. It fails with `40P01` when the user row is taken `FOR UPDATE` (AC5, AC6), and fails on the previous code (AC1, AC2, AC6).
+The re-run keeps a flow version authored by the deleted user out of the test: such a version makes the deletion fail on its own, a separate defect recorded in [PRIVACY_AND_SAFETY.md](../implementation/PRIVACY_AND_SAFETY.md#4-deletion).
 
 **Known gaps (read from the code while auditing this; not reproduced and not changed by this fix).** The rule covers the paths above, not these:
 
