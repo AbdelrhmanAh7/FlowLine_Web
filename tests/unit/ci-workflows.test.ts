@@ -26,7 +26,7 @@ const triggerTypes = (text: string, event: string) => {
 
 describe("workflow files", () => {
   it("finds the workflows and composite actions", () => {
-    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
+    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
