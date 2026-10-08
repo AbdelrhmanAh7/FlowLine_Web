@@ -4,7 +4,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { devNull, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -13,7 +13,7 @@ const script = fileURLToPath(new URL("../../scripts/worktree.mjs", import.meta.u
 const guide = fileURLToPath(new URL("../../docs/DEVELOPER_GUIDE.md", import.meta.url));
 // Hermetic git: no user/system config, fixed identity.
 const env = {
-  ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1",
+  ...process.env, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: "1",
   GIT_AUTHOR_NAME: "wt", GIT_AUTHOR_EMAIL: "wt@example.test", GIT_COMMITTER_NAME: "wt", GIT_COMMITTER_EMAIL: "wt@example.test",
 };
 let tmp: string;

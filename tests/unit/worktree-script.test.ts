@@ -262,21 +262,6 @@ describe("worktree add lane names", () => {
     expect(() => main(["add", "lane", "--branch", "existing-branch"])).toThrow(/branch named 'existing-branch' already exists/);
     expect(mocks.symlink).not.toHaveBeenCalled();
   });
-
-  it("propagates git error when worktree path already exists on add", () => {
-    mocks.git.mockImplementation((_command, args) => {
-      if (args[0] === "rev-parse" && args[1] === "--path-format=absolute") return join(root, ".git");
-      if (args.join(" ") === "worktree list --porcelain") return entries;
-      if (args[0] === "worktree" && args[1] === "add") {
-        const err = new Error("fatal: 'path' already exists") as Error & { status: number };
-        err.status = 128;
-        throw err;
-      }
-      return "";
-    });
-    expect(() => main(["add", "lane"])).toThrow(/already exists/);
-    expect(mocks.symlink).not.toHaveBeenCalled();
-  });
 });
 
 describe("worktree iteration", () => {

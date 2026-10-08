@@ -87,7 +87,7 @@ pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch name; the la
 pnpm wt add base-lane --base origin/main     # --base picks the start point (default origin/main)
 pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false> per lane
 pnpm wt remove my-lane                       # same as: pnpm wt rm my-lane
-pnpm wt rm ./path/to/external-lane           # external lanes need an explicit path
+# pnpm wt rm /abs/path/to/external-lane     # placeholder: external lanes need an explicit path
 pnpm wt prune                                # git worktree prune, then remove every clean, pushed lane
 ```
 
@@ -97,5 +97,5 @@ Safety rules (covered by `tests/unit/worktree-script.test.ts` and the scratch-cl
 - **Existing branch:** `add` does not reuse a branch. Git's `fatal: a branch named '<branch>' already exists` is printed, the exit code is 1 and no lane is created.
 - **Remove refuses dirty or unpushed work:** `rm`/`remove` checks the lane before touching it. Any modified, staged or untracked file counts as a change, except the `node_modules` symlink to the main install that `add` created; a `node_modules` link pointing elsewhere (or tracked by git) counts as work and is never unlinked. A dirty lane fails with exit 1 and `refusing to remove <path>: N uncommitted change(s); commit or discard them first`. A lane whose HEAD is on no remote branch fails with `refusing to remove <path>: HEAD not on any remote branch; push it first`. Nothing is unlinked or removed.
 - **Never forced:** the main checkout and locked worktrees are refused too (exit 1). Removal never uses `--force` and never deletes the branch.
-- **Name vs path:** `rm`/`remove` accept only registered worktrees. A bare name resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external lane needs an explicit path (absolute or containing `/` or `\`). Relative paths resolve from the current directory, with no managed-lane fallback. Path comparisons normalize separators and ignore case only on Windows.
+- **Name vs path:** `rm`/`remove` accept only registered worktrees. A bare name resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external lane needs an explicit path (absolute or containing `/` or `\`). Relative paths resolve from the current directory, with no managed-lane fallback.
 - **list and prune:** missing directories and locked entries are reported and skipped, not inspected. `prune` keeps dirty or unpushed lanes with `kept <path>: <reason>` and moves on; do not run it while agents are starting lanes. Both report per-lane errors, continue, and exit nonzero if any lane failed.
