@@ -8,6 +8,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Logo } from "@/components/ui";
 import { FeatureScenes } from "@/components/landing/feature-scenes";
 import { FlowScene } from "@/components/landing/flow-scene";
+import { DemoVideo } from "@/components/landing/demo-video";
 import { HeroPin } from "@/components/landing/hero-pin";
 import { Magnetic } from "@/components/landing/magnetic";
 import { Reveal, WordReveal } from "@/components/landing/reveal";
@@ -113,6 +114,11 @@ export default async function Landing() {
               { id: "c", type: "logic.condition", label: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub") },
             ]} />
           </section>
+
+          <DemoVideo
+            locale={t.locale}
+            labels={{ title: t("landing.demo.title"), body: t("landing.demo.body"), play: t("landing.demo.play"), pause: t("landing.demo.pause"), captions: t("landing.demo.captions") }}
+          />
 
           <FlowScene nodes={[...flowNodes]} title={t("landing.flowSceneTitle")} body={t("landing.flowSceneBody")} />
 

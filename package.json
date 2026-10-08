@@ -16,6 +16,7 @@
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
     "tokens": "tsx scripts/build-tokens.ts",
+    "demo:record": "tsx scripts/record-demo.ts",
     "db:migrate": "node scripts/with-env.mjs .env tsx src/db/migrate.ts",
     "db:migrate:test": "node scripts/with-env.mjs .env.test tsx src/db/migrate.ts",
     "lint": "eslint . --cache --cache-location node_modules/.cache/eslint/",

@@ -81,3 +81,13 @@ For a handoff, describe the concrete changed behavior, files/configuration, vali
 Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
 
 `pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+
+## Landing demo video
+
+The landing page (`src/components/landing/demo-video.tsx`) embeds `public/media/flowline-demo.{mp4,webm,jpg,en.vtt,ar.vtt}`. Regenerate after UI changes with a seeded fake-data demo user on a running test/staging app and ffmpeg installed (`brew install ffmpeg`):
+
+```
+BASE_URL=http://localhost:3100 DEMO_EMAIL=demo@example.test DEMO_PASSWORD=demo-password pnpm demo:record
+```
+
+The script records 1280×720 with Playwright, encodes H.264 + VP9 (40 s) and fails if a file exceeds 6 MB. Autoplay is skipped under `prefers-reduced-motion` (poster + "Play demo"); if the files are absent the section hides itself. Lighthouse/LCP has not been measured for this change.

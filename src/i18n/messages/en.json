@@ -337,6 +337,13 @@
       "checkSub": "Chooses the path",
       "enrichSub": "Uses AI",
       "outputSub": "Shows the outcome"
+    },
+    "demo": {
+      "title": "See FlowLine in action",
+      "body": "A short recorded tour of the real app.",
+      "play": "Play demo",
+      "pause": "Pause demo",
+      "captions": "Captions are available in English and Arabic."
     }
   },
   "localTemplates": {
