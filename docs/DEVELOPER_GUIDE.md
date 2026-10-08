@@ -81,9 +81,10 @@ For a handoff, describe the concrete changed behavior, files/configuration, vali
 `pnpm wt` (`scripts/worktree.mjs`) manages agent lanes under `.claude/worktrees/<name>` (git-ignored), never folders beside the repo. Each lane gets a `node_modules` symlink to the main install. Run it from any checkout of the repo.
 
 ```bash
+# Each add uses its own lane name, so the block runs top to bottom.
 pnpm wt add my-lane                          # .claude/worktrees/my-lane on new branch my-lane from origin/main; prints the path
-pnpm wt add my-lane --branch feat/my-lane    # slashed branch name; the lane name stays bare
-pnpm wt add my-lane --base origin/main       # --base picks the start point (default origin/main)
+pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch name; the lane name stays bare
+pnpm wt add base-lane --base origin/main     # --base picks the start point (default origin/main)
 pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false> per lane
 pnpm wt remove my-lane                       # same as: pnpm wt rm my-lane
 pnpm wt rm ./path/to/external-lane           # external lanes need an explicit path
@@ -94,7 +95,7 @@ Safety rules (covered by `tests/unit/worktree-script.test.ts` and the scratch-cl
 
 - **Lane names are bare:** `<name>` must match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Anything else (`feat/x`, `../sibling`, `.hidden`, spaces) fails with `invalid lane name "<name>"` and exit 1 before git runs; `rm`/`remove` apply the same check to a bare name (not to an explicit path). Use `--branch feat/x` for a slashed branch.
 - **Existing branch:** `add` does not reuse a branch. Git's `fatal: a branch named '<branch>' already exists` is printed, the exit code is 1 and no lane is created.
-- **Remove refuses dirty or unpushed work:** `rm`/`remove` checks the lane before touching it. Any modified, staged or untracked file counts as a change, except the lane's own `node_modules` link. A dirty lane fails with exit 1 and `refusing to remove <path>: N uncommitted change(s); commit or discard them first`. A lane whose HEAD is on no remote branch fails with `refusing to remove <path>: HEAD not on any remote branch; push it first`. Nothing is unlinked or removed.
+- **Remove refuses dirty or unpushed work:** `rm`/`remove` checks the lane before touching it. Any modified, staged or untracked file counts as a change, except the `node_modules` symlink to the main install that `add` created; a `node_modules` link pointing elsewhere (or tracked by git) counts as work and is never unlinked. A dirty lane fails with exit 1 and `refusing to remove <path>: N uncommitted change(s); commit or discard them first`. A lane whose HEAD is on no remote branch fails with `refusing to remove <path>: HEAD not on any remote branch; push it first`. Nothing is unlinked or removed.
 - **Never forced:** the main checkout and locked worktrees are refused too (exit 1). Removal never uses `--force` and never deletes the branch.
 - **Name vs path:** `rm`/`remove` accept only registered worktrees. A bare name resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external lane needs an explicit path (absolute or containing `/` or `\`). Relative paths resolve from the current directory, with no managed-lane fallback. Path comparisons normalize separators and ignore case only on Windows.
 - **list and prune:** missing directories and locked entries are reported and skipped, not inspected. `prune` keeps dirty or unpushed lanes with `kept <path>: <reason>` and moves on; do not run it while agents are starting lanes. Both report per-lane errors, continue, and exit nonzero if any lane failed.

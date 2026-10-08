@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertLaneName, main, samePath } from "../../scripts/worktree.mjs";
 
 const mocks = vi.hoisted(() => ({
-  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(),
+  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(), readlink: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({ execFileSync: mocks.git }));
 vi.mock("node:fs", () => ({
-  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink,
+  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink, readlinkSync: mocks.readlink,
 }));
 
 // Entirely virtual paths: no child process or filesystem operation reaches the host.
@@ -47,6 +47,7 @@ beforeEach(() => {
   events = [];
   mocks.exists.mockImplementation((path) => path !== stale);
   mocks.stat.mockReturnValue({ isSymbolicLink: () => true });
+  mocks.readlink.mockReturnValue(join(root, "node_modules"));
   mocks.unlink.mockImplementation((path) => { events.push(`unlink ${path}`); });
   mocks.git.mockImplementation((command, args, { cwd }) => {
     expect(command).toBe("git");
@@ -160,6 +161,17 @@ describe("worktree removal safeguards", () => {
     expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
     dirty = "?? node_modules/\n?? node_modules2";
     expect(() => main(["rm", "lane"])).toThrow("2 uncommitted change(s)");
+  });
+
+  it("@issue-67 keeps a node_modules link that does not point at the main install (counted as work, never unlinked)", () => {
+    mocks.readlink.mockReturnValue(join(external, "node_modules"));
+    dirty = "?? node_modules";
+    expect(() => main(["rm", "lane"])).toThrow("1 uncommitted change(s)");
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    dirty = "";
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().filter(({ args }) => args[1] === "remove")).toHaveLength(1);
   });
 
   it("@issue-67 unlinks a dangling node_modules link (lstat, not exists)", () => {

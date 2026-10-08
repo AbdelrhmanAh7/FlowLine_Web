@@ -16,7 +16,7 @@
 // The branch itself is never deleted.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, symlinkSync, unlinkSync } from "node:fs";
+import { existsSync, lstatSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,18 +48,24 @@ function worktrees(root) {
     .filter((w) => w.worktree);
 }
 
-function state(path) {
-  // The node_modules link made by `add` is a symlink, which the `node_modules/` ignore rule (directories only) misses.
-  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter((l) => l && l !== "?? node_modules").length;
-  const head = git(["rev-parse", "HEAD"], path);
-  const pushed = git(["branch", "-r", "--contains", head], path).length > 0;
-  return { dirty, head, pushed };
+// Only the link `add` made counts as the helper's own: a symlink to the main checkout's node_modules. A link someone
+// replaced it with (or a tracked one) is the lane's work and must neither hide from the dirty count nor be unlinked.
+function isOwnModulesLink(path, root, platform) {
+  const nm = join(path, "node_modules");
+  try {
+    return lstatSync(nm, { throwIfNoEntry: false })?.isSymbolicLink() === true && samePath(resolve(path, readlinkSync(nm)), join(root, "node_modules"), platform);
+  } catch {
+    return false;
+  }
 }
 
-function unlinkModules(path) {
-  const nm = join(path, "node_modules");
-  // A junction/symlink is removed as a link only, so the shared install is never touched; lstat also sees a dangling link.
-  if (lstatSync(nm, { throwIfNoEntry: false })?.isSymbolicLink()) unlinkSync(nm);
+function state(path, root, platform) {
+  // The link made by `add` is a symlink, which the `node_modules/` ignore rule (directories only) misses.
+  const own = isOwnModulesLink(path, root, platform);
+  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter((l) => l && !(own && l === "?? node_modules")).length;
+  const head = git(["rev-parse", "HEAD"], path);
+  const pushed = git(["branch", "-r", "--contains", head], path).length > 0;
+  return { dirty, head, pushed, ownLink: own };
 }
 
 // An explicit rm refuses (throws) when work would be kept; prune only reports it and moves on.
@@ -67,14 +73,15 @@ function remove(w, root, platform, refuse = false) {
   const path = resolve(w.worktree);
   if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
   if (Object.hasOwn(w, "locked")) throw new Error(`refusing to remove locked worktree: ${path}`);
-  const s = state(path);
+  const s = state(path, root, platform);
   if (s.dirty || !s.pushed) {
     const reason = s.dirty ? `${s.dirty} uncommitted change(s); commit or discard them first` : "HEAD not on any remote branch; push it first";
     if (refuse) throw new Error(`refusing to remove ${path}: ${reason}`);
     console.log(`kept ${path}: ${reason}`);
     return false;
   }
-  unlinkModules(path);
+  // A junction/symlink is removed as a link only, so the shared install is never touched.
+  if (s.ownLink) unlinkSync(join(path, "node_modules"));
   git(["worktree", "remove", path], root);
   console.log(`removed ${path}`);
   return true;
@@ -118,7 +125,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
         }
         if (cmd === "prune") remove(w, root, platform);
         else {
-          const s = state(w.worktree);
+          const s = state(w.worktree, root, platform);
           console.log(`${w.worktree} | ${w.branch?.replace("refs/heads/", "") ?? "detached"} | dirty=${s.dirty} | pushed=${s.pushed}`);
         }
       } catch (error) {
