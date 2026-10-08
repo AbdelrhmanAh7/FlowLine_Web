@@ -72,6 +72,62 @@ describe("email account flows", () => {
     expect(await verifyPassword({ hash: account!.password!, password: "fresh-password-123" })).toBe(true);
   });
 
+  it("handles concurrent reset and account deletion without deadlocks (#45)", async () => {
+    const user = await makeUser("emailconcurrentdel");
+    await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
+    await issueAccountToken("reset", user);
+    const resetToken = await lastToken(user.email, "/reset-password");
+    await issueAccountToken("delete", user);
+    const deleteToken = await lastToken(user.email, "/account/delete");
+
+    const [resetRes, deleteRes] = await Promise.all([
+      consumeAccountToken("reset", resetToken, "concurrent-pwd-123"),
+      consumeAccountToken("delete", deleteToken, undefined, user.id),
+    ]);
+
+    // User row lock order ensures both finish without deadlock (40P01):
+    // Either reset wins first and delete deletes after, or delete wins first and reset is safely refused as invalid.
+    if (resetRes === "done") {
+      expect(deleteRes).toBe("done");
+    } else {
+      expect(resetRes).toBe("invalid");
+      expect(deleteRes).toBe("done");
+    }
+    const [deletedUser] = await db.select().from(schema.user).where(eq(schema.user.id, user.id));
+    expect(deletedUser).toBeUndefined();
+  });
+
+  it("handles concurrent resets with two different tokens: winner updates credential, loser is refused as used (#45)", async () => {
+    const user = await makeUser("emailconcurrentresets");
+    await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
+    await issueAccountToken("reset", user);
+    const allOutbox1 = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, user.email));
+    const tokenA = new RegExp(`/reset-password\\?token=([A-Za-z0-9_-]+)`).exec(allOutbox1.at(-1)!.plainText)![1]!;
+
+    await issueAccountToken("reset", user);
+    const allOutbox2 = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, user.email));
+    const tokenB = new RegExp(`/reset-password\\?token=([A-Za-z0-9_-]+)`).exec(allOutbox2.at(-1)!.plainText)![1]!;
+    expect(tokenA).not.toBe(tokenB);
+
+    const [resA, resB] = await Promise.all([
+      consumeAccountToken("reset", tokenA, "password-A-12345"),
+      consumeAccountToken("reset", tokenB, "password-B-12345"),
+    ]);
+
+    const results = [resA, resB].sort();
+    expect(results).toEqual(["done", "used"]);
+
+    const [account] = await db.select().from(schema.account).where(eq(schema.account.userId, user.id));
+    const winPassword = resA === "done" ? "password-A-12345" : "password-B-12345";
+    const losePassword = resA === "done" ? "password-B-12345" : "password-A-12345";
+    expect(await verifyPassword({ hash: account!.password!, password: winPassword })).toBe(true);
+    expect(await verifyPassword({ hash: account!.password!, password: losePassword })).toBe(false);
+
+    const tokens = await db.select().from(schema.emailToken).where(eq(schema.emailToken.userId, user.id));
+    expect(tokens).toHaveLength(2);
+    expect(tokens.every((t) => t.consumedAt)).toBe(true);
+  });
+
   it("delivers invitations and leaves revoked links unusable", async () => {
     const owner = await makeUser("emailowner");
     const invitee = await makeUser("emailinvitee");

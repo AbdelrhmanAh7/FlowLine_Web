@@ -9,7 +9,7 @@ import { consumeAccountToken } from "@/server/email/flows";
 import { closeDb, makeUser } from "./helpers";
 import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
 
-// Written for CI (two real PostgreSQL connections); NOT executed locally.
+// Two real PostgreSQL connections (watches pg_blocking_pids for lock-ordering verification).
 //
 // Issue #45: password reset, email verification and delete confirmation locked their token row first, while deleting a
 // user updates every token row of that user (email_token.user_id is ON DELETE SET NULL) after locking the user. A reset
