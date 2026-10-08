@@ -15,7 +15,7 @@ const ownerActions = read(ownerActionsPath);
 
 // The body of the `## ` section whose heading matches, up to the next `## ` heading.
 function section(heading: RegExp): string {
-  const parts = runbook.split(/^(?=## )/m);
+  const parts = runbook.split(/^(?=## )/m).filter((part) => part.startsWith("## "));
   return parts.find((part) => heading.test(part.split("\n")[0])) ?? "";
 }
 // Top-level ordered steps (`1. `, `2. ` …) of a section, in document order.
