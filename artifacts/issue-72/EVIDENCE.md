@@ -1,7 +1,7 @@
 # Evidence — issue #72: audit failed and abandoned federated MFA steps
 
-Tested commit: `eea6b30` (production change and tests; later commits change only Markdown). Failing-first commit: `8704395` (tests only).
-Branch: `ai/72`, stacked on `ai/66` (PR #70, open draft) because the issue extends that PR's `tests/integration/sec-federated-mfa-regression.test.ts`; once #70 merges, this branch's own diff is the commits after `d70f567`.
+Tested commits: `eea6b30` (production change and tests), then `612af72` (merge of `origin/main` after #66 landed as `9225fe9`; same production code and tests, re-run below). Failing-first commit: `8704395` (tests only).
+Branch: `ai/72`. It was stacked on `ai/66` (PR #70); #70 is now squash-merged, so the PR's diff against `main` is #72 only.
 Run on 2026-10-08, macOS, Node 26.10.0, Vitest 5.0.2, against a disposable PostgreSQL 16 in a temp directory (CI uses 17) with a throwaway `.env.test` from `.github/ci/env.test.template` (random secrets, fake provider values). No network, no real IdP, no credentials.
 
 Carries REQ-FL-66-5 ("a failed or abandoned MFA step writes an audit entry") from the #66 PRD. Behaviour: [Failure audit](../../docs/security/FEDERATED_MFA.md#failure-audit).
@@ -14,7 +14,7 @@ Carries REQ-FL-66-5 ("a failed or abandoned MFA step writes an audit entry") fro
 | AC1 rate limited (scope reason) | AC1: rate-limited guessing writes one sso.mfa_failed (rate_limited) per window, not one per request | Pass |
 | AC2 | AC2: a successful completion writes exactly one sso.signin (localTotp) and no failure audit (workspace and GitHub) | Pass |
 | AC3 | The AC1 AC3 tests assert `data` is exactly `{ reason }` (workspace) or `{ reason, provider }` (platform) and that the stored rows contain neither the code, the pending token, its hash nor any refusal message | Pass |
-| AC4 | `git diff d70f567..HEAD --stat -- .github` is empty; own diff about 290 lines including this file | Done |
+| AC4 | `git diff origin/main...HEAD --stat -- .github` is empty; diff against `main` about 285 lines including this file | Done |
 
 ## Results
 
@@ -38,3 +38,12 @@ Carries REQ-FL-66-5 ("a failed or abandoned MFA step writes an audit entry") fro
 ## Review round 1 (PR #73)
 
 - Finding: `docs/implementation/PHASE4_BETA_REPORT.md` appeared to drop the sentence recording the two known lock-order gaps (password-reset recovery; member role change/removal against the SSO audit insert). Cause: the #66/#72 summary had been appended to the same Markdown line, so the line diff showed the whole line as removed, though the sentence was still in it. Fix: the original line is restored byte-for-byte (no diff against `origin/main`), and the #66/#72 summary is a new paragraph that says the two gaps are unchanged. The gaps stay documented in `docs/security/FEDERATED_MFA.md` ("Known gaps"), which this branch does not change. Docs-only; no code or test change.
+
+## Merge with main (rework round, `612af72`)
+
+- PR #73 was `CONFLICTING` after #66 merged as a squash commit. The add/add conflicts in `tests/integration/sec-federated-mfa-regression.test.ts` and `docs/security/FEDERATED_MFA.md` were only where #72 extends the #66 text; the #72 side was kept. `PHASE4_BETA_REPORT.md` keeps main's line unchanged (two lock-order gaps included); the #72 paragraph no longer repeats the #66 sentence already on main.
+- Re-run on `612af72` against a disposable PostgreSQL 16: `sec-federated-mfa-regression`, `sec-federated-totp`, `p4-retention`, `federated-lock-order`, `sec-platform` and `p3-sso`: **6 files, 74 tests passed**. Unit federated suites: **5 files, 38 tests passed**. `tsc --noEmit` clean; ESLint on the changed files clean.
+
+## Why no e2e-army test
+
+The change is server-side: no screen, route, form or text changes. The step-up page shows the same 401/403/429 refusals as before, and the workspace audit log already lists every action by its raw name, so `sso.mfa_failed` needs no new UI or i18n key. The audit rows are checked through the real routes at the integration level (`@issue-72` tests above), which is where a browser-driven check could not see them anyway.
