@@ -17,7 +17,7 @@ Owner enabled the first four on 2026-10-03 16:20 UTC ([issue comment](https://gi
 | CodeQL code scanning | **default setup, configured** (languages as the API lists them: `actions`, `javascript`, `javascript-typescript`, `python`, `typescript`; query suite `default`; first run 37136327901). No CodeQL workflow file in `.github/workflows/`, and none should be added while default setup is on | Settings → Code security |
 | Copilot automatic code review | **not enabled** (owner-only, pending per the issue; #24 stays open for it). The `main protection` ruleset has no Copilot review rule (its rules on 2026-10-07: `deletion`, `non_fast_forward`, `pull_request`, `required_status_checks`); the owner's account-level setting cannot be read from the repo API and has not been reported as on | Settings → Rules → Rulesets (rule), or Copilot settings → Code review (account) |
 
-Open alerts at the 2026-10-07 check: secret scanning 0; Dependabot 1 (`source-map-js`, high; tracked in [#62](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/62)); CodeQL 13 (triage tracked in [#63](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/63)). First-hand outputs for the PRD requirement ids REQ-FL-24-1 to -3 were recorded in PR #59's `EVIDENCE.md` (a per-issue file).
+Open alerts at the 2026-10-07 check: secret scanning 0; Dependabot 1 (`source-map-js`, high; tracked in [#62](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/62)); CodeQL 13 (triage tracked in [#63](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/63)). First-hand outputs for the PRD requirement ids REQ-FL-24-1 to -3 are recorded in [`artifacts/phase-4/issue-24/EVIDENCE.md`](../../artifacts/phase-4/issue-24/EVIDENCE.md) (a per-issue path, so it cannot collide with other issues' evidence).
 
 ## Pending owner action: Copilot code review
 
@@ -30,7 +30,7 @@ Copilot Pro adds automatic Copilot code review as a second reviewer next to Code
 
 - Ruleset: `gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'` lists `copilot_code_review` (rule parameters: `review_on_push`, `review_draft_pull_requests`).
 - Account setting: no repository API exposes a personal Copilot setting, and the ruleset command above stays unchanged. The record is the owner's statement of the toggle state on the settings page (text is enough; no screenshot of account details).
-- Either source: the next PR into main gets a review from the Copilot reviewer. `gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]` (shown as Copilot in the PR UI).
+- Ruleset source: the next PR into main, whoever opens it (a human, Dependabot or a bot), gets a review from the Copilot reviewer. Account source: the setting applies only to PRs created by the owner's account, so verify it on a PR the owner authored; a missing review on a Dependabot, bot or other contributor's PR does not disprove the setting and must not keep #24 open. In both cases `gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]` (shown as Copilot in the PR UI).
 
 After it is on, record the date and the source in the table above and in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md), then close issue #24, which stays open until then (PR #59 references it without closing it).
 
@@ -59,4 +59,4 @@ gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/<N>/reviews --jq '.[].user.login' 
 - [ ] Settings → Code security: *Secret scanning* and *Push protection* enabled; *Dependabot alerts* enabled; *Code scanning* shows the CodeQL default setup (no `codeql.yml` in `.github/workflows/`).
 - [ ] Security tab: the *Dependabot*, *Code scanning* and *Secret scanning* alert lists open (an empty list with the feature on is fine; "not enabled" is not).
 - [ ] Copilot review source: Settings → Rules → Rulesets → *main protection* lists *Automatically request Copilot code review*, or the owner's Copilot settings → Code review show *Automatic Copilot code review* on.
-- [ ] The latest PR into main has a Copilot review next to CodeRabbit's.
+- [ ] The latest PR into main (for the account source: the latest owner-authored PR) has a Copilot review next to CodeRabbit's.

@@ -40,3 +40,8 @@ Open secret-scanning alerts: 0 (`gh api 'repos/AbdelrhmanAh7/FlowLine_Web/secret
 - Finding "docs/security/REPO_SECURITY_SETTINGS.md is truncated (ends at 'Issu')": not reproducible. `wc -l` → 62 lines; the file ends with the checklist item "The latest PR into main has a Copilot review next to CodeRabbit's." and the intro links the full issue URL. The cut-off was in the review's diff view, not in the file. The PR template link (`.github/pull_request_template.md:19`) resolves to the complete file.
 - E2E: this issue changes only GitHub settings documentation and a PR-template line; no user or API client can observe a change, so no E2E test applies (E2E-exempt: docs and repository settings only).
 - Recheck 2026-10-08 (commit `6b6cd2b`, read-only `gh api`): ruleset `main protection` rules are still `deletion`, `non_fast_forward`, `pull_request`, `required_status_checks` (no `copilot_code_review`); reviewers on PR #59 are `coderabbitai[bot]` and `chatgpt-codex-connector[bot]`, no Copilot. REQ-FL-24-3 stays NOT MET until the owner enables it.
+
+## Review round 2 (2026-10-08)
+
+- Evidence moved from the repository root `EVIDENCE.md` to this per-issue path under `artifacts/phase-4/` so it cannot collide with another issue's evidence (PR #61 also adds a root `EVIDENCE.md`); `docs/security/REPO_SECURITY_SETTINGS.md` links here.
+- Verification of the account-level Copilot setting now requires an owner-authored PR (the setting only covers PRs created by the owner's account); the ruleset source keeps the unrestricted next-PR check. No change to the REQ-FL-24-3 verdict: still NOT MET until the owner enables it.
