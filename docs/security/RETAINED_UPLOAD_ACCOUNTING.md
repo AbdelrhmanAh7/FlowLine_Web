@@ -52,8 +52,8 @@ All locks last until commit or rollback. Admission uses the helper before its
 workspace-counter upsert and file INSERT. Source deletion uses it before the
 source UPDATE or chunk/file DELETE. Account deletion uses it before even its
 user-row and email-token locks, and before locking all member workspaces,
-including workspaces that will survive the deletion (the user row precedes the
-workspaces for issue #47, see
+including workspaces that will survive the deletion (the user row, `FOR NO KEY
+UPDATE`, precedes the workspaces for issue #47, see
 [FEDERATED_MFA.md](FEDERATED_MFA.md#lock-order)).
 
 An AFTER ROW trigger cannot repair an inverted caller order: the caller already
