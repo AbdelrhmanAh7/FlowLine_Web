@@ -96,7 +96,13 @@ async function record(browser: Browser, url: string, scenario: Scenario, locale:
     await page.waitForTimeout(400); // settle entrance animations before the first frame
     const rec = new Recorder(page, { dir, locale, theme });
     await rec.start();
-    await scenario.run({ page, rec, locale, seeded, t });
+    try {
+      await scenario.run({ page, rec, locale, seeded, t });
+    } catch (e) {
+      // Keep what the page looked like for the troubleshooting section of docs/landing/DEMO_MEDIA.md.
+      await page.screenshot({ path: join(dir, "failure.png") }).catch(() => {});
+      throw new Error(`${(e as Error).message.split("\n").slice(0, 3).join(" | ")} (at ${rec.now().toFixed(1)} s; screenshot ${join(dir, "failure.png").replace(`${ROOT}/`, "")})`);
+    }
     return await rec.stop();
   } finally {
     await ctx.close();
@@ -181,12 +187,13 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
       run(REMOTION, ["still", "src/index.ts", "Demo", out, `--frame=${Math.min(Math.round(t * spec.fps), Math.round(ev.duration * spec.fps) - 1)}`, `--props=${join(dir, "props.poster.json")}`, "--image-format=jpeg", "--jpeg-quality=82", `--scale=${scale}`, "--log=error"], TOOL);
     const poster = join(dir, "poster.jpg");
     if (!flags.skipRender || !existsSync(poster)) await still(poster, sb.posterT);
-    // Chapter stills (walkthrough): a clean frame of each chapter's first scene, 1280x720 to stay inside 70 KB.
+    await fitJpeg(poster, BUDGET.poster);
+    // Chapter stills (walkthrough): a clean frame of each chapter's result (storyboard `still`), 1280x720 to stay inside 70 KB.
     const chapterStills: { chapter: string; index: number; file: string }[] = [];
     for (const [i, c] of sb.chapterMarks.entries()) {
-      const card = sb.chapters[i];
       const file = join(dir, `chapter${i + 1}.jpg`);
-      if (!flags.skipRender || !existsSync(file)) await still(file, (card ? card.t1 : c.t) + 1.2, 2 / 3);
+      if (!flags.skipRender || !existsSync(file)) await still(file, c.stillT, 2 / 3);
+      await fitJpeg(file, BUDGET.chapterStill);
       chapterStills.push({ chapter: c.id, index: i + 1, file });
     }
     if (clip === "hero") await checkAccent(join(dir, "composed.mp4"), ev, props);
@@ -208,6 +215,18 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
   } finally {
     rmSync(join(pub, key), { recursive: true, force: true });
   }
+}
+
+/** Re-encodes a JPEG at lower quality until it fits `max` bytes (posters <= 90 KB, chapter stills <= 70 KB). */
+async function fitJpeg(file: string, max: number) {
+  const { default: sharp } = await import("sharp");
+  const src = readFileSync(file);
+  if (src.length <= max) return;
+  for (let q = 78; q >= 50; q -= 4) {
+    const out = await sharp(src).jpeg({ quality: q, mozjpeg: true }).toBuffer();
+    if (out.length <= max) return writeFileSync(file, out);
+  }
+  throw new Error(`${file}: still over ${max / 1000} KB at JPEG quality 50`);
 }
 
 function gitHead(): string {

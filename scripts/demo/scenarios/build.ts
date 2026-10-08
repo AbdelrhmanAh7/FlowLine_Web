@@ -3,18 +3,22 @@
 import type { Page } from "@playwright/test";
 import { holdUntil, type ScenarioCtx, type Scenario } from "./common";
 
-/** Opens the palette, optionally searches, and drags `title` onto the pane at fraction `fx`/`fy` (mirrored in RTL). */
-export async function dropNode(ctx: ScenarioCtx, title: string, at: [number, number], opts: { search?: string; label: string }) {
+/**
+ * Opens the palette, optionally searches, and drags `title` onto the pane at fraction `at` of the pane (mirrored in RTL)
+ * or at an absolute viewport point `opts.point`.
+ */
+export async function dropNode(ctx: ScenarioCtx, title: string, at: [number, number], opts: { search?: string; label: string; fast?: boolean; point?: [number, number] }) {
   const { page, rec, t } = ctx;
-  await rec.click(page.getByRole("button", { name: t("builder.addNode") }).first(), `${opts.label}-palette`, { dur: 0.55 });
+  await rec.click(page.getByRole("button", { name: t("builder.addNode") }).first(), `${opts.label}-palette`, { dur: opts.fast ? 0.45 : 0.55 });
   const palette = page.getByRole("dialog", { name: t("palette.dialog") });
-  if (opts.search) await rec.type(palette.getByLabel(t("palette.searchLabel")), opts.search, `${opts.label}-search`, { delayMs: 45 });
+  if (opts.search) await rec.type(palette.getByLabel(t("palette.searchLabel")), opts.search, `${opts.label}-search`, { delayMs: opts.fast ? 35 : 45, focused: true });
   const option = palette.getByRole("option", { name: new RegExp(title) }).first();
   const src = await rec.box(option);
   const pane = await rec.box(page.locator(".react-flow__pane"));
   const fx = ctx.locale === "ar" ? 1 - at[0] : at[0];
   const count = await page.locator(".react-flow__node").count();
-  await rec.drag([src.x + 40, src.y + src.h / 2], [pane.x + pane.w * fx, pane.y + pane.h * at[1]], opts.label, { dur: 0.75 });
+  const to: [number, number] = opts.point ?? [pane.x + pane.w * fx, pane.y + pane.h * at[1]];
+  await rec.drag([src.x + 40, src.y + src.h / 2], to, opts.label, { dur: opts.fast ? 0.6 : 0.75 });
   await page.waitForFunction((n) => document.querySelectorAll(".react-flow__node").length > n, count);
   await page.keyboard.press("Escape"); // the new step's drawer opens; keep the canvas in view
 }
@@ -39,19 +43,23 @@ export const build: Scenario = {
   },
   async run(ctx) {
     const { page, rec, t } = ctx;
-    // Square crop: centred between the Add node button and the empty-state card (mirrored in Arabic).
+    // Square crop: centred on the span from the Add node button to the empty-state card (mirrored in Arabic).
     const add = await rec.box(page.getByRole("button", { name: t("builder.addNode") }).first());
-    const empty = await rec.box(page.getByText(t("builder.emptyTitle")).first());
-    rec.setBase((add.x + add.w / 2 + empty.x + empty.w / 2) / 2, 330);
+    const empty = await rec.box(page.getByText(t("builder.emptyTitle")).first().locator("xpath=.."));
+    rec.setBase((Math.min(add.x, empty.x) + Math.max(add.x + add.w, empty.x + empty.w)) / 2, 330);
     rec.beat("establish");
-    await rec.hold(0.5);
+    await rec.hold(0.3);
     rec.beat("palette");
-    await dropNode(ctx, t("nodes.trigger_manual.title"), [0.32, 0.42], { label: "trigger" });
+    await dropNode(ctx, t("nodes.trigger_manual.title"), [0.36, 0.45], { label: "trigger", fast: true });
     rec.beat("drop");
-    await dropNode(ctx, t("nodes.transform_json.title"), [0.62, 0.42], { search: "json", label: "transform" });
-    const [first, second] = await page.locator(".react-flow__node").evaluateAll((els) => els.map((e) => e.getAttribute("data-id")!));
+    // The second step lands one node-width further along the reading direction (the canvas may have re-centred).
+    const first = await rec.box(page.locator(".react-flow__node").first());
+    const dir = ctx.locale === "ar" ? -1 : 1;
+    const point: [number, number] = [first.x + first.w / 2 + dir * (first.w + 90), first.y + first.h / 2];
+    await dropNode(ctx, t("nodes.transform_json.title"), [0, 0], { search: "json", label: "transform", fast: true, point });
+    const [a, b] = await page.locator(".react-flow__node").evaluateAll((els) => els.map((e) => e.getAttribute("data-id")!));
     rec.beat("connect");
-    await connectNodes(ctx, first!, second!, "connect");
+    await connectNodes(ctx, a!, b!, "connect");
     await holdUntil(ctx, 8.0);
   },
 };

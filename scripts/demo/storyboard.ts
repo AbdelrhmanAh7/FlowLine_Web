@@ -16,7 +16,8 @@ export const StoryboardSchema = z
     beats: z.array(beat).min(1),
     captions: z.array(z.object({ beat, at: z.number().default(0), dur: z.number().positive(), ...bilingual }).strict()).optional(),
     chips: z.object({ in: beat, out: beat, items: z.array(z.object({ beat, ...bilingual }).strict()).min(1) }).strict().optional(),
-    chapters: z.array(z.object({ id: z.string().min(1), beat, dur: z.number().positive(), ...bilingual }).strict()).optional(),
+    // `still`: the moment the chapter's still image is taken (its result on screen), anchored to a beat like captions.
+    chapters: z.array(z.object({ id: z.string().min(1), beat, dur: z.number().positive(), still: z.object({ beat, at: z.number().default(0) }).strict().optional(), ...bilingual }).strict()).optional(),
     endCard: z.object({ beat }).strict().optional(),
     poster: z.object({ beat, at: z.number().default(0) }).strict(),
   })
@@ -32,7 +33,7 @@ export function parseStoryboard(json: unknown, where = "storyboard"): Storyboard
   const used = [
     ...(sb.captions ?? []).map((c) => c.beat),
     ...(sb.chips ? [sb.chips.in, sb.chips.out, ...sb.chips.items.map((i) => i.beat)] : []),
-    ...(sb.chapters ?? []).map((c) => c.beat),
+    ...(sb.chapters ?? []).flatMap((c) => [c.beat, ...(c.still ? [c.still.beat] : [])]),
     ...(sb.endCard ? [sb.endCard.beat] : []),
     sb.poster.beat,
   ];
@@ -68,7 +69,8 @@ export type ResolvedStoryboard = {
   chapters: (TimedText & { index: number })[];
   endCard?: { t0: number; wordmark: string; badge: string };
   posterT: number;
-  chapterMarks: { id: string; t: number }[];
+  /** Chapter start times (manifest `chapters`) and the time of each chapter's still (default: 1.2 s after its card). */
+  chapterMarks: { id: string; t: number; stillT: number }[];
 };
 
 export function resolveStoryboard(sb: Storyboard, events: EventsFile, locale: Locale, opts: ResolveOpts): ResolvedStoryboard {
@@ -83,6 +85,9 @@ export function resolveStoryboard(sb: Storyboard, events: EventsFile, locale: Lo
     if (t0 >= end) continue;
     captions.push({ t0, t1: Math.min(t0 + c.dur, end), text: c[locale] });
   }
+  // A slow beat can push a caption into the next one: the earlier caption gives way (cues never overlap).
+  captions.sort((a, b) => a.t0 - b.t0);
+  for (let i = 0; i + 1 < captions.length; i++) captions[i]!.t1 = Math.min(captions[i]!.t1, captions[i + 1]!.t0 - 0.04);
 
   const chips = sb.chips && {
     tIn: at(sb.chips.in),
@@ -100,8 +105,8 @@ export function resolveStoryboard(sb: Storyboard, events: EventsFile, locale: Lo
     captions,
     ...(chips ? { chips } : {}),
     chapters,
-    ...(sb.endCard ? { endCard: { t0: at(sb.endCard.beat), wordmark: "FlowLine", badge: opts.badge } } : {}),
+    ...(sb.endCard ? { endCard: { t0: at(sb.endCard.beat), wordmark: "Flowline", badge: opts.badge } } : {}),
     posterT: at(sb.poster.beat) + sb.poster.at,
-    chapterMarks: chapterDefs.map((c, i) => ({ id: c.id, t: chapters[i]!.t0 })),
+    chapterMarks: chapterDefs.map((c, i) => ({ id: c.id, t: chapters[i]!.t0, stillT: c.still ? at(c.still.beat) + c.still.at : chapters[i]!.t1 + 1.2 })),
   };
 }

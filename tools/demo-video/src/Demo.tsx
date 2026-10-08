@@ -5,6 +5,7 @@ import type { DemoProps } from "./props.ts";
 import {
   buildTrack,
   cameraWithCaptions,
+  shapeCamera,
   contentRect,
   cursorAt,
   cursorOpacity,
@@ -75,7 +76,7 @@ const Scene: React.FC<DemoProps & { overlay?: boolean }> = (props) => {
   const rect = useMemo(() => contentRect(shape, canvas, vp, base), [shape, canvas, vp, base]);
   const keys = useMemo(() => buildTrack(events, vp, durationS, base), [events, vp, durationS, base]);
 
-  const cam = cameraWithCaptions(keys, t, poster ? [] : captions, vp);
+  const cam = shapeCamera(cameraWithCaptions(keys, t, poster ? [] : captions, vp), shape);
   const tr = viewTransform(cam, rect, canvas, vp);
   const win = shape === "window";
   const start: [number, number] = (() => {

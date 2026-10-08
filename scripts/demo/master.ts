@@ -42,7 +42,8 @@ export function masterArgs(dir: string): string[] {
 
 /** Writes `<dir>/frames.ffconcat` from frames.json + events.json and encodes `<dir>/master.mp4`. */
 export async function buildMaster(dir: string, run: (args: string[]) => Promise<unknown> = (a) => ffmpeg(a)): Promise<string> {
-  const frames = JSON.parse(await fs.readFile(path.join(dir, "frames.json"), "utf8")) as FrameStamp[];
+  // Screencast frames can be delivered a few ms out of order: play them in capture-time order.
+  const frames = (JSON.parse(await fs.readFile(path.join(dir, "frames.json"), "utf8")) as FrameStamp[]).sort((a, b) => a.t - b.t || a.i - b.i);
   const events = parseEvents(await fs.readFile(path.join(dir, "events.json"), "utf8"));
   await fs.writeFile(path.join(dir, "frames.ffconcat"), buildFfconcat(frames, events.duration));
   await run(masterArgs(dir));

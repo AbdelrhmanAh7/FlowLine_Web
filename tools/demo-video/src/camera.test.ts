@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  shapeCamera,
   buildTrack,
   cameraAt,
   cameraTargets,
@@ -124,6 +125,14 @@ test("window-edge clamp: while zoomed no background shows, even for a target in 
     assert.ok(zoomed.tx + zoomed.scale * rect.x <= 1e-6 && zoomed.tx + zoomed.scale * (rect.x + rect.w) >= CANVAS.w - 1e-6, "zoomed window covers the canvas horizontally");
     assert.ok(zoomed.ty + zoomed.scale * rect.y <= 1e-6 && zoomed.ty + zoomed.scale * (rect.y + rect.h) >= CANVAS.h - 1e-6, "zoomed window covers the canvas vertically");
   }
+});
+
+test("square tiles keep 30% of a zoom moment (1.35-1.8 becomes 1.105-1.24); other shapes are unchanged", () => {
+  assert.equal(shapeCamera({ s: 1.8, cx: 1, cy: 2 }, "square").s.toFixed(3), "1.240");
+  assert.equal(shapeCamera({ s: 1.35, cx: 1, cy: 2 }, "square").s.toFixed(3), "1.105");
+  assert.equal(shapeCamera({ s: 1, cx: 1, cy: 2 }, "square").s, 1);
+  assert.equal(shapeCamera({ s: 1.8, cx: 1, cy: 2 }, "wide").s, 1.8);
+  assert.equal(shapeCamera({ s: 1.8, cx: 1, cy: 2 }, "window").s, 1.8);
 });
 
 test("bleed shapes always cover the canvas", () => {

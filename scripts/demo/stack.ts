@@ -21,7 +21,7 @@ export function buildIsCurrent(root = process.cwd()): boolean {
   const id = `${root}/.next-test/BUILD_ID`;
   if (!existsSync(id)) return false;
   const built = statSync(id).mtimeMs / 1000;
-  const lastCommit = Number(spawnSync("git", ["log", "-1", "--format=%ct", "--", "src", "public", "next.config.ts"], { cwd: root, encoding: "utf8" }).stdout.trim() || 0);
+  const lastCommit = Number(spawnSync("git", ["log", "-1", "--format=%ct", "--", "src", "next.config.ts"], { cwd: root, encoding: "utf8" }).stdout.trim() || 0);
   const dirty = spawnSync("git", ["status", "--porcelain", "--", "src", "next.config.ts"], { cwd: root, encoding: "utf8" }).stdout.trim();
   return built >= lastCommit && !dirty;
 }

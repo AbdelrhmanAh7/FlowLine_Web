@@ -144,6 +144,7 @@ export class Recorder {
   /** Storyboard marker (captions, chapters and chips resolve against these). */
   beat(id: string) {
     this.events.push({ t: r3(this.now()), type: "beat", id });
+    if (process.env.DEMO_DEBUG) console.log(`[demo] beat ${id} at ${this.now().toFixed(2)} s`);
   }
 
   /** Wide-shot centre for the full-bleed tiles (written to scene.json; the compositor crops around it). */
@@ -209,8 +210,9 @@ export class Recorder {
   }
 
   /** Clicks a field and types into it at a readable pace, logged as one `type` event (t .. t1). */
-  async type(target: Locator, text: string, label: string, opts: { delayMs?: number; clear?: boolean } = {}) {
-    const b = await this.click(target, `${label}-focus`);
+  async type(target: Locator, text: string, label: string, opts: { delayMs?: number; clear?: boolean; focused?: boolean } = {}) {
+    // `focused`: the field already has focus (e.g. the palette search), so no click is needed.
+    const b = opts.focused ? await this.box(target) : await this.click(target, `${label}-focus`);
     if (opts.clear) await target.fill("");
     const t = r3(this.now());
     await target.pressSequentially(text, { delay: opts.delayMs ?? 55 });
@@ -251,7 +253,7 @@ export class Recorder {
     if (this.guardHits.size) throw new Error(`honesty guard: the DOM contained ${[...this.guardHits].join("; ")}`);
     if (this.frames.length < 2) throw new Error("the screencast captured fewer than 2 frames");
     const file: EventsFile = { schema: 1, viewport: { ...VIEWPORT }, duration, locale: this.opts.locale, theme: this.opts.theme, events: [...this.events].sort((a, b) => a.t - b.t) };
-    writeFileSync(join(this.opts.dir, "frames.json"), JSON.stringify(this.frames));
+    writeFileSync(join(this.opts.dir, "frames.json"), JSON.stringify([...this.frames].sort((a, b) => a.t - b.t || a.i - b.i)));
     writeFileSync(join(this.opts.dir, "events.json"), JSON.stringify(file, null, 1) + "\n");
     writeFileSync(join(this.opts.dir, "scene.json"), JSON.stringify({ base: this.base }) + "\n");
     return file;

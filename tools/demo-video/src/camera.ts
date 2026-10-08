@@ -216,6 +216,17 @@ function axis(canvasLen: number, rectPos: number, rectLen: number, center: numbe
 }
 
 /**
+ * Square tiles already crop the 16:9 viewport to its middle 720 CSS px (about 1.8x tighter than the window shot), so
+ * their zoom moments keep only this share of the zoom: 1.35-1.8 becomes about 1.1-1.24.
+ */
+export const SQUARE_ZOOM_SHARE = 0.3;
+
+/** The camera for a clip shape: square tiles get gentler zoom moments; window and wide tiles use the track as is. */
+export function shapeCamera<T extends { s: number }>(cam: T, shape: Shape): T {
+  return shape === "square" ? { ...cam, s: 1 + (cam.s - 1) * SQUARE_ZOOM_SHARE } : cam;
+}
+
+/**
  * CSS transform (`translate(tx, ty) scale(scale)` with transform-origin 0 0, applied to the element placed at `rect`)
  * that centres camera point (cx, cy) on the canvas. Clamped so, whenever the scaled content is larger than the canvas,
  * its edges never leave the canvas (no background visible); a smaller window stays centred.

@@ -2,10 +2,10 @@
   "clip": "walkthrough",
   "beats": ["ch1", "templates", "use", "ch2", "add-node", "connect", "ch3", "run", "result", "ch4", "inspect", "history", "share", "end"],
   "chapters": [
-    { "id": "templates", "beat": "ch1", "dur": 1.8, "ar": "ابدأ من قالب", "en": "Start from a template" },
-    { "id": "shape", "beat": "ch2", "dur": 1.6, "ar": "عدّل الخطوات", "en": "Shape the steps" },
-    { "id": "run", "beat": "ch3", "dur": 1.6, "ar": "شغّل وراقب", "en": "Run and watch" },
-    { "id": "inspect", "beat": "ch4", "dur": 1.6, "ar": "افهم ما حدث", "en": "See what happened" }
+    { "id": "templates", "beat": "ch1", "dur": 1.8, "still": { "beat": "use", "at": 4.0 }, "ar": "ابدأ من قالب", "en": "Start from a template" },
+    { "id": "shape", "beat": "ch2", "dur": 1.6, "still": { "beat": "connect", "at": 5.4 }, "ar": "عدّل الخطوات", "en": "Shape the steps" },
+    { "id": "run", "beat": "ch3", "dur": 1.6, "still": { "beat": "result", "at": 2.5 }, "ar": "شغّل وراقب", "en": "Run and watch" },
+    { "id": "inspect", "beat": "ch4", "dur": 1.6, "still": { "beat": "inspect", "at": 3.4 }, "ar": "افهم ما حدث", "en": "See what happened" }
   ],
   "captions": [
     { "beat": "templates", "at": 0.2, "dur": 4.2, "ar": "ابدأ من قالب جاهز يعمل على بيانات تجريبية.", "en": "Start from a ready-made template that runs on sample data." },

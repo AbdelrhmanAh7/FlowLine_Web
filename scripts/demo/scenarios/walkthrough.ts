@@ -47,8 +47,8 @@ export const walkthrough: Scenario = {
     // 3 · Run and watch
     rec.beat("ch3");
     await holdUntil(ctx, 26.6);
-    await rec.click(runButton(ctx), "run", { dur: 0.9 });
     rec.beat("run");
+    await rec.click(runButton(ctx), "run", { dur: 0.9 });
     for (const id of ["trigger", "normalise", "is-hot", "hot"]) {
       await rec.focus(grow(await rec.box(nodeCard(page, id)), 400, 180), `node-${id}`);
       await holdUntil(ctx, rec.now() + 1.3);
@@ -67,7 +67,7 @@ export const walkthrough: Scenario = {
     const panel = page.getByTestId("step-panel");
     await panel.waitFor({ state: "visible", timeout: 20_000 });
     // "50+ employees?" reads the normalised lead (no email in its input or output).
-    await rec.click(page.getByRole("button", { name: /50\+/ }).first(), "step", { dur: 0.6 });
+    await rec.click(page.getByRole("button", { name: t("localTemplates.lead-qualifier.nodes.is-hot") }).first(), "step", { dur: 0.6 });
     await rec.click(panel.getByRole("tab", { name: t("runs.panel.tabs.input") }), "tab-input", { dur: 0.5, box: panel });
     await rec.hold(1.0);
     await rec.click(panel.getByRole("tab", { name: t("runs.panel.tabs.output") }), "tab-output", { dur: 0.4, box: panel });

@@ -36,8 +36,10 @@ describe("storyboard", () => {
       [3, "#3 · شغّل", 25, 26.8],
     ]);
     expect(r.chips).toEqual({ tIn: 0, tOut: 50, items: [{ t0: 0, text: "#1 ابدأ" }, { t0: 26, text: "#2 شغّل" }] });
-    expect(r.chapterMarks).toEqual([{ id: "templates", t: 1 }, { id: "shape", t: 12 }, { id: "run", t: 25 }]);
-    expect(r.endCard).toEqual({ t0: 50, wordmark: "FlowLine", badge: "Sandbox" });
+    expect(r.chapterMarks.map(({ id, t }) => ({ id, t }))).toEqual([{ id: "templates", t: 1 }, { id: "shape", t: 12 }, { id: "run", t: 25 }]);
+    // No `still` in the fixture: each still is taken 1.2 s after its chapter card.
+    r.chapterMarks.forEach((m, i) => expect(m.stillT).toBeCloseTo(r.chapters[i]!.t1 + 1.2));
+    expect(r.endCard).toEqual({ t0: 50, wordmark: "Flowline", badge: "Sandbox" });
     expect(r.posterT).toBeCloseTo(0.6);
   });
 
@@ -47,6 +49,19 @@ describe("storyboard", () => {
     const r = resolveStoryboard(sb, short, "en", opts);
     expect(r.captions).toHaveLength(1);
     expect(r.captions[0]!.t1).toBe(5);
+  });
+
+  it("an earlier caption gives way when a slow beat pushes it into the next one (cues never overlap)", () => {
+    const e = recorded();
+    const late = { ...e, events: e.events.map((ev) => (ev.type === "beat" && ev.id === "templates" ? { ...ev, t: ev.t + 30 } : ev)) };
+    const r = resolveStoryboard(sb, late, "en", opts);
+    for (let i = 0; i + 1 < r.captions.length; i++) expect(r.captions[i]!.t1).toBeLessThan(r.captions[i + 1]!.t0);
+  });
+
+  it("anchors a chapter still to its beat", () => {
+    const withStill = parseStoryboard({ ...sb, chapters: sb.chapters!.map((c, i) => (i === 0 ? { ...c, still: { beat: c.beat, at: 3 } } : c)) });
+    const r = resolveStoryboard(withStill, recorded(), "en", opts);
+    expect(r.chapterMarks[0]!.stillT).toBeCloseTo(r.chapterMarks[0]!.t + 3);
   });
 
   it("throws naming a missing beat", () => {
