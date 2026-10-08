@@ -48,3 +48,9 @@ Resolved directly via Docker Hub Registry API for official multi-platform OCI in
   - Platforms: linux/amd64 (`sha256:51b1100cc...`), linux/arm64 (`sha256:ba6b7d0ee...`), linux/ppc64le (`sha256:e6dc05f51...`)
 - `node:24-alpine`: `sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`
   - Platforms: linux/amd64 (`sha256:83f1c388c...`), linux/arm64 (`sha256:38a36422d...`), linux/s390x (`sha256:fb2a6de21...`)
+
+## Review follow-up: E2E exemption and sandbox change
+`src/server/code-sandbox.ts` only changes the default `SANDBOX_IMAGE` (node:22 -> node:24-alpine, digest-pinned); the sandbox logic is untouched.
+No UI or API client behaviour changes, so no e2e-army test is added. The image pin is covered by
+`tests/unit/release-input-policy.test.ts` (`@issue-74 AC1 AC2 AC3`, sandbox digest check), and sandbox behaviour by the existing `tests/unit/sandbox.test.ts`.
+Not run in this worktree (no node_modules); proven by the PR `gate` run on the final head SHA.
