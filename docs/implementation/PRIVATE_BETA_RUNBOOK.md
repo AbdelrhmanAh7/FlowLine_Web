@@ -131,6 +131,9 @@ reconnect at their next refresh, unless deployment history proves which client i
 
 ## 5. Backups and restore
 
+A step-by-step restore, rollback and alerting procedure for the approved pilot target (PP-06, #30) is drafted for owner
+review in [restore-rollback-alerts.md](../runbooks/restore-rollback-alerts.md). It is a draft and has not been run.
+
 - The nightly dump goes to `deploy/beta/backups/flowline-<utc>.dump`. `LAST_OK` / `LAST_FAILED` markers are watched by
   the monitor.
 - **Copy backups off the host** (object storage or another machine). The owner must configure this.

@@ -72,6 +72,8 @@ The historical handoff requested a privately saved Google client file. Its prese
 | O11 | Legal/business attestations | Google User Data Policy accepted by owner. Any further binding policy/identity attestations require takeover |
 | O12 | Git publication if it triggers deploy/cost | `.github/workflows/gate.yml` now defines PR/push/manual CI. Deployment hooks and external app triggers are unverified; publication remains outside this docs task |
 
+Paid-pilot PP-06 (approved deployment with restore, rollback and alerts; PP-02..PP-09 are tracked in #30), related to O04 and O08 above: draft procedure for owner review in [restore-rollback-alerts.md](../runbooks/restore-rollback-alerts.md). It is a draft, not executed; it changes no item's state.
+
 The earlier handoff reported Google policy/client creation, Sheets/Gmail enablement and External/Testing identity configuration. These external account states are unverified here; live provider certification remains unverified.
 
 The cp21/cp23 build and supervisor notes were transient session state, not a current startup or shutdown procedure. Re-establish process ownership and the tested revision before any operational action.
