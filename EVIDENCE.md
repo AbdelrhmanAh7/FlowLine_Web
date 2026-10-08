@@ -49,3 +49,15 @@ while deletion reaches flow rows after the workspace (the sole-workspace cascade
 - Full unit project: 1247 passed, 4 skipped, 1 failed, and 2 files failed: `tests/unit/egress.test.ts` and `tests/unit/codex-poc-egress-redirect.test.ts` need local port binding, which this sandbox blocks. The egress code is untouched.
 - `tsc --noEmit` and `eslint` on the changed files: clean.
 - Integration tests (`pnpm test:integration`): not run locally. The CI `gate` runs them; the council requires its logs to show AC1, AC2, AC5 and AC6 ran and passed.
+
+## Round 3: quality-review finding (documentation only)
+
+- Finding: the `**Account deletion (issue #47).**` paragraph in `docs/security/FEDERATED_MFA.md` "ends abruptly with
+  ...waited for a completed deletion fi".
+- Root cause: the committed file was complete (`git show 78a0561:docs/security/FEDERATED_MFA.md` has the full paragraph,
+  ending "...deleted with the account."). The paragraph was one 1,113-character line, and the review's diff view cut it
+  at about 966 characters, which is exactly where "deletion fi" ends.
+- Fix: the long lines this PR added in `docs/security/FEDERATED_MFA.md`, `docs/implementation/PHASE4_BETA_REPORT.md`
+  and `docs/DEVELOPER_GUIDE.md` are broken at sentence boundaries (Markdown soft breaks, so the rendered text is the same).
+  `git diff --word-diff` shows no word changes, and no line this PR adds to a `.md` file is longer than 900 characters.
+- No code or test changed in this round, so the local runs on `cee11a9` above still describe the code under review.
