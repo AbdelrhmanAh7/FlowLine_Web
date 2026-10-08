@@ -97,6 +97,7 @@ export class Recorder {
   private cur: [number, number] = [VIEWPORT.w / 2, VIEWPORT.h / 2];
   private stopScreencast: (() => Promise<void>) | null = null;
   private guardTimer: ReturnType<typeof setInterval> | null = null;
+  private base: { cx: number; cy: number } | null = null;
 
   constructor(page: Page, opts: RecorderOpts) {
     this.page = page;
@@ -143,6 +144,11 @@ export class Recorder {
   /** Storyboard marker (captions, chapters and chips resolve against these). */
   beat(id: string) {
     this.events.push({ t: r3(this.now()), type: "beat", id });
+  }
+
+  /** Wide-shot centre for the full-bleed tiles (written to scene.json; the compositor crops around it). */
+  setBase(cx: number, cy: number) {
+    this.base = { cx: Math.round(cx), cy: Math.round(cy) };
   }
 
   /** A deliberate on-screen pause for the viewer (pacing, never synchronisation). */
@@ -247,6 +253,7 @@ export class Recorder {
     const file: EventsFile = { schema: 1, viewport: { ...VIEWPORT }, duration, locale: this.opts.locale, theme: this.opts.theme, events: [...this.events].sort((a, b) => a.t - b.t) };
     writeFileSync(join(this.opts.dir, "frames.json"), JSON.stringify(this.frames));
     writeFileSync(join(this.opts.dir, "events.json"), JSON.stringify(file, null, 1) + "\n");
+    writeFileSync(join(this.opts.dir, "scene.json"), JSON.stringify({ base: this.base }) + "\n");
     return file;
   }
 }
