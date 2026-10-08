@@ -136,8 +136,17 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | E2E, Chromium + Firefox + WebKit, dev server (starts the test stack on :3100) | `pnpm test:e2e`; for Chromium + Firefox only: `pnpm test:e2e --project=chromium --project=firefox` (install the selected browsers first with `pnpm exec playwright install chromium firefox`) |
 | E2E against a production build instead of `next dev` | `FLOWLINE_TEST_NEXT=start pnpm test:e2e` (runs `next build` once, then `next start`; recommended for release gates — see `scripts/dev-test.mjs`) |
 | E2E, WebKit (Linux Playwright container; needs `pnpm dev:test` running) | `bash e2e/tools/webkit-docker.sh` |
+| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; ≤ 5 min) | `pnpm e2e:army`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
 | Live (real PostgreSQL and SaaS certification; missing SaaS credentials → BLOCKED; no AI suite) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
+
+The blocking E2E gate for AI pull requests is the `e2e-army` commit status, posted by the hub's verify job: it starts
+the app from the PR branch and runs its FlowLine suite plus every `e2e-army/*.e2e.ts` file of the branch. A PR that
+changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit (title `@issue-<N> <criterion>`,
+one goal per `agent.act`, checked with `agent.assert` or an exact `expect`; import only `e2e`, `@e2e-dev/web` and node
+built-ins, because the hub copies the file into its runner). Signed-in tests use the `fl-user` session (a verified user
+with a workspace; slug in `<E2E_ARMY_OUT>/flowline-slug.txt`), which the hub suite saves and `e2e-army/setup/` saves
+locally. The existing Playwright specs stay as plain tests. No GitHub Actions job runs `e2e-army` yet.
 
 CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,
 Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets
@@ -179,6 +188,7 @@ src/db             Drizzle schema and migration runner
 worker/            Separate execution worker (runs, agents, indexing, schedules)
 drizzle/           SQL migrations (expand-only)
 e2e/               Playwright specs; e2e/fakes = provider-boundary test doubles; e2e/tools = WebKit runner
+e2e-army/          Natural-language tester-army/e2e suite (pnpm e2e:army, config e2e.config.ts); setup/ = local fl-user session
 tests/             Vitest unit, contract, integration, live
 scripts/           Test stack, release (rollback, backup/restore, DB outage), load, admin bootstrap/rewrap, diagnostics
 docs/              Implementation plans, test plan, AI hub report/providers/routing/migration, security design, releases
