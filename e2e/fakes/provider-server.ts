@@ -1817,9 +1817,9 @@ ${failed}
       await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", { ...txn }));
       await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
     }
-    // The redirect Paddle.js performs to settings.successUrl after payment. CodeQL `js/server-side-unvalidated-url-redirection`
-    // (alert #9) dismissed, used in tests: the real Paddle.js also follows the caller's successUrl, and this fake listens on
-    // 127.0.0.1 only (docs/security/CODEQL_TRIAGE.md).
+    // The redirect Paddle.js performs to settings.successUrl after payment.
+    // CodeQL `js/server-side-unvalidated-url-redirection` (alert #9) dismissed, used in tests: the real Paddle.js also
+    // follows the caller's successUrl, and this fake listens on 127.0.0.1 only (docs/security/CODEQL_TRIAGE.md).
     res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
     res.end();
     return;

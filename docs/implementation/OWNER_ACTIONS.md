@@ -26,6 +26,11 @@ These checks remain unverified from the repository. Confirm the running app and 
    - Owner action: sign in to dedicated test accounts and grant only the requested test access. For GitHub, use a separate private test repository, never FlowLine_Web as a side-effect target. Do not use a personal Gmail connector. Proceed only where accounts, scopes and test actions are already within the approved brief.
    - Claude verifies after: the resulting connection state and bounded read/action/result/revoke/reconnect evidence required by the brief. A saved configuration or successful consent alone is not live certification.
 
+5. **Dismiss the five documented CodeQL alerts (#63), after its PR merges**
+   - Purpose: close alerts #6, #8, #9, #10 and #12, whose reasons are written in [CODEQL_TRIAGE.md](../security/CODEQL_TRIAGE.md) and at the code; the other eight close on main's next CodeQL scan.
+   - Owner action: run the `dismiss` commands in that doc (repository admin), or dismiss each alert in Security → Code scanning with the reason the table gives.
+   - Claude verifies after: `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts?state=open' --jq length` returns 0.
+
 This dated section is the current owner-action plan and supersedes older handoff/action status below it. Those entries are retained as history only.
 
 ## Current source handoff — Company Builder integrated
