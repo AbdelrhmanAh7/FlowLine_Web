@@ -34,3 +34,8 @@ Open secret-scanning alerts: 0 (`gh api 'repos/AbdelrhmanAh7/FlowLine_Web/secret
 - `checkDocs` from `scripts/ci/docs-check.mjs` on the branch's file list: passed (code files changed: 1, the PR template; docs changed: 7, this file included). `classifyScope` from `scripts/ci/changed-scope.mjs`: docs-only, so CI's `gate` reports "docs-only change: test jobs skipped by design".
 - Relative links in the edited Markdown files: 0 broken.
 - `vitest run --project unit tests/unit/docs-check-script.test.ts tests/unit/changed-scope.test.ts`: 2 files, 183 tests passed (the scripts behind the `docs` check and the gate's scope classification; no test reads the PR template).
+
+## Quality-review round (2026-10-08)
+
+- Finding "docs/security/REPO_SECURITY_SETTINGS.md is truncated (ends at 'Issu')": not reproducible. `wc -l` → 62 lines; the file ends with the checklist item "The latest PR into main has a Copilot review next to CodeRabbit's." and the intro links the full issue URL. The cut-off was in the review's diff view, not in the file. The PR template link (`.github/pull_request_template.md:19`) resolves to the complete file.
+- E2E: this issue changes only GitHub settings documentation and a PR-template line; no user or API client can observe a change, so no E2E test applies (E2E-exempt: docs and repository settings only).
