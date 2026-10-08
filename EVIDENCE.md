@@ -1,6 +1,6 @@
 # Evidence — issue #47: account deletion vs the user's own SSO audit insert (lock order)
 
-Tested commit: `abc8c6a` (round 4: the AC5/AC6 fixture; production code unchanged since `cee11a918a6e9f2497b92411017fe159c675c622`, round 2). Tests were committed first and alone each round:
+Tested commit: `f12f9f8f027c61538c27b98492a74831603a5d06` (round 5: merge of `origin/main` `9225fe9` and a test-helper fix; production code unchanged since `cee11a918a6e9f2497b92411017fe159c675c622`, round 2). Tests were committed first and alone each round:
 `bd28eb5` (AC1–AC4), then `bc2c2503a2a5a1e724170c45e1f02a4e697f029a` (AC5, AC6).
 Requirement ids come from the Notion PRD (Approval = Draft).
 
@@ -86,3 +86,34 @@ while deletion reaches flow rows after the workspace (the sole-workspace cascade
     retained-file counter row instead of the user row. It did not recur in 8 later runs of AC1 (one on a re-created
     database), and CI passed AC1 on `b1c04f5`. It is noted, not explained.
 
+
+## Round 5: merge conflict with `main`, and the unexplained AC1 failure
+
+- Merge (`b8ad3fa`): `origin/main` at `9225fe9` (issue #66) conflicted in `docs/implementation/PHASE4_BETA_REPORT.md`.
+  Main's line is kept byte for byte, and the #47 lines follow it. `docs/security/FEDERATED_MFA.md` merged on its own;
+  its #47 paragraphs are complete. Main changed no `src/` file.
+- Symptom: the first run after the merge, on a fresh PostgreSQL 16.15 cluster, failed `@issue-47 AC1` once in 46 ms.
+  The next runs passed. This is the same first-run failure round 4 recorded and could not explain.
+- Root cause (test helper, not the lock order): `blockedByObserver` (`tests/integration/pg-lock-helpers.ts`) reads
+  `pg_stat_activity.query` from the backend-status snapshot taken when its probe starts. It reads `wait_event_type` and
+  `pg_blocking_pids()` live. A probe racing the deletion's first statements can pair the retained-file counter select
+  that deletion has just finished with the user-row wait that comes next. Shown on three connections: inside one
+  snapshot the waiter reports its earlier statement with `wait_event_type` `Lock` and the holder as its blocker, and
+  after `pg_stat_clear_snapshot()` it reports the blocked statement.
+- Fix (`f12f9f8`, test only): once the wait is seen, the helper probes again on a fresh snapshot and returns that
+  reading. The waiter cannot move while the holder is paused. `tests/integration/retained-file-locking.test.ts` keeps
+  its own copy of the old helper (code on `main`, outside this PR); it has the same race and needs a follow-up.
+- Local runs on `f12f9f8`, against a throwaway PostgreSQL 16.15 cluster (Homebrew, own port, removed afterwards):
+  - `account-deletion-lock-order`, `federated-lock-order` and `retained-file-locking` integration files: 9 of 9 passed,
+    5 runs, each on a re-created database.
+  - Mutation check: with `origin/main`'s `src/server/email/flows.ts`, AC1, AC2 and AC6 fail, and AC5 passes (as in round 4).
+  - Full integration project via `suite.sh`, excluding `p2-code-sandbox` and `company-builder-cli` (Docker only):
+    59 files, 594 tests passed.
+  - Full unit project via `suite.sh`: 98 files, 1252 tests passed. `tsc --noEmit` is clean, and `eslint` is clean on the changed files.
+
+## E2E (e2e-army)
+
+No `e2e-army/47-*.e2e.ts` test. The change is internal: the order of row locks inside the account-deletion
+transaction. The deletion screen, its messages and its result are unchanged. The defect appears only when two transactions
+of the same user overlap at one statement boundary, and a browser cannot pause a transaction there. The two-connection
+integration tests above do pause it, and are the right level for this change.
