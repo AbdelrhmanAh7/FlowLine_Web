@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Dependabot alert #3 resolution — 2026-10-08
+
+Issue #62 addresses Dependabot alert #3 (`source-map-js` < 1.2.2, high severity, GHSA-68fv-2mgg-jv7q). Upgraded `source-map-js` from 1.2.1 to ≥1.2.2 via `pnpm-workspace.yaml` overrides and updated `pnpm-lock.yaml`. Verified via unit test `tests/unit/dependency-advisories.test.ts` (`@issue-62 AC1`). Post-merge acceptance: Dependabot alert #3 closes automatically upon merge to main.
+
 ## H3 security readiness review — 2026-10-03
 
 PR #21 (H3, open; its base PR #17 is merged into main) enforces local MFA across all session reads, refuses replayed TOTP codes at both federated gates, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. It is not merged or deployed. This update does not change private-beta or production acceptance. Issue #37 (a possible lock-order inversion between SSO link confirmation and federated challenge completion, which share the initiating session) is fixed in source by one documented lock order and a shared helper ([Lock order](../security/FEDERATED_MFA.md#lock-order)); the mocked-order unit test passes locally, the two-connection PostgreSQL regression `tests/integration/federated-lock-order.test.ts` is **not executed** locally and needs CI. Two adjacent inversions found while auditing (password-reset recovery, and member role change/removal against the SSO audit insert) are recorded there as known gaps, not fixed.
