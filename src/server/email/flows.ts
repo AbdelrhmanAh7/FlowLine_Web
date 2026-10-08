@@ -137,7 +137,15 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
   return db.transaction(async (tx) => {
     // Deletion cascades into retained files. Accounting must precede even the
     // token lock, and especially the workspace locks below (including shared W).
-    if (purpose === "delete") await lockRetainedFileAccounting(tx);
+    if (purpose === "delete") {
+      await lockRetainedFileAccounting(tx);
+      // Then the account row, before the token and every workspace lock below (issue #47). The user's own SSO
+      // transactions lock this row first and insert their audit row (a key-share lock on the workspace) last; holding
+      // the workspaces while waiting for this row at the final delete deadlocked with them.
+      // docs/security/FEDERATED_MFA.md, "Lock order".
+      if (!currentUserId) return "invalid";
+      await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, currentUserId)).for("update");
+    }
     const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
