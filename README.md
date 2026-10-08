@@ -143,7 +143,7 @@ CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main
 Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets
 docs-only changes pass `gate` without the test jobs, and the final `gate` job combines the results (main also requires
 the `docs` check). Every fast-tier job runs on a GitHub-hosted runner with a 5-minute limit; `checks` is split into
-static·unit·contract plus three integration shards on separate runners. Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
+static·unit·contract plus three integration shards on separate runners, and every leg uploads its own gate report (`summary.json` and logs). Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
 `docs/DEVELOPER_GUIDE.md`.
 Historical gate results and tested revisions are in `docs/implementation/PHASE4_BETA_REPORT.md` and
 `docs/ai/AI_HUB_REPORT.md`; they do not certify the current checkout or a current release image.
