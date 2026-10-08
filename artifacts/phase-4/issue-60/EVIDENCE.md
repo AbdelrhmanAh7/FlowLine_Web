@@ -21,7 +21,7 @@ The self-hosted runner reuses its checkout workspace, so `.git/config` kept seve
 Recent scheduled `automerge` runs fail with `automerge.sh: line 103: syntax error near unexpected token 'done'` in the hub's `bin/automerge.sh`. That is a hub script bug. The AI implementers workflow is now disabled on GitHub and runs locally.
 
 ## Local verification
-Checked on top of `a4ddf61`, after removing the orphaned "Clean git credentials" test that `36591f4` had re-added:
+Tested tree: branch `ai/60` at `334948f` (its only code change since `main` is the removal of the orphaned "Clean git credentials" test in `tests/unit/ci-workflows.test.ts`). The results below were recorded locally on `a4ddf61` plus that one test removal, which is exactly the content committed as `334948f`; the implementer worktree has no `node_modules`, so they were not re-run for this revision. CI `gate` on the PR is the authoritative run for `334948f`.
 - `vitest run --project unit tests/unit/ci-workflows.test.ts`: 27 passed. Before the removal, 1 failed because the reverted workflow has no "Clean git credentials" step.
 - `eslint tests/unit/ci-workflows.test.ts` and `tsc --noEmit`: clean.
 - Full unit project: 1244 passed, 4 skipped. The only failures were `egress.test.ts` and `codex-poc-egress-redirect.test.ts`, which hit `listen EPERM` on 127.0.0.1 because the local sandbox blocks port binding. That is unrelated to this change.
