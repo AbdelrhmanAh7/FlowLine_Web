@@ -24,6 +24,7 @@
     "test:integration": "node scripts/with-env.mjs .env.test vitest run --project integration",
     "test:integration:sharded": "node scripts/test-integration-sharded.mjs",
     "test:e2e": "playwright test",
+    "e2e:army": "node scripts/e2e-army.mjs",
     "check": "pnpm lint && pnpm typecheck && pnpm check:evidence && pnpm test && pnpm test:contract && pnpm test:integration",
     "check:evidence": "node scripts/check-evidence-secrets.mjs",
     "gate": "node scripts/gate.mjs",
@@ -70,6 +71,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@e2e-dev/web": "0.13.0",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.3",
@@ -79,6 +81,7 @@
     "@types/react-dom": "19.3.0",
     "concurrently": "10.0.5",
     "drizzle-kit": "0.31.11",
+    "e2e": "0.18.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
     "tailwindcss": "4.3.3",
