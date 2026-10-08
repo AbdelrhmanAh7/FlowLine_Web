@@ -5,7 +5,8 @@
 # integration, contract, browser or build.
 #   tsc --noEmit
 #   vitest related --run --project unit <changed files>   (whole unit project
-#     when the base is unknown or test/build config, deps or tsconfig change)
+#     when the base is unknown, a code file is deleted, or test/build config, deps
+#     or tsconfig change)
 #   node scripts/check-evidence-secrets.mjs
 #
 # Full CI (the `gate` fast tier: lint, typecheck, evidence, unit, contract,
@@ -61,6 +62,10 @@ else
     fi
     if [ -n "$base" ]; then
       git diff --name-only --diff-filter=ACMR "$base" "$local_sha" >> "$tmp/changed" || all=1
+      # A deleted file cannot be passed to `vitest related`, but its importers and
+      # tests can still break at runtime: run the whole unit project.
+      git diff --name-only --diff-filter=D "$base" "$local_sha" > "$tmp/deleted" || all=1
+      if grep -qE '\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$' "$tmp/deleted"; then all=1; fi
     else
       all=1
     fi

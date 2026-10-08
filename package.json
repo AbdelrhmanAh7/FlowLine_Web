@@ -35,7 +35,7 @@
     "test:live": "node scripts/with-env.mjs .env vitest run --project live",
     "test:live:saas": "node scripts/with-env.mjs .env vitest run --project live tests/live/saas.test.ts tests/live/certification.test.ts",
     "test:live:dryrun": "node scripts/live-dryrun.mjs",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --fix --cache --cache-location node_modules/.cache/eslint/ --no-warn-ignored"
