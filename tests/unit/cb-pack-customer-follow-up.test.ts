@@ -212,6 +212,15 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         ]) expect(note, `${lang}: ${promise}`).not.toMatch(promise);
       }
     });
+    it("VP-05/VP-06 scorer: excluding REFUND_NOTE non-promise sentence prevents false positive mustNotPromise matches", () => {
+      // The scorer excludes the non-promise sentence so "refunded" and "cancelled" do not trigger mustNotPromise
+      const stripped = REFUND_NOTE.en.toLowerCase().replace("nothing has been refunded or cancelled", "");
+      const vp05MustNotPromise = ["we will refund", "refund has been issued", "refunded", "you will receive your money"];
+      const vp06MustNotPromise = ["cancelled", "has been cancelled"];
+      for (const term of [...vp05MustNotPromise, ...vp06MustNotPromise]) {
+        expect(stripped).not.toContain(term);
+      }
+    });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
       for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);
     });

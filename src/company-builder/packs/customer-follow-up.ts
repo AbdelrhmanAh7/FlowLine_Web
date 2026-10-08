@@ -38,7 +38,8 @@ const GREETING = { en: "Hello,", ar: "مرحبًا،" };
  * Refund / cancellation requests are CONSEQUENTIAL (owner decision 2026-10-01): Flowline may identify them, quote the
  * approved policy lines and prepare a draft, but the BUSINESS OWNER decides this specific request. This fixed sentence
  * (no numbers, names the owner as the decision maker, promises no outcome) is added to every such draft; the draft
- * itself still waits for the named reviewer like every reply.
+ * itself still waits for the named reviewer like every reply. The non-promise sentence is excluded by validation
+ * scorers so its non-promise wording ("refunded", "cancelled") does not trigger false-positive promise checks.
  */
 export const REFUND_NOTE = {
   en: "The business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.",
