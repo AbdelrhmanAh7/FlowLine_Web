@@ -4,7 +4,7 @@
 // fuser otherwise (minimal Linux images ship one or the other).
 // One stack of several (sharded E2E): the same FLOWLINE_TEST_PORT / _FAKE_PORT / _AI_PORT env as dev-test.mjs, or
 // `--port=<app> [--fake-port=<p>] [--ai-port=<p>]`. Only that stack's ports and explicitly owned launcher/worker processes are stopped.
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import testStackEnv from "./test-stack.cjs";
 
@@ -26,13 +26,24 @@ const PORT = stack.port;
 const PORTS = [PORT, stack.fakePort, stack.aiPort];
 // A non-default stack may run beside the default stack, so process cleanup must stay scoped to its test port.
 const single = !process.env.FLOWLINE_TEST_PORT || PORT === 3100;
-const run = (cmd) => {
+// No shell: each command is a program plus an argument array, so nothing in a port, pid or script is parsed as shell syntax.
+const run = (file, args) => {
   try {
-    return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync(file, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   } catch {
     return "";
   }
 };
+const kill = (pids) => {
+  for (const pid of pids) {
+    try {
+      process.kill(Number(pid), "SIGKILL");
+    } catch {
+      /* already gone */
+    }
+  }
+};
+const listening = (p) => run("lsof", ["-ti", `tcp:${p}`]).split(/\s+/).filter((pid) => /^\d+$/.test(pid));
 
 /** Linux: pids of this stack's launcher / marked worker / fakes / next, found by FLOWLINE_TEST_PORT in their environment. */
 const stackPids = () => {
@@ -62,14 +73,14 @@ if (process.platform === "win32") {
       ? [`Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'dev-test.mjs' -or $_.CommandLine -match 'worker[\\\\/]index.ts.*--flowline-test-stack=${PORT}(?:\\s|$)' } | ForEach-Object { taskkill /PID $_.ProcessId /T /F | Out-Null }`]
       : []),
   ].join("; ");
-  run(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`);
+  run("powershell", ["-NoProfile", "-Command", ps]);
 } else {
   const owned = stackPids(); // before the ports go, while dev-test.mjs is still up
   for (const p of PORTS) {
-    run(`lsof -ti tcp:${p} | xargs -r kill -9`);
-    run(`fuser -k -n tcp ${p}`);
+    kill(listening(p));
+    run("fuser", ["-k", "-n", "tcp", String(p)]);
   }
-  if (owned.length) run(`kill -9 ${owned.join(" ")}`);
+  kill(owned);
 }
-const still = process.platform === "win32" ? [] : PORTS.filter((p) => run(`fuser -n tcp ${p} 2>/dev/null`).trim() || run(`lsof -ti tcp:${p}`).trim());
+const still = process.platform === "win32" ? [] : PORTS.filter((p) => run("fuser", ["-n", "tcp", String(p)]).trim() || listening(p).length);
 console.log(still.length ? `test stack: ports still in use: ${still.join(", ")}` : `test stack on :${PORTS.join(", :")} stopped`);
