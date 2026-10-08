@@ -16,3 +16,5 @@ A test asserting a failure audit would fail on main, and making it pass needs a 
 
 1. **Yes:** open a follow-up issue for the production change. Suggested shape: a new workspace action (for example `sso.mfa_failed`) for workspace challenges and a `platform_audit` action for global-provider challenges, written outside the rolled-back completion transaction, with bounded reason codes only (`invalid_code`, `replayed_code`, `expired`, `rate_limited`) and never the code itself. "Abandoned" has no request to hook, so it would need a sweep of expired `federated-mfa:*` rows. Then add the REQ-FL-66-5 test there.
 2. **No:** keep "audit only on success", and drop REQ-FL-66-5 from the PRD.
+
+**Decided (AI council on PR #70, 2026-10-08): option 1.** Follow-up issue #72 ("Audit failed and abandoned federated MFA steps") carries the production change and REQ-FL-66-5. The #66 tests stay unchanged.
