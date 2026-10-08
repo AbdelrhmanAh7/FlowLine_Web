@@ -1,6 +1,6 @@
 # Evidence: issue #67, `pnpm wt` tests and docs
 
-Tested SHA: `33107394917758c8f8cf30e450f619502e97693a` (branch `ai/67`, base `bc59cab`), node v26.10.0, git 2.56.0, macOS. REQ ids come from the PRD draft (Notion, Approval = Draft).
+Tested SHA: `57c6759` (branch `ai/67`, base `bc59cab`; behaviour last changed in `57c6759`), node v26.10.0, git 2.56.0, macOS. REQ ids come from the PRD draft (Notion, Approval = Draft).
 
 | REQ | Verified by |
 |---|---|
@@ -17,11 +17,11 @@ Tested SHA: `33107394917758c8f8cf30e450f619502e97693a` (branch `ai/67`, base `bc
 
 ## Commands and results at the tested SHA
 
-- `vitest run --project unit tests/unit/worktree-script.test.ts`: 84 passed.
+- `vitest run --project unit tests/unit/worktree-script.test.ts`: 85 passed (adds a test that a `node_modules` link not pointing at the main install is counted as work and never unlinked, PR #69 review).
 - `tests/integration/worktree-cli.test.ts`: 9 passed. Run locally with a config that omits the integration `globalSetup` (no Postgres here; the test uses no database). CI runs it in the integration project.
 - `eslint` on the three changed code files: clean. `tsc --noEmit`: clean.
 - Full unit project: 1258 passed, 4 skipped, 1 failed (2 files). `egress.test.ts` and `codex-poc-egress-redirect.test.ts` time out in `listen()` because the sandbox forbids local port binding. Neither file is touched here.
-- Diff vs `bc59cab` before this file: 6 files, +295/−20.
+- Diff vs `bc59cab` before this file: 6 files, about +330/−20. Not user-facing (CLI/docs only), so no e2e-army test; the real-git acceptance test covers it.
 
 ## Manual scratch clone (issue test plan)
 
