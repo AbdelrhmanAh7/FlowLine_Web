@@ -1,31 +1,51 @@
 # Evidence — issue #47: account deletion vs the user's own SSO audit insert (lock order)
 
-Tested commit: `49cf14f51873267df202001e24e696403a562136` (fix), tests first committed alone in `bd28eb5`.
+Tested commit: `cee11a918a6e9f2497b92411017fe159c675c622` (fix, round 2). Tests were committed first and alone each round:
+`bd28eb5` (AC1–AC4), then `bc2c2503a2a5a1e724170c45e1f02a4e697f029a` (AC5, AC6).
 Requirement ids come from the Notion PRD (Approval = Draft).
 
 ## Change
 
-`consumeAccountToken("delete")` (`src/server/email/flows.ts`) now locks the signed-in user's row `FOR UPDATE` right after
-the retained-file accounting locks, before the token row and every workspace `FOR UPDATE` lock. It used to hold the
+`consumeAccountToken("delete")` (`src/server/email/flows.ts`) now locks the signed-in user's row `FOR NO KEY UPDATE` right
+after the retained-file accounting locks, before the token row and every workspace `FOR UPDATE` lock. It used to hold the
 workspaces and reach the user row only at the final `DELETE`, while the user's own SSO sign-in holds the user row and
 inserts its `sso.signin` audit row last (a key-share lock on the workspace): a lock cycle, aborted by PostgreSQL with
 `40P01`. Workspace locks stay `FOR UPDATE` (sole-member workspaces are deleted). Rule documented in
 `docs/security/FEDERATED_MFA.md` ("Lock order").
 
+Round 2 (AI council condition on PR #71: "no other flow locks a workspace before a user row"): round 1 took the user row
+`FOR UPDATE`. That conflicted with the key-share lock that `enqueueRun` and `startAgentRun` take on the user row (their
+`created_by` inserts) while they hold the workspace `FOR UPDATE`, which made a new deadlock with the same user's run
+enqueue. `FOR NO KEY UPDATE` still excludes the SSO paths' `FOR SHARE` / `FOR UPDATE`, but not key-share.
+
+Audit of every transaction that locks a `workspace` row `FOR UPDATE` (`grep -rnE 'for\("update"\)' src worker`):
+
+| Transaction | User-row access after the workspace lock | Conflicts with `FOR NO KEY UPDATE`? |
+|---|---|---|
+| `enqueueRun` (`src/server/runs.ts`) | key-share via `run.created_by`, `flow_version.created_by` inserts | No |
+| `startAgentRun` (`src/server/agents.ts`) | key-share via `agent_conversation.created_by` insert | No |
+| `changeRole`, `removeMember` (`src/server/members.ts`) | none (audit row references the workspace only) | — |
+| `reserveUsage` (`src/server/usage.ts`) | none | — |
+| `consumeAccountToken("delete")` | user row taken before the workspaces | — |
+
+Known gap that predates this change and is not fixed here: `enqueueRun` locks the `flow` row before the workspace row,
+while deletion reaches flow rows after the workspace (the sole-workspace cascade, or `created_by` set to null). It is recorded in
+`docs/security/FEDERATED_MFA.md`.
+
 ## Requirements
 
 | Id | Status | How it is verified |
 |---|---|---|
-| REQ-FL-47-3 / AC-FL-47-3 (no inconsistency with concurrent SSO) | Implemented | `tests/integration/account-deletion-lock-order.test.ts` (`@issue-47 AC1`, `AC2`): real `consumeAccountToken("delete")` and real `completeSso` on two PostgreSQL connections, both interleavings; the second waits at the user row (`pg_blocking_pids`), both finish without `40P01`; user, sessions and sole workspace deleted, shared workspace kept with exactly one `account.deleted` record (plus `sso.signin` when the sign-in committed first; otherwise the sign-in is refused with `SSO_LINK_INVALID`). **Written for CI, not executed locally** (PostgreSQL cannot start in this sandbox: `shmget` is denied). |
-| NFR-FL-47-1 (no new races) | Implemented | `tests/unit/account-deletion-lock-order.test.ts` (`@issue-47 AC3`) pins the full statement order: accounting advisory + counter row, user `FOR UPDATE`, token, workspace `FOR UPDATE`, audit insert, workspace delete, token consume, user delete. `@issue-47 AC4`: another account's token and a missing signed-in user are refused before any workspace lock. Existing `retained-file-locking.test.ts` still pauses after the workspace lock (pattern unchanged). |
+| REQ-FL-47-3 / AC-FL-47-3 (no inconsistency with concurrent SSO) | Implemented | `tests/integration/account-deletion-lock-order.test.ts` (`@issue-47 AC1`, `AC2`): real `consumeAccountToken("delete")` and real `completeSso` on two PostgreSQL connections, both interleavings. The second waits at the user row (`pg_blocking_pids`), and both finish without `40P01`. The user, their sessions and their sole workspace are deleted. The shared workspace is kept with exactly one `account.deleted` record, plus `sso.signin` when the sign-in committed first; otherwise the sign-in is refused with `SSO_LINK_INVALID`. **Written for CI, not executed locally** (PostgreSQL cannot start in this sandbox: `shmget` is denied). |
+| NFR-FL-47-1 (no new races) | Implemented | `tests/unit/account-deletion-lock-order.test.ts` (`@issue-47 AC3`) pins the full statement order: accounting advisory lock and counter row, then user `FOR NO KEY UPDATE`, token, workspace `FOR UPDATE`, audit insert, workspace delete, token consume, user delete. `AC5` pins the user-row mode. `@issue-47 AC4`: another account's token and a missing signed-in user are refused before any workspace lock. Integration `@issue-47 AC5`, `AC6`: the real deletion against the same user's real `enqueueRun` in a shared workspace, both interleavings. Neither deadlocks, the run never waits for the deletion's user-row lock, and the run survives with `created_by` null. **Written for CI, not executed locally.** `retained-file-locking.test.ts` still pauses after the workspace lock (pattern unchanged). |
 | NFR-FL-47-2 (audit insert atomic and durable) | Unchanged | Audit rows are still written in the same transaction as the deletion. |
-| REQ-FL-47-1, REQ-FL-47-2 / AC-FL-47-1, AC-FL-47-2 ("insert audit rows before locking the workspace") | **Not implemented as written** | The draft PRD's ordering would not break the cycle: the cycle is the workspace `FOR UPDATE` lock held while waiting for the user row, and an audit insert before the lock would itself take a key-share lock on the workspace and need the member reads that the lock makes consistent. The issue body asks for "a different ordering"; the user-row-first order is the one documented for every transaction in this area. The PRD should be corrected before approval. |
-| NFR-FL-47-3 (throughput) | Not measured | One extra primary-key row lock on the user's own row; no throughput measurement is claimed. |
+| REQ-FL-47-1, REQ-FL-47-2 / AC-FL-47-1, AC-FL-47-2 ("insert audit rows before locking the workspace") | **Not implemented as written** | The draft PRD's ordering would not break the cycle. The cycle is the workspace `FOR UPDATE` lock held while waiting for the user row. An audit insert before the lock would itself take a key-share lock on the workspace, and it needs the member reads that the lock makes consistent. The issue body asks for "a different ordering", and user-row-first is the order documented for every transaction in this area. The PRD should be corrected before approval (the council asked Product for a ticket). |
+| NFR-FL-47-3 (throughput) | Not measured | One extra primary-key row lock on the user's own row. No throughput measurement is claimed. |
 
-## Local runs on `49cf14f`
+## Local runs on `cee11a9`
 
-- `node node_modules/vitest/vitest.mjs run --project unit tests/unit/account-deletion-lock-order.test.ts tests/unit/federated-lock-order.test.ts`: 2 files, 8 tests passed.
-- Same new unit test against the previous `flows.ts` (from `bd28eb5`): 3 failed, 1 passed (the other-account guard already held).
-- Full unit project: 1246 passed, 4 skipped, 1 failed plus one failed file: `tests/unit/egress.test.ts` and `tests/unit/codex-poc-egress-redirect.test.ts` need local port binding, which this sandbox blocks (`listen` hook timeout); egress code is untouched.
-- `eslint` on the changed files and `tsc --noEmit`: clean.
-- Integration tests (`pnpm test:integration`): not run locally; CI `gate` runs them.
+- `node node_modules/vitest/vitest.mjs run --project unit tests/unit/account-deletion-lock-order.test.ts tests/unit/federated-lock-order.test.ts`: 2 files, 9 tests passed.
+- New unit test against the round-1 `flows.ts` (`FOR UPDATE`, at `bc2c250`): 3 failed, 2 passed.
+- Full unit project: 1247 passed, 4 skipped, 1 failed, and 2 files failed: `tests/unit/egress.test.ts` and `tests/unit/codex-poc-egress-redirect.test.ts` need local port binding, which this sandbox blocks. The egress code is untouched.
+- `tsc --noEmit` and `eslint` on the changed files: clean.
+- Integration tests (`pnpm test:integration`): not run locally. The CI `gate` runs them; the council requires its logs to show AC1, AC2, AC5 and AC6 ran and passed.
