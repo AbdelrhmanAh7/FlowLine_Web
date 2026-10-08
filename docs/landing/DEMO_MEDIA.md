@@ -41,6 +41,7 @@ and `nice` / local port binding are blocked there.
 | `pnpm demo:build` | Every clip, both locales, light theme (about 35-40 min on the Mac mini; the walkthrough is about 10 min per locale). |
 | `pnpm demo:build --only hero --locale ar` | One clip (about 3-5 min). `--only a,b` · `--locale ar\|en\|all` · `--theme light\|dark\|all` (dark twins are optional and not shipped) · `--concurrency 2` (Remotion render threads) |
 | `pnpm demo:build --only run --skip-record` | Reuse the recording in `tools/demo-video/.work/<clip>.<locale>.<theme>/` (re-master, re-compose, re-deliver). `--skip-render` also reuses the composed video and posters (delivery only). `--rebuild` forces a fresh production build of the app. |
+| `pnpm demo:build --record-only` then `… --skip-record` | Two phases for a shared machine: record (light, real time, about 2.5 min for everything) at normal priority, then render and encode (the heavy part) under the machine's governor, e.g. `/Users/…/hub-live/bin/suite.sh pnpm demo:build --skip-record`. Recording must not run under background QoS (`taskpolicy -b`): the throttled browser runs slow and the ±15 % length check fails. |
 | `pnpm demo:verify` | Validates `manifest.json` and every budget, probes each video (canvas, fps, BT.709, no audio, codec string), checks loop seams, the hero's accent colour and PSNR (when `.work` is present), flags stale media, and writes a 6-still contact sheet per clip to `artifacts/demo-media/` (git-ignored; copy the ones you attach to a PR under `artifacts/issue-<N>/`). Review the sheets before committing. |
 | `pnpm demo:studio` | Opens Remotion Studio on the composition (preview props in `tools/demo-video/src/defaultProps.ts`). |
 
@@ -131,7 +132,7 @@ about 15-20 MB of binaries to git history).
 | `another demo build is running (pid N)` | wait, or remove a stale `tools/demo-video/.work/build.lock` |
 | `another next build is running` | a gate/e2e build owns `.next-test`; wait for it |
 | A recording fails | the error names the locator and time; `tools/demo-video/.work/<clip>.<locale>.<theme>/failure.png` shows the page; `DEMO_DEBUG=1` prints the beats |
-| `recorded 9.3 s, storyboard 8 s` | the scenario is too slow: shorten its moves or holds (its `holdUntil` pads only when it is early) |
+| `recorded 9.3 s, storyboard 8 s` | the scenario is too slow: shorten its moves or holds (its `holdUntil` pads only when it is early). Under a CPU governor or background QoS, record with `--record-only` at normal priority first |
 | `honesty guard: the DOM contained …` | the scenario opened something with test-double or real-looking data; film another element |
 | `Version mismatch … zod` | `tools/demo-video` pins zod 4.5.4 for Remotion; run `pnpm demo:setup` again |
 | `over the … target at crf …` | the clip got busier: shorten it or accept a higher crf in `scripts/demo/clips.ts` (keep PSNR >= 42) |

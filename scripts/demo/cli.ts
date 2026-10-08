@@ -22,7 +22,7 @@ import { checkAccent, verify } from "./verify";
 
 const REMOTION = join(TOOL, "node_modules/.bin/remotion");
 
-type Flags = { only: ClipId[]; locales: Locale[]; themes: Theme[]; skipRecord: boolean; skipRender: boolean; concurrency: number; rebuild: boolean };
+type Flags = { only: ClipId[]; locales: Locale[]; themes: Theme[]; skipRecord: boolean; skipRender: boolean; recordOnly: boolean; concurrency: number; rebuild: boolean };
 
 export function parseFlags(argv: string[]): Flags {
   const get = (name: string) => {
@@ -38,7 +38,8 @@ export function parseFlags(argv: string[]): Flags {
   for (const t of themes) if (!THEMES.includes(t)) throw new Error(`--theme: "${t}" is not light, dark or all`);
   const concurrency = Number(get("concurrency") ?? 2);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error("--concurrency must be 1-8");
-  return { only, locales, themes, skipRecord: argv.includes("--skip-record") || argv.includes("--skip-render"), skipRender: argv.includes("--skip-render"), concurrency, rebuild: argv.includes("--rebuild") };
+  if (argv.includes("--record-only") && (argv.includes("--skip-record") || argv.includes("--skip-render"))) throw new Error("--record-only cannot be combined with --skip-record/--skip-render");
+  return { only, locales, themes, skipRecord: argv.includes("--skip-record") || argv.includes("--skip-render"), skipRender: argv.includes("--skip-render"), recordOnly: argv.includes("--record-only"), concurrency, rebuild: argv.includes("--rebuild") };
 }
 
 /** The app's own @fontsource files (OFL), copied into the compositor's public/fonts for a render. */
@@ -161,6 +162,7 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
       }
     }
     log(`${key}: recorded ${ev.duration.toFixed(2)} s`);
+    if (flags.recordOnly) return null;
   } else {
     if (!existsSync(join(dir, "events.json"))) throw new Error(`${key}: --skip-record but ${dir}/events.json is missing`);
     ev = parseEvents(JSON.parse(readFileSync(join(dir, "events.json"), "utf8")));
@@ -266,6 +268,7 @@ async function build(argv: string[]) {
       for (const locale of flags.locales)
         for (const theme of flags.themes) {
           const r = await buildOne(clip, locale, theme, flags, recorder ? recorder(clip, locale, theme) : null);
+          if (!r) continue; // --record-only: the recording waits in .work for `--skip-record`
           // The manifest is merged after every clip, so a later failure keeps the clips already built.
           let old: Manifest | null = null;
           if (existsSync(join(OUT, "manifest.json"))) old = await readManifest(OUT);
@@ -273,7 +276,8 @@ async function build(argv: string[]) {
           await writeManifest(OUT, m);
           for (const f of await staleFiles(OUT, m)) unlinkSync(join(OUT, f));
         }
-    log(`built ${flags.only.join(", ")} × ${flags.locales.join(", ")} × ${flags.themes.join(", ")}; run \`pnpm demo:verify\` next`);
+    const what = `${flags.only.join(", ")} × ${flags.locales.join(", ")} × ${flags.themes.join(", ")}`;
+    log(flags.recordOnly ? `recorded ${what}; render with the same flags and --skip-record` : `built ${what}; run \`pnpm demo:verify\` next`);
   } finally {
     await browser?.close();
     await stack?.stop();
@@ -285,7 +289,7 @@ async function build(argv: string[]) {
 const [cmd, ...rest] = process.argv.slice(2);
 const main = cmd === "doctor" ? () => doctor() : cmd === "build" ? () => build(rest) : cmd === "verify" ? () => verify(rest) : null;
 if (!main) {
-  console.error("usage: tsx scripts/demo/cli.ts doctor | build [--only hero,run] [--locale ar|en|all] [--theme light|dark|all] [--skip-record] [--skip-render] [--concurrency 2] [--rebuild] | verify");
+  console.error("usage: tsx scripts/demo/cli.ts doctor | build [--only hero,run] [--locale ar|en|all] [--theme light|dark|all] [--record-only | --skip-record | --skip-render] [--concurrency 2] [--rebuild] | verify");
   process.exit(2);
 }
 main().then(
