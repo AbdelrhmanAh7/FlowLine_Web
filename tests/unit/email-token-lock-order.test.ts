@@ -38,7 +38,7 @@ vi.mock("@/db", async () => {
   const db = { select, update: write("update"), insert: write("insert"), delete: write("delete"), transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => callback(db) };
   return { db, schema: await import("@/db/schema") };
 });
-vi.mock("better-auth/crypto", () => ({ hashPassword: async () => "hashed" }));
+vi.mock("better-auth/crypto", () => ({ hashPassword: async () => { fx.events.push("hash"); return "hashed"; } }));
 vi.mock("@/server/retained-files", () => ({ lockRetainedFileAccounting: async () => { fx.events.push("lock:retained-accounting"); } }));
 vi.mock("@/billing/service", () => ({ getAdapter: async () => null }));
 vi.mock("@/server/email/index", () => ({ sendEmail: async () => {} }));
@@ -66,6 +66,14 @@ describe("account token lock order", () => {
     // Every write (token consumption included) happens after both locks.
     const firstWrite = fx.events.findIndex((e) => !e.startsWith("lock:"));
     expect(firstWrite).toBeGreaterThanOrEqual(expected.length);
+  });
+
+  it("hashes the new password only after both locks, and not at all for a too-short one or a consumed token", async () => {
+    expect(await consumeAccountToken("reset", TOKEN, "long-enough-password")).toBe("done");
+    expect(fx.events.indexOf("hash")).toBeGreaterThan(fx.events.indexOf("lock:email_token:update"));
+    fx.events.length = 0;
+    await expect(consumeAccountToken("reset", TOKEN, "short")).rejects.toMatchObject({ status: 400 });
+    expect(fx.events).toEqual([]);
   });
 
   it("refuses a token whose user was deleted after the unlocked read, without locking the token", async () => {
