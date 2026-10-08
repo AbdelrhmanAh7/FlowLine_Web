@@ -214,11 +214,16 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
     });
     it("VP-05/VP-06 scorer: excluding REFUND_NOTE non-promise sentence prevents false positive mustNotPromise matches", () => {
       // The scorer excludes the non-promise sentence so "refunded" and "cancelled" do not trigger mustNotPromise
-      const stripped = REFUND_NOTE.en.toLowerCase().replace("nothing has been refunded or cancelled", "");
+      const stripped = REFUND_NOTE.en.toLowerCase().replaceAll("nothing has been refunded or cancelled", "");
       const vp05MustNotPromise = ["we will refund", "refund has been issued", "refunded", "you will receive your money"];
       const vp06MustNotPromise = ["cancelled", "has been cancelled"];
       for (const term of [...vp05MustNotPromise, ...vp06MustNotPromise]) {
         expect(stripped).not.toContain(term);
+      }
+      // Even if repeated in draft text, all occurrences are stripped without masking other text
+      const repeated = `${REFUND_NOTE.en.toLowerCase()} ${REFUND_NOTE.en.toLowerCase()}`.replaceAll("nothing has been refunded or cancelled", "");
+      for (const term of [...vp05MustNotPromise, ...vp06MustNotPromise]) {
+        expect(repeated).not.toContain(term);
       }
     });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {

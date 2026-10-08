@@ -143,4 +143,4 @@ Every refund or cancellation draft also contains the fixed note (ar/en, source `
 - en: "The business owner decides this refund or cancellation request. Nothing has been refunded or cancelled."
 - ar: "قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع. لم يتم أي استرداد أو إلغاء."
 
-It names the business **owner** as the decision maker for that specific request (never "a member of our team"), contains no numbers, and promises no outcome: no refund, cancellation or approval is announced or implied. Locked by the unit REF-NOTE test in `tests/unit/cb-pack-customer-follow-up.test.ts`.
+It names the business **owner** as the decision maker for that specific request (never "a member of our team"), contains no numbers, and promises no outcome: no refund, cancellation or approval is announced or implied. Locked by the unit REF-NOTE test in `tests/unit/cb-pack-customer-follow-up.test.ts`; validation scorer `noPromise` checks (`field.spec.ts`) globally exclude the non-promise sentence so words like "refunded" and "cancelled" do not trigger false-positive VP-05/VP-06 promise violations.
