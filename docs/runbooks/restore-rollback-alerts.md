@@ -15,6 +15,14 @@ item in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
 In the commands, `dc` stands for `docker compose -f docker-compose.beta.yml --env-file .env.beta`, run on
 `<beta-host>` from `<deploy-dir>`. `<utc>` is the current UTC time as `YYYYMMDDTHHMMSSZ`.
 
+How the paid-pilot owner items (issue #30) relate to this runbook (decisions are in §4):
+
+- PP-06 (approved deployment with restore, rollback and alerts): this whole runbook.
+- PP-02 (owner sign-in and admin MFA): the auth-failures alert and decision 3. PP-03, PP-04 (integrations, AI): the
+  AI and integration step alerts. PP-05 (sandbox billing): the billing-webhook alert.
+- PP-07 (policies and acceptance): decision 10. PP-08 (protected test configuration): decision 3.
+- PP-09 (CI billing): not affected; this runbook adds no CI runs.
+
 ## 1. Backup and restore
 
 ### What is backed up
@@ -153,15 +161,16 @@ For every alert the owner on duty:
 
 ## 4. Owner decisions needed
 
-This draft cannot settle these; each needs an explicit owner decision before PP-06 can move.
+This draft cannot settle these. Each has a default that applies until the owner decides; no default authorizes a
+deployment, a spend or a change to a real environment.
 
-1. The target host and domain (`<beta-host>`), and who may run `dc` on it (OWNER_ACTIONS O04 and O08).
-2. The off-host backup destination, its encryption, retention and who can read it.
-3. Where the keys in `<key-store>` live, who holds them, and how they are recovered if that person is unavailable.
-4. Recovery targets: this draft assumes up to 24 h of data loss (nightly dumps) and 2 h to restore. Confirm or change.
-5. The alert channel behind `FLOWLINE_ALERT_WEBHOOK_URL`, the `<owner>` for each alert, response times and hours.
-6. Whether to build the missing alerts (uptime probe, auth failures, off-host backup age) before the pilot.
-7. Approval of the suggested thresholds in §3.
-8. Who may start a rollback or a restore without the owner present.
-9. The isolated environment and schedule for restore drills (the beta runbook suggests monthly).
-10. What pilot customers are told during a restore, and the wording for lost data after the dump time.
+1. Target host and domain (`<beta-host>`), and who may run `dc` on it (OWNER_ACTIONS O04, O08). Default: no target; nothing is deployed and this runbook stays a draft.
+2. Off-host backup destination, its encryption, retention and readers. Default: none configured; the backup-age alert covers on-host dumps only and the pilot is not called restore-ready.
+3. Where `<key-store>` lives, who holds the keys and how they are recovered without that person. Default: the owner's private password manager, owner only.
+4. Recovery targets. Default: up to 24 h of data loss (nightly dumps) and 2 h to restore.
+5. The channel behind `FLOWLINE_ALERT_WEBHOOK_URL`, the `<owner>` per alert, response times and hours. Default: one owner-only channel, the owner for every alert, best-effort response in working hours.
+6. Whether to build the missing alerts (uptime probe, auth failures, off-host backup age) before the pilot. Default: open one issue per missing alert; the pilot waits for none of them.
+7. The thresholds in §3. Default: the suggested values, reviewed after the first two pilot weeks.
+8. Who may start a rollback or a restore without the owner present. Default: nobody; only the owner starts either.
+9. The isolated environment and schedule for restore drills. Default: monthly, on the local staging stack, until a target copy exists.
+10. What pilot customers are told during a restore and about data lost after the dump time. Default: the owner writes each notice; nothing is sent automatically.
