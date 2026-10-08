@@ -72,6 +72,8 @@ For browser timeouts, distinguish the whole-test deadline from time spent on the
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
+Lock-order regression tests (deadlock checks) use `runConcurrent(txA, txB, { timeoutMs })` from `tests/helpers/concurrentTx.ts`: it runs two transactions on separate connections, gives each a `barrier()` so both can hold their first lock before either takes its second, and fails with `ConcurrentTxDeadlockError` (Postgres 40P01) or `ConcurrentTxTimeoutError`. Usage example in the file header; its own tests are `tests/integration/concurrent-tx.test.ts` (they need the test database, so they run in the integration project, not `pnpm test`).
+
 For the H3 security regression set without a database or browser, run `pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/mfa-session-fence.test.ts tests/unit/federated-mfa-lifecycle.test.ts tests/unit/auth-provider-fence.test.ts tests/unit/federated-mfa.test.ts tests/unit/auth-confirmation.test.ts tests/unit/zitadel-issuer-binding.test.ts tests/unit/zitadel-review-fixes.test.ts tests/unit/i18n.test.ts tests/unit/federated-lock-order.test.ts`. Use `pnpm` instead of `pnpm.cmd` off Windows. This focused command does not replace integration tests or the full main-target CI gate.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
