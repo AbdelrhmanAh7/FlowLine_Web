@@ -9,8 +9,10 @@ import { sha256Hex } from "@/server/crypto";
 import { consumeAccountToken } from "@/server/email/flows";
 import { HttpError } from "@/server/http";
 import { completeSso, ssoProviderId } from "@/server/sso";
+import { createFlow } from "@/server/flows";
+import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
-import { addMember, closeDb, unique } from "./helpers";
+import { addMember, closeDb, makeUser, unique } from "./helpers";
 import { makeVerifiedUser } from "./platform-helpers";
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt } from "./federation-fixture";
 import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
@@ -101,7 +103,7 @@ for (const first of ["sso", "deletion"] as const) {
         // The waiter holds nothing the holder still needs. Old order, SSO first: deletion locked the workspace and
         // waited at `delete from "user"`; deletion first: SSO waited at its audit insert (workspace key-share). Either
         // way the resumed holder then needed the waiter's lock and PostgreSQL aborted one with 40P01.
-        expect(wait.query).toMatch(/^select[\s\S]*from "user"[\s\S]*for (update|share)/i);
+        expect(wait.query).toMatch(/^select[\s\S]*from "user"[\s\S]*for (no key update|update|share)/i);
         holder.pause.resume();
         const [sso, deletion] = await Promise.allSettled(first === "sso" ? [holding, waiting] : [waiting, holding]);
         expect(deletion).toEqual({ status: "fulfilled", value: "done" });
@@ -130,6 +132,89 @@ for (const first of ["sso", "deletion"] as const) {
       const actions = await auditActions(f.ws.id, f.user.id);
       expect(actions.filter((a) => a === "account.deleted")).toHaveLength(1);
       expect(actions.filter((a) => a === "sso.signin")).toHaveLength(first === "sso" ? 1 : 0);
+    });
+  });
+}
+
+// The user-row lock must not create a new cycle with the user's ordinary work. enqueueRun (like startAgentRun) locks
+// the workspace FOR UPDATE and then inserts rows whose created_by references the user, i.e. a key-share lock on the
+// user row. A deletion holding the user row FOR UPDATE while waiting for that workspace deadlocked with it, so deletion
+// takes the user row FOR NO KEY UPDATE: it still excludes the SSO paths' FOR SHARE / FOR UPDATE, not key-share.
+
+/** A shared workspace (owned by someone else, so it survives) with a runnable flow, the user as its editor, a
+ * sole-member workspace of the user and a valid account-deletion token. */
+async function runFixture() {
+  const owner = await makeUser("delete-run-owner");
+  const ws = await createWorkspace(owner, unique("Shared runs"));
+  const flow = await createFlow(owner, ws.id, { templateId: "lead-qualifier", name: unique("Runnable") });
+  const user = await makeUser("delete-during-run");
+  await addMember(ws.id, user.id, "editor");
+  const solo = await createWorkspace(user, unique("Solo"));
+  const token = randomBytes(32).toString("base64url");
+  await db.insert(schema.emailToken).values({ userId: user.id, tokenHash: sha256Hex(token), purpose: "delete", expiresAt: new Date(Date.now() + 60_000) });
+  return { ws, flow, solo, user, token };
+}
+
+for (const first of ["run", "deletion"] as const) {
+  describe(`account deletion and the user's own run enqueue (${first} holds its locks first)`, () => {
+    it(`@issue-47 ${first === "run" ? "AC5" : "AC6"}: finishes both without a deadlock`, async () => {
+      const f = await runFixture();
+      const runClient = await connect();
+      const deleteClient = await connect();
+      const routing = routeTransactions();
+      const runDb = drizzle(runClient, { schema });
+      const deleteDb = drizzle(deleteClient, { schema });
+      const pid = async (client: typeof runClient) => (await client.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
+      let runDone = false;
+      const startRun = () => routing.run(runDb, () => enqueueRun(f.user, f.flow.id)).finally(() => { runDone = true; });
+      const startDeletion = () => routing.run(deleteDb, () => consumeAccountToken("delete", f.token, undefined, f.user.id));
+      // Run first: pause right after it locked the workspace. Deletion first: pause right after it locked the user row.
+      const pause = first === "run"
+        ? pauseAfter(runClient, /from "workspace"[\s\S]*for update/i)
+        : pauseAfter(deleteClient, /from "user"[\s\S]*for no key update/i);
+      const holder = first === "run" ? { client: runClient, start: startRun } : { client: deleteClient, start: startDeletion };
+      const waiter = first === "run" ? { client: deleteClient, start: startDeletion } : { client: runClient, start: startRun };
+      let holding: Promise<unknown> | undefined;
+      let waiting: Promise<unknown> | undefined;
+      try {
+        const waiterPid = await pid(waiter.client);
+        holding = holder.start();
+        void holding.catch(() => {});
+        await Promise.race([pause.reached, holding.then(() => { throw new Error("The first transaction finished without reaching its lock barrier"); })]);
+        let finished = false;
+        waiting = waiter.start().finally(() => { finished = true; });
+        void waiting.catch(() => {});
+        if (first === "run") {
+          // Deletion waits for the workspace the run holds, holding only its user row, which the run's inserts can share.
+          const wait = await blockedByObserver(holder.client, waiterPid, () => finished);
+          expect(wait.query).toMatch(/^select[\s\S]*from "workspace"[\s\S]*for update/i);
+        } else {
+          // The run must not wait for the deletion's user-row lock at all (it did under FOR UPDATE, while holding the
+          // workspace the paused deletion locks next: a deadlock once resumed).
+          const probe = blockedByObserver(holder.client, waiterPid, () => finished).then((w) => w.query, () => null);
+          const blockedAt = await Promise.race([waiting.then(() => null), probe]);
+          expect(blockedAt).toBeNull();
+          await probe;
+          expect(runDone).toBe(true);
+        }
+        pause.resume();
+        const [run, deletion] = await Promise.allSettled(first === "run" ? [holding, waiting] : [waiting, holding]);
+        expect(deletion).toEqual({ status: "fulfilled", value: "done" });
+        expect(run).toMatchObject({ status: "fulfilled", value: { flowId: f.flow.id, status: "queued" } });
+      } finally {
+        pause.resume();
+        await Promise.allSettled([holding, waiting]);
+        pause.restore();
+        routing.restore();
+        await Promise.all([runClient.end(), deleteClient.end()]);
+      }
+      // The run survives in the shared workspace without its creator; the account and its sole workspace are gone.
+      const runs = await db.select().from(schema.run).where(eq(schema.run.flowId, f.flow.id));
+      expect(runs).toHaveLength(1);
+      expect(runs[0]!.createdBy).toBeNull();
+      expect(await db.select().from(schema.user).where(eq(schema.user.id, f.user.id))).toHaveLength(0);
+      expect(await db.select().from(schema.workspace).where(eq(schema.workspace.id, f.solo.id))).toHaveLength(0);
+      expect((await auditActions(f.ws.id, f.user.id)).filter((a) => a === "account.deleted")).toHaveLength(1);
     });
   });
 }

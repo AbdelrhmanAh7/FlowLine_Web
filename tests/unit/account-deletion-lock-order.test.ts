@@ -64,22 +64,31 @@ beforeEach(() => {
 });
 
 describe("account deletion lock order (mocked transaction: statement order only; PostgreSQL deadlock behaviour runs in CI)", () => {
-  it("@issue-47 AC3: locks the user row FOR UPDATE right after the retained-file accounting locks, before the token, every workspace lock and every audit insert", async () => {
+  it("@issue-47 AC3: locks the user row right after the retained-file accounting locks, before the token, every workspace lock and every audit insert", async () => {
     await expect(consumeAccountToken("delete", TOKEN, undefined, "user-1")).resolves.toBe("done");
     expect(fx.events).toEqual([
-      "advisory", "retained_file_counter:update", "user:update", "email_token:update", "workspace:update",
+      "advisory", "retained_file_counter:update", "user:no key update", "email_token:update", "workspace:update",
       "insert:audit_event", "delete:workspace", "update:email_token", "delete:user",
     ]);
   });
 
   it("@issue-47 AC3: keeps the workspace locks FOR UPDATE, since sole-member workspaces are deleted with the account", async () => {
     await consumeAccountToken("delete", TOKEN, undefined, "user-1");
-    const user = fx.events.indexOf("user:update");
+    const user = fx.events.indexOf("user:no key update");
     expect(user).toBeGreaterThan(-1);
     expect(fx.events.filter((e) => e.startsWith("workspace:"))).toEqual(["workspace:update"]);
     for (const later of ["workspace:update", "insert:audit_event", "delete:workspace", "delete:user"]) {
       expect(fx.events.indexOf(later), later).toBeGreaterThan(user);
     }
+  });
+
+  it("@issue-47 AC5: takes the user row FOR NO KEY UPDATE, not FOR UPDATE, so the user's own run and agent-run enqueues are not blocked by it", async () => {
+    // FOR NO KEY UPDATE still conflicts with the SSO paths' FOR SHARE / FOR UPDATE on this row (the AC1/AC2 cycle), but
+    // not with the key-share lock an INSERT referencing the user takes. enqueueRun and startAgentRun lock the workspace
+    // FOR UPDATE and then insert rows whose created_by references the user: under FOR UPDATE they waited for deletion
+    // while holding the workspace deletion waits for (tests/integration/account-deletion-lock-order.test.ts, AC5/AC6).
+    await consumeAccountToken("delete", TOKEN, undefined, "user-1");
+    expect(fx.events.filter((e) => e.startsWith("user:"))).toEqual(["user:no key update"]);
   });
 
   it("@issue-47 AC4: a deletion token of another account is refused before any workspace is locked", async () => {
