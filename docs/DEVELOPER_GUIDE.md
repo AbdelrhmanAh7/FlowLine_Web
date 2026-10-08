@@ -84,10 +84,12 @@ Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base or
 
 ## Landing demo video
 
-The landing page (`src/components/landing/demo-video.tsx`) embeds `public/media/flowline-demo.{mp4,webm,jpg,en.vtt,ar.vtt}`. Regenerate after UI changes with a seeded fake-data demo user on a running test/staging app and ffmpeg installed (`brew install ffmpeg`):
+The landing page (`src/components/landing/demo-video.tsx`, mounted after the hero in `src/app/page.tsx`) embeds `public/media/flowline-demo.{mp4,webm,jpg,en.vtt,ar.vtt}`: H.264 + VP9, 1280×720, no audio, about 38 s, under 0.5 MB each. Behaviour: `preload="none"` (only the poster downloads with the page), muted autoplay once half the player is in view and pause when it leaves, a visitor's own pause sticks; under `prefers-reduced-motion` it never autoplays (poster + "Play demo"). The play/pause button sits at the `end` edge (left in Arabic) and the captions track for the UI language is the default. If no source can load, the section hides itself.
+
+Regenerate after UI changes. Prerequisites: ffmpeg and ffprobe on PATH (`brew install ffmpeg` / `apt install ffmpeg`; Playwright's bundled ffmpeg only encodes VP8 and is not enough) and a running test stack (`pnpm dev:test`; the script needs `FLOWLINE_ENV=test` for the e-mail outbox):
 
 ```
-BASE_URL=http://localhost:3100 DEMO_EMAIL=demo@example.test DEMO_PASSWORD=demo-password pnpm demo:record
+BASE_URL=http://localhost:3100 pnpm demo:record
 ```
 
-The script records 1280×720 with Playwright, encodes H.264 + VP9 (40 s) and fails if a file exceeds 6 MB. Autoplay is skipped under `prefers-reduced-motion` (poster + "Play demo"); if the files are absent the section hides itself. Lighthouse/LCP has not been measured for this change.
+`scripts/record-demo.mts` creates a throwaway fake account (`demo-<time>@flowline-demo.test`, workspaces "Demo Co" and "Demo Co Ops", the `lead-qualifier` template) through the public API, then records sign in → run → inspect a step's input/output → share a copy to the second workspace. Caption cues come from scene marks taken during the recording, so they stay in sync. It fails if a file exceeds 6 MB or a video is outside 30–60 s; `tests/unit/landing-demo-assets.test.ts` re-checks sizes and caption timing in CI. Tests: `e2e/landing-demo.spec.ts` (reduced motion, keyboard pause, Arabic RTL) and the e2e-army gate test `e2e-army/96-landing-demo.e2e.ts` (excluded from `tsconfig.json`, because it imports the hub runner's packages). Lighthouse has not been run for this change. A Playwright check on the test stack found the hero `<h1>` as the LCP element at 1440×900 and 375×812, with no video bytes requested before scrolling.
