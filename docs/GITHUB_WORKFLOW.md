@@ -39,7 +39,7 @@ Exception: <which rule is not followed>
 Reason: <why it is necessary now>
 Risk: <what could go wrong>
 Verification: <how the result was checked: run ids, SHAs, reviewer confirmation>
-Approved by: <owner, or the delegated reviewer>
+Approved by: <owner; delegated reviewer only where the affected rule permits delegation>
 ```
 
 A missed record is added retroactively on the PR as soon as it is found, labelled as retroactive.
