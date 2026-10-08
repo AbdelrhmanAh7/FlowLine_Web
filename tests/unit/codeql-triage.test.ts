@@ -18,13 +18,13 @@ const FIXED: Record<number, { rule: string; file: string; flagged: string }> = {
   3: { rule: "js/incomplete-sanitization", file: "e2e/phase3.spec.ts", flagged: `FAKE.replace(/[.:/]/g` },
   4: { rule: "js/incomplete-sanitization", file: "scripts/stop-test-stack.mjs", flagged: `ps.replace(/"/g` },
   5: { rule: "js/stack-trace-exposure", file: "e2e/fakes/provider-server.ts", flagged: "{ error: String(e) }" },
+  8: { rule: "js/disabling-certificate-validation", file: "scripts/release/verify-beta-stack.mjs", flagged: "NODE_TLS_REJECT_UNAUTHORIZED" },
   7: { rule: "js/resource-exhaustion", file: "e2e/fakes/ai-server.ts", flagged: "fault.delayMs ?? 1000)" },
   13: { rule: "js/shell-command-injection-from-environment", file: "scripts/stop-test-stack.mjs", flagged: "execSync(" },
   14: { rule: "js/incomplete-url-substring-sanitization", file: "tests/unit/ai-hub-wave-b.test.ts", flagged: `endsWith("cohere.com")` },
 };
 const DISMISSED: Record<number, { rule: string; file: string }> = {
   6: { rule: "js/regex-injection", file: "e2e/fakes/provider-server.ts" },
-  8: { rule: "js/disabling-certificate-validation", file: "scripts/release/verify-beta-stack.mjs" },
   9: { rule: "js/server-side-unvalidated-url-redirection", file: "e2e/fakes/provider-server.ts" },
   10: { rule: "js/insufficient-password-hash", file: "e2e/fakes/ai-protocols.ts" },
   12: { rule: "js/insufficient-password-hash", file: "src/server/rate-limit.ts" },
@@ -60,12 +60,17 @@ describe("CodeQL triage (#63)", () => {
     expect(src).not.toMatch(/\bexecSync\b/);
   });
 
-  it("@issue-63 AC5: verify-beta-stack refuses --insecure-local for a non-loopback host before any connection", () => {
-    const r = spawnSync(process.execPath, ["scripts/release/verify-beta-stack.mjs", "--base", "https://beta.example.com", "--insecure-local", "--out", join(tmpdir(), "flowline-issue-63")], {
-      encoding: "utf8",
-      timeout: 10_000,
-    });
-    expect(r.status).toBe(2);
-    expect(r.stderr).toContain("--insecure-local is only for a loopback host");
+  it("@issue-63 AC5: verify-beta-stack never disables certificate validation; a local CA is trusted with --ca-file", () => {
+    const src = read("scripts/release/verify-beta-stack.mjs");
+    expect(src).not.toMatch(/NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized\s*:\s*(false|!)/);
+    expect(src).toContain("--ca-file");
+    const run = (...extra: string[]) =>
+      spawnSync(process.execPath, ["scripts/release/verify-beta-stack.mjs", "--base", "https://localhost:1", ...extra, "--out", join(tmpdir(), "flowline-issue-63")], { encoding: "utf8", timeout: 10_000 });
+    const old = run("--insecure-local");
+    expect(old.status).toBe(2);
+    expect(old.stderr).toContain("--insecure-local was removed");
+    const missing = run("--ca-file", join(tmpdir(), "flowline-issue-63", "no-such-ca.crt"));
+    expect(missing.status).toBe(2);
+    expect(missing.stderr).toContain("cannot read --ca-file");
   });
 });

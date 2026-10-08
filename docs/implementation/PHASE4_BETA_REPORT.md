@@ -2,7 +2,7 @@
 
 ## CodeQL triage (#63) — 2026-10-08
 
-The 13 CodeQL alerts open on 2026-10-07 are triaged in [CODEQL_TRIAGE.md](../security/CODEQL_TRIAGE.md): 8 fixed (test code, the fake servers, `stop-test-stack.mjs` without a shell), 5 dismissed with the reason next to the code (#6, #9, #10 used in tests; #8 won't fix, `--insecure-local` now loopback-only; #12 false positive). The dismissals still need a repository admin after the merge ([OWNER_ACTIONS.md](OWNER_ACTIONS.md) item 5). Evidence: [`artifacts/issue-63/EVIDENCE.md`](../../artifacts/issue-63/EVIDENCE.md).
+The 13 CodeQL alerts open on 2026-10-07 are triaged in [CODEQL_TRIAGE.md](../security/CODEQL_TRIAGE.md): 9 fixed (test code, the fake servers, `stop-test-stack.mjs` without a shell, `verify-beta-stack.mjs` now trusts a local CA with `--ca-file` and never disables certificate validation), 4 dismissed with the reason next to the code (#6, #9, #10 used in tests; #12 false positive). The dismissals still need a repository admin after the merge ([OWNER_ACTIONS.md](OWNER_ACTIONS.md) item 5). Evidence: [`artifacts/issue-63/EVIDENCE.md`](../../artifacts/issue-63/EVIDENCE.md).
 
 ## H3 security readiness review — 2026-10-03
 

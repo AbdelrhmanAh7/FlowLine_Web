@@ -13,7 +13,7 @@ Fixed alerts close when CodeQL rescans main after the merge. Dismissals are a Gi
 | #5 | `js/stack-trace-exposure` | `e2e/fakes/provider-server.ts` | fixed | `/__fake/fault` answers an invalid `pathPattern` with a fixed message, not the caught exception. |
 | #6 | `js/regex-injection` | `e2e/fakes/provider-server.ts` | dismissed: used in tests | Test-control endpoint of the fake provider server, which listens on 127.0.0.1 only; the pattern comes from the test that injects the fault, and an invalid one gets a 400. |
 | #7 | `js/resource-exhaustion` | `e2e/fakes/ai-server.ts` | fixed | A slow fault's `delayMs` must be a number from 0 to 60000, checked when the fault is registered and again before `setTimeout`. |
-| #8 | `js/disabling-certificate-validation` | `scripts/release/verify-beta-stack.mjs` | dismissed: won't fix | `--insecure-local` is an opt-in dry run against Caddy's internal CA and is now refused (exit 2) for any host but `localhost`, `127.0.0.1` or `[::1]`; every other host, the real beta domain included, keeps full certificate validation. |
+| #8 | `js/disabling-certificate-validation` | `scripts/release/verify-beta-stack.mjs` | fixed | Also PR alert #15 (same line). Certificate validation is never disabled: `--insecure-local` and the `NODE_TLS_REJECT_UNAUTHORIZED=0` assignment are gone. A local dry run against Caddy's internal CA trusts that CA with `--ca-file <root.crt>` (system roots plus the file); the script reads the file, uses it for the TLS check and for the HTTPS requests, and exits 2 if it cannot be read. |
 | #9 | `js/server-side-unvalidated-url-redirection` | `e2e/fakes/provider-server.ts` | dismissed: used in tests | The fake Paddle checkout redirects to the caller's `success_url` exactly as Paddle.js does; the fake listens on 127.0.0.1 only and exists for the E2E billing flow. |
 | #10 | `js/insufficient-password-hash` | `e2e/fakes/ai-protocols.ts` | dismissed: used in tests | The fake AI hub logs a SHA-256 fingerprint of the API key a request carried so tests can assert which key was sent without the log holding it; nothing is stored or verified as a password. |
 | #12 | `js/insufficient-password-hash` | `src/server/rate-limit.ts` | dismissed: false positive | `checkRate` hashes bucket names such as `apikey:<row id>` or `platform-write:<user id>`; no password or API-key secret reaches it. CodeQL keys on the `apiKeyId` name; a slow KDF would only slow every rate-limit check. |
@@ -24,7 +24,7 @@ Fixed alerts close when CodeQL rescans main after the merge. Dismissals are a Gi
 
 ```sh
 dismiss() { gh api -X PATCH "repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts/$1" -f state=dismissed -f dismissed_reason="$2" -f dismissed_comment="See docs/security/CODEQL_TRIAGE.md (#63)"; }
-dismiss 6 "used in tests"; dismiss 9 "used in tests"; dismiss 10 "used in tests"; dismiss 8 "won't fix"; dismiss 12 "false positive"
+dismiss 6 "used in tests"; dismiss 9 "used in tests"; dismiss 10 "used in tests"; dismiss 12 "false positive"
 gh api 'repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts?state=open' --jq 'length'   # 0 once main is rescanned
 ```
 
