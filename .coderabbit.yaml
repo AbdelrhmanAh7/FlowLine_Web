@@ -10,7 +10,7 @@
 language: en-US
 reviews:
   profile: assertive
-  request_changes_workflow: false
+  request_changes_workflow: true
   auto_review:
     enabled: true
     auto_incremental_review: false

@@ -9,6 +9,7 @@ import { HttpError } from "./http";
 import { checkRate } from "./rate-limit";
 import { verifyTotp } from "./platform-access";
 import { consumeFederatedTotpStep } from "./federated-mfa";
+import { lockUserThenSessions } from "./federated-locks";
 import { ssoProviderId } from "./sso";
 import { deliverAccountToken, prepareAccountToken } from "./email/flows";
 
@@ -93,8 +94,8 @@ export async function confirmSsoLink(token: string, sessionToken: string, assura
   return db.transaction(async (tx) => {
     const [pending] = await tx.select().from(schema.verification).where(and(eq(schema.verification.identifier, identifier(token)), gt(schema.verification.expiresAt, new Date()))).for("update");
     if (!pending || pending.value !== JSON.stringify(intent)) throw invalid();
-    const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, sessionToken), eq(schema.session.userId, user.id), gt(schema.session.expiresAt, new Date()))).for("update");
-    const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user.id)).for("update");
+    // Lock order (docs/security/FEDERATED_MFA.md, "Lock order"): own pending row above, then user, then session, then factor/credential, tenant authority, advisory lock, replay marker.
+    const { user: currentUser, sessions: [currentSession] } = await lockUserThenSessions(tx, user.id, "update", [{ by: { token: sessionToken }, mode: "update" }]);
     const [currentFactor] = user.twoFactorEnabled ? await tx.select().from(schema.twoFactor).where(eq(schema.twoFactor.userId, user.id)).for("share") : [];
     const [currentCredential] = await tx.select().from(schema.account).where(and(eq(schema.account.userId, user.id), eq(schema.account.providerId, "credential"))).for("share");
     if ((user.twoFactorEnabled && (!currentFactor || currentFactor.verified === false || sha256Hex(currentFactor.secret) !== details.factorHash)) || (currentCredential?.password ?? null) !== (details.passwordHash ?? null)) throw invalid();

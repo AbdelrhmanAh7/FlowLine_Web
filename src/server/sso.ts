@@ -503,6 +503,10 @@ export async function completeSso(opts: {
   if (user.twoFactorEnabled) {
     const { createFederatedChallenge } = await import("./federated-mfa");
     const mfaRequired = await db.transaction(async (tx) => {
+      // Lock order (docs/security/FEDERATED_MFA.md, "Lock order"): user, then the initiating session, then tenant authority.
+      // `confirmSsoLink` and `completeFederatedChallenge` lock the user before sessions; a session-first order here would
+      // deadlock against them (issue #37).
+      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
       let initiator: { sessionId: string; userId: string; sessionHash: string } | undefined;
       if (pending.initiatorUserId) {
         const [initiatorSession] = opts.sessionToken ? await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken), eq(schema.session.userId, pending.initiatorUserId), sql`${schema.session.expiresAt} > now()`)).for("share") : [];
@@ -510,7 +514,6 @@ export async function completeSso(opts: {
           throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
         initiator = { sessionId: initiatorSession.id, userId: initiatorSession.userId, sessionHash: binding.sessionHash };
       }
-      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
       const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
       const [currentMember] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, user!.id))).for("share");
       const [currentLink] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user!.id))).for("share");
@@ -533,16 +536,18 @@ export async function completeSso(opts: {
   const newMember = false;
   try {
     await db.transaction(async (tx) => {
+      // Lock order (docs/security/FEDERATED_MFA.md, "Lock order"): user, then sessions (initiator, then the unissued one),
+      // then tenant authority. See the matching comment in the MFA branch above.
+      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
       if (pending.initiatorUserId) {
         const [initiatorSession] = opts.sessionToken ? await tx.select().from(schema.session).where(and(eq(schema.session.token, opts.sessionToken), eq(schema.session.userId, pending.initiatorUserId), sql`${schema.session.expiresAt} > now()`)).for("share") : [];
         if (!initiatorSession || !binding.sessionHash || sha256Hex(opts.sessionToken!) !== binding.sessionHash)
           throw new HttpError(403, "SSO_LINK_INVALID", "Restart SSO while signed in");
       }
-      const [currentUser] = await tx.select().from(schema.user).where(eq(schema.user.id, user!.id)).for("share");
+      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user!.id), sql`${schema.session.expiresAt} > now()`)).for("share");
       const [currentConfig] = await tx.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id)).for("update");
       const [currentMember] = await tx.select().from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, user!.id))).for("share");
       const [currentLink] = await tx.select().from(schema.account).where(and(eq(schema.account.providerId, providerId), eq(schema.account.accountId, subject), eq(schema.account.userId, user!.id))).for("share");
-      const [currentSession] = await tx.select().from(schema.session).where(and(eq(schema.session.token, session.token), eq(schema.session.userId, user!.id), sql`${schema.session.expiresAt} > now()`)).for("share");
       if (!currentConfig?.enabled || currentConfig.updatedAt.toISOString() !== binding.configStamp)
         throw new HttpError(400, "SSO_STATE_INVALID", "Restart SSO after a configuration change");
       if (!currentUser?.emailVerified || currentUser.twoFactorEnabled !== user!.twoFactorEnabled || !currentMember || !currentLink || !currentSession)

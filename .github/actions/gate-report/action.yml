@@ -1,8 +1,8 @@
 name: Gate report
-description: Write a gate job's summary to the step summary and upload its logs and browser reports.
+description: Write a gate job's summary to the step summary and upload its logs and browser reports. It reads only the summary.json in its own `out` directory, and an integration shard's report is accepted only when that file names the same shard.
 inputs:
   job:
-    description: Job name (used in the summary heading and the artifact name)
+    description: Leg name, unique within the run (used in the summary heading and the artifact name, so two legs never upload under one artifact name)
     required: true
   out:
     description: The gate --out directory
@@ -10,6 +10,10 @@ inputs:
   tier:
     description: Gate tier
     required: true
+  shard:
+    description: The integration shard this leg ran, as k/N. Leave empty for every other leg. A summary.json that names a different shard, or a shard report read by a leg that expects none, is rejected instead of rendered.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -20,6 +24,7 @@ runs:
         GATE_JOB: ${{ inputs.job }}
         GATE_TIER: ${{ inputs.tier }}
         GATE_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        GATE_SHARD: ${{ inputs.shard }}
       run: |
         {
           echo "## FlowLine gate: $GATE_JOB ($GATE_TIER)"
@@ -27,12 +32,22 @@ runs:
             node --input-type=module <<'NODE'
         import { readFileSync } from 'node:fs';
         const gate = JSON.parse(readFileSync(process.env.GATE_SUMMARY, 'utf8'));
-        console.log(`Commit: \`${gate.sha}\` · result: **${gate.ok ? 'PASS' : 'FAIL'}** · browser mode: ${gate.browsersMode}`);
+        const expected = process.env.GATE_SHARD || null;
+        const actual = gate.shard ?? null;
+        if (expected !== actual) {
+          // Another leg's report (or none of a shard's) must never be shown as this leg's result.
+          console.log(`**Not this leg's report.** ${process.env.GATE_JOB} expects ${expected ? `the report of integration shard ${expected}` : 'a report that is not a shard report'}, but this summary is ${actual ? `integration shard ${actual}'s` : 'not a shard report'}. No result is claimed for this leg.`);
+          console.error(`::error title=Gate report mismatch::${process.env.GATE_JOB} read a summary that is not its own (expected shard ${expected ?? 'none'}, found ${actual ?? 'none'})`);
+          process.exit(1);
+        }
+        const mode = gate.browsersMode ? ` · browser mode: ${gate.browsersMode}` : '';
+        console.log(`Commit: \`${gate.sha}\` · result: **${gate.ok ? 'PASS' : 'FAIL'}**${expected ? ` · integration shard ${expected}` : ''}${mode}`);
         console.log('\n| Step | Status | Time | Tests / note |\n| --- | --- | ---: | --- |');
         for (const step of gate.steps) {
-          const totals = step.totals ? Object.entries(step.totals).map(([k, v]) => `${v} ${k}`).join(', ') : (step.note ?? '');
+          const totals = step.totals ? Object.entries(step.totals).map(([k, v]) => `${v} ${k}`).join(', ') : '';
+          const detail = [totals, step.note].filter(Boolean).join(' · ');
           const time = step.durationMs ? `${(step.durationMs / 1000).toFixed(1)}s` : '—';
-          console.log(`| ${step.name} | ${step.status} | ${time} | ${totals.replaceAll('|', '\\|')} |`);
+          console.log(`| ${step.name} | ${step.status} | ${time} | ${detail.replaceAll('|', '\\|')} |`);
         }
         // Name the failing browser tests so a red run is readable without downloading artifacts.
         const { readdirSync, existsSync } = await import('node:fs');
@@ -46,7 +61,8 @@ runs:
         NODE
           else
             echo
-            echo "Gate summary was not created. Check the job logs for setup or early gate failures."
+            echo "Gate summary was not created for $GATE_JOB. Check the job logs for setup or early gate failures. No result is claimed for this leg."
+            echo "::warning title=Gate summary missing::$GATE_JOB wrote no summary.json" >&2
           fi
         } >> "$GITHUB_STEP_SUMMARY"
 
