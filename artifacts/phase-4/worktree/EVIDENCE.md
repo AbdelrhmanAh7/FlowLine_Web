@@ -1,6 +1,6 @@
 # Evidence: issue #67, `pnpm wt` tests and docs
 
-Tested SHA: `57c6759` (branch `ai/67`, base `bc59cab`; behaviour last changed in `57c6759`), node v26.10.0, git 2.56.0, macOS. REQ ids come from the PRD draft (Notion, Approval = Draft).
+Tested SHA: `57c6759` for the counts below (behaviour last changed there). The later commit only drops one duplicate unit test (85 → 84), uses `os.devNull` in the integration test and tidies docs; it could not be re-run here (no node_modules, npm registry blocked), so CI is the check for it. Branch `ai/67`, base `bc59cab`. REQ ids come from the PRD draft (Notion, Approval = Draft).
 
 | REQ | Verified by |
 |---|---|
