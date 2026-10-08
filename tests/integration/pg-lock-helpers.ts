@@ -47,16 +47,28 @@ export function pauseAfter(client: Client, pattern: RegExp) {
  * Observe an actual PostgreSQL wait, not elapsed time as evidence of blocking. `observer` must be the connection that
  * holds the lock (it is paused between statements, so it can still run this probe): the waiter has to be blocked BY it.
  * Returns the waiter's current statement text.
+ *
+ * `query` comes from the backend-status snapshot taken when the probe starts, while `wait_event_type` and
+ * `pg_blocking_pids` are read live, so a probe racing the waiter's earlier statements can pair an old statement with
+ * the new wait (issue #47: deletion "waiting" at the retained-file counter row it had already locked). Once the wait is
+ * seen the waiter cannot move while the observer is paused, so a second probe on a fresh snapshot reads its real text.
  */
 export async function blockedByObserver(observer: Client, waiterPid: number, finished: () => boolean) {
-  const deadline = Date.now() + 5_000;
-  while (Date.now() < deadline) {
-    if (finished()) throw new Error("Competing transaction completed before the lock barrier was released");
+  const probe = async () => {
     await observer.query("select pg_stat_clear_snapshot()");
     const { rows } = await observer.query<{ query: string; wait_event_type: string }>(
       "select query, wait_event_type from pg_stat_activity where pid = $1 and pg_backend_pid() = any(pg_blocking_pids(pid))", [waiterPid],
     );
-    if (rows[0]?.wait_event_type === "Lock") return rows[0];
+    return rows[0]?.wait_event_type === "Lock" ? rows[0] : undefined;
+  };
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    if (finished()) throw new Error("Competing transaction completed before the lock barrier was released");
+    if (await probe()) {
+      const settled = await probe();
+      if (!settled) throw new Error("Competing transaction stopped waiting while the lock barrier was held");
+      return settled;
+    }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error("Competing transaction did not block on the expected connection");
