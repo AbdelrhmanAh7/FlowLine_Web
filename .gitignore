@@ -35,3 +35,6 @@ tools/demo-video/node_modules/
 tools/demo-video/.work/
 tools/demo-video/out/
 tools/demo-video/public/
+
+# demo:verify contact sheets (regenerated each run; curated copies live in artifacts/issue-<N>/)
+artifacts/demo-media/
