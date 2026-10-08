@@ -120,7 +120,8 @@ describe.each(helpers)("focused-run helper %s", (script) => {
     const report = JSON.parse(stdout) as { dryRun: boolean; policy: string; allowlist: string[]; inheritedNames: string[]; explicitNames: string[] };
     expect(report.dryRun).toBe(true);
     expect(report.policy).toBe("allowlist");
-    expect(report.inheritedNames.every((name) => report.allowlist.includes(name))).toBe(true);
+    const fold = (n: string) => (process.platform === "win32" ? n.toUpperCase() : n);
+    expect(report.inheritedNames.every((name) => report.allowlist.includes(fold(name)))).toBe(true);
     expect(report.inheritedNames).not.toContain("DATABASE_URL");
     expect(report.explicitNames).toEqual(expect.arrayContaining(["DATABASE_URL", "FLOWLINE_ENV", "BETTER_AUTH_SECRET"]));
     for (const leaked of ["FLOWLINE_SENTINEL_AMBIENT", "ZITADEL_ISSUER", "NODE_ENV"]) {
