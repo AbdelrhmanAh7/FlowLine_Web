@@ -45,6 +45,12 @@ export async function zitadelCallback(opts: { issuer: string; subject: string; e
 
 /** Real built-in social-provider callback, with only HTTP transport replaced. */
 export async function githubCallback(opts: { subject: number; email: string; next: string }) {
+  const { instance, request } = await githubCallbackRequest(opts);
+  return instance.handler(request);
+}
+
+/** The started sign-in's callback request, unsent, so a test can deliver it more than once. */
+export async function githubCallbackRequest(opts: { subject: number; email: string; next: string }) {
   vi.spyOn(authDispatch, "federatedProviderStamp").mockResolvedValue("fixture:github");
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
@@ -58,5 +64,5 @@ export async function githubCallback(opts: { subject: number; email: string; nex
   expect(start.status).toBe(200);
   const authorization = new URL((await start.json()).url);
   const cookie = start.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-  return instance.handler(new Request(`${ORIGIN}/api/auth/callback/github?state=${authorization.searchParams.get("state")}&code=synthetic-code`, { headers: { cookie } }));
+  return { instance, request: new Request(`${ORIGIN}/api/auth/callback/github?state=${authorization.searchParams.get("state")}&code=synthetic-code`, { headers: { cookie } }) };
 }
