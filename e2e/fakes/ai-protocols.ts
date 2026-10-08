@@ -81,6 +81,8 @@ export function resetHub() {
   hub.publicListing = new Set();
 }
 
+// Fingerprints the API key a request carried, so tests can assert which key was sent without the log holding it. Not
+// password storage: CodeQL `js/insufficient-password-hash` (alert #10) dismissed, used in tests (docs/security/CODEQL_TRIAGE.md).
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 /** Models per native provider (OpenAI-compatible providers share the OpenAI double's list). */

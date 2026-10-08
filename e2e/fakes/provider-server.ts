@@ -1817,7 +1817,9 @@ ${failed}
       await sendPaddleWebhook(ctx, paddleEvent(s, "transaction.completed", { ...txn }));
       await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
     }
-    // The redirect Paddle.js performs to settings.successUrl after payment.
+    // The redirect Paddle.js performs to settings.successUrl after payment. CodeQL `js/server-side-unvalidated-url-redirection`
+    // (alert #9) dismissed, used in tests: the real Paddle.js also follows the caller's successUrl, and this fake listens on
+    // 127.0.0.1 only (docs/security/CODEQL_TRIAGE.md).
     res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
     res.end();
     return;
@@ -2051,14 +2053,16 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
     try {
       ctx.faults.push({
         provider: payload.provider,
+        // CodeQL `js/regex-injection` (alert #6) dismissed, used in tests: this test-control endpoint of a fake that listens
+        // on 127.0.0.1 only takes the pattern from the test that injects the fault (docs/security/CODEQL_TRIAGE.md).
         pattern: new RegExp(payload.pathPattern),
         mode: payload.mode,
         times: payload.times ?? 1,
         retryAfterSec: payload.retryAfterSec,
         delayMs: payload.delayMs,
       });
-    } catch (e) {
-      return json(ctx, req, res, 400, { error: String(e) }), true;
+    } catch {
+      return json(ctx, req, res, 400, { error: "pathPattern is not a valid regular expression" }), true;
     }
     return json(ctx, req, res, 200, { ok: true }), true;
   }

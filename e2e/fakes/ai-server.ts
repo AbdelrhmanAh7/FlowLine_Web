@@ -335,6 +335,9 @@ function handleChat(reqBody: string, res: ServerResponse) {
  * as the rest of this file. Keys: any "sk-fake-…" is accepted except ones containing "revoked" (401 that echoes a
  * partially masked key, like real providers do). Every request records a SHA-256 of the key used — never the key.
  */
+/** Longest "slow" fault the double accepts (the longest a test uses is 30 s), so a fault cannot park a timer indefinitely. */
+const SLOW_MAX_MS = 60_000;
+const validDelay = (v: unknown) => v === undefined || (typeof v === "number" && v >= 0 && v <= SLOW_MAX_MS);
 const OPENAI_MODELS = ["fake-gpt-mini", "fake-gpt-large", "fake-gpt-tools", "fake-reasoner", "fake-cache"];
 type OpenAiFault = { mode: "401" | "403" | "429" | "500" | "timeout" | "removed_model" | "redirect_private" | "redirect_cross_origin" | "insufficient_quota" | "bad_json" | "slow"; times: number; retryAfterSec?: number; delayMs?: number; path?: "chat" | "models" };
 const openai = {
@@ -422,7 +425,9 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   }
   // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
   if (fault?.mode === "slow") {
-    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), fault.delayMs ?? 1000);
+    const delayMs = fault.delayMs ?? 1000;
+    if (!(delayMs >= 0 && delayMs <= SLOW_MAX_MS)) return oaError(res, 400, `delayMs must be a number from 0 to ${SLOW_MAX_MS}`), true;
+    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), delayMs);
     return true;
   }
 
@@ -563,7 +568,9 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
     if (await handleHub(req, res, url, b, { run: runRules, oaModels: listedModels, delegate })) return;
     if (req.url === "/__fake/openai/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ requests: openai.requests, stolen: openai.stolen }));
     if (req.url === "/__fake/openai/fault" && req.method === "POST") {
-      openai.faults.push(JSON.parse(b) as OpenAiFault);
+      const f = JSON.parse(b) as OpenAiFault;
+      if (!validDelay(f.delayMs)) return res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: `delayMs must be a number from 0 to ${SLOW_MAX_MS}` }));
+      openai.faults.push(f);
       return res.writeHead(200).end("{}");
     }
     if (req.url === "/__fake/openai/catalogue" && req.method === "POST") {
