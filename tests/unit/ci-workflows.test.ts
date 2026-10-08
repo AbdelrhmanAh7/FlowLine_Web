@@ -25,8 +25,8 @@ const triggerTypes = (text: string, event: string) => {
 };
 
 describe("workflow files", () => {
-  it("finds the workflows and composite actions", () => {
-    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
+  it("has at least the gate and docs workflows and the shared composite actions", () => {
+    expect(workflowFiles).toEqual(expect.arrayContaining([".github/workflows/gate.yml", ".github/workflows/docs.yml"]));
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
@@ -97,6 +97,21 @@ describe("gate.yml always reports a real `gate`", () => {
     expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
     expect(byJob.changes).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}pull-requests: read\n/m);
     expect(text.match(/pull-requests: read/g)).toHaveLength(1);
+  });
+});
+
+describe("nightly.yml stays off the PR path", () => {
+  const text = read(".github/workflows/nightly.yml");
+
+  it("runs on a schedule or by dispatch only, never on pull_request or push", () => {
+    expect(stripComments(text)).toMatch(/^ {2}schedule:$/m);
+    expect(stripComments(text)).toMatch(/^ {2}workflow_dispatch:$/m);
+    expect(stripComments(text)).not.toMatch(/^ {2}(pull_request|pull_request_target|push):/m);
+  });
+
+  it("runs the nightly project through the shared setup", () => {
+    expect(text).toContain("./.github/actions/setup-gate");
+    expect(text).toContain("pnpm test:nightly");
   });
 });
 

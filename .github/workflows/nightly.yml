@@ -1,0 +1,32 @@
+name: Nightly
+
+# Slow or infra-sensitive suites moved out of the PR gate (see docs/implementation/SMALL_GATES.md, "Nightly tier").
+# Not a required check: a red nightly opens a follow-up, it never blocks a PR. Runs on main only (schedule), or on any ref by dispatch.
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-gate
+        with:
+          postgres: "true"
+          sandbox-image: "true"
+
+      - name: Run the nightly project (code sandbox, upgrade paths, company-builder CLI prototype, dependency pins)
+        run: pnpm test:nightly

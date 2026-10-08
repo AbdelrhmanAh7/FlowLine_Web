@@ -16,6 +16,15 @@ Static checks already run in parallel with each other; integration is already sh
 Every run writes `summary.json` and logs under `artifacts/gates/`; a skipped, blocked or failed step shows in the table and
 makes the exit code non-zero.
 
+## Nightly tier
+
+Slow or infra-sensitive suites run in the `nightly` vitest project (`pnpm test:nightly`, needs `.env.test`, Postgres and the
+code-sandbox image) from `.github/workflows/nightly.yml` (cron 01:17 UTC, or Actions > Nightly > Run workflow on any ref). They
+are excluded from the `unit` and `integration` projects, so the PR gate no longer runs them: `p2-code-sandbox`,
+`company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill` and `drizzle-tooling-prune`. The list lives in
+`nightlyFiles` in `vitest.config.mts`. The nightly is not a required check. Run it by hand before merging a change to
+`src/server/code-sandbox.ts`, `src/server/crypto|rewrap` or `drizzle/**`.
+
 ## Browser groups (`--group`)
 
 `scripts/gate-groups.mjs` is the registry. Groups: `product`, `auth`, `editor`, `platform` (`--list-groups` prints them with

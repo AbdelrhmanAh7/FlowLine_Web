@@ -99,7 +99,6 @@ jobs:
       - uses: ./.github/actions/setup-gate
         with:
           postgres: "true"
-          sandbox-image: "true"
 
       - name: Run gate (static, unit, contract, integration)
         run: pnpm gate --only=static,unit,contract,integration --out="$GATE_OUT"
