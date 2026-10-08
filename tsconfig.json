@@ -41,6 +41,7 @@
     "node_modules",
     ".next-test",
     "artifacts",
+    "e2e-army",
     "playwright-report",
     "test-results"
   ]

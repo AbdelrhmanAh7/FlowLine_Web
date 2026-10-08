@@ -8,24 +8,36 @@ type Labels = { title: string; body: string; play: string; pause: string; captio
 
 /**
  * Recorded product demo (`pnpm demo:record` regenerates public/media/flowline-demo.*).
- * The poster is the paint element (preload="metadata", never the video bytes). Autoplay only without
- * prefers-reduced-motion; with it the poster stays and the button says "Play demo". A rejected play() (autoplay
- * policy) falls back to the same paused state. If the media files are missing the section hides instead of showing a dead player.
+ * Lazy: preload="none" fetches no video bytes, and autoplay (muted) starts only once half the player is in view, so the
+ * video never competes with the hero for LCP and a phone visitor below the fold downloads nothing. It pauses again off-screen.
+ * prefers-reduced-motion (read after mount, like reveal.tsx, so server and client markup match): never autoplays; the poster
+ * stays with a "Play demo" button. A rejected play() (autoplay policy) leaves the same paused state; a visitor's own pause
+ * sticks. If the media files are missing the section hides instead of showing a dead player.
  */
 export function DemoVideo({ locale, labels }: { locale: "ar" | "en"; labels: Labels }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const userPaused = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [broken, setBroken] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
     if (!v || window.matchMedia(REDUCED_MOTION).matches) return;
-    v.play().catch(() => setPlaying(false));
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) v.pause();
+        else if (!userPaused.current) v.play().catch(() => setPlaying(false));
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(v);
+    return () => io.disconnect();
   }, []);
 
   function toggle() {
     const v = ref.current;
     if (!v) return;
+    userPaused.current = !v.paused;
     if (v.paused) v.play().catch(() => setPlaying(false));
     else v.pause();
   }
@@ -43,14 +55,14 @@ export function DemoVideo({ locale, labels }: { locale: "ar" | "en"; labels: Lab
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           poster="/media/flowline-demo.jpg"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          onError={() => setBroken(true)}
         >
           <source src="/media/flowline-demo.mp4" type="video/mp4" />
-          <source src="/media/flowline-demo.webm" type="video/webm" />
+          {/* The last source failing means no format could load (an error on <video> itself never fires for <source>). */}
+          <source src="/media/flowline-demo.webm" type="video/webm" onError={() => setBroken(true)} />
           <track kind="captions" srcLang="en" label="English" src="/media/flowline-demo.en.vtt" default={locale === "en"} />
           <track kind="captions" srcLang="ar" label="العربية" src="/media/flowline-demo.ar.vtt" default={locale === "ar"} />
         </video>
