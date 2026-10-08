@@ -7,6 +7,9 @@ import { HttpError } from "./http";
  * the limit is global across web instances, not per process. Keys are hashed (no user ids / key ids stored in clear).
  * Each check takes a per-key transaction-level advisory lock, drops hits older than the window, counts, then either
  * records the hit or refuses — so concurrent requests can't overshoot.
+ * The SHA-256 below hashes a bucket name such as `apikey:<row id>` or `platform-write:<user id>`, never a password or
+ * an API key secret: CodeQL `js/insufficient-password-hash` (alert #12) is dismissed as a false positive
+ * (docs/security/CODEQL_TRIAGE.md).
  */
 export const RUNS_PER_MINUTE = 30;
 const WINDOW_SECONDS = 60;

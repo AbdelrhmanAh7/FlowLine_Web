@@ -4,7 +4,7 @@
  * correlation ids, internal routes blocked at the proxy, database not reachable, invitation-only sign-up.
  *   node scripts/release/verify-beta-stack.mjs --base https://beta.example.com [--out artifacts/phase-4/beta-infra]
  * For a LOCAL dry run against Caddy's internal CA, add --insecure-local (skips certificate validation; never for the real
- * beta domain — the real check must validate the Let's Encrypt certificate).
+ * beta domain — the real check must validate the Let's Encrypt certificate). It is refused for any host but loopback.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import net from "node:net";
@@ -17,8 +17,14 @@ const arg = (k, d) => {
 const BASE = arg("base", "https://localhost").replace(/\/+$/, "");
 const OUT = arg("out", "artifacts/phase-4/beta-infra");
 const insecure = process.argv.includes("--insecure-local");
-if (insecure) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const host = new URL(BASE).hostname;
+if (insecure && !["localhost", "127.0.0.1", "[::1]"].includes(host)) {
+  console.error(`--insecure-local is only for a loopback host (localhost, 127.0.0.1, [::1]), not ${host}`);
+  process.exit(2);
+}
+// CodeQL `js/disabling-certificate-validation` (alert #8) dismissed, won't fix: opt-in, loopback-only dry run against
+// Caddy's internal CA; every other host keeps full validation (docs/security/CODEQL_TRIAGE.md).
+if (insecure) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const checks = [];
 const check = (name, ok, detail = "") => {
   checks.push({ name, ok: Boolean(ok), detail });
