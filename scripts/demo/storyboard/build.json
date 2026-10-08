@@ -1,0 +1,5 @@
+{
+  "clip": "build",
+  "beats": ["establish", "palette", "drop", "connect"],
+  "poster": { "beat": "establish", "at": 0.5 }
+}

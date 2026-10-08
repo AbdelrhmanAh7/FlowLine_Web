@@ -29,3 +29,9 @@ artifacts/**/test-results*/
 
 # Local gate runs (scripts/gate.mjs); copy a run under artifacts/<area>/ deliberately to keep it as evidence
 artifacts/gates/
+
+# Landing demo compositor (tools/demo-video, isolated package: docs/landing/DEMO_MEDIA.md): installed deps, per-clip work dirs, renders
+tools/demo-video/node_modules/
+tools/demo-video/.work/
+tools/demo-video/out/
+tools/demo-video/public/

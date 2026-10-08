@@ -1,0 +1,5 @@
+{
+  "clip": "history",
+  "beats": ["establish", "history", "version", "restore"],
+  "poster": { "beat": "establish", "at": 0.5 }
+}

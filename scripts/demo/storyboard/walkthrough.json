@@ -1,0 +1,23 @@
+{
+  "clip": "walkthrough",
+  "beats": ["ch1", "templates", "use", "ch2", "add-node", "connect", "ch3", "run", "result", "ch4", "inspect", "history", "share", "end"],
+  "chapters": [
+    { "id": "templates", "beat": "ch1", "dur": 1.8, "ar": "ابدأ من قالب", "en": "Start from a template" },
+    { "id": "shape", "beat": "ch2", "dur": 1.6, "ar": "عدّل الخطوات", "en": "Shape the steps" },
+    { "id": "run", "beat": "ch3", "dur": 1.6, "ar": "شغّل وراقب", "en": "Run and watch" },
+    { "id": "inspect", "beat": "ch4", "dur": 1.6, "ar": "افهم ما حدث", "en": "See what happened" }
+  ],
+  "captions": [
+    { "beat": "templates", "at": 0.2, "dur": 4.2, "ar": "ابدأ من قالب جاهز يعمل على بيانات تجريبية.", "en": "Start from a ready-made template that runs on sample data." },
+    { "beat": "use", "at": 0.2, "dur": 4.4, "ar": "يفتح القالب على لوحة الخطوات، وكل خطوة واضحة.", "en": "It opens on the canvas, one clear step at a time." },
+    { "beat": "add-node", "at": 0.2, "dur": 4.8, "ar": "أضف خطوة من القائمة واسحبها إلى اللوحة.", "en": "Add a step from the list and drop it on the canvas." },
+    { "beat": "connect", "at": 0.2, "dur": 5.4, "ar": "اربطها بما قبلها واضبط شرطها.", "en": "Connect it to what comes before and set its condition." },
+    { "beat": "run", "at": 0.2, "dur": 5.8, "ar": "اضغط «تشغيل»، وتضيء الخطوات واحدة تلو الأخرى.", "en": "Press Run: the steps light up one by one." },
+    { "beat": "result", "at": 0.2, "dur": 4.4, "ar": "وتظهر النتيجة فور انتهاء التشغيل.", "en": "The result appears as soon as the run ends." },
+    { "beat": "inspect", "at": 0.2, "dur": 4.0, "ar": "افتح أي خطوة لترى ما دخلها وما خرج منها.", "en": "Open any step to see what went in and what came out." },
+    { "beat": "history", "at": 0.2, "dur": 3.2, "ar": "وكل تشغيل محفوظ في «السجل».", "en": "Every run is kept in your history." },
+    { "beat": "share", "at": 0.2, "dur": 2.9, "ar": "وشارك نسخة منه مع مساحة عمل أخرى.", "en": "Share a copy with another workspace." }
+  ],
+  "endCard": { "beat": "end" },
+  "poster": { "beat": "use", "at": 3.0 }
+}

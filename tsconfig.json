@@ -42,6 +42,7 @@
     ".next-test",
     "artifacts",
     "playwright-report",
-    "test-results"
+    "test-results",
+    "tools/demo-video"
   ]
 }

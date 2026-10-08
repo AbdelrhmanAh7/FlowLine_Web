@@ -1,0 +1,16 @@
+{
+  "clip": "walkthrough",
+  "beats": ["establish", "ch1", "templates", "ch2", "shape", "ch3", "run", "end"],
+  "captions": [
+    { "beat": "templates", "at": 0.4, "dur": 3.0, "ar": "ابدأ من قالب جاهز يعمل على بيانات تجريبية.", "en": "Start from a ready-made template that runs on sample data." },
+    { "beat": "run", "at": 0.2, "dur": 4.0, "ar": "شغّل التدفق وشاهد كل خطوة.", "en": "Run the flow and watch every step." }
+  ],
+  "chips": { "in": "establish", "out": "end", "items": [{ "beat": "establish", "ar": "ابدأ", "en": "Build" }, { "beat": "run", "ar": "شغّل", "en": "Run" }] },
+  "chapters": [
+    { "id": "templates", "beat": "ch1", "dur": 1.8, "ar": "ابدأ من قالب", "en": "Start from a template" },
+    { "id": "shape", "beat": "ch2", "dur": 1.8, "ar": "شكّل التدفق", "en": "Shape the flow" },
+    { "id": "run", "beat": "ch3", "dur": 1.8, "ar": "شغّل", "en": "Run it" }
+  ],
+  "endCard": { "beat": "end" },
+  "poster": { "beat": "establish", "at": 0.6 }
+}

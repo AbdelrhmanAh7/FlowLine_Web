@@ -1,0 +1,5 @@
+{
+  "clip": "run",
+  "beats": ["establish", "run", "finished", "inspector"],
+  "poster": { "beat": "establish", "at": 0.5 }
+}
