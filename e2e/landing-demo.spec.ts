@@ -19,8 +19,9 @@ type Caps = "av1" | "h264";
 
 /** Stub player: play/pause/paused/currentTime are deterministic; mediaCapabilities answers per `caps`; `play` can reject. */
 const PLAYER_STUB = ({ caps, reject }: { caps: Caps; reject: boolean }) => {
-  const w = window as unknown as { __plays: number; __rejectPlay: boolean };
+  const w = window as unknown as { __plays: number; __states: string[]; __rejectPlay: boolean };
   w.__plays = 0;
+  w.__states = []; // document.readyState at every play(): autoplay must wait for window.load
   w.__rejectPlay = reject;
   const proto = HTMLMediaElement.prototype;
   type S = HTMLMediaElement & { __p?: boolean; __t?: number };
@@ -29,6 +30,7 @@ const PLAYER_STUB = ({ caps, reject }: { caps: Caps; reject: boolean }) => {
   proto.play = function (this: S) {
     if (w.__rejectPlay) return Promise.reject(new DOMException("blocked", "NotAllowedError"));
     w.__plays++;
+    w.__states.push(document.readyState);
     this.__p = false;
     this.dispatchEvent(new Event("play"));
     return Promise.resolve();
@@ -52,18 +54,16 @@ async function open(browser: Browser, o: Opts = {}) {
     viewport: { width, height: 900 },
     storageState: { cookies: [cookie("fl_test_beta_mode", "open"), cookie("fl_locale", locale), cookie("fl_test_demo", demo)], origins: [] },
   });
-  const requests: { url: string; beforeLoad: boolean }[] = [];
-  let loaded = false;
+  const requests: { url: string }[] = [];
   await context.route("**/media/demo/**", (route) => {
     const url = new URL(route.request().url());
-    requests.push({ url: url.pathname, beforeLoad: !loaded });
+    requests.push({ url: url.pathname });
     const name = url.pathname;
     if (name.endsWith(".mp4")) return route.fulfill({ status: 200, contentType: "video/mp4", body: MP4 });
     if (name.endsWith(".vtt")) return route.fulfill({ status: 200, contentType: "text/vtt", body: VTT[name.includes(".ar.") ? "ar" : "en"] });
     return route.fulfill({ status: 200, contentType: "image/jpeg", body: JPG });
   });
   const page = await context.newPage();
-  page.on("load", () => { loaded = true; });
   await page.addInitScript(PLAYER_STUB, { caps, reject });
   if (connection) await page.addInitScript((c) => Object.defineProperty(navigator, "connection", { configurable: true, value: { saveData: false, effectiveType: "4g", ...c } }), connection);
   const errors: string[] = [];
@@ -89,7 +89,9 @@ test.describe("with a manifest", () => {
     expect(poster).toContain("/media/demo/hero.en.light.poster.");
     await expect(page.locator(`link[rel="preload"][as="image"][href="${poster}"]`)).toHaveAttribute("fetchpriority", "high");
     await expect.poll(() => videos(/\/hero\./).length).toBe(1);
-    expect(videos(/\/hero\./)[0]).toMatchObject({ beforeLoad: false });
+    const states = await page.evaluate(() => (window as unknown as { __states: string[] }).__states);
+    expect(states.length).toBeGreaterThan(0);
+    expect(states.every((s) => s === "complete")).toBe(true); // started after window.load
     expect(videos(/\/hero\./)[0]!.url).toContain(".av1.");
     expect(await v.evaluate((el: HTMLVideoElement) => el.muted && el.hasAttribute("muted"))).toBe(true);
     await expect.poll(() => paused(v)).toBe(false);
@@ -244,7 +246,7 @@ test.describe("with a manifest", () => {
     await expect(section.getByRole("heading", { name: "See it in action", level: 2 })).toBeVisible();
     const tiles = section.locator("[data-demo-tile]");
     await expect(tiles).toHaveCount(4);
-    await expect(tiles.locator("h3")).toHaveText(["Ready-made templates", "Build by dragging and connecting", "Run and follow every step", "A record of every run"]);
+    await expect(tiles.locator("h3")).toHaveText(["Ready-made templates", "Build by dragging and connecting", "A record of every run", "Run and follow every step"]);
     await expect(tiles.nth(0)).toContainText("Start from an example that runs on sample data.");
     await expect(section).toContainText("Recorded in the app on sample data");
     expect(videos(/\/(templates|build|run|history)\./)).toEqual([]);

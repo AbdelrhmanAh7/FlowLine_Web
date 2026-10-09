@@ -56,7 +56,7 @@ test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after 
 });
 
 test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play button of at least 44x44 px that sticks", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
-  const hits = await arm(browser, "en", base(app));
+  await arm(browser, "en", base(app));
   await app.open("/");
   const pause = screen.getByRole("button", "Pause").first();
   await expect(pause).toBeVisible({ timeout: 15_000 });
@@ -107,7 +107,7 @@ test("@issue-100 AC5: the See it in action bento shows four tiles with one hones
   await app.open("/");
   await expect(screen.getByRole("heading", "See it in action")).toBeVisible();
   const titles = await browser.evaluate(() => [...document.querySelectorAll("#demo [data-demo-tile]")].map((t) => [t.getAttribute("data-demo-tile"), t.querySelector("h3")?.textContent]));
-  expect(titles).toEqual([["templates", "Ready-made templates"], ["build", "Build by dragging and connecting"], ["run", "Run and follow every step"], ["history", "A record of every run"]]);
+  expect(titles).toEqual([["templates", "Ready-made templates"], ["build", "Build by dragging and connecting"], ["history", "A record of every run"], ["run", "Run and follow every step"]]);
   await expect(screen.getByText("Recorded in the app on sample data").first()).toBeVisible();
   expect(hits.filter((p) => /\/(templates|build|run|history)\..*\.mp4$/.test(p))).toEqual([]); // below the fold: nothing fetched yet
   await browser.evaluate(() => document.getElementById("demo")!.scrollIntoView());

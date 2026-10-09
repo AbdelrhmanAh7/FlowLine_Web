@@ -68,6 +68,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [integrations/CONNECTING.md](integrations/CONNECTING.md) | Connecting integrations | no | approved |
 | [integrations/LIVE-CERTIFICATION.md](integrations/LIVE-CERTIFICATION.md) | Live certification | yes | approved |
 | [integrations/SUPPORTED-ACTIONS.md](integrations/SUPPORTED-ACTIONS.md) | Supported actions | no | approved |
+| [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md) | Landing demo media: how the landing page consumes it (manifest, loops, walkthrough, tests); generation arrives with #99 | no | draft |
 | [security/CREDENTIALS_DESIGN.md](security/CREDENTIALS_DESIGN.md) | Credentials design | yes | approved |
 | [security/FEDERATED_MFA.md](security/FEDERATED_MFA.md) | Federated MFA | yes | approved |
 | [security/RELEASE_INPUT_UPDATE.md](security/RELEASE_INPUT_UPDATE.md) | Release input update | yes | approved |

@@ -265,6 +265,43 @@
       "pricing": "Pricing",
       "docs": "Docs"
     },
+    "demo": {
+      "title": "See it in action",
+      "recorded": "Recorded in the app on sample data",
+      "watch": "Watch the full walkthrough (under a minute)",
+      "play": "Play demo",
+      "pause": "Pause",
+      "close": "Close",
+      "chapters": "Walkthrough chapters",
+      "next": "Next",
+      "back": "Back",
+      "heroAria": "Recording from inside Flowline: a flow running step by step",
+      "walkthroughAria": "The full Flowline walkthrough in under a minute",
+      "ch": {
+        "templates": "Start from a template",
+        "shape": "Shape the steps",
+        "run": "Run and watch",
+        "inspect": "See what happened"
+      },
+      "tile": {
+        "templates": {
+          "title": "Ready-made templates",
+          "body": "Start from an example that runs on sample data."
+        },
+        "build": {
+          "title": "Build by dragging and connecting",
+          "body": "Add a step, connect it, set its condition."
+        },
+        "run": {
+          "title": "Run and follow every step",
+          "body": "Watch the steps light up one by one."
+        },
+        "history": {
+          "title": "A record of every run",
+          "body": "Go back to any past run or version."
+        }
+      }
+    },
     "docsReason": "Our public guide is not available yet.",
     "openApp": "Open app",
     "signIn": "Sign in",

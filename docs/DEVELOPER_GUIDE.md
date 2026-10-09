@@ -34,6 +34,8 @@ The existing token pipeline starts at `src/design/tokens.ts`, generates CSS with
 
 Use meaningful existing Lucide icons; preserve textual accessible names. Motion must be at most 300 ms, honor reduced motion, and never lift cards on hover. Backgrounds are decorative and must not intercept clicks or obscure text. Section navigation uses query parameters, never URL fragments.
 
+Landing demo media (hero loop, "See it in action" bento, walkthrough) is read from `public/media/demo/manifest.json`; without it the landing page is unchanged. Specs use `e2e/fixtures/demo/` through the test-only cookie `fl_test_demo` (`fixture` / `off`, honoured only on `FLOWLINE_ENV=test`); see [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md). No command changes.
+
 ## Server, data and security
 
 Use the relevant `src/server/access.ts` helper (`requireWorkspace`, `requireFlow`, `requireRun`, etc.) before accessing workspace resources. Authentication alone is insufficient: enforce the requested role/capability and preserve non-member 404 behavior. Follow existing route wrappers for mutation validation and CSRF; App Router does not automatically protect arbitrary route handlers.
