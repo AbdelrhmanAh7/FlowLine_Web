@@ -96,3 +96,12 @@ Until the hub drops the tests that are now in this repo, the sign-in and canvas 
 CodeQL flagged line 16 of `scripts/e2e-army.mjs` for clear-text logging of sensitive data from `process.env`.
 Resolved by replacing raw env logging with sanitized constant string descriptors (`custom URL` vs `test stack on :3100`, and `claude` / `agy` / `none (agent tests skip)`), eliminating data flow of raw environment variables to `console.log`.
 
+
+## 3. Layout note (review round 2)
+
+The ported per-feature suite (115 tests, all feature-map tests, tags `feat:`/`shard:`/`lvl:`) lives in `e2e-army/features/`
+with its helpers (`_helpers.ts`, `../lib.ts`). The hub copies only top-level `e2e-army/*.e2e.ts` (max 8) and files may
+import only `e2e` / `@e2e-dev/web`, so the shared helpers cannot sit next to the top-level files. The hub keeps running its
+own copy of these tests per shard; the in-repo copy is for `pnpm e2e:army --shard-id <shard>` and a future CI matrix (one
+job per shard, `timeout-minutes: 5`, pending question 1). I could not run the suite locally in this round (no `.env.test`
+database or model on the hub): I checked that `e2e list` selects all 115 tests and that every id in the feature map has one.
