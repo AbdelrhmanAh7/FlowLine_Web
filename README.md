@@ -68,7 +68,7 @@ current owner credentials, live account state and remote CI are unverified in th
 
 ## Requirements
 
-- Node.js 22.x (`engines` in `package.json`; CI and the release image use Node 22 LTS) and pnpm **10.32.1**
+- Node.js 24.x (`engines` in `package.json`; CI and the release image use Node 24 LTS) and pnpm **10.32.1**
   (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
@@ -142,7 +142,8 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,
 Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets
 docs-only changes pass `gate` without the test jobs, and the final `gate` job combines the results (main also requires
-the `docs` check). Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
+the `docs` check). Every fast-tier job runs on a GitHub-hosted runner with a 5-minute limit; `checks` is split into
+static·unit·contract plus three integration shards on separate runners, and every leg uploads its own gate report (`summary.json` and logs). Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
 `docs/DEVELOPER_GUIDE.md`.
 Historical gate results and tested revisions are in `docs/implementation/PHASE4_BETA_REPORT.md` and
 `docs/ai/AI_HUB_REPORT.md`; they do not certify the current checkout or a current release image.
