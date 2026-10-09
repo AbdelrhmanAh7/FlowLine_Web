@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -19,5 +19,28 @@ describe("e2e-army configuration and runner", () => {
     expect(runnerText).not.toMatch(/console\.log\([^)]*env\.E2E_ARMY_URL/);
     expect(runnerText).not.toMatch(/console\.log\([^)]*process\.env\.E2E_ARMY_URL/);
     expect(runnerText).toContain('console.log(`e2e-army: ${target} · model ${model}`)');
+  });
+
+  it("every feature test is titled [<feature>.<n>] and tagged feat / shard / lvl with matching feature ids", () => {
+    const dir = join(root, "e2e-army/features");
+    const found: string[] = [];
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".e2e.ts") && !x.startsWith("_"))) {
+      const text = readFileSync(join(dir, f), "utf8");
+      for (const m of text.matchAll(/test\("\[([a-z0-9-]+)\.(\d+)\][^\n]*?tags: \[([^\]]*)\]/g)) {
+        const [, feature, , tags] = m;
+        found.push(`${feature}.${m[2]}`);
+        expect(tags, `${f} ${feature}.${m[2]}`).toContain(`"feat:${feature}"`);
+        expect(tags, `${f} ${feature}.${m[2]}`).toMatch(/"shard:[a-z0-9-]+"/);
+        expect(tags, `${f} ${feature}.${m[2]}`).toMatch(/"lvl:(ui|api|job)"/);
+      }
+    }
+    expect(found.length).toBeGreaterThanOrEqual(100);
+    expect(new Set(found).size).toBe(found.length);
+  });
+
+  it("scripts/e2e-army.mjs maps --shard-id to the shard tag", () => {
+    const runnerText = readFileSync(join(root, "scripts/e2e-army.mjs"), "utf8");
+    expect(runnerText).toContain('"--shard-id"');
+    expect(runnerText).toContain("`shard:${id}`");
   });
 });
