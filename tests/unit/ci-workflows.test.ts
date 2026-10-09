@@ -250,3 +250,22 @@ describe("docs.yml always re-evaluates", () => {
     expect(jobs(text).docs).toMatch(/^ {4}if: \$\{\{ !github\.event\.pull_request\.draft \}\}$/m);
   });
 });
+
+describe("ai-implementers.yml (Mac mini hub)", () => {
+  const text = read(".github/workflows/ai-implementers.yml");
+  const byJob = jobs(text);
+
+  it("schedules start 24/7 every 2 hours and matches the start job trigger", () => {
+    expect(text).toMatch(/cron:\s*"0 \*\/2 \* \* \*"/);
+    expect(byJob.start).toMatch(/github\.event\.schedule == '0 \*\/2 \* \* \*'/);
+  });
+
+  it("runs all jobs on self-hosted macmini runner with dedicated concurrency", () => {
+    for (const job of ["start", "rescue", "automerge", "mention"]) {
+      expect(byJob[job]).toMatch(/runs-on:\s*\[self-hosted,\s*macmini\]/);
+    }
+    for (const job of ["start", "rescue", "automerge"]) {
+      expect(byJob[job]).toMatch(/group:\s*ai-/);
+    }
+  });
+});
