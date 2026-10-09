@@ -41,6 +41,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [design-system/FORMS.md](design-system/FORMS.md) | Form conventions | no | approved |
 | [design-system/ICONS.md](design-system/ICONS.md) | Icon usage | no | approved |
 | [design-system/README.md](design-system/README.md) | Design system overview | no | approved |
+| [engineering/lock-order.md](engineering/lock-order.md) | Row lock order and transaction review checklist | no | draft |
 | [implementation/BETA_EXECUTION_BRIEF.md](implementation/BETA_EXECUTION_BRIEF.md) | Supervised beta execution brief | yes | approved |
 | [implementation/BETA_EXECUTION_STATUS.md](implementation/BETA_EXECUTION_STATUS.md) | Beta execution ledger | yes | approved |
 | [implementation/BETA_LIMITATIONS.md](implementation/BETA_LIMITATIONS.md) | Known beta limitations | yes | approved |
