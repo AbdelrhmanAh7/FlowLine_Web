@@ -83,13 +83,30 @@ jobs:
               ;;
           esac
 
+  # Every job stays under the 5-minute rule (owner, 2026-10-07), so `checks` is split across runners: one leg runs lint,
+  # typecheck, evidence, unit and contract (none uses a database), and the integration project runs as vitest --shard=k/N
+  # legs, each on its own runner with its own PostgreSQL. A matrix keeps this ONE job id: `gate` reads `needs.checks.result`,
+  # which is success only when every leg succeeded and skipped only when all were skipped (docs-only).
+  # Reporting is per leg and never shared: each leg has its own Report step, its own GATE_OUT and its own artifact name
+  # (`report` in the matrix: flowline-gate-<report>-<run>-<attempt>). The static leg's summary.json comes from `pnpm gate`;
+  # every integration shard writes its own through scripts/ci/integration-shard.mjs (summary.json, the vitest log, progress.log),
+  # and gate-report rejects a shard report that names another shard, so one leg's report is never read as another's.
   checks:
+    name: checks (${{ matrix.part }})
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: static·unit·contract, kind: static, report: checks-static }
+          - { part: integration 1/3, kind: integration, shard: 1/3, report: checks-integration-1of3 }
+          - { part: integration 2/3, kind: integration, shard: 2/3, report: checks-integration-2of3 }
+          - { part: integration 3/3, kind: integration, shard: 3/3, report: checks-integration-3of3 }
     env:
-      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-checks
+      GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.report }}
       GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -98,25 +115,50 @@ jobs:
 
       - uses: ./.github/actions/setup-gate
         with:
-          postgres: "true"
-          sandbox-image: "true"
+          postgres: ${{ matrix.kind == 'integration' && 'true' || 'false' }}
+          sandbox-image: ${{ matrix.kind == 'integration' && 'true' || 'false' }}
 
-      - name: Run gate (static, unit, contract, integration)
-        run: pnpm gate --only=static,unit,contract,integration --out="$GATE_OUT"
+      - name: Run gate (static, unit, contract)
+        if: matrix.kind == 'static'
+        run: pnpm gate --only=static,unit,contract --out="$GATE_OUT"
 
-      - name: Report
-        if: always()
+      # The static leg's report: the summary.json `pnpm gate` wrote to its own GATE_OUT.
+      - name: Report (static, unit, contract)
+        if: always() && matrix.kind == 'static'
         uses: ./.github/actions/gate-report
         with:
-          job: checks
+          job: ${{ matrix.report }}
           out: ${{ env.GATE_OUT }}
           tier: ${{ env.GATE_TIER }}
+
+      # The shard has its own PostgreSQL, so the shared test database is its own. The suite's global setup migrates and seeds
+      # it; the Linux-only suites (Docker code sandbox, CLI isolation) run here because the runner has Docker.
+      - name: Create the shard database
+        if: matrix.kind == 'integration'
+        run: docker exec flowline-ci-postgres createdb -U flowline flowline_test
+
+      # Runs `vitest run --project integration --no-cache --shard=k/N` and writes THIS shard's summary.json, its vitest log and
+      # progress.log into GATE_OUT (a killed or timed-out shard leaves a failed summary, never a missing one).
+      - name: Run integration shard ${{ matrix.shard }}
+        if: matrix.kind == 'integration'
+        run: node scripts/ci/integration-shard.mjs --shard=${{ matrix.shard }} --tier="$GATE_TIER" --out="$GATE_OUT"
+
+      # The shard's report: only the summary.json of this shard (gate-report refuses a summary that names another shard) and
+      # its own artifact, flowline-gate-checks-integration-<k>of<N>-<run>-<attempt>.
+      - name: Report (integration shard ${{ matrix.shard }})
+        if: always() && matrix.kind == 'integration'
+        uses: ./.github/actions/gate-report
+        with:
+          job: ${{ matrix.report }}
+          out: ${{ env.GATE_OUT }}
+          tier: ${{ env.GATE_TIER }}
+          shard: ${{ matrix.shard }}
 
   chromium:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 5
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium

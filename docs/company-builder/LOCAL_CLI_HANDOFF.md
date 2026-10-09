@@ -21,7 +21,7 @@ Read, in this order, before changing anything:
   docs/company-builder/VALIDATION_REPORT.md (§10 = latest round), artifacts/company-builder/BUGS.md.
 
 ## 1. Local setup
-- Node 22, pnpm 10, Docker (browser tests run in mcr.microsoft.com/playwright:v1.63.0-noble).
+- Node 24, pnpm 10, Docker (browser tests run in mcr.microsoft.com/playwright:v1.63.0-noble).
 - Postgres 16 on 127.0.0.1:5433 with databases `flowline` and `flowline_test`; the role needs CREATEDB (the gate
   creates flowline_test_s1..4 and flowline_test_e2.. for its shards and stacks).
 - pnpm install --frozen-lockfile
