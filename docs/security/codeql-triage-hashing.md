@@ -7,8 +7,8 @@ also has a `CodeQL` comment with the same reason.
 
 | Alert | Rule | File | Disposition | Reason |
 |---|---|---|---|---|
-| #10 | `js/insufficient-password-hash` | `e2e/fakes/ai-protocols.ts` | dismissed: used in tests | The fake AI hub (test double, only with `FLOWLINE_ENV=test`, listens on 127.0.0.1) records a SHA-256 fingerprint of the fake `sk-fake-…` key a request carried. Tests use it to check which key was sent, so the request log never holds the key. Nothing is stored or checked as a password. The tests (`tests/integration/ai-hub*.test.ts`, `e2e/ai-hub.spec.ts`) compute the same SHA-256, so the fingerprint must stay plain SHA-256. |
-| #12 | `js/insufficient-password-hash` | `src/server/rate-limit.ts` | dismissed: false positive | `checkRate` hashes rate-limit bucket names such as `runs:apikey:<api key row id>`, `runs:<user id>`, `platform-write:<user id>` or `public-body:<kind>:<ip>`. No password, API-key secret or token reaches it (every caller is listed below). `runs:apikey:` (built by `checkRunRate` from `apikey:<id>`) uses the API key's row id (`apiKeyId`/`keyId`), not the key itself. SHA-256 only keeps ids out of the `rate_limit_hit` table. scrypt/argon2 would slow every rate-limit check and add no security. |
+| #10 | `js/insufficient-password-hash` | `e2e/fakes/ai-protocols.ts` | dismissed: false positive | The value is a fake token in test-only code, not a password. The fake AI hub (test double, only with `FLOWLINE_ENV=test`, listens on 127.0.0.1) records a SHA-256 fingerprint of the fake `sk-fake-…` key a request carried. Tests use it to check which key was sent, so the request log never holds the key. Nothing is stored or checked as a password. The tests (`tests/integration/ai-hub*.test.ts`, `tests/contract/ai-openai-chat.test.ts`, `e2e/ai-hub.spec.ts`) compute the same SHA-256, so the fingerprint must stay plain SHA-256. |
+| #12 | `js/insufficient-password-hash` | `src/server/rate-limit.ts` | dismissed: false positive | `checkRate` hashes rate-limit bucket names such as `runs:apikey:<api key row id>`, `runs:<user id>`, `platform-write:<user id>` or `public-body:<kind>:<ip>`. No password, API-key secret or token reaches it (every caller is listed below). `runs:apikey:` (built by `checkRunRate` from `apikey:<id>`) uses the API key's row id (`apiKeyId`/`keyId`), not the key itself. SHA-256 turns any bucket name into a fixed-length table key and advisory-lock id. It is not meant to hide the name: low-entropy names (an IPv4 address, a known id) could be found again by brute force, and nothing secret is in them. scrypt/argon2 would slow every rate-limit check and add no security. |
 
 ## Caller audit for alert #12
 
@@ -55,6 +55,6 @@ audit of all callers is the evidence, not a guess about the query's name heurist
 ## Dismissing on GitHub (repository admin, after the merge)
 
 ```sh
-gh api -X PATCH repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts/10 -f state=dismissed -f dismissed_reason="used in tests" -f dismissed_comment="See docs/security/codeql-triage-hashing.md (#113)"
+gh api -X PATCH repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts/10 -f state=dismissed -f dismissed_reason="false positive" -f dismissed_comment="See docs/security/codeql-triage-hashing.md (#113)"
 gh api -X PATCH repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/alerts/12 -f state=dismissed -f dismissed_reason="false positive" -f dismissed_comment="See docs/security/codeql-triage-hashing.md (#113)"
 ```
