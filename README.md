@@ -68,7 +68,7 @@ current owner credentials, live account state and remote CI are unverified in th
 
 ## Requirements
 
-- Node.js 22.x (`engines` in `package.json`; CI and the release image use Node 22 LTS) and pnpm **10.32.1**
+- Node.js 24.x (`engines` in `package.json`; CI and the release image use Node 24 LTS) and pnpm **10.32.1**
   (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
