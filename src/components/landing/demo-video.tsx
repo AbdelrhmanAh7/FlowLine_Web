@@ -62,6 +62,9 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
       v.muted = true;
       v.loop = view.loop && !once;
       if (!(await attachSource(v, view.sources, once))) return;
+      // We are about to play: let the browser fetch now. Without this a `preload="none"` element only starts the download inside play(),
+      // so anything that defers play() (a blocked or stubbed player) would never request the file it just chose.
+      v.preload = "auto";
       setBlocked(false);
       await startPlayback(v, () => setBlocked(true));
     } finally {
