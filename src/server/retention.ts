@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "@/db";
+import { sweepAbandonedFederatedChallenges } from "./federated-mfa-audit";
 
 /**
  * Data retention (PRIVACY_AND_SAFETY.md §2). Deletes, in bounded batches:
@@ -7,7 +8,8 @@ import type { Db } from "@/db";
  *   - finished agent runs (with their steps) older than RUN_DAYS,
  *   - webhook deliveries older than WEBHOOK_DAYS, product telemetry older than TELEMETRY_DAYS,
  *     audit entries older than AUDIT_DAYS,
- *   - expired sessions, verification tokens, OAuth and SSO states.
+ *   - expired sessions, verification tokens, OAuth and SSO states; an expired federated MFA challenge is audited as
+ *     abandoned (`sso.mfa_failed` / platform `signin.mfa_failed`, reason `expired`) before it is deleted.
  * Never touched: the usage ledger and billing records (billing history), workflows, versions, connections, knowledge,
  * and the PLATFORM security audit (`platform_audit_event`): it is deliberately not pruned here — whatever
  * FLOWLINE_RETENTION_AUDIT_DAYS says — and is kept for at least 730 days (docs/security/CREDENTIALS_DESIGN.md MUST 20).
@@ -36,6 +38,7 @@ export async function pruneOnce(db: Db, now = new Date()): Promise<Record<string
       telemetry: await count(sql`delete from product_event where id in (select id from product_event where at < ${before(days("TELEMETRY_DAYS"))} limit ${BATCH})`),
       audit: await count(sql`delete from audit_event where id in (select id from audit_event where at < ${before(days("AUDIT_DAYS"))} limit ${BATCH})`),
       sessions: await count(sql`delete from session where expires_at < ${now}`),
+      abandonedMfaChallenges: await sweepAbandonedFederatedChallenges(tx, now),
       verifications: await count(sql`delete from verification where expires_at < ${now}`),
       oauthStates: await count(sql`delete from oauth_state where expires_at < ${now}`),
       ssoStates: await count(sql`delete from sso_state where expires_at < ${now}`),
