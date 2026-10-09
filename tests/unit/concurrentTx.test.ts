@@ -52,4 +52,21 @@ describe("runConcurrent", () => {
     };
     await expect(runConcurrent(hung, done, { timeoutMs: 50 })).rejects.toThrow(/timed out/i);
   });
+
+  it("absorbs a late error from a timed-out transaction (no unhandled rejection)", async () => {
+    // PR #94: a hung transaction failed after its timeout and surfaced as an unhandled error at teardown.
+    let abort!: (err: Error) => void;
+    const hung = async (ctx: TxContext) => {
+      await ctx.arrive();
+      return new Promise<never>((_, reject) => {
+        abort = reject;
+      });
+    };
+    const done = async (ctx: TxContext) => {
+      await ctx.arrive();
+      return "b";
+    };
+    await expect(runConcurrent(hung, done, { timeoutMs: 50 })).rejects.toThrow(/timed out/i);
+    abort(Object.assign(new Error("terminating connection due to administrator command"), { code: "57P01" }));
+  });
 });
