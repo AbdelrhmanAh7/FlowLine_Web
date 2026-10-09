@@ -4,6 +4,8 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | doc | purpose | owner-review needed | status |
 |---|---|---|---|
 | [README.md](README.md) | This index | no | approved |
+| [vision.md](vision.md) | Vision, pilot and next-phase goals (GitHub milestones) | yes | approved |
+| [backlog-restructure.md](backlog-restructure.md) | Backlog restructure log 2026-10-10 (counts, goals, links) | no | approved |
 | [CLAUDE_HANDOVER_20261002.md](CLAUDE_HANDOVER_20261002.md) | Claude session handover | no | approved |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Setup and commands | no | approved |
 | [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Issues, PRs, board rules | yes | approved |
