@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DemoVideo } from "@/components/landing/demo-video";
@@ -9,7 +9,9 @@ import fixture from "../../e2e/fixtures/demo/manifest.json";
 
 // Server markup of the landing demo (issue 100): correct without JS. The browser behaviour is in e2e/landing-demo.spec.ts.
 const m = parseManifest(fixture)!;
-const wrap = (locale: "ar" | "en", child: ReturnType<typeof createElement>) => renderToStaticMarkup(createElement(I18nProvider, { locale, children: child }));
+// eslint-disable-next-line react/no-children-prop -- a .ts file cannot use JSX
+const provide = (locale: "ar" | "en", child: ReactNode) => createElement(I18nProvider, { locale, children: child });
+const wrap = (locale: "ar" | "en", child: ReactNode) => renderToStaticMarkup(provide(locale, child));
 
 describe("DemoVideo server markup", () => {
   const html = wrap("en", createElement(DemoVideo, { view: clipView(m, "hero", "en", "light")!, label: "Hero loop" }));
