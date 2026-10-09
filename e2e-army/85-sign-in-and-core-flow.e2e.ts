@@ -1,15 +1,12 @@
 // FlowLine critical flows in natural language (tester-army/e2e, issue #85): the landing page, Arabic RTL, sign-in and the
 // core flow (a new blank flow on the canvas). Ported from the hub's suite (ops/verify/e2e-army/tests/FlowLine_Web.e2e.ts).
-// The hub's verify job copies e2e-army/*.e2e.ts next to its own FlowLine suite, whose setup saves the `fl-user` session and
-// writes the workspace slug; `pnpm e2e:army` runs e2e-army/setup/ for the same. Copied files may import only `e2e`,
+// The hub's verify job copies the top-level e2e-army/*.e2e.ts next to its own FlowLine suite, whose setup saves the
+// `fl-user` session; `pnpm e2e:army` uses e2e-army/features/_setup.e2e.ts for the same. Copied files may import only `e2e`,
 // `@e2e-dev/web` and node built-ins, so the helpers live here. Runs against the test stack (FLOWLINE_ENV=test: outbox e-mail).
-import { readFileSync } from "node:fs";
 import { test } from "@e2e-dev/web";
 import { expect, unique } from "e2e";
 
 const PASSWORD = "Army-Passw0rd!";
-const SLUG_FILE = `${process.env.E2E_ARMY_OUT ?? ".e2e"}/flowline-slug.txt`;
-const workspace = () => `/w/${readFileSync(SLUG_FILE, "utf8").trim()}`;
 
 /** Agent steps need a model; without one (E2E_ARMY_NOAGENT=1) they are skipped and the locator tests still run. */
 const needsModel = () => test.skip(process.env.E2E_ARMY_NOAGENT === "1", "no model available: agent steps skipped");
@@ -32,18 +29,18 @@ async function signUpVerified(base: string, email: string) {
   if (!v.ok) throw new Error(`verify ${v.status}`);
 }
 
-test("@issue-85 landing: the page shows the product promise and a call to action", async ({ app, screen }) => {
+test("@issue-85 landing: the page shows the product promise and a call to action", { tags: ["feat:fl-landing"] }, async ({ app, screen }) => {
   await app.open("/");
   await expect(screen.getByRole("heading").first()).toBeVisible();
   await expect(screen.getByRole("link").first()).toBeVisible();
 });
 
-test("@issue-85 Arabic: the default language is Arabic and the page is right-to-left", async ({ app, browser }) => {
+test("@issue-85 Arabic: the default language is Arabic and the page is right-to-left", { tags: ["feat:fl-i18n-rtl"] }, async ({ app, browser }) => {
   await app.open("/");
   expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
 });
 
-test("@issue-85 login: a verified user signs in with e-mail and password", async ({ app, screen, agent, browser }) => {
+test("@issue-85 login: a verified user signs in with e-mail and password", { tags: ["feat:fl-sign-in"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const base = app.baseUrl!, email = `army-login-${Date.now().toString(36)}@flowline-e2e.test`;
   await signUpVerified(base, email);
@@ -54,7 +51,7 @@ test("@issue-85 login: a verified user signs in with e-mail and password", async
   await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
 });
 
-test("@issue-85 login: a wrong password is rejected on the sign-in screen", async ({ app, screen, agent, browser }) => {
+test("@issue-85 login: a wrong password is rejected on the sign-in screen", { tags: ["feat:fl-sign-in"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
   await app.open("/sign-in");
@@ -64,9 +61,10 @@ test("@issue-85 login: a wrong password is rejected on the sign-in screen", asyn
   await expect(screen.getByLabel("Password")).toBeVisible();
 });
 
-test("@issue-85 core flow: a signed-in user creates a blank flow and its canvas opens", { session: "fl-user" }, async ({ app, screen, agent }) => {
+test("@issue-85 core flow: a signed-in user creates a blank flow and its canvas opens", { session: "fl-user", tags: ["feat:fl-flows-list", "feat:fl-builder"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  await app.open(`${workspace()}/flows`);
+  await app.open("/app"); // continues in the session owner's workspace
+  await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
   await agent.act("create a new blank flow and open its canvas");
   await expect(screen.getByText("Start with a trigger")).toBeVisible();
   await agent.assert("the flow builder canvas is shown and invites the user to start with a trigger");
