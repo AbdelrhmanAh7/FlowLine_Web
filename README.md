@@ -136,7 +136,7 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | E2E, Chromium + Firefox + WebKit, dev server (starts the test stack on :3100) | `pnpm test:e2e`; for Chromium + Firefox only: `pnpm test:e2e --project=chromium --project=firefox` (install the selected browsers first with `pnpm exec playwright install chromium firefox`) |
 | E2E against a production build instead of `next dev` | `FLOWLINE_TEST_NEXT=start pnpm test:e2e` (runs `next build` once, then `next start`; recommended for release gates — see `scripts/dev-test.mjs`) |
 | E2E, WebKit (Linux Playwright container; needs `pnpm dev:test` running) | `bash e2e/tools/webkit-docker.sh` |
-| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; ≤ 5 min) | `pnpm e2e:army` (quick default: smoke shard + top-level `@issue` tests) or `pnpm e2e:army --shard-id <shard>`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
+| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; ≤ 5 min) | `pnpm e2e:army` (quick default: smoke shard + top-level `@issue` tests) or `pnpm e2e:army --shard-id core-api`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
 | Live (real PostgreSQL and SaaS certification; missing SaaS credentials → BLOCKED; no AI suite) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
@@ -152,7 +152,7 @@ The feature suite is in `e2e-army/features/`: every feature of the hub's feature
 has at least one test, titled `[<feature>.<n>]` and tagged `feat:<feature>`, `shard:<shard>`, `lvl:ui|api|job` (`api` and
 `job` tests are request-level, no model). Shards (each ≤ 5 min): smoke, core-api, flows-api, runs, triggers, schedule,
 ai-api, platform-api, ui-auth, ui-auth2, ui-flows, ui-builder, ui-settings, ui-ai, ui-admin, ui-misc; run one with
-`pnpm e2e:army --shard-id <shard>`. Every PR adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each
+`pnpm e2e:army --shard-id core-api`. Every PR adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each
 feature its changed files touch (waiver: `E2E: not needed — <reason>` in the PR). No GitHub Actions job runs `e2e-army`
 yet (see AI_QUESTIONS.md).
 

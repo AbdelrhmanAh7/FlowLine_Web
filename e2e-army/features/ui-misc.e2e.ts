@@ -2,7 +2,7 @@
 // system showcase and the resend-verification page. Public pages need no session.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
-import { apiBase, needsModel, seededEmail } from "../lib.ts";
+import { apiBase, needsModel, freshEmail } from "../lib.ts";
 import { Http, PASSWORD, SEED_DOMAIN, anonymous, awaitMail } from "./_helpers.ts";
 
 const cookie = (name: string, value: string) => [{ url: apiBase(), name, value }];
@@ -64,9 +64,9 @@ test("[fl-design-system.1] the design system page shows the product's building b
   expect((await anonymous().get("/design-system")).status).toBe(200);
 });
 
-test("[fl-email-flows.6] the resend-verification page sends a new link to an unverified account", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+test("[fl-email-flows.6] the resend-verification page accepts a request for an unverified account and answers neutrally", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  const email = seededEmail("ui-resend", SEED_DOMAIN);
+  const email = freshEmail("ui-resend", SEED_DOMAIN);
   const up = await new Http().post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Resend" } });
   expect(up.status).toBe(200);
   const first = await awaitMail(anonymous(), email, "verify");
@@ -76,4 +76,7 @@ test("[fl-email-flows.6] the resend-verification page sends a new link to an unv
   await agent.act("request a new verification link for the email {email}", { params: { email } });
   await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
   expect(first.link).toMatch(/verify-email/);
+  // No second-mail assertion on purpose: requestToken (src/server/email/flows.ts:104) sends nothing within 60 s of the previous
+  // token, and a test may not sleep, so a resend right after sign-up cannot produce a second mail. The page's answer is the
+  // same for every address by design (no enumeration); the link of the first mail is what the user would click.
 });

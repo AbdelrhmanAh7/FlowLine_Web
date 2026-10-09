@@ -20,6 +20,12 @@ const SEED = process.env.E2E_ARMY_SEED ?? "nql-e2e-army-1";
 /** Deterministic test data: same (seed, name) → same value on every run and every machine. Use a distinct `name` per record inside one run. */
 export const seeded = (name: string, len = 6) => `${name}-${createHash("sha1").update(`${SEED}:${name}`).digest("hex").slice(0, len)}`;
 export const seededEmail = (name: string, domain = "army-e2e.test") => `${seeded(name)}@${domain}`;
+/**
+ * Address for an account the test itself creates (sign-up, invitation). On the hub's throwaway database it equals seededEmail().
+ * `pnpm e2e:army` sets E2E_ARMY_RUN to a new value per invocation, so a second run against the same local database signs up a new
+ * account instead of failing on the one the first run left behind.
+ */
+export const freshEmail = (name: string, domain = "army-e2e.test") => seededEmail(`${name}${process.env.E2E_ARMY_RUN ?? ""}`, domain);
 /** Seeded integer in [min, max] (mulberry32) for amounts, quantities … */
 export function seededInt(name: string, min: number, max: number): number {
   let a = parseInt(createHash("sha1").update(`${SEED}:${name}`).digest("hex").slice(0, 8), 16) >>> 0;

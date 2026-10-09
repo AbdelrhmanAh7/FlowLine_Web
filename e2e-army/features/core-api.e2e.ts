@@ -2,10 +2,10 @@
 // matrix, members and invitations, API keys and the audit log. Everything goes through the product's own HTTP API.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
-import { apiBase, seeded, seededEmail } from "../lib.ts";
+import { apiBase, seeded, freshEmail } from "../lib.ts";
 import { Http, PASSWORD, SEED_DOMAIN, actor, addMember, anonymous, awaitMail, chain, newFlow, outbox, signIn, signUpVerified, startRun, tokenOf, uuidRe } from "./_helpers.ts";
 
-const mailOf = (name: string) => seededEmail(name, SEED_DOMAIN);
+const mailOf = (name: string) => freshEmail(name, SEED_DOMAIN);
 
 // ── fl-auth-api ──────────────────────────────────────────────────────────────────────────────────────────────────────
 test("[fl-auth-api.1] sign-up opens no session until the e-mail link is used, then sign-in and /api/me work", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async () => {

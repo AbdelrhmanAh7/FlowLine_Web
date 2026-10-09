@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the AI SDK v4 model spec is not a dependency of this repo
+// the AI SDK v4 model spec is not a dependency of this repo, so its types are `any` here
 type Any = any;
 export interface CliModelOpts { cli: "agy" | "claude"; model?: string; timeoutMs?: number }
 
@@ -63,7 +63,8 @@ function runCli(o: CliModelOpts, text: string, dir: string, signal?: AbortSignal
     child.stdout!.on("data", (d) => (out += d));
     child.stderr!.on("data", (d) => (err += d));
     child.on("error", (e) => { clearTimeout(t); reject(e); });
-    child.on("exit", (code) => {
+    // "close", not "exit": exit can fire while stdout still holds buffered data, which would parse a truncated JSON answer.
+    child.on("close", (code) => {
       clearTimeout(t);
       if (code !== 0) return reject(new Error(`${o.cli} exit ${code}: ${(err || out).slice(0, 300)}`));
       if (o.cli === "claude") { try { const j = JSON.parse(out); if (j.is_error) return reject(new Error(String(j.result).slice(0, 300))); return resolve(String(j.result ?? "")); } catch { /* raw */ } }

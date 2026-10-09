@@ -2,7 +2,7 @@
 // the onboarding wizard and accepting an invitation. English UI unless a test says otherwise; accounts and mail come from the throwaway stack.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
-import { apiBase, needsModel, seeded, seededEmail } from "../lib.ts";
+import { apiBase, needsModel, seeded, freshEmail } from "../lib.ts";
 import { Http, PASSWORD, SEED_DOMAIN, actor, anonymous, awaitMail, signIn, signUpVerified, tokenOf } from "./_helpers.ts";
 
 const cookies = (locale: "en" | "ar" = "en") => [
@@ -24,7 +24,7 @@ test("[fl-sign-in.2] a wrong password is rejected on the sign-in screen and the 
 
 test("[fl-sign-up.1] a visitor creates an account and is told to open the link sent to their e-mail", { tags: ["feat:fl-sign-up", "shard:ui-auth", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  const email = seededEmail("ui-signup", SEED_DOMAIN);
+  const email = freshEmail("ui-signup", SEED_DOMAIN);
   await browser.setCookies(cookies());
   await app.open("/sign-up");
   await expect(screen.getByRole("heading", "Create your account")).toBeVisible();
@@ -40,7 +40,7 @@ test("[fl-sign-up.1] a visitor creates an account and is told to open the link s
 
 test("[fl-email-flows.1] opening the e-mailed verification link and confirming activates the account", { tags: ["feat:fl-email-flows", "shard:ui-auth", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  const email = seededEmail("ui-verify", SEED_DOMAIN);
+  const email = freshEmail("ui-verify", SEED_DOMAIN);
   const h = new Http();
   expect((await h.post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Verify" } })).status).toBe(200);
   const mail = await awaitMail(h, email, "verify");
@@ -59,7 +59,7 @@ test("[fl-email-flows.1] opening the e-mailed verification link and confirming a
 
 test("[fl-email-flows.5] a forgotten password is reset from the e-mailed link and the new password signs in", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  const email = seededEmail("ui-reset", SEED_DOMAIN);
+  const email = freshEmail("ui-reset", SEED_DOMAIN);
   await signUpVerified(email, "Army Reset");
   await browser.setCookies(cookies());
   await app.open("/sign-in");
@@ -80,7 +80,7 @@ test("[fl-email-flows.5] a forgotten password is reset from the e-mailed link an
 
 test("[fl-onboarding.2] a new user names a workspace, picks a goal and opens a first blank flow on the canvas", { tags: ["feat:fl-onboarding", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
-  const email = seededEmail("ui-onboard", SEED_DOMAIN);
+  const email = freshEmail("ui-onboard", SEED_DOMAIN);
   await signUpVerified(email, "Army Onboard");
   await browser.setCookies(cookies());
   await app.open("/sign-in");
@@ -102,7 +102,7 @@ test("[fl-onboarding.2] a new user names a workspace, picks a goal and opens a f
 test("[fl-members.3] an invited person signs in with the invited address and joins the workspace with the invited role", { tags: ["feat:fl-members", "shard:ui-auth", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const owner = await actor("ui-invite-owner");
-  const email = seededEmail("ui-invitee", SEED_DOMAIN);
+  const email = freshEmail("ui-invitee", SEED_DOMAIN);
   await signUpVerified(email, "Army Invitee");
   const inv = await owner.http.post(`/api/workspaces/${owner.a.workspaceId}/invites`, { json: { email, role: "editor" } });
   expect(inv.status).toBe(201);

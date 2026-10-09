@@ -2,7 +2,7 @@
 // providers. Session fl-user (English UI); each test works in a fresh workspace so lists and counts are exact.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
-import { needsModel, seeded, seededEmail } from "../lib.ts";
+import { needsModel, seeded, freshEmail } from "../lib.ts";
 import { SEED_DOMAIN, actor, freshWorkspace } from "./_helpers.ts";
 
 const SESSION = { session: "fl-user" } as const;
@@ -25,7 +25,7 @@ test("[fl-members.4] the owner invites a teammate from Settings and gets the sin
   needsModel();
   const { http } = await actor("ui-owner");
   const ws = await freshWorkspace(http, "settings-2");
-  const invitee = seededEmail("ui-settings-invitee", SEED_DOMAIN);
+  const invitee = freshEmail("ui-settings-invitee", SEED_DOMAIN);
   await app.open(`/w/${ws.slug}/settings?tab=members`);
   await expect(screen.getByRole("heading", "Invite a teammate")).toBeVisible();
   await agent.act("invite {email} as an editor and create the invite link", { params: { email: invitee } });
@@ -59,7 +59,7 @@ test("[fl-audit-log.2] the audit log tab lists who changed what, newest first", 
   const ws = await freshWorkspace(http, "settings-4");
   const key = await http.post(`/api/workspaces/${ws.id}/api-keys`, { json: { name: `Audited ${seeded("settings-4-key", 4)}`, mode: "test", scopes: ["flows:read"] } });
   expect(key.status).toBe(201);
-  await http.post(`/api/workspaces/${ws.id}/invites`, { json: { email: seededEmail("ui-audit-invitee", SEED_DOMAIN), role: "viewer" } });
+  await http.post(`/api/workspaces/${ws.id}/invites`, { json: { email: freshEmail("ui-audit-invitee", SEED_DOMAIN), role: "viewer" } });
   await app.open(`/w/${ws.slug}/settings?tab=audit`);
   await expect(screen.getByRole("heading", "Audit log")).toBeVisible();
   await expect(screen.getByRole("list", "Audit events")).toBeVisible();

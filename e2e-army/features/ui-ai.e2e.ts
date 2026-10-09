@@ -63,7 +63,7 @@ test("[fl-agents.1] the owner creates an agent in the UI and chats with it; the 
   await agent.assert("the agent answered that items can be returned within 14 days and cites the source it used");
 });
 
-test("[fl-approvals.3] a gated action waits in the run inspector and a person approves it, after which the run completes", { ...SESSION, tags: ["feat:fl-approvals", "shard:ui-settings", "lvl:ui"] }, async ({ app, screen, agent }) => {
+test("[fl-approvals.3] a gated action waits in the run inspector and a person approves it, after which the run completes", { ...SESSION, tags: ["feat:fl-approvals", "shard:ui-ai", "lvl:ui"] }, async ({ app, screen, agent }) => {
   needsModel();
   const { http } = await actor("ui-owner");
   const ws = await freshWorkspace(http, "ai-4");

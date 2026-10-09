@@ -79,7 +79,7 @@ test("[fl-flow-publish.2] publishing a webhook flow from the canvas shows its UR
   expect(info.webhook.active).toBe(true);
 });
 
-test("[fl-copilot.1] Create with Copilot turns a request into a reviewed proposal and a draft flow only after approval", { ...SESSION, tags: ["feat:fl-copilot", "shard:ui-misc", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+test("[fl-copilot.1] Create with Copilot turns a request into a reviewed proposal and a draft flow only after approval", { ...SESSION, tags: ["feat:fl-copilot", "shard:ui-builder", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const { http } = await actor("ui-owner");
   const ws = await freshWorkspace(http, "builder-5");
