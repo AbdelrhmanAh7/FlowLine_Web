@@ -23,6 +23,7 @@ runs:
         GATE_SUMMARY: ${{ inputs.out }}/summary.json
         GATE_JOB: ${{ inputs.job }}
         GATE_TIER: ${{ inputs.tier }}
+        GATE_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         GATE_SHARD: ${{ inputs.shard }}
       run: |
         {
@@ -52,7 +53,11 @@ runs:
         const { readdirSync, existsSync } = await import('node:fs');
         const failed = existsSync('test-results') ? readdirSync('test-results').filter((f) => f.endsWith('-report.txt'))
           .flatMap((f) => readFileSync(`test-results/${f}`, 'utf8').split('\n').filter((l) => /^\s+\d+\) \[(chromium|firefox|webkit)\]/.test(l)).map((l) => l.trim())) : [];
-        if (failed.length) console.log(`\n**Failed browser tests**\n\n${[...new Set(failed)].map((l) => `- ${l.replaceAll('|', '\\|')}`).join('\n')}`);
+        if (failed.length) {
+          console.log(`\n**Failed browser tests**\n\n${[...new Set(failed)].map((l) => `- ${l.replaceAll('|', '\\|')}`).join('\n')}`);
+          const artifact = `flowline-gate-${process.env.GATE_JOB}-${process.env.GATE_RUN}`;
+          console.log(`\nPer-action timings: artifact \`${artifact}-traces\` (kept 7 days), open a \`trace.zip\` with \`pnpm exec playwright show-trace\`. Per-test durations: \`test-results/*-results.json\` in artifact \`${artifact}\`.`);
+        }
         NODE
           else
             echo
@@ -66,11 +71,27 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: flowline-gate-${{ inputs.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-        # Browser reports and failure context (page snapshot, screenshot) are test data only, no secrets.
+        # Browser reports, the Playwright JSON reports (per-test durations and errors) and failure context (page snapshot,
+        # screenshot) are test data from the disposable CI stack only, no secrets.
         path: |
           artifacts/gates/**
           test-results/*-report.txt
+          test-results/*-results.json
           test-results/**/error-context.md
           test-results/**/test-failed-*.png
         if-no-files-found: warn
         retention-days: 14
+
+    # Playwright keeps a trace only for a failing test (playwright.config.ts `use.trace: retain-on-failure`, zero retries),
+    # so a green run has none and creates no artifact (`ignore`). A trace holds per-action timings (what a browser timeout
+    # needs), DOM snapshots and the page's network log, so it is a separate, shorter-lived artifact. Everything in it comes
+    # from the disposable CI stack; specs that handle write-only credentials turn tracing off (docs/DEVELOPER_GUIDE.md,
+    # "Playwright traces in CI").
+    - name: Upload Playwright traces
+      if: ${{ always() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: flowline-gate-${{ inputs.job }}-${{ github.run_id }}-${{ github.run_attempt }}-traces
+        path: test-results/**/trace.zip
+        if-no-files-found: ignore
+        retention-days: 7
