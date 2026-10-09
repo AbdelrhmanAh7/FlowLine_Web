@@ -422,7 +422,7 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   }
   // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
   if (fault?.mode === "slow") {
-    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), fault.delayMs ?? 1000);
+    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), Math.min(Math.max(Number(fault.delayMs) || 1000, 0), 10_000));
     return true;
   }
 
