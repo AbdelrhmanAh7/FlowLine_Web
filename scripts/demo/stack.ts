@@ -28,7 +28,9 @@ export function buildIsCurrent(root = process.cwd()): boolean {
 
 /** Another `next build` (a gate or e2e run) is in progress on this machine. */
 export function otherBuildRunning(): boolean {
-  const r = spawnSync("pgrep", ["-f", "next build"], { encoding: "utf8" });
+  // Match only actual node processes running `next build`, not opencode/other processes that
+  // happen to have "next build" in their command line (e.g. issue text).
+  const r = spawnSync("pgrep", ["-f", "^node.*next build"], { encoding: "utf8" });
   return r.status === 0 && r.stdout.trim().length > 0;
 }
 
@@ -60,7 +62,12 @@ export async function startStack(opts: { rebuild?: boolean; log?: (s: string) =>
   const child: ChildProcess = spawn(process.execPath, ["scripts/dev-test.mjs"], { env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
   const tail: string[] = [];
   const keep = (b: Buffer) => {
-    tail.push(...b.toString().split("\n").filter(Boolean));
+    const s = b.toString();
+    // Log worker output in real-time
+    for (const line of s.split("\n").filter(Boolean)) {
+      if (line.includes("[worker]")) log(`[stack] ${line}`);
+    }
+    tail.push(...s.split("\n").filter(Boolean));
     tail.splice(0, Math.max(0, tail.length - 40));
   };
   child.stdout?.on("data", keep);

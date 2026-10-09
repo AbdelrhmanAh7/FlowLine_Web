@@ -1,6 +1,6 @@
 # Evidence for #99 — landing demo media recording pipeline
 
-Part of #96. Branch `ai/99`. The pipeline code was last changed in `865c674`; the assets in `public/media/demo/` were
+Part of #96. Branch `ai/99`. The pipeline code was last changed in the final commit of this branch; the assets in `public/media/demo/` were
 recorded from the UI at `main` `d211653` (this branch changes nothing under `src/`), and `manifest.json` records the
 branch head of the build (`uiCommit`). Machine: Mac mini M4, 16 GB, macOS, Node 26.10, outside the agent sandbox.
 Isolated stack: production build in `.next-test`, app `:3190`, fakes `:4190/:4191`, DB `flowline_test_demo` on a
@@ -22,7 +22,13 @@ E2E: not needed — dev tooling, no user flow (the landing embed is #100).
 
 ## Final verify
 
-(filled in below after the last clip)
+`pnpm demo:verify` on the final tree (46 files, 26.05 MB of 45 MB, every file <= 6 MB; largest `walkthrough.en.light.h264` 4.87 MB):
+manifest valid; every video 1920x1080 or its tile shape at the clip fps, BT.709, no audio, codec strings match; loop seams
+(hero, tiles) 36.4-50.2 dB (>= 35); walkthrough EN delivered PSNR 47.3 dB (AV1) / 45.8 dB (H.264) vs the composed master;
+the hero Run-button accent check ran on the hero builds. Contact sheets for all 12 clips are written to
+`artifacts/demo-media/` (git-ignored); three are attached here: `hero.ar`, `run.ar`, `walkthrough.en`.
+Re-checked after the last change: `pnpm typecheck` and `pnpm lint` clean, `vitest --project unit tests/unit/demo-` 59/59,
+`node --test src/camera.test.ts` 12/12. Recorded walkthrough length 53.00 s (ar, en).
 
 ## Notes and limitations
 

@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-08T18:32:43Z",
-  "uiCommit": "865c6748484eb68b67d93ff032cc7c731627c981",
+  "generatedAt": "2026-10-09T17:05:09Z",
+  "uiCommit": "7810c5859b7910a4a54023c14c728e5335908326",
   "tooling": {
     "playwright": "1.63.0",
     "remotion": "4.0.534"
@@ -63,7 +63,7 @@
       "chapters": [
         {
           "id": "templates",
-          "t": 0.02
+          "t": 0.03
         },
         {
           "id": "shape",
@@ -484,6 +484,83 @@
       "locale": "ar",
       "path": "walkthrough.ar.light.ch1.fb5ea04d.jpg",
       "bytes": 65399,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "templates"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.fc8989cb.vtt",
+      "bytes": 731,
+      "kind": "captions",
+      "lang": "en"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.av1.c571aee2.mp4",
+      "bytes": 3139532,
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "sha256": "c571aee206b7b0e6f1b62c22f0e082d5c5414122832c1a1d571d0a9bea303595",
+      "bitrate": 473891
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.h264.9e35b412.mp4",
+      "bytes": 4873881,
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "sha256": "9e35b41219bcdc24f8ed73c196acc32950b90b793dc90c71243d4a559b4c5f50",
+      "bitrate": 735680
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.poster.f7571adb.jpg",
+      "bytes": 75076,
+      "theme": "light",
+      "kind": "poster",
+      "sha256": "f7571adba8b9d7317ea3a4470a8cd4202829930d68d669f08ec44490d0d26a48"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.ch4.7397432a.jpg",
+      "bytes": 64324,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "inspect"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.ch3.b6be3949.jpg",
+      "bytes": 55078,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "run"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.ch2.a4c9e4f5.jpg",
+      "bytes": 34175,
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "shape"
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "path": "walkthrough.en.light.ch1.076918d5.jpg",
+      "bytes": 41912,
       "theme": "light",
       "kind": "chapter-still",
       "chapter": "templates"

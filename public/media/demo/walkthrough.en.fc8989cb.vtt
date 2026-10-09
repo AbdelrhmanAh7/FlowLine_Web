@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:02.600 --> 00:00:06.800
+Start from a ready-made template that runs on sample data.
+
+2
+00:00:06.867 --> 00:00:11.267
+It opens on the canvas, one clear step at a time.
+
+3
+00:00:13.801 --> 00:00:18.601
+Add a step from the list and drop it on the canvas.
+
+4
+00:00:19.200 --> 00:00:24.600
+Connect it to what comes before and set its condition.
+
+5
+00:00:26.800 --> 00:00:32.600
+Press Run: the steps light up one by one.
+
+6
+00:00:33.249 --> 00:00:37.649
+The result appears as soon as the run ends.
+
+7
+00:00:40.735 --> 00:00:44.677
+Open any step to see what went in and what came out.
+
+8
+00:00:44.717 --> 00:00:47.461
+Every run is kept in your history.
+
+9
+00:00:47.501 --> 00:00:50.401
+Share a copy with another workspace.

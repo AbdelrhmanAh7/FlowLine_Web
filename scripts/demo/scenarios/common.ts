@@ -52,7 +52,11 @@ export const runButton = (ctx: Pick<ScenarioCtx, "page" | "t">) => ctx.page.getB
 /** Waits for the run dock header to report the finished run as succeeded. */
 export async function runFinished(ctx: Pick<ScenarioCtx, "page" | "t">) {
   const dock = ctx.page.getByTestId("run-dock");
-  await dock.getByText(ctx.t("runStatus.succeeded"), { exact: true }).first().waitFor({ state: "visible", timeout: 20_000 });
+  // Wait for the dock to be visible first
+  await dock.waitFor({ state: "visible", timeout: 20_000 });
+  // Wait for the success status badge in the dock header - use substring match because it may be in a badge
+  const succeededText = ctx.t("runStatus.succeeded");
+  await dock.getByText(succeededText, { exact: false }).first().waitFor({ state: "visible", timeout: 60_000 });
   return dock;
 }
 

@@ -49,6 +49,10 @@ export const walkthrough: Scenario = {
     await holdUntil(ctx, 26.6);
     rec.beat("run");
     await rec.click(runButton(ctx), "run", { dur: 0.9 });
+    // Wait for the run to appear in the dock (queued/running) before focusing on nodes
+    const runStatusQueued = ctx.t("runStatus.queued");
+    const runStatusRunning = ctx.t("runStatus.running");
+    await page.getByTestId("run-dock").getByText(new RegExp(`${runStatusQueued}|${runStatusRunning}`)).first().waitFor({ state: "visible", timeout: 15_000 });
     for (const id of ["trigger", "normalise", "is-hot", "hot"]) {
       await rec.focus(grow(await rec.box(nodeCard(page, id)), 400, 180), `node-${id}`);
       await holdUntil(ctx, rec.now() + 1.3);
