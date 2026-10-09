@@ -40,6 +40,7 @@
   "exclude": [
     "node_modules",
     "e2e-army",
+    "tools/story-video",
     ".next-test",
     "artifacts",
     "playwright-report",

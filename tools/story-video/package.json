@@ -1,0 +1,29 @@
+{
+  "name": "flowline-story-video",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Story-driven product film (persona, pain, solution over real UI, outcome) rendered locally with Remotion. Not a workspace member; see docs/video/STORY_VIDEO.md.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "studio": "remotion studio src/index.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@remotion/cli": "4.0.534",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.534",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "6.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
