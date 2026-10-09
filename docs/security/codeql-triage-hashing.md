@@ -8,7 +8,25 @@ also has a `CodeQL` comment with the same reason.
 | Alert | Rule | File | Disposition | Reason |
 |---|---|---|---|---|
 | #10 | `js/insufficient-password-hash` | `e2e/fakes/ai-protocols.ts` | dismissed: used in tests | The fake AI hub (test double, only with `FLOWLINE_ENV=test`, listens on 127.0.0.1) records a SHA-256 fingerprint of the fake `sk-fake-…` key a request carried. Tests use it to check which key was sent, so the request log never holds the key. Nothing is stored or checked as a password. The tests (`tests/integration/ai-hub*.test.ts`, `e2e/ai-hub.spec.ts`) compute the same SHA-256, so the fingerprint must stay plain SHA-256. |
-| #12 | `js/insufficient-password-hash` | `src/server/rate-limit.ts` | dismissed: false positive | `checkRate` hashes rate-limit bucket names such as `apikey:<api key row id>`, `runs:<user id>`, `platform-write:<user id>` or `public-body:<kind>:<ip>`. No password, API-key secret or token reaches it. CodeQL keys on the `apiKeyId`/`keyId` name, but that value is only the row id. SHA-256 only keeps ids out of the `rate_limit_hit` table. scrypt/argon2 would slow every rate-limit check and add no security. |
+| #12 | `js/insufficient-password-hash` | `src/server/rate-limit.ts` | dismissed: false positive | `checkRate` hashes rate-limit bucket names such as `apikey:<api key row id>`, `runs:<user id>`, `platform-write:<user id>` or `public-body:<kind>:<ip>`. No password, API-key secret or token reaches it (every caller is listed below). `apikey:` uses the API key's row id (`apiKeyId`/`keyId`), not the key itself. SHA-256 only keeps ids out of the `rate_limit_hit` table. scrypt/argon2 would slow every rate-limit check and add no security. |
+
+## Caller audit for alert #12
+
+Every `checkRate` / `checkRunRate` caller builds its bucket name from ids, enum values or a client IP only:
+
+| Caller | Bucket name |
+|---|---|
+| `src/app/api/v1/flows/[fid]/runs/route.ts`, `src/server/agents.ts` | `runs:apikey:<api key row id>` or `runs:<user id>` |
+| `src/app/api/flows/[fid]/runs/route.ts`, `src/app/api/runs/[rid]/rerun/route.ts` | `runs:<user id>` |
+| `src/server/copilot.ts` | `runs:copilot:<user id>` |
+| `src/server/platform-http.ts`, `platform-access.ts`, `sso-link.ts`, `oauth-apps.ts`, `federated-mfa.ts` | `<action>:<user id>` or `<action>:<workspace id>` |
+| `src/server/platform-secrets.ts` | `platform-probe:<user id or actor label>`, `platform-probe-purpose:<purpose>` |
+| `src/server/platform-setup.ts` | `platform-setup-redeem:<client IP>`, `platform-setup-redeem:all`, `platform-setup-complete:<challenge id>` (the setup token is hashed separately and never reaches `checkRate`) |
+| `src/server/public-body.ts` | `public-body:<kind>:<ip>` |
+| `src/ai/hub/connections.ts` | `ai-key:user:<user id>`, `ai-key:conn:<connection id>` |
+
+The alert detail (which source CodeQL traced) could not be fetched from the build machine, so this
+audit of all callers is the evidence, not a guess about the query's name heuristics.
 
 ## Options we did not take
 
