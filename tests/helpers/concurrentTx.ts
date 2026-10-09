@@ -49,6 +49,8 @@ type Side = (typeof SIDES)[number];
 
 async function openClient(connectionString: string) {
   const client = new Client({ connectionString, connectionTimeoutMillis: 5_000 });
+  // Terminated/idle backends make pg emit 'error'; without a listener Vitest reports an unhandled error.
+  client.on("error", () => undefined);
   await client.connect();
   const { rows } = await client.query<{ pid: number }>("select pg_backend_pid() as pid");
   return { client, pid: rows[0].pid };
@@ -57,6 +59,7 @@ async function openClient(connectionString: string) {
 /** Best effort: end the backends from a third connection so a hung lock wait cannot outlive the test. */
 async function terminateBackends(connectionString: string, pids: number[]) {
   const killer = new Client({ connectionString, connectionTimeoutMillis: 5_000 });
+  killer.on("error", () => undefined);
   try {
     await killer.connect();
     await killer.query("select pg_terminate_backend(pid) from unnest($1::int[]) as pid", [pids]);
