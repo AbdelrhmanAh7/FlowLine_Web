@@ -1,8 +1,8 @@
 name: Gate report
-description: Write a gate job's summary to the step summary and upload its logs and browser reports.
+description: Write a gate job's summary to the step summary and upload its logs and browser reports. It reads only the summary.json in its own `out` directory, and an integration shard's report is accepted only when that file names the same shard.
 inputs:
   job:
-    description: Job name (used in the summary heading and the artifact name)
+    description: Leg name, unique within the run (used in the summary heading and the artifact name, so two legs never upload under one artifact name)
     required: true
   out:
     description: The gate --out directory
@@ -10,6 +10,10 @@ inputs:
   tier:
     description: Gate tier
     required: true
+  shard:
+    description: The integration shard this leg ran, as k/N. Leave empty for every other leg. A summary.json that names a different shard, or a shard report read by a leg that expects none, is rejected instead of rendered.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -19,6 +23,8 @@ runs:
         GATE_SUMMARY: ${{ inputs.out }}/summary.json
         GATE_JOB: ${{ inputs.job }}
         GATE_TIER: ${{ inputs.tier }}
+        GATE_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        GATE_SHARD: ${{ inputs.shard }}
       run: |
         {
           echo "## FlowLine gate: $GATE_JOB ($GATE_TIER)"
@@ -26,22 +32,37 @@ runs:
             node --input-type=module <<'NODE'
         import { readFileSync } from 'node:fs';
         const gate = JSON.parse(readFileSync(process.env.GATE_SUMMARY, 'utf8'));
-        console.log(`Commit: \`${gate.sha}\` · result: **${gate.ok ? 'PASS' : 'FAIL'}** · browser mode: ${gate.browsersMode}`);
+        const expected = process.env.GATE_SHARD || null;
+        const actual = gate.shard ?? null;
+        if (expected !== actual) {
+          // Another leg's report (or none of a shard's) must never be shown as this leg's result.
+          console.log(`**Not this leg's report.** ${process.env.GATE_JOB} expects ${expected ? `the report of integration shard ${expected}` : 'a report that is not a shard report'}, but this summary is ${actual ? `integration shard ${actual}'s` : 'not a shard report'}. No result is claimed for this leg.`);
+          console.error(`::error title=Gate report mismatch::${process.env.GATE_JOB} read a summary that is not its own (expected shard ${expected ?? 'none'}, found ${actual ?? 'none'})`);
+          process.exit(1);
+        }
+        const mode = gate.browsersMode ? ` · browser mode: ${gate.browsersMode}` : '';
+        console.log(`Commit: \`${gate.sha}\` · result: **${gate.ok ? 'PASS' : 'FAIL'}**${expected ? ` · integration shard ${expected}` : ''}${mode}`);
         console.log('\n| Step | Status | Time | Tests / note |\n| --- | --- | ---: | --- |');
         for (const step of gate.steps) {
-          const totals = step.totals ? Object.entries(step.totals).map(([k, v]) => `${v} ${k}`).join(', ') : (step.note ?? '');
+          const totals = step.totals ? Object.entries(step.totals).map(([k, v]) => `${v} ${k}`).join(', ') : '';
+          const detail = [totals, step.note].filter(Boolean).join(' · ');
           const time = step.durationMs ? `${(step.durationMs / 1000).toFixed(1)}s` : '—';
-          console.log(`| ${step.name} | ${step.status} | ${time} | ${totals.replaceAll('|', '\\|')} |`);
+          console.log(`| ${step.name} | ${step.status} | ${time} | ${detail.replaceAll('|', '\\|')} |`);
         }
         // Name the failing browser tests so a red run is readable without downloading artifacts.
         const { readdirSync, existsSync } = await import('node:fs');
         const failed = existsSync('test-results') ? readdirSync('test-results').filter((f) => f.endsWith('-report.txt'))
           .flatMap((f) => readFileSync(`test-results/${f}`, 'utf8').split('\n').filter((l) => /^\s+\d+\) \[(chromium|firefox|webkit)\]/.test(l)).map((l) => l.trim())) : [];
-        if (failed.length) console.log(`\n**Failed browser tests**\n\n${[...new Set(failed)].map((l) => `- ${l.replaceAll('|', '\\|')}`).join('\n')}`);
+        if (failed.length) {
+          console.log(`\n**Failed browser tests**\n\n${[...new Set(failed)].map((l) => `- ${l.replaceAll('|', '\\|')}`).join('\n')}`);
+          const artifact = `flowline-gate-${process.env.GATE_JOB}-${process.env.GATE_RUN}`;
+          console.log(`\nPer-action timings: artifact \`${artifact}-traces\` (kept 7 days), open a \`trace.zip\` with \`pnpm exec playwright show-trace\`. Per-test durations: \`test-results/*-results.json\` in artifact \`${artifact}\`.`);
+        }
         NODE
           else
             echo
-            echo "Gate summary was not created. Check the job logs for setup or early gate failures."
+            echo "Gate summary was not created for $GATE_JOB. Check the job logs for setup or early gate failures. No result is claimed for this leg."
+            echo "::warning title=Gate summary missing::$GATE_JOB wrote no summary.json" >&2
           fi
         } >> "$GITHUB_STEP_SUMMARY"
 
@@ -50,11 +71,27 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: flowline-gate-${{ inputs.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-        # Browser reports and failure context (page snapshot, screenshot) are test data only, no secrets.
+        # Browser reports, the Playwright JSON reports (per-test durations and errors) and failure context (page snapshot,
+        # screenshot) are test data from the disposable CI stack only, no secrets.
         path: |
           artifacts/gates/**
           test-results/*-report.txt
+          test-results/*-results.json
           test-results/**/error-context.md
           test-results/**/test-failed-*.png
         if-no-files-found: warn
         retention-days: 14
+
+    # Playwright keeps a trace only for a failing test (playwright.config.ts `use.trace: retain-on-failure`, zero retries),
+    # so a green run has none and creates no artifact (`ignore`). A trace holds per-action timings (what a browser timeout
+    # needs), DOM snapshots and the page's network log, so it is a separate, shorter-lived artifact. Everything in it comes
+    # from the disposable CI stack; specs that handle write-only credentials turn tracing off (docs/DEVELOPER_GUIDE.md,
+    # "Playwright traces in CI").
+    - name: Upload Playwright traces
+      if: ${{ always() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: flowline-gate-${{ inputs.job }}-${{ github.run_id }}-${{ github.run_attempt }}-traces
+        path: test-results/**/trace.zip
+        if-no-files-found: ignore
+        retention-days: 7
