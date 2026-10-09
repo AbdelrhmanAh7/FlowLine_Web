@@ -22,7 +22,7 @@ Slow or infra-sensitive suites run in the `nightly` vitest project (`pnpm test:n
 code-sandbox image) from `.github/workflows/nightly.yml` (cron 01:17 UTC, or Actions > Nightly > Run workflow on any ref). They
 are excluded from the `unit` and `integration` projects, so the PR gate no longer runs them: `p2-code-sandbox`,
 `company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill` and `drizzle-tooling-prune`. The list lives in
-`nightlyFiles` in `vitest.config.mts`. The nightly is not a required check. Run it by hand before merging a change to
+`nightlyFiles` in `vitest.config.mts`. The workflow creates `flowline_test` itself (the Postgres container starts with `flowline` only), like the Gate's integration legs. The nightly is not a required check. Run it by hand before merging a change to
 `src/server/code-sandbox.ts`, `src/server/crypto|rewrap` or `drizzle/**`.
 
 ## Browser groups (`--group`)

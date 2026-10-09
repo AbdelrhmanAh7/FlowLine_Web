@@ -115,6 +115,29 @@ describe("nightly.yml stays off the PR path", () => {
   it("runs the nightly project through the shared setup", () => {
     expect(text).toContain("./.github/actions/setup-gate");
     expect(text).toContain("pnpm test:nightly");
+    expect(stripComments(text)).not.toMatch(/run: pnpm test\s*$/m);
+  });
+
+  it("creates the flowline_test database (the container only has `flowline`) before the tests run", () => {
+    const body = stripComments(text);
+    const create = body.indexOf("createdb -U flowline flowline_test");
+    expect(create).toBeGreaterThan(-1);
+    expect(create).toBeLessThan(body.indexOf("pnpm test:nightly"));
+    expect(read(".github/actions/setup-gate/action.yml")).toMatch(/POSTGRES_DB=flowline(?!_)/);
+  });
+});
+
+describe("the nightly vitest project", () => {
+  it("is a named project that pnpm test:nightly selects, and the PR projects exclude exactly its files", async () => {
+    const { default: config } = await import("../../vitest.config.mts");
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const files = byName.nightly.include;
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) expect(() => read(file), file).not.toThrow();
+    expect(byName.unit.exclude).toEqual(files);
+    expect(byName.integration.exclude).toEqual(files);
+    expect(JSON.parse(read("package.json")).scripts["test:nightly"]).toMatch(/vitest run --project nightly$/);
   });
 });
 
