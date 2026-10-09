@@ -24,9 +24,12 @@ const OUT_SUFFIX = STACK.shard ? `-${STACK.shard}` : "";
  * development-only Company Builder trials. Production ignores this cookie; beta specs override it per context.
  */
 const OPEN_BETA_COOKIE = { name: "fl_test_beta_mode", value: "open", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const };
-export const AR_STATE = { cookies: [OPEN_BETA_COOKIE], origins: [] };
+// The landing demo (#100) reads public/media/demo/manifest.json; specs other than e2e/landing-demo.spec.ts test the legacy hero, so they
+// ignore a real manifest with this test-only cookie (`fixture` switches to e2e/fixtures/demo, set by that spec). Production ignores it.
+const NO_DEMO_COOKIE = { name: "fl_test_demo", value: "off", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const };
+export const AR_STATE = { cookies: [OPEN_BETA_COOKIE, NO_DEMO_COOKIE], origins: [] };
 export const EN_STATE = {
-  cookies: [OPEN_BETA_COOKIE, { name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
+  cookies: [OPEN_BETA_COOKIE, NO_DEMO_COOKIE, { name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
   origins: [],
 };
 
