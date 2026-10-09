@@ -32,13 +32,26 @@ describe("runConcurrent", () => {
   it("reports an opposite-order pair that raises 40P01 as a deadlock", async () => {
     const txA = async (ctx: TxContext) => {
       await ctx.arrive();
-      throw Object.assign(new Error("deadlock detected"), { code: "40P01" });
+      throw Object.assign(new Error("transaction conflict"), { code: "40P01" });
     };
     const txB = async (ctx: TxContext) => {
       await ctx.arrive();
       return never();
     };
-    await expect(runConcurrent(txA, txB, { timeoutMs: 1000 })).rejects.toThrow(/deadlock/i);
+    await expect(runConcurrent(txA, txB, { timeoutMs: 1000 })).rejects.toThrow(/deadlock detected \(40P01\): transaction conflict/);
+  });
+
+  it("starts txB and maps 40P01 even when txA throws synchronously", async () => {
+    let bStarted = false;
+    const txA = (() => {
+      throw Object.assign(new Error("transaction conflict"), { code: "40P01" });
+    }) as unknown as (ctx: TxContext) => Promise<never>;
+    const txB = async () => {
+      bStarted = true;
+      return never();
+    };
+    await expect(runConcurrent(txA, txB, { timeoutMs: 1000 })).rejects.toThrow(/deadlock detected \(40P01\)/);
+    expect(bStarted).toBe(true);
   });
 
   it("fails with a timeout message when a transaction hangs", async () => {

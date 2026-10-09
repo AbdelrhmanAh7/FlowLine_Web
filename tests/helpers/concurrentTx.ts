@@ -45,7 +45,10 @@ export async function runConcurrent<A, B>(
   });
   try {
     return await Promise.race([
-      Promise.all([txA(barrier), txB(barrier)]).catch((err: unknown) => {
+      Promise.all([
+        Promise.resolve().then(() => txA(barrier)),
+        Promise.resolve().then(() => txB(barrier)),
+      ]).catch((err: unknown) => {
         if ((err as { code?: unknown })?.code === "40P01") {
           throw new Error(`deadlock detected (40P01): ${(err as Error).message}`);
         }
