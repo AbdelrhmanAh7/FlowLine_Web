@@ -147,7 +147,7 @@ export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof sche
     .where(eq(schema.flowVersion.flowId, flow.id));
   const [v] = await tx
     .insert(schema.flowVersion)
-    .values({ flowId: flow.id, version: next, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
+    .values({ flowId: flow.id, version: reason === "run" ? null : next, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
     .returning();
   return v;
 }
@@ -157,7 +157,7 @@ export async function listVersions(flowId: string) {
     .select({ id: schema.flowVersion.id, version: schema.flowVersion.version, revision: schema.flowVersion.revision, reason: schema.flowVersion.reason, createdAt: schema.flowVersion.createdAt })
     .from(schema.flowVersion)
     .where(eq(schema.flowVersion.flowId, flowId))
-    .orderBy(desc(schema.flowVersion.version))
+    .orderBy(desc(schema.flowVersion.createdAt), sql`${schema.flowVersion.version} desc nulls last`)
     .limit(50);
 }
 
