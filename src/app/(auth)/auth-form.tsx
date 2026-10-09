@@ -76,6 +76,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
           setPending(false);
           return;
         }
+        // Test environment only (#124, src/server/test-auto-verify.ts): the account is already verified and no e-mail
+        // was sent, so sign in now instead of showing "Check your inbox"; if that fails, the sign-in page takes over.
+        if ((res.data as { user?: { emailVerified?: boolean } } | null)?.user?.emailVerified === true) {
+          const signedIn = await authClient.signIn.email({ email, password });
+          const twoFactorNeeded = (signedIn.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect;
+          router.replace(signedIn.error || twoFactorNeeded ? afterVerify : destination);
+          router.refresh();
+          return;
+        }
         setSentTo(email.trim());
         setPending(false);
         return;

@@ -13,6 +13,7 @@ import { track } from "@/server/telemetry";
 import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
 import { federatedMfa } from "@/server/federated-mfa";
 import { assertFederatedLinkSession } from "@/server/federated-link";
+import { autoVerifySignUps } from "@/server/test-auto-verify";
 
 /**
  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -52,6 +53,8 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
       // better-auth's own link carries the sign-up's callbackURL; Flowline sends its own single-use token instead and
       // keeps only that (same-origin, validated) path so the verify page can continue where sign-up started.
       sendVerificationEmail: async ({ user, url }, request) => {
+        // TEST ENVIRONMENT ONLY (#124): an account the opt-in already verified at sign-up gets no link. Nothing else changes.
+        if (user.emailVerified && autoVerifySignUps(request?.headers)) return;
         let callbackURL: string | null = null;
         try { callbackURL = new URL(url).searchParams.get("callbackURL"); } catch { /* no callback */ }
         await issueAccountToken("verify", user, request, { callbackURL });
@@ -88,6 +91,9 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
             const body = c?.body;
             const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null, betaMode(c?.headers ?? c?.request?.headers));
             if (!decision.ok) throw new APIError("FORBIDDEN", { message: BETA_REFUSAL, code: "BETA_INVITE_REQUIRED" });
+            // TEST ENVIRONMENT ONLY (#124): e-mail sign-ups start verified when explicitly opted in under FLOWLINE_ENV=test.
+            const path = (ctx as { path?: unknown } | null | undefined)?.path;
+            if (path === "/sign-up/email" && autoVerifySignUps(c?.headers ?? c?.request?.headers)) return { data: { ...user, emailVerified: true } };
           },
           after: async (user) => {
             track("signup_completed", { userId: user.id }, { via: betaMode() });
