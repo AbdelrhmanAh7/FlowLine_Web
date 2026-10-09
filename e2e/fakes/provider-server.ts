@@ -13,6 +13,7 @@ import { createHash, createHmac, generateKeyPairSync, randomBytes, sign as crypt
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { pathToFileURL } from "node:url";
+import { compileFaultPattern, safeRedirectTarget } from "./safety";
 
 // ---------------------------------------------------------------- fixtures
 
@@ -385,7 +386,7 @@ interface RecordedRequest {
 type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
 interface Fault {
   provider: string;
-  pattern: RegExp;
+  pattern: { test(path: string): boolean };
   mode: FaultMode;
   times: number;
   retryAfterSec?: number;
@@ -492,14 +493,15 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
   if (req.method === "GET" && path === "/oauth/authorize") {
     const redirectUri = url.searchParams.get("redirect_uri") ?? "";
     const account: AccountKey = url.searchParams.get("fake_account") === "second" || url.searchParams.get("login_hint")?.includes("bob") ? "b" : "a";
+    // Allowlisted redirect target (relative path or loopback host); anything else is refused, not followed.
+    if (!safeRedirectTarget(redirectUri)) {
+      json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri must be a relative path or a local host" });
+      return true;
+    }
     const code = `fake-code-${randomBytes(6).toString("hex")}`;
     const challenge = url.searchParams.get("code_challenge") ?? undefined;
     state.oauthCodes.set(code, { provider, challenge, account });
-    const target = new URL(redirectUri);
-    target.searchParams.set("code", code);
-    const st = url.searchParams.get("state");
-    if (st) target.searchParams.set("state", st);
-    res.writeHead(302, { location: target.toString() });
+    res.writeHead(302, { location: safeRedirectTarget(redirectUri, { code, state: url.searchParams.get("state") })! });
     res.end();
     return true;
   }
@@ -643,6 +645,10 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
       json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri and client_id are required" });
       return true;
     }
+    if (!safeRedirectTarget(redirectUri)) {
+      json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri must be a relative path or a local host" });
+      return true;
+    }
     // Auto-consent: login_hint picks the identity, otherwise the control-set fake user.
     const user = state.oidcUser;
     const code = `oidc-code-${randomBytes(6).toString("hex")}`;
@@ -653,11 +659,7 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
       email: url.searchParams.get("login_hint") || user.email,
       emailVerified: user.emailVerified,
     });
-    const target = new URL(redirectUri);
-    target.searchParams.set("code", code);
-    const st = url.searchParams.get("state");
-    if (st) target.searchParams.set("state", st);
-    res.writeHead(302, { location: target.toString() });
+    res.writeHead(302, { location: safeRedirectTarget(redirectUri, { code, state: url.searchParams.get("state") })! });
     res.end();
     return true;
   }
@@ -1435,6 +1437,7 @@ const stripe: Handler = async (ctx, req, res, path, url, body) => {
     if (!session) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "No such checkout session" } });
     if (completeMatch[2] === "fail") {
       session.status = "failed";
+      // Redirects to the URL the API caller registered (authenticated, stored server-side); see docs/security/codeql-triage-fakes.md.
       res.writeHead(303, { location: session.cancel_url || "/" });
       res.end();
       return;
@@ -1779,6 +1782,8 @@ ${failed}
       res.end();
       return;
     }
+    // A success_url outside the allowlist is not followed: the buyer stays on the checkout page instead.
+    const success = safeRedirectTarget(_url.searchParams.get("success_url") || "") ?? `/paddle/checkout/${txn.id}`;
     if (txn.status !== "completed") {
       txn.status = "completed";
       const price = s.paddlePrices.find((p) => p.id === txn.items[0]!.price_id);
@@ -1818,7 +1823,7 @@ ${failed}
       await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
     }
     // The redirect Paddle.js performs to settings.successUrl after payment.
-    res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
+    res.writeHead(303, { location: success });
     res.end();
     return;
   }
@@ -2048,18 +2053,17 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
   }
   if (req.method === "POST" && path === "/__fake/fault") {
     const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number; delayMs?: number };
-    try {
-      ctx.faults.push({
-        provider: payload.provider,
-        pattern: new RegExp(payload.pathPattern),
-        mode: payload.mode,
-        times: payload.times ?? 1,
-        retryAfterSec: payload.retryAfterSec,
-        delayMs: payload.delayMs,
-      });
-    } catch (e) {
-      return json(ctx, req, res, 400, { error: String(e) }), true;
-    }
+    // The pattern is matched as text (see safety.ts), never compiled to a RegExp.
+    const pattern = compileFaultPattern(payload.pathPattern);
+    if (!pattern) return json(ctx, req, res, 400, { error: "pathPattern must be a non-empty string of at most 200 characters" }), true;
+    ctx.faults.push({
+      provider: payload.provider,
+      pattern,
+      mode: payload.mode,
+      times: payload.times ?? 1,
+      retryAfterSec: payload.retryAfterSec,
+      delayMs: payload.delayMs,
+    });
     return json(ctx, req, res, 200, { ok: true }), true;
   }
   // Builds a signed Stripe-style event WITHOUT sending it, so tests can post it
@@ -2373,10 +2377,12 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       ctx.requests[ctx.requests.length - 1]!.body = rawBody && (req.headers["content-type"] ?? "").includes("json") ? j(rawBody) : rawBody || undefined;
 
       await handler(ctx, req, res, path, url, rawBody, account);
-    })().catch((e) => {
+    })().catch((e: unknown) => {
+      // The stack stays in the server log; the response body is generic (CodeQL js/stack-trace-exposure).
+      console.error("[fake-providers] request failed:", e instanceof Error ? (e.stack ?? e.message) : e);
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: `fake server error: ${e}` }));
+        res.end(JSON.stringify({ error: "internal fake server error" }));
       } else {
         res.end();
       }

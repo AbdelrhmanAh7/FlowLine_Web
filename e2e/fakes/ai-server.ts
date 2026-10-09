@@ -9,6 +9,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createHash } from "node:crypto";
+import { BodyTooLargeError, readCappedBody } from "./safety";
 import { handleHub, hub, resetHub, type HubFault, type InnerOut, type InnerReq } from "./ai-protocols";
 
 interface Schema {
@@ -28,13 +29,12 @@ function pricingPage() {
   return `<!doctype html><html><body><h1>Pricing</h1><p>Plan: Pro</p><p>Price: ${state.price}</p><p>Currency: USD</p></body></html>`;
 }
 
-function body(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve) => {
-    let b = "";
-    req.on("data", (c) => (b += c));
-    req.on("end", () => resolve(b));
-  });
-}
+/** Request bodies above this are refused with 413 (CodeQL js/resource-exhaustion, #114): fixtures are a few KB. */
+const MAX_BODY_BYTES = 1024 * 1024;
+/** A client has this long to send its whole request (slow-body / slowloris guard); answering a fault may take longer. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+const body = (req: IncomingMessage): Promise<string> => readCappedBody(req, MAX_BODY_BYTES);
 
 const aliases: Record<string, string[]> = {
   vendor: ["vendor", "supplier", "from"],
@@ -540,7 +540,14 @@ function runRules(inner: InnerReq): Promise<InnerOut> {
 export async function startFakeAi(port = 0): Promise<{ url: string; port: number; close(): Promise<void> }> {
   let boundPort = port;
   const server: Server = createServer(async (req, res) => {
-    const b = await body(req);
+    let b: string;
+    try {
+      b = await body(req);
+    } catch (e) {
+      const tooLarge = e instanceof BodyTooLargeError;
+      res.writeHead(tooLarge ? 413 : 400, { "content-type": "application/json", connection: "close" }).end(JSON.stringify({ error: tooLarge ? "request body too large" : "bad request" }));
+      return;
+    }
     const url = new URL(req.url ?? "/", "http://fake.local");
     if (req.url === "/__fake/hub/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ requests: hub.requests }));
     if (req.url === "/__fake/hub/fault" && req.method === "POST") {
@@ -597,6 +604,8 @@ export async function startFakeAi(port = 0): Promise<{ url: string; port: number
     if (req.url === "/__fake/requests") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(state.requests));
     res.writeHead(404).end();
   });
+  server.requestTimeout = REQUEST_TIMEOUT_MS;
+  server.headersTimeout = REQUEST_TIMEOUT_MS;
   await new Promise<void>((r) => server.listen(port, "127.0.0.1", r));
   const p = (server.address() as AddressInfo).port;
   boundPort = p;

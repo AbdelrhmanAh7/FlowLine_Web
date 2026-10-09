@@ -6,12 +6,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { compileFaultPattern, safeRedirectTarget } from "../../e2e/fakes/safety";
-import { startFakeProviders } from "../../e2e/fakes/provider-server";
+import { PaddlePaymentAdapter } from "@/billing/paddle";
+import { startFake, type Fake } from "./helpers";
 
-let providers: Awaited<ReturnType<typeof startFakeProviders>>;
+let providers: Fake;
 let ai: Awaited<ReturnType<typeof startFakeAi>>;
 beforeAll(async () => {
-  providers = await startFakeProviders();
+  providers = await startFake();
   ai = await startFakeAi();
 });
 afterAll(async () => {
@@ -123,5 +124,22 @@ describe("#7 resource exhaustion: the fake AI server caps request bodies", () =>
 
   it("still serves small control requests", async () => {
     expect((await postJson(`${ai.url}/__fake/reset`, {})).status).toBe(200);
+  });
+});
+
+describe("#9 Paddle's success_url query parameter is allowlisted", () => {
+  it("falls back to the checkout page for an external success_url and keeps a local one", async () => {
+    const adapter = new PaddlePaymentAdapter("pdl_sdbx_fake_billing", "pdl_ntfset_fake");
+    await postJson(`${providers.url}/__fake/paddle/price`, { id: "pri_test_cq", trialDays: 0 });
+    const complete = async (success: string) => {
+      const c = await adapter.createCustomer({ id: "ws-cq", name: "Cq", slug: "cq", email: "o@cq.test" });
+      const s = await adapter.createCheckoutSession({ customerId: c.id, priceId: "pri_test_cq", successUrl: success, cancelUrl: "http://localhost:3100/c", checkoutPageUrl: "http://localhost:3100/billing/checkout?ws=cq" });
+      return fetch(`${providers.url}/paddle/checkout/${s.id}/complete?success_url=${encodeURIComponent(success)}`, { method: "POST", redirect: "manual" });
+    };
+    const ext = await complete("https://evil.example/ok");
+    expect(ext.status).toBe(303);
+    expect(ext.headers.get("location")).toMatch(/^\/paddle\/checkout\/txn_/);
+    const local = await complete("http://localhost:3100/ok");
+    expect(local.headers.get("location")).toBe("http://localhost:3100/ok");
   });
 });
