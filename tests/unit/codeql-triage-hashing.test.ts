@@ -83,7 +83,7 @@ describe("fake AI hub records a SHA-256 fingerprint of the fake key (alert #10)"
 describe("each alert has a written disposition", () => {
   const doc = () => read("docs/security/codeql-triage-hashing.md");
   for (const [alert, file, disposition] of [
-    ["#10", "e2e/fakes/ai-protocols.ts", "dismissed: used in tests"],
+    ["#10", "e2e/fakes/ai-protocols.ts", "dismissed: false positive"],
     ["#12", "src/server/rate-limit.ts", "dismissed: false positive"],
   ] as const) {
     it(`alert ${alert} (${file}) is in the triage doc and commented at the flagged line`, () => {
