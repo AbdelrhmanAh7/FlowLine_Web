@@ -117,6 +117,14 @@ describe("#7 resource exhaustion: the fake AI server caps request bodies", () =>
     else expect(res).toBeInstanceOf(Error);
   });
 
+  it("a slow fault still answers after its delay, taken from the fixed step table (timer alert)", async () => {
+    await postJson(`${ai.url}/__fake/openai/fault`, { mode: "slow", times: 1, path: "models", delayMs: 100 });
+    const t0 = Date.now();
+    const res = await fetch(`${ai.url}/openai/v1/models`, { headers: { authorization: "Bearer sk-fake-test" } });
+    expect(res.status).toBe(200);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(200); // 100 ms rounds up to the 250 ms step
+  });
+
   it("still answers a normal chat request", async () => {
     const res = await postJson(`${ai.url}/api/chat`, { model: "fake-model", messages: [{ role: "user", content: "Vendor: Acme\nTotal: 5" }] });
     expect(res.status).toBe(200);
