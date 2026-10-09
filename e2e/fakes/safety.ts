@@ -51,34 +51,20 @@ export function safeRedirectTarget(raw: string, params: Record<string, string | 
 }
 
 export class BodyTooLargeError extends Error {
-  constructor(readonly limit: number) {
-    super(`request body exceeds ${limit} bytes`);
-    this.name = "BodyTooLargeError";
-  }
+  name = "BodyTooLargeError";
 }
 
-/** Reads a request body, rejecting with BodyTooLargeError (and stopping the read) once it passes `limit` bytes. */
+/** Reads a request body, rejecting with BodyTooLargeError (and dropping what it read) once it passes `limit` bytes. */
 export function readCappedBody(req: IncomingMessage, limit: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
-    let done = false;
     req.on("data", (c: Buffer) => {
-      if (done) return;
       size += c.length;
-      if (size > limit) {
-        done = true;
-        chunks.length = 0;
-        reject(new BodyTooLargeError(limit));
-        return;
-      }
+      if (size > limit) return void (chunks.length = 0, reject(new BodyTooLargeError(`request body exceeds ${limit} bytes`)));
       chunks.push(c);
     });
-    req.on("end", () => {
-      if (!done) resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    req.on("error", (e) => {
-      if (!done) reject(e);
-    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
   });
 }

@@ -12,7 +12,7 @@ Scope: `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`. These are te
 ## Verification
 
 - `tests/contract/codeql-fakes.test.ts`: helper units, OAuth/OIDC/Paddle redirects, fault control API, generic 500 body (and the stack in the log), 413 for a 2 MiB body.
-- The whole `contract` project passes with the fixes (481 tests); `tsc` and `eslint` are clean on the changed files. The full gate runs on CI.
+- The whole `contract` project passes with the fixes (480 tests); `tsc` and `eslint` are clean on the changed files. The full gate runs on CI.
 - No e2e-army test: the change is internal to test doubles with no user-facing flow.
 
 CodeQL's own re-scan after merge is the final confirmation for each alert.

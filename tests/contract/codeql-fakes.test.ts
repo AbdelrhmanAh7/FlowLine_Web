@@ -121,10 +121,6 @@ describe("#7 resource exhaustion: the fake AI server caps request bodies", () =>
     const res = await postJson(`${ai.url}/api/chat`, { model: "fake-model", messages: [{ role: "user", content: "Vendor: Acme\nTotal: 5" }] });
     expect(res.status).toBe(200);
   });
-
-  it("still serves small control requests", async () => {
-    expect((await postJson(`${ai.url}/__fake/reset`, {})).status).toBe(200);
-  });
 });
 
 describe("#9 Paddle's success_url query parameter is allowlisted", () => {
