@@ -422,7 +422,11 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   }
   // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
   if (fault?.mode === "slow") {
-    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), Math.min(Math.max(Number(fault.delayMs) || 1000, 0), 10_000));
+    // CodeQL js/resource-exhaustion: the timer duration comes from a fixed table (the nearest step at or above the request), never from the request value itself.
+    const SLOW_STEPS_MS = [0, 250, 500, 1000, 2000, 5000, 10_000];
+    const wantedMs = Number(fault.delayMs) || 1000;
+    const delayMs = SLOW_STEPS_MS.find((step) => step >= wantedMs) ?? 10_000;
+    setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), delayMs);
     return true;
   }
 
