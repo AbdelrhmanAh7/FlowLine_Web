@@ -7,7 +7,7 @@ Not user-facing (test-only helper), so no e2e-army test.
 | Helper exported + header usage example | `tests/helpers/concurrentTx.ts` header comment |
 | Opposite-order pair detected as deadlock | `tests/integration/concurrent-tx.test.ts` |
 | Same-order pair passes | `tests/integration/concurrent-tx.test.ts` |
-| Deterministic, <10 s | CI `checks` run on the pushed commit |
+| Deterministic, <10 s | UNVERIFIED locally: no focused test result, duration or tested SHA recorded yet (no node_modules/test DB in this worktree); to be filled from the CI run on the pushed commit |
 | No `.github/` changes | `git diff main --stat` |
 
 Fix this round: add `'error'` listeners on pg clients so backends terminated on timeout do not raise an unhandled error.

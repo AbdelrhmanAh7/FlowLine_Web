@@ -51,12 +51,22 @@ async function openClient(connectionString: string) {
   const client = new Client({ connectionString, connectionTimeoutMillis: 5_000 });
   // Terminated/idle backends make pg emit 'error'; without a listener Vitest reports an unhandled error.
   client.on("error", () => undefined);
-  await client.connect();
-  const { rows } = await client.query<{ pid: number }>("select pg_backend_pid() as pid");
-  return { client, pid: rows[0].pid };
+  try {
+    await client.connect();
+    const { rows } = await client.query<{ pid: number }>("select pg_backend_pid() as pid");
+    return { client, pid: rows[0].pid };
+  } catch (error) {
+    await client.end().catch(() => undefined);
+    throw error;
+  }
 }
 
 /** Best effort: end the backends from a third connection so a hung lock wait cannot outlive the test. */
+const GRACE_MS = 1_000;
+/** Resolves when `p` settles or after `ms`, whichever is first; never rejects. */
+const bounded = (p: Promise<unknown>, ms: number) =>
+  new Promise<void>((resolve) => { const t = setTimeout(resolve, ms); p.then(() => undefined, () => undefined).then(() => { clearTimeout(t); resolve(); }); });
+
 async function terminateBackends(connectionString: string, pids: number[]) {
   const killer = new Client({ connectionString, connectionTimeoutMillis: 5_000 });
   killer.on("error", () => undefined);
@@ -76,13 +86,25 @@ export async function runConcurrent<A, B>(
   { timeoutMs = 5_000, connectionString = process.env.DATABASE_URL }: RunConcurrentOptions = {},
 ): Promise<{ a: A; b: B }> {
   if (!connectionString) throw new Error("runConcurrent needs a connection string (DATABASE_URL is not set)");
-  const opened = await Promise.allSettled([openClient(connectionString), openClient(connectionString)]);
-  const connections = opened.flatMap((o) => (o.status === "fulfilled" ? [o.value] : []));
-  const release = () => Promise.allSettled(connections.map((c) => c.client.end()));
-  const failed = opened.find((o) => o.status === "rejected");
-  if (failed) {
+  // One deadline covers connecting, running, termination and cleanup.
+  let timer: NodeJS.Timeout | undefined;
+  const timedOut = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new ConcurrentTxTimeoutError(timeoutMs)), timeoutMs); });
+  timedOut.catch(() => undefined);
+  const connections: { client: Client; pid: number }[] = [];
+  const release = () => bounded(Promise.allSettled(connections.map((c) => c.client.end())), GRACE_MS);
+  let opening: Promise<PromiseSettledResult<{ client: Client; pid: number }>[]> | undefined;
+  try {
+    opening = Promise.allSettled([openClient(connectionString), openClient(connectionString)]);
+    const opened = await Promise.race([opening, timedOut]);
+    connections.push(...opened.flatMap((o) => (o.status === "fulfilled" ? [o.value] : [])));
+    const failed = opened.find((o) => o.status === "rejected");
+    if (failed) throw (failed as PromiseRejectedResult).reason;
+  } catch (error) {
+    // A connection still opening when the deadline hit is closed as soon as it finishes.
+    void opening?.then((r) => r.forEach((o) => o.status === "fulfilled" && o.value.client.end().catch(() => undefined)));
+    clearTimeout(timer);
     await release();
-    throw (failed as PromiseRejectedResult).reason;
+    throw error;
   }
 
   const arrivals: Record<Side, number> = { A: 0, B: 0 };
@@ -103,6 +125,7 @@ export async function runConcurrent<A, B>(
     return new Promise<void>((resolve, reject) => waiting[side].push({ n, resolve, reject }));
   };
 
+  let onDeadlock: ((e: Error) => void) | undefined;
   const runSide = async <T>(side: Side, tx: TxCallback<T>, client: Client): Promise<T> => {
     try {
       await client.query("begin");
@@ -110,6 +133,7 @@ export async function runConcurrent<A, B>(
       await client.query("commit");
       return result;
     } catch (error) {
+      if ((error as { code?: string })?.code === "40P01") onDeadlock?.(new ConcurrentTxDeadlockError(side, error));
       await client.query("rollback").catch(() => undefined);
       throw error;
     } finally {
@@ -119,11 +143,12 @@ export async function runConcurrent<A, B>(
     }
   };
 
-  let timer: NodeJS.Timeout | undefined;
   try {
-    const timedOut = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new ConcurrentTxTimeoutError(timeoutMs)), timeoutMs); });
+    // A 40P01 is reported as soon as it happens, even if the surviving side then hangs on a peer that never settles.
+    const deadlocked = new Promise<never>((_, reject) => { onDeadlock = reject; });
+    deadlocked.catch(() => undefined);
     const settled = Promise.allSettled([runSide("A", txA, connections[0].client), runSide("B", txB, connections[1].client)]);
-    const [ra, rb] = await Promise.race([settled, timedOut]);
+    const [ra, rb] = await Promise.race([settled, timedOut, deadlocked]);
     for (const [side, r] of [["A", ra], ["B", rb]] as const) {
       if (r.status === "rejected" && (r.reason as { code?: string })?.code === "40P01") throw new ConcurrentTxDeadlockError(side, r.reason);
     }
@@ -131,7 +156,9 @@ export async function runConcurrent<A, B>(
     if (rb.status === "rejected") throw rb.reason;
     return { a: ra.value as A, b: rb.value as B };
   } catch (error) {
-    if (error instanceof ConcurrentTxTimeoutError) await terminateBackends(connectionString, connections.map((c) => c.pid));
+    if (error instanceof ConcurrentTxTimeoutError || error instanceof ConcurrentTxDeadlockError) {
+      await bounded(terminateBackends(connectionString, connections.map((c) => c.pid)), GRACE_MS);
+    }
     throw error;
   } finally {
     clearTimeout(timer);
