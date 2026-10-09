@@ -1,5 +1,12 @@
 # Questions / blockers for #121
 
-`docs/engineering/lock-order.md` does not exist on main (origin/main = c830c11). The skeleton (part 1/3, #120) exists only on branch `ai/120` (commit 3315b21) and has not merged. The brief says to start after it merges and rebase on main, so no work was done. `git fetch` was also blocked by the sandbox (github.com not allowed), so origin/main may be stale.
+Blocked on #120, re-checked 2026-10-09 after a successful `git fetch origin`:
 
-Needed: merge #120, then re-run #121 (rebase on main, add the #41 and #42 worked examples).
+- `origin/main` is still `c830c11` and has no `docs/engineering/lock-order.md`.
+- #120 (the skeleton, part 1/3 of #89) is OPEN, and its PR #128 (branch `ai/120`) is still a **draft**.
+
+Brief step 1 says to start only after the skeleton has merged, then rebase on main. Building on `ai/120` would mean stacking on, or folding in, an unreviewed draft, which the constitution (article 2) forbids. So this branch has no doc changes yet.
+
+Needed: mark PR #128 ready, get it reviewed and merged, then re-run #121. That run rebases on main and adds the #41 and #42 worked examples under `## Worked examples`.
+
+No e2e-army test: #121 is docs only and changes no user-facing flow.
