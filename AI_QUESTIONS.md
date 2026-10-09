@@ -66,3 +66,13 @@ Every option that makes the test pass changes version semantics. Some also need 
 
 `lastRunAt` in the flow list is the raw Postgres text `"2026-10-09 06:44:04.423993+03"`, not an ISO timestamp like
 `updatedAt`. The cause is the untyped `sql<Date>` subquery in `listFlows`. Worth a separate small issue.
+
+## Fix-review round 1 (PR #139) — status
+
+- Thread "no product code / lastRunStatus mapping": there is no mapping bug (`lastRunStatus` is already `"succeeded"`; the
+  issue text was truncated). The real mismatch is `publishedVersion` (3 vs 1), caused by documented design
+  (`insertVersion` in `src/server/flows.ts` gives `run` snapshots a number in the same sequence as publications). Fixing it
+  needs option 1 or 3 above (migration or hub-test change), which is an owner decision. **Please do not auto-close #117 from
+  this PR** — drop "Closes #117" (use "Refs #117") until the owner picks an option.
+- Threads about hub-checkout imports and the never-run `bad` flow: already fixed in `f0fbab0`
+  (`e2e-army/117-flows-list-dashboard.e2e.ts` is self-contained, runs `bad` via `runToEnd`, which tolerates failed runs).
