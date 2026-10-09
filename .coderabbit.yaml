@@ -9,7 +9,7 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    auto_incremental_review: false   # the hub requests reviews within the 5/hour quota; no automatic review on every push
+    auto_incremental_review: false   # off: Flowline uses at most 3 of the 5 reviews/hour (docs/GITHUB_WORKFLOW.md); request @coderabbitai review after each fix push
     base_branches:
       - main
   path_filters:
@@ -69,9 +69,9 @@ reviews:
       - name: "Tests changed with code"
         mode: warning
         instructions: "If the PR changes production source code (not docs, config or comments only), it must also add or modify a test file. Warn otherwise."
-      - name: "e2e-army test for UI flows"
+      - name: "e2e test for UI flows"
         mode: warning
-        instructions: "If the PR changes a user-facing UI flow (routes, forms, navigation, checkout/auth screens), it should add or update a test file under e2e-army/. Warn only; never fail."
+        instructions: "If the PR changes a user-facing UI flow (routes, forms, navigation, checkout/auth screens), it should add or update a test file under e2e/. Warn only; never fail."
 knowledge_base:
   learnings:
     scope: local
