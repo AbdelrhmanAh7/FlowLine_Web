@@ -13,3 +13,7 @@ none needed a dismissal.
 
 Verification: `pnpm vitest run tests/unit/cb-pack-customer-follow-up.test.ts tests/unit/landing-header.test.ts tests/unit/ai-hub-wave-b.test.ts`.
 `e2e/phase3.spec.ts` runs in the Chromium CI legs (it needs the test stack).
+
+## e2e-army waiver
+
+`E2E: not needed`: these changes are test-only and internal. No product screen, API, or job behaviour changes, so there is no user-facing flow for an e2e-army test to cover. The waiver is also recorded in the commit message of the fix. Alert #4 (`scripts/`) is out of scope here and belongs to part B.
