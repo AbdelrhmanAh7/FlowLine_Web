@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getT } from "@/i18n/server";
-import { platformAdminOrNull } from "@/server/platform-access";
+import { platformAdminOrNull, type PlatformAdminContext } from "@/server/platform-access";
 import { CopyEditor } from "./copy-editor";
 
 export const dynamic = "force-dynamic";
