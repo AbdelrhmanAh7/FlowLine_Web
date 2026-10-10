@@ -20,7 +20,7 @@ outcome. It is the first half of a two-part story: the same company continues in
 Acceptance limits (#137, landing budget #96): each file is at most 6 MB (about 540 kbps for the full cut, so
 encode with a tight bitrate and check the result), and the WebVTT captions must match the burned-in text.
 
-Silent (no music) or royalty-free music only. Light palette from `src/design/tokens.json` (brand 500 `#7c6cff`).
+Silent (no music) or royalty-free music with no purchase or license fee ($0 spend, #137). Light palette from `src/design/tokens.json` (brand 500 `#7c6cff`).
 Fonts are the app's own: Inter and IBM Plex Sans Arabic (OFL).
 
 ## Persona
@@ -46,7 +46,7 @@ the real Lead Qualifier template uses, so the story and the recorded UI show the
 | 9 | 62.7-66.3 | Solution 5 | Real UI: Share a copy with the ops workspace (connections cleared). | Share a copy, workspaces |
 | 10 | 66.3-72.3 | Outcome | "Next Monday": the same five leads sort themselves into "Hot lead · call today" and "Nurture". | (result of 5-9) |
 | 11 | 72.3-78.3 | Outcome | "What changed for Nour": same check for every lead; big accounts on top; every decision has a record. | |
-| 12 | 78.3-83.3 | Call to action | Flowline wordmark, tagline, "Preview · free during the beta", "Start building — free" (= `landing.ctaStart`). | |
+| 12 | 78.3-83.3 | Call to action | Flowline wordmark, tagline, "Preview" badge and "Start building" button; no price or "free" wording (honesty rules below). | |
 | 13 | 83.3-88.8 | Hand-off to Mizano | "Ada's company says yes. The deal moves on to the books." A "Won" card travels from a Flowline tile to a Mizano tile and becomes "New customer · quote to prepare". Label: **"Vision · the Flowline × Mizano link is not built yet"**. | concept only, no UI |
 
 ## Short (about 19 s)

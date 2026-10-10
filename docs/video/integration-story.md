@@ -21,13 +21,16 @@ flowchart LR
 
 ## Integration points (what data passes)
 
-| # | Trigger | From → to | Data | Flowline side today | Mizano side today |
-|---|---|---|---|---|---|
-| 1 | Lead qualified and the deal is won | Flowline → Mizano | customer `{name, company, email, phone, taxId?}`; quote lines `{item, qty, unitPrice, taxRate}`; currency | Lead Qualifier template (`src/engine/templates.ts`), HTTP node (`src/integrations/http.ts`) | `POST /api/customers`, `POST /api/quotes`, `POST /api/quotes/:id/convert-to-invoice`; CRM `POST /api/crm/deals/:id/won`, `POST /api/crm/leads/:id/convert` |
-| 2 | Order confirmed | Flowline → Mizano | invoice lines `{sku, qty, price}`, customer id | Order Totals Digest (`templates.ts`), Order Packing List (`src/engine/local-scenarios.ts`) | `POST /api/invoices` |
-| 3 | Invoice due or overdue | Mizano → Flowline | `{asOf, currency, invoices[{number, customer, amount, dueDate, paid}]}` | Invoice Follow-up List (`local-scenarios.ts`) takes exactly this shape; run via `POST /api/v1/flows/{id}/runs` (API key `runs:write`, `Idempotency-Key`) or a webhook trigger (`src/app/api/hooks/[token]`) | `GET /api/invoices`, `GET /api/reports/receivables-aging` (polling; no outbound events yet) |
-| 4 | Payment received | Mizano → Flowline | `{invoiceNumber, customer, amount, currency, paidAt}` | any flow via webhook trigger | `GET /api/payments-received` (cursor polling) |
-| 5 | Supplier bill captured | Mizano → Flowline | `{vendor, billNumber, total, dueDate}` for an approval flow | Agents with ASK permission (human decision) | bills, bill scan page (`/purchases/bills/scan`) |
+Columns "Flowline primitive today" and "Mizano endpoint today" name only things that exist in the code now. The last
+column is what is **proposed and not built**: no row below works end to end yet.
+
+| # | Trigger | From → to | Data | Flowline primitive today | Mizano endpoint today | Proposed, not built |
+|---|---|---|---|---|---|---|
+| 1 | Lead qualified and the deal is won | Flowline → Mizano | customer `{name, company, email, phone, taxId?}`; quote lines `{item, qty, unitPrice, taxRate}`; currency | Lead Qualifier template (`src/engine/templates.ts`), HTTP node (`src/integrations/http.ts`) | `POST /api/customers`, `POST /api/quotes`, `POST /api/quotes/:id/convert-to-invoice`; CRM `POST /api/crm/deals/:id/won`, `POST /api/crm/leads/:id/convert` | Mizano provider and "Deal won → Mizano quote" template; Mizano service auth |
+| 2 | Order confirmed | Flowline → Mizano | invoice lines `{sku, qty, price}`, customer id | Order Totals Digest (`templates.ts`), Order Packing List (`src/engine/local-scenarios.ts`) | `POST /api/invoices` | Mizano "create invoice" step; Mizano service auth |
+| 3 | Invoice due or overdue | Mizano → Flowline | `{asOf, currency, invoices[{number, customer, amount, dueDate, paid}]}` | Invoice Follow-up List (`local-scenarios.ts`) takes exactly this shape; run via `POST /api/v1/flows/{id}/runs` (API key `runs:write`, `Idempotency-Key`) or a webhook trigger (`src/app/api/hooks/[token]`) | `GET /api/invoices`, `GET /api/reports/receivables-aging` (polling only) | Mizano outbound `invoice.overdue` event or a scheduled poller |
+| 4 | Payment received | Mizano → Flowline | `{invoiceNumber, customer, amount, currency, paidAt}` | any flow via webhook trigger | `GET /api/payments-received` (cursor polling) | Mizano outbound `payment.received` event |
+| 5 | Supplier bill captured | Mizano → Flowline | `{vendor, billNumber, total, dueDate}` for an approval flow | Agents with ASK permission (human decision) | bills, bill scan page (`/purchases/bills/scan`) | Mizano outbound event and an approval flow template |
 
 ## Rules both sides must keep
 
