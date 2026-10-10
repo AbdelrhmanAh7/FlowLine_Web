@@ -252,7 +252,7 @@ test("billing sandbox: choose a test plan → fake checkout → verified webhook
   await expect(page.getByText("Test mode")).toBeVisible();
   await expect(page.getByText(/configured price/).first()).toBeVisible();
   await page.getByRole("listitem").filter({ hasText: "Test Starter" }).getByRole("button", { name: "Choose" }).click();
-  await expect(page).toHaveURL(new RegExp(`${FAKE.replace(/[.:/]/g, "\\$&")}/stripe/checkout/`));
+  await expect(page).toHaveURL(new RegExp(`${FAKE.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}/stripe/checkout/`));
   await page.getByRole("button", { name: "Pay (test card)" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/settings\\?billing=success`));
   await expect(page.getByText("Test Starter").first()).toBeVisible();
