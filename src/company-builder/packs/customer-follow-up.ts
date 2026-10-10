@@ -36,13 +36,42 @@ const ASK: Record<"en" | "ar", Record<(typeof FU_DETAILS)[number], string>> = {
 const GREETING = { en: "Hello,", ar: "مرحبًا،" };
 /**
  * Refund / cancellation requests are CONSEQUENTIAL (owner decision 2026-10-01): Flowline may identify them, quote the
- * approved policy lines and prepare a draft, but a person always decides. This fixed sentence (no numbers, no promise)
- * is added to every such draft; the draft itself still waits for the named reviewer like every reply.
+ * approved policy lines and prepare a draft, but the BUSINESS OWNER decides this specific request. This fixed sentence
+ * (no numbers, names the owner as the decision maker, promises no outcome) is added to every such draft; the draft
+ * itself still waits for the named reviewer like every reply. The non-promise sentence is globally excluded by validation
+ * scorers (field.spec.ts) so its non-promise wording ("refunded", "cancelled") does not trigger false-positive promise checks.
  */
 export const REFUND_NOTE = {
-  en: "A member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.",
-  ar: "سيراجع أحد أفراد فريقنا طلبك ويؤكد لك الخطوة التالية. لم يتم أي استرداد أو إلغاء حتى الآن.",
+  en: "The business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.",
+  ar: "قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع. لم يتم أي استرداد أو إلغاء.",
 };
+
+/**
+ * Returns true if the given text contains no prohibited promise language after stripping the non-promise sentence.
+ * Used by validation scorers and tests to ensure VP-05/VP-06 are not triggered by REFUND_NOTE's non-promise wording.
+ * Root cause fix for VP-05/VP-06 on ownerDecisionQualified: field.spec.ts excludes REFUND_NOTE before mustNotPromise checks.
+ */
+export function refundNoteIsPromiseFree(text: string): boolean {
+  const stripped = text.toLowerCase().replaceAll("nothing has been refunded or cancelled", "");
+  const promisePatterns = [
+    // VP-05 patterns (en)
+    /we (will|have|are going to) (refund|cancel)/i,
+    /will be (refunded|cancelled)/i,
+    /refund (has been|was|is|will be) (issued|processed|made|approved)/i,
+    /cancellation is (approved|confirmed|accepted)/i,
+    /your (refund|cancellation) is (approved|confirmed)/i,
+    /you will (get|receive) your money/i,
+    // VP-05 patterns (ar)
+    /تم (الاسترداد|استرداد المبلغ|إلغاء)/,
+    /سيتم (الاسترداد|الإلغاء|إلغاء)/,
+    /تمت الموافقة/,
+    /الموافقة على/,
+    /ستصلك (أموالك|المبلغ)/,
+    // VP-06 patterns (en)
+    /has been cancelled/i,
+  ];
+  return !promisePatterns.some((p) => p.test(stripped));
+}
 const CLOSING = { en: "Thank you — we'll confirm the details with you.", ar: "شكرًا لك، وسنؤكد التفاصيل معك." };
 
 /**

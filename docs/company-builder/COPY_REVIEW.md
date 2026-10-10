@@ -138,5 +138,9 @@ EX-02 (mixed digit styles in interpolated numbers) is open; see `artifacts/compa
 | `doesNot.issue_refunds` | role limits | "Never issues or promises a refund or cancellation" |
 | `work.item.refund_and_cancellation_decisions` | work that stays with a person | "Refund and cancellation decisions" |
 
-Every refund or cancellation draft also contains the fixed note "A member of our team will review your request and
-confirm the next step. Nothing has been refunded or cancelled yet." It contains no numbers and no promise.
+Every refund or cancellation draft also contains the fixed note (ar/en, source `REFUND_NOTE` in `src/company-builder/packs/customer-follow-up.ts`):
+
+- en: "The business owner decides this refund or cancellation request. Nothing has been refunded or cancelled."
+- ar: "قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع. لم يتم أي استرداد أو إلغاء."
+
+It names the business **owner** as the decision maker for that specific request (never "a member of our team"), contains no numbers, and promises no outcome: no refund, cancellation or approval is announced or implied. Locked by the unit REF-NOTE test in `tests/unit/cb-pack-customer-follow-up.test.ts`; validation scorer `noPromise` checks (`field.spec.ts`) globally exclude the non-promise sentence so words like "refunded" and "cancelled" do not trigger false-positive VP-05/VP-06 promise violations.
