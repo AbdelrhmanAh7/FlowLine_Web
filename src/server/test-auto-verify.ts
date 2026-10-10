@@ -3,7 +3,8 @@
  * cloud, milestone runs) can run sign-up -> sign-in -> create end to end without reading the mail outbox.
  *
  * Two opt-ins, both honoured ONLY when FLOWLINE_ENV=test (anything else, production, staging and beta included, ignores
- * them and logs one configuration error, so the switch cannot be turned on there):
+ * them, so the switch cannot be turned on there): a stray FLOWLINE_TEST_AUTO_VERIFY var logs ONE warning at the first
+ * sign-up attempt, the cookie is ignored silently.
  *   - FLOWLINE_TEST_AUTO_VERIFY=1: server-wide, for an external tester that cannot set cookies (exactly "1", nothing else);
  *   - the `fl_test_auto_verify=1` cookie: for one browser context only, like `fl_test_beta_mode` (src/server/beta.ts), so
  *     the shared E2E stack can exercise the switch without changing every other test's sign-up.
