@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { apiBase, seeded, freshEmail } from "../lib.ts";
-import { Http, PASSWORD, SEED_DOMAIN, actor, addMember, anonymous, awaitMail, chain, newFlow, outbox, signIn, signUpVerified, startRun, tokenOf, uuidRe } from "./_helpers.ts";
+import { Http, PASSWORD, SEED_DOMAIN, actor, addMember, anonymous, awaitMail, chain, newFlow, outbox, signIn, signUpVerified, startRun, tokenOf, uuidRe, type Verb } from "./_helpers.ts";
 
 const mailOf = (name: string) => freshEmail(name, SEED_DOMAIN);
 
@@ -268,14 +268,14 @@ test("[fl-roles.1] a viewer can look but not change: every write answers 403 wit
   expect((await viewer.http.get(`${w}/flows`)).status).toBe(200);
   expect((await viewer.http.get(`${w}/members`)).status).toBe(200);
   expect((await viewer.http.get(`/api/flows/${flow.id}`)).json.role).toBe("viewer");
-  const denied: [string, string, unknown?][] = [
+  const denied: [Verb, string, unknown?][] = [
     ["post", `${w}/flows`, { name: "nope" }], ["put", `/api/flows/${flow.id}`, { baseRevision: flow.revision, name: "nope" }], ["del", `/api/flows/${flow.id}`], ["post", `/api/flows/${flow.id}/runs`, {}],
     ["post", `/api/flows/${flow.id}/publish`], ["patch", w, { name: "nope" }], ["get", `${w}/api-keys`], ["post", `${w}/invites`, { email: mailOf("x-invite"), role: "viewer" }], ["get", `${w}/invites`],
     ["get", `${w}/audit`], ["post", `${w}/ai/connections`, { provider: "openai", apiKey: "k" }], ["post", `${w}/knowledge`, { name: "n", text: "t" }], ["post", `${w}/agents`, {}],
     ["get", `${w}/billing`], ["post", `${w}/billing/checkout`, { planId: "test_pro" }], ["post", `${w}/connections`, { provider: "slack", fields: {} }],
   ];
   for (const [verb, path, body] of denied) {
-    const r = await (viewer.http as any)[verb](path, body === undefined ? {} : { json: body });
+    const r = await viewer.http[verb](path, body === undefined ? {} : { json: body });
     expect(r.status, `${verb.toUpperCase()} ${path}`).toBe(403);
     expect(r.json.error.code).toBe("FORBIDDEN");
   }
@@ -291,8 +291,8 @@ test("[fl-roles.2] an editor builds and runs but cannot manage members, keys, bi
   expect((await startRun(editor.http, flow.id)).status).toBe(202);
   expect((await editor.http.get(`${w}/billing`)).status).toBe(200);
   for (const [verb, path, body] of [["patch", w, { name: "nope" }], ["get", `${w}/api-keys`], ["get", `${w}/audit`], ["get", `${w}/invites`], ["post", `${w}/invites`, { email: mailOf("y-invite"), role: "viewer" }],
-    ["post", `${w}/billing/checkout`, { planId: "test_pro" }], ["post", `${w}/ai/connections`, { provider: "openai", apiKey: "k" }]] as [string, string, unknown?][]) {
-    const r = await (editor.http as any)[verb](path, body === undefined ? {} : { json: body });
+    ["post", `${w}/billing/checkout`, { planId: "test_pro" }], ["post", `${w}/ai/connections`, { provider: "openai", apiKey: "k" }]] as [Verb, string, unknown?][]) {
+    const r = await editor.http[verb](path, body === undefined ? {} : { json: body });
     expect(r.status, `${verb.toUpperCase()} ${path}`).toBe(403);
   }
 });
@@ -385,13 +385,13 @@ test("[fl-audit-log.1] security-relevant changes are recorded with who did them,
   await owner.http.patch(`${w}/members/${viewer.a.userId}`, { json: { role: "viewer" } });
   const log = await owner.http.get(`${w}/audit`);
   expect(log.status).toBe(200);
-  const events = log.json.events as { action: string; actorLabel: string; targetType: string; data: unknown }[];
+  const events = log.json.events as { id: number; action: string; actorLabel: string; targetType: string; data: unknown }[];
   const actions = events.map((e) => e.action);
   expect(actions).toEqual(expect.arrayContaining(["apikey.created", "member.invited", "member.joined", "member.role_changed"]));
   expect(events.find((e) => e.action === "apikey.created")).toMatchObject({ actorLabel: owner.a.email, targetType: "api_key" });
   expect(log.text).not.toContain(key.json.key);
   expect((await viewer.http.get(`${w}/audit`)).status).toBe(403);
-  const ids = events.map((e: any) => e.id as number);
+  const ids = events.map((e) => e.id);
   expect([...ids].sort((x, y) => y - x)).toEqual(ids);
   if (log.json.nextBefore) expect((await owner.http.get(`${w}/audit?before=${log.json.nextBefore}`)).status).toBe(200);
 });

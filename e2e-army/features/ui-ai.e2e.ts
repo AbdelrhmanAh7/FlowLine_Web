@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { needsModel, seeded } from "../lib.ts";
-import { E, N, actor, connect, connectAi, freshWorkspace, newFlow, startRun, waitRun, type Graph } from "./_helpers.ts";
+import { E, N, actor, connect, connectAi, freshWorkspace, newFlow, startRun, waitRun, type Graph, type Json } from "./_helpers.ts";
 
 const SESSION = { session: "fl-user" } as const;
 
@@ -32,7 +32,7 @@ test("[fl-knowledge.1] the owner adds a text source in Knowledge, waits for inde
   await app.open(`/w/${ws.slug}/knowledge`);
   await expect(screen.getByText("No knowledge yet")).toBeVisible();
   await agent.act("add the text source titled {title} with the text {text}", { params: { title, text: "Refund policy: customers may request a refund within 30 days of purchase." } });
-  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/knowledge`)).json.sources as any[]).find((s) => s.name === title)?.status, { timeout: 40_000, interval: 500 }).toBe("ready");
+  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/knowledge`)).json.sources as Json[]).find((s) => s.name === title)?.status, { timeout: 40_000, interval: 500 }).toBe("ready");
   await expect(screen.getByTestId(`source-${title}`)).toBeVisible();
   await agent.act("search the knowledge for {q}", { params: { q: "refund" } });
   await expect(screen.getByText("30 days", { exact: false }).first()).toBeVisible();
@@ -46,13 +46,13 @@ test("[fl-agents.1] the owner creates an agent in the UI and chats with it; the 
   await connectAi(http, ws.id, "ai-3");
   const title = `Returns FAQ ${seeded("ai-3-title", 4)}`;
   const src = (await http.post(`/api/workspaces/${ws.id}/knowledge`, { json: { name: title, text: "Returns: items can be sent back within 14 days in the original packaging." } })).json.source;
-  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/knowledge`)).json.sources as any[]).find((s) => s.id === src.id)?.status, { timeout: 40_000, interval: 500 }).toBe("ready");
+  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/knowledge`)).json.sources as Json[]).find((s) => s.id === src.id)?.status, { timeout: 40_000, interval: 500 }).toBe("ready");
   await app.open(`/w/${ws.slug}/agents`);
   await expect(screen.getByText("No agents yet")).toBeVisible();
   const name = `Returns bot ${seeded("ai-3-name", 4)}`;
   await agent.act("create a new agent named {name} with the instructions {text} and save it", { params: { name, text: "Answer questions about returns using the knowledge." } });
-  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/agents`)).json.agents as any[]).find((a) => a.name === name)?.version, { timeout: 30_000, interval: 500 }).toBe(1);
-  const created = ((await http.get(`/api/workspaces/${ws.id}/agents`)).json.agents as any[]).find((a) => a.name === name);
+  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/agents`)).json.agents as Json[]).find((a) => a.name === name)?.version, { timeout: 30_000, interval: 500 }).toBe(1);
+  const created = ((await http.get(`/api/workspaces/${ws.id}/agents`)).json.agents as Json[]).find((a) => a.name === name);
   expect(created.tools).toEqual([expect.objectContaining({ tool: "knowledge_search", permission: "allow" })]);
   // Granting the agent this knowledge source is a new immutable version (the pick list itself is exercised at API level in fl-agents.2/.3).
   const v2 = await http.put(`/api/agents/${created.id}`, { json: { name, instructions: "Answer questions about returns using the knowledge.", tools: [{ tool: "knowledge_search", permission: "allow" }], knowledgeSourceIds: [src.id] } });

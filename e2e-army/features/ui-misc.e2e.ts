@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { apiBase, needsModel, freshEmail } from "../lib.ts";
-import { Http, PASSWORD, SEED_DOMAIN, anonymous, awaitMail } from "./_helpers.ts";
+import { Http, PASSWORD, SEED_DOMAIN, anonymous, awaitMail, outbox } from "./_helpers.ts";
 
 const cookie = (name: string, value: string) => [{ url: apiBase(), name, value }];
 
@@ -70,13 +70,15 @@ test("[fl-email-flows.6] the resend-verification page accepts a request for an u
   const up = await new Http().post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Resend" } });
   expect(up.status).toBe(200);
   const first = await awaitMail(anonymous(), email, "verify");
+  const before = (await outbox(anonymous(), email, "verify")).length;
   await browser.setCookies(cookie("fl_locale", "en"));
   await app.open("/resend-verification");
   await expect(screen.getByRole("heading", "Resend verification")).toBeVisible();
   await agent.act("request a new verification link for the email {email}", { params: { email } });
   await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
   expect(first.link).toMatch(/verify-email/);
-  // No second-mail assertion on purpose: requestToken (src/server/email/flows.ts:104) sends nothing within 60 s of the previous
-  // token, and a test may not sleep, so a resend right after sign-up cannot produce a second mail. The page's answer is the
-  // same for every address by design (no enumeration); the link of the first mail is what the user would click.
+  // requestToken (src/server/email/flows.ts:104) sends nothing within 60 s of the previous token, and a test may not sleep, so a second
+  // mail right after sign-up cannot exist. The neutral answer is only shown after requestToken returned, so the outbox is final now:
+  // the resend was accepted without a new mail, and the first mail's link is still the one the user would click.
+  expect((await outbox(anonymous(), email, "verify")).length).toBe(before);
 });

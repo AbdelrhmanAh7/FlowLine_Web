@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { seeded } from "../lib.ts";
-import { Http, actor, addMember, anonymous, chain, clientOf, createFlow, E, N, newFlow, startRun, uuidRe, waitRun, type Graph } from "./_helpers.ts";
+import { Http, actor, addMember, anonymous, chain, clientOf, createFlow, E, N, newFlow, startRun, uuidRe, waitRun, type Graph, type Json } from "./_helpers.ts";
 
 const codes = (issues: { code: string }[]) => issues.map((i) => i.code);
 
@@ -27,7 +27,7 @@ test("[fl-flows-api.1] a flow is created, listed with its summary, renamed, save
   expect(renamed.json.version).toBeNull();
   const saved = await http.put(`/api/flows/${f.id}`, { json: { baseRevision: renamed.json.flow.revision, graph: chain({ n: 1 }, "$") } });
   expect(saved.json.issues).toEqual([]);
-  const row = ((await http.get(`${w}/flows`)).json.flows as any[]).find((x) => x.id === f.id);
+  const row = ((await http.get(`${w}/flows`)).json.flows as Json[]).find((x) => x.id === f.id);
   expect(row).toMatchObject({ name: `${name} v2`, nodeCount: 3, trigger: "trigger.manual", hasTrigger: true, publishedVersion: null, runCount: 0, lastRunStatus: null });
   expect((await http.post(`${w}/flows`, { json: { name: "" } })).status).toBe(400);
   expect((await http.post(`${w}/flows`, { json: { name: "n".repeat(81) } })).status).toBe(400);
@@ -35,7 +35,7 @@ test("[fl-flows-api.1] a flow is created, listed with its summary, renamed, save
   expect((await http.get("/api/flows/not-a-uuid")).status).toBe(404);
   expect((await http.del(`/api/flows/${f.id}`)).json).toEqual({ ok: true });
   expect((await http.get(`/api/flows/${f.id}`)).status).toBe(404);
-  expect(((await http.get(`${w}/flows`)).json.flows as any[]).some((x) => x.id === f.id)).toBe(false);
+  expect(((await http.get(`${w}/flows`)).json.flows as Json[]).some((x) => x.id === f.id)).toBe(false);
   expect((await startRun(http, f.id)).status).toBe(404);
 });
 
@@ -88,7 +88,7 @@ test("[fl-flows-list.3] the flow list and the dashboard numbers summarise each f
     await waitRun(http, run.json.run.id);
   }
   expect((await http.post(`/api/flows/${good.id}/publish`)).status).toBe(201);
-  const rows = (await http.get(`${w}/flows`)).json.flows as any[];
+  const rows = (await http.get(`${w}/flows`)).json.flows as Json[];
   expect(rows).toHaveLength(3);
   const row = (id: string) => rows.find((r) => r.id === id);
   expect(row(good.id)).toMatchObject({ runCount: 2, lastRunStatus: "succeeded", successRate: 1, publishedVersion: 1, nodeCount: 3, trigger: "trigger.manual" });
@@ -177,7 +177,7 @@ test("[fl-flow-share.1] sharing copies a flow into another workspace without any
   const copy = (await owner.http.get(`/api/flows/${shared.json.flow.id}`)).json;
   expect(copy.flow.name).toBe(`${f.name} (shared copy)`);
   expect(copy.flow.workspaceId).toBe(other.id);
-  expect(copy.flow.graph.nodes.find((n: any) => n.id === "send").data.config.connectionId).toBe("");
+  expect(copy.flow.graph.nodes.find((n: Json) => n.id === "send").data.config.connectionId).toBe("");
   expect(JSON.stringify(copy.flow.graph)).not.toContain(ghostConnection);
   expect((await stranger.http.post(`/api/flows/${f.id}/share`, { json: { targetWorkspaceId: other.id } })).status).toBe(404);
   expect((await owner.http.post(`/api/flows/${f.id}/share`, { json: { targetWorkspaceId: stranger.a.workspaceId } })).status).toBe(404);
@@ -197,7 +197,7 @@ test("[fl-flow-publish.1] publishing pins an immutable version; republishing add
   const v1 = p1.json.version as number;
   const info = (await http.get(`/api/flows/${f.id}/publish`)).json;
   expect(info.publishedVersionId).toBe(p1.json.versionId);
-  const row = ((await http.get(`/api/workspaces/${a.workspaceId}/flows`)).json.flows as any[]).find((x) => x.id === f.id);
+  const row = ((await http.get(`/api/workspaces/${a.workspaceId}/flows`)).json.flows as Json[]).find((x) => x.id === f.id);
   expect(row.publishedVersion).toBe(v1);
   const p2 = await http.post(`/api/flows/${f.id}/publish`);
   expect(p2.json.version).toBe(v1 + 1);

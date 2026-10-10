@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { needsModel, seeded } from "../lib.ts";
-import { actor, freshWorkspace, fakeOrigin } from "./_helpers.ts";
+import { actor, freshWorkspace, fakeOrigin, type Json } from "./_helpers.ts";
 
 const SESSION = { session: "fl-user" } as const;
 
@@ -30,7 +30,7 @@ test("[fl-oauth-apps.2] the owner registers the workspace's own GitHub OAuth app
   await app.open(`/w/${ws.slug}/settings?tab=oauthApps`);
   await expect(screen.getByTestId("oauth-app-github")).toBeVisible();
   await agent.act("set up the GitHub OAuth app with the client ID {id} and the client secret {secret} and save it", { params: { id: "army-gh-client", secret } });
-  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/oauth-apps`)).json.apps as any[]).map((a) => a.clientId), { timeout: 30_000, interval: 500 }).toEqual(["army-gh-client"]);
+  await expect.poll(async () => ((await http.get(`/api/workspaces/${ws.id}/oauth-apps`)).json.apps as Json[]).map((a) => a.clientId), { timeout: 30_000, interval: 500 }).toEqual(["army-gh-client"]);
   await agent.assert("the GitHub OAuth app shows the client ID army-gh-client as configured and the secret is not displayed");
   await expect(screen.getByText(secret)).toBeHidden();
   expect((await http.get(`/api/workspaces/${ws.id}/oauth-apps`)).text).not.toContain(secret);

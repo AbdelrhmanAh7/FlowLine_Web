@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { apiBase, seeded } from "../lib.ts";
-import { Http, actor, addMember, anonymous, fakeOrigin, uuidRe, type Actor } from "./_helpers.ts";
+import { Http, actor, addMember, anonymous, fakeOrigin, uuidRe, type Actor, type Json } from "./_helpers.ts";
 
 async function freshWorkspace(http: Http, label: string) {
   return (await http.post("/api/workspaces", { json: { name: `Plat ${seeded(label, 5)}` } })).json.workspace as { id: string; slug: string; name: string };
@@ -20,8 +20,8 @@ test("[fl-integrations.2] the catalog lists every real provider with its actions
   const ids = (cat.providers as { id: string }[]).map((p) => p.id);
   expect(ids).toEqual(["google_sheets", "gmail", "slack", "hubspot", "zendesk", "airtable", "snowflake", "github", "stripe", "notion", "postgres", "linear"]);
   expect(cat.count).toBe(12);
-  expect(cat.actionCount).toBe((cat.providers as any[]).reduce((n, p) => n + p.actions.length, 0));
-  for (const p of cat.providers as any[]) {
+  expect(cat.actionCount).toBe((cat.providers as Json[]).reduce((n, p) => n + p.actions.length, 0));
+  for (const p of cat.providers as Json[]) {
     expect(p.actions.length, p.id).toBeGreaterThan(0);
     expect(["oauth2", "api_key", "basic", "connection_string"]).toContain(p.authType);
     expect(p.verification, p.id).toMatchObject({ adapter: true });
@@ -33,13 +33,13 @@ test("[fl-integrations.2] the catalog lists every real provider with its actions
     if (p.authType === "oauth2") expect(typeof p.oauthConfigured).toBe("boolean");
     else expect(p.oauthConfigured).toBeNull();
   }
-  const by = (id: string) => (cat.providers as any[]).find((p) => p.id === id);
+  const by = (id: string) => (cat.providers as Json[]).find((p) => p.id === id);
   expect(["google_sheets", "slack"].map((id) => by(id).oauthConfigured)).toEqual([true, true]);
   expect(by("github").oauthConfigured).toBeNull();
-  expect(by("slack").actions.map((x: any) => x.id)).toEqual(["slack.post_message", "slack.list_channels"]);
+  expect(by("slack").actions.map((x: Json) => x.id)).toEqual(["slack.post_message", "slack.list_channels"]);
   expect(by("stripe").connectFields.length).toBeGreaterThan(0);
-  expect(by("stripe").connectFields.some((f: any) => f.secret)).toBe(true);
-  expect(by("gmail").actions.find((x: any) => x.id === "gmail.send").sensitive).toBe(true);
+  expect(by("stripe").connectFields.some((f: Json) => f.secret)).toBe(true);
+  expect(by("gmail").actions.find((x: Json) => x.id === "gmail.send").sensitive).toBe(true);
   expect(typeof cat.runtime.codeSandbox.available).toBe("boolean");
   expect((await http.get(`/api/integrations/catalog?workspaceId=${stranger.a.workspaceId}`)).status).toBe(404);
   expect((await anonymous().get("/api/integrations/catalog")).status).toBe(401);
@@ -63,7 +63,7 @@ test("[fl-connections.1] a pasted-token connection is verified with the provider
   expect(made.text).not.toContain("test-token");
   const list = await owner.http.get(`${w}/connections`);
   expect(list.text).not.toContain("test-token");
-  expect(list.json.connections.find((c: any) => c.id === conn.id)).toMatchObject({ label, flowCount: 0 });
+  expect(list.json.connections.find((c: Json) => c.id === conn.id)).toMatchObject({ label, flowCount: 0 });
   expect((await owner.http.get(`/api/connections/${conn.id}`)).json.connection.id).toBe(conn.id);
   expect((await owner.http.post(`${w}/connections`, { json: { provider: "slack", label: "bad", fields: { token: "not-a-valid-token" } } })).json.error.code).toBe("CONNECTION_REJECTED");
   expect((await owner.http.post(`${w}/connections`, { json: { provider: "stripe", label: "bad", fields: {} } })).json.error.code).toBe("VALIDATION");
@@ -112,7 +112,7 @@ test("[fl-connections.2] OAuth connects an app through the provider's consent, i
   expect(done.status).toBe(307);
   expect(done.headers.get("location")).toMatch(new RegExp(`/w/${ws.slug}/integrations\\?oauth=connected&connection=[0-9a-f-]{36}$`));
   expect(done.headers.get("referrer-policy")).toBe("no-referrer");
-  const conns = (await owner.http.get(`${w}/connections`)).json.connections as any[];
+  const conns = (await owner.http.get(`${w}/connections`)).json.connections as Json[];
   expect(conns).toHaveLength(1);
   expect(conns[0]).toMatchObject({ provider: "github", authType: "oauth2", status: "active", oauthApp: { source: "platform", clientId: "fake-github-client-id" } });
   const replay = await owner.http.get(back.pathname + back.search);
@@ -137,7 +137,7 @@ test("[fl-oauth-apps.1] an owner can bring the workspace's own OAuth app: write-
   const editor = await addMember(asOwner(owner, ws), "plat-oapp-editor", "editor");
   const empty = (await owner.http.get(`${w}/oauth-apps`)).json;
   expect(empty.apps).toEqual([]);
-  expect(empty.platform.map((p: any) => p.family).sort()).toEqual(["github", "google", "slack"]);
+  expect(empty.platform.map((p: Json) => p.family).sort()).toEqual(["github", "google", "slack"]);
   const secret = `gh-secret-${seeded("oapp-secret", 12)}`;
   const put = await owner.http.put(`${w}/oauth-apps/github`, { json: { clientId: "army-github-client", secret, expectedRevision: 0 } });
   expect(put.status).toBe(200);
@@ -172,7 +172,7 @@ test("[fl-billing-plan.2] a plan is bought through checkout, applied by the veri
   const w = `/api/workspaces/${ws.id}`;
   const before = (await owner.http.get(`${w}/billing`)).json;
   expect(before).toMatchObject({ configured: true, planInForce: "test_free", account: null });
-  expect(before.plans.map((p: any) => p.id)).toEqual(["test_free", "test_starter", "test_pro"]);
+  expect(before.plans.map((p: Json) => p.id)).toEqual(["test_free", "test_starter", "test_pro"]);
   expect(before.entitlements).toMatchObject({ maxMonthlyExecutions: 100 });
   expect((await owner.http.post(`${w}/billing/checkout`, { json: { planId: "nope" } })).json.error.code).toBe("UNKNOWN_PLAN");
   expect((await owner.http.post(`${w}/billing/checkout`, { json: { planId: "test_free" } })).json.error.message).toMatch(/free plan/);

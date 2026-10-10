@@ -18,7 +18,12 @@ export const PASSWORD = "Army-Passw0rd!";
 export const SEED_DOMAIN = "flowline-e2e.test";
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export interface R<T = any> { status: number; ok: boolean; headers: Headers; text: string; json: T }
+// The tests read JSON from the API under test and assert its shape with `expect`; there is no schema to type it against, so this is the
+// one place in e2e-army where an untyped value is allowed.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Json = any;
+export type Verb = "get" | "post" | "put" | "patch" | "del";
+export interface R<T = Json> { status: number; ok: boolean; headers: Headers; text: string; json: T }
 export interface CallInit { json?: unknown; body?: BodyInit; headers?: Record<string, string>; redirect?: RequestRedirect; noCookies?: boolean }
 
 export class Http {
@@ -50,7 +55,7 @@ export class Http {
       if (gone) this.jar.delete(name); else this.jar.set(name, value);
     }
     const text = await res.text();
-    let json: any = null;
+    let json: Json = null;
     try { json = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
     return { status: res.status, ok: res.ok, headers: res.headers, text, json };
   }
@@ -137,7 +142,7 @@ export async function actor(name: string): Promise<{ a: Actor; http: Http }> {
   if (!http) { await signUpVerified(email, `Army ${name}`); http = await signIn(email); }
   const me = (await http.get("/api/me")).json;
   const wsName = `Army ${seeded(name, 4)}`;
-  let ws = (me.workspaces as any[])[0];
+  let ws = (me.workspaces as Json[])[0];
   if (!ws) {
     const created = await http.post("/api/workspaces", { json: { name: wsName } });
     if (created.status !== 201) throw new Error(`workspace ${created.status}: ${created.text.slice(0, 200)}`);
@@ -227,8 +232,8 @@ export async function startRun(h: Http, flowId: string, input?: unknown, clientR
 }
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
 /** Polls GET /api/runs/:id until the run reaches one of `until` (default: any terminal status) and returns the run detail. */
-export async function waitRun(h: Http, runId: string, until: string[] | "terminal" = "terminal", timeout = 60_000): Promise<any> {
-  let last: any = null;
+export async function waitRun(h: Http, runId: string, until: string[] | "terminal" = "terminal", timeout = 60_000): Promise<Json> {
+  let last: Json = null;
   const want = until === "terminal" ? TERMINAL : new Set(until);
   await expect
     .poll(async () => { last = (await h.get(`/api/runs/${runId}`)).json?.run; return want.has(last?.status ?? "none"); }, { timeout, interval: 500, message: `run ${runId} never reached ${until === "terminal" ? "a terminal status" : until.join("/")}` })

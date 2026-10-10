@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { needsModel, seeded } from "../lib.ts";
-import { E, N, actor, chain, connectAi, freshWorkspace, newFlow, createFlow, type Graph } from "./_helpers.ts";
+import { E, N, actor, chain, connectAi, freshWorkspace, newFlow, createFlow, type Graph, type Json } from "./_helpers.ts";
 
 const SESSION = { session: "fl-user" } as const;
 
@@ -20,7 +20,7 @@ test("[fl-builder.1] adding a trigger on an empty canvas places the node and the
   await expect(screen.getByTestId("save-status")).toHaveAttribute("data-status", "saved", { timeout: 20_000 });
   await agent.assert("a manual trigger node is shown on the flow canvas and the flow is saved");
   const saved = (await http.get(`/api/flows/${flow.id}`)).json.flow;
-  expect(saved.graph.nodes.map((n: any) => n.type)).toEqual(["trigger.manual"]);
+  expect(saved.graph.nodes.map((n: Json) => n.type)).toEqual(["trigger.manual"]);
   expect(saved.revision).toBeGreaterThan(flow.revision);
 });
 

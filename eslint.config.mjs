@@ -27,11 +27,6 @@ const config = [
       ],
     },
   },
-  {
-    // e2e-army (tester-army/e2e): the tests read untyped JSON from the API under test, so `any` is deliberate there.
-    files: ["e2e-army/**/*.ts"],
-    rules: { "@typescript-eslint/no-explicit-any": "off" },
-  },
   { ignores: [".next/**", ".next-test/**", ".next-test-*/**", "node_modules/**", "artifacts/**", "playwright-report/**", "test-results/**", "drizzle/**", "next-env.d.ts", ".claude/**"] },
 ];
 

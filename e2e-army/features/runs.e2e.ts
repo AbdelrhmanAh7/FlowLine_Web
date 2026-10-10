@@ -4,14 +4,14 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { seeded } from "../lib.ts";
-import { Http, N, E, actor, anonymous, chain, connect, createFlow, fakeOrigin, newFlow, startRun, waitRun, type Graph } from "./_helpers.ts";
+import { Http, N, E, actor, anonymous, chain, connect, createFlow, fakeOrigin, newFlow, startRun, waitRun, type Graph, type Json } from "./_helpers.ts";
 
 const finish = async (http: Http, flowId: string, input?: unknown) => {
   const started = await startRun(http, flowId, input);
   if (started.status !== 202) throw new Error(`run not accepted: ${started.status} ${started.text.slice(0, 300)}`);
   return waitRun(http, started.json.run.id);
 };
-const stepOf = (run: any, id: string) => run.steps.find((s: any) => s.nodeId === id);
+const stepOf = (run: Json, id: string) => run.steps.find((s: Json) => s.nodeId === id);
 
 // ── fl-run-execution ─────────────────────────────────────────────────────────────────────────────────────────────────
 test("[fl-run-execution.1] a queued run is executed by the worker: steps in order, the untaken branch skipped, the result saved", { tags: ["feat:fl-run-execution", "shard:runs", "lvl:job"] }, async () => {
@@ -25,7 +25,7 @@ test("[fl-run-execution.1] a queued run is executed by the worker: steps in orde
   const run = await waitRun(http, started.json.run.id);
   expect(run.status).toBe("succeeded");
   expect(run.output).toEqual({ hot_lead: { name: "Ada Lovelace", domain: "analytical.io", tier: "hot" } });
-  expect(run.steps.map((s: any) => [s.nodeId, s.status])).toEqual([["trigger", "succeeded"], ["normalise", "succeeded"], ["is-hot", "succeeded"], ["hot", "succeeded"], ["nurture", "skipped"]]);
+  expect(run.steps.map((s: Json) => [s.nodeId, s.status])).toEqual([["trigger", "succeeded"], ["normalise", "succeeded"], ["is-hot", "succeeded"], ["hot", "succeeded"], ["nurture", "skipped"]]);
   expect(stepOf(run, "normalise").output).toEqual({ name: "Ada Lovelace", domain: "analytical.io", size: 120 });
   expect(stepOf(run, "nurture").skipReason).toMatch(/took the true branch/);
   expect(run.finishedAt).not.toBeNull();
@@ -231,18 +231,18 @@ test("[fl-run-history.2] the run list filters by status, flow and text, pages wi
   const all = await list();
   expect(all.runs).toHaveLength(4);
   expect(all.runs[0].id).toBe(badRun.id);
-  expect(all.runs.map((r: any) => r.number)).toEqual([...all.runs.map((r: any) => r.number)].sort((x: number, y: number) => y - x));
-  expect((await list("?status=failed")).runs.map((r: any) => r.id)).toEqual([badRun.id]);
+  expect(all.runs.map((r: Json) => r.number)).toEqual([...all.runs.map((r: Json) => r.number)].sort((x: number, y: number) => y - x));
+  expect((await list("?status=failed")).runs.map((r: Json) => r.id)).toEqual([badRun.id]);
   expect((await list("?status=succeeded")).runs).toHaveLength(3);
   expect((await list(`?flowId=${ok.id}`)).runs).toHaveLength(3);
-  expect((await list(`?q=${encodeURIComponent("history bad")}`)).runs.map((r: any) => r.id)).toEqual([badRun.id]);
-  expect((await list(`?q=%23${okRuns[0].number}`)).runs.map((r: any) => r.id)).toContain(okRuns[0].id);
+  expect((await list(`?q=${encodeURIComponent("history bad")}`)).runs.map((r: Json) => r.id)).toEqual([badRun.id]);
+  expect((await list(`?q=%23${okRuns[0].number}`)).runs.map((r: Json) => r.id)).toContain(okRuns[0].id);
   const page1 = await list("?limit=2");
   expect(page1.runs).toHaveLength(2);
   expect(page1.nextCursor).not.toBeNull();
   const page2 = await list(`?limit=2&beforeAt=${encodeURIComponent(page1.nextCursor.createdAt)}&beforeId=${page1.nextCursor.id}`);
   expect(page2.runs).toHaveLength(2);
-  expect(new Set([...page1.runs, ...page2.runs].map((r: any) => r.id)).size).toBe(4);
+  expect(new Set([...page1.runs, ...page2.runs].map((r: Json) => r.id)).size).toBe(4);
   const detail = (await http.get(`/api/runs/${okRuns[0].id}`)).json.run;
   for (const internal of ["lockedBy", "attempts", "heartbeatAt", "policy"]) expect(detail, internal).not.toHaveProperty(internal);
   for (const step of detail.steps) expect(step).not.toHaveProperty("dataEnc");
@@ -263,7 +263,7 @@ test("[fl-run-control.1] a run held by a slow provider can be cancelled mid-requ
   expect(fault.status).toBe(200);
   const started = await startRun(http, f.id);
   const rid = started.json.run.id as string;
-  await expect.poll(async () => ((await http.get(`/api/runs/${rid}`)).json.run.steps as any[]).find((s) => s.nodeId === "sheet")?.status, { timeout: 30_000, interval: 300 }).toBe("running");
+  await expect.poll(async () => ((await http.get(`/api/runs/${rid}`)).json.run.steps as Json[]).find((s) => s.nodeId === "sheet")?.status, { timeout: 30_000, interval: 300 }).toBe("running");
   const early = await http.post(`/api/runs/${rid}/rerun`, { json: { fromNodeId: "sheet" } });
   expect(early.status).toBe(409);
   expect(early.json.error.code).toBe("RUN_ACTIVE");
@@ -282,8 +282,8 @@ test("[fl-run-control.2] a re-run from a step previews what repeats, reuses the 
   const run = await finish(http, f.id);
   expect(run.output).toEqual({ result: { v: 30 } });
   const preview = (await http.get(`/api/runs/${run.id}/rerun-preview?fromNodeId=second`)).json;
-  expect(preview.willRerun.map((s: any) => s.nodeId)).toEqual(["second", "o"]);
-  expect(preview.reused.map((s: any) => s.nodeId)).toEqual(["t", "first"]);
+  expect(preview.willRerun.map((s: Json) => s.nodeId)).toEqual(["second", "o"]);
+  expect(preview.reused.map((s: Json) => s.nodeId)).toEqual(["t", "first"]);
   expect(preview.warnings).toEqual([]);
   expect((await http.get(`/api/runs/${run.id}/rerun-preview?fromNodeId=ghost`)).status).toBe(422);
   const re = await http.post(`/api/runs/${run.id}/rerun`, { json: { fromNodeId: "second" } });
@@ -291,7 +291,7 @@ test("[fl-run-control.2] a re-run from a step previews what repeats, reuses the 
   expect(re.json.run).toMatchObject({ triggerKind: "rerun", rerunOfRunId: run.id, rerunFromNodeId: "second" });
   const again = await waitRun(http, re.json.run.id);
   expect(again.status).toBe("succeeded");
-  expect(again.steps.map((s: any) => [s.nodeId, s.status])).toEqual([["t", "reused"], ["first", "reused"], ["second", "succeeded"], ["o", "succeeded"]]);
+  expect(again.steps.map((s: Json) => [s.nodeId, s.status])).toEqual([["t", "reused"], ["first", "reused"], ["second", "succeeded"], ["o", "succeeded"]]);
   expect(again.output).toEqual({ result: { v: 30 } });
   const saved = await http.get(`/api/flows/${f.id}`);
   await http.put(`/api/flows/${f.id}`, { json: { baseRevision: saved.json.flow.revision, graph: g("{ \"v\": n * 100 }") } });
@@ -317,10 +317,10 @@ test("[fl-usage-limits.1] every run is counted in the monthly usage ledger, and 
   expect(refused.status).toBe(429);
   expect(refused.json.error.code).toBe("EXECUTION_LIMIT");
   const usage = (await http.get(`/api/workspaces/${ws.id}/usage`)).json;
-  const exec = (usage.rows as any[]).find((r) => r.kind === "execution");
+  const exec = (usage.rows as Json[]).find((r) => r.kind === "execution");
   expect(exec.events).toBe(2);
   expect(usage.totalMicros).toBe(0);
   expect((await http.patch(`/api/workspaces/${ws.id}`, { json: { maxMonthlyExecutions: null } })).status).toBe(200);
   expect((await finish(http, f.id)).status).toBe("succeeded");
-  expect(((await http.get(`/api/workspaces/${ws.id}/usage`)).json.rows as any[]).find((r) => r.kind === "execution").events).toBe(3);
+  expect(((await http.get(`/api/workspaces/${ws.id}/usage`)).json.rows as Json[]).find((r) => r.kind === "execution").events).toBe(3);
 });

@@ -136,7 +136,7 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | E2E, Chromium + Firefox + WebKit, dev server (starts the test stack on :3100) | `pnpm test:e2e`; for Chromium + Firefox only: `pnpm test:e2e --project=chromium --project=firefox` (install the selected browsers first with `pnpm exec playwright install chromium firefox`) |
 | E2E against a production build instead of `next dev` | `FLOWLINE_TEST_NEXT=start pnpm test:e2e` (runs `next build` once, then `next start`; recommended for release gates — see `scripts/dev-test.mjs`) |
 | E2E, WebKit (Linux Playwright container; needs `pnpm dev:test` running) | `bash e2e/tools/webkit-docker.sh` |
-| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; ≤ 5 min) | `pnpm e2e:army` (quick default: smoke shard + top-level `@issue` tests) or `pnpm e2e:army --shard-id core-api`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
+| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; budget 5 min, enforced by `scripts/e2e-army.mjs`, not yet timed in CI) | `pnpm e2e:army` (quick default: smoke shard + top-level `@issue` tests) or `pnpm e2e:army --shard-id core-api`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
 | Live (real PostgreSQL and SaaS certification; missing SaaS credentials → BLOCKED; no AI suite) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
@@ -150,11 +150,11 @@ existing Playwright specs stay as plain tests.
 
 The feature suite is in `e2e-army/features/`: every feature of the hub's feature map (`ops/verify/features/FlowLine_Web.json`)
 has at least one test, titled `[<feature>.<n>]` and tagged `feat:<feature>`, `shard:<shard>`, `lvl:ui|api|job` (`api` and
-`job` tests are request-level, no model). Shards (each ≤ 5 min): smoke, core-api, flows-api, runs, triggers, schedule,
+`job` tests are request-level, no model). Shards (budget 5 min per shard, enforced by `scripts/e2e-army.mjs`; not yet timed in CI): smoke, core-api, flows-api, runs, triggers, schedule,
 ai-api, platform-api, ui-auth, ui-auth2, ui-flows, ui-builder, ui-settings, ui-ai, ui-admin, ui-misc; run one with
 `pnpm e2e:army --shard-id core-api`. Every PR adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each
-feature its changed files touch (waiver: `E2E: not needed — <reason>` in the PR). No GitHub Actions job runs `e2e-army`
-yet (see AI_QUESTIONS.md).
+feature its changed files touch (waiver: `E2E: not needed — <reason>` in the PR). The hub's verify job posts the `e2e-army`
+status; the owner adds the GitHub Actions workflow separately (AI PRs do not change `.github/workflows`).
 
 CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,
 Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets

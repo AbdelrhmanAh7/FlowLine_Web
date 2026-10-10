@@ -11,7 +11,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// the AI SDK v4 model spec is not a dependency of this repo, so its types are `any` here
+// The AI SDK v4 model spec is not a dependency of this repo, so its types cannot be imported; this alias is the only `any` in the adapter.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 export interface CliModelOpts { cli: "agy" | "claude"; model?: string; timeoutMs?: number }
 

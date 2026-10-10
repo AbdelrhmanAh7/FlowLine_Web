@@ -57,3 +57,24 @@ describe("e2e-army docs and suite", () => {
     }
   });
 });
+
+describe("e2e-army hygiene (#85)", () => {
+  const files = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : e.name.endsWith(".ts") ? [join(dir, e.name)] : []));
+  const suite = files(join(root, "e2e-army")).filter((f) => !f.endsWith("cli-model.ts"));
+
+  it("no test or helper waits with a fixed delay (conditions are polled with expect.poll)", () => {
+    for (const f of suite) expect(readFileSync(f, "utf8"), f).not.toMatch(/setTimeout|waitForTimeout/);
+  });
+
+  it("lint is not switched off for e2e-army and `any` appears only behind a scoped disable", () => {
+    expect(readFileSync(join(root, "eslint.config.mjs"), "utf8")).not.toMatch(/e2e-army/);
+    for (const f of [...suite, join(root, "e2e-army", "cli-model.ts")]) {
+      const lines = readFileSync(f, "utf8").split("\n");
+      lines.forEach((l, i) => {
+        if (/(:|=|as|<)\s*any\b(?!\s+(terminal|[a-z]+ of))/.test(l.replace(/\/\/.*$/, "").replace(/"[^"]*"|`[^`]*`/g, ""))) {
+          expect(lines[i - 1], `${f}:${i + 1}`).toMatch(/eslint-disable-next-line @typescript-eslint\/no-explicit-any/);
+        }
+      });
+    }
+  });
+});

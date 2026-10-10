@@ -3,14 +3,14 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { seeded } from "../lib.ts";
-import { Http, N, E, actor, addMember, anonymous, chain, connect, createFlow, fakeOrigin, githubSignature, newFlow, serverNow, signWebhook, startRun, waitRun, withKey, type Graph } from "./_helpers.ts";
+import { Http, N, E, actor, addMember, anonymous, chain, connect, createFlow, fakeOrigin, githubSignature, newFlow, serverNow, signWebhook, startRun, waitRun, withKey, type Graph, type Json } from "./_helpers.ts";
 
 const finish = async (http: Http, flowId: string, input?: unknown) => {
   const started = await startRun(http, flowId, input);
   if (started.status !== 202) throw new Error(`run not accepted: ${started.status} ${started.text.slice(0, 300)}`);
   return waitRun(http, started.json.run.id);
 };
-const stepOf = (run: any, id: string) => run.steps.find((s: any) => s.nodeId === id);
+const stepOf = (run: Json, id: string) => run.steps.find((s: Json) => s.nodeId === id);
 const tokenOfHook = (url: string) => new URL(url).pathname.split("/").pop()!;
 const nowSec = async () => Math.floor((await serverNow()).getTime() / 1000);
 
@@ -50,7 +50,7 @@ test("[fl-trigger-webhook.1] a correctly signed delivery starts a run with its p
   expect(conflicting.status).toBe(409);
   const info = (await http.get(`/api/flows/${h.flow.id}/publish`)).json;
   expect(info.webhook.active).toBe(true);
-  expect(info.webhook.recentEvents.filter((e: any) => e.eventId === ev)).toHaveLength(1);
+  expect(info.webhook.recentEvents.filter((e: Json) => e.eventId === ev)).toHaveLength(1);
   expect(info.webhook.recentEvents[0]).toMatchObject({ eventId: ev, status: "accepted", runId: first.json.runId });
   const runs = (await http.get(`/api/flows/${h.flow.id}/runs`)).json.runs as { id: string }[];
   expect(runs.filter((r) => r.id === first.json.runId)).toHaveLength(1);
@@ -118,7 +118,7 @@ test("[fl-public-api-v1.1] the public API authenticates a Bearer key, lists the 
   const full = await mint("test", ["flows:read", "runs:read", "runs:write"]);
   const listed = await withKey(full.key).get("/api/v1/flows");
   expect(listed.status).toBe(200);
-  expect(listed.json.flows.find((x: any) => x.id === f.id)).toMatchObject({ name: f.name, publishedVersion: null, trigger: "trigger.manual", paused: false });
+  expect(listed.json.flows.find((x: Json) => x.id === f.id)).toMatchObject({ name: f.name, publishedVersion: null, trigger: "trigger.manual", paused: false });
   expect((await anonymous().get("/api/v1/flows")).json.error.code).toBe("API_KEY_REQUIRED");
   expect((await http.get("/api/v1/flows")).status).toBe(401);
   expect((await withKey("nope").get("/api/v1/flows")).json.error.code).toBe("API_KEY_INVALID");
@@ -154,7 +154,7 @@ test("[fl-public-api-v1.2] a test key runs the current draft, a live key only th
   await expect.poll(async () => (await withKey(liveKey).get(live.json.statusUrl)).json.status, { timeout: 30_000, interval: 400 }).toBe("succeeded");
   const liveDone = (await withKey(liveKey).get(live.json.statusUrl)).json;
   expect(liveDone.output).toEqual({ result: { v: "published", x: 7 } });
-  expect(liveDone.steps.map((s: any) => [s.nodeId, s.status])).toEqual([["t", "succeeded"], ["shape", "succeeded"], ["out", "succeeded"]]);
+  expect(liveDone.steps.map((s: Json) => [s.nodeId, s.status])).toEqual([["t", "succeeded"], ["shape", "succeeded"], ["out", "succeeded"]]);
   const testRun = await withKey(testKey).post(`/api/v1/flows/${f.id}/runs`, { json: { input: { x: 8 } } });
   await expect.poll(async () => (await withKey(testKey).get(testRun.json.statusUrl)).json.status, { timeout: 30_000, interval: 400 }).toBe("succeeded");
   expect((await withKey(testKey).get(testRun.json.statusUrl)).json.output).toEqual({ result: { v: "draft", x: 8 } });
@@ -190,13 +190,13 @@ test("[fl-approvals.1] a gated action waits for a human: viewers cannot decide, 
   expect(stepOf(waiting, "post").status).toBe("waiting_approval");
   expect(waiting.approvals[0]).toMatchObject({ status: "pending", actionId: "slack.post_message", kind: "approval" });
   expect(waiting.approvals[0].argsPreview).toEqual({ channel: "C001GEN", text });
-  const pending = (await owner.http.get(`/api/workspaces/${owner.a.workspaceId}/approvals`)).json.approvals as any[];
+  const pending = (await owner.http.get(`/api/workspaces/${owner.a.workspaceId}/approvals`)).json.approvals as Json[];
   const mine = pending.find((p) => p.runId === started.json.run.id);
   expect(mine).toMatchObject({ actionId: "slack.post_message", flowName: f.name, nodeId: "post" });
   expect((await owner.http.get(`/api/workspaces/${owner.a.workspaceId}/overview`)).json.pendingApprovals).toBeGreaterThanOrEqual(1);
   const denied = await viewer.http.post(`/api/approvals/${mine.id}/decide`, { json: { decision: "approve" } });
   expect(denied.status).toBe(403);
-  expect(((await viewer.http.get(`/api/workspaces/${owner.a.workspaceId}/approvals`)).json.approvals as any[]).some((p) => p.id === mine.id)).toBe(true);
+  expect(((await viewer.http.get(`/api/workspaces/${owner.a.workspaceId}/approvals`)).json.approvals as Json[]).some((p) => p.id === mine.id)).toBe(true);
   const sentBefore = ((await (await fetch(`${fake}/__fake/state/slack`)).json()).messages as { text: string }[]).filter((m) => m.text === text).length;
   expect(sentBefore).toBe(0);
   expect((await owner.http.post(`/api/approvals/${mine.id}/decide`, { json: { decision: "approve", note: "ok" } })).status).toBe(200);
@@ -206,7 +206,7 @@ test("[fl-approvals.1] a gated action waits for a human: viewers cannot decide, 
   expect(done.output.sent.ts).toMatch(/^\d+\.\d{6}$/);
   const sent = ((await (await fetch(`${fake}/__fake/state/slack`)).json()).messages as { text: string }[]).filter((m) => m.text === text);
   expect(sent).toHaveLength(1);
-  expect(((await owner.http.get(`/api/runs/${started.json.run.id}`)).json.run.approvals as any[])[0].status).toBe("approved");
+  expect(((await owner.http.get(`/api/runs/${started.json.run.id}`)).json.run.approvals as Json[])[0].status).toBe("approved");
   const log = (await owner.http.get(`/api/workspaces/${owner.a.workspaceId}/audit`)).json.events as { action: string }[];
   expect(log.some((e) => e.action === "approval.decided")).toBe(true);
 });
@@ -249,7 +249,7 @@ test("[fl-integration-actions.1] app actions run against the provider with the s
   expect((await http.get(`/api/flows/${f.id}`)).json.issues).toEqual([]);
   const run = await finish(http, f.id);
   expect(run.status).toBe("succeeded");
-  expect(run.output.channels.channels.map((c: any) => c.name)).toEqual(expect.arrayContaining(["general", "random"]));
+  expect(run.output.channels.channels.map((c: Json) => c.name)).toEqual(expect.arrayContaining(["general", "random"]));
   expect(run.output.posted).toMatchObject({ channel: "C002RND" });
   expect(stepOf(run, "post").meta).toMatchObject({ provider: "slack", action: "slack.post_message", sideEffect: "non_idempotent" });
   expect(JSON.stringify(run)).not.toContain("test-token");
