@@ -71,10 +71,21 @@ test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play 
   expect(await browser.evaluate(() => document.querySelector(".hero-scrub [data-demo-toggle]")!.getAttribute("aria-pressed"))).toBe("true");
 });
 
-test("@issue-100 AC4: the walkthrough dialog opens from the button, steps through four chapters, flips its arrow keys in Arabic and closes with Esc", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
+test("@issue-100 AC4: the walkthrough dialog opens from the button, steps through four chapters, flips its arrow keys in Arabic and closes with Esc", { tags: ["feat:fl-landing", "feat:fl-i18n-rtl", "feat:fl-design-system"] }, async ({ app, screen, browser }) => {
   const hits = await arm(browser, "ar", base(app));
   await app.open("/");
   expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+  // Arabic copy comes from ar.json (the source of truth), not English fallbacks.
+  await expect(screen.getByRole("heading", "شاهده وهو يعمل")).toBeVisible();
+  await expect(screen.getByText("تسجيل حقيقي من داخل التطبيق على بيانات تجريبية").first()).toBeVisible();
+  // Captions and the dialog backdrop are styled by globals.css (design-system colours).
+  const styled = await browser.evaluate(() => {
+    const sel: string[] = [];
+    const walk = (rules: CSSRuleList) => { for (const r of [...rules]) { if ("selectorText" in r) sel.push(String((r as CSSStyleRule).selectorText)); if ("cssRules" in r) walk((r as CSSGroupingRule).cssRules); } };
+    for (const sheet of [...document.styleSheets]) { try { walk(sheet.cssRules); } catch { /* cross-origin sheet */ } }
+    return { cue: sel.some((s) => s.includes("::cue")), backdrop: sel.some((s) => s.includes(".demo-dialog::backdrop")) };
+  });
+  expect(styled).toEqual({ cue: true, backdrop: true });
   const open = screen.getByTestId("demo-watch");
   await open.tap();
   await expect(screen.getByTestId("demo-walkthrough")).toBeVisible();

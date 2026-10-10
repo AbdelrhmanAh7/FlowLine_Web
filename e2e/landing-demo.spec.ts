@@ -240,6 +240,22 @@ test.describe("with a manifest", () => {
     await context.close();
   });
 
+  test("walkthrough without a playable video: the stepper falls back to the chapter stills with their text", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    await page.getByTestId("demo-watch").click();
+    const dialog = page.getByTestId("demo-walkthrough");
+    await expect(dialog.getByTestId("demo-chapter-still")).toHaveCount(0); // motion allowed and the video is fine: no stills
+    // The chosen file cannot be decoded or fetched (the player reports a media error).
+    await dialog.locator("video").evaluate((v: HTMLVideoElement) => v.dispatchEvent(new Event("error")));
+    const still = dialog.getByTestId("demo-chapter-still");
+    await expect(still.locator("img")).toHaveAttribute("src", /walkthrough\.en\.light\.ch1\./);
+    await expect(still).toContainText("Start from a template");
+    await dialog.locator("[data-chapter='run']").click();
+    await expect(still.locator("img")).toHaveAttribute("src", /walkthrough\.en\.light\.ch3\./);
+    await expect(still).toContainText("Run and watch");
+    await context.close();
+  });
+
   test("bento: four tiles with spans, heading + line each, the honest note, started only when visible", async ({ browser }) => {
     const { context, page, videos } = await open(browser);
     const section = page.locator("#demo");
