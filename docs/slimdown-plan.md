@@ -1,8 +1,8 @@
 # FlowLine slim-down plan (2026-10-10)
 
 The owner asked to make development, testing and code review faster across the projects. FlowLine is not built wrong,
-so this is a careful trim: every pilot feature (16 Oct pilot plan, milestone "MVP — Ship plan", the hub's feature inventory) stays,
-and nothing that guards real logic is removed. e2e-army (the hub's tester-army suite, `ops/verify/e2e-army/` in the hub)
+so this is a careful trim: every pilot feature (16 Oct pilot plan, milestone "MVP — Ship plan", the Hub's feature inventory) stays,
+and nothing that guards real logic is removed. e2e-army (the Hub's tester-army suite, `ops/verify/e2e-army/` in the Hub)
 is the main end-to-end gate; GitHub CI stays the fast correctness gate.
 
 ## How this was measured
@@ -11,7 +11,7 @@ is the main end-to-end gate; GitHub CI stays the fast correctness gate.
 - **CI**: GitHub Actions REST data for 2026-09-26 → 2026-10-10 (all 308 `Gate` runs; job and step timings of the 35 most
   recent completed pull-request runs; one full chromium job log).
 - **Dead code**: `knip` 5 (unused files, exports, dependencies), every flagged file grepped for references in code, docs and
-  `package.json`; the hub's feature inventory (`ops/verify/features/FlowLine_Web.json`, 53 features) mapped onto all 448
+  `package.json`; the Hub's feature inventory (`ops/verify/features/FlowLine_Web.json`, 53 features) mapped onto all 448
   `src/` + `worker/` files.
 - **Duplicates**: each candidate test was compared with the kept tests and the e2e-army feature it belongs to.
 
@@ -28,7 +28,7 @@ is the main end-to-end gate; GitHub CI stays the fast correctness gate.
 | PR CI (`Gate`) | wall clock median 3.8 min, p90 4.3 min, max 5.0 min; runner time median 9.6 min per run (6 jobs) |
 | Slowest job | `chromium` median 3.5 min: setup 41 s (Postgres 14 s, Playwright deps 15 s), `next build` 36 s, 3 stacks 8 s, 78 specs 95 s |
 | `checks` legs | static·unit·contract 1.3 min (gate step 55 s); integration shards 1.5–1.9 min (58–78 s of tests, 24 s setup each) |
-| Other workflows (14 d) | `docs` 532 runs (median 10 s, but a full 186 MB checkout to run one Node script); `claude` 927 runs (98 % skipped by its `if:`); `ai-implementers` 149 runs, disabled manually since the hub moved to launchd |
+| Other workflows (14 d) | `docs` 532 runs (median 10 s, but a full 186 MB checkout to run one Node script); `claude` 927 runs (98 % skipped by its `if:`); `ai-implementers` 149 runs, disabled manually since the Hub moved to launchd |
 | Failures (35 sampled runs) | 12 `checks` and 5 `chromium` failures: real PR failures plus one infrastructure failure (Docker exit 125 in setup on every leg of one run); no test failed intermittently on the same head |
 
 The PR CI target (under 5 minutes) is already met; the main costs are the repository weight (every clone, checkout and
@@ -59,7 +59,7 @@ agent worktree moves 170 MB), CI noise, and a few tests that duplicate others or
 | `tests/integration/codex-poc-agent-approval-republish.test.ts` | duplicate of the kept `p3-agents.test.ts` (from #92) | 2 |
 | `tests/unit/provider-basic-auth.test.ts` | tautology: re-implements its parser inline (from #92) | 2 |
 | `tests/unit/codex-poc-egress-redirect.test.ts` | duplicate: the POST/307 cross-origin case is one row of `egress-redirect-security.test.ts` | 2 |
-| `.github/workflows/ai-implementers.yml` | disabled manually; the hub's launchd jobs replaced it (149 runs in 14 days before it was turned off) | 2 |
+| `.github/workflows/ai-implementers.yml` | disabled manually; the Hub's launchd jobs replaced it (149 runs in 14 days before it was turned off) | 2 |
 
 Older raw evidence stays reachable at the tag `archive/pre-slimdown-2026-10-10` (nothing is lost; 29 historical doc links
 point at files there).
@@ -68,7 +68,7 @@ point at files there).
 
 | Change | Evidence / effect | PR |
 | --- | --- | --- |
-| Nightly tier for 6 slow or infra-heavy suites (`p2-code-sandbox`, `company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill`, `drizzle-tooling-prune`) | ~31 s of integration time and the 4 s sandbox image pull off every PR (from #92); `nightly.yml` opens or updates one `nightly-red` issue when it fails, so a red nightly reaches the hub's engineers without an owner decision | 2 |
+| Nightly tier for 6 slow or infra-heavy suites (`p2-code-sandbox`, `company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill`, `drizzle-tooling-prune`) | ~31 s of integration time and the 4 s sandbox image pull off every PR (from #92); `nightly.yml` opens or updates one `nightly-red` issue when it fails, so a red nightly reaches the Hub's engineers without an owner decision | 2 |
 | `docs.yml` checks out only `scripts/ci` | it ran a full checkout of the repository 532 times in 14 days to run one script | 2 |
 | Skip the duplicate TypeScript pass inside the CI test build | `tsc --noEmit` already runs in the static leg; `next build` repeated it on the chromium critical path (`FLOWLINE_SKIP_BUILD_TYPECHECK=1`, CI test build only; production builds still type-check) | 2 |
 | Smaller checkouts everywhere | removing `artifacts/` raw files cuts each `actions/checkout` and every agent clone | 1 |
