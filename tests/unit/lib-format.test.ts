@@ -49,10 +49,25 @@ describe("lib/format helpers", () => {
       expect(duration(undefined)).toBe("—");
     });
     it("Arabic keeps Western digits (ar-EG-u-nu-latn)", () => {
-      const ar = duration(125000, "ar");
-      expect(ar).not.toMatch(/[٠-٩]/);
-      expect(ar).toContain("2");
-      expect(ar).toContain("5");
+      const arMs = duration(850, "ar");
+      expect(arMs).not.toMatch(/[٠-٩]/);
+      expect(arMs).toContain("850");
+      expect(arMs).toContain("ملي");
+
+      const arSeconds = duration(12300, "ar");
+      expect(arSeconds).not.toMatch(/[٠-٩]/);
+      expect(arSeconds).toContain("12.3");
+      expect(arSeconds).toContain("ث");
+
+      const arMinutes = duration(125000, "ar");
+      expect(arMinutes).not.toMatch(/[٠-٩]/);
+      expect(arMinutes).toContain("د");
+      expect(arMinutes).toContain("2");
+      expect(arMinutes).toContain("5");
+    });
+    it("Arabic also renders nullish as an em dash", () => {
+      expect(duration(null, "ar")).toBe("—");
+      expect(duration(undefined, "ar")).toBe("—");
     });
   });
 
