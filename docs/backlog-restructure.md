@@ -6,8 +6,8 @@ Owner ask: smaller, linked tasks with no duplicate work, a vision with clear goa
 
 | | before | after |
 |---|---|---|
-| Open issues | 45 | 52 |
-| Open issues in a goal milestone | 0 | 50 |
+| Open issues | 45 | 54 |
+| Open issues in a goal milestone | 0 | not recounted |
 | Duplicates closed (as duplicate, cross-linked) | — | 3 |
 | Stale/obsolete closed (not planned, with reason) | — | 2 |
 | Merged into another issue (scope copied by comment) | — | 1 |
@@ -16,6 +16,8 @@ Owner ask: smaller, linked tasks with no duplicate work, a vision with clear goa
 | Goal demo checklist issues | 0 | 6 |
 | Sub-issue links added | — | 10 |
 | Labels renamed to the shared spelling | — | 21 |
+
+Reconciliation: 45 − 6 closed/merged (3 duplicates + 2 not planned + 1 merged) + 15 new (#141–#155: 7 new tasks + 6 goal demos + 2 split sub-issues) = 54. The split parent (#6) stays open as the parent of #141 and #142. The earlier figures 52 and 50 did not reconcile and were not rechecked against `gh issue list`; re-verify both with it before relying on them.
 
 ## Goals
 

@@ -19,12 +19,12 @@ FlowLine is the Arabic-first workflow automation platform for small teams in Egy
 
 | Goal (milestone) | Due | Acceptance criteria | Demo |
 |---|---|---|---|
-| [FL G5 · Mizano connector v1](https://github.com/AbdelrhmanAh7/FlowLine_Web/milestone/11) | 2026-11-20 | Next phase. Done when: a FlowLine user can connect a Mizano workspace with a scoped API key, run the 'Deal won -> Mizano quote' template end to end (customer + draft quote appear in Mizano, money sent as decimal strings, a human approval step before anything leaves the company) and list overdue Mizano invoices into the Invoice Follow-up List flow. Depends on Mizano 'MZ G5 · FlowLine integration API'. Story: docs/video/integration-story.md. | #154 |
+| [FL G5 · Mizano connector v1](https://github.com/AbdelrhmanAh7/FlowLine_Web/milestone/11) | 2026-11-20 | Next phase. Done when: a FlowLine user can connect a Mizano workspace with a scoped API key, run the 'Deal won -> Mizano quote' template end to end (customer + draft quote appear in Mizano, money sent as decimal strings, a human approval step before anything leaves the company) and list overdue Mizano invoices into the Invoice Follow-up List flow. Depends on Mizano 'MZ G5 · FlowLine integration API'. Story: planned, not yet written (`docs/video/integration-story.md` does not exist yet; tracked by epic #144). | #154 |
 | [FL G6 · Post-pilot hardening: concurrency and quality](https://github.com/AbdelrhmanAh7/FlowLine_Web/milestone/12) | 2026-11-06 | Next phase. Done when: every known lock-order deadlock (#41, #42, #45, #47 split #108/#109) has a failing-then-passing regression test using the shared concurrent-tx helper (#90), lock-order docs exist (#120-#122), and the remaining out-of-pilot fixes in this milestone are merged or closed. | #155 |
 
 ## FlowLine ↔ Mizano integration (planned)
 
-Status: vision, not built. Full story and data contracts: `docs/video/integration-story.md` (same page in both repos).
+Status: vision, not built. Full story and data contracts: planned (`docs/video/integration-story.md` is not written yet; tracked by epic #144).
 
 ```mermaid
 flowchart LR
