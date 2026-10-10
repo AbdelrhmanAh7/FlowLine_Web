@@ -118,7 +118,9 @@ export async function acceptInvite(user: CurrentUser, token: string) {
   });
 }
 
-async function ownerCount(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], workspaceId: string) {
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function ownerCount(tx: Tx, workspaceId: string) {
   const [r] = await tx
     .select({ n: count() })
     .from(schema.workspaceMember)
@@ -126,10 +128,22 @@ async function ownerCount(tx: Parameters<Parameters<typeof db.transaction>[0]>[0
   return Number(r?.n ?? 0);
 }
 
+/**
+ * Serializes membership changes per workspace (two owners must not demote each other at once; the last-owner check
+ * reads the owner count under this lock). The mode is FOR NO KEY UPDATE and must stay that way: it conflicts with
+ * itself and with FOR UPDATE, so membership changes still queue one behind the other, but NOT with FOR KEY SHARE, the
+ * lock every insert of an `audit_event` row (foreign key to `workspace`) takes on the workspace row. The SSO
+ * transactions hold a `workspace_member` row (FOR SHARE or FOR UPDATE) and then insert an audit row; a FOR UPDATE
+ * workspace lock here made this transaction wait for their member row while they waited for the workspace row, a
+ * deadlock (issue #42). Rule: docs/security/FEDERATED_MFA.md, "Lock order" > "Member changes".
+ */
+async function lockWorkspaceMembership(tx: Tx, workspaceId: string) {
+  await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId)).for("no key update");
+}
+
 export async function changeRole(user: CurrentUser, workspaceId: string, targetUserId: string, role: Role) {
   return db.transaction(async (tx) => {
-    // Serialize membership changes per workspace so two owners can't demote each other at once.
-    await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId)).for("update");
+    await lockWorkspaceMembership(tx, workspaceId);
     const [m] = await tx
       .select()
       .from(schema.workspaceMember)
@@ -146,7 +160,7 @@ export async function changeRole(user: CurrentUser, workspaceId: string, targetU
 /** Removes a member. Access ends on their next request (membership is checked per request). */
 export async function removeMember(user: CurrentUser, workspaceId: string, targetUserId: string) {
   return db.transaction(async (tx) => {
-    await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId)).for("update");
+    await lockWorkspaceMembership(tx, workspaceId);
     const [m] = await tx
       .select()
       .from(schema.workspaceMember)
