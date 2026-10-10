@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
       { source: "/api/oauth/callback", headers: secure },
       { source: "/api/auth/callback/:path*", headers: secure },
       { source: "/api/sso/callback", headers: secure },
+      // Landing demo media (#100): file names carry a content hash, so they never change under the same URL. Next's default for public/ is max-age=0.
+      { source: "/media/demo/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
     ];
   },
 };
