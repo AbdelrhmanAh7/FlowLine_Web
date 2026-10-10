@@ -127,6 +127,16 @@ routes providers to local test doubles (fake SaaS APIs, OAuth and OIDC on `:4010
 double and a fake Paddle, used only when `FLOWLINE_ENV=test` — tests still add the AI key through the app, like a
 customer). Start from `.env.example` for the shape of `.env.test`.
 
+Sign-up still needs the emailed verification link on the test stack (read it from `/api/test/outbox`). For an external
+automated tester that cannot read the outbox (TestSprite cloud, milestone runs), start a `FLOWLINE_ENV=test` stack with
+`FLOWLINE_TEST_AUTO_VERIFY=1`: new e-mail sign-ups are then created verified, get no verification e-mail, and the
+sign-up form signs them in straight away (issue #124). A single browser context can opt in with the cookie
+`fl_test_auto_verify=1` instead (the e2e-army test does). Both opt-ins are honoured only when `FLOWLINE_ENV` is exactly
+`test`; anywhere else they are ignored, so they cannot be enabled on staging, beta or production — a stray
+`FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one warning at the first sign-up attempt; the cookie is ignored silently.
+The log is emitted lazily on the first sign-up attempt, not at startup. The private-beta admission check still applies,
+and Google/GitHub/ZITADEL sign-ups are unaffected.
+
 | Check | Command |
 |---|---|
 | Lint / typecheck | `pnpm lint` / `pnpm typecheck` |
