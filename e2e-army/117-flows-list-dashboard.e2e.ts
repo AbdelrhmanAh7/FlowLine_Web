@@ -15,7 +15,18 @@ const seeded = (base: string, seed: string, n = 10) =>
   createHash("sha256").update(`${base}|${seed}`).digest("base64url").slice(0, n).toLowerCase().replace(/[^a-z0-9]/g, "x");
 
 type Headers = Record<string, string>;
-interface Res { status: number; json: any }
+interface Res { status: number; json: unknown }
+/** One row of GET /api/workspaces/:id/flows, as the flow list renders it. */
+interface FlowRow {
+  id: string;
+  runCount: number;
+  lastRunStatus: string | null;
+  successRate: number | null;
+  publishedVersion: number | null;
+  nodeCount: number;
+  trigger: string | null;
+  hasTrigger: boolean;
+}
 
 /** A verified, signed-in account through the product's own endpoints (test stack outbox); returns its request headers. */
 async function signedIn(base: string, email: string): Promise<Headers> {
@@ -45,7 +56,7 @@ function client(base: string, headers: Headers) {
   const call = async (method: string, path: string, body?: unknown): Promise<Res> => {
     const r = await fetch(`${base}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     const text = await r.text();
-    let json: any = null;
+    let json: unknown = null;
     try { json = text ? JSON.parse(text) : null; } catch { json = null; }
     return { status: r.status, json };
   };
@@ -69,21 +80,21 @@ const chain = (payload: unknown, expression: string) => ({
 async function createFlow(http: Http, workspaceId: string, name: string) {
   const r = await http.post(`/api/workspaces/${workspaceId}/flows`, { name });
   expect(r.status).toBe(201);
-  return r.json.flow as { id: string; revision: number };
+  return (r.json as { flow: { id: string; revision: number } }).flow;
 }
 async function newFlow(http: Http, workspaceId: string, name: string, graph: unknown) {
   const f = await createFlow(http, workspaceId, name);
   const r = await http.put(`/api/flows/${f.id}`, { baseRevision: f.revision, graph });
   expect(r.status).toBe(200);
-  return r.json.flow as { id: string; revision: number };
+  return (r.json as { flow: { id: string; revision: number } }).flow;
 }
 /** Starts a manual run and waits until it is terminal (a failed run is a valid outcome here, not an error). */
 async function runToEnd(http: Http, flowId: string) {
   const started = await http.post(`/api/flows/${flowId}/runs`);
   expect(started.status).toBe(202);
-  const runId = started.json.run.id as string;
+  const runId = (started.json as { run: { id: string } }).run.id;
   await expect
-    .poll(async () => (await http.get(`/api/runs/${runId}`)).json?.run?.status, { timeout: 60_000, interval: 500 })
+    .poll(async () => ((await http.get(`/api/runs/${runId}`)).json as { run?: { status?: string } } | null)?.run?.status, { timeout: 60_000, interval: 500 })
     .toMatch(/^(succeeded|failed|cancelled)$/);
 }
 
@@ -95,11 +106,11 @@ test(
     const http = client(base, await signedIn(base, `army-117-${seeded(base, "army-117-owner")}@flowline-e2e.test`));
     const created = await http.post("/api/workspaces", { name: `List ${seeded(base, "army-117-ws", 6)}` });
     expect(created.status).toBe(201);
-    const ws = created.json.workspace as { id: string };
+    const ws = (created.json as { workspace: { id: string } }).workspace;
     const w = `/api/workspaces/${ws.id}`;
 
     // Empty case: a new workspace lists no flows.
-    expect(((await http.get(`${w}/flows`)).json.flows as unknown[]).length).toBe(0);
+    expect(((await http.get(`${w}/flows`)).json as { flows: unknown[] }).flows.length).toBe(0);
 
     const good = await newFlow(http, ws.id, `Listed good ${seeded(base, "army-117-good", 4)}`, chain({ n: 1 }, "$"));
     const bad = await newFlow(http, ws.id, `Listed bad ${seeded(base, "army-117-bad", 4)}`, chain({ n: 1 }, '$number("x")'));
@@ -107,7 +118,7 @@ test(
     for (const id of [good.id, good.id, bad.id]) await runToEnd(http, id);
     expect((await http.post(`/api/flows/${good.id}/publish`)).status).toBe(201);
 
-    const rows = (await http.get(`${w}/flows`)).json.flows as any[];
+    const rows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
     expect(rows).toHaveLength(3);
     const row = (id: string) => rows.find((r) => r.id === id);
     expect(row(good.id)).toMatchObject({ runCount: 2, lastRunStatus: "succeeded", successRate: 1, publishedVersion: 1, nodeCount: 3, trigger: "trigger.manual" });
