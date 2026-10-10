@@ -1,4 +1,0 @@
-db=flowline_test_dv2 columns scanned=329
-3e896b951ec8 828 new workspace
-9f851b7d7d64 7 new platform
-envelopes under exposed key ids: 0
