@@ -81,8 +81,21 @@ function remove(w, root, platform, refuse = false) {
     return false;
   }
   // A junction/symlink is removed as a link only, so the shared install is never touched.
-  if (s.ownLink) unlinkSync(join(path, "node_modules"));
-  git(["worktree", "remove", path], root);
+  // If git refuses (e.g. an ignored file blocks removal), the link is put back so the lane keeps its install.
+  const link = join(path, "node_modules");
+  if (s.ownLink) unlinkSync(link);
+  try {
+    git(["worktree", "remove", path], root);
+  } catch (error) {
+    if (s.ownLink) {
+      try {
+        symlinkSync(join(root, "node_modules"), link, "junction");
+      } catch {
+        // keep the git error as the reported failure
+      }
+    }
+    throw error;
+  }
   console.log(`removed ${path}`);
   return true;
 }

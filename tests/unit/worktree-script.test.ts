@@ -181,6 +181,17 @@ describe("worktree removal safeguards", () => {
     expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
   });
 
+  it("@issue-67 restores the node_modules link when git worktree remove fails", () => {
+    const base = mocks.git.getMockImplementation()!;
+    mocks.git.mockImplementation((command, args, options) => {
+      if (args[0] === "worktree" && args[1] === "remove") throw new Error("contains untracked files");
+      return base(command, args, options);
+    });
+    expect(() => main(["rm", "lane"])).toThrow("contains untracked files");
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(lane, "node_modules"), "junction");
+  });
+
   it("checks clean and pushed before unlinking, then removes without force", () => {
     expect(main(["rm", "lane"])).toBe(0);
     expect(events).toEqual([
