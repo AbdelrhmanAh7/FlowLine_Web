@@ -1,9 +1,0 @@
-{
-  "url": "http://localhost:3200/account/delete",
-  "text": "Flowline\nالعربية\nEnglish\nConfirm account deletion\n\nThis permanently deletes your account.\n\nYou are the last owner of a workspace with other members. Transfer ownership before deleting your account.\n\nDelete account\n\nBack to sign in",
-  "buttons": [
-    "العربية",
-    "English",
-    "Delete account"
-  ]
-}
