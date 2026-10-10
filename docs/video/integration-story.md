@@ -2,7 +2,8 @@
 
 Status: **vision, not built.** No Flowline connector for Mizano exists and Mizano has no outbound webhooks or API keys
 today. This page lists the natural integration points found in both codebases (2026-10-09), so the product plan and
-the two real-world videos tell the same story. The same page lives in both repos (`docs/video/integration-story.md`).
+the two real-world videos tell the same story. The matching page in the Mizano repo
+(`docs/video/integration-story.md`) is planned, not yet published; this copy is the source until it lands.
 
 ## One company, two products
 

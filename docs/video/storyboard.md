@@ -17,6 +17,9 @@ outcome. It is the first half of a two-part story: the same company continues in
 | Short | about 19 s | same | landing hero, social |
 | Better together (shared with Mizano) | 30-45 s | same | both landings, after the Mizano pilot (2026-11-02) |
 
+Acceptance limits (#137, landing budget #96): each file is at most 6 MB (about 540 kbps for the full cut, so
+encode with a tight bitrate and check the result), and the WebVTT captions must match the burned-in text.
+
 Silent (no music) or royalty-free music only. Light palette from `src/design/tokens.json` (brand 500 `#7c6cff`).
 Fonts are the app's own: Inter and IBM Plex Sans Arabic (OFL).
 
@@ -85,4 +88,5 @@ tsc/ESLint). It is on branch `video/story-pipeline` until the final render; it i
   `npx remotion render src/index.ts story-en out/story-en.mp4` (also `story-ar`, `short-en`, `short-ar`).
 
 Before the final render: re-record the walkthrough on the pilot build (#99), check each scene's in/out points against
-the new recording, review every frame for text overflow and RTL, then encode WebM and posters and embed through #100.
+the new recording, review every frame for text overflow and RTL, generate a contact sheet of every scene and attach it to the
+final-assets PR, then encode WebM and posters and embed through #100.
