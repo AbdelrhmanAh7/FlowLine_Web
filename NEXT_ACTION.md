@@ -13,7 +13,7 @@
 
 1. Work the open follow-up issues on the [board](https://github.com/users/AbdelrhmanAh7/projects/21) under the constitution in `AGENTS.md` (every exception needs a recorded reason).
 2. Reconcile G2/G4 with their actual evidence and owner authorization before execution; main does not establish completion, and the only G4 record lives on draft PR #9 until that PR is reviewed and merged.
-3. Obtain a fresh issue #6 field-validation version without modifying frozen evidence; keep issue #6 open until the new run's evidence supports closure.
+3. Issue #6: the field-validation v2 harness and packet (`scripts/field-validation/v2/`, [README](scripts/field-validation/v2/README.md)) fix the six scoring/coverage items and are covered by deterministic unit tests only. No v2 run is recorded yet: an authorised operator must run it on an isolated test stack and keep the evidence under a new `artifacts/` run, without modifying the frozen `d224cfb` evidence. Expect VP-05/VP-06 to fail until the refund/cancellation draft says the owner decides (a separate product change).
 4. Owner completes the Google → ZITADEL → FlowLine round-trip and TOTP/bootstrap privately, following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md) (bounded provider checks: [BETA_EXECUTION_BRIEF.md](docs/implementation/BETA_EXECUTION_BRIEF.md)). Keep `PRIVATE_BETA_READY: NO` until provider, security, field-validation, and owner checks are evidenced.
 
 Production deployment, live payments, invitations, DNS/Pi changes, and spending remain unapproved. No production readiness is implied by the stack implementation, review, or CI.
