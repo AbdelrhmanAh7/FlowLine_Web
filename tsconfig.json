@@ -39,6 +39,7 @@
   ],
   "exclude": [
     "node_modules",
+    "e2e-army",
     ".next-test",
     "artifacts",
     "playwright-report",
