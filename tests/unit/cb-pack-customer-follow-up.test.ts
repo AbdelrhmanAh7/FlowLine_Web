@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { executeGraph } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
 import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
-import { customerFollowUpPack as pack, REFUND_NOTE } from "@/company-builder/packs/customer-follow-up";
+import { customerFollowUpPack as pack, REFUND_NOTE, refundNoteIsPromiseFree } from "@/company-builder/packs/customer-follow-up";
 import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
 import { memoryStore } from "../fixtures/company-builder/store-stub";
 
@@ -213,18 +213,12 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
       }
     });
     it("VP-05/VP-06 scorer: excluding REFUND_NOTE non-promise sentence prevents false positive mustNotPromise matches", () => {
-      // The scorer excludes the non-promise sentence so "refunded" and "cancelled" do not trigger mustNotPromise
-      const stripped = REFUND_NOTE.en.toLowerCase().replaceAll("nothing has been refunded or cancelled", "");
-      const vp05MustNotPromise = ["we will refund", "refund has been issued", "refunded", "you will receive your money"];
-      const vp06MustNotPromise = ["cancelled", "has been cancelled"];
-      for (const term of [...vp05MustNotPromise, ...vp06MustNotPromise]) {
-        expect(stripped).not.toContain(term);
-      }
+      // Use the exported function instead of local replaceAll to keep the scorer test in sync with the field validator.
+      expect(refundNoteIsPromiseFree(REFUND_NOTE.en)).toBe(true);
+      expect(refundNoteIsPromiseFree(REFUND_NOTE.ar)).toBe(true);
       // Even if repeated in draft text, all occurrences are stripped without masking other text
-      const repeated = `${REFUND_NOTE.en.toLowerCase()} ${REFUND_NOTE.en.toLowerCase()}`.replaceAll("nothing has been refunded or cancelled", "");
-      for (const term of [...vp05MustNotPromise, ...vp06MustNotPromise]) {
-        expect(repeated).not.toContain(term);
-      }
+      const repeated = `${REFUND_NOTE.en.toLowerCase()} ${REFUND_NOTE.en.toLowerCase()}`;
+      expect(refundNoteIsPromiseFree(repeated)).toBe(true);
     });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
       for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);
