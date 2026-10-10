@@ -1,1 +1,0 @@
-{"id":"33","code":"save('session-closed.json',{closedAt:new Date().toISOString(),browser:'Google Chrome',sessionCount:1,reason:'Retest complete; closing only the launched browser'}); return 'Retest complete';","close":true}
