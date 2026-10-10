@@ -29,3 +29,23 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 - [ ] Update this table, and FEDERATED_MFA.md for federated paths, in the same PR as the change.
 
 ## Worked examples
+
+### #45 — Email token consume vs user delete
+
+**Hazard:** `consumeAccountToken("delete")` locks the `email_token` row (rank 1), then every workspace the user owns (rank 2, ordered by `id`), then deletes the `user` row (rank 3). If a concurrent transaction deleted the user first and then tried to consume the same token, the two would take rank 1 and rank 3 in opposite orders.
+
+**Ordering rule:** Email token (1) → Workspace (2) → User (3). The transaction in `src/server/email/flows.ts` (`consumeAccountToken`, lines 134–188) follows this exactly: it locks the token row with `FOR UPDATE`, then locks workspaces with `FOR UPDATE` in deterministic `id` order, and only then deletes the user. No lower rank is revisited.
+
+**Cited code:** `src/server/email/flows.ts` – `consumeAccountToken` (lines 134–188).
+
+---
+
+### #47 — Workspace FOR UPDATE vs SSO audit insert
+
+**Hazard:** `changeRole`/`removeMember` in `src/server/members.ts` lock the `workspace` row (rank 2, `FOR UPDATE`) and then call `audit()` which inserts into `audit_event` (rank 7). The insert takes a key-share lock on the same `workspace` row (via the FK `audit_event.workspace_id`). SSO paths (`completeSso` in `src/server/sso.ts`, `confirmSsoLink` in `src/server/sso-link.ts`, `completeFederatedChallenge` in `src/server/federated-mfa.ts`) also lock workspace (rank 2, `FOR UPDATE`) and then audit. Two such transactions on the same workspace can deadlock: one holds the exclusive lock and waits for the key-share, the other holds the key-share and waits for the exclusive.
+
+**Ordering rule:** Workspace (2) → SSO audit (7). The lock on rank 2 is taken first and the audit insert (which key-share locks the same workspace) comes after. The known gap is that the key-share lock from the audit insert is still a lock on rank 2 taken *after* the exclusive lock on rank 2; this is documented as a known gap in the entity table (rank 2, rank 7 rows).
+
+**Cited code:** `src/server/members.ts` – `changeRole` (lines 129–143), `removeMember` (lines 147–161); `src/server/sso.ts` – `completeSso` (lines 538–563); `src/server/sso-link.ts` – `confirmSsoLink` (lines 94–117); `src/server/federated-mfa.ts` – `completeFederatedChallenge` (lines 151–195); `src/server/audit.ts` – `audit` (lines 65–76).
+
+**Status:** Known gap (rank 2 / rank 7). A fix would need to either move the audit insert before the workspace lock (not possible here because the audit needs the workspace id) or use a deferred/after-commit audit write. Tracked as **pending #47**.
