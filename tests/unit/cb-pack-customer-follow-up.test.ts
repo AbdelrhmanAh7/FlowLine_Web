@@ -264,7 +264,7 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         const req = { ...base, body: `deep cleaning on 2026-10-05, call me on ${written} thanks` };
         const { o } = await run(req);
         expect((o.follow_up_record!.detected as { phone: string }).phone).toBe(phone);
-        expect(o.follow_up_record!.phone_display).toBe(written.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/^\(/, "(").trim());
+        expect(o.follow_up_record!.phone_display).toBe(written.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim());
         expect(failing(o, req)).toEqual([]);
       });
     }

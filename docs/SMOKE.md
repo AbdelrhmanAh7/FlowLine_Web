@@ -1,0 +1,2 @@
+- 2026-10-06 Mac mini hub smoke test
+- 2026-10-06 telegram cycle test (free-first engines)
