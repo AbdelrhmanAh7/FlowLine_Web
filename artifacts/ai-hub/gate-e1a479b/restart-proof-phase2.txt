@@ -1,8 +1,0 @@
-
-Running 2 tests using 1 worker
-
-  -  1 [chromium] › e2e\zz-restart-proof.spec.ts:12:5 › restart proof — phase 1: connect a key through the UI
-  ok 2 [chromium] › e2e\zz-restart-proof.spec.ts:26:5 › restart proof — phase 2: after restarting web + worker, sign in again; the stored key is used (5.2s)
-
-  1 skipped
-  1 passed (5.9s)
