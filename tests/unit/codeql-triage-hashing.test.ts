@@ -1,6 +1,6 @@
 /**
  * Issue #113 (CodeQL triage C, part 3/4 of #63): `js/insufficient-password-hash` alerts #10 and #12.
- * Neither hashed value is a password, so both stay SHA-256 and are dismissed with a written reason
+ * Neither hashed value is a password, so both stay SHA-256 and are classified as false positives with a written reason
  * (docs/security/codeql-triage-hashing.md). These tests pin the behaviour that must stay identical and the
  * written reasons at the flagged lines.
  */
@@ -83,8 +83,8 @@ describe("fake AI hub records a SHA-256 fingerprint of the fake key (alert #10)"
 describe("each alert has a written disposition", () => {
   const doc = () => read("docs/security/codeql-triage-hashing.md");
   for (const [alert, file, disposition] of [
-    ["#10", "e2e/fakes/ai-protocols.ts", "dismissed: false positive"],
-    ["#12", "src/server/rate-limit.ts", "dismissed: false positive"],
+    ["#10", "e2e/fakes/ai-protocols.ts", "false positive (dismissal pending)"],
+    ["#12", "src/server/rate-limit.ts", "false positive (dismissal pending)"],
   ] as const) {
     it(`alert ${alert} (${file}) is in the triage doc and commented at the flagged line`, () => {
       const row = doc().split("\n").find((line) => line.startsWith(`| ${alert} |`));
