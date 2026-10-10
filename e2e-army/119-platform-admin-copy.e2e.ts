@@ -13,11 +13,11 @@ test("@issue-119 Platform admin copy page loads without error", { tags: ["feat:f
   await screen.waitForSelector("h1");
 
   // Assertion: Page loads, no error
-  const title = await screen.getByText("Platform Copy Editor");
+  const title = await screen.getByText("Copy editor");
   expect(title).toBeVisible();
 
   // Check for loading state
-  const loading = await screen.getByText("Loading");
+  const loading = await screen.getByText("Loading…");
   expect(loading).not.toBeVisible();
 
   // Edge case: Check for error message
@@ -25,11 +25,11 @@ test("@issue-119 Platform admin copy page loads without error", { tags: ["feat:f
   expect(error).not.toBeVisible();
 
   // Arabic/RTL check
-  const dir = await browser.evaluate(() => document.documentElement.dir);
+  const dir = await screen.evaluate(() => document.documentElement.dir);
   expect(dir).toBe("ltr"); // English page, should be LTR
 
   // Verify the page structure
-  const searchInput = await screen.getByLabel("Search");
+  const searchInput = await screen.getByLabel("Search keys or text");
   expect(searchInput).toBeVisible();
 
   const groupSelect = await screen.getByLabel("Group");
