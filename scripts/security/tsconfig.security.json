@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "strict": true, "skipLibCheck": true, "noEmit": true,
+    "esModuleInterop": true, "types": ["node"]
+  },
+  "include": ["dv2-02-verifier.ts", "vitest.security.config.mts", "../../tests/unit/dv2-02-verifier.test.ts"]
+}
