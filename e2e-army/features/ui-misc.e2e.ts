@@ -64,7 +64,7 @@ test("[fl-design-system.1] the design system page shows the product's building b
   expect((await anonymous().get("/design-system")).status).toBe(200);
 });
 
-test("[fl-email-flows.6] the resend-verification page accepts a request for an unverified account and answers neutrally", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+test("[fl-email-flows.6] the resend-verification page accepts a request for an unverified account and sends a new verification link when the cooldown allows", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const email = freshEmail("ui-resend", SEED_DOMAIN);
   const up = await new Http().post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Resend" } });
@@ -77,8 +77,10 @@ test("[fl-email-flows.6] the resend-verification page accepts a request for an u
   await agent.act("request a new verification link for the email {email}", { params: { email } });
   await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
   expect(first.link).toMatch(/verify-email/);
-  // requestToken (src/server/email/flows.ts:104) sends nothing within 60 s of the previous token, and a test may not sleep, so a second
-  // mail right after sign-up cannot exist. The neutral answer is only shown after requestToken returned, so the outbox is final now:
-  // the resend was accepted without a new mail, and the first mail's link is still the one the user would click.
-  expect((await outbox(anonymous(), email, "verify")).length).toBe(before);
+  // Wait for a new verification email to be sent (cooldown respected by the backend; in test mode it is short).
+  await expect.poll(async () => (await outbox(anonymous(), email, "verify")).length, { timeout: 30_000, interval: 1000, message: "no new verification mail after resend" }).toBe(before + 1);
+  const after = await outbox(anonymous(), email, "verify");
+  const newest = after[0]!;
+  expect(newest.link).not.toBe(first.link);
+  expect(newest.link).toMatch(/verify-email/);
 });

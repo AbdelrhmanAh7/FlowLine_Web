@@ -275,7 +275,7 @@ test("[fl-roles.1] a viewer can look but not change: every write answers 403 wit
     ["get", `${w}/billing`], ["post", `${w}/billing/checkout`, { planId: "test_pro" }], ["post", `${w}/connections`, { provider: "slack", fields: {} }],
   ];
   for (const [verb, path, body] of denied) {
-    const r = await viewer.http[verb](path, body === undefined ? {} : { json: body });
+    const r = await viewer.http.call(verb.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path, body === undefined ? {} : { json: body });
     expect(r.status, `${verb.toUpperCase()} ${path}`).toBe(403);
     expect(r.json.error.code).toBe("FORBIDDEN");
   }
@@ -292,7 +292,7 @@ test("[fl-roles.2] an editor builds and runs but cannot manage members, keys, bi
   expect((await editor.http.get(`${w}/billing`)).status).toBe(200);
   for (const [verb, path, body] of [["patch", w, { name: "nope" }], ["get", `${w}/api-keys`], ["get", `${w}/audit`], ["get", `${w}/invites`], ["post", `${w}/invites`, { email: mailOf("y-invite"), role: "viewer" }],
     ["post", `${w}/billing/checkout`, { planId: "test_pro" }], ["post", `${w}/ai/connections`, { provider: "openai", apiKey: "k" }]] as [Verb, string, unknown?][]) {
-    const r = await editor.http[verb](path, body === undefined ? {} : { json: body });
+    const r = await editor.http.call(verb.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path, body === undefined ? {} : { json: body });
     expect(r.status, `${verb.toUpperCase()} ${path}`).toBe(403);
   }
 });
