@@ -1,3 +1,31 @@
+# Owner actions — FlowLine private beta
+
+**Current state checked 2026-10-03 against primary refs and sanitized final evidence.** No Pi deployment, DNS/tunnel exposure, payment activation or invitations are approved.
+
+## Current verified state
+
+- Main is `9641ad1e684cad7b84bd2385751ea19b0a9d4060`; docs PR #8 is merged. PR #2's earlier code stack merge at `9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d` remains historical context; its reviewed head passed full-tier CI [37077650513](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37077650513), all six jobs green.
+- Exact final tested/reviewed code is `7a315f7146784a4ac23b48e1ba06f46a762a21a7` (source tree `6418ad710a312ae45732a288b7efaebf1a4d07f8`). Draft PR #9 is open; full CI run [37081791704](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37081791704) failed (WebKit 77 passed / 1 failed; other jobs passed). The current CodeRabbit report has zero included reviews remaining in its latest report, but a verified no-cost review/reset is not established; PR #9 remains blocked from review/merge progression until a verified no-cost route is available.
+- Sanitized final build evidence records a successful local `linux/arm64` build labelled with exact source `7a315f7`; local image ID is `sha256:f2e50c0236355765a35d95706d6d4b1d23cdb92ea325dba6aa3e442a3f9a7e9d`, platform manifest digest `sha256:6d2406c1216cfd5d450a3755269bca36272115f3e4710460978f97b58fc2f834`, and source tree `6418ad710a312ae45732a288b7efaebf1a4d07f8`. Registry push is false. This is local build metadata only: no runtime, Pi, migration, provider or deployment certification.
+- Final sanitized recovery record `RECOVERY-1536fd4f52bb8b817a42ab4b475fa746.json` is `PASS_DB_ONLY`: 18 checks passed, including wrong-key refusal before restore, target/container/database guards, nonempty-destination preservation, encrypted restore, ciphertext/key-ID preservation, distinct workspace/platform key decryption, wrong-key/AAD refusal, source integrity, and cleanup of two owned containers/private files. It does not certify application, migrations, off-device backup, Pi restore or a deployed artifact.
+- Overall G4 remains **PARTIAL**. Main/PR2/PR8 merge history is distinct from the unmerged PR #9 candidate. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO`.
+
+## Owner inputs and approvals still required
+
+| Action | Exact input or approval needed | Current boundary |
+|---|---|---|
+| Select the existing beta domain | Confirm an already-owned domain, exact `beta.<domain>` hostname, and chosen sending subdomain/provider; identify an owner-approved read-only DNS view. | Pending. No purchase or nameserver changes. Inventory existing A/AAAA/MX/TXT and mail-auth records before proposing edits. |
+| Authorize read-only Pi inspection | Exact SSH host/user and a secure access method outside chat; authorize inspection of OS/architecture, RAM/storage, Docker/Compose, firewall, running services/ports and other workloads. | Pending. No private keys in chat. No install, restart, configuration change or Pi deployment. |
+| Approve DNS and named-tunnel exposure | After inspection, approve the exact DNS diff, Cloudflare account/zone and named tunnel route, origin, service/firewall changes, verified cost, risks and rollback. | Pending. No tunnel creation, DNS write, credentials or internet exposure. |
+| Approve a specific beta deployment | Exact source SHA, image digest/architecture, migration state/plan, named Pi services and protected config paths, data/off-device backup and clean-restore plan, rollback, verified cost, invite-only mode and sandbox-only billing with live billing disabled. | Pending. Local candidate evidence is source `7a315f7`, image ID `sha256:f2e50c0236355765a35d95706d6d4b1d23cdb92ea325dba6aa3e442a3f9a7e9d`, platform manifest `sha256:6d2406c1216cfd5d450a3755269bca36272115f3e4710460978f97b58fc2f834`; this is not Pi or release certification. Approval cannot imply production or invitations. |
+| Complete named provider setup and consent | Dedicated test accounts/resources, verified callbacks and least scopes, intended Flowline UI/storage, and owner consent for Google/GitHub, Sheets/Gmail, Slack, email and Paddle sandbox journeys. | Not live-verified. No real customer data or live payments. |
+| Hosted AI validation / PR #9 review | Use only a verified no-cost review route; a verified reset/availability is not recorded. | Aggregate cap remains **$0**. PR #9 review remains blocked until a no-cost route is verified. No new spending proposal, billable calls, billing activation or top-ups. |
+| Complete owner admin setup privately | Owner completes Google → ZITADEL → Flowline sign-in round-trip and real platform-admin TOTP/bootstrap, then stores recovery material privately. | Both remain unverified in the coordinator record. No owner login/MFA was performed here. |
+| Approve recipient-specific invitations | After exact-artifact readiness and owner UAT, specify each recipient/workspace, number of invitations and expiry. | Not approved. No invitations sent. |
+
+**Current disposition:** Main `9641ad1`; PR #8 docs merged. PR #9 is draft/unmerged; full CI run `37081791704` failed in WebKit. Its unresolved `ECONNRESET` failure remains an additional merge blocker even if later documentation-head CI passes. The local ARM64 artifact and DB-only proof cover exact tested code `7a315f7`, with no registry push or deployment. G4 is PARTIAL; review progression also awaits verified no-cost availability. `BETA INFRA VERIFIED: NO` · `PRIVATE BETA READY: NO` · `PUBLIC PRODUCTION APPROVED: NO` · invitations not approved.
+
+## Preserved earlier owner chronology — historical, superseded; do not act on its status
 # Owner actions — private beta
 
 ## Pending owner checks — 2026-10-03
