@@ -1,14 +1,12 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-<<<<<<< HEAD
 ## `pnpm wt` tests and docs (issue #67) — 2026-10-08
 
 `pnpm wt rm` gains the alias `remove` and now refuses a dirty or unpushed lane with exit 1 and `refusing to remove <path>: <reason>` (it used to print `kept …` and exit 0; `prune` still keeps and continues). A scratch-clone acceptance test showed every fresh lane counted as dirty (git lists the `node_modules` symlink as untracked) and a dangling link blocked removal; both are fixed in `scripts/worktree.mjs`. Usage and safety rules: [developer guide](../DEVELOPER_GUIDE.md#worktrees). Tests: `tests/unit/worktree-script.test.ts`, `tests/integration/worktree-cli.test.ts`; evidence in [artifacts/phase-4/worktree/EVIDENCE.md](../../artifacts/phase-4/worktree/EVIDENCE.md).
-=======
+
 ## Focused-run evidence helpers: explicit child environment — 2026-10-03
 
 Issue #36: the four local focused-run helpers (`upload-admission/run-focused.mjs`, `federated-mfa/run-focused.mjs`, `run-auth-focused.mjs`, `artifacts/phase-4/security-auth/run-focused.mjs`) no longer start Vitest with `...process.env`. They use the allowlist in `scripts/focused-run-env.mjs` (OS/runtime names plus the synthetic values each helper builds), record variable names only (never values) in new result JSON or stderr, and support `--dry-run`. [Allowlist and limits](../../artifacts/phase-4/paid-pilot-round1/upload-admission/README.md#child-environment-issue-36). Verified locally on Windows only: unit test, dry-runs, and a probe launching `npx tsx` and a Vitest unit run under the allowlist. The helpers were **not re-run against a database** (no Docker started), the Linux path is unit-tested by name only, and the earlier recorded runs predate the change and used the ambient shell. `check-drizzle-prune.mjs` and the gate/release/Company Builder scripts still pass `process.env` (not focused database runs); the frozen `artifacts/beta-execution` helpers are historical. This does not change release scope or the unverified items below.
->>>>>>> origin/main
 
 ## H3 security readiness review — 2026-10-03
 
