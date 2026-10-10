@@ -425,8 +425,8 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
     // CodeQL js/resource-exhaustion: the timer duration comes from a fixed table (the nearest step at or above the request), never from the request value itself.
     const SLOW_STEPS_MS = [0, 250, 500, 1000, 2000, 5000, 10_000];
     const rawMs = Number(fault.delayMs);
-    const wantedMs = fault.delayMs == null || !Number.isFinite(rawMs) ? 1000 : rawMs; // an explicit 0 stays 0; negative values fall to the 0 step
-    const delayMs = SLOW_STEPS_MS.find((step) => step >= wantedMs) ?? 10_000;
+    const wantedMs = Number.isFinite(rawMs) ? rawMs : 1000; // an explicit 0 stays 0; negative values become 0
+    const delayMs = SLOW_STEPS_MS.find((step) => step >= wantedMs) ?? 10_000; // 10 s cap, rounded up to nearest step
     setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), delayMs);
     return true;
   }
