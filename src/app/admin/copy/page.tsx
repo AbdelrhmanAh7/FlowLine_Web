@@ -11,6 +11,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CopyPage() {
-  if (!(await platformAdminOrNull())) notFound();
+  let adminOrNull: PlatformAdminContext | null = null;
+  try {
+    adminOrNull = await platformAdminOrNull();
+  } catch (e) {
+    console.error("[admin/copy] platformAdminOrNull error:", e);
+    throw e;
+  }
+  if (!adminOrNull) notFound();
   return <CopyEditor />;
 }
