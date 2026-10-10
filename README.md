@@ -133,8 +133,9 @@ automated tester that cannot read the outbox (TestSprite cloud, milestone runs),
 sign-up form signs them in straight away (issue #124). A single browser context can opt in with the cookie
 `fl_test_auto_verify=1` instead (the e2e-army test does). Both opt-ins are honoured only when `FLOWLINE_ENV` is exactly
 `test`; anywhere else they are ignored, so they cannot be enabled on staging, beta or production — a stray
-`FLOWLINE_TEST_AUTO_VERIFY` var logs one warning at the first sign-up attempt, the cookie is ignored silently. The
-private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
+`FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one warning at the first sign-up attempt; the cookie is ignored silently.
+The log is emitted lazily on the first sign-up attempt, not at startup. The private-beta admission check still applies,
+and Google/GitHub/ZITADEL sign-ups are unaffected.
 
 | Check | Command |
 |---|---|
