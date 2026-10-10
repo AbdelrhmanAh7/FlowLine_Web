@@ -68,3 +68,15 @@ export function readCappedBody(req: IncomingMessage, limit: number): Promise<str
     req.on("error", reject);
   });
 }
+
+const SLOW_STEPS_MS = [0, 250, 500, 1000, 2000, 5000, 10_000];
+
+/**
+ * Timer duration for the AI fake's `slow` fault: the nearest step of a fixed table at or above the requested value
+ * (10 s cap, negative = 0, a missing or non-numeric value = 1000). An explicit 0 stays 0.
+ */
+export function slowDelayMs(raw: unknown): number {
+  const n = Number(raw ?? 1000);
+  const wanted = Number.isFinite(n) ? n : 1000;
+  return SLOW_STEPS_MS.find((step) => step >= wanted) ?? 10_000;
+}

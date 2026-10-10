@@ -9,7 +9,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createHash } from "node:crypto";
-import { BodyTooLargeError, readCappedBody } from "./safety";
+import { BodyTooLargeError, readCappedBody, slowDelayMs } from "./safety";
 import { handleHub, hub, resetHub, type HubFault, type InnerOut, type InnerReq } from "./ai-protocols";
 
 interface Schema {
@@ -422,11 +422,8 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   }
   // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
   if (fault?.mode === "slow") {
-    // CodeQL js/resource-exhaustion: the timer duration comes from a fixed table (the nearest step at or above the request), never from the request value itself.
-    const SLOW_STEPS_MS = [0, 250, 500, 1000, 2000, 5000, 10_000];
-    const rawMs = Number(fault.delayMs);
-    const wantedMs = Number.isFinite(rawMs) ? rawMs : 1000; // an explicit 0 stays 0; negative values become 0
-    const delayMs = SLOW_STEPS_MS.find((step) => step >= wantedMs) ?? 10_000; // 10 s cap, rounded up to nearest step
+    // CodeQL js/resource-exhaustion: the timer duration comes from a fixed step table (see slowDelayMs), never from the request value itself.
+    const delayMs = slowDelayMs(fault.delayMs);
     setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), delayMs);
     return true;
   }

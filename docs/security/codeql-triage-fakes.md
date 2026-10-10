@@ -11,7 +11,7 @@ Scope: `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`. These are te
 
 ## Verification
 
-- `tests/contract/codeql-fakes.test.ts`: helper units, OAuth/OIDC/Paddle redirects, fault control API, generic 500 body (and the stack in the log), an oversized AI body refused (413 or the connection closed), and the `slow` step table (an explicit `delayMs: 0` stays 0; 100 ms rounds up to the 250 ms step).
+- `tests/contract/codeql-fakes.test.ts`: helper units, OAuth/OIDC/Paddle redirects, fault control API, generic 500 body (and the stack in the log), an oversized AI body refused (413 or the connection closed), and the `slow` step table (`slowDelayMs` unit-checked: an explicit `delayMs: 0` stays 0, 100 ms rounds up to 250 ms; plus one end-to-end slow answer).
 - The whole `contract` project passes with the fixes (482 tests); `tsc` and `eslint` are clean on the changed files. The full gate runs on CI.
 - No e2e-army test: the change is internal to test doubles with no user-facing flow.
 
