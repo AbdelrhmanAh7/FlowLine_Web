@@ -20,9 +20,19 @@ const { LanguageSwitcher } = await import("@/components/language-switcher");
 function render(node: ReactElement, locale: Locale = "en") {
   return renderToStaticMarkup(createElement(I18nProvider, { locale }, createElement(ServerThemeProvider, { theme: "dark" }, node)));
 }
+/** Removes tags repeatedly until none remain, so nested fragments like "<<b>script>" cannot survive one pass. */
+function stripTags(html: string): string {
+  let prev: string;
+  let out = html;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
+  return out;
+}
 /** The <button> elements of a markup string: attributes and inner HTML. */
 function buttons(html: string) {
-  return [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]!, text: m[2]!.replace(/<[^>]*>/g, "").trim() }));
+  return [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]!, text: stripTags(m[2]!).trim() }));
 }
 const classOf = (attrs: string) => /class="([^"]*)"/.exec(attrs)?.[1] ?? "";
 const has = (attrs: string, token: string) => classOf(attrs).split(/\s+/).includes(token);
