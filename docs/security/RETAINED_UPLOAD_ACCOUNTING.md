@@ -92,6 +92,7 @@ and schema foreign keys:
 | Membership removal/role change, connection/OAuth deletion, worker reindexing | Delete or change members, credentials, or chunks, not retained files. They do not acquire accounting later in the same transaction. |
 | `server/retention.ts` and worker/script cleanup | Remove execution/history, telemetry, audit, authentication, rate-limit and heartbeat records. No retained-file or workspace cleanup was found. |
 | Better Auth user deletion | Native `/delete-user` and callback routes are replaced by Flowline's account-token flow in `src/app/api/auth/[...all]/route.ts`. |
+| `email/flows.consumeAccountToken("reset")`, called by the email confirmation route | Rewrites the user's sessions, accounts and user row (user row first, see [FEDERATED_MFA.md](FEDERATED_MFA.md#password-reset-recovery-lock-order)). None of these cascade into retained files and the user UPDATE leaves `created_by` alone, so it takes no accounting lock. |
 
 The three production insert sites (file-upload API, knowledge source creation,
 and Company Builder knowledge fixtures) all use `insertRetainedFile`.

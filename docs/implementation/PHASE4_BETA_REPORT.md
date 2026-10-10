@@ -18,6 +18,10 @@ Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, rema
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
 
+## Issue #41 password-reset lock order — 2026-10-04
+
+`consumeAccountToken("reset")` now takes the user row (`FOR UPDATE`) before the user's sessions and accounts, the same user-first order the federated transactions use; it had locked the credential account, then the sessions, then the user. [Order, retained-upload note and two adjacent known gaps](../security/FEDERATED_MFA.md#password-reset-recovery-lock-order). `#43` (the federated paths' shared user-first order, `src/server/federated-locks.ts`) is merged into this branch, so both sides now take the same order. The mocked-order unit test `tests/unit/password-reset-lock-order.test.ts` passes locally and fails on the previous code; the two-connection PostgreSQL regression `tests/integration/password-reset-lock-order.test.ts` is **not executed** locally and needs CI. No migration, no UI change, no change to private-beta or production acceptance.
+
 ## Branch maintenance — 2026-10-03
 
 Status: **merged into main** by [PR #20](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/20) (merge `db4b590`, final head `050407f`), built first on `claude/ci-trim-20261003` and the stacked `claude/ci-gate-always-report` (issues #22, #23).

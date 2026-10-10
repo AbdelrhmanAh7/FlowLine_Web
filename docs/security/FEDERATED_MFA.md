@@ -58,12 +58,11 @@ The federated authority transactions lock rows that other requests of the same u
 
 Two facts matter when adding a lock. The unissued session is created by Better Auth's `createSession` before the transaction, outside every lock above; it waits for a concurrent holder of the user row (its foreign key takes a key-share lock) but holds nothing while it waits, so it cannot form a cycle. And an `INSERT` also takes a key-share lock on each row it references: `audit(tx, ...)` references `workspace`, and `account` and `session` inserts reference `user`.
 
-**Known gaps (read from the code while auditing this; not reproduced and not changed by this fix).** The rule covers the paths above, not these:
+**Known gap (read from the code while auditing this; not reproduced and not changed by this fix).** The rule covers the paths above, not this one. Password-reset recovery, formerly listed here, now follows the rule: see [Password-reset recovery lock order](#password-reset-recovery-lock-order).
 
-- `consumeAccountToken("reset")` in `src/server/email/flows.ts` updates the credential `account` row, then deletes the user's sessions, then updates the user row: account, session, user. Run against a link confirmation or challenge completion of the same user, the opposite order can deadlock.
 - `changeRole` and `removeMember` in `src/server/members.ts` lock the `workspace` row and then the member row. The SSO transactions hold the member row (step 5) and later insert an `audit_event` row, which needs a key-share lock on the `workspace` row, so a role change or removal of the same member at the same moment can deadlock with them.
 
-Both need their own change and test; until then a PostgreSQL deadlock abort is the failure mode, not a silent bypass.
+It needs its own change and test; until then a PostgreSQL deadlock abort is the failure mode, not a silent bypass.
 
 **Checks.** `tests/unit/federated-lock-order.test.ts` records the real lock statements of link confirmation and of challenge completion (workspace sign-in with an initiator, and global provider) against a mocked database. It asserts the exact sequence and that every sequence is non-decreasing in the rank above, so a lock added to either path fails it until the rank table and this section change. Run against the previous code it fails (link: session before user; challenge: the sessions after factor and accounts). It proves statement order, not PostgreSQL behaviour. `tests/integration/federated-lock-order.test.ts` runs both production functions at once on two real connections for one user sharing a session, in both directions (link first, challenge first). It pauses the first transaction right after the lock that used to be its first, observes the second waiting at the user row through `pg_blocking_pids`, releases, and requires both to commit with their audit records, the assurance proof and the TOTP marker at the later step. It is written for CI and was **not executed** locally.
 
@@ -72,6 +71,31 @@ Both need their own change and test; until then a PostgreSQL deadlock abort is t
 Platform access additionally requires an active `platform_admin` row, verified email, verified TOTP and a session at most 24 hours old. Writes still require a separate ten-minute, session-bound TOTP elevation with replay protection. Workspace ownership/SSO never grants platform administration. Unassured sessions resolve as signed out, including a 404 at the platform boundary.
 
 Workspace API keys are independent machine credentials for `/api/v1/**`; they retain their existing hash, expiry/revocation, scope and current-membership checks. They never count as a browser session or local MFA, and any Authorization header is refused by platform access. An unassured browser session cannot create a new key through the authenticated workspace management API. Enrollment or session logout does not silently revoke previously issued API keys.
+
+## Password-reset recovery lock order
+
+`consumeAccountToken("reset", ...)` in `src/server/email/flows.ts` rewrites the rows that the federated transactions lock too: the user row, the user's sessions and the user's `account` rows. It used to update the credential account, delete the sessions, delete the never-approved `sso:*` accounts and only then update the user row (account, session, user), the opposite of the user-first order the federated transactions take (user row, then sessions, then factor and accounts). A password reset and a link confirmation, challenge completion or SSO callback of the same user could therefore each hold the row the other needed next, and PostgreSQL would abort one of them (SQLSTATE `40P01`) after `deadlock_timeout` (issue #41, found by reading the code while fixing #37; the two-connection test below is written to reproduce it on the old order and was not executed locally). `#43` (the federated paths' shared user-first order, `src/server/federated-locks.ts`) is merged into this branch, so both sides now take the same order.
+
+**Rule.** The reset transaction takes its row locks in this order and never returns to an earlier step:
+
+1. The reset token's own `email_token` row, `FOR UPDATE` (the flow's pending-state row; `consumeAccountToken` takes it first for every purpose).
+2. The user row, `FOR UPDATE`, through an explicit locking read. The new password is hashed before this step, so the lock is held only for the writes. If the row is gone the call returns `invalid` and writes nothing.
+3. The user's session rows (`DELETE`: recovery revokes every session).
+4. The user's account rows: the credential account (`UPDATE`, or `INSERT` when none exists; the insert's foreign key takes a key-share lock on the user row this transaction already holds), then the `sso:*` accounts that were never mailbox-approved (`DELETE`).
+5. Writes to rows already locked (the user's `emailVerified` and `updatedAt`), then the user's other outstanding reset tokens and this token (see the gaps below).
+
+Taking the user row first also makes two recoveries of one user take turns at that row instead of interleaving on the credential account (two concurrent resets of a user without a credential account could both find none and both insert one).
+
+**Retained uploads.** Reset mutates no retained file. The `session` and `account` rows have no dependents, and a user `UPDATE` leaves `file_object.created_by` alone (only a user `DELETE` nulls it), so reset takes no retained-file accounting lock and the accounting-first rule in [RETAINED_UPLOAD_ACCOUNTING.md](RETAINED_UPLOAD_ACCOUNTING.md) is unaffected. If a future change makes recovery touch retained files, it must call `lockRetainedFileAccounting(tx)` before the token row, as account deletion does.
+
+**Known gaps (read from the code; not reproduced and not changed by this fix).**
+
+- `email_token.user_id` references `user` with `ON DELETE SET NULL`, so deleting a user updates that user's token rows after the user row is locked, while reset, verification and account-deletion consumption lock their token row before the user. A reset confirmation and an account-deletion confirmation of the same user at the same moment can therefore deadlock on the token row. Closing it means locking the user before the token row in those three flows, which needs the user id from an unlocked read first; that is a separate decision.
+- Two resets of one user with two different outstanding tokens each hold their own token row, then queue at the user row; the one that gets it finally updates every outstanding reset token of that user, including the one the other holds. That cycle existed before this change (it then queued at the credential account instead) and is not closed by it.
+
+Both need their own change and test; until then a PostgreSQL deadlock abort is the failure mode, not a silent bypass: one request fails and its transaction rolls back, so its link is not consumed.
+
+**Checks.** `tests/unit/password-reset-lock-order.test.ts` runs the real `consumeAccountToken("reset", ...)` against a mocked database that records every row lock in order. It asserts the exact statement sequence (existing and missing credential account), that the tables are first touched in the order token, user, session, account, and that no retained-file accounting lock is taken; it fails on the previous code (account first, sessions second, user last). It proves statement order, not PostgreSQL behaviour. `tests/integration/password-reset-lock-order.test.ts` runs the real reset on one connection against a second connection that locks the user, a session and the accounts in the federated order, in both directions (reset first, the other first). It pauses the first transaction at its first lock on the shared rows, observes the second waiting at the user row through `pg_blocking_pids`, releases, and requires both to commit with the new password in place, the never-approved SSO identity and the sessions removed and the link consumed. The second connection issues the documented lock statements itself instead of calling the federated functions, so the test holds whichever of the two orders those functions currently use. It is written for CI and was **not executed** locally.
 
 ## Validation limits
 
