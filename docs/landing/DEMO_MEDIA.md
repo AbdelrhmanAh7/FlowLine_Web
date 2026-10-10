@@ -47,8 +47,8 @@ The button (`data-testid="demo-watch"`) opens the dialog with `showModal()`; Esc
 button. The video has `controls`, no loop, `<track kind="captions">` for `ar` and `en` (the page language is the default track,
 styled by `::cue` in `globals.css`). The stepper has one button per manifest chapter plus Back/Next; `aria-current="step"`; Left/Right
 arrows follow the reading direction (flipped in RTL), Home/End jump. Choosing a chapter seeks the video to its start time.
-Under reduced motion nothing plays by itself and the active chapter's **still** and text are shown, so the walkthrough works
-without playback. No API calls; it works logged out.
+Under reduced motion nothing plays by itself. Under reduced motion, or when the video cannot play (a media `error`), the active
+chapter's **still** and text are shown, so the walkthrough works without playback. No API calls; it works logged out.
 
 ### Delivery
 
@@ -72,6 +72,12 @@ Every string is in `src/i18n/messages/{ar,en}.json` under `landing.demo.*` (iden
 - `e2e-army/100-landing-demo.e2e.ts` is the blocking `e2e-army` flow (hero, Pause/Play, walkthrough in Arabic, bento).
 - `tests/unit/demo-media.test.ts` (manifest parsing, `fileFor`, `chooseSource`, the `play()` handler, the cache header, i18n keys) and
   `tests/unit/demo-markup.test.ts` (server markup).
+
+### Reusing the player for another clip
+
+`DemoVideo` takes any `ClipView`, and `clipView(manifest, id, locale, theme)` builds one for any clip id in the manifest. A further
+clip (for example the story video of #137) needs only its entry in the manifest and one `<DemoVideo view={clipView(...)} />`; no
+second player.
 
 ### Regenerating or swapping media
 

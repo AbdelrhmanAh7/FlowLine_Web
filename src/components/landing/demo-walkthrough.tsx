@@ -13,8 +13,9 @@ const btn = "inline-flex min-h-11 items-center justify-center rounded-lg border 
 /**
  * The 53 s walkthrough (issue 100): a button that opens a native modal `<dialog>` (showModal: focus trap, Esc, inert page) with the video
  * (`controls`, no loop, EN + AR caption tracks, the page language is the default track) and a four-step chapter stepper that seeks it.
- * Left/Right keys follow the reading direction (flipped in RTL). Under reduced motion nothing plays by itself and the stepper also
- * shows the chapter still with its text, so the walkthrough is usable without playback. No API calls; works logged out.
+ * Left/Right keys follow the reading direction (flipped in RTL). Under reduced motion nothing plays by itself, and under reduced motion
+ * or when the video cannot play (a media error) the stepper also shows the chapter still with its text, so the walkthrough is usable
+ * without playback. No API calls; works logged out.
  */
 export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
   const t = useT();
@@ -26,6 +27,8 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
   const steps = useRef<(HTMLButtonElement | null)[]>([]);
   const [active, setActive] = useState(0);
   const [reduced, setReduced] = useState(false);
+  /** The video cannot play here (no decodable file, or it failed to load): the stills carry the walkthrough instead. */
+  const [noVideo, setNoVideo] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia(REDUCED_MOTION);
@@ -45,7 +48,7 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
     d.showModal();
     if (!v) return;
     // Choosing the file does not download it (preload="none"); bytes flow only when the visitor, or autoplay below, starts playback.
-    if (!(await attachSource(v, view.sources, true))) return;
+    if (!(await attachSource(v, view.sources, true))) { setNoVideo(true); return; }
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (!shouldSkipVideo(window.matchMedia(REDUCED_MOTION).matches, conn)) {
       v.muted = true;
@@ -114,13 +117,14 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
             className="w-full rounded-lg bg-card"
             aria-label={t("landing.demo.walkthroughAria")}
             onTimeUpdate={onTime}
+            onError={() => setNoVideo(true)}
           >
             {fallback && <source src={fallback.src} type={fallback.type} />}
             {order.map((lang) => view.captions[lang] && (
               <track key={lang} kind="captions" srcLang={lang} label={lang === "ar" ? "العربية" : "English"} src={view.captions[lang]} default={lang === locale} />
             ))}
           </video>
-          {reduced && chapter?.still && (
+          {(reduced || noVideo) && chapter?.still && (
             <figure data-testid="demo-chapter-still" className="m-0 flex flex-col gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element -- a fixed, content-hashed still; its size is the recording's */}
               <img src={chapter.still} alt="" width={view.width} height={view.height} style={{ aspectRatio: view.aspect }} className="w-full rounded-lg border border-line" />
