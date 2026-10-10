@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "concurrently -k -n web,worker -c magenta,cyan \"next dev -p 3000\" \"node scripts/with-env.mjs .env tsx watch worker/index.ts\"",
@@ -35,7 +35,11 @@
     "test:contract": "vitest run --project contract",
     "test:live": "node scripts/with-env.mjs .env vitest run --project live",
     "test:live:saas": "node scripts/with-env.mjs .env vitest run --project live tests/live/saas.test.ts tests/live/certification.test.ts",
-    "test:live:dryrun": "node scripts/live-dryrun.mjs"
+    "test:live:dryrun": "node scripts/live-dryrun.mjs",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --fix --cache --cache-location node_modules/.cache/eslint/ --no-warn-ignored"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",
@@ -84,6 +88,8 @@
     "e2e": "0.18.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

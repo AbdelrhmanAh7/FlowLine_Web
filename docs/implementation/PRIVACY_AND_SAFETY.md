@@ -45,7 +45,7 @@ used for analytics or model training by Flowline.
 | Webhook deliveries | 30 days (`FLOWLINE_RETENTION_WEBHOOK_DAYS`) |
 | Audit log | 1 year (`FLOWLINE_RETENTION_AUDIT_DAYS`) |
 | Product telemetry | 180 days (`FLOWLINE_RETENTION_TELEMETRY_DAYS`) |
-| Sessions, verification tokens, OAuth/SSO states | deleted once expired |
+| Sessions, verification tokens, OAuth/SSO states | deleted once expired (an expired federated MFA challenge is first recorded as an `expired` failure audit, see `docs/security/FEDERATED_MFA.md`) |
 | Database backups | `BACKUP_RETENTION_DAYS` (default 14 days) on the beta host |
 | Container logs | 5 × 20 MB per service (rotated) |
 
