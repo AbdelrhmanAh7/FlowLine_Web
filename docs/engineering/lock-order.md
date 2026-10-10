@@ -29,3 +29,21 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 - [ ] Update this table, and FEDERATED_MFA.md for federated paths, in the same PR as the change.
 
 ## Worked examples
+
+### Email token vs user delete ([#45](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/45))
+
+**Hazard:** `email_token.user_id` is `ON DELETE SET NULL` (`src/db/schema.ts`), so deleting a user updates the user's other token rows after locking the user. `consumeAccountToken` (`src/server/email/flows.ts`) locks its own token row first (`FOR UPDATE` at line 141), and the `reset` purpose writes the user row. A reset and a delete confirmation of one user can deadlock: the reset holds its token and queues at the user row, while the delete holds the user row and its cascade waits for that reset token. Two resets with different tokens queue at the user row; the winner updates the loser's token.
+
+**Rule:** The transaction locks its own token row first, then any workspaces it owns (deterministic `id` order), then deletes the user. The `reset` purpose writes account, session and user rows after the token lock (lines 189–202), so it also locks token before user.
+
+**Code:** `src/server/email/flows.ts` – `consumeAccountToken` (lines 134–209). Open fix in PR #65.
+
+---
+
+### Workspace `FOR UPDATE` vs SSO audit insert ([#47](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/47))
+
+**Hazard:** `consumeAccountToken("delete")` (`src/server/email/flows.ts`) locks the user's workspaces `FOR UPDATE` (ordered by `id` at line 151) and later deletes the user. SSO callbacks in `src/server/sso.ts` (lines 509, 541) share-lock the user `FOR SHARE`, then call `audit()` (`src/server/audit.ts:64`), whose `audit_event` insert key-share locks the same workspace (via `audit_event.workspace_id`). A deletion holds workspace W and waits for the user row, while an SSO transaction holds the user row `FOR SHARE` and waits for W to insert its audit row. Same deadlock cycle as #42. `FOR UPDATE` must stay, because sole-member workspaces are deleted (`tests/integration/retained-file-locking.test.ts:122`). #109 proposes moving the audit insert before the workspace lock.
+
+**Rule:** A transaction that will insert an audit row for workspace W must not wait for W while holding the user row. Deletion keeps `FOR UPDATE` (sole-member workspaces are deleted) and changes its order instead.
+
+**Code:** `src/server/sso.ts` – callbacks (lines 509, 541); `src/server/sso-link.ts` – `confirmSsoLink` (line 114); `src/server/federated-mfa.ts` – `completeFederatedChallenge` (lines 151–195); `src/server/audit.ts` – `audit` (lines 65–76); `src/server/email/flows.ts` – `consumeAccountToken` delete flow (line 151). Tracked as **pending #109** (test: #108).
