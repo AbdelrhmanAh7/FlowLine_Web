@@ -43,8 +43,13 @@ export const getPublishedCopy = cache(async (): Promise<CopyOverrides> => {
 });
 
 export async function getCopyEditorState() {
-  const [draft, published] = await Promise.all([read(DRAFT), read(PUBLISHED)]);
-  return { base: { ar: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("ar", key)!])), en: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("en", key)!])) }, draft, published };
+  try {
+    const [draft, published] = await Promise.all([read(DRAFT), read(PUBLISHED)]);
+    return { base: { ar: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("ar", key)!])), en: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("en", key)!])) }, draft, published };
+  } catch (e) {
+    console.error("[platform-copy] getCopyEditorState error:", e);
+    throw e;
+  }
 }
 
 function actorOf(ctx: PlatformAdminContext) {

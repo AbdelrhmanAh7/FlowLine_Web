@@ -96,11 +96,13 @@ export async function hasVerifiedTotp(userId: string) {
 
 /** Current step-up expiry for this session, or null. */
 export async function stepUpUntil(ctx: PlatformAdminContext): Promise<Date | null> {
+  const now = new Date();
   const [row] = await db
     .select({ expiresAt: schema.platformStepup.expiresAt })
     .from(schema.platformStepup)
-    .where(and(eq(schema.platformStepup.sessionTokenHash, ctx.session.tokenHash), eq(schema.platformStepup.userId, ctx.user.id), gt(schema.platformStepup.expiresAt, new Date())));
-  return row?.expiresAt ?? null;
+    .where(and(eq(schema.platformStepup.sessionTokenHash, ctx.session.tokenHash), eq(schema.platformStepup.userId, ctx.user.id), gt(schema.platformStepup.expiresAt, now)));
+  if (!row?.expiresAt) return null;
+  return new Date(row.expiresAt);
 }
 
 /** Writes need a TOTP step-up in the last 10 minutes on THIS session. */
