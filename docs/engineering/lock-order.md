@@ -29,3 +29,15 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 - [ ] Update this table, and FEDERATED_MFA.md for federated paths, in the same PR as the change.
 
 ## Worked examples
+
+### Example #41: Password reset vs SSO link confirmation
+
+**Hazard:** A password reset and a SSO link confirmation for the same user can deadlock. Reset locked the account row (rank 5) before the user row (rank 3), while link confirmation locked the user first, then the account.
+
+**Ordering rule:** Password reset must lock user (rank 3) before sessions (rank 4) and accounts (rank 5). This is now enforced by `consumeAccountToken("reset")` in `src/server/email/flows.ts`.
+
+### Example #42: SSO link confirmation vs federated challenge completion
+
+**Hazard:** `confirmSsoLink` and `completeFederatedChallenge` for the same user can deadlock. Link confirmation locked the initiating session (rank 4) before the user row (rank 3), while challenge completion locked the user first.
+
+**Ordering rule:** Both paths now take the user row (rank 3) before the initiating session (rank 4) via the shared helper `lockUserThenSessions` in `src/server/federated-locks.ts`.
