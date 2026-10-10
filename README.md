@@ -201,7 +201,7 @@ e2e-army/          Natural-language tester-army/e2e suite (pnpm e2e:army, config
 tests/             Vitest unit, contract, integration, live
 scripts/           Test stack, release (rollback, backup/restore, DB outage), load, admin bootstrap/rewrap, diagnostics
 docs/              Implementation plans, test plan, AI hub report/providers/routing/migration, security design, releases
-artifacts/         Evidence per phase (test output, screenshots, reviews, release checks)
+artifacts/         Evidence per phase as Markdown reports (raw output is not committed; older raw evidence: tag archive/pre-slimdown-2026-10-10)
 design-reference/  Design slide renders and extracted tokens
 ```
 
