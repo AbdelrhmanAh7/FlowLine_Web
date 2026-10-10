@@ -82,6 +82,15 @@ point at files there).
 - Historical handover docs (`docs/CLAUDE_HANDOVER_20261002.md`, `KIMI_BRIEF.md`, `NEXT_ACTION.md`): docs, not code; left to the
   docs owner.
 
-## After
+## After (this PR + the tests/CI PR, measured on their own CI runs)
 
-Filled in by the last slim-down PR from its own CI runs.
+| Measure | Before | After |
+| --- | --- | --- |
+| Tracked files / size | 3,879 / 206 MB | 1,081 / 21.5 MB |
+| Code lines (non-blank) | 107,462 | ~100,390 |
+| PR test suites (Vitest) | unit 100 files / 1,329; contract 23 / 468; integration 60 files / 515 | unit 97 / 1,329 (the CI-policy test gained per-workflow rows); contract 22 / 464; integration 54 files / 481; 6 files / 35 tests moved to the nightly tier |
+| Dependencies | 30 + 18 direct, 690 locked | unchanged: knip found none unused |
+| PR CI (`Gate`) | median 3.8 min wall, 9.6 runner-min | 3.5 min wall, 8.6 runner-min (first run of the tests/CI PR, before the checkout shrinks) |
+| Workflows | 4 (one disabled, self-hosted) | 4: `gate`, `docs` (sparse checkout), `claude`, `nightly` (new, off the PR path) |
+
+CodeQL default setup no longer analyses Python: the only Python files were one-off scripts under `artifacts/`.
