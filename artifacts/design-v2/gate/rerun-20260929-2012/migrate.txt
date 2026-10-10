@@ -1,5 +1,0 @@
-
-> flowline@0.1.0 db:migrate:test C:\Users\Abdelrahman\Desktop\Personal_Project\FL-wt-design
-> node scripts/with-env.mjs .env.test tsx src/db/migrate.ts
-
-migrated postgres://***@127.0.0.1:5433/flowline_test_design

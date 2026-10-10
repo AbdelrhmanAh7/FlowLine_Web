@@ -9,6 +9,7 @@ import { GET as challengeGET, POST as challengePOST } from "@/app/api/federation
 import { confirmationCsrf } from "@/server/auth-confirmation";
 import { sha256Hex } from "@/server/crypto";
 import { FEDERATED_MFA_COOKIE } from "@/server/federated-mfa";
+import { pruneOnce } from "@/server/retention";
 import { ssoProviderId, ssoSessionCookie } from "@/server/sso";
 import { addMember, closeDb } from "./helpers";
 import { code, enrolTotp, makeVerifiedUser, ORIGIN } from "./platform-helpers";
@@ -50,7 +51,12 @@ async function workspaceMember(prefix: string, withTotp: boolean) {
   await db.insert(schema.account).values({ id: randomUUID(), userId: user.id, providerId: ssoProviderId(ws.id, ISSUER, "test-client"), accountId: "attacker-subject" });
   const attempt = await oidcAttempt(ws.slug, user.email);
   const callback = () => ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
-  return { ws, user, secret, callback };
+  /** A second, independent sign-in attempt (new state and code) for the same member. */
+  const signInAgain = async () => {
+    const next = await oidcAttempt(ws.slug, user.email);
+    return ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${next.state}&code=${next.code}`, { headers: { cookie: `fl_sso_state=${next.state}` } }));
+  };
+  return { ws, user, secret, callback, signInAgain };
 }
 async function githubUser(prefix: string, withTotp: boolean) {
   const user = await makeVerifiedUser(prefix);
@@ -174,5 +180,161 @@ describe("@issue-66 federated MFA enforcement (H3 regression)", () => {
     expect(replayed.status).toBe(401);
     expect(cookieFrom(replayed, await sessionCookieName())).toBe("");
     expect(await sessionRows(user.id)).toHaveLength(1);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: an MFA-enrolled member with no linked federated identity gets no session from the SSO callback", async () => {
+    const { ws } = await configuredTenant();
+    const user = await makeVerifiedUser("i66-ws-nolink");
+    await enrolTotp(user.id);
+    await addMember(ws.id, user.id, "viewer");
+    const attempt = await oidcAttempt(ws.slug, user.email);
+    const res = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
+    // No linked identity and no signed-in initiator: the callback refuses the takeover; it neither starts the MFA step nor signs in.
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/sign-in?sso_error=auth.ssoAccountExists`);
+    expect(cookieFrom(res, FEDERATED_MFA_COOKIE)).toBe("");
+    await expectNoUsableSession(res, user.id);
+    expect(await signInAudits(ws.id, user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: the MFA step refuses a missing, malformed or unknown pending token", async () => {
+    const { user } = await workspaceMember("i66-ws-badtoken", true);
+    // Without the pending cookie there is no CSRF binding either, so the POST is refused before the token is looked at (403);
+    // the challenge lookup itself answers 401.
+    const noCookie = await challengePOST(new Request(`${ORIGIN}/api/federation/step-up`, { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ code: "123456" }) }), undefined);
+    expect(noCookie.status).toBe(403);
+    expect((await noCookie.json()).error.code).toBe("CSRF_TOKEN_INVALID");
+    await expectNoUsableSession(noCookie, user.id);
+    const noCookieLookup = await challengeGET(new Request(`${ORIGIN}/api/federation/step-up`), undefined);
+    expect(noCookieLookup.status).toBe(401);
+    for (const token of ["garbage", "A".repeat(43)]) {
+      const res = await submitCode(token, "123456");
+      expect(res.status).toBe(401);
+      expect((await res.json()).error.code).toBe("FEDERATED_MFA_INVALID");
+      await expectNoUsableSession(res, user.id);
+    }
+  });
+});
+
+const workspaceFailures = (workspaceId: string, userId: string) => db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, workspaceId), eq(schema.auditEvent.action, "sso.mfa_failed"), eq(schema.auditEvent.targetId, userId)));
+const platformFailures = (userId: string) => db.select().from(schema.platformAuditEvent).where(and(eq(schema.platformAuditEvent.action, "signin.mfa_failed"), eq(schema.platformAuditEvent.actorUserId, userId)));
+const expire = (token: string) => db.update(schema.verification).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.verification.identifier, `federated-mfa:${sha256Hex(token)}`));
+const wrongCode = (secret: string) => ["000000", "111111", "222222", "333333"].find((c) => ![-2, -1, 0, 1, 2].some((o) => code(secret, o) === c))!;
+/** AC3: a failure audit carries the actor and a bounded reason, never the code, the pending token or an error message. */
+function expectBounded(rows: object[], leaks: string[]) {
+  const text = JSON.stringify(rows);
+  for (const leak of [...leaks, "authenticator", "already used", "Restart sign-in", "Try again later"]) expect(text).not.toContain(leak);
+}
+
+describe("@issue-72 failed and abandoned federated MFA steps are audited", () => {
+  beforeEach(() => { mockTenantIdp(); });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1 AC3: a wrong workspace code writes one sso.mfa_failed (invalid_code) with the actor and no session", async () => {
+    const { ws, user, secret, callback } = await workspaceMember("i72-ws-wrong", true);
+    const token = pendingToken(await callback());
+    const wrong = wrongCode(secret);
+    const refused = await submitCode(token, wrong);
+    expect(refused.status).toBe(403);
+    await expectNoUsableSession(refused, user.id);
+    const rows = await workspaceFailures(ws.id, user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorUserId: user.id, actorLabel: user.email, targetType: "user", data: { reason: "invalid_code" } });
+    expect(Object.keys(rows[0]!.data as object)).toEqual(["reason"]);
+    expectBounded(rows, [wrong, token, sha256Hex(token)]);
+    expect(await signInAudits(ws.id, user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1 AC3: a replayed workspace code writes one sso.mfa_failed (replayed_code) and issues no second session", async () => {
+    const { ws, user, secret, callback, signInAgain } = await workspaceMember("i72-ws-replay", true);
+    const used = code(secret);
+    expect((await submitCode(pendingToken(await callback()), used)).status).toBe(200);
+    const second = pendingToken(await signInAgain());
+    const refused = await submitCode(second, used);
+    expect(refused.status).toBe(403);
+    expect(cookieFrom(refused, await sessionCookieName())).toBe("");
+    expect(await sessionRows(user.id)).toHaveLength(1);
+    const rows = await workspaceFailures(ws.id, user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorUserId: user.id, data: { reason: "replayed_code" } });
+    expectBounded(rows, [used, second, sha256Hex(second)]);
+    expect(await signInAudits(ws.id, user.id)).toHaveLength(1);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1 AC3: an expired workspace challenge writes exactly one sso.mfa_failed (expired), however often it is retried or swept", async () => {
+    const { ws, user, secret, callback } = await workspaceMember("i72-ws-expired", true);
+    const token = pendingToken(await callback());
+    await expire(token);
+    for (let i = 0; i < 2; i++) {
+      const late = await submitCode(token, code(secret));
+      expect(late.status).toBe(401);
+      await expectNoUsableSession(late, user.id);
+    }
+    await pruneOnce(db);
+    const rows = await workspaceFailures(ws.id, user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorUserId: user.id, data: { reason: "expired" } });
+    expectBounded(rows, [token, sha256Hex(token)]);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1: an abandoned workspace challenge is audited once (expired) by the retention sweep", async () => {
+    const { ws, user, callback } = await workspaceMember("i72-ws-abandoned", true);
+    const token = pendingToken(await callback());
+    await expire(token);
+    await pruneOnce(db);
+    await pruneOnce(db);
+    const rows = await workspaceFailures(ws.id, user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorUserId: user.id, actorLabel: user.email, data: { reason: "expired" } });
+    expect(await db.select().from(schema.verification).where(eq(schema.verification.identifier, `federated-mfa:${sha256Hex(token)}`))).toHaveLength(0);
+    expect(await sessionRows(user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1: rate-limited guessing writes one sso.mfa_failed (rate_limited) per window, not one per request", async () => {
+    const { ws, user, secret, callback } = await workspaceMember("i72-ws-rate", true);
+    const token = pendingToken(await callback());
+    const wrong = wrongCode(secret);
+    for (let i = 0; i < 5; i++) expect((await submitCode(token, wrong)).status).toBe(403);
+    for (let i = 0; i < 2; i++) expect((await submitCode(token, wrong)).status).toBe(429);
+    const reasons = (await workspaceFailures(ws.id, user.id)).map((r) => (r.data as { reason: string }).reason);
+    expect(reasons.filter((r) => r === "invalid_code")).toHaveLength(5);
+    expect(reasons.filter((r) => r === "rate_limited")).toHaveLength(1);
+    expect(await sessionRows(user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1 AC3: a wrong code after a social (GitHub) sign-in writes one platform signin.mfa_failed and no session", async () => {
+    const { user, secret, callback } = await githubUser("i72-gh-wrong", true);
+    const token = pendingToken(await callback());
+    const wrong = wrongCode(secret);
+    const refused = await submitCode(token, wrong);
+    expect(refused.status).toBe(403);
+    await expectNoUsableSession(refused, user.id);
+    const rows = await platformFailures(user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorLabel: user.email, result: "denied", data: { reason: "invalid_code", provider: "github" } });
+    expectBounded(rows, [wrong, token, sha256Hex(token)]);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC1: an abandoned social (GitHub) challenge is audited once (expired) by the retention sweep", async () => {
+    const { user, callback } = await githubUser("i72-gh-abandoned", true);
+    const token = pendingToken(await callback());
+    await expire(token);
+    await pruneOnce(db);
+    await pruneOnce(db);
+    const rows = await platformFailures(user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ result: "denied", data: { reason: "expired", provider: "github" } });
+    expect(await sessionRows(user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-72 AC2: a successful completion writes exactly one sso.signin (localTotp) and no failure audit", async () => {
+    const { ws, user, secret, callback } = await workspaceMember("i72-ws-ok", true);
+    expect((await submitCode(pendingToken(await callback()), code(secret))).status).toBe(200);
+    const signIns = await signInAudits(ws.id, user.id);
+    expect(signIns).toHaveLength(1);
+    expect(signIns[0]!.data).toMatchObject({ localTotp: true });
+    expect(await workspaceFailures(ws.id, user.id)).toHaveLength(0);
+    const gh = await githubUser("i72-gh-ok", true);
+    expect((await submitCode(pendingToken(await gh.callback()), code(gh.secret))).status).toBe(200);
+    expect(await platformFailures(gh.user.id)).toHaveLength(0);
   });
 });

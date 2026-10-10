@@ -8,6 +8,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Setup and commands | no | approved |
 | [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Issues, PRs, board rules | yes | approved |
 | [SMOKE.md](SMOKE.md) | Smoke-test lines | no | approved |
+| [slimdown-plan.md](slimdown-plan.md) | Slim-down plan: keep/remove/simplify with evidence, before/after numbers | no | approved |
 | [UI_COPY_REVIEW_20261001.md](UI_COPY_REVIEW_20261001.md) | UI copy review | no | approved |
 | [WORKTREE_CLEANUP_REVIEW.md](WORKTREE_CLEANUP_REVIEW.md) | Worktree cleanup review | no | approved |
 | [ZITADEL_ASSESSMENT.md](ZITADEL_ASSESSMENT.md) | Zitadel auth assessment | yes | approved |
@@ -41,6 +42,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [design-system/FORMS.md](design-system/FORMS.md) | Form conventions | no | approved |
 | [design-system/ICONS.md](design-system/ICONS.md) | Icon usage | no | approved |
 | [design-system/README.md](design-system/README.md) | Design system overview | no | approved |
+| [engineering/lock-order.md](engineering/lock-order.md) | Row lock order and transaction review checklist | no | draft |
 | [implementation/BETA_EXECUTION_BRIEF.md](implementation/BETA_EXECUTION_BRIEF.md) | Supervised beta execution brief | yes | approved |
 | [implementation/BETA_EXECUTION_STATUS.md](implementation/BETA_EXECUTION_STATUS.md) | Beta execution ledger | yes | approved |
 | [implementation/BETA_LIMITATIONS.md](implementation/BETA_LIMITATIONS.md) | Known beta limitations | yes | approved |
@@ -74,5 +76,6 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [security/REQUEST_BODY_LIMITS.md](security/REQUEST_BODY_LIMITS.md) | Request body limits | yes | approved |
 | [security/RETAINED_UPLOAD_ACCOUNTING.md](security/RETAINED_UPLOAD_ACCOUNTING.md) | Retained upload accounting | yes | approved |
 | [security/SECURITY_REVIEW_20261003.md](security/SECURITY_REVIEW_20261003.md) | Security review | yes | approved |
+| [security/codeql-triage-tests.md](security/codeql-triage-tests.md) | CodeQL triage A (tests and e2e) | yes | draft |
 | [#68 runbook](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/68) | Restore/rollback/alerting runbook | yes | planned |
 | [#67 helper doc](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/67) | pnpm wt helper | no | planned |

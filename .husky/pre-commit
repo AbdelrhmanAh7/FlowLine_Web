@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+# FlowLine pre-commit: FAST (hard limit 60 s), staged files only - lint-staged runs
+# `eslint --fix` on staged TS/JS (config: "lint-staged" in package.json).
+#
+# Full CI (lint, typecheck, evidence, unit, contract, integration, browser)
+# runs on the Mac mini via the hub's `localci` job, which posts the GitHub
+# commit statuses under the workflows' job names.
+# Escape hatch: HUSKY=0 git commit ...
+#
+# Linked-worktree safe and non-interactive: a worktree without node_modules
+# skips with a one-line note instead of failing or installing anything.
+# Hard wall-clock limit: re-run this hook under a perl watchdog that stops the
+# whole process group after the limit (macOS has no `timeout`); stdin is inherited.
+# The group gets SIGINT first and up to 20 s to exit: lint-staged answers SIGINT by
+# rolling back and restoring the unstaged edits it hid for partially staged files;
+# only then TERM (5 s) and KILL. If it still had to be killed, those edits live in
+# lint-staged's backup stash, so the timeout message says how to get them back.
+if [ -z "${FL_HOOK_LIMITED:-}" ] && command -v perl >/dev/null 2>&1; then
+  FL_HOOK_LIMITED=1 exec perl -e '
+    use POSIX ":sys_wait_h";
+    my ($t, $name) = (shift, shift); my $p = fork; die "fork: $!" unless defined $p;
+    if (!$p) { setpgrp(0, 0); exec @ARGV; exit 127 }
+    my $stop = sub {
+      for my $step (["INT", 20], ["TERM", 5], ["KILL", 5]) {
+        kill $step->[0], -$p;
+        for (1 .. $step->[1] * 10) { return 1 if waitpid($p, WNOHANG) == $p; select(undef, undef, undef, 0.1) }
+      }
+      0;
+    };
+    $SIG{INT} = $SIG{TERM} = sub { $stop->(); exit 130 };
+    $SIG{ALRM} = sub {
+      $stop->();
+      print STDERR "\n$name exceeded the ${t}s limit: stage less at once, or commit with HUSKY=0 - localci runs the full CI\n";
+      print STDERR "If edits to partially staged files look missing, restore them from lint-staged backup stash: git stash list, then git stash apply <the \"lint-staged automatic backup\" entry>\n";
+      exit 124;
+    };
+    alarm $t; waitpid($p, 0); exit($? & 127 ? 128 + ($? & 127) : $? >> 8);
+  ' "${FL_PRECOMMIT_LIMIT_SECONDS:-60}" pre-commit sh "$0" "$@"
+fi
+
+if [ ! -x node_modules/.bin/lint-staged ] || [ ! -x node_modules/.bin/eslint ]; then
+  echo "pre-commit: node_modules missing in this worktree; skipping staged lint (localci runs full CI)"
+  exit 0
+fi
+# lint-staged reads and re-stages the index itself, so git's hook environment
+# (GIT_INDEX_FILE etc.) is deliberately kept.
+node_modules/.bin/lint-staged </dev/null

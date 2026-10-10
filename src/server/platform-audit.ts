@@ -21,6 +21,7 @@ export type PlatformAction =
   | "admin.totp_enrolled"
   | "admin.stepup"
   | "admin.access_denied"
+  | "signin.mfa_failed"
   | "platform_secret.set"
   | "platform_secret.rotated"
   | "platform_secret.switched"
@@ -35,7 +36,7 @@ export type PlatformAction =
   | "crypto.rewrap";
 
 /** How strongly the actor was authenticated for this action. */
-export type Assurance = "session_totp_stepup" | "session" | "setup_session" | "cli" | "system";
+export type Assurance = "session_totp_stepup" | "session" | "setup_session" | "cli" | "system" | "federated_pending";
 
 export interface PlatformAuditInput {
   actor: { userId: string | null; label: string };
