@@ -52,7 +52,7 @@ agent worktree moves 170 MB), CI noise, and a few tests that duplicate others or
 
 | Item | Evidence | PR |
 | --- | --- | --- |
-| Raw files under `artifacts/` (2,800 files, ~184 MB) | generated screenshots, traces, logs, JSON and one-off driver scripts from finished review rounds; no code reads them (only `RESEARCH_RECORD`, a Markdown report, which stays). The 4 focused-run helpers documented in `docs/DEVELOPER_GUIDE.md` and tested by `focused-run-env.test.ts` stay. `.gitignore` now admits only `artifacts/**/*.md` (tracked helpers are unaffected) | 1 |
+| Raw files under `artifacts/` (2,789 files, ~184 MB) | generated screenshots, traces, logs, JSON and one-off driver scripts from finished review rounds; no code reads them (only `RESEARCH_RECORD`, a Markdown report, which stays). Still in use and kept: the 4 focused-run helpers (`docs/DEVELOPER_GUIDE.md`, `focused-run-env.test.ts`) and the Company Builder field-validation harness and packet (`artifacts/company-builder/validation/*/flowline-field/`, `packet/`; issues #6, #141, #142, PR #50). `.gitignore` now admits only `artifacts/**/*.md` (tracked helpers are unaffected) | 1 |
 | Raw Codex transcripts (`codex-stdout.md`, 4 files, 0.7 MB) | helper-CLI output, which the repo already refuses to commit (DV2-02) | 1 |
 | `e2e/tools/cb-screens.mjs`, `scripts/audit-ui-copy.mts`, `scripts/db-peek.mjs`, `scripts/diag/copilot-real-model.mts`, `scripts/diag/db-path-probe.mjs`, `scripts/test/grep-canary.mjs` | knip: unused; zero references in code, docs or `package.json` (one-off diagnostics) | 1 |
 | `tests/contract/oauth.test.ts` | mock-only: tests the fake provider's own OAuth; real paths stay in `sec-oauth` and `oauth-client` (from #92) | 2 |
