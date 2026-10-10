@@ -1,9 +1,0 @@
-During authenticated navigation to Templates, the browser received HTTP 500 and rendered "Something went wrong".
-
-Console excerpt (credential value removed):
-Better Auth INTERNAL_SERVER_ERROR
-Failed query: select "id", "expires_at", "token", ... from "session" where "session"."token" = $1
-params: [redacted session token]
-APIError: Failed to get session
-
-The unredacted value appeared in the browser console. No token value is retained in this evidence.
