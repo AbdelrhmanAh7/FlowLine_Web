@@ -23,7 +23,7 @@ is the main end-to-end gate; GitHub CI stays the fast correctness gate.
 | `artifacts/` | 2,946 files, 186 MB: 1,632 PNG, 433 JSON, 385 TXT, 178 logs, Playwright trace zips, 110 one-off `.mjs` drivers, 142 Markdown reports |
 | Code lines (non-blank) | 107,462 total; `src` 48,246, `tests` 29,213, `e2e` 8,262, `scripts` 4,654, `worker` 1,572, `drizzle` 1,389, `artifacts` 6,935 |
 | `src` by module | server 11,424 · app 10,824 · components 7,775 · ai 4,931 · company-builder 3,157 · engine 2,737 · integrations 1,871 · db 1,750 · billing 1,200 · i18n 967 · lib 774 · design 717 · theme 119 |
-| Tests | unit 100 files / ~807 cases; contract 23 / ~195; integration 60 / ~502; live 3 / 5 (manual); Playwright 29 specs / ~164 tests (fast tier runs 78 on Chromium) |
+| Tests (Vitest counts, `it.each` rows included) | unit 100 files / 1,329 tests; contract 23 / 468; integration 60 / 515; live 3 files (manual, not in CI); Playwright 29 specs / ~164 tests (the PR fast tier runs 78 on Chromium) |
 | Dependencies | 30 runtime + 18 dev (direct); 690 packages in `pnpm-lock.yaml` |
 | PR CI (`Gate`) | wall clock median 3.8 min, p90 4.3 min, max 5.0 min; runner time median 9.6 min per run (6 jobs) |
 | Slowest job | `chromium` median 3.5 min: setup 41 s (Postgres 14 s, Playwright deps 15 s), `next build` 36 s, 3 stacks 8 s, 78 specs 95 s |
