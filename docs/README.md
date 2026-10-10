@@ -8,6 +8,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Setup and commands | no | approved |
 | [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) | Issues, PRs, board rules | yes | approved |
 | [SMOKE.md](SMOKE.md) | Smoke-test lines | no | approved |
+| [slimdown-plan.md](slimdown-plan.md) | Slim-down plan: keep/remove/simplify with evidence, before/after numbers | no | approved |
 | [UI_COPY_REVIEW_20261001.md](UI_COPY_REVIEW_20261001.md) | UI copy review | no | approved |
 | [WORKTREE_CLEANUP_REVIEW.md](WORKTREE_CLEANUP_REVIEW.md) | Worktree cleanup review | no | approved |
 | [ZITADEL_ASSESSMENT.md](ZITADEL_ASSESSMENT.md) | Zitadel auth assessment | yes | approved |

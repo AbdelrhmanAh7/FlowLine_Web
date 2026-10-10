@@ -1,5 +1,0 @@
-
-> flowline@0.1.0 lint C:\Users\Abdelrahman\Desktop\Personal_Project\FlowLine
-> eslint .
-
-exit 0

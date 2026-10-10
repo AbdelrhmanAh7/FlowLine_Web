@@ -1,9 +1,0 @@
-
- RUN  v5.0.2 /home/user/FlowLine_Web
-
-
- Test Files  1 passed (1)
-      Tests  14 passed (14)
-   Start at  23:20:28
-   Duration  657ms (transform 46%, tests 38%, import 15%, worker 1%)
-
