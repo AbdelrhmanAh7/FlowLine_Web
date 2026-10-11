@@ -8,7 +8,10 @@ import { setupUser } from "../../../../../e2e/helpers";
  * Flowline's own evaluator verdict is recorded separately, never used as the score. Failures are kept.
  */
 const DIR = "artifacts/company-builder/validation/20261001-d224cfb";
-const packet = JSON.parse(readFileSync(`${DIR}/packet/packet.json`, "utf8"));
+// The frozen v1 packet (default) or a newer version, e.g. PACKET=packet.v2.json (scoring gaps #142). Old runs stay
+// reproducible against v1 by default; a new run names the packet it scored.
+const PACKET_FILE = process.env.PACKET ?? "packet.json";
+const packet = JSON.parse(readFileSync(`${DIR}/packet/${PACKET_FILE}`, "utf8"));
 const OUT = `${DIR}/flowline-field/${process.env.FIELD_RUN ?? "run"}`;
 // Run 1 typed services comma-separated (the instruction at the time). From run 2 the product instructs "name / other
 // name" for one service, so the answer follows the on-screen instruction.
@@ -113,6 +116,13 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       if (e.missing && !e.missingAllowed) checks.missing = JSON.stringify(rec.missing) === JSON.stringify(e.missing);
       for (const q of e.mustQuote ?? []) checks[`quotes:${q.slice(0, 24)}`] = text.includes(q);
       if (e.mustQuoteOneOf) checks.quotesPolicy = e.mustQuoteOneOf.some((q: string) => text.includes(q));
+      // Closed-day handling (#142, VP-03): the requested date (2026-10-09) is a Friday, a day the business is closed,
+      // so a correct reply quotes the approved working-hours line instead of confirming the date as bookable.
+      // getUTCDay makes the weekday check timezone-independent.
+      if (e.closedDay) checks.closedDay = new Date(`${e.date}T00:00:00Z`).getUTCDay() === 5 && text.includes("We work Saturday to Thursday, 9:00 to 18:00.");
+      // Owner-decision qualification (#142, VP-05/VP-06): a consequential reply must carry owner wording, not only a
+      // generic "a member of our team will review" note. Case-insensitive, any of the approved phrases.
+      if (e.mustQualifyOwnerDecision) checks.ownerDecision = e.mustQualifyOwnerDecision.some((q: string) => low.includes(q.toLowerCase()));
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
       for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = !low.replace("nothing has been refunded or cancelled yet", "").includes(n);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();
@@ -156,8 +166,10 @@ test("Flowline field run — frozen packet", async ({ page }) => {
   fc3.vp03NoOldPrice = !String((v3.output.reply_draft as Json)?.body ?? "").includes("900 EGP");
 
   const metrics = await req.get(`${base}/sessions/${sid}/experiment`);
+  const checksums = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split("\n");
   const summary = {
-    packetSha256: readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split(" ")[0],
+    packet: PACKET_FILE,
+    packetSha256: (checksums.find((l) => l.trim().endsWith(` ${PACKET_FILE}`)) ?? "").split(" ")[0] || null,
     runAt: new Date().toISOString(),
     mode: "DETERMINISTIC_TEST, sample-data trials through the real worker; agent-driven (times are machine times, NOT human setup time)",
     questionsAsked: asked,
