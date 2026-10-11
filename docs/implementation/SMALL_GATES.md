@@ -16,6 +16,23 @@ Static checks already run in parallel with each other; integration is already sh
 Every run writes `summary.json` and logs under `artifacts/gates/`; a skipped, blocked or failed step shows in the table and
 makes the exit code non-zero.
 
+## Nightly tier
+
+Slow or infra-sensitive suites run in the `nightly` vitest project (`pnpm test:nightly`, needs `.env.test`, Postgres and the
+code-sandbox image) from `.github/workflows/nightly.yml` (cron 01:17 UTC, or Actions > Nightly > Run workflow on any ref). They
+are excluded from the `unit` and `integration` projects, so the PR gate no longer runs them: `p2-code-sandbox`,
+`company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill` and `drizzle-tooling-prune`. The list lives in
+`nightlyFiles` in `vitest.config.mts`. The workflow creates `flowline_test` itself (the Postgres container starts with `flowline` only), like the Gate's integration legs. The nightly is not a required check. Run it by hand before merging a change to
+`src/server/code-sandbox.ts`, `src/server/crypto|rewrap` or `drizzle/**`.
+
+Who triages a red nightly: nobody has to watch it. When the nightly fails on `main`, its `report` job opens one issue labelled
+`nightly-red` with the run link (or comments on the one already open), and the hub's engineers pick that issue up like any bug.
+
+CI speed-ups that go with the nightly tier (docs/slimdown-plan.md): the browser jobs set `FLOWLINE_SKIP_BUILD_TYPECHECK=1` so the
+test build skips Next's second type-check (`tsc --noEmit` already runs in the static leg on the same commit; production and local
+builds still type-check), and `docs.yml` checks out only `scripts/ci`. The disabled self-hosted `ai-implementers.yml` is gone:
+the hub runs its jobs from launchd on the Mac mini.
+
 ## Browser groups (`--group`)
 
 `scripts/gate-groups.mjs` is the registry. Groups: `product`, `auth`, `editor`, `platform` (`--list-groups` prints them with

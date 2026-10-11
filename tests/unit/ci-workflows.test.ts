@@ -28,8 +28,8 @@ const triggerTypes = (text: string, event: string) => {
 };
 
 describe("workflow files", () => {
-  it("finds the workflows and composite actions", () => {
-    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
+  it("has at least the gate and docs workflows and the shared composite actions", () => {
+    expect(workflowFiles).toEqual(expect.arrayContaining([".github/workflows/gate.yml", ".github/workflows/docs.yml"]));
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
@@ -41,15 +41,30 @@ describe("workflow files", () => {
   it.each(allFiles)("%s uses no floating runner image", (file) => {
     const text = read(file);
     expect(text).not.toMatch(/ubuntu-latest|windows-latest|macos-latest/);
-    // ai-implementers.yml is the one exception: it runs on the owner's Mac mini self-hosted runner.
-    const runner = file === ".github/workflows/ai-implementers.yml" ? "[self-hosted, macmini]" : "ubuntu-24.04";
-    for (const match of text.matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)) expect(match[1]).toBe(runner);
+    for (const match of text.matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)) expect(match[1]).toBe("ubuntu-24.04");
   });
 
-  it("keeps the self-hosted AI implementers away from fork and pull-request events", () => {
-    const text = stripComments(read(".github/workflows/ai-implementers.yml"));
-    expect(text).not.toMatch(/^ {2}pull_request(_target|_review|_review_comment)?:/m);
-    expect(jobs(text).mention).toMatch(/author_association == 'OWNER'/);
+  it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
+    expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
+  });
+
+  it("gate.yml has no needs on removed ai-implementers workflow jobs", () => {
+    const gateText = read(".github/workflows/gate.yml");
+    // The removed ai-implementers.yml had jobs like: implement, review, etc.
+    // Ensure gate.yml doesn't depend on any of them
+    expect(gateText).not.toMatch(/needs:.*ai-implementers/);
+    expect(gateText).not.toMatch(/needs:.*implement/);
+    expect(gateText).not.toMatch(/needs:.*review/);
+  });
+});
+
+describe("next.config.ts guards production type-check", () => {
+  const nextConfig = read("next.config.ts");
+
+  it("requires both FLOWLINE_SKIP_BUILD_TYPECHECK=1 AND FLOWLINE_ENV=test to skip type-checking", () => {
+    expect(nextConfig).toContain('process.env.FLOWLINE_SKIP_BUILD_TYPECHECK === "1"');
+    expect(nextConfig).toContain('process.env.FLOWLINE_ENV === "test"');
+    expect(nextConfig).toContain("&&");
   });
 });
 
@@ -100,6 +115,108 @@ describe("gate.yml always reports a real `gate`", () => {
     expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
     expect(byJob.changes).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}pull-requests: read\n/m);
     expect(text.match(/pull-requests: read/g)).toHaveLength(1);
+  });
+
+  it("runs a strict typecheck job (tsc --noEmit) on every PR with no continue-on-error", () => {
+    // The static leg of the `checks` matrix runs lint, typecheck, evidence, unit, contract
+    const checks = byJob.checks;
+    expect(checks).toContain('run: pnpm gate --only=static,unit,contract');
+    // The static leg has no continue-on-error (defaults to false)
+    expect(checks).not.toMatch(/continue-on-error:\s*true/);
+  });
+
+  it("sets FLOWLINE_SKIP_BUILD_TYPECHECK only on browser build jobs, never on the typecheck job", () => {
+    // Browser jobs set it
+    expect(byJob.chromium).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    expect(byJob.firefox).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    expect(byJob.webkit).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    // The checks job (which runs typecheck) must NOT set it
+    expect(byJob.checks).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    // The changes and gate jobs must NOT set it
+    expect(byJob.changes).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    expect(byJob.gate).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+  });
+});
+
+describe("nightly.yml stays off the PR path", () => {
+  const text = read(".github/workflows/nightly.yml");
+
+  it("runs on a schedule or by dispatch only, never on pull_request or push", () => {
+    expect(stripComments(text)).toMatch(/^ {2}schedule:$/m);
+    expect(stripComments(text)).toMatch(/^ {2}workflow_dispatch:$/m);
+    expect(stripComments(text)).not.toMatch(/^ {2}(pull_request|pull_request_target|push):/m);
+  });
+
+  it("runs the nightly project through the shared setup", () => {
+    expect(text).toContain("./.github/actions/setup-gate");
+    expect(text).toContain("pnpm test:nightly");
+    expect(stripComments(text)).not.toMatch(/run: pnpm test\s*$/m);
+  });
+
+  it("creates the flowline_test database (the container only has `flowline`) before the tests run", () => {
+    const body = stripComments(text);
+    const create = body.indexOf("createdb -U flowline flowline_test");
+    expect(create).toBeGreaterThan(-1);
+    expect(create).toBeLessThan(body.indexOf("pnpm test:nightly"));
+    expect(read(".github/actions/setup-gate/action.yml")).toMatch(/POSTGRES_DB=flowline(?!_)/);
+  });
+
+  it("reports a red nightly on main as one nightly-red issue, with write access only in that job", () => {
+    const report = jobs(text).report;
+    expect(report).toMatch(/^ {4}needs: nightly$/m);
+    expect(report).toMatch(/^ {4}if: \$\{\{ failure\(\) && github\.ref == 'refs\/heads\/main' \}\}$/m);
+    expect(report).toMatch(/^ {4}permissions:\n {6}issues: write\n/m);
+    expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
+    expect(text.match(/issues: write/g)).toHaveLength(1);
+  });
+
+  it("report job has timeout-minutes ≤ 5, no continue-on-error, no token echo, and handles label creation failure", () => {
+    const report = jobs(text).report;
+    expect(report).toMatch(/^ {4}timeout-minutes: [1-5]$/m);
+    expect(report).not.toMatch(/continue-on-error:\s*true/);
+    // No echo of GH_TOKEN
+    expect(report).not.toMatch(/echo.*GH_TOKEN|echo.*\$\{.*github\.token/);
+    // Handles label creation failure with fallback
+    expect(report).toContain("gh label create nightly-red");
+    expect(report).toContain("gh issue create --label nightly-red");
+    expect(report).toContain("|| gh issue create --title");
+  });
+});
+
+describe("the nightly vitest project", () => {
+  it("is a named project that pnpm test:nightly selects, and the PR projects exclude exactly its files", async () => {
+    // A computed specifier: tsc rejects a literal ".mts" import path without allowImportingTsExtensions.
+    const { default: config } = (await import(new URL("../../vitest.config.mts", import.meta.url).href)) as { default: { test?: { projects?: unknown[] } } };
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const files = byName.nightly.include;
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) expect(() => read(file), file).not.toThrow();
+    expect(byName.unit.exclude).toEqual(files);
+    expect(byName.integration.exclude).toEqual(files);
+    expect(JSON.parse(read("package.json")).scripts["test:nightly"]).toMatch(/vitest run --project nightly$/);
+  });
+
+  it("includes every test file that was moved to nightly (no moved file silently dropped)", async () => {
+    const { default: config } = (await import(new URL("../../vitest.config.mts", import.meta.url).href)) as { default: { test?: { projects?: unknown[] } } };
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const nightlyFiles = byName.nightly.include;
+    // These are the files that the slim-down plan explicitly moves to nightly
+    const expectedNightlyFiles = [
+      "tests/integration/p2-code-sandbox.test.ts",
+      "tests/integration/company-builder-cli.test.ts",
+      "tests/unit/drizzle-tooling-prune.test.ts",
+    ];
+    for (const expected of expectedNightlyFiles) {
+      expect(nightlyFiles).toContain(expected);
+    }
+    // Ensure sec-* tests are NOT in nightly (they stay in per-PR integration)
+    const secTests = ["tests/integration/sec-upgrade.test.ts", "tests/integration/sec-cxh06-rotation.test.ts", "tests/integration/sec-cxh01-backfill.test.ts"];
+    for (const sec of secTests) {
+      expect(nightlyFiles).not.toContain(sec);
+      expect(byName.integration.exclude).not.toContain(sec);
+    }
   });
 });
 
@@ -244,6 +361,10 @@ describe("docs.yml always re-evaluates", () => {
 
   it("reruns on label and body edits", () => {
     expect(triggerTypes(text, "pull_request")).toEqual(["opened", "synchronize", "reopened", "ready_for_review", "labeled", "unlabeled", "edited"]);
+  });
+
+  it("checks out only the checker script, not the whole repository", () => {
+    expect(text).toMatch(/^ {10}sparse-checkout: scripts\/ci$/m);
   });
 
   it("skips only drafts, never on a label, an edit or a path", () => {

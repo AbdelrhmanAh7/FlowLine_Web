@@ -116,7 +116,6 @@ jobs:
       - uses: ./.github/actions/setup-gate
         with:
           postgres: ${{ matrix.kind == 'integration' && 'true' || 'false' }}
-          sandbox-image: ${{ matrix.kind == 'integration' && 'true' || 'false' }}
 
       - name: Run gate (static, unit, contract)
         if: matrix.kind == 'static'
@@ -161,6 +160,7 @@ jobs:
     timeout-minutes: 5
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
       GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
     steps:
@@ -193,6 +193,7 @@ jobs:
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-firefox
       GATE_TIER: full
     steps:
@@ -224,6 +225,7 @@ jobs:
     timeout-minutes: 40
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
+      FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-webkit
       GATE_TIER: full
     steps:
