@@ -7,7 +7,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { ApiError, api } from "@/lib/api";
-import { copyErrorKey } from "./copy-errors";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -25,7 +24,7 @@ function effective(state: State, locale: Locale, key: string) {
 export function CopyEditor() {
   const t = useT();
   const state = useQuery({ queryKey: ["platform-copy"], queryFn: () => api<State>("/api/platform/copy") });
-  const { data: meData, refetch: refetchMe, isError: meError } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
+  const { data: meData, refetch: refetchMe } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
   const [key, setKey] = useState("meta.title");
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
@@ -71,18 +70,15 @@ export function CopyEditor() {
   }
 
   async function handleWriteError(cause: unknown, fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError") {
-    const errorKey = copyErrorKey(cause, fallbackKey);
-    // For step-up errors, we still want to refresh the me query and update stepUpActive
     if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
       const refreshed = await refetchMe();
       const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
       setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
+      setError(t("platformAdmin.copyEditor.stepUp"));
+      return;
     }
-    // For revision conflicts, refetch the copy state to get the latest revision
-    if (cause instanceof ApiError && cause.code === "REVISION_CONFLICT") {
-      await state.refetch();
-    }
-    setError(t(errorKey));
+    await state.refetch();
+    setError(t(fallbackKey));
   }
 
   async function save() {
@@ -134,15 +130,9 @@ export function CopyEditor() {
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <p className="text-med">{t("platformAdmin.copyEditor.subtitle")}</p>
       {!stepUpActive && <p role="note" className="text-warning">{t("platformAdmin.copyEditor.stepUp")}</p>}
-      {meError && <p role="alert" className="text-danger">{t("platformAdmin.copyEditor.meLoadError")}</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {message && <p role="status" className="text-success">{message}</p>}
-      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? (
-        <div className="flex items-center gap-3">
-          <p role="alert">{t("platformAdmin.copyEditor.loadError")}</p>
-          <Button variant="ghost" size="sm" onClick={() => state.refetch()}>{t("common.retry")}</Button>
-        </div>
-      ) : draft && <>
+      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? <p role="alert">{t("platformAdmin.copyEditor.loadError")}</p> : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <Card className="p-4">
             <label className="block text-sm font-medium" htmlFor="copy-search">{t("platformAdmin.copyEditor.search")}</label>
