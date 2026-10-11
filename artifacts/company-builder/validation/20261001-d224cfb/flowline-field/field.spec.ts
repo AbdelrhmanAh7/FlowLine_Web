@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { setupUser } from "../../../../../e2e/helpers";
+import { scoreClosedDay, scoreOwnerDecision } from "../../../../../tests/helpers/fieldScoring";
 
 /**
  * Flowline field run of the FROZEN validation packet (sha256 in ../packet/SHA256SUMS). Agent-driven through the real
@@ -116,13 +117,10 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       if (e.missing && !e.missingAllowed) checks.missing = JSON.stringify(rec.missing) === JSON.stringify(e.missing);
       for (const q of e.mustQuote ?? []) checks[`quotes:${q.slice(0, 24)}`] = text.includes(q);
       if (e.mustQuoteOneOf) checks.quotesPolicy = e.mustQuoteOneOf.some((q: string) => text.includes(q));
-      // Closed-day handling (#142, VP-03): the requested date (2026-10-09) is a Friday, a day the business is closed,
-      // so a correct reply quotes the approved working-hours line instead of confirming the date as bookable.
-      // getUTCDay makes the weekday check timezone-independent.
-      if (e.closedDay) checks.closedDay = new Date(`${e.date}T00:00:00Z`).getUTCDay() === 5 && text.includes("We work Saturday to Thursday, 9:00 to 18:00.");
-      // Owner-decision qualification (#142, VP-05/VP-06): a consequential reply must carry owner wording, not only a
-      // generic "a member of our team will review" note. Case-insensitive, any of the approved phrases.
-      if (e.mustQualifyOwnerDecision) checks.ownerDecision = e.mustQualifyOwnerDecision.some((q: string) => low.includes(q.toLowerCase()));
+      // Closed-day (#142, VP-03) and owner-decision (#142, VP-05/VP-06) checks live in tests/helpers/fieldScoring.ts,
+      // where unit tests pin them with positive and negative fixture replies.
+      if (e.closedDay) checks.closedDay = scoreClosedDay(text, e.date);
+      if (e.mustQualifyOwnerDecision) checks.ownerDecision = scoreOwnerDecision(text, e.mustQualifyOwnerDecision);
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
       for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = !low.replace("nothing has been refunded or cancelled yet", "").includes(n);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();

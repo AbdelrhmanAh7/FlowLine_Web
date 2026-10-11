@@ -16,8 +16,8 @@
 - **Flowline's own verdict disagreements:** none (recorded as `[]`)
 
 ## What changed (v2 vs v1)
-- VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer uses `new Date(...T00:00:00Z).getUTCDay() === 5` (timezone-independent).
-- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer requires this wording in consequential replies.
+- VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply that repeats the requested date or names Friday together with a confirming word. Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
+- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording somewhere in the reply; the quoted approved policy line satisfies it. It checks that owner wording is present, not who decides the current request.
 
 ## Per-VP results (run 5)
 | ID | Passed | Failed checks | Notes |
@@ -33,14 +33,15 @@
 | VP-09 | true | — | hand-off `no_approved_information`. |
 | VP-10 | true | — | hand-off `empty_request`. |
 
-## Delta vs run 4 (v1 spec applied historically; v2 extra checks)
-- Run 4 VP-03 (historical, v1): passed under v1 expectations (quoted the office price `"Office cleaning starts at 900 EGP per visit."`), but under v2's extra checks: `closedDay=false` (the reply did not quote the working-hours line). This isolates the closed-day scoring gap that v2 fixes (scorer now requires the working-hours line when the requested date is a Friday).
-- Run 4 VP-05/VP-06: both satisfy `ownerDecision=true` in the v2 check (they quote "reviewed by the owner"). Run 4 VP-06 still fails only on VF-02 `noPromise:cancelled`.
-- Negative control: a generic-only note `"A member of our team will review your request and confirm the next step."` gives `ownerDecision=false` under the v2 check, confirming the check does not pass on generic wording.
+## Delta vs run 4 and negative controls (committed, reproducible)
+The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI with the unit project; fixture replies, no stack). The run-4 replies below are quoted from `run4-r4-f74285c/results.json`; run 4 itself is not re-scored.
+- **closedDay:** the run-4 VP-03 reply (office price quote, no working-hours line) and the run-5 reply (minimal Arabic confirmation) both score `closedDay=false`; a reply that quotes the hours line passes; a reply that quotes the hours line but also confirms 2026-10-09 / Friday (English or Arabic digits) fails; a non-Friday date fails the check.
+- **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line, so they pass; this run therefore shows the check passing, and the rejecting case is the unit test above.
+- Run 4 VP-06 still fails only on VF-02 (`noPromise:cancelled`).
 
 ## Notes (important)
 - **VF-02 (packet ambiguity) remains:** VP-06 fails on `noPromise:cancelled` because the approved policy line `"Refunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days."` contains the word `cancelled`. The strict scorer keeps this as a failure under the written expectation. Both VP-05 and VP-06 replies include the same owner wording in this run, so a wording-only requirement cannot make VP-05 pass and VP-06 fail; the distinction is the pre-existing `mustNotPromise` on VP-06. This is documented as a fixture ambiguity (not a product defect).
-- **Run 5's VP-03 reply differs from run 4:** Run 4 VP-03 replied with the office price quote (Arabic + price), run 5 VP-03 replied with a minimal Arabic confirmation only. This appears to be pre-existing product behaviour on the mainline stack under this deterministic setup; it is not introduced by the v2 packet or the spec changes. The scorer's v2 checks still behave correctly (both fail appropriately).
+- **Run 5's VP-03 reply differs from run 4:** Run 4 VP-03 replied with the office price quote (Arabic + price), run 5 VP-03 replied with a minimal Arabic confirmation only. Cause not investigated; see VF-05 in `artifacts/company-builder/BUGS.md` (follow-up, not #142). The scorer's v2 checks fail this reply as intended.
 - **What is committed:** `results.json` (this run's output) is committed exactly as runs 1–4 were — the maintainers explicitly kept the field-validation harness and its run records as inputs of open work (#6/#141/#142, commit `b372098`, `docs/slimdown-plan.md` §"Keep"). The two PNG screenshots are **not** committed (`/artifacts/**` ignores everything except `*.md`); they remain local, as for runs 1–4. This `RESULTS.md` is the human-readable record.
 - **Packet naming:** every run names the packet it scored (`summary.packet = "packet.v2.json"`), and `summary.packetSha256` matches `SHA256SUMS`.
 
@@ -51,4 +52,27 @@
 ## Results JSON (committed)
 - `results.json` — full run output as written by `field.spec.ts`
 
-**Result:** VP-03 and VP-06 fail as expected under v2 (the two gaps are fixed at the scorer level); VP-05 passes the owner-decision check. The acceptance criterion is satisfied by the v2 scorer correctly applying the new checks.
+## Decisions
+- **Option 1 accepted (CTO, #142):** accept the v2 result (8/10) as is. The plan's check "VP-06 fails on missing owner wording, VP-05 passes" is superseded: both replies quote the approved policy line "reviewed by the owner", so owner wording cannot separate them. Issue #142's acceptance (replies without owner-decision wording score as failures) is met and proven by the committed negative control (`tests/unit/field-scoring.test.ts`).
+- VP-06 fails only on VF-02 (`mustNotPromise: "cancelled"`), unchanged from runs 1–4; not touched here. VP-03's missing price quote (VF-05) and an explicit owner-decision sentence (VO-07) are logged as follow-ups, not #142.
+- No product code changed.
+
+## Integrity of the v1 files
+`sha256sum -c SHA256SUMS` and `sha256sum -c SHA256SUMS.derived` in `packet/` (run on this head): output:
+
+```
+$ sha256sum -c SHA256SUMS
+packet.json: OK
+packet.v2.json: OK
+$ sha256sum -c SHA256SUMS.derived
+packet.json: OK
+participant-input.json: OK
+evaluator-ground-truth.json: OK
+packet.v2.json: OK
+participant-input.v2.json: OK
+evaluator-ground-truth.v2.json: OK
+```
+
+`git diff` of the three v1 files and of runs 1–4 against the merge base with `main` is empty.
+
+**Result:** VP-03 and VP-06 fail in run 5 for the reasons above. Both scorer gaps are closed at the scorer level: the closed-day and owner-decision checks are enforced and each is shown rejecting a reply by the committed unit test (the run itself shows `closedDay` rejecting; `ownerDecision` passes in both consequential replies). Whether the product behaves correctly on VP-03 is a separate matter (VF-05).
