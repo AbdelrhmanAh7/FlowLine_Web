@@ -89,12 +89,19 @@ export function readCappedBody(req: IncomingMessage, limit: number): Promise<str
 const MAX_FAKE_DELAY_MS = 10_000;
 
 /**
- * Timer duration for the AI fake's `slow` fault: the requested value clamped to [0, 10 s]
+ * Timer duration for the AI fake's `slow` fault: the requested value bounded to [0, 10 s]
  * (a missing, null or non-numeric value = 1000; an explicit 0 stays 0), so the timer is always bounded
  * and in-range delays keep their exact timing.
+ *
+ * The ceiling is a relational upper-bound guard, not `Math.min`/`Math.max`: CodeQL's `js/resource-exhaustion`
+ * models those arithmetic calls (and `Number`) as taint-propagating numeric steps and only recognises a
+ * relational comparison as its barrier, so a `Math.min` clamp still leaves the timer's duration flagged as
+ * user-controlled. Returning literals from the guard also keeps the flow that reaches `setTimeout` untainted.
  */
 export function slowDelayMs(raw: unknown): number {
   const n = Number(raw ?? 1000);
   const wanted = Number.isFinite(n) ? n : 1000;
-  return Math.min(Math.max(wanted, 0), MAX_FAKE_DELAY_MS);
+  if (wanted > MAX_FAKE_DELAY_MS) return MAX_FAKE_DELAY_MS;
+  if (wanted < 0) return 0;
+  return wanted;
 }
