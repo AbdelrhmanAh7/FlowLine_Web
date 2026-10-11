@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { ApiError, api } from "@/lib/api";
-import { copyErrorKey } from "./copy-errors";
+import { copyErrorKey, shouldRefetchAfterWriteError } from "./copy-errors";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -78,10 +78,7 @@ export function CopyEditor() {
       const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
       setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
     }
-    // Revision conflicts and lost responses (the write may have committed) both leave stale revisions: reconcile
-    if (cause instanceof ApiError && (cause.code === "REVISION_CONFLICT" || cause.isNetwork)) {
-      await state.refetch();
-    }
+    if (shouldRefetchAfterWriteError(cause)) await state.refetch();
     setError(t(errorKey));
   }
 

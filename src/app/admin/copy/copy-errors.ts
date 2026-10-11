@@ -37,3 +37,11 @@ export function copyErrorKey(
   // Non-API errors (e.g., thrown strings, TypeError) — use fallback
   return fallbackKey;
 }
+
+/**
+ * Whether the editor must refetch the copy state after a failed write. Only a revision conflict (the draft moved on) and a lost
+ * response (the write may have committed) leave the client's revisions stale; validation or permission failures changed nothing.
+ */
+export function shouldRefetchAfterWriteError(cause: unknown): boolean {
+  return cause instanceof ApiError && (cause.code === "REVISION_CONFLICT" || cause.isNetwork);
+}

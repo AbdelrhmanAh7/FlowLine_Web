@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ApiError } from "@/lib/api";
-import { copyErrorKey } from "@/app/admin/copy/copy-errors";
+import { copyErrorKey, shouldRefetchAfterWriteError } from "@/app/admin/copy/copy-errors";
 
 describe("copyErrorKey", () => {
   const saveFallback = "platformAdmin.copyEditor.saveError";
@@ -53,5 +53,20 @@ describe("copyErrorKey", () => {
     expect(copyErrorKey(null, saveFallback)).toBe(saveFallback);
     expect(copyErrorKey(undefined, saveFallback)).toBe(saveFallback);
     expect(copyErrorKey({ code: "WEIRD" }, saveFallback)).toBe(saveFallback);
+  });
+});
+
+describe("shouldRefetchAfterWriteError", () => {
+  it("refetches after a revision conflict and after a lost response (network)", () => {
+    expect(shouldRefetchAfterWriteError(new ApiError(409, "REVISION_CONFLICT", "Conflict"))).toBe(true);
+    expect(shouldRefetchAfterWriteError(new ApiError(0, "NETWORK", "Network error"))).toBe(true);
+  });
+
+  it("does not refetch after step-up, validation, server or non-API failures", () => {
+    expect(shouldRefetchAfterWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step up"))).toBe(false);
+    expect(shouldRefetchAfterWriteError(new ApiError(400, "VALIDATION", "Bad request"))).toBe(false);
+    expect(shouldRefetchAfterWriteError(new ApiError(500, "INTERNAL", "Server error"))).toBe(false);
+    expect(shouldRefetchAfterWriteError(new Error("generic"))).toBe(false);
+    expect(shouldRefetchAfterWriteError(null)).toBe(false);
   });
 });
