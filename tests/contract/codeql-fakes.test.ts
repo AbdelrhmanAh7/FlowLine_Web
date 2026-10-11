@@ -73,7 +73,9 @@ describe("#9 redirect targets are allowlisted", () => {
     expect(safeRedirectTarget("http://127.0.0.1/cb")).toBe("http://127.0.0.1/cb");
     expect(safeRedirectTarget("http://[::1]:3100/cb")).toBe("http://[::1]:3100/cb");
     for (const bad of ["", "https://evil.example/cb", "//evil.example/cb", "/\\evil.example", "javascript:alert(1)", "http://localhost.evil.example/cb", "http://user@evil.example/", "cb", "http://169.254.169.254/", // a relative path that normalises to a protocol-relative Location
-      "/..//evil", "/a/../..//evil", "/%2e%2e//evil", "/././/evil"]) {
+      // the normalisation bypass Claude Sonnet 5.5 found (review): the raw string has a single leading slash,
+      // but `new URL(raw, base)` collapses the dot segment and yields pathname "//evil.example".
+      "/.//evil.example", "/..//evil.example", "/..//evil", "/a/../..//evil", "/%2e%2e//evil", "/././/evil"]) {
       expect(safeRedirectTarget(bad), bad).toBeNull();
     }
   });
@@ -142,15 +144,22 @@ describe("#7 resource exhaustion: the fake AI server caps request bodies", () =>
     expect(Date.now() - t0).toBeGreaterThanOrEqual(100); // the requested 100 ms, unchanged
   });
 
-  it("slowDelayMs clamps the requested delay to [0, 10 s] (deterministic, no wall clock)", () => {
+  it("slowDelayMs bounds the requested delay to [0, 10 s] with the CodeQL upper-bound guard (deterministic, no wall clock)", () => {
     expect(slowDelayMs(0)).toBe(0); // an explicit 0 stays 0, not the 1000 ms default
     expect(slowDelayMs(-5)).toBe(0);
     expect(slowDelayMs(undefined)).toBe(1000);
     expect(slowDelayMs("abc")).toBe(1000);
     expect(slowDelayMs(100)).toBe(100); // in-range values keep their exact timing
     expect(slowDelayMs(3000)).toBe(3000);
-    expect(slowDelayMs(10_000)).toBe(10_000);
+    expect(slowDelayMs(10_000)).toBe(10_000); // the ceiling itself is unchanged
+    // Root cause of the CodeQL timer alert: the bound is a relational upper-bound guard, not Math.min,
+    // so the value that reaches setTimeout is never user-controlled. Prove it stays in range for a sweep.
+    for (let ms = -20_000; ms <= 20_000; ms += 250) {
+      expect(slowDelayMs(ms)).toBeGreaterThanOrEqual(0);
+      expect(slowDelayMs(ms)).toBeLessThanOrEqual(10_000);
+    }
     expect(slowDelayMs(1e12)).toBe(10_000); // the timer is always bounded (CodeQL timer alert)
+    expect(slowDelayMs(Number.POSITIVE_INFINITY)).toBe(1000); // non-finite falls back to the default
   });
 
   it("still answers a normal chat request", async () => {
@@ -186,5 +195,7 @@ describe("the triage notes stay in sync with the code (root cause of the $-loss 
     expect(safety).toContain("trailing `$` (path ends with)");
     expect(safety).toContain("`^/a\\.b$` still means");
     expect(doc).toContain("clamp"); // the #7 row describes the timer handling the code actually has
+    expect(doc).toContain("upper-bound"); // …and names the guard that satisfies the CodeQL timer alert
+    expect(safety).toContain("upper-bound");
   });
 });
