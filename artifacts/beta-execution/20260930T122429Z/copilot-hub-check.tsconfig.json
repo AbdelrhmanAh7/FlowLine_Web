@@ -1,6 +1,0 @@
-{
-  "extends": "../../../tsconfig.json",
-  "compilerOptions": { "incremental": false },
-  "include": ["../../../scripts/diag/copilot-benchmark-hub.mts"],
-  "exclude": ["../../../node_modules", "../../../artifacts"]
-}

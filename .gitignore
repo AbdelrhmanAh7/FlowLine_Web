@@ -11,21 +11,20 @@ next-env.d.ts
 test-results/
 playwright-report/
 blob-report/
-/artifacts/phase-1/tmp/
 .DS_Store
 .env.staging
 .claude/worktrees/
 deploy/beta/.env.beta
 deploy/beta/backups/
 
-# raw helper-agent transcripts (reports are kept, transcripts are not evidence)
-artifacts/**/codex-stderr*.txt
-# helper CLI output (Kimi, OpenCode, Command Code, Codex stdout) is collected here, never committed (DV2-02)
+# Evidence (docs/slimdown-plan.md): only Markdown reports are committed under artifacts/. Raw run output (screenshots,
+# traces, logs, JSON, helper scripts) goes to CI artifacts or the PR, never to git: it was 2,800 files / 184 MB by 2026-10-10.
+/artifacts/**
+!/artifacts/**/
+!/artifacts/**/*.md
+# raw helper-agent transcripts and helper CLI output stay out even as Markdown (DV2-02)
+artifacts/**/codex-stderr*
+artifacts/**/codex-stdout*
 artifacts/**/helper-logs/
-# throwaway browser profiles used by QA reviewers
-artifacts/**/.profile/
-# per-run Playwright output (traces are zips the evidence scanner cannot read)
-artifacts/**/test-results*/
-
-# Local gate runs (scripts/gate.mjs); copy a run under artifacts/<area>/ deliberately to keep it as evidence
+# Local gate runs (scripts/gate.mjs); summarise a run in a Markdown report under artifacts/<area>/ to keep it as evidence
 artifacts/gates/

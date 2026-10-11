@@ -1,9 +1,0 @@
-{
-  "url": "http://localhost:3200/account/delete",
-  "text": "Flowline\nالعربية\nEnglish\nDelete account\n\nWe'll send a confirmation link to your account email. Deletion is permanent.\n\nSend confirmation link\n\nBack to sign in",
-  "buttons": [
-    "العربية",
-    "English",
-    "Send confirmation link"
-  ]
-}
