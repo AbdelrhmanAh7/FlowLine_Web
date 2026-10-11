@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db";
 import type { AiPolicy } from "@/db/schema";
-import { deferFor, isRouteRef, resolveRoute, routeSnapshot } from "@/ai/hub/routing";
-import type { ResolvedRoute } from "@/ai/hub/types";
+import { capabilityProblem, deferFor, isRouteRef, mayFallback, privacyAllows, resolveRoute, routeSnapshot } from "@/ai/hub/routing";
+import type { HubChatRequest, ResolvedRoute } from "@/ai/hub/types";
 
 const CONN = "6f1d2c3a-1111-4222-8333-444455556666";
 const db = {} as Db;
@@ -29,6 +29,31 @@ describe("hub routing (no database)", () => {
       capabilities: {}, pricing: { inputPerMTokMicros: 1 }, free: { zeroPriced: false, note: null },
     } as unknown as ResolvedRoute;
     expect(routeSnapshot(route)).toEqual({ provider: "p", connectionId: CONN, connectionLabel: "L", modelId: "m", protocol: "x", source: "explicit" });
+  });
+
+  it("privacyAllows only restricts when requireNoTraining is set, and then only providers documented as 'no training'", () => {
+    const r = (provider: string) => ({ provider }) as unknown as ResolvedRoute;
+    expect(privacyAllows({ mode: "MANUAL", allowUnknownCost: false } as AiPolicy, r("gemini"))).toBeNull();
+    const strict = { mode: "MANUAL", allowUnknownCost: false, requireNoTraining: true } as AiPolicy;
+    expect(privacyAllows(strict, r("openai"))).toBeNull();
+    expect(privacyAllows(strict, r("gemini"))).toContain(`"depends"`);
+    expect(privacyAllows(strict, r("no-such-provider"))).toBe("unknown provider");
+  });
+
+  it("capabilityProblem refuses only UNSUPPORTED tools / streaming, never an unknown capability", () => {
+    const route = (caps: Record<string, string>) => ({ capabilities: caps }) as unknown as ResolvedRoute;
+    const withTools = { tools: [{}] } as unknown as HubChatRequest;
+    const plain = {} as HubChatRequest;
+    expect(capabilityProblem(route({ tools: "UNSUPPORTED" }), withTools, false)).toBe("tool calls are unsupported");
+    expect(capabilityProblem(route({ tools: "UNSUPPORTED" }), plain, false)).toBeNull();
+    expect(capabilityProblem(route({ tools: "UNKNOWN" }), withTools, false)).toBeNull();
+    expect(capabilityProblem(route({ streaming: "UNSUPPORTED" }), plain, true)).toBe("streaming is unsupported");
+    expect(capabilityProblem(route({ streaming: "UNSUPPORTED" }), plain, false)).toBeNull();
+  });
+
+  it("mayFallback allows transient provider errors and never auth, budget, privacy or unknown codes", () => {
+    for (const code of ["AI_RATE_LIMITED", "AI_TIMEOUT", "AI_MODEL_REMOVED"]) expect(mayFallback(code)).toBe(true);
+    for (const code of ["AI_AUTH_FAILED", "BUDGET_EXCEEDED", "AI_PRIVACY_POLICY", "AI_CONNECTION_REVOKED", "SOMETHING_ELSE"]) expect(mayFallback(code)).toBe(false);
   });
 
   it("with no route configured, resolveRoute throws AI_NOT_CONFIGURED", async () => {
