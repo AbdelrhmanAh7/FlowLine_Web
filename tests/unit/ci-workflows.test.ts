@@ -27,6 +27,37 @@ const triggerTypes = (text: string, event: string) => {
   return match ? match[1].split(",").map((type) => type.trim()) : null;
 };
 
+// A job's steps, parsed from the comment-stripped text (a commented-out line or a step name cannot count as a command).
+// Each step starts at `      - ` (six spaces); its keys sit at eight spaces. `run` is the command, or the block under `run: |`.
+type Step = { name?: string; uses?: string; run?: string; if?: string; raw: string };
+const steps = (jobText: string): Step[] =>
+  stripComments(jobText).split(/^ {6}- /m).slice(1).map((chunk) => {
+    const raw = `        ${chunk}`; // the first key shares the `- ` line: put it at the same indent as the others
+    const field = (key: string) => new RegExp(`^ {8}${key}:[ \\t]*(.*)$`, "m").exec(raw)?.[1].trim();
+    const block = new RegExp("^ {8}run:[ \\t]*\\|[ \\t]*\\n((?: {10}.*\\n?|[ \\t]*\\n)*)", "m").exec(raw)?.[1];
+    return { name: field("name"), uses: field("uses"), run: block !== undefined ? block.replace(/^ {10}/gm, "").trim() : field("run"), if: field("if"), raw };
+  });
+
+// The nightly job must be exactly: checkout, shared setup, create flowline_test, run the nightly project, in this order,
+// with no condition and no continue-on-error on any step. Returns the problems found (empty when the job is right).
+const nightlyProblems = (workflow: string): string[] => {
+  const job = jobs(stripComments(workflow)).nightly;
+  if (job === undefined) return ["no nightly job"];
+  const all = steps(job);
+  const problems: string[] = [];
+  const [checkout, setup, createdb, run] = all;
+  if (all.length !== 4) problems.push(`expected 4 steps, found ${all.length}`);
+  if (!checkout?.uses?.startsWith("actions/checkout@") || !/^ {10}persist-credentials: false$/m.test(checkout.raw)) problems.push("step 1 is not checkout with persist-credentials: false");
+  if (setup?.uses !== "./.github/actions/setup-gate" || !/^ {10}postgres: "true"$/m.test(setup.raw) || !/^ {10}sandbox-image: "true"$/m.test(setup.raw)) problems.push("step 2 is not setup-gate with postgres and sandbox-image");
+  if (createdb?.run !== "docker exec flowline-ci-postgres createdb -U flowline flowline_test") problems.push("step 3 does not create flowline_test");
+  if (run?.run !== "pnpm test:nightly") problems.push("step 4 does not run pnpm test:nightly");
+  for (const [i, step] of all.entries()) {
+    if (step.if !== undefined) problems.push(`step ${i + 1} has an if: condition`);
+    if (/^ {8}continue-on-error:/m.test(step.raw)) problems.push(`step ${i + 1} has continue-on-error`);
+  }
+  return problems;
+};
+
 describe("workflow files", () => {
   it("has exactly the expected workflows and the shared composite actions", () => {
     expect(workflowFiles.sort()).toEqual([".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml", ".github/workflows/nightly.yml"]);
@@ -129,12 +160,17 @@ describe("gate.yml always reports a real `gate`", () => {
     expect(text.match(/pull-requests: read/g)).toHaveLength(1);
   });
 
-  it("runs a strict typecheck job (tsc --noEmit) on every PR with no continue-on-error", () => {
-    // The static leg of the `checks` matrix runs lint, typecheck, evidence, unit, contract
-    const checks = byJob.checks;
-    expect(checks).toContain('run: pnpm gate --only=static,unit,contract');
-    // The static leg has no continue-on-error (defaults to false)
-    expect(checks).not.toMatch(/continue-on-error:\s*true/);
+  it("runs tsc --noEmit on every PR in the static leg, without a condition that skips it or continue-on-error", async () => {
+    // Browser jobs skip Next's own type-check only because this leg already type-checks the same commit.
+    const run = steps(byJob.checks).find((step) => step.run?.startsWith("pnpm gate --only=static,unit,contract"));
+    expect(run, "the static gate step").toBeDefined();
+    expect(run!.if).toBe("matrix.kind == 'static'");
+    expect(run!.raw).not.toMatch(/continue-on-error:/);
+    expect(byJob.checks).toMatch(/^ {10}- \{ part: static·unit·contract, kind: static, report: checks-static \}$/m);
+    const { expandSteps } = await import("../../scripts/gate-groups.mjs");
+    expect(expandSteps(["static"])).toContain("typecheck");
+    expect(read("scripts/gate.mjs")).toContain('typecheck: "pnpm typecheck"');
+    expect(JSON.parse(read("package.json")).scripts.typecheck).toBe("tsc --noEmit");
   });
 
   it("sets FLOWLINE_SKIP_BUILD_TYPECHECK only on browser build jobs, never on the typecheck job", () => {
@@ -161,18 +197,48 @@ describe("nightly.yml stays off the PR path", () => {
     expect(stripComments(text)).not.toMatch(/^ {2}(pull_request|pull_request_target|push):/m);
   });
 
-  it("runs the nightly project through the shared setup", () => {
-    expect(text).toContain("./.github/actions/setup-gate");
-    expect(text).toContain("pnpm test:nightly");
+  it("runs, in this order and unconditionally: checkout, shared setup, createdb flowline_test, pnpm test:nightly", () => {
+    // The container only has `flowline`; the suite migrates flowline_test, so it must exist before the tests run.
+    expect(nightlyProblems(text)).toEqual([]);
+    expect(steps(jobs(text).nightly).map((step) => step.run ?? step.uses?.replace(/@.*/, ""))).toEqual([
+      "actions/checkout",
+      "./.github/actions/setup-gate",
+      "docker exec flowline-ci-postgres createdb -U flowline flowline_test",
+      "pnpm test:nightly",
+    ]);
+    expect(read(".github/actions/setup-gate/action.yml")).toMatch(/POSTGRES_DB=flowline(?!_)/);
     expect(stripComments(text)).not.toMatch(/run: pnpm test\s*$/m);
   });
 
-  it("creates the flowline_test database (the container only has `flowline`) before the tests run", () => {
-    const body = stripComments(text);
-    const create = body.indexOf("createdb -U flowline flowline_test");
-    expect(create).toBeGreaterThan(-1);
-    expect(create).toBeLessThan(body.indexOf("pnpm test:nightly"));
-    expect(read(".github/actions/setup-gate/action.yml")).toMatch(/POSTGRES_DB=flowline(?!_)/);
+  describe("the nightly step guard fails on a broken job (negative controls)", () => {
+    const checkout = "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n";
+    const setup = '      - uses: ./.github/actions/setup-gate\n        with:\n          postgres: "true"\n          sandbox-image: "true"\n';
+    const createdb = "      - name: Create the nightly database\n        run: docker exec flowline-ci-postgres createdb -U flowline flowline_test\n";
+    const test = "      - name: Run the nightly project\n        run: pnpm test:nightly\n";
+    // The report job's issue body mentions `pnpm test:nightly`, as the real file's does: it must not satisfy the guard.
+    const report = '  report:\n    steps:\n      - run: |\n          gh issue create --body "failed (`pnpm test:nightly`)"\n';
+    const workflow = (...parts: string[]) => `name: Nightly\njobs:\n  nightly:\n    runs-on: ubuntu-24.04\n    steps:\n${parts.join("")}${report}`;
+
+    it("accepts the intended job", () => {
+      expect(nightlyProblems(workflow(checkout, setup, createdb, test))).toEqual([]);
+    });
+
+    it.each([
+      ["createdb commented out", workflow(checkout, setup, createdb.replace("        run:", "        # run:"), test)],
+      ["createdb only in a step name", workflow(checkout, setup, "      - name: docker exec flowline-ci-postgres createdb -U flowline flowline_test\n        run: echo ok\n", test)],
+      ["createdb after pnpm test:nightly", workflow(checkout, setup, test, createdb)],
+      ["pnpm test:nightly missing (the report body still names it)", workflow(checkout, setup, createdb)],
+      ["pnpm test:nightly commented out", workflow(checkout, setup, createdb, test.replace("        run:", "        # run:"))],
+      ["pnpm test:nightly only in a step name", workflow(checkout, setup, createdb, "      - name: pnpm test:nightly\n        run: echo ok\n")],
+      ["createdb for another database", workflow(checkout, setup, createdb.replace("flowline_test", "flowline"), test)],
+      ["a step with an if: condition", workflow(checkout, setup, createdb, test.replace("        run:", "        if: always()\n        run:"))],
+      ["a step with continue-on-error", workflow(checkout, setup, createdb, test.replace("        run:", "        continue-on-error: true\n        run:"))],
+      ["checkout keeping credentials", workflow(checkout.replace("persist-credentials: false", "persist-credentials: true"), setup, createdb, test)],
+      ["setup without the sandbox image", workflow(checkout, setup.replace('sandbox-image: "true"', 'sandbox-image: "false"'), createdb, test)],
+      ["an extra step", workflow(checkout, setup, createdb, test, "      - run: echo done\n")],
+    ])("%s", (_name, broken) => {
+      expect(nightlyProblems(broken).length).toBeGreaterThan(0);
+    });
   });
 
   it("reports a red nightly on main as one nightly-red issue, with write access only in that job", () => {
@@ -184,16 +250,23 @@ describe("nightly.yml stays off the PR path", () => {
     expect(text.match(/issues: write/g)).toHaveLength(1);
   });
 
-  it("report job has timeout-minutes ≤ 5, no continue-on-error, no token echo, and handles label creation failure", () => {
+  it("report job: one step, GH_TOKEN only from github.token in env, never printed, no continue-on-error, ≤ 5 minutes", () => {
     const report = jobs(text).report;
     expect(report).toMatch(/^ {4}timeout-minutes: [1-5]$/m);
-    expect(report).not.toMatch(/continue-on-error:\s*true/);
-    // No echo of GH_TOKEN
-    expect(report).not.toMatch(/echo.*GH_TOKEN|echo.*\$\{.*github\.token/);
-    // Handles label creation failure with fallback
-    expect(report).toContain("gh label create nightly-red");
-    expect(report).toContain("gh issue create --label nightly-red");
-    expect(report).toContain("|| gh issue create --title");
+    expect(report).not.toMatch(/continue-on-error:/);
+    const [step, ...rest] = steps(report);
+    expect(rest).toEqual([]);
+    expect(step.if).toBeUndefined();
+    expect(step.raw).toMatch(/^ {10}GH_TOKEN: \$\{\{ github\.token \}\}$/m);
+    // The command block never mentions the token (no echo, print or xtrace of it), nor any other secret.
+    expect(step.run).not.toMatch(/GH_TOKEN|github\.token|secrets\.|set -x|xtrace/);
+    expect(step.run).toContain("set -euo pipefail");
+    // The list call has no error suppression, so an API failure fails the job instead of reading as "no open issue".
+    expect(step.run).toMatch(/^open=\$\(gh issue list --state open --label nightly-red --json number --jq '[^']+'\)$/m);
+    expect(step.run).toContain("gh label create nightly-red");
+    expect(step.run).toContain('gh issue comment "$open"');
+    expect(step.run).toContain("gh issue create --label nightly-red");
+    expect(step.run).toContain("|| gh issue create --title");
   });
 
   it("nightly job has timeout-minutes ≤ 30 and neither job uses continue-on-error", () => {

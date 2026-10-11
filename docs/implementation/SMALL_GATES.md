@@ -26,6 +26,13 @@ are excluded from the `unit` and `integration` projects, so the PR gate no longe
 per-PR integration project and are not moved to nightly. The workflow creates `flowline_test` itself (the Postgres container starts with `flowline` only), like the Gate's integration legs. The nightly is not a required check. Run it by hand before merging a change to
 `src/server/code-sandbox.ts` or `drizzle/**`.
 
+`tests/unit/ci-workflows.test.ts` pins the nightly job as an ordered list of steps parsed from the comment-stripped YAML (checkout,
+`setup-gate`, `createdb ... flowline_test`, `pnpm test:nightly`; no `if:` or `continue-on-error`), with negative controls, so a
+commented-out or reordered step fails the test. Covering tests kept for the deleted duplicates: the CX3-02 republish case is
+`p3-agents.test.ts` ("an approval doesn't carry over to a republished workflow", a pending re-approval and `enqueueRunEx` 409
+`WORKFLOW_REPUBLISHED`); the CX3-03 cross-origin POST/307 case is the `POST`/`307` row of `egress-redirect-security.test.ts`
+(`EGRESS_REDIRECT_REFUSED`, the target is never requested).
+
 Who triages a red nightly: nobody has to watch it. When the nightly fails on `main`, its `report` job opens one issue labelled
 `nightly-red` with the run link (or comments on the one already open), and the hub's engineers pick that issue up like any bug.
 

@@ -33,7 +33,7 @@ jobs:
       - name: Create the nightly database
         run: docker exec flowline-ci-postgres createdb -U flowline flowline_test
 
-      - name: Run the nightly project (code sandbox, upgrade paths, company-builder CLI prototype, dependency pins)
+      - name: Run the nightly project (code sandbox, company-builder CLI prototype, dependency pins)
         run: pnpm test:nightly
 
   # A red nightly is not a required check, so it must reach someone: this job opens one `nightly-red` issue (or comments on
@@ -56,7 +56,7 @@ jobs:
           # Create the label if it doesn't exist; if it fails for any reason other than "already exists",
           # fall back to creating the issue without the label.
           gh label create nightly-red --color B60205 --description "Nightly test tier failed on main" 2>/dev/null || true
-          open=$(gh issue list --state open --label nightly-red --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
+          open=$(gh issue list --state open --label nightly-red --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             gh issue comment "$open" --body "Nightly failed again: $RUN_URL"
           else
