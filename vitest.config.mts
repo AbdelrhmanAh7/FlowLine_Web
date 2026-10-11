@@ -6,9 +6,6 @@ const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 const nightlyFiles = [
   "tests/integration/p2-code-sandbox.test.ts",
   "tests/integration/company-builder-cli.test.ts",
-  "tests/integration/sec-upgrade.test.ts",
-  "tests/integration/sec-cxh06-rotation.test.ts",
-  "tests/integration/sec-cxh01-backfill.test.ts",
   "tests/unit/drizzle-tooling-prune.test.ts",
 ];
 

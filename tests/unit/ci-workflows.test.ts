@@ -47,6 +47,25 @@ describe("workflow files", () => {
   it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
     expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
   });
+
+  it("gate.yml has no needs on removed ai-implementers workflow jobs", () => {
+    const gateText = read(".github/workflows/gate.yml");
+    // The removed ai-implementers.yml had jobs like: implement, review, etc.
+    // Ensure gate.yml doesn't depend on any of them
+    expect(gateText).not.toMatch(/needs:.*ai-implementers/);
+    expect(gateText).not.toMatch(/needs:.*implement/);
+    expect(gateText).not.toMatch(/needs:.*review/);
+  });
+});
+
+describe("next.config.ts guards production type-check", () => {
+  const nextConfig = read("next.config.ts");
+
+  it("requires both FLOWLINE_SKIP_BUILD_TYPECHECK=1 AND FLOWLINE_ENV=test to skip type-checking", () => {
+    expect(nextConfig).toContain('process.env.FLOWLINE_SKIP_BUILD_TYPECHECK === "1"');
+    expect(nextConfig).toContain('process.env.FLOWLINE_ENV === "test"');
+    expect(nextConfig).toContain("&&");
+  });
 });
 
 describe("gate.yml always reports a real `gate`", () => {
@@ -97,6 +116,26 @@ describe("gate.yml always reports a real `gate`", () => {
     expect(byJob.changes).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}pull-requests: read\n/m);
     expect(text.match(/pull-requests: read/g)).toHaveLength(1);
   });
+
+  it("runs a strict typecheck job (tsc --noEmit) on every PR with no continue-on-error", () => {
+    // The static leg of the `checks` matrix runs lint, typecheck, evidence, unit, contract
+    const checks = byJob.checks;
+    expect(checks).toContain('run: pnpm gate --only=static,unit,contract');
+    // The static leg has no continue-on-error (defaults to false)
+    expect(checks).not.toMatch(/continue-on-error:\s*true/);
+  });
+
+  it("sets FLOWLINE_SKIP_BUILD_TYPECHECK only on browser build jobs, never on the typecheck job", () => {
+    // Browser jobs set it
+    expect(byJob.chromium).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    expect(byJob.firefox).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    expect(byJob.webkit).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    // The checks job (which runs typecheck) must NOT set it
+    expect(byJob.checks).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    // The changes and gate jobs must NOT set it
+    expect(byJob.changes).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    expect(byJob.gate).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+  });
 });
 
 describe("nightly.yml stays off the PR path", () => {
@@ -130,6 +169,18 @@ describe("nightly.yml stays off the PR path", () => {
     expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
     expect(text.match(/issues: write/g)).toHaveLength(1);
   });
+
+  it("report job has timeout-minutes ≤ 5, no continue-on-error, no token echo, and handles label creation failure", () => {
+    const report = jobs(text).report;
+    expect(report).toMatch(/^ {4}timeout-minutes: [1-5]$/m);
+    expect(report).not.toMatch(/continue-on-error:\s*true/);
+    // No echo of GH_TOKEN
+    expect(report).not.toMatch(/echo.*GH_TOKEN|echo.*\$\{.*github\.token/);
+    // Handles label creation failure with fallback
+    expect(report).toContain("gh label create nightly-red");
+    expect(report).toContain("gh issue create --label nightly-red");
+    expect(report).toContain("|| gh issue create --title");
+  });
 });
 
 describe("the nightly vitest project", () => {
@@ -144,6 +195,28 @@ describe("the nightly vitest project", () => {
     expect(byName.unit.exclude).toEqual(files);
     expect(byName.integration.exclude).toEqual(files);
     expect(JSON.parse(read("package.json")).scripts["test:nightly"]).toMatch(/vitest run --project nightly$/);
+  });
+
+  it("includes every test file that was moved to nightly (no moved file silently dropped)", async () => {
+    const { default: config } = (await import(new URL("../../vitest.config.mts", import.meta.url).href)) as { default: { test?: { projects?: unknown[] } } };
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const nightlyFiles = byName.nightly.include;
+    // These are the files that the slim-down plan explicitly moves to nightly
+    const expectedNightlyFiles = [
+      "tests/integration/p2-code-sandbox.test.ts",
+      "tests/integration/company-builder-cli.test.ts",
+      "tests/unit/drizzle-tooling-prune.test.ts",
+    ];
+    for (const expected of expectedNightlyFiles) {
+      expect(nightlyFiles).toContain(expected);
+    }
+    // Ensure sec-* tests are NOT in nightly (they stay in per-PR integration)
+    const secTests = ["tests/integration/sec-upgrade.test.ts", "tests/integration/sec-cxh06-rotation.test.ts", "tests/integration/sec-cxh01-backfill.test.ts"];
+    for (const sec of secTests) {
+      expect(nightlyFiles).not.toContain(sec);
+      expect(byName.integration.exclude).not.toContain(sec);
+    }
   });
 });
 

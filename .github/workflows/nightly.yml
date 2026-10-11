@@ -42,7 +42,7 @@ jobs:
     needs: nightly
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 5
     permissions:
       issues: write
     steps:
@@ -53,11 +53,16 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
+          # Create the label if it doesn't exist; if it fails for any reason other than "already exists",
+          # fall back to creating the issue without the label.
           gh label create nightly-red --color B60205 --description "Nightly test tier failed on main" 2>/dev/null || true
-          open=$(gh issue list --state open --label nightly-red --json number --jq '.[0].number // empty')
+          open=$(gh issue list --state open --label nightly-red --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
           if [ -n "$open" ]; then
             gh issue comment "$open" --body "Nightly failed again: $RUN_URL"
           else
+            # Try with label first; if that fails (e.g., label creation failed), create without label.
             gh issue create --label nightly-red --title "Nightly tests failed on main" \
+              --body "The nightly tier (\`pnpm test:nightly\`, see docs/implementation/SMALL_GATES.md) failed: $RUN_URL" 2>/dev/null \
+            || gh issue create --title "Nightly tests failed on main" \
               --body "The nightly tier (\`pnpm test:nightly\`, see docs/implementation/SMALL_GATES.md) failed: $RUN_URL"
           fi
