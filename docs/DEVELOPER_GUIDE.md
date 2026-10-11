@@ -24,7 +24,7 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Every refusal of `/api/platform/copy` is a bounded JSON error `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; `tests/integration/platform-copy-errors.test.ts` (admin-only codes such as `STEP_UP_REQUIRED` and `REVISION_CONFLICT`) and `e2e-army/181-admin-copy.e2e.ts` (non-admin 404 and cross-site 403) cover it.
 
 ## Components and design
 
