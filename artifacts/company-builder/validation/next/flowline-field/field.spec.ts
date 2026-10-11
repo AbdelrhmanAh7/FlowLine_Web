@@ -1,7 +1,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { and, eq } from "drizzle-orm";
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { db, schema } from "@/db";
 import { setupUser } from "../../../../../e2e/helpers";
-import { compareFollowUpRecords, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../../../../../tests/helpers/field-scoring";
+import { comparePersistedRows, compareFollowUpRecords, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../../../../../tests/helpers/field-scoring";
 
 /**
  * NEXT-round Flowline field harness (#141): the frozen run's (20261001-d224cfb) spec with its 4 scoring gaps fixed; that run
@@ -145,15 +147,29 @@ test("Flowline field run — next round", async ({ page }) => {
   const decided = await req.post(`${base}/reviews/${rev05.reviewItem?.id}`, { data: { decision: "approve" } });
   const approvedItem = decided.ok() ? (await decided.json()).item : null;
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
+  // The entry the approval wrote: recipient, text-only payload and no payment action are scored against the packet's VP-05.
+  const sentEntry = (ov.outbox as Json[]).find((x) => x.reviewItemId === rev05.reviewItem?.id);
   const reviewGate = {
     outboxBefore, refundItemStatus: rev05.reviewItem?.status, refundItemConsequential: rev05.reviewItem?.proposed?.consequential ?? null,
     outboxAfterRequestNoApproval: outboxAfterRequest, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status ?? `http ${decided.status()}`,
-    checks: scoreReviewGate({ outboxBefore, outboxAfterRequest, statusAfterRequest: rev05.reviewItem?.status, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status }),
+    checks: {
+      ...scoreReviewGate({ outboxBefore, outboxAfterRequest, statusAfterRequest: rev05.reviewItem?.status, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status }),
+      ...scoreApprovedOutboxEntry(sentEntry, packet.expected["VP-05"].recipient),
+    },
   };
 
   // Duplicate check: re-run VP-01 with a new click → same record. Gap 3 (was :143): compare the persisted run records.
+  // Persisted state (kv_entry written by the data.store step) is read straight from the test DB before and after the second run.
+  const storedFollowUps = async () => (await db.select({ key: schema.kvEntry.key, value: schema.kvEntry.value }).from(schema.kvEntry)
+    .where(and(eq(schema.kvEntry.workspaceId, workspace.id), eq(schema.kvEntry.namespace, "cb_customer_follow_ups"))));
+  const storedBefore = await storedFollowUps();
   const again = await runOne(packet.requests[0], "field-VP-01-again");
-  const duplicateRun = { requestsBefore: results.length, ...compareFollowUpRecords(vp01.record, again.output.follow_up_record), note: "second VP-01 trial; persisted follow_up_record compared with the first" };
+  const storedAfter = await storedFollowUps();
+  const duplicateRun = {
+    requestsBefore: results.length, storedRowsBefore: storedBefore.length, storedRowsAfter: storedAfter.length,
+    ...compareFollowUpRecords(vp01.record, again.output.follow_up_record), ...comparePersistedRows(storedBefore, storedAfter),
+    note: "second VP-01 trial; follow_up_record and the persisted kv_entry rows compared before and after",
+  };
 
   // FC-3 changed answer → reviewable new plan version, then VP-03 quotes the new price.
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
