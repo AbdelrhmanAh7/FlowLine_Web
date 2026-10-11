@@ -103,6 +103,16 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(step.indexOf("createdb")).toBeLessThan(step.indexOf("pg_restore"));
   });
 
+  it("@issue-68 AC1: nothing can dump or write the database while it is dropped, and the safety dump is checked first", () => {
+    const restore = section(/Backup and restore/i);
+    const stop = restore.slice(restore.indexOf("6. Stop"), restore.indexOf("7. Check"));
+    // The nightly backup container would otherwise dump the empty or half-restored database and mark it LAST_OK.
+    expect(stop).toMatch(/dc stop web worker backup/);
+    const check = restore.slice(restore.indexOf("7. Check"), restore.indexOf("8. Restore"));
+    expect(check).toMatch(/pg_restore --list < backups\/<dump-file>/);
+    expect(check).toMatch(/pg_restore --list < backups\/pre-restore-<utc>\.dump/);
+  });
+
   it("@issue-68 AC4: the mandatory docs check passes for this change", () => {
     const files = ["docs/runbooks/restore-rollback-alerts.md", "docs/implementation/OWNER_ACTIONS.md", "tests/unit/restore-rollback-alerts-runbook.test.ts"];
     expect(checkDocs(files).passed).toBe(true);

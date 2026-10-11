@@ -51,9 +51,12 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 4. Take a safety dump of the current state, even if damaged:
    `dc exec -T db pg_dump -U flowline -Fc flowline > backups/pre-restore-<utc>.dump`.
 5. Post a maintenance notice in `<alert-channel>` and acknowledge the alerts the next steps will trigger.
-6. Stop the writers: `dc stop web worker`. Leave `db` running.
-7. Check the dump is readable: `dc exec -T db pg_restore --list < backups/<dump-file> > /dev/null`. Stop here if it
-   fails and pick the previous dump.
+6. Stop the writers and the nightly backup (it would dump the empty database as `LAST_OK`):
+   `dc stop web worker backup`. Leave `db` running.
+7. Check both dumps are readable, since step 8 drops the only live copy:
+   `dc exec -T db pg_restore --list < backups/<dump-file> > /dev/null` and
+   `dc exec -T db pg_restore --list < backups/pre-restore-<utc>.dump > /dev/null`. If the first fails, pick the
+   previous dump; if the second fails, repeat step 4 and do not continue without a readable safety dump.
 8. Restore into a fresh, empty database, so no object absent from the dump survives (restoring over the old one would leave it):
    `dc exec -T db dropdb -U flowline --force --if-exists flowline`, then `dc exec -T db createdb -U flowline flowline`,
    then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < backups/<dump-file>`.
