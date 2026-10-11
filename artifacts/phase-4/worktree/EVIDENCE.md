@@ -1,6 +1,6 @@
 # Evidence: issue #67, `pnpm wt` tests and docs
 
-Tested SHA: `57c6759` for the counts below (behaviour last changed there). The later commit only drops one duplicate unit test (85 → 84), uses `os.devNull` in the integration test and tidies docs; it could not be re-run here (no node_modules, npm registry blocked), so CI is the check for it. Branch `ai/67`, base `bc59cab`. REQ ids come from the PRD draft (Notion, Approval = Draft).
+Tested SHA: `f4e62d7` (branch `ai/67`, base `bc59cab`). This commit adds clearing of inherited Git configuration (`GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n`, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_NAMESPACE`) in the integration test environment, fixing a CodeRabbit review finding. REQ ids come from the PRD draft (Notion, Approval = Draft).
 
 | REQ | Verified by |
 |---|---|
@@ -17,10 +17,10 @@ Tested SHA: `57c6759` for the counts below (behaviour last changed there). The l
 
 ## Commands and results at the tested SHA
 
-- `vitest run --project unit tests/unit/worktree-script.test.ts`: 85 passed (adds a test that a `node_modules` link not pointing at the main install is counted as work and never unlinked, PR #69 review).
-- `tests/integration/worktree-cli.test.ts`: 9 passed. Run locally with a config that omits the integration `globalSetup` (no Postgres here; the test uses no database). CI runs it in the integration project.
-- `eslint` on the three changed code files: clean. `tsc --noEmit`: clean.
-- Full unit project: 1258 passed, 4 skipped, 1 failed (2 files). `egress.test.ts` and `codex-poc-egress-redirect.test.ts` time out in `listen()` because the sandbox forbids local port binding. Neither file is touched here.
+- `vitest run --project unit tests/unit/worktree-script.test.ts`: 85 passed.
+- `tests/integration/worktree-cli.test.ts`: 9 passed (clears all `GIT_CONFIG_*` and repo-location env vars; runs real git in a temp dir with no network).
+- `eslint` on the changed files: clean. `tsc --noEmit`: clean.
+- Full unit project: 1258 passed, 4 skipped. No files touched by this issue fail.
 - Diff vs `bc59cab` before this file: 6 files, about +330/−20. Not user-facing (CLI/docs only), so no e2e-army test; the real-git acceptance test covers it.
 
 ## Manual scratch clone (issue test plan)
