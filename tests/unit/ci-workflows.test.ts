@@ -308,20 +308,38 @@ describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
 });
 
 describe("ai-implementers.yml (Mac mini hub)", () => {
-  const text = read(".github/workflows/ai-implementers.yml");
+  // Assert on active lines only: whole-line comments are stripped and every pattern is anchored to a line start, so a
+  // commented-out `# cron: ...` / `# group: ...` or a match inside a trailing comment cannot satisfy these checks.
+  const text = stripComments(read(".github/workflows/ai-implementers.yml"));
   const byJob = jobs(text);
+  const crons = [...text.matchAll(/^ {4}- cron: "([^"]+)"/gm)].map((match) => match[1]);
+
+  it("ignores commented-out schedules and runners (guard against the raw-text false positive)", () => {
+    const sample = stripComments('on:\n  schedule:\n    # - cron: "0 */2 * * *"\n    - cron: "5 * * * *"\n    # runs-on: [self-hosted, macmini]\n');
+    expect([...sample.matchAll(/^ {4}- cron: "([^"]+)"/gm)].map((match) => match[1])).toEqual(["5 * * * *"]);
+    expect(sample).not.toMatch(/^ {4}runs-on: \[self-hosted, macmini\]/m);
+  });
+
+  it("defines exactly the start, rescue and automerge schedules", () => {
+    expect(crons).toEqual(["0 */2 * * *", "30 */3 * * *", "15 * * * *"]);
+  });
 
   it("schedules start 24/7 every 2 hours and matches the start job trigger", () => {
-    expect(text).toMatch(/cron:\s*"0 \*\/2 \* \* \*"/);
-    expect(byJob.start).toMatch(/github\.event\.schedule == '0 \*\/2 \* \* \*'/);
+    expect(crons[0]).toBe("0 */2 * * *");
+    expect(byJob.start).toMatch(/^ {4}if: .*github\.event\.schedule == '0 \*\/2 \* \* \*'/m);
+  });
+
+  it("routes the rescue and automerge schedules to their own jobs", () => {
+    expect(byJob.rescue).toMatch(/^ {4}if: .*github\.event\.schedule == '30 \*\/3 \* \* \*'/m);
+    expect(byJob.automerge).toMatch(/^ {4}if: .*github\.event\.schedule == '15 \* \* \* \*'/m);
   });
 
   it("runs all jobs on self-hosted macmini runner with dedicated concurrency", () => {
     for (const job of ["start", "rescue", "automerge", "mention"]) {
-      expect(byJob[job]).toMatch(/runs-on:\s*\[self-hosted,\s*macmini\]/);
+      expect(byJob[job]).toMatch(/^ {4}runs-on: \[self-hosted, macmini\]\s*$/m);
     }
     for (const job of ["start", "rescue", "automerge"]) {
-      expect(byJob[job]).toMatch(/group:\s*ai-/);
+      expect(byJob[job]).toMatch(/^ {6}group: ai-/m);
     }
   });
 });
