@@ -56,3 +56,9 @@ failure, permissions changed mid-run, approval expired, membership revoked mid-s
 
 Codex reviews code, tests and security, and does agent-driven exploratory browser testing against the running
 stack. Findings are fixed and retested. This is not human UAT.
+
+## Landing e2e-army (#177)
+
+The e2e-army test `e2e-army/177-landing-cta.e2e.ts` (feature `fl-landing`) covers the landing hero: AC1 checks that the
+"Explore a workflow" hero button opens the flow demo section and that "Start building — free" leads to the sign-up page;
+AC2 checks on the rendered page that both hero links are shown. It runs in the hub e2e-army gate, not in local Playwright.
