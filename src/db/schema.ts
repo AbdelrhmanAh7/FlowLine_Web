@@ -203,7 +203,8 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    version: integer("version").notNull(),
+    /** Public version number (save / overwrite / publish share one sequence per flow). NULL for "run" snapshots: a run pins its graph but does not use up a number. */
+    version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
     graph: jsonb("graph").$type<FlowGraph>().notNull(),
@@ -212,7 +213,9 @@ export const flowVersion = pgTable(
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
+  (t) => [
+    uniqueIndex("flow_version_unique").on(t.flowId, t.version).where(sql`${t.version} is not null`),
+  ],
 );
 
 export const runStatusEnum = pgEnum("run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);

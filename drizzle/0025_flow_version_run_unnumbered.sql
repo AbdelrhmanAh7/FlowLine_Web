@@ -1,0 +1,1 @@
+ALTER TABLE "flow_version" ALTER COLUMN "version" DROP NOT NULL;
