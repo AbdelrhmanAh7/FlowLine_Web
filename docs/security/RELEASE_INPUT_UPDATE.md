@@ -1,6 +1,6 @@
 # Reviewed release image inputs
 
-CI, the release build/runtime and the package support policy select Node 22 LTS. Node's [release working group schedule](https://github.com/nodejs/Release#release-schedule) lists the Node 22 maintenance support end as 2027-04-30; reevaluate this policy before that date. The Node 25 release line is EOL according to the [official release table](https://nodejs.org/en/about/previous-releases).
+CI, the release build/runtime and the package support policy select Node 24 LTS. Node's [release working group schedule](https://github.com/nodejs/Release#release-schedule) lists the Node 24 maintenance support end as 2028-04-30; reevaluate this policy before that date. The Node 25 release line is EOL according to the [official release table](https://nodejs.org/en/about/previous-releases).
 
 Shipped builder frontend, base, sandbox default, CI database/sandbox pull and beta infrastructure inputs use immutable multi-platform manifest-index digests. Tags remain beside each digest as an update hint. Metadata resolution alone is not vulnerability scanning, image execution, platform support or beta deployment verification.
 

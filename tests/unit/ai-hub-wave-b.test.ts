@@ -53,7 +53,7 @@ describe("curated catalogue provenance", () => {
       expect(e.pricing.sourceUrl, e.modelId).toMatch(/^https:\/\//);
       const host = new URL(e.pricing.sourceUrl!).hostname;
       const cited = [...def.sources.map((s) => new URL(s.url).hostname), def.termsUrl ? new URL(def.termsUrl).hostname : ""];
-      expect(cited.some((h) => h === host) || host.endsWith("cohere.com"), `${e.modelId} price source ${host}`).toBe(true);
+      expect(cited.some((h) => h === host) || host === "cohere.com" || host.endsWith(".cohere.com"), `${e.modelId} price source ${host}`).toBe(true);
     }
   });
 

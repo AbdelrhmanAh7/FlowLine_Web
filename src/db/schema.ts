@@ -1365,7 +1365,7 @@ export const platformAuditEvent = pgTable(
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
     actorUserId: text("actor_user_id"),
     actorLabel: text("actor_label").notNull(),
-    /** session_totp_stepup | session | setup_session | cli | system */
+    /** session_totp_stepup | session | setup_session | cli | system | federated_pending */
     assurance: text("assurance").notNull(),
     action: text("action").notNull(),
     targetType: text("target_type"),
