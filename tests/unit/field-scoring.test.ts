@@ -35,6 +35,14 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nWe booked you for Friday.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nتم تأكيد موعدكم يوم الجمعة ٢٠٢٦-١٠-٠٩.`, date)).toBe(false);
   });
+  it("passes the ideal reply: closed on Fridays plus the product's generic closing (no false positive)", () => {
+    expect(scoreClosedDay(`We are closed on Fridays. ${HOURS_LINE}\n\nThank you — we'll confirm the details with you.`, date)).toBe(true);
+    expect(scoreClosedDay(`Friday 2026-10-09 is not available. ${HOURS_LINE}\n\nThank you — we'll confirm the details with you.`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nنحن مغلقون يوم الجمعة.\n\nشكرًا لك، وسنؤكد التفاصيل معك.`, date)).toBe(true);
+  });
+  it("fails a dotted date confirmation (09.10.2026) next to the hours line", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 09.10.2026 is confirmed.`, date)).toBe(false);
+  });
   it("fails when the requested date is not a Friday (the check does not apply)", () => {
     expect(scoreClosedDay(HOURS_LINE, "2026-10-08")).toBe(false);
   });

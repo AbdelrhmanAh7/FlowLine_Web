@@ -16,7 +16,7 @@
 - **Flowline's own verdict disagreements:** none (recorded as `[]`)
 
 ## What changed (v2 vs v1)
-- VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply that repeats the requested date or names Friday together with a confirming word. Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
+- VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply with a sentence that repeats the requested date or names Friday together with a confirming word, unless that sentence says the day is closed or not available (so "We are closed on Fridays." plus the generic "we'll confirm the details" closing passes). Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
 - VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording somewhere in the reply; the quoted approved policy line satisfies it. It checks that owner wording is present, not who decides the current request.
 
 ## Per-VP results (run 5)
@@ -35,7 +35,7 @@
 
 ## Delta vs run 4 and negative controls (committed, reproducible)
 The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI with the unit project; fixture replies, no stack). The run-4 replies below are quoted from `run4-r4-f74285c/results.json`; run 4 itself is not re-scored.
-- **closedDay:** the run-4 VP-03 reply (office price quote, no working-hours line) and the run-5 reply (minimal Arabic confirmation) both score `closedDay=false`; a reply that quotes the hours line passes; a reply that quotes the hours line but also confirms 2026-10-09 / Friday (English or Arabic digits) fails; a non-Friday date fails the check.
+- **closedDay:** the run-4 VP-03 reply (office price quote, no working-hours line) and the run-5 reply (minimal Arabic confirmation) both score `closedDay=false`; a reply that quotes the hours line passes, including with "We are closed on Fridays." and the generic closing; a reply that quotes the hours line but also confirms 2026-10-09 / Friday (English or Arabic digits) fails; a non-Friday date fails the check.
 - **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line, so they pass; this run therefore shows the check passing, and the rejecting case is the unit test above.
 - Run 4 VP-06 still fails only on VF-02 (`noPromise:cancelled`).
 

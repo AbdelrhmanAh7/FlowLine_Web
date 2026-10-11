@@ -13,20 +13,27 @@ export function isFriday(isoDate: string): boolean {
 // Western and Arabic-Indic digits, so the Arabic-language VP-03 reply is covered too.
 const toWestern = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 const CONFIRM = /confirm|book|schedul|available|reserved|تأكيد|مؤكد|حجز|متاح|موعد/i;
+// A sentence that says the day is closed / not available is the correct answer, not a confirmation.
+const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
+const FRIDAY = /friday|الجمعة/i;
 
 /**
  * VP-03: the requested date is a Friday (a closed day). A correct reply quotes the approved working-hours line and
- * does not present the requested date as bookable: it must not repeat the date, or name Friday together with a
- * confirming word (generic "we'll confirm the details" closings are fine).
+ * does not present the requested date as bookable. It is judged sentence by sentence, so the generic closing
+ * "Thank you, we'll confirm the details" (no mention of the day) is fine, and "We are closed on Fridays." passes. A
+ * sentence fails when it repeats the requested date or names Friday together with a confirming word, unless that
+ * same sentence says the day is closed or not available.
  */
 export function scoreClosedDay(text: string, requestedDate: string): boolean {
   if (!isFriday(requestedDate)) return false;
   if (!text.includes(HOURS_LINE)) return false;
   const t = toWestern(text);
-  if (t.includes(requestedDate)) return false;
   const [y, m, d] = requestedDate.split("-");
-  if (new RegExp(`\\b${d}[/.-]${m}[/.-]${y}\\b`).test(t)) return false;
-  return !(/friday|الجمعة/i.test(t) && CONFIRM.test(t));
+  const dateForms = new RegExp(`${requestedDate}|\\b${d}[/.-]${m}[/.-]${y}\\b`);
+  return !t.split(/[!?؟\n]+|\.(?=\s|$)/).some((sentence) => {
+    if (NEGATION.test(sentence)) return false;
+    return dateForms.test(sentence) || (FRIDAY.test(sentence) && CONFIRM.test(sentence));
+  });
 }
 
 /**
