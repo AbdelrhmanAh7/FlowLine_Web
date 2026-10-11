@@ -14,7 +14,7 @@ The self-hosted runner reuses its checkout workspace, so `.git/config` kept seve
 ## Resolution
 - The cleanup lives in the hub (`AbdelrhmanAh7/nql-agents`), commit `41c658f` "git_as_owner: reset credential.helper idempotently": `git_as_owner` in `bin/common.sh` now runs `git config --local --unset-all` for `credential.helper` and `http.https://github.com/.extraheader` before re-adding them. Later `start` runs on `main` passed (for example 37588370109, 37594935252, 37605265556, 37619221039).
 - This PR does **not** change `.github/workflows/` (owner-only). An earlier revision added "Clean git credentials" steps there; they were reverted, together with the unit test that required them.
-- `tests/unit/ci-workflows.test.ts` adds policy checks that match the workflow on `main`: the 24/7 `0 */2 * * *` start schedule and the `[self-hosted, macmini]` runners with `ai-*` concurrency groups.
+- `tests/unit/ci-workflows.test.ts` adds policy checks that match the workflow on `main`: the three crons (`0 */2 * * *` start, `30 */3 * * *` rescue, `15 * * * *` automerge), each cron's job routing, and the `[self-hosted, macmini]` runners with `ai-*` concurrency groups. They run on comment-stripped text with line-anchored patterns, so a commented-out line cannot satisfy them (a dedicated test covers that). The engine order is not tested here; `docs/GITHUB_WORKFLOW.md` points at the hub as its source.
 - `docs/GITHUB_WORKFLOW.md` documents the AI implementers workflow and where the persistent-runner git cleanup lives. It makes no claim about whether the owner has the workflow enabled in GitHub's Actions settings (not verifiable from this repo).
 
 ## Still red, outside this repo
@@ -31,5 +31,7 @@ Each result names the exact tree it was recorded on. Results are never carried o
 | `686c38bf33941297ba08ae875123470b9807612a` (merge of `origin/main` `aee8385b07396871709052b6f2922ac8de7f1438` into this branch; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed (main's gate-report, gate and docs checks plus this PR's `ai-implementers.yml` block) |
 | same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
 | `66d739da5d565e48358ad36c1756414f758e2fdb` (HEAD before this note; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed |
+| `89da178ced4c5797b655e7d8bfe68c958e124be7` (clean tree) | `vitest run tests/unit/ci-workflows.test.ts` | 55 passed |
+| same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
 
-Commits after `686c38bf33941297ba08ae875123470b9807612a` change only this evidence file. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
+Commits after `686c38bf33941297ba08ae875123470b9807612a` change only this evidence file, the ci-workflows test block and `docs/GITHUB_WORKFLOW.md`. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
