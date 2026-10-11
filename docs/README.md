@@ -72,6 +72,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [integrations/CONNECTING.md](integrations/CONNECTING.md) | Connecting integrations | no | approved |
 | [integrations/LIVE-CERTIFICATION.md](integrations/LIVE-CERTIFICATION.md) | Live certification | yes | approved |
 | [integrations/SUPPORTED-ACTIONS.md](integrations/SUPPORTED-ACTIONS.md) | Supported actions | no | approved |
+| [security/codeql-triage-fakes.md](security/codeql-triage-fakes.md) | CodeQL triage of the e2e fake servers | yes | draft |
 | [security/CREDENTIALS_DESIGN.md](security/CREDENTIALS_DESIGN.md) | Credentials design | yes | approved |
 | [security/FEDERATED_MFA.md](security/FEDERATED_MFA.md) | Federated MFA | yes | approved |
 | [security/RELEASE_INPUT_UPDATE.md](security/RELEASE_INPUT_UPDATE.md) | Release input update | yes | approved |
