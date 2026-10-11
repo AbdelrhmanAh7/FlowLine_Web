@@ -1,6 +1,6 @@
 # Evidence — issue #68 (restore, rollback and alerting runbook draft)
 
-Tested commit: pinned in the next commit, the last change to the runbook and test (later commits touch only this file). Docs only; nothing ran against a real environment.
+Tested commit `d75d83d`, the last change to the runbook and test (later commits touch only this file). Docs only; nothing ran against a real environment.
 - `tests/unit/restore-rollback-alerts-runbook.test.ts` (`@issue-68`, 7 tests): AC1 four sections, ordered steps, all-or-nothing restore into a fresh DB, cutoff `max(created_at)` read before writers restart, copy-pasteable commands, `git -C "$REPO_DIR"` and `node "$REPO_DIR/scripts/…"` anchored; AC2 no secrets/hosts/LIVE, NileQuant PAPER only; AC3 OWNER_ACTIONS.md link next to PP-06 (#30), O04/O08 unchanged, links resolve; AC4 docs check; AC5 whole change ≤ 300 lines.
 - `vitest run --project unit` on this file: 7/7 passed. On the previous runbook (`5236845`) the new assertions fail: cutoff checked after `dc up`, smoke path relative to `DEPLOY_DIR`.
 - `git diff --shortstat origin/main...HEAD`: 4 files changed, 300 insertions(+) (runbook 182, test 108, this file 8, OWNER_ACTIONS.md 2).
