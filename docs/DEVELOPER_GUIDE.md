@@ -24,7 +24,7 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Save/publish failures show a translated message chosen by `copyErrorKey` (`src/app/admin/copy/copy-errors.ts`: revision conflict, step-up required, network, server 5xx, generic fallback), never the raw server text; revision conflicts and network failures (the write may have committed) refetch the copy state, and a failed load offers a Retry button.
 
 ## Components and design
 

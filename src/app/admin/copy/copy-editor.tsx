@@ -78,8 +78,8 @@ export function CopyEditor() {
       const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
       setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
     }
-    // For revision conflicts, refetch the copy state to get the latest revision
-    if (cause instanceof ApiError && cause.code === "REVISION_CONFLICT") {
+    // Revision conflicts and lost responses (the write may have committed) both leave stale revisions: reconcile
+    if (cause instanceof ApiError && (cause.code === "REVISION_CONFLICT" || cause.isNetwork)) {
       await state.refetch();
     }
     setError(t(errorKey));
