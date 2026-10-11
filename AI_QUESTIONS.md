@@ -71,12 +71,15 @@ Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
 - File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
 - Does not modify `transport.ts` — tests only
 - Uses real providers from `getProviderDef` as specified in the manager plan
+
+---
+
 ## Issue #174: Add unit tests for hub selection
 
 ### The named functions do not exist
 
 `selectEngineByScore` and `selectFreeEndpoint` are not in `src/ai/hub/selection.ts`, anywhere else in the repo, or in its
-git history (`git log --all -S selectEngineByScore` is empty). The planner made up the names, so no test can import them.
+git history (`git log --all -S selectEngineByScore` only finds the commit that records this note). The planner made up the names, so no test can import them.
 That is the root cause of the QA finding "tests never exercise the required functions". The real exports are
 `assertRouteSelection`, `assertRoutesUsable`, `pinDefaultRoutes` and `aiRoutesIn`. As with #173, the tests cover those.
 
