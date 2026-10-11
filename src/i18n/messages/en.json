@@ -3342,7 +3342,12 @@
       "discard": "Discard the unsaved edit?",
       "loadError": "Could not load the copy. Refresh and try again.",
       "saveError": "Could not save the draft. Check the text and refresh if it changed elsewhere.",
-      "publishError": "Could not publish. Refresh and review the draft before trying again."
+      "publishError": "Could not publish. Refresh and review the draft before trying again.",
+      "conflict": "This copy was changed by someone else. Refresh to see the latest version.",
+      "networkError": "Could not reach the server. Check your connection and try again.",
+      "serverError": "The server encountered an error. Try again in a moment.",
+      "stepUp": "Confirm your identity in the admin panel before saving or publishing.",
+      "meLoadError": "Could not load your admin session. Refresh the page and try again."
     },
     "title": "Platform admin",
     "subtitle": "Flowline's own service credentials. Secrets are write-only: after you save one it is never shown again — not to you, not to anyone.",
