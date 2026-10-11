@@ -32,12 +32,12 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 
 ### Example #41: Password reset vs SSO link confirmation ([#41](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/41))
 
-**Hazard:** A password reset and a SSO link confirmation for the same user can deadlock. Reset locked the account row (rank 5) before the user row (rank 3), while link confirmation locked the user first, then the account.
+**Hazard:** A password reset (`consumeAccountToken("reset")`) and an SSO link confirmation (`confirmSsoLink`) for the same user can deadlock. Reset locks the email token (rank 1), then writes the account row (rank 5), then deletes sessions (rank 4), then updates the user row (rank 3) — account → session → user. Link confirmation locks the user row (rank 3) first, then the session (rank 4), then the account (rank 5) — user → session → account. The opposite orders form a cycle.
 
-**Ordering rule:** Password reset must lock user (rank 3) before sessions (rank 4) and accounts (rank 5). This is now enforced by `consumeAccountToken("reset")` in `src/server/email/flows.ts`.
+**Ordering rule:** Password reset must lock user (rank 3) before sessions (rank 4) and accounts (rank 5), consistent with the entity table. This is a known gap documented in [FEDERATED_MFA.md](../security/FEDERATED_MFA.md#lock-order); the fix is **pending #41**.
 
-### Example #42: SSO link confirmation vs federated challenge completion ([#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42))
+### Example #42: Member role change vs SSO audit ([#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42))
 
-**Hazard:** `confirmSsoLink` and `completeFederatedChallenge` for the same user can deadlock. Link confirmation locked the initiating session (rank 4) before the user row (rank 3), while challenge completion locked the user first.
+**Hazard:** A member role change (`changeRole` or `removeMember` in `src/server/members.ts`) and an SSO transaction that writes an audit entry (e.g., `confirmSsoLink`, `completeFederatedChallenge`, or SSO callback in `src/server/sso.ts`) for the same member can deadlock. Role change locks the workspace row (rank 2, `FOR UPDATE`), then the member row (rank 6). The SSO path holds the member row (rank 6) and later inserts an `audit_event` row (rank 7), which takes a key-share lock on the workspace row (rank 2). Each transaction holds the row the other needs next.
 
-**Ordering rule:** Both paths now take the user row (rank 3) before the initiating session (rank 4) via the shared helper `lockUserThenSessions` in `src/server/federated-locks.ts`.
+**Ordering rule:** Both paths should follow rank order (workspace rank 2 before member rank 6 before audit rank 7). The `audit_event` insert's key-share lock on workspace after member is a known gap documented in [FEDERATED_MFA.md](../security/FEDERATED_MFA.md#lock-order) and the entity table above; the fix is **pending #42**.
