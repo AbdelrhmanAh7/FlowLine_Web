@@ -11,11 +11,29 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const script = fileURLToPath(new URL("../../scripts/worktree.mjs", import.meta.url));
 const guide = fileURLToPath(new URL("../../docs/DEVELOPER_GUIDE.md", import.meta.url));
-// Hermetic git: no user/system config, fixed identity.
-const env = {
-  ...process.env, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: "1",
-  GIT_AUTHOR_NAME: "wt", GIT_AUTHOR_EMAIL: "wt@example.test", GIT_COMMITTER_NAME: "wt", GIT_COMMITTER_EMAIL: "wt@example.test",
-};
+
+// Hermetic git: clear all inherited Git configuration (including command-scope GIT_CONFIG_COUNT/KEY_n/VALUE_n)
+// and repository-location variables, then set fixed identity.
+function gitEnv() {
+  const env = { ...process.env };
+  // Clear all Git configuration environment variables
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("GIT_CONFIG_") || key === "GIT_DIR" || key === "GIT_WORK_TREE" || key === "GIT_NAMESPACE") {
+      delete env[key];
+    }
+  }
+  // Ensure clean config sources
+  env.GIT_CONFIG_GLOBAL = devNull;
+  env.GIT_CONFIG_NOSYSTEM = "1";
+  // Fixed identity
+  env.GIT_AUTHOR_NAME = "wt";
+  env.GIT_AUTHOR_EMAIL = "wt@example.test";
+  env.GIT_COMMITTER_NAME = "wt";
+  env.GIT_COMMITTER_EMAIL = "wt@example.test";
+  return env;
+}
+
+const env = gitEnv();
 let tmp: string;
 let repo: string;
 const git = (args: string[], cwd = repo) => {
