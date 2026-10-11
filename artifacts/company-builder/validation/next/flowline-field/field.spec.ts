@@ -154,7 +154,7 @@ test("Flowline field run — next round", async ({ page }) => {
     outboxAfterRequestNoApproval: outboxAfterRequest, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status ?? `http ${decided.status()}`,
     checks: {
       ...scoreReviewGate({ outboxBefore, outboxAfterRequest, statusAfterRequest: rev05.reviewItem?.status, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status }),
-      ...scoreApprovedOutboxEntry(sentEntry, packet.expected["VP-05"].recipient),
+      ...scoreApprovedOutboxEntry(sentEntry, packet.expected["VP-05"].recipient, rev05.reviewItem?.proposed),
     },
   };
 
@@ -167,7 +167,8 @@ test("Flowline field run — next round", async ({ page }) => {
   const storedAfter = await storedFollowUps();
   const duplicateRun = {
     requestsBefore: results.length, storedRowsBefore: storedBefore.length, storedRowsAfter: storedAfter.length,
-    ...compareFollowUpRecords(vp01.record, again.output.follow_up_record), ...comparePersistedRows(storedBefore, storedAfter),
+    ...compareFollowUpRecords(vp01.record, again.output.follow_up_record),
+    ...comparePersistedRows(storedBefore, storedAfter, { key: (vp01.record as Json).store_key, value: vp01.record }),
     note: "second VP-01 trial; follow_up_record and the persisted kv_entry rows compared before and after",
   };
 

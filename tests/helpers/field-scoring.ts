@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { REFUND_NOTE } from "../../src/company-builder/packs/customer-follow-up";
 
 /**
@@ -41,17 +42,22 @@ export function compareFollowUpRecords(first: unknown, again: unknown): { sameKe
 }
 
 /** Gap 3 (persisted side): the stored follow-up rows (kv_entry) after the duplicate trial must equal those before it. */
-export function comparePersistedRows(before: readonly { key: string; value: unknown }[], after: readonly { key: string; value: unknown }[]): { sameRowCount: boolean; sameRows: boolean } {
-  const norm = (rows: readonly { key: string; value: unknown }[]) => JSON.stringify([...rows].sort((a, b) => a.key.localeCompare(b.key)).map((r) => [r.key, r.value]));
-  return { sameRowCount: before.length === after.length, sameRows: norm(before) === norm(after) };
+export function comparePersistedRows(before: readonly { key: string; value: unknown }[], after: readonly { key: string; value: unknown }[], expected: { key: unknown; value: unknown }): Record<string, boolean> {
+  const norm = (rows: readonly { key: string; value: unknown }[]) => [...rows].sort((a, b) => a.key.localeCompare(b.key));
+  const hasOriginal = (rows: typeof before) => {
+    const matches = rows.filter((r) => r.key === expected.key);
+    return typeof expected.key === "string" && matches.length === 1 && isDeepStrictEqual(matches[0]!.value, expected.value);
+  };
+  return { sameRowCount: before.length === after.length, sameRows: isDeepStrictEqual(norm(before), norm(after)), exactlyOneFollowUp: hasOriginal(before) && hasOriginal(after) };
 }
 
 /** Gap 2 (payload side): the entry the approval wrote is the reviewed text-only reply to the expected recipient, with no payment action. */
-export function scoreApprovedOutboxEntry(entry: unknown, expectedRecipient: string): Record<string, boolean> {
+export function scoreApprovedOutboxEntry(entry: unknown, expectedRecipient: string, reviewedProposal: unknown): Record<string, boolean> {
   const p = ((entry ?? {}) as { payload?: { proposed?: Record<string, unknown>; recipient?: unknown } }).payload ?? {};
   const proposed = p.proposed ?? {};
   const allowed = new Set(["kind", "to", "subject", "body", "consequential"]);
   return {
+    outboxMatchesReviewedDraft: reviewedProposal != null && isDeepStrictEqual(proposed, reviewedProposal),
     outboxRecipientMatches: p.recipient === expectedRecipient && proposed.to === expectedRecipient,
     outboxTextOnly: proposed.kind === "email_reply" && typeof proposed.body === "string" && Object.keys(proposed).every((k) => allowed.has(k)),
     outboxNoPaymentAction: !/payment|invoice|charge|checkout|\bpay\b/i.test(Object.keys(proposed).join(" ") + String(proposed.kind)),

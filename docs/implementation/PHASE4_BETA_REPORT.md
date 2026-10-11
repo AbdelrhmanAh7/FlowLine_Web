@@ -1,5 +1,23 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Field-harness scoring review (#141 / PR #193) — 2026-10-12
+
+The next-round harness compares the approved outbox proposal against the reviewed draft and requires one
+persisted VP-01 row with the original value before and after reprocessing. Six focused scoring tests pass;
+the two new regressions failed against the previous helpers. Earlier `20261001-d224cfb` evidence is unchanged.
+The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
+3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
+This internal harness change does not change product behavior or beta readiness.
+
+Local verification: `pnpm test flowline-field --maxWorkers=2` passes 6/6. Temporarily disabling each of the
+four original fixes independently yields 1 failed / 5 passed; all mutations were restored. `pnpm lint`
+passes. Explicit lint of the normally excluded field spec passes with its pre-existing unused `log` warning.
+`node node_modules/typescript/bin/tsc --noEmit` passes, as does a temporary tsconfig extending the repository
+config and explicitly including the field spec. The `pnpm typecheck` launcher stalled and was terminated;
+the direct command executes that script's identical compiler/options. Playwright was attempted with a packet
+copy under `/tmp` and stopped during import with `DATABASE_URL is not set`; no live assertions ran. These
+checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
+
 ## Focused-run evidence helpers: explicit child environment — 2026-10-03
 
 Issue #36: the four local focused-run helpers (`upload-admission/run-focused.mjs`, `federated-mfa/run-focused.mjs`, `run-auth-focused.mjs`, `artifacts/phase-4/security-auth/run-focused.mjs`) no longer start Vitest with `...process.env`. They use the allowlist in `scripts/focused-run-env.mjs` (OS/runtime names plus the synthetic values each helper builds), record variable names only (never values) in new result JSON or stderr, and support `--dry-run`. [Allowlist and limits](../../artifacts/phase-4/paid-pilot-round1/upload-admission/README.md#child-environment-issue-36). Verified locally on Windows only: unit test, dry-runs, and a probe launching `npx tsx` and a Vitest unit run under the allowlist. The helpers were **not re-run against a database** (no Docker started), the Linux path is unit-tested by name only, and the earlier recorded runs predate the change and used the ambient shell. `check-drizzle-prune.mjs` and the gate/release/Company Builder scripts still pass `process.env` (not focused database runs); the frozen `artifacts/beta-execution` helpers are historical. This does not change release scope or the unverified items below.

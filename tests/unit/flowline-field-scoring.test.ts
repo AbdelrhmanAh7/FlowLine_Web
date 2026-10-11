@@ -36,13 +36,13 @@ describe("flowline-field scoring gaps (#141)", () => {
     // The approved entry is the reviewed text-only reply to the expected recipient, no payment action.
     const entry = (proposed: Record<string, unknown>, recipient = "a@b.eg") => ({ payload: { proposed, recipient } });
     const reply = { kind: "email_reply", to: "a@b.eg", subject: "s", body: "hello", consequential: true };
-    expect(Object.values(scoreApprovedOutboxEntry(entry(reply), "a@b.eg")).every(Boolean)).toBe(true);
-    expect(scoreApprovedOutboxEntry(entry(reply), "x@y.eg").outboxRecipientMatches).toBe(false);
-    expect(scoreApprovedOutboxEntry(entry({ ...reply, to: "x@y.eg" }), "a@b.eg").outboxRecipientMatches).toBe(false);
-    expect(scoreApprovedOutboxEntry(entry({ kind: "ledger_rows", rows: [] }), "a@b.eg").outboxTextOnly).toBe(false);
-    expect(scoreApprovedOutboxEntry(entry({ ...reply, charge: { amount: 5 } }), "a@b.eg").outboxTextOnly).toBe(false);
-    expect(scoreApprovedOutboxEntry(entry({ ...reply, payment_link: "x" }), "a@b.eg").outboxNoPaymentAction).toBe(false);
-    expect(scoreApprovedOutboxEntry(undefined, "a@b.eg").outboxTextOnly).toBe(false);
+    expect(Object.values(scoreApprovedOutboxEntry(entry(reply), "a@b.eg", reply)).every(Boolean)).toBe(true);
+    expect(scoreApprovedOutboxEntry(entry(reply), "x@y.eg", reply).outboxRecipientMatches).toBe(false);
+    expect(scoreApprovedOutboxEntry(entry({ ...reply, to: "x@y.eg" }), "a@b.eg", reply).outboxRecipientMatches).toBe(false);
+    expect(scoreApprovedOutboxEntry(entry({ kind: "ledger_rows", rows: [] }), "a@b.eg", reply).outboxTextOnly).toBe(false);
+    expect(scoreApprovedOutboxEntry(entry({ ...reply, charge: { amount: 5 } }), "a@b.eg", reply).outboxTextOnly).toBe(false);
+    expect(scoreApprovedOutboxEntry(entry({ ...reply, payment_link: "x" }), "a@b.eg", reply).outboxNoPaymentAction).toBe(false);
+    expect(scoreApprovedOutboxEntry(undefined, "a@b.eg", reply).outboxTextOnly).toBe(false);
   });
 
   it(":143 persisted records are compared after the duplicate trial", () => {
@@ -53,9 +53,9 @@ describe("flowline-field scoring gaps (#141)", () => {
     expect(compareFollowUpRecords(rec, undefined).sameKey).toBe(false);
     // The stored rows (kv_entry), not only the run output, must be unchanged by the duplicate trial.
     const rows = [{ key: "a", value: { n: 1 } }, { key: "b", value: { n: 2 } }];
-    expect(comparePersistedRows(rows, [...rows].reverse())).toEqual({ sameRowCount: true, sameRows: true });
-    expect(comparePersistedRows(rows, [...rows, { key: "a-again", value: { n: 1 } }])).toEqual({ sameRowCount: false, sameRows: false });
-    expect(comparePersistedRows(rows, [rows[0]!, { key: "b", value: { n: 3 } }])).toEqual({ sameRowCount: true, sameRows: false });
+    expect(comparePersistedRows(rows, [...rows].reverse(), rows[0]!)).toMatchObject({ sameRowCount: true, sameRows: true });
+    expect(comparePersistedRows(rows, [...rows, { key: "a-again", value: { n: 1 } }], rows[0]!)).toMatchObject({ sameRowCount: false, sameRows: false });
+    expect(comparePersistedRows(rows, [rows[0]!, { key: "b", value: { n: 3 } }], rows[0]!)).toMatchObject({ sameRowCount: true, sameRows: false });
   });
 
   it(":160 the packet digest is verified before it is recorded", () => {
@@ -74,5 +74,28 @@ describe("flowline-field scoring gaps (#141)", () => {
     expect(verifyPacketDigest(`${sha("[]")}  participant-input.json\n`, read)).toMatchObject({ ok: false, digest: null });
     expect(verifyPacketDigest("", read).ok).toBe(false);
     expect(verifyPacketDigest("not a sums file", read).ok).toBe(false);
+  });
+
+  it("approval preserves the exact reviewed draft, including subject and consequential flag", () => {
+    const proposed = { kind: "email_reply", to: "a@b.eg", subject: "Re: refund", body: "Owner will review.", consequential: true };
+    const score = (actual: unknown) => scoreApprovedOutboxEntry({ payload: { recipient: proposed.to, proposed: actual } }, proposed.to, proposed);
+    expect(score({ ...proposed }).outboxMatchesReviewedDraft).toBe(true);
+    for (const changed of [{ body: "Refund completed." }, { subject: "Invoice" }, { consequential: false }]) {
+      expect(score({ ...proposed, ...changed }).outboxMatchesReviewedDraft).toBe(false);
+    }
+    expect(score(undefined).outboxMatchesReviewedDraft).toBe(false);
+  });
+
+  it("duplicate scoring requires one persisted copy of the original follow-up in each snapshot", () => {
+    const record = { key: "sample:VP-01", store_key: "installation/sample:VP-01", request_id: "VP-01" };
+    const stored = { key: record.store_key, value: record };
+    const score = (before: typeof stored[], after: typeof stored[]) => comparePersistedRows(before, after, stored);
+    expect(score([stored], [stored]).exactlyOneFollowUp).toBe(true);
+    expect(score([stored], [{ ...stored, value: { request_id: "VP-01", store_key: record.store_key, key: record.key } }]).sameRows).toBe(true);
+    expect(score([], []).exactlyOneFollowUp).toBe(false);
+    expect(score([stored], []).exactlyOneFollowUp).toBe(false);
+    expect(score([stored, stored], [stored, stored]).exactlyOneFollowUp).toBe(false);
+    const wrong = { ...stored, value: { ...record, request_id: "other" } };
+    expect(score([wrong], [wrong]).exactlyOneFollowUp).toBe(false);
   });
 });

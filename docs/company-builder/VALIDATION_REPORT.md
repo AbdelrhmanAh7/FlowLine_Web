@@ -104,6 +104,15 @@ equals the packet's VP-05 recipient, text-only `email_reply` payload, no payment
 database, so the harness needs the same `DATABASE_URL` as the stack) before and after; the packet digest recorded is the
 `packet.json` line of `SHA256SUMS` (a missing `packet.json` entry is rejected).
 
+Review follow-up (#141, PR #193): approval now also requires the outbox proposal to equal the reviewed draft,
+including its body, subject and consequential flag. Duplicate scoring requires exactly one row at VP-01's
+`store_key`, with the original stored value, in both snapshots; two empty snapshots cannot pass. Both helper
+callers (the next-round harness and unit tests) supply the original observations. JSONB property order does
+not affect the persisted-value comparison. The existing direct `kv_entry` reads address the persisted-state
+review thread; the additional assertion prevents a missing/wrong database observation from scoring as success.
+Focused regressions cover altered approved drafts, absent/duplicate/changed stored rows, and all four original
+scoring gaps. Live-stack validation remains outstanding; unit results do not establish field-run completion.
+
 **Operator and assistance:**
 
 - The operator was an AI agent (the implementer, with maximal familiarity), driving the real HTTP API of the
