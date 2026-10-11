@@ -186,7 +186,7 @@ describe("#9 Paddle's success_url query parameter is allowlisted", () => {
 });
 
 describe("the triage notes stay in sync with the code (root cause of the $-loss review rounds)", () => {
-  it("keep the $ anchor syntax in the doc and the JSDoc, and document the clamped timer", () => {
+  it("keep the $ anchor syntax in the doc and the JSDoc, and document the bounded timer", () => {
     const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
     const doc = read("../../docs/security/codeql-triage-fakes.md");
     const safety = read("../../e2e/fakes/safety.ts");
@@ -194,7 +194,7 @@ describe("the triage notes stay in sync with the code (root cause of the $-loss 
     expect(doc).toContain("`^/conversations\\.list$` still means that exact path");
     expect(safety).toContain("trailing `$` (path ends with)");
     expect(safety).toContain("`^/a\\.b$` still means");
-    expect(doc).toContain("clamp"); // the #7 row describes the timer handling the code actually has
+    expect(doc).toContain("bounded to [0, 10 s]"); // the #7 row states the range slowDelayMs actually enforces
     expect(doc).toContain("upper-bound"); // …and names the guard that satisfies the CodeQL timer alert
     expect(safety).toContain("upper-bound");
   });
