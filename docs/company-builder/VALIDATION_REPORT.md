@@ -81,11 +81,10 @@ Rough size: 1 pack step + 1 action executor + lifecycle rule + tests. It's a new
 
 ## 3. Track A — sample / rules-only (the only track exercised)
 
-Frozen packet: `packet/packet.json`, sha256 `4fa9841b…`, committed in `ec35061` before any product ran. It is split,
-by derivation only, into:
+Frozen packet: `packet/packet.json`, sha256 `4fa9841b…`, committed in `ec35061` before any product ran. A scoring-gap fix (#142) added `packet.v2.json` (sha256 `3684c632…`) with new evaluator fields (`closedDay`, `mustQualifyOwnerDecision`) and updated the scorer to read `PACKET` env (default `packet.json`). Old runs 1–4 remain reproducible against v1. The packets are split, by derivation only, into:
 
-- `participant-input.json`: business facts, approved policies and requests;
-- `evaluator-ground-truth.json`: expectations, invariants, prohibited outcomes and scoring rule.
+- `participant-input.json`, `participant-input.v2.json`: business facts, approved policies and requests;
+- `evaluator-ground-truth.json`, `evaluator-ground-truth.v2.json`: expectations, invariants, prohibited outcomes and scoring rule.
 
 Flowline was set up only from participant fields. The expectations are read only by the scorer
 (`flowline-field/field.spec.ts`).
@@ -328,3 +327,23 @@ MERGE TO MAIN: requested by the owner 2026-10-01 — see final report.
 
 Still blocked (unchanged from §5): real Google Chrome QA, live Gmail certification, real owner CLI, competitor runs,
 human usability. Still open: R4-RV-04 (latent) and VO-01..06 (observations; VO-03 metric rounding is OPEN), see BUGS.md.
+
+## 11. Packet v2 — scoring-gap fix (#142)
+
+**Issue:** `AbdelrhmanAh7/FlowLine_Web#142`. Two scoring gaps in the frozen field-validation packet: VP-03 Friday/closed-day confirmation was scored as correct, and VP-05/VP-06 owner-decision qualification was not enforced.
+
+**Implementation:**
+- **`packet.v2.json`** (sha256 `3684c632fafa91e116f4095be8f37420041f15b43003c9c02910adfefb5ac11e`): adds `closedDay: true` and a note for VP-03 (2026-10-09 is a Friday; business works Saturday to Thursday) and `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` for VP-05 and VP-06. V1 packets (`packet.json`, `evaluator-ground-truth.json`, `participant-input.json`) remain byte-identical.
+- **`field.spec.ts`**: reads `PACKET` env var (default `packet.json`) so old runs 1–4 remain reproducible. Adds two checks: `closedDay` (timezone-independent using `getUTCDay()` on the request date) and `ownerDecision` (case-insensitive substring match against the allowed phrases). The run summary records `packet` and its hash.
+- **Derived v2 files:** `participant-input.v2.json`, `evaluator-ground-truth.v2.json` with matching `derivedFrom` and updated `derivedFromSha256`. `SHA256SUMS` and `SHA256SUMS.derived` updated.
+
+**Run 5 (packet.v2.json):**
+- **Candidate:** `c2b0541`
+- **Run ID:** `run5-v2-c2b0541`
+- **Result:** **8/10** (failures VP-03: `quotes:Office cleaning starts a`, `closedDay`; VP-06: `noPromise:cancelled`). VP-05 passes `ownerDecision`.
+- **Evidence:** `validation/20261001-d224cfb/flowline-field/run5-v2-c2b0541/` (`RESULTS.md` and `results.json` committed, as for runs 1–4; screenshots are git-ignored).
+- **Delta vs run 4:** Under v2, run 4 VP-03 still fails `closedDay` (the reply lacked the working-hours line) while having passed v1; run 4/run 5 VP-05 and VP-06 satisfy `ownerDecision`. Negative control (generic "member of our team" note) does not satisfy `ownerDecision`. VP-06's `noPromise:cancelled` failure is the pre-existing VF-02 fixture ambiguity (both VP-05 and VP-06 include the same owner wording in the actual replies, so owner-wording alone cannot separate them).
+
+**Notes:**
+- The plan's stated expectation that VP-06 would fail solely on missing owner wording cannot be satisfied as written because the approved policy line contains "reviewed by the owner" and is quoted by both VP-05 and VP-06 in current replies; VP-06's failure remains the VF-02 `mustNotPromise: cancelled` check. Recorded in `AI_QUESTIONS.md`.
+- See `artifacts/company-builder/BUGS.md` VF-04 (VP-03 closed-day scoring gap, fixed by v2) and VF-02 (VP-06, unchanged).
