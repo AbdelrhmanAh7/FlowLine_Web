@@ -20,7 +20,9 @@ from the earlier version of this file.
 
 Commands on the tested commit:
 
-- `pnpm exec vitest run --project unit --maxWorkers=1 tests/unit/<file>.test.ts`, one file per run: `dependency-advisories`
+- One Vitest file per run, for example `pnpm exec vitest run --project unit --maxWorkers=1 tests/unit/dependency-advisories.test.ts`
+  (the same command with `tests/unit/drizzle-tooling-prune.test.ts`, `tests/unit/docs-index.test.ts`,
+  `tests/unit/docs-check-script.test.ts` and `tests/unit/changed-scope.test.ts`): `dependency-advisories`
   3/3, `drizzle-tooling-prune` 2/2, `docs-index` 4/4, `docs-check-script` 95/95, `changed-scope` 88/88. In the agent
   sandbox, runs of several files (and the first attempt of `changed-scope`) stalled at Vitest start-up before any test ran.
 - Regression proof for the review finding at `dependency-advisories.test.ts:100`: with the old

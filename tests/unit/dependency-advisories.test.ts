@@ -102,6 +102,17 @@ const lockfileWith = (version: string) =>
     `      source-map-js: ${version}`,
   ].join("\n");
 
+// Inline code spans that start with a shell command must paste as they are: `pnpm why <package>` makes a POSIX
+// shell read `<package>` as input redirection from a file named "package".
+const SHELL_COMMAND = /^(?:pnpm|npx|node|gh|git)\s/;
+const ANGLE_PLACEHOLDER = /<[^<>\s]+>/;
+
+export function unpastableCommands(markdown: string): string[] {
+  return [...markdown.matchAll(/`([^`\n]+)`/g)]
+    .map((m) => m[1]!)
+    .filter((code) => SHELL_COMMAND.test(code) && ANGLE_PLACEHOLDER.test(code));
+}
+
 describe("dependency advisories security check", () => {
   it("semver comparison correctly handles prereleases and stable versions", () => {
     expect(semverGte("1.2.1", "1.2.2")).toBe(false);
@@ -129,5 +140,14 @@ describe("dependency advisories security check", () => {
     const lockfile = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
     expect(lockedSourceMapJsVersions(lockfile).length).toBeGreaterThan(0);
     expect(vulnerableSourceMapJs(lockfile)).toEqual([]);
+  });
+
+  it("commands in the advisory docs and #62 evidence paste into a shell without <placeholders>", () => {
+    expect(unpastableCommands("Run `pnpm why <package>` and `pnpm why source-map-js`.")).toEqual(["pnpm why <package>"]);
+    expect(unpastableCommands("`vitest run tests/unit/<file>.test.ts` and `<tr>`")).toEqual([]);
+    expect(unpastableCommands("`pnpm exec vitest run tests/unit/<file>.test.ts`")).toHaveLength(1);
+    for (const doc of ["docs/security/DEPENDENCIES.md", "artifacts/phase-4/issue-62/EVIDENCE.md"]) {
+      expect(unpastableCommands(readFileSync(join(root, doc), "utf8")), doc).toEqual([]);
+    }
   });
 });
