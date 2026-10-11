@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { createFlow, listFlows, listVersions, saveFlow, softDeleteFlow } from "@/server/flows";
@@ -332,6 +333,27 @@ describe("run snapshots do not use up version numbers (regression: #117)", () =>
     const [{ revision }] = await db.select({ revision: schema.flow.revision }).from(schema.flow).where(eq(schema.flow.id, flow.id));
     const saved = await saveFlow(user, flow.id, { baseRevision: revision, createVersion: true });
     expect(saved.version?.version).toBe(2);
+  });
+});
+
+describe("legacy run snapshots are unnumbered by migration 0027 (#117)", () => {
+  it("nulls the number of existing run snapshots, keeps the others, and the next publication starts at the highest kept number + 1", async () => {
+    const { user, flow } = await setup();
+    const [{ revision }] = await db.select({ revision: schema.flow.revision }).from(schema.flow).where(eq(schema.flow.id, flow.id));
+    const saved = await saveFlow(user, flow.id, { baseRevision: revision, createVersion: true }); // v1
+    // What a pre-fix database holds: a run snapshot that took v2.
+    const legacy = { flowId: flow.id, revision, name: flow.name, graph: flow.graph, createdBy: user.id };
+    const [old] = await db.insert(schema.flowVersion).values({ ...legacy, version: 2, reason: "run" }).returning();
+
+    const file = readFileSync(new URL("../../drizzle/0027_flow_version_run_backfill.sql", import.meta.url), "utf8");
+    for (const statement of file.split("--> statement-breakpoint")) await db.execute(sql.raw(statement));
+
+    const rows = await db.select({ id: schema.flowVersion.id, version: schema.flowVersion.version }).from(schema.flowVersion).where(eq(schema.flowVersion.flowId, flow.id));
+    expect(rows.find((r) => r.id === old.id)!.version).toBeNull();
+    expect(rows.find((r) => r.id === saved.version!.id)!.version).toBe(1);
+    // The immutability trigger is back on: a later update is still refused.
+    await expect(db.update(schema.flowVersion).set({ name: "x" }).where(eq(schema.flowVersion.id, old.id))).rejects.toThrow();
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
   });
 });
 

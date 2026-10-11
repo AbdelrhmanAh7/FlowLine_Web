@@ -2025,6 +2025,7 @@
       "title": "Re-run #{number} from “{label}”",
       "revision": "Revision",
       "original": "The run's original version (v{version})",
+      "originalSnapshot": "The run's original snapshot (it has no version number)",
       "latest": "The current saved flow (includes your fixes)",
       "willRerun": "Will run again · {count}",
       "needsApproval": "needs approval",
