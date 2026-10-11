@@ -16,8 +16,9 @@ export function lockHeld(): number | null {
   try {
     process.kill(pid, 0);
     return pid;
-  } catch {
-    return null;
+  } catch (e) {
+    // Only "no such process" frees the lock; EPERM means the pid is alive under another user.
+    return (e as NodeJS.ErrnoException).code === "ESRCH" ? null : pid;
   }
 }
 

@@ -1,7 +1,7 @@
 // `pnpm demo:doctor | demo:build | demo:verify` — the landing demo media pipeline (docs/landing/DEMO_MEDIA.md).
 // build: isolated stack → seed → record (real UI, real DPR) → master (CFR 60, BT.709) → compose (Remotion) →
 // deliver (AV1 + H.264 + poster [+ chapter stills, WebVTT]) → public/media/demo/ + manifest.json. Local only, never CI.
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Browser } from "@playwright/test";
@@ -16,11 +16,13 @@ import { mergeManifest, readManifest, staleFiles, writeManifest, type ClipEntry,
 import { buildMaster } from "./master";
 import { msg, type Scenario } from "./scenarios/common";
 import { loadStoryboard, missingBeats, resolveStoryboard, type ResolvedStoryboard } from "./storyboard";
+import { run as runProc } from "./run";
 import { writeVtt } from "./vtt";
 import { LOCK, OUT, ROOT, TOOL, WORK, lockHeld, themeTokens } from "./paths";
 import { checkAccent, verify } from "./verify";
 
 const REMOTION = join(TOOL, "node_modules/.bin/remotion");
+const run = (cmd: string, args: string[], cwd = ROOT) => runProc(cmd, args, cwd);
 
 type Flags = { only: ClipId[]; locales: Locale[]; themes: Theme[]; skipRecord: boolean; skipRender: boolean; recordOnly: boolean; concurrency: number; rebuild: boolean };
 
@@ -49,18 +51,6 @@ const FONTS = [
   { family: "IBM Plex Sans Arabic", weight: "400", src: "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2" },
   { family: "Inter Variable", weight: "100 900", src: "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" },
 ];
-
-function run(cmd: string, args: string[], cwd = ROOT): Promise<void> {
-  return new Promise((ok, fail) => {
-    const p = spawn(process.platform === "win32" ? cmd : "nice", process.platform === "win32" ? args : ["-n", "10", cmd, ...args], { cwd, stdio: ["ignore", "inherit", "pipe"] });
-    let err = "";
-    p.stderr.on("data", (b: Buffer) => {
-      const s = b.toString();
-      if (!/Version mismatch|zod/.test(s)) err += s;
-    });
-    p.on("exit", (code) => (code === 0 ? ok() : fail(new Error(`${cmd} ${args.slice(0, 3).join(" ")} … failed (${code}): ${err.slice(-1500)}`))));
-  });
-}
 
 const log = (s: string) => console.log(`[demo] ${s}`);
 
