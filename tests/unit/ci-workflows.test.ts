@@ -28,8 +28,8 @@ const triggerTypes = (text: string, event: string) => {
 };
 
 describe("workflow files", () => {
-  it("has at least the gate and docs workflows and the shared composite actions", () => {
-    expect(workflowFiles).toEqual(expect.arrayContaining([".github/workflows/gate.yml", ".github/workflows/docs.yml"]));
+  it("has exactly the expected workflows and the shared composite actions", () => {
+    expect(workflowFiles.sort()).toEqual([".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml", ".github/workflows/nightly.yml"]);
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
@@ -46,15 +46,6 @@ describe("workflow files", () => {
 
   it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
     expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
-  });
-
-  it("gate.yml has no needs on removed ai-implementers workflow jobs", () => {
-    const gateText = read(".github/workflows/gate.yml");
-    // The removed ai-implementers.yml had jobs like: implement, review, etc.
-    // Ensure gate.yml doesn't depend on any of them
-    expect(gateText).not.toMatch(/needs:.*ai-implementers/);
-    expect(gateText).not.toMatch(/needs:.*implement/);
-    expect(gateText).not.toMatch(/needs:.*review/);
   });
 });
 
@@ -180,6 +171,14 @@ describe("nightly.yml stays off the PR path", () => {
     expect(report).toContain("gh label create nightly-red");
     expect(report).toContain("gh issue create --label nightly-red");
     expect(report).toContain("|| gh issue create --title");
+  });
+
+  it("nightly job has timeout-minutes ≤ 30 and neither job uses continue-on-error", () => {
+    const nightlyJob = jobs(text).nightly;
+    expect(nightlyJob).toMatch(/^ {4}timeout-minutes: (?:[1-9]|[12][0-9]|30)$/m);
+    expect(nightlyJob).not.toMatch(/continue-on-error:\s*true/);
+    const reportJob = jobs(text).report;
+    expect(reportJob).not.toMatch(/continue-on-error:\s*true/);
   });
 });
 

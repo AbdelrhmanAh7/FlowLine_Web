@@ -21,9 +21,10 @@ makes the exit code non-zero.
 Slow or infra-sensitive suites run in the `nightly` vitest project (`pnpm test:nightly`, needs `.env.test`, Postgres and the
 code-sandbox image) from `.github/workflows/nightly.yml` (cron 01:17 UTC, or Actions > Nightly > Run workflow on any ref). They
 are excluded from the `unit` and `integration` projects, so the PR gate no longer runs them: `p2-code-sandbox`,
-`company-builder-cli`, `sec-upgrade`, `sec-cxh06-rotation`, `sec-cxh01-backfill` and `drizzle-tooling-prune`. The list lives in
-`nightlyFiles` in `vitest.config.mts`. The workflow creates `flowline_test` itself (the Postgres container starts with `flowline` only), like the Gate's integration legs. The nightly is not a required check. Run it by hand before merging a change to
-`src/server/code-sandbox.ts`, `src/server/crypto|rewrap` or `drizzle/**`.
+`company-builder-cli` and `drizzle-tooling-prune`. The list lives in
+`nightlyFiles` in `vitest.config.mts`. The `sec-upgrade`, `sec-cxh06-rotation` and `sec-cxh01-backfill` suites remain in the
+per-PR integration project and are not moved to nightly. The workflow creates `flowline_test` itself (the Postgres container starts with `flowline` only), like the Gate's integration legs. The nightly is not a required check. Run it by hand before merging a change to
+`src/server/code-sandbox.ts` or `drizzle/**`.
 
 Who triages a red nightly: nobody has to watch it. When the nightly fails on `main`, its `report` job opens one issue labelled
 `nightly-red` with the run link (or comments on the one already open), and the hub's engineers pick that issue up like any bug.
