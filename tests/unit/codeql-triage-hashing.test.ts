@@ -53,10 +53,19 @@ describe("rate limit bucket hashing stays identical (alert #12)", () => {
     expect(insert!.params[1]).toEqual(now);
   });
 
+  it("still allows and records the last hit below the limit", async () => {
+    stored = 2;
+    await expect(checkRate("bucket-below-limit", 3, 60)).resolves.toBe(true);
+    expect(statements.at(-1)!.text).toMatch(/^insert into rate_limit_hit/);
+  });
+
   it("refuses at the limit without recording a hit, and checkRunRate keeps its runs: prefix and 429", async () => {
     stored = 3;
     await expect(checkRate("bucket-at-limit", 3, 60)).resolves.toBe(false);
     expect(statements.some((s) => s.text.startsWith("insert"))).toBe(false);
+    statements.length = 0;
+    stored = RUNS_PER_MINUTE - 1;
+    await expect(checkRunRate("user-army-113")).resolves.toBeUndefined();
     statements.length = 0;
     stored = RUNS_PER_MINUTE;
     await expect(checkRunRate("user-army-113")).rejects.toMatchObject({ status: 429, code: "RATE_LIMITED" });
@@ -65,34 +74,46 @@ describe("rate limit bucket hashing stays identical (alert #12)", () => {
 });
 
 describe("fake AI hub records a SHA-256 fingerprint of the fake key (alert #10)", () => {
-  it("records sha256 hex of the presented key and never the key itself", async () => {
-    resetHub();
-    const fakeToken = "sk-fake-army-113";
-    const req = { method: "GET", headers: { "x-api-key": fakeToken } } as unknown as IncomingMessage;
-    const res = { writeHead() { return this; }, end() { return this; } } as unknown as ServerResponse;
-    const url = new URL("http://127.0.0.1/anthropic/v1/models?key=in-url");
+  const call = async (path: string, headers: Record<string, string>) => {
+    let status = 0;
+    const req = { method: "GET", headers } as unknown as IncomingMessage;
+    const res = { writeHead(s: number) { status = s; return this; }, end() { return this; } } as unknown as ServerResponse;
     const ctx = { run: undefined, oaModels: () => [], delegate: () => undefined } as unknown as Parameters<typeof handleHub>[4];
-    await expect(handleHub(req, res, url, "", ctx)).resolves.toBe(true);
-    expect(hub.requests).toHaveLength(1);
-    expect(hub.requests[0]!.auth).toBe("x-api-key");
-    expect(hub.requests[0]!.keySha256).toBe(sha256Hex(fakeToken));
-    expect(JSON.stringify(hub.requests)).not.toContain(fakeToken);
+    await expect(handleHub(req, res, new URL(`http://127.0.0.1${path}`), "", ctx)).resolves.toBe(true);
+    return status;
+  };
+
+  it("accepts only sk-fake- keys and logs a header key only as its SHA-256", async () => {
+    resetHub();
+    const fakeKey = "sk-fake-army-113";
+    const otherKey = "army-113-not-a-fake-key";
+    expect(await call("/anthropic/v1/models", { "x-api-key": fakeKey, accept: "application/json" })).toBe(200);
+    expect(await call("/gemini/v1beta/models", { "x-goog-api-key": otherKey })).toBe(401);
+    expect(hub.requests.map((r) => [r.auth, r.keySha256])).toEqual([
+      ["x-api-key", sha256Hex(fakeKey)],
+      ["x-goog-api-key", sha256Hex(otherKey)],
+    ]);
+    expect(hub.requests.map((r) => r.headers)).toEqual([{ accept: "application/json" }, {}]);
+    const log = JSON.stringify(hub.requests);
+    expect(log).not.toContain(fakeKey);
+    expect(log).not.toContain(otherKey);
   });
 });
 
 describe("each alert has a written disposition", () => {
   const doc = () => read("docs/security/codeql-triage-hashing.md");
-  for (const [alert, file, disposition] of [
-    ["#10", "e2e/fakes/ai-protocols.ts", "false positive (dismissal pending)"],
-    ["#12", "src/server/rate-limit.ts", "false positive (dismissal pending)"],
+  for (const [alert, file] of [
+    ["#10", "e2e/fakes/ai-protocols.ts"],
+    ["#12", "src/server/rate-limit.ts"],
   ] as const) {
     it(`alert ${alert} (${file}) is in the triage doc and commented at the flagged line`, () => {
       const row = doc().split("\n").find((line) => line.startsWith(`| ${alert} |`));
       expect(row).toBeDefined();
       expect(row).toContain("`js/insufficient-password-hash`");
       expect(row).toContain(`\`${file}\``);
-      expect(row).toContain(disposition);
-      expect(read(file)).toContain(`CodeQL \`js/insufficient-password-hash\` (alert ${alert})`);
+      expect(row).toContain("false positive");
+      expect(read(file)).toContain(`(alert ${alert})`);
+      expect(read(file)).toContain("docs/security/codeql-triage-hashing.md");
     });
   }
   it("the triage doc is listed in the docs index", () => {
