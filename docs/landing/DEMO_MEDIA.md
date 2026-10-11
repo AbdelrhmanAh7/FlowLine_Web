@@ -41,7 +41,7 @@ and `nice` / local port binding are blocked there.
 | `pnpm demo:build` | Every clip, both locales, light theme (about 35-40 min on the Mac mini; the walkthrough is about 10 min per locale). |
 | `pnpm demo:build --only hero --locale ar` | One clip (about 3-5 min). `--only a,b` · `--locale ar\|en\|all` · `--theme light\|dark\|all` (dark twins are optional and not shipped) · `--concurrency 2` (Remotion render threads) |
 | `pnpm demo:build --only run --skip-record` | Reuse the recording in `tools/demo-video/.work/<clip>.<locale>.<theme>/` (re-master, re-compose, re-deliver). `--skip-render` also reuses the composed video and posters (delivery only). `--rebuild` forces a fresh production build of the app. |
-| `pnpm demo:build --record-only` then `… --skip-record` | Two phases for a shared machine: record (light, real time, about 2.5 min for everything) at normal priority, then render and encode (the heavy part) under the machine's governor, e.g. `/Users/…/hub-live/bin/suite.sh pnpm demo:build --skip-record`. Recording must not run under background QoS (`taskpolicy -b`): the throttled browser runs slow and the ±15 % length check fails. |
+| `pnpm demo:build --record-only`, then `pnpm demo:build --skip-record` | Two phases for a shared machine: record (light, real time, about 2.5 min for everything) at normal priority, then render and encode (the heavy part) as a second command; on a machine with a job governor, start that second command through the governor's wrapper (a machine-local script, not part of this repo). Recording must not run under background QoS (`taskpolicy -b`): the throttled browser runs slow and the ±15 % length check fails. |
 | `pnpm demo:verify` | Validates `manifest.json` and every budget, probes each video (canvas, fps, BT.709, no audio, codec string), checks loop seams, the hero's accent colour and PSNR (when `.work` is present), flags stale media, and writes a 6-still contact sheet per clip to `artifacts/demo-media/` (git-ignored; copy the ones you attach to a PR under `artifacts/issue-<N>/`). Review the sheets before committing. |
 | `pnpm demo:studio` | Opens Remotion Studio on the composition (preview props in `tools/demo-video/src/defaultProps.ts`). |
 
@@ -96,8 +96,8 @@ uses the app's own fonts (`@fontsource`, OFL): Inter Variable 600 for English, I
 (tracking 0, whole-line animation only).
 
 To change what a clip shows, edit its scenario in `scripts/demo/scenarios/` (keep role/test-id/message locators and log a
-beat for anything a caption or card hangs on), adjust the storyboard, then `pnpm demo:build --only <clip>` and
-`pnpm demo:verify`.
+beat for anything a caption or card hangs on), adjust the storyboard, then `pnpm demo:build --only hero` (use the clip you edited:
+`hero`, `templates`, `build`, `run`, `history` or `walkthrough`) and `pnpm demo:verify`.
 
 ## Budgets (checked by `demo:verify`)
 
