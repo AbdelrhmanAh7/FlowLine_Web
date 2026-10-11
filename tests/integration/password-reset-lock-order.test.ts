@@ -11,23 +11,30 @@ import { closeDb, makeUser } from "./helpers";
 
 // Written for CI (two real PostgreSQL connections); NOT executed locally.
 //
-// Issue #41: `consumeAccountToken("reset", ...)` updated the credential account, deleted the user's sessions, and only
-// then updated the user row (account, session, user). The federated authority transactions (link confirmation,
-// challenge completion, SSO callbacks) lock the user row first, then the sessions, then the user's accounts, so a
-// password reset and one of those for the same user could each hold the row the other needed next, and PostgreSQL
-// aborted one of them with 40P01 after `deadlock_timeout`. Reset now takes the user row first. Rule and rationale:
-// docs/security/FEDERATED_MFA.md ("Password-reset recovery lock order").
+// Issue #41: before this fix `consumeAccountToken("reset", ...)` updated the credential account, deleted the user's
+// sessions, and only then updated the user row (account, session, user). The federated authority transactions (link
+// confirmation, challenge completion, SSO callbacks) lock the user row first, then the sessions, then the user's
+// accounts, so a password reset and one of those for the same user could each hold the row the other needed next, and
+// PostgreSQL aborted one of them with 40P01 after `deadlock_timeout`. Rule and rationale: docs/security/FEDERATED_MFA.md
+// ("Password-reset recovery lock order").
+//
+// What this file does and does not catch. Issue #45 had already put the user row ahead of the token row, so on the
+// code this branch is based on the reset already queues at the USER row first and BOTH scenarios below also pass there.
+// This file therefore pins the end-to-end protocol (user, then sessions, then accounts, no 40P01, correct final state)
+// but does NOT fail on a regression of the session-before-account move that #41 itself makes. That move is guarded by
+// tests/unit/password-reset-lock-order.test.ts (exact statement sequence), which does fail on the previous code.
 //
 // The REAL reset runs on one dedicated connection against a second connection that takes the three row classes the
 // two transactions share in the documented federated order (user FOR UPDATE, session FOR UPDATE, account FOR SHARE).
 // Raw SQL stands in for the federated side on purpose: it pins the documented protocol, so this test says the same
-// thing whether or not the federated functions have been moved to that order yet. The interleaving that used to
-// deadlock is forced with barriers, in both directions, and every wait is observed through pg_blocking_pids:
-//   - reset holds its first lock on the shared rows, the other transaction must queue at the USER row. (Old order: the
-//     reset had updated the credential account, the other transaction took user and session and then waited at that
-//     account; on resume the reset's session delete waited at the other's session lock. Deadlock.)
-//   - the other transaction holds user and session, the reset must queue at the USER row. (Old order: the reset took
-//     the credential account first and waited at the session row; on resume the other waited at that account. Deadlock.)
+// thing whether or not the federated functions have been moved to that order yet. The interleaving is forced with
+// barriers, in both directions, and every wait is observed through pg_blocking_pids:
+//   - reset holds its first lock on the shared rows, the other transaction must queue at the USER row. (Pre-#41/#45
+//     order: the reset had updated the credential account, the other transaction took user and session and then waited
+//     at that account; on resume the reset's session delete waited at the other's session lock. Deadlock.)
+//   - the other transaction holds user and session, the reset must queue at the USER row. (Pre-#41/#45 order: the reset
+//     took the credential account first and waited at the session row; on resume the other waited at that account.
+//     Deadlock.)
 // With the shared order the one that arrives second holds nothing the first still needs, so both commit.
 
 afterEach(() => { vi.restoreAllMocks(); });
