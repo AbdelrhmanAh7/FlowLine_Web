@@ -57,11 +57,9 @@ failure, permissions changed mid-run, approval expired, membership revoked mid-s
 Codex reviews code, tests and security, and does agent-driven exploratory browser testing against the running
 stack. Findings are fixed and retested. This is not human UAT.
 
-## Landing e2e-army (#177)
+## Landing hero interactions (#177)
 
-The e2e-army test `e2e-army/177-landing-cta.e2e.ts` (feature `fl-landing`) covers the landing hero: AC1 checks that the
-"Explore a workflow" hero button opens the flow demo section and that "Start building — free" leads to the sign-up page;
-AC2 checks on the rendered page that both hero links are shown. It runs in the hub e2e-army gate, not in local Playwright.
-The existing Playwright coverage runs with `npm run test:e2e -- landing.spec.ts --workers=1` and requires the isolated
-`.env.test` stack. From the hub, run `ops/verify/e2e-army/run-local.sh FlowLine_Web <ref> -- --tag feat:fl-landing`
-for feature verification; the PR verify job also loads the branch's `e2e-army/*.e2e.ts` tests.
+`e2e/landing.spec.ts` ("landing hero and main CTA") covers two hero interactions in English: the "Explore a workflow ↓"
+button navigates to `?section=flow-demo` and brings `#flow-demo` into view, and the "Start building — free" button
+opens `/sign-up`. Run it with `pnpm test:e2e landing.spec.ts --project=chromium --workers=1`. It needs the isolated test
+stack described in `docs/DEVELOPER_GUIDE.md`. The change only adds tests and does not alter a user-facing flow.
