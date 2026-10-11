@@ -90,6 +90,13 @@ by derivation only, into:
 Flowline was set up only from participant fields. The expectations are read only by the scorer
 (`flowline-field/field.spec.ts`).
 
+**Next round (issue #141):** the frozen run's scorer has four known scoring gaps (approved policy text scored as a
+cancellation promise; the review gate's approval side not exercised; the duplicate trial's persisted record not compared;
+the packet digest recorded without being verified). They are fixed only in the next round's harness,
+`artifacts/company-builder/validation/next/flowline-field/field.spec.ts` (needs `FIELD_PACKET_DIR`), whose pure scoring
+lives in `tests/helpers/field-scoring.ts` and is covered by `pnpm test flowline-field`. The frozen run's spec, results and
+recorded evidence are unchanged, so run 1-4 numbers stand as recorded.
+
 **Operator and assistance:**
 
 - The operator was an AI agent (the implementer, with maximal familiarity), driving the real HTTP API of the
