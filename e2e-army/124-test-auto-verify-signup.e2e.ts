@@ -15,13 +15,27 @@ const BASE_COOKIES = "fl_test_beta_mode=open; fl_locale=en";
 const emailFor = (base: string, seed: string) =>
   `army-124-${createHash("sha256").update(`${base}|${seed}`).digest("hex").slice(0, 12)}@flowline-e2e.test`;
 const headers = (base: string, cookie: string) => ({ "content-type": "application/json", origin: new URL(base).origin, cookie });
+/**
+ * The first address in the seed's fixed sequence that has no account yet, so a rerun against the same stack and database
+ * (a retried verification) signs up a new user instead of getting Better Auth's generic duplicate-sign-up answer.
+ * Sign-in with the test password is the probe: 401 only for an unknown address (a taken one answers 200 or 403).
+ */
+async function freshEmail(base: string, seed: string): Promise<string> {
+  for (let n = 0; n < 50; n++) {
+    const email = emailFor(base, `${seed}#${n}`);
+    const probe = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: headers(base, BASE_COOKIES), body: JSON.stringify({ email, password: PASSWORD }) });
+    if (probe.status === 401) return email;
+    if (probe.status !== 200 && probe.status !== 403) throw new Error(`sign-in probe for ${email} answered ${probe.status}`);
+  }
+  throw new Error(`no unused address left for seed ${seed}`);
+}
 
 test(
   "@issue-124 AC1: with the test auto-verify opt-in, a new sign-up is verified and can sign in and create a workspace",
   { tags: ["feat:fl-auth-api", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    const email = emailFor(base, "api-auto-verified");
+    const email = await freshEmail(base, "api-auto-verified");
     const optIn = headers(base, `${BASE_COOKIES}; fl_test_auto_verify=1`);
     const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: optIn, body: JSON.stringify({ email, password: PASSWORD, name: "Army 124" }) });
     expect(up.status).toBe(200);
@@ -41,7 +55,7 @@ test(
   { tags: ["feat:fl-auth-api", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    const email = emailFor(base, "api-default-unverified");
+    const email = await freshEmail(base, "api-default-unverified");
     const plain = headers(base, BASE_COOKIES);
     // A value other than "1" is not an opt-in either.
     const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: headers(base, `${BASE_COOKIES}; fl_test_auto_verify=true`), body: JSON.stringify({ email, password: PASSWORD, name: "Army 124" }) });
@@ -63,9 +77,10 @@ test(
       { url: base, name: "fl_test_beta_mode", value: "open" },
       { url: base, name: "fl_test_auto_verify", value: "1" },
     ]);
+    const email = await freshEmail(base, "ui-auto-verified");
     await app.open("/sign-up");
     await screen.getByLabel("Name").fill("Army 124");
-    await screen.getByLabel("Email").fill(emailFor(base, "ui-auto-verified"));
+    await screen.getByLabel("Email").fill(email);
     await screen.getByLabel("Password").fill(PASSWORD);
     await screen.getByRole("button", "Create account").tap();
     // Signed in on the spot: onboarding, not the "Check your inbox" panel (no e-mail was sent).
