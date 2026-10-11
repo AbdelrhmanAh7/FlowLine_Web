@@ -74,19 +74,22 @@ function dateRangeClause(column: SQL, from: Date, to: Date): SQL {
   return sql`${column} BETWEEN ${from} AND ${to}`;
 }
 
-/** Query 1: Sign-ups and median time to verified */
+/** Query 1: Sign-ups and median time to verified (per-user first consumed verify token) */
 async function getSignupsAndMedianVerified(db: ReturnType<typeof drizzle>, from: Date, to: Date) {
   const result = await db.execute(sql`
     SELECT
-      COUNT(*)::int AS signups,
+      COUNT(DISTINCT u.id)::int AS signups,
       percentile_cont(0.5) WITHIN GROUP (
-        ORDER BY EXTRACT(EPOCH FROM (et.consumed_at - u.created_at)) / 3600
+        ORDER BY EXTRACT(EPOCH FROM (et.first_consumed - u.created_at)) / 3600
       ) AS median_hours_to_verified
     FROM ${schema.user} u
-    LEFT JOIN ${schema.emailToken} et
-      ON et.user_id = u.id
-      AND et.purpose = 'verify'
-      AND et.consumed_at IS NOT NULL
+    LEFT JOIN (
+      SELECT user_id, MIN(consumed_at) AS first_consumed
+      FROM ${schema.emailToken}
+      WHERE purpose = 'verify'
+        AND consumed_at IS NOT NULL
+      GROUP BY user_id
+    ) et ON et.user_id = u.id
     WHERE ${dateRangeClause(sql`u.created_at`, from, to)}
   `);
   return result.rows[0] as { signups: number; median_hours_to_verified: number | null };
@@ -161,14 +164,18 @@ async function getApprovals(db: ReturnType<typeof drizzle>, from: Date, to: Date
   return result.rows[0] as { count: number };
 }
 
-/** Query 5c: Duplicate webhook events (rejected due to duplicate event_id or signature) */
+/**
+ * Query 5c: Duplicate webhook runs — deliveries rejected as duplicates (same event id or
+ * signature replay). Rejected events never have a run_id, so they are counted by
+ * received_at; the detail filter excludes other rejection reasons (e.g. "flow not published").
+ */
 async function getDuplicateWebhookRuns(db: ReturnType<typeof drizzle>, from: Date, to: Date) {
   const result = await db.execute(sql`
     SELECT COUNT(*)::int AS count
     FROM ${schema.webhookEvent} we
-    JOIN ${schema.run} r ON r.id = we.run_id
     WHERE we.status = 'rejected'
-      AND ${dateRangeClause(sql`r.created_at`, from, to)}
+      AND we.detail = 'duplicate'
+      AND ${dateRangeClause(sql`we.received_at`, from, to)}
   `);
   return result.rows[0] as { count: number };
 }
