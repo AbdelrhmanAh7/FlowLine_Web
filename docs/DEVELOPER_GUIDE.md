@@ -123,3 +123,51 @@ Download and open a trace on your own machine: `gh run download <run id> -R Abde
 Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
 
 `pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+
+## Useful scripts
+
+### `scripts/pilot-metrics.ts`
+
+Prints the 8 week-1 success criteria from the configured database as a Markdown table. Read-only (SELECT only), no secrets in output.
+
+**Usage:**
+```bash
+pnpm tsx scripts/pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD
+```
+
+**Example:**
+```bash
+pnpm tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23
+```
+
+**Output:**
+```
+# Pilot Metrics: 2026-10-16 to 2026-10-23
+
+| Metric | Value |
+|--------|-------|
+| Sign-ups | 4 |
+| Median time to verified | 2 hours |
+| Onboarding completed + workspace created on day 1 | 1 |
+| Published ≥1 flow within 3 days | 1 |
+| Run success rate | 77.8% |
+| p95 queue-to-start | 36.0s |
+| Webhook runs | 2 |
+| Approvals (workflow) | 2 |
+| Duplicate webhook runs | 1 |
+| Cross-workspace access denials | 1 |
+| Share of users who switched to Arabic | 0% (not tracked — locale is cookie-only) |
+```
+
+**Metrics:**
+1. **Sign-ups** — distinct users created in the date range
+2. **Median time to verified** — median hours from sign-up to first consumed email verification token (per-user MIN)
+3. **Onboarding + workspace day 1** — users who completed onboarding and created a workspace on the same calendar day
+4. **Published ≥1 flow within 3 days** — users who published at least one flow within 3 days of sign-up
+5. **Run success rate** — succeeded / (succeeded + failed) for runs created in range
+6. **p95 queue-to-start** — 95th percentile of (started_at - created_at) in milliseconds
+7. **Webhook runs** — accepted webhook events that created a run
+8. **Approvals (workflow)** — workflow approval decisions (kind=approval, not agent tool reviews)
+9. **Duplicate webhook runs** — rejected webhook events with detail="duplicate", filtered by received_at
+10. **Cross-workspace access denials** — platform audit events with action=admin.access_denied
+11. **Arabic switchers** — not tracked in DB (locale is cookie-only)
