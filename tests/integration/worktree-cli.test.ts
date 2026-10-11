@@ -42,20 +42,20 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 describe("pnpm wt in a scratch clone", () => {
-  it("@e2e @issue-67 AC1: create adds a managed lane on a new branch with node_modules linked", () => {
+  it("@issue-67 AC1: create adds a managed lane on a new branch with node_modules linked", () => {
     const r = wt("add", "lane");
     expect(r.code).toBe(0);
     expect(r.stdout.trim()).toBe(lanePath("lane"));
     expect(git(["rev-parse", "--abbrev-ref", "HEAD"], lanePath("lane"))).toBe("lane");
     expect(lstatSync(join(lanePath("lane"), "node_modules")).isSymbolicLink()).toBe(true);
   });
-  it("@e2e @issue-67 AC1: list shows a fresh lane as clean and pushed", () => {
+  it("@issue-67 AC1: list shows a fresh lane as clean and pushed", () => {
     expect(wt("add", "lane").code).toBe(0);
     const r = wt("list");
     expect(r.code).toBe(0);
     expect(r.stdout).toContain(`${lanePath("lane")} | lane | dirty=0 | pushed=true`);
   });
-  it("@e2e @issue-67 AC1: remove deletes a clean, pushed lane and keeps its branch", () => {
+  it("@issue-67 AC1: remove deletes a clean, pushed lane and keeps its branch", () => {
     expect(wt("add", "lane").code).toBe(0);
     const r = wt("remove", "lane");
     expect(r.stderr).toBe("");
@@ -65,7 +65,7 @@ describe("pnpm wt in a scratch clone", () => {
     expect(git(["branch", "--list", "lane"])).toContain("lane");
     expect(wt("list").stdout).not.toContain(lanePath("lane"));
   });
-  it.each(["remove", "rm"])("@e2e @issue-67 AC2: %s refuses a dirty lane with a clear message and keeps the work", (cmd) => {
+  it.each(["remove", "rm"])("@issue-67 AC2: %s refuses a dirty lane with a clear message and keeps the work", (cmd) => {
     expect(wt("add", "lane").code).toBe(0);
     writeFileSync(join(lanePath("lane"), "draft.txt"), "unsaved work\n");
     const r = wt(cmd, "lane");
@@ -75,19 +75,19 @@ describe("pnpm wt in a scratch clone", () => {
     expect(readFileSync(join(lanePath("lane"), "draft.txt"), "utf8")).toBe("unsaved work\n");
     expect(wt("list").stdout).toContain(`${lanePath("lane")} | lane | dirty=1 | pushed=true`);
   });
-  it("@e2e @issue-67 AC1: create refuses an existing branch and creates no lane", () => {
+  it("@issue-67 AC1: create refuses an existing branch and creates no lane", () => {
     git(["branch", "taken"]);
     const r = wt("add", "taken");
     expect(r.code).toBe(1);
     expect(r.stderr).toMatch(/branch named 'taken' already exists/);
     expect(existsSync(lanePath("taken"))).toBe(false);
   });
-  it("@e2e @issue-67 AC1: remove rejects an invalid bare lane name", () => {
+  it("@issue-67 AC1: remove rejects an invalid bare lane name", () => {
     const r = wt("remove", ".hidden");
     expect(r.code).toBe(1);
     expect(r.stderr).toContain('invalid lane name ".hidden"');
   });
-  it("@e2e @issue-67 AC1: create rejects an invalid lane name before running git", () => {
+  it("@issue-67 AC1: create rejects an invalid lane name before running git", () => {
     const r = wt("add", "feat/x");
     expect(r.code).toBe(1);
     expect(r.stderr).toContain('invalid lane name "feat/x"');
@@ -95,8 +95,11 @@ describe("pnpm wt in a scratch clone", () => {
     expect(existsSync(join(repo, ".claude"))).toBe(false);
     expect(git(["branch", "--list", "feat/x"])).toBe("");
   });
-  it("@e2e @issue-67 AC3: the developer guide documents create, list, remove and the dirty refusal message", () => {
+  it("@issue-67 AC3: the developer guide documents create, list, remove and the dirty refusal message", () => {
     const docs = readFileSync(guide, "utf8");
+    const pattern = /const LANE_NAME = \/(.+)\/;/.exec(readFileSync(script, "utf8"))?.[1];
+    expect(pattern).toBeTruthy();
+    expect(docs).toContain(`\`${pattern}\``);
     for (const example of ["pnpm wt add my-lane", "pnpm wt list", "pnpm wt remove my-lane", "refusing to remove", "uncommitted change(s)"]) {
       expect(docs).toContain(example);
     }
