@@ -71,3 +71,31 @@ Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
 - File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
 - Does not modify `transport.ts` — tests only
 - Uses real providers from `getProviderDef` as specified in the manager plan
+## Issue #174: Add unit tests for hub selection
+
+### The named functions do not exist
+
+`selectEngineByScore` and `selectFreeEndpoint` are not in `src/ai/hub/selection.ts`, anywhere else in the repo, or in its
+git history (`git log --all -S selectEngineByScore` is empty). The planner made up the names, so no test can import them.
+That is the root cause of the QA finding "tests never exercise the required functions". The real exports are
+`assertRouteSelection`, `assertRoutesUsable`, `pinDefaultRoutes` and `aiRoutesIn`. As with #173, the tests cover those.
+
+### What changed (rework of PR #183)
+
+- Removed `src/ai/hub/selection.spec.ts` (231 lines). It sat outside the vitest `unit` include (`tests/unit/**/*.test.ts`), so it
+  never ran. Its db mock also didn't match drizzle's `select().from().where()` call shape.
+- Added `tests/unit/ai-hub-selection.test.ts` (9 tests, under 70 lines). It uses a fake db with the same call chain as drizzle.
+  It covers: connection missing, revoked or not allowed for the role; an empty route list makes no query;
+  unchanged routes are not re-checked; only new or changed routes are checked; `aiRoutesIn` skips bad routes.
+  `pinDefaultRoutes` is already covered in `tests/unit/ai-hub.test.ts`.
+- Mutation check: turning off the REVOKED check or the "changed routes only" filter makes 2 tests fail.
+
+### Replacement acceptance check
+
+`npm test -- --listTests` is a Jest flag; this repo uses vitest. Use instead:
+`npx tsc --noEmit && npx vitest list --project unit tests/unit/ai-hub-selection.test.ts`.
+
+### Question for the owner
+
+Should a selection helper by score or for free endpoints exist? If so, it needs its own feature issue with a spec. These tests
+cover only what exists. E2E: not needed, because this change adds unit tests only and does not change any behaviour.
