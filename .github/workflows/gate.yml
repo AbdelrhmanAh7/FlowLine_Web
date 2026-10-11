@@ -161,6 +161,7 @@ jobs:
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
+      FLOWLINE_ENV: test # next.config.ts honours the skip only in a test build
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-chromium
       GATE_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'full' && 'full' || 'fast' }}
     steps:
@@ -194,6 +195,7 @@ jobs:
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
+      FLOWLINE_ENV: test # next.config.ts honours the skip only in a test build
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-firefox
       GATE_TIER: full
     steps:
@@ -226,6 +228,7 @@ jobs:
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
+      FLOWLINE_ENV: test # next.config.ts honours the skip only in a test build
       GATE_OUT: artifacts/gates/ci-${{ github.run_id }}-${{ github.run_attempt }}-webkit
       GATE_TIER: full
     steps:

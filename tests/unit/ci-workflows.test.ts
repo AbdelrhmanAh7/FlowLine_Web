@@ -3,7 +3,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Text-level guards for .github/ (no YAML parser is a project dependency). They pin the invariants behind the required
 // `gate` and `docs` checks on main; behaviour that depends on GitHub itself can only be verified by a live run.
@@ -50,12 +50,33 @@ describe("workflow files", () => {
 });
 
 describe("next.config.ts guards production type-check", () => {
-  const nextConfig = read("next.config.ts");
+  const nextConfig = stripComments(read("next.config.ts").replace(/^\s*\/\/.*$/gm, "")); // comments cannot satisfy the match
 
-  it("requires both FLOWLINE_SKIP_BUILD_TYPECHECK=1 AND FLOWLINE_ENV=test to skip type-checking", () => {
-    expect(nextConfig).toContain('process.env.FLOWLINE_SKIP_BUILD_TYPECHECK === "1"');
-    expect(nextConfig).toContain('process.env.FLOWLINE_ENV === "test"');
-    expect(nextConfig).toContain("&&");
+  it("sets ignoreBuildErrors from exactly FLOWLINE_SKIP_BUILD_TYPECHECK=1 AND FLOWLINE_ENV=test", () => {
+    expect(nextConfig).toMatch(
+      /typescript:\s*\{\s*ignoreBuildErrors:\s*process\.env\.FLOWLINE_SKIP_BUILD_TYPECHECK === "1"\s*&&\s*process\.env\.FLOWLINE_ENV === "test"\s*\}/,
+    );
+  });
+
+  // Evaluates the real config under each environment: only the test build with the flag may skip the type-check.
+  it.each([
+    ["1", "test", true],
+    ["1", undefined, false],
+    ["1", "staging", false],
+    ["1", "production", false],
+    [undefined, "test", false],
+    ["0", "test", false],
+    [undefined, undefined, false],
+  ])("FLOWLINE_SKIP_BUILD_TYPECHECK=%s with FLOWLINE_ENV=%s skips type-checking: %s", async (skip, env, expected) => {
+    vi.resetModules();
+    vi.stubEnv("FLOWLINE_SKIP_BUILD_TYPECHECK", skip as string);
+    vi.stubEnv("FLOWLINE_ENV", env as string);
+    try {
+      const { default: config } = await import("../../next.config");
+      expect(config.typescript?.ignoreBuildErrors).toBe(expected);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
@@ -118,9 +139,11 @@ describe("gate.yml always reports a real `gate`", () => {
 
   it("sets FLOWLINE_SKIP_BUILD_TYPECHECK only on browser build jobs, never on the typecheck job", () => {
     // Browser jobs set it
-    expect(byJob.chromium).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
-    expect(byJob.firefox).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
-    expect(byJob.webkit).toContain("FLOWLINE_SKIP_BUILD_TYPECHECK: \"1\"");
+    // next.config.ts honours the skip only with FLOWLINE_ENV=test, so each browser job must carry both.
+    for (const job of ["chromium", "firefox", "webkit"]) {
+      expect(byJob[job], job).toMatch(/^ {6}FLOWLINE_SKIP_BUILD_TYPECHECK: "1"/m);
+      expect(byJob[job], job).toMatch(/^ {6}FLOWLINE_ENV: test\b/m);
+    }
     // The checks job (which runs typecheck) must NOT set it
     expect(byJob.checks).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
     // The changes and gate jobs must NOT set it

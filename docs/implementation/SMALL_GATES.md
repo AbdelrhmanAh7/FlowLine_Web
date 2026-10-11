@@ -29,8 +29,8 @@ per-PR integration project and are not moved to nightly. The workflow creates `f
 Who triages a red nightly: nobody has to watch it. When the nightly fails on `main`, its `report` job opens one issue labelled
 `nightly-red` with the run link (or comments on the one already open), and the hub's engineers pick that issue up like any bug.
 
-CI speed-ups that go with the nightly tier (docs/slimdown-plan.md): the browser jobs set `FLOWLINE_SKIP_BUILD_TYPECHECK=1` so the
-test build skips Next's second type-check (`tsc --noEmit` already runs in the static leg on the same commit; production and local
+CI speed-ups that go with the nightly tier (docs/slimdown-plan.md): the browser jobs set `FLOWLINE_SKIP_BUILD_TYPECHECK=1` and `FLOWLINE_ENV=test` (`next.config.ts` skips the
+type-check only when both are set) so the test build skips Next's second type-check (`tsc --noEmit` already runs in the static leg on the same commit; production and local
 builds still type-check), and `docs.yml` checks out only `scripts/ci`. The disabled self-hosted `ai-implementers.yml` is gone:
 the hub runs its jobs from launchd on the Mac mini.
 
