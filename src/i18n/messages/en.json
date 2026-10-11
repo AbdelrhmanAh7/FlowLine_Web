@@ -3510,24 +3510,6 @@
       "you": "you",
       "grantNote": "Adding an administrator is an operator action on the server (scripts/admin/bootstrap.mts --grant)."
     },
-    "ownerActions": {
-      "title": "Owner actions (issue #162)",
-      "subtitle": "These five sensitive actions are blocked by hard rules (money, legal, people) and require the founder to complete them. Enable the feature flag after the owner finishes each setup.",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "configure": "Configure",
-      "note": "Feature flags are set via environment variables (FLOWLINE_OWNER_*_ENABLED). The owner completes each action externally; the flag only unlocks the corresponding UI in the app.",
-      "realProvider": "Real provider and AI account setup",
-      "realProviderDesc": "Configure real AI provider accounts and accept provider terms. Blocked by provider contracts and billing.",
-      "sandboxPayments": "Sandbox payments configuration",
-      "sandboxPaymentsDesc": "Configure Stripe/Paddle sandbox accounts and webhook secrets. Blocked by payment provider setup.",
-      "approvedDeployment": "Approved deployment with restore/rollback/alerts",
-      "approvedDeploymentDesc": "Approve a deployment revision with automated rollback and alerting. Blocked by production approval process.",
-      "pricingTerms": "Pricing and terms finalization",
-      "pricingTermsDesc": "Finalize pricing plans and legal terms. Blocked by legal sign-off.",
-      "customerTests": "Customer test coordination",
-      "customerTestsDesc": "Coordinate beta customers with NDAs and feedback collection. Blocked by customer availability and legal clearance."
-    },
     "setup": {
       "title": "Platform setup",
       "intro": "Paste the one-time setup code the server operator gave you. It works once and expires after 30 minutes.",

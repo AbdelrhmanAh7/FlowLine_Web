@@ -4,7 +4,6 @@ import { legacyEnvVars, SETTING_KEYS } from "@/server/platform-purposes";
 import { listPlatformSecretViews } from "@/server/platform-secrets";
 import { getSetting, settingEnvPresent } from "@/server/platform-settings";
 import { platformRedirectUris } from "@/server/platform-uris";
-import { readOwnerFeatureFlags } from "@/server/owner-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +29,5 @@ export const GET = platformRead(async () => {
     // Env vars that used to hold now UI-managed values and are STILL set: the operator should remove them.
     legacyEnvStillSet: legacyEnvVars().filter((k) => Boolean(process.env[k]?.trim())),
     billingSafety: { paddleEnv: process.env.FLOWLINE_BILLING_PADDLE_ENV === "live" ? "live" : "sandbox", allowLive: process.env.FLOWLINE_BILLING_ALLOW_LIVE === "true" },
-    ownerFeatureFlags: readOwnerFeatureFlags(),
   };
 });

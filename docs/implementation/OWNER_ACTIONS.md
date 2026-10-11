@@ -2,7 +2,7 @@
 
 ## Issue #162: Owner Actions - Sensitive Components (tracking)
 
-This document tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions. Engineering scaffolding for these items is tracked in issue #163.
+This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
 
 ### Owner-only checklist (from issue #162)
 
