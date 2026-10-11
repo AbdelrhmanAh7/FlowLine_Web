@@ -44,7 +44,8 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 
 1. Get owner approval for the restore and note the incident start time and the reason in the incident record.
 2. Pick `<dump-file>`: the newest `backups/flowline-<utc>.dump` taken before the damage (`ls -l backups/`). Record
-   its timestamp: data written after it will be lost.
+   its timestamp: data written after it will be lost. The dump's real snapshot point is when `pg_dump` starts, slightly
+   after the `<utc>` in the filename.
 3. Record the running release: `dc images web` and `curl -fsS https://<beta-host>/api/health` (revision and
    `schemaVersion`).
 4. Take a safety dump of the current state, even if damaged:
@@ -54,7 +55,9 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 7. Check the dump is readable: `dc exec -T db pg_restore --list < backups/<dump-file> > /dev/null`. Stop here if it
    fails and pick the previous dump.
 8. Restore over the current database:
-   `dc exec -T db pg_restore -U flowline -d flowline --clean --if-exists --no-owner < backups/<dump-file>`.
+   `dc exec -T db pg_restore -U flowline -d flowline --clean --if-exists --no-owner --single-transaction --exit-on-error < backups/<dump-file>`.
+   On any error, stop: do not start `web` or `worker`, restore `backups/pre-restore-<utc>.dump` the same way, and
+   escalate to `<owner>`.
 9. Confirm `.env.beta` holds the same encryption keys and auth secret as when the dump was taken (compare with
    `<key-store>`; never print the values).
 10. Start the app with the same image: `FLOWLINE_IMAGE=flowline:<current-sha> dc up -d --wait`. The `migrate`
@@ -84,7 +87,8 @@ union all select 'run', count(*) from run
 union all select 'connection', count(*) from connection
 union all select 'api_key', count(*) from api_key
 union all select 'platform_admin', count(*) from platform_admin;
--- Newest run: must be just before the dump timestamp, never after it.
+-- Newest run: must be close to the dump time (allow a few minutes after the filename timestamp);
+-- a much later value means the wrong dump was restored.
 select max(created_at) as newest_run from run;
 -- Runs cut off mid-flight by the backup show here; the worker resumes or fails them, check none stay stuck.
 select status, count(*) from run group by status order by status;

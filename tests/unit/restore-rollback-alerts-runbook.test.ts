@@ -99,7 +99,9 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(existsSync(runbookPath)).toBe(true);
   });
 
-  it("@issue-68 AC5: the runbook stays small enough for one ≤ ~300-line PR", () => {
+  it("@issue-68 AC5: the runbook stays within its own 200-line budget", () => {
+    // 200 lines is the runbook's own budget inside the ~300-line PR limit (REQ-FL-68-9). The whole-PR size is
+    // checked with `git diff --shortstat` and recorded in artifacts/issue-68/EVIDENCE.md.
     const lines = runbook.split("\n").length;
     expect(lines).toBeGreaterThan(40);
     expect(lines).toBeLessThanOrEqual(200);
