@@ -58,6 +58,7 @@ describe("runConcurrentPg on scratch tables (two real connections)", () => {
     expect(Date.now() - started).toBeLessThan(5_000); // well under timeoutMs: it did not wait for B or the timeout
   }, 10_000);
 
+  // Order-dependent on purpose: runs last in this file and checks what the three cases above left behind.
   it("leaves no scratch-table lock or open transaction behind", async () => {
     for (const t of [T1, T2]) {
       const { rows } = await admin.query(`select id from ${t} where id = 1 for update nowait`);

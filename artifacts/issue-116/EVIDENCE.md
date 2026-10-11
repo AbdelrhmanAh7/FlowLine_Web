@@ -23,7 +23,7 @@ Tested commit: `550bc3d` (CTO rework round on top of `d95f365`, the merge of `or
 | No lock or open transaction left behind | "leaves no scratch-table lock or open transaction behind": `for update nowait` succeeds on T1 and T2; 0 `idle in transaction` backends from this file | Pass |
 | Under 10 s, deterministic | per-test timeout 10 s, adapter timeout 8 s; the barrier makes the lock cycle certain (no sleeps) | Pass |
 | Lint / typecheck | `pnpm exec eslint tests/integration/concurrent-tx-pg.test.ts`; `pnpm typecheck` | Clean |
-| 20 local runs, no flakes | `for i in $(seq 1 20); do node scripts/with-env.mjs <env with flowline_test_i116> pnpm exec vitest run --project integration tests/integration/concurrent-tx-pg.test.ts; done` | **20/20 passed** (4/4 tests each; deadlock test 1090–1104 ms, early-error test 9–25 ms); 0 `scratch_cc%` tables left afterwards |
+| 20 local runs, no flakes | `for i in $(seq 1 20); do DATABASE_URL=postgres://localhost/flowline_test_i116 FLOWLINE_ENV=test node scripts/with-env.mjs .env.test pnpm exec vitest run --project integration tests/integration/concurrent-tx-pg.test.ts; done` | **20/20 passed** (4/4 tests each; deadlock test 1090–1104 ms, early-error test 9–25 ms); 0 `scratch_cc%` tables left afterwards |
 | Existing adapter tests still pass | `concurrent-tx.test.ts` run together with the #116 file | 9/9 passed (2 files) |
 | No production code / no `.github/` changes | the PR diff against `main` touches only `tests/integration/concurrent-tx-pg.test.ts`, `docs/DEVELOPER_GUIDE.md` and this file | Done |
 | No test skipped or weakened | no existing test file changed | Done |
