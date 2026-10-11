@@ -76,6 +76,32 @@ export function semverGte(v: string, min: string): boolean {
   return compareSemVer(v, min) >= 0;
 }
 
+// Dependabot alert #3 (GHSA-68fv-2mgg-jv7q): source-map-js below 1.2.2 is vulnerable.
+const PATCHED_SOURCE_MAP_JS = "1.2.2";
+
+// Every source-map-js version the lockfile names, as a package key (`source-map-js@1.2.2:`) or a
+// dependency entry (`source-map-js: 1.2.2`). Versions are read whole, so 1.2.10 is never taken for 1.2.1.
+export function lockedSourceMapJsVersions(lockfile: string): string[] {
+  const regex =
+    /(?<![\w@/.-])source-map-js(?:@|:\s*['"]?)([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g;
+  return [...lockfile.matchAll(regex)].map((m) => m[1]!);
+}
+
+export function vulnerableSourceMapJs(lockfile: string): string[] {
+  return lockedSourceMapJsVersions(lockfile).filter((version) => !semverGte(version, PATCHED_SOURCE_MAP_JS));
+}
+
+const lockfileWith = (version: string) =>
+  [
+    "packages:",
+    `  source-map-js@${version}:`,
+    "    resolution: {integrity: sha512-fixture}",
+    "snapshots:",
+    "  postcss@8.5.28:",
+    "    dependencies:",
+    `      source-map-js: ${version}`,
+  ].join("\n");
+
 describe("dependency advisories security check", () => {
   it("semver comparison correctly handles prereleases and stable versions", () => {
     expect(semverGte("1.2.1", "1.2.2")).toBe(false);
@@ -87,16 +113,21 @@ describe("dependency advisories security check", () => {
     expect(semverGte("1.2.3", "1.2.2")).toBe(true);
   });
 
+  it("flags only versions below 1.2.2 and accepts later patches such as 1.2.10", () => {
+    // A 1.2.10 lockfile contains the text "source-map-js@1.2.1" as a prefix, so a substring check rejects it.
+    expect(lockfileWith("1.2.10")).toContain("source-map-js@1.2.1");
+    expect(lockedSourceMapJsVersions(lockfileWith("1.2.10"))).toEqual(["1.2.10", "1.2.10"]);
+    expect(vulnerableSourceMapJs(lockfileWith("1.2.10"))).toEqual([]);
+    expect(vulnerableSourceMapJs(lockfileWith("1.2.2"))).toEqual([]);
+    expect(vulnerableSourceMapJs(lockfileWith("1.2.1"))).toEqual(["1.2.1", "1.2.1"]);
+    expect(vulnerableSourceMapJs(lockfileWith("1.2.2-beta.1"))).toEqual(["1.2.2-beta.1", "1.2.2-beta.1"]);
+    // Packages whose names merely end in source-map-js are not read as source-map-js.
+    expect(lockedSourceMapJsVersions("  '@scope/source-map-js@1.0.0':\n      not-source-map-js: 1.0.0")).toEqual([]);
+  });
+
   it("@issue-62 AC1: lockfile resolves source-map-js >= 1.2.2", () => {
     const lockfile = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
-    const regex =
-      /(?:['"]?source-map-js@|(?<![a-zA-Z0-9_-])source-map-js:\s*['"]?)([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g;
-    const matches = [...lockfile.matchAll(regex)].map((m) => m[1]!);
-
-    expect(matches.length).toBeGreaterThan(0);
-
-    const vulnerable = matches.filter((ver) => !semverGte(ver, "1.2.2"));
-    expect(vulnerable).toEqual([]);
-    expect(lockfile).not.toContain("source-map-js@1.2.1");
+    expect(lockedSourceMapJsVersions(lockfile).length).toBeGreaterThan(0);
+    expect(vulnerableSourceMapJs(lockfile)).toEqual([]);
   });
 });
