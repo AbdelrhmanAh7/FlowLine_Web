@@ -1,6 +1,6 @@
 # Evidence — issue #116: Postgres adapter and integration tests for `runConcurrent`
 
-Tested commit: see "Tested commit" below. Run on 2026-10-11, macOS, Node 26.10.0, Vitest 5.0.2, local PostgreSQL 16.15 (CI uses 17), `deadlock_timeout` = 1s (server default, not changed), throwaway database `flowline_test_i116` (accepted by the integration global-setup guard).
+Tested commit: `d95f365` (merge of `origin/main` `6aa89ed` into `ai/116`; the checks below ran on exactly this tree before it was committed). Run on 2026-10-11, macOS, Node 26.10.0, Vitest 5.0.2, local PostgreSQL 16.15 (CI uses 17), `deadlock_timeout` = 1s (server default, not changed), throwaway database `flowline_test_i116` (accepted by the integration global-setup guard).
 
 ## What changed on 2026-10-11 (merge of `main`)
 `main` gained the Postgres adapter `runConcurrentPg` in `tests/helpers/concurrentPgTx.ts` with advisory-lock tests in `tests/integration/concurrent-tx.test.ts` (#90, PR #125) while this branch was open. This branch's own adapter (`tests/integration/concurrentTx.pg.ts`) duplicated it, so it was deleted; the #116 tests now plug the scratch-table cases into that one adapter. The PR therefore adds only `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables) plus docs.
