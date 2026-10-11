@@ -9,6 +9,7 @@ Repository audit baseline: `9641ad1e684cad7b84bd2385751ea19b0a9d4060` (docs work
 | Phase 3/4 | Agents, knowledge, Copilot, access controls, email flows, invite-only beta and sandbox billing are implemented; historical gates do not certify this checkout | `src/server/`, `src/billing/`, `docs/implementation/RELEASE_REPORT.md`, `docs/implementation/PHASE4_BETA_REPORT.md` |
 | AI hub | Cloud BYOK, five protocols, routing and metering implemented; live certification and hosted Copilot quality remain unverified | `src/ai/hub/`, `docs/ai/AI_HUB_REPORT.md` |
 | Design system | Generated tokens, Arabic-first UI, light default, dark/system selection and protected copy editor | `src/design/`, `src/theme/config.ts`, `src/i18n/`, `src/app/admin/copy/` |
+| Admin copy error flow (#181) | Every `/api/platform/copy` refusal is tested from route to the client `api()` (integration) and as bounded JSON / localized 404 (e2e-army); test-only, no runtime change. Known gap: error responses lack the no-store headers (see CREDENTIALS_DESIGN.md item 10) | `tests/integration/platform-copy-errors.test.ts`, `e2e-army/181-admin-copy.e2e.ts` |
 | Company Builder | Outcome-first interview, draft installation, sample trials and reviewed activation implemented behind an off-by-default flag; live Gmail is not implemented | `src/company-builder/`, `src/server/company-builder/`, `docs/company-builder/VALIDATION_REPORT.md` |
 | Docs freshness | Scoped docs corrected against source; change ledger and unverifiable claims recorded | `docs/implementation/DOCS_FRESHNESS_20261003.md` |
 
