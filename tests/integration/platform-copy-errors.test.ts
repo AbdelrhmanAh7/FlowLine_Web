@@ -137,6 +137,8 @@ describe("admin copy error flow, server to client (#181)", () => {
     // Exhaust this admin's platform-write budget (20 a minute); the next write is refused, not queued or dropped silently.
     for (let i = 0; i < 25 && (await checkRate(`platform-write:${admin.user.id}`, 20, 60)); i++);
     expectError(await patch(edit("Army title")), 429, "RATE_LIMITED");
+    const afterLimit = await read();
+    expect({ draft: afterLimit.draft, published: afterLimit.published }).toEqual({ draft: before.draft, published: before.published });
   });
 
   it("turns an unexpected server failure into INTERNAL with a request id and without the cause", async () => {
@@ -167,5 +169,6 @@ describe("admin copy error flow, server to client (#181)", () => {
     gateway.mockRestore();
     expect(proxied).toBeInstanceOf(ApiError);
     expect({ status: (proxied as ApiError).status, code: (proxied as ApiError).code, message: (proxied as ApiError).message }).toEqual({ status: 502, code: "HTTP_502", message: "Request failed (502)" });
+    expect((proxied as ApiError).message).not.toContain(MARKER);
   });
 });
