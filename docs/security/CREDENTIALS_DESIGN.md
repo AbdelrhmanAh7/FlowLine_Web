@@ -87,6 +87,19 @@ The two reviews agree on all of these.
     - `route()` CSRF + strict Origin, body caps and shared read deadline, `Cache-Control: no-store`; layered ingress/hosting policy: [REQUEST_BODY_LIMITS.md](REQUEST_BODY_LIMITS.md);
     - distributed `checkRate` limits: test 5/min, writes 20/min, step-up 5/5 min, bootstrap/MFA attempts;
     - fixed error codes.
+    - Error-flow tests (#181), with the admin copy endpoints (`/api/platform/copy`) as the reference case:
+      `tests/integration/platform-copy-errors.test.ts` sends every refusal through the real route into the browser
+      client `api()`: `NOT_FOUND` for non-admins, `CROSS_SITE_REQUEST`, `CSRF_TOKEN_INVALID`,
+      `UNSUPPORTED_MEDIA_TYPE`, `STEP_UP_REQUIRED`, `BODY_TOO_LARGE`, `BAD_JSON`, `VALIDATION` (field paths only),
+      `COPY_KEY_INVALID`, `COPY_VALUE_INVALID`, `COPY_DUPLICATE_EDIT`, `REVISION_CONFLICT`, `RATE_LIMITED` and
+      `INTERNAL` (request id, no cause), plus an unreachable server (`NETWORK`) and a non-JSON gateway page
+      (`HTTP_502`). For each one it checks that the status, code and message reach the client unchanged, that the
+      submitted text is not echoed, that no stack leaks and that the draft is unchanged.
+      `e2e-army/181-admin-copy.e2e.ts` checks the non-admin and cross-site refusals and the localized 404 page on a
+      live stack.
+    - Known gap: the platform handlers set `no-store` / `no-referrer` only on successful responses (`secured()` in
+      `src/server/platform-http.ts`). Error responses are built by `route()`, which does not add them. Those bodies
+      hold only the bounded code and message.
 
 ### OAuth correctness
 11. **Fixed provider endpoints.** Customers supply only a client ID and secret; authorize, token and revoke URLs, scopes,
