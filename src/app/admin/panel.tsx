@@ -11,6 +11,7 @@ import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
+import { getOwnerActionDisabledReason, type OwnerFeatureFlags } from "@/server/owner-actions";
 
 /** Write-only projection returned by /api/platform/credentials (never a value, a ciphertext or a provider error). */
 interface CredentialView {
@@ -48,6 +49,7 @@ interface Overview {
   redirectUris: { integrations: string | null; signin: { google: string | null; github: string | null; zitadel: string | null }; warnings: string[] };
   legacyEnvStillSet: string[];
   billingSafety: { paddleEnv: "sandbox" | "live"; allowLive: boolean };
+  ownerFeatureFlags: OwnerFeatureFlags;
 }
 
 interface Me {
@@ -156,6 +158,7 @@ export function PlatformPanel() {
             <SettingsCard settings={overview.data.settings} credentials={overview.data.credentials} csrf={me.data?.csrfToken ?? ""} lockReason={lockReason} />
             <AdminsCard csrf={me.data?.csrfToken ?? ""} lockReason={lockReason} self={me.data?.email ?? ""} />
             <AuditCard />
+            <OwnerActionsCard flags={overview.data.ownerFeatureFlags} />
           </>
         )}
       </main>
@@ -693,6 +696,74 @@ function AuditCard() {
           </table>
         </div>
       )}
+    </Card>
+  );
+}
+
+/**
+ * Owner Actions card — displays the five sensitive owner actions from issue 162.
+ * Each action shows its feature flag status and is disabled with a reason until the owner enables it.
+ * These are tracking placeholders — the actual setup is done by the owner outside the app.
+ */
+function OwnerActionsCard({ flags }: { flags: OwnerFeatureFlags }) {
+  const t = useT();
+
+  const actions: { key: keyof OwnerFeatureFlags; title: string; description: string }[] = [
+    {
+      key: "ownerRealProviderEnabled",
+      title: t("platformAdmin.ownerActions.realProvider"),
+      description: t("platformAdmin.ownerActions.realProviderDesc"),
+    },
+    {
+      key: "ownerSandboxPaymentsEnabled",
+      title: t("platformAdmin.ownerActions.sandboxPayments"),
+      description: t("platformAdmin.ownerActions.sandboxPaymentsDesc"),
+    },
+    {
+      key: "ownerApprovedDeploymentEnabled",
+      title: t("platformAdmin.ownerActions.approvedDeployment"),
+      description: t("platformAdmin.ownerActions.approvedDeploymentDesc"),
+    },
+    {
+      key: "ownerPricingTermsEnabled",
+      title: t("platformAdmin.ownerActions.pricingTerms"),
+      description: t("platformAdmin.ownerActions.pricingTermsDesc"),
+    },
+    {
+      key: "ownerCustomerTestsEnabled",
+      title: t("platformAdmin.ownerActions.customerTests"),
+      description: t("platformAdmin.ownerActions.customerTestsDesc"),
+    },
+  ];
+
+  return (
+    <Card className="p-4" data-testid="owner-actions">
+      <h2 className="text-lg font-semibold">{t("platformAdmin.ownerActions.title")}</h2>
+      <p className="mt-1 text-sm text-med">{t("platformAdmin.ownerActions.subtitle")}</p>
+      <ul className="mt-3 flex flex-col gap-3" role="list">
+        {actions.map((a) => (
+          <li key={a.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border border-line bg-surface">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-hi">{a.title}</span>
+                <StatusBadge tone={flags[a.key] ? "success" : "muted"} upper>
+                  {flags[a.key] ? t("platformAdmin.ownerActions.enabled") : t("platformAdmin.ownerActions.disabled")}
+                </StatusBadge>
+              </div>
+              <p className="text-sm text-med">{a.description}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled
+              disabledReason={flags[a.key] ? null : getOwnerActionDisabledReason(a.key)}
+            >
+              {t("platformAdmin.ownerActions.configure")}
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-muted">{t("platformAdmin.ownerActions.note")}</p>
     </Card>
   );
 }

@@ -1,5 +1,23 @@
 # Owner actions — private beta
 
+## Issue #162: Owner Actions - Sensitive Components (tracking)
+
+This document tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions. Engineering scaffolding for these items is tracked in issue #163.
+
+### Owner-only checklist (from issue #162)
+
+| # | Action | Status | Blocked by | Notes |
+|---|--------|--------|------------|-------|
+| 1 | Real provider and AI account setup | ⏳ Pending | Money/legal | Requires real provider credentials and contracts |
+| 2 | Sandbox payments configuration | ⏳ Pending | Money/legal | Requires payment provider accounts and legal review |
+| 3 | Approved deployment with restore/rollback/alerts | ⏳ Pending | Money/people | Requires production approval and runbook sign-off |
+| 4 | Pricing and terms finalization | ⏳ Pending | Legal | Requires legal sign-off on pricing and ToS |
+| 5 | Customer test coordination | ⏳ Pending | People | Requires real customers and NDA/legal clearance |
+
+**Status legend:** ⏳ Pending = owner action required; ✅ Done = completed and verified; 🚫 Blocked = cannot proceed.
+
+---
+
 ## Pending owner checks — 2026-10-03
 
 These checks remain unverified from the repository. Confirm the running app and account before using the local URLs below; no browser session or listener was checked in this docs pass. Record only non-secret completion state; no passwords, OTPs, recovery codes, seeds or provider secrets belong in chat.
