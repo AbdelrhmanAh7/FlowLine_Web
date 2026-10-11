@@ -127,6 +127,13 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(runbook).not.toMatch(/backups\/backups/);
   });
 
+  it("@issue-68 AC1: the rollback migration check is anchored at the repo root, not the deploy directory", () => {
+    // `git diff -- drizzle/` run from the deploy folder would look at deploy/beta/drizzle/ and print nothing.
+    const rollback = section(/Rollback/i);
+    expect(rollback).toMatch(/git -C "\$REPO_DIR" diff --stat "\$PREV_SHA" "\$CURRENT_SHA" -- drizzle\//);
+    expect(runbook).toMatch(/^REPO_DIR="/m);
+  });
+
   it("@issue-68 AC4: the mandatory docs check passes for this change", () => {
     const files = ["docs/runbooks/restore-rollback-alerts.md", "docs/implementation/OWNER_ACTIONS.md", "tests/unit/restore-rollback-alerts-runbook.test.ts"];
     expect(checkDocs(files).passed).toBe(true);

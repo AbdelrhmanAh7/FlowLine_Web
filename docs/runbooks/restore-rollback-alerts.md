@@ -5,7 +5,7 @@ and alerts" owner item (PP-06 of the paid-pilot PP-02..PP-09 list, tracked in is
 performs every real step; agents run none of it against a real environment. Nothing here changes the state of any
 item in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
 
-- Placeholders only: `<beta-host>`, `<deploy-dir>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
+- Placeholders only: `<beta-host>`, `<deploy-dir>`, `<repo-checkout>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
   `<alert-channel>`, `<owner>`. No credentials, hostnames or secrets belong in this file, in commands or in evidence.
 - NileQuant stays PAPER only. This runbook has no broker, order or trading steps and does not apply to NileQuant.
 - Billing stays sandbox-only; nothing here activates payments.
@@ -18,6 +18,7 @@ owner replaces once per session before anything else:
 
 ```sh
 DEPLOY_DIR="<deploy-dir>"; BASE_URL="https://<beta-host>"
+REPO_DIR="<repo-checkout>"   # git checkout of the repo (the beta stack is its deploy/beta folder), not DEPLOY_DIR itself
 PREV_SHA="<previous-sha>"; CURRENT_SHA="<current-sha>"   # rollback and restore only
 cd "$DEPLOY_DIR"
 dc() { docker compose -f docker-compose.beta.yml --env-file .env.beta "$@"; }
@@ -136,8 +137,8 @@ Steps:
 2. Find `<previous-sha>`, the last release recorded as healthy under `artifacts/phase-4/release/`, and check its
    image is on the host: `docker image inspect "flowline:$PREV_SHA" --format '{{.Id}}'`.
 3. Check the migrations between the two releases are expand-only:
-   `git diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/`, then read each new `.sql` file for `drop`, `rename`
-   or type changes. If any is destructive, stop: choose roll forward or restore with the owner.
+   `git -C "$REPO_DIR" diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/` (`-C` anchors the path at the repo root, so
+   an empty result really means no new migrations), then read each new `.sql` file for `drop`, `rename` or type changes. If any is destructive, stop: choose roll forward or restore with the owner.
 4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-rollback-$UTC.dump"`.
 5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`.
 6. Check `"$BASE_URL/api/health"`: revision is `<previous-sha>`, `schemaVersion` is unchanged (it never
