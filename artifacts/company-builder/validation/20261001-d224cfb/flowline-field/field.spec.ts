@@ -114,7 +114,7 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       for (const q of e.mustQuote ?? []) checks[`quotes:${q.slice(0, 24)}`] = text.includes(q);
       if (e.mustQuoteOneOf) checks.quotesPolicy = e.mustQuoteOneOf.some((q: string) => text.includes(q));
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
-      for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = !low.replace("nothing has been refunded or cancelled yet", "").includes(n);
+      for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = !low.includes(n);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();
       if (e.suspiciousFlagged) checks.suspiciousFlagged = reply?.suspicious === true;
       if (e.language) checks.language = reply?.language === e.language;
@@ -135,12 +135,17 @@ test("Flowline field run — frozen packet", async ({ page }) => {
   const rev05 = await (await req.post(`${base}/trials/${vp05trial}/review`, { data: {} })).json();
   const reviewGate = { outboxBefore, refundItemStatus: rev05.reviewItem?.status, refundItemConsequential: rev05.reviewItem?.proposed?.consequential ?? null };
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
-  reviewGate["outboxAfterRequestNoApproval" as keyof typeof reviewGate] = ov.outbox.length as never;
+  const outboxAfterRequestNoApproval = ov.outbox.length;
+  reviewGate = { ...reviewGate, outboxAfterRequestNoApproval };
 
   // Duplicate check: re-run VP-01 with a new click → same record (count unchanged).
   const keysBefore = results.length;
+  const vp01RecordBefore = results.find((x) => x.id === "VP-01")!.record;
   await runOne(packet.requests[0], "field-VP-01-again");
-  // (record count verified in the DB-free way: follow-up keys are per request id; the second run must update, not add)
+  const vp01RecordAfter = results.find((x) => x.id === "VP-01")!.record;
+  // Verify the record is updated (key unchanged, timestamp updated) not duplicated
+  expect(vp01RecordBefore.key, "duplicate record created for re-run").toBe(vp01RecordAfter.key);
+  expect(vp01RecordBefore.next_follow_up_at, "record timestamp not updated").not.toBe(vp01RecordAfter.next_follow_up_at);
 
   // FC-3 changed answer → reviewable new plan version, then VP-03 quotes the new price.
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
@@ -156,8 +161,13 @@ test("Flowline field run — frozen packet", async ({ page }) => {
   fc3.vp03NoOldPrice = !String((v3.output.reply_draft as Json)?.body ?? "").includes("900 EGP");
 
   const metrics = await req.get(`${base}/sessions/${sid}/experiment`);
+  // Verify packet digest matches the actual packet data
+  const sha256FromChecksums = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split(" ")[0];
+  const crypto = await import("node:crypto");
+  const sha256FromPacket = crypto.createHash("sha256").update(JSON.stringify(packet)).digest("hex");
+  expect(sha256FromChecksums, "packet digest mismatch").toBe(sha256FromPacket);
   const summary = {
-    packetSha256: readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split(" ")[0],
+    packetSha256: sha256FromChecksums,
     runAt: new Date().toISOString(),
     mode: "DETERMINISTIC_TEST, sample-data trials through the real worker; agent-driven (times are machine times, NOT human setup time)",
     questionsAsked: asked,
