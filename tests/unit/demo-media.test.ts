@@ -142,6 +142,6 @@ describe("delivery and copy", () => {
     const flat = (o: unknown, p = ""): string[] => (typeof o === "string" ? [p] : Object.entries(o as object).flatMap(([k, v]) => flat(v, p ? `${p}.${k}` : k)));
     const a = flat((ar as { landing: { demo: unknown } }).landing.demo).sort();
     expect(a).toEqual(flat((en as { landing: { demo: unknown } }).landing.demo).sort());
-    expect(a).toHaveLength(23);
+    expect(a).toHaveLength(25);
   });
 });

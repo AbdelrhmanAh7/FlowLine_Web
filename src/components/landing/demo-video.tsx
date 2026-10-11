@@ -20,7 +20,10 @@ const storePause = (on: boolean) => { try { if (on) sessionStorage.setItem(PAUSE
 export async function attachSource(v: HTMLVideoElement, sources: VideoSource[], force: boolean): Promise<boolean> {
   if (v.getAttribute("src")) return true;
   const mc = navigator.mediaCapabilities;
-  const picked = (await chooseSource(sources, { decodingInfo: mc?.decodingInfo ? (c) => mc.decodingInfo(c) : undefined, canPlayType: v.canPlayType.bind(v) })) ?? (force ? (sources.find((s) => s.codec === "h264") ?? sources[0]) : undefined);
+  const caps = { decodingInfo: mc?.decodingInfo ? (c: Parameters<NonNullable<typeof mc.decodingInfo>>[0]) => mc.decodingInfo(c) : undefined, canPlayType: v.canPlayType.bind(v) };
+  // A visitor's tap may fall back to the H.264 file, but only when the browser says it can play it; otherwise poster + Play stay.
+  const forced = force ? sources.find((s) => s.codec === "h264" && v.canPlayType(s.type) !== "") : undefined;
+  const picked = (await chooseSource(sources, caps)) ?? forced;
   if (!picked) return false;
   if (!v.getAttribute("src")) v.src = picked.src;
   return true;

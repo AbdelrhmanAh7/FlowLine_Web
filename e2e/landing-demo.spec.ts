@@ -73,6 +73,12 @@ async function open(browser: Browser, o: Opts = {}) {
   return { context, page, requests, errors, videos: (re: RegExp) => requests.filter((r) => re.test(r.url) && r.url.endsWith(".mp4")) };
 }
 
+/** Load has fired and the browser has rendered twice: observers (IntersectionObserver, matchMedia) have been delivered, so "nothing was requested" is a settled fact, not a guess. */
+const settled = (page: Page) => page.evaluate(() => new Promise<void>((done) => {
+  const frames = () => requestAnimationFrame(() => requestAnimationFrame(() => done()));
+  if (document.readyState === "complete") frames(); else window.addEventListener("load", frames, { once: true });
+}));
+
 const hero = (page: Page) => page.locator(".hero-scrub video[data-demo-clip='hero']");
 const paused = (loc: ReturnType<Page["locator"]>) => loc.evaluate((v: HTMLVideoElement) => v.paused);
 
@@ -111,10 +117,10 @@ test.describe("with a manifest", () => {
   test("reduced motion: no video request, poster and a visible Play demo button; pressing it plays once without loop", async ({ browser }) => {
     const { context, page, requests, videos } = await open(browser, { motion: false });
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(600);
-    expect(videos(/./)).toEqual([]);
     const play = page.locator(".hero-scrub").getByRole("button", { name: "Play demo" });
-    await expect(play).toBeVisible();
+    await expect(play).toBeVisible(); // JS has decided to skip the video
+    await settled(page);
+    expect(videos(/./)).toEqual([]);
     expect(await paused(hero(page))).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
     await play.click();
@@ -129,9 +135,9 @@ test.describe("with a manifest", () => {
     test(`${name}: no video request and a Play demo button`, async ({ browser }) => {
       const { context, page, videos } = await open(browser, { connection });
       await page.evaluate(() => document.getElementById("demo")?.scrollIntoView());
-      await page.waitForTimeout(600);
+      await expect(page.locator(".hero-scrub").getByRole("button", { name: "Play demo" })).toBeVisible(); // JS has decided to skip the video
+      await settled(page);
       expect(videos(/./)).toEqual([]);
-      await expect(page.locator(".hero-scrub").getByRole("button", { name: "Play demo" })).toBeVisible();
       await context.close();
     });
   }
@@ -159,9 +165,10 @@ test.describe("with a manifest", () => {
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     await expect(toggle).toHaveText("Play demo");
     await page.reload();
-    await page.waitForTimeout(800);
-    expect(await paused(hero(page))).toBe(true); // the visitor's pause is kept for the session
     await expect(page.locator(".hero-scrub [data-demo-toggle]")).toHaveAttribute("aria-pressed", "true");
+    await settled(page);
+    expect(await page.evaluate(() => (window as unknown as { __plays: number }).__plays)).toBe(0); // the visitor's pause is kept for the session
+    expect(await paused(hero(page))).toBe(true);
     await page.locator(".hero-scrub [data-demo-toggle]").press("Space");
     await expect.poll(() => paused(hero(page))).toBe(false);
     await context.close();
@@ -208,6 +215,17 @@ test.describe("with a manifest", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(watch).toBeFocused();
+    await context.close();
+  });
+
+  test("walkthrough: turning reduced motion on while it plays pauses the video and shows the chapter stills", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    await page.getByTestId("demo-watch").click();
+    const dialog = page.getByTestId("demo-walkthrough");
+    await expect.poll(() => paused(dialog.locator("video"))).toBe(false);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect.poll(() => paused(dialog.locator("video"))).toBe(true);
+    await expect(dialog.getByTestId("demo-chapter-still")).toBeVisible();
     await context.close();
   });
 

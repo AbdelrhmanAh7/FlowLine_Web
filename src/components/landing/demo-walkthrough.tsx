@@ -32,7 +32,10 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
 
   useEffect(() => {
     const mq = window.matchMedia(REDUCED_MOTION);
-    const sync = () => setReduced(mq.matches);
+    const sync = () => {
+      setReduced(mq.matches);
+      if (mq.matches) video.current?.pause(); // reduce switched on while it plays: stop at once
+    };
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
@@ -46,6 +49,7 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
     const v = video.current;
     if (!d || d.open) return;
     d.showModal();
+    setNoVideo(false); // a stale error from an earlier open must not make the stills permanent
     if (!v) return;
     // Choosing the file does not download it (preload="none"); bytes flow only when the visitor, or autoplay below, starts playback.
     if (!(await attachSource(v, view.sources, true))) { setNoVideo(true); return; }
@@ -121,7 +125,7 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
           >
             {fallback && <source src={fallback.src} type={fallback.type} />}
             {order.map((lang) => view.captions[lang] && (
-              <track key={lang} kind="captions" srcLang={lang} label={lang === "ar" ? "العربية" : "English"} src={view.captions[lang]} default={lang === locale} />
+              <track key={lang} kind="captions" srcLang={lang} label={t(`landing.demo.captionLang.${lang}`)} src={view.captions[lang]} default={lang === locale} />
             ))}
           </video>
           {(reduced || noVideo) && chapter?.still && (

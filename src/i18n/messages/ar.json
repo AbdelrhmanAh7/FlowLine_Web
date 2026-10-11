@@ -277,6 +277,10 @@
       "back": "السابق",
       "heroAria": "تسجيل من داخل Flowline: مسار عمل يعمل خطوة بخطوة",
       "walkthroughAria": "العرض الكامل لـ Flowline في أقل من دقيقة",
+      "captionLang": {
+        "ar": "العربية",
+        "en": "English"
+      },
       "ch": {
         "templates": "ابدأ من قالب",
         "shape": "عدّل الخطوات",

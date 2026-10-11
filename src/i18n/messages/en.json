@@ -277,6 +277,10 @@
       "back": "Back",
       "heroAria": "Recording from inside Flowline: a flow running step by step",
       "walkthroughAria": "The full Flowline walkthrough in under a minute",
+      "captionLang": {
+        "ar": "العربية",
+        "en": "English"
+      },
       "ch": {
         "templates": "Start from a template",
         "shape": "Shape the steps",
