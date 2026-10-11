@@ -131,7 +131,7 @@ async function ownerCount(tx: Tx, workspaceId: string) {
 /**
  * Serializes membership changes per workspace (two owners must not demote each other at once; the last-owner check
  * reads the owner count under this lock). The mode is FOR NO KEY UPDATE and must stay that way: it conflicts with
- * itself and with FOR UPDATE, so membership changes still queue one behind the other, but NOT with FOR KEY SHARE, the
+ * itself, FOR UPDATE and FOR SHARE, so membership changes still queue one behind the other, but NOT with FOR KEY SHARE, the
  * lock every insert of an `audit_event` row (foreign key to `workspace`) takes on the workspace row. The SSO
  * transactions hold a `workspace_member` row (FOR SHARE or FOR UPDATE) and then insert an audit row; a FOR UPDATE
  * workspace lock here made this transaction wait for their member row while they waited for the workspace row, a
