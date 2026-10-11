@@ -81,6 +81,9 @@ export function resetHub() {
   hub.publicListing = new Set();
 }
 
+// CodeQL `js/insufficient-password-hash` (alert #10): false positive (fake token, test-only code). A fingerprint of the fake "sk-fake-…" key a request
+// carried, so tests can assert which key was sent without the log holding it; nothing is stored or verified as a
+// password. Tests compare it with their own SHA-256. See docs/security/codeql-triage-hashing.md.
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
 /** Models per native provider (OpenAI-compatible providers share the OpenAI double's list). */
