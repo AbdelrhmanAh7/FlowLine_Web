@@ -8,13 +8,12 @@ item in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
 - Placeholders only: `<beta-host>`, `<deploy-dir>`, `<repo-checkout>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
   `<alert-channel>`, `<owner>`. No credentials, hostnames or secrets belong in this file, in commands or in evidence.
 - NileQuant stays PAPER only. This runbook has no broker, order or trading steps and does not apply to NileQuant.
-- Billing stays sandbox-only; nothing here activates payments.
+  Billing stays sandbox-only; nothing here activates payments.
 - It builds on the beta stack in [docker-compose.beta.yml](../../deploy/beta/docker-compose.beta.yml) and the
   [private beta runbook](../implementation/PRIVATE_BETA_RUNBOOK.md) (§4 monitoring, §5 backups, §6 rollback).
 
-Commands are meant to be pasted into a POSIX shell on `<beta-host>`, so they use shell variables, never `<...>`
-(the shell reads that as input redirection). `<...>` appears only in prose and in the quoted values below, which the
-owner replaces once per session before anything else:
+Commands use shell variables, never `<...>` (a POSIX shell reads that as input redirection). `<...>` appears only in
+prose and in the quoted values below, which the owner replaces once per session on `<beta-host>` before anything else:
 
 ```sh
 DEPLOY_DIR="<deploy-dir>"; BASE_URL="https://<beta-host>"
@@ -25,13 +24,11 @@ dc() { docker compose -f docker-compose.beta.yml --env-file .env.beta "$@"; }
 UTC=$(date -u +%Y%m%dT%H%M%SZ)   # names the safety dump; run again for a new one
 ```
 
-How the paid-pilot owner items (issue #30) relate to this runbook (decisions are in §4):
-
-- PP-06 (approved deployment with restore, rollback and alerts): this whole runbook.
-- PP-02 (owner sign-in and admin MFA): the auth-failures alert and decision 3. PP-03, PP-04 (integrations, AI): the
-  AI and integration step alerts. PP-05 (sandbox billing): the billing-webhook alert.
-- PP-07 (policies and acceptance): decision 10. PP-08 (protected test configuration): decision 3.
-- PP-09 (CI billing): not affected; this runbook adds no CI runs.
+How the paid-pilot owner items (issue #30) relate to this runbook (decisions are in §4): PP-06 (approved deployment
+with restore, rollback and alerts) is this whole runbook. PP-02 (owner sign-in and admin MFA): the auth-failures alert
+and decision 3. PP-03, PP-04 (integrations, AI): the AI and integration step alerts. PP-05 (sandbox billing): the
+billing-webhook alert. PP-07 (policies and acceptance): decision 10. PP-08 (protected test configuration): decision 3.
+PP-09 (CI billing): not affected; this runbook adds no CI runs.
 
 ## 1. Backup and restore
 
@@ -57,13 +54,11 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
    `DUMP_FILE` to its bare file name (no `backups/`), e.g. `DUMP_FILE="flowline-20260101T020000Z.dump"`. Record
    its timestamp: data written after it will be lost. The dump's real snapshot point is when `pg_dump` starts, slightly
    after the `<utc>` in the filename.
-3. Record the running release: `dc images web` and `curl -fsS "$BASE_URL/api/health"` (revision and
-   `schemaVersion`).
+3. Record the running release (revision and `schemaVersion`): `dc images web` and `curl -fsS "$BASE_URL/api/health"`.
 4. Take a safety dump of the current state, even if damaged:
    `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-restore-$UTC.dump"`.
 5. Post a maintenance notice in `<alert-channel>` and acknowledge the alerts the next steps will trigger.
-6. Stop the writers and the nightly backup (it would dump the empty database as `LAST_OK`):
-   `dc stop web worker backup`. Leave `db` running.
+6. Stop the writers and the backup (it would mark an empty database `LAST_OK`), not `db`: `dc stop web worker backup`.
 7. Check both dumps are readable, since step 8 drops the only live copy:
    `dc exec -T db pg_restore --list < "backups/$DUMP_FILE" > /dev/null` and
    `dc exec -T db pg_restore --list < "backups/pre-restore-$UTC.dump" > /dev/null`. If the first fails, pick the
@@ -73,17 +68,14 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
    then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < "backups/$DUMP_FILE"`.
    On any error, stop: do not start `web` or `worker`, repeat this step with `"backups/pre-restore-$UTC.dump"`
    in place of `"backups/$DUMP_FILE"` (drop, create, restore), and escalate to `<owner>`.
-9. Confirm `.env.beta` holds the same encryption keys and auth secret as when the dump was taken (compare with
-   `<key-store>`; never print the values).
+9. Confirm `.env.beta` holds the keys and auth secret in use at dump time (compare with `<key-store>`; never print them).
 10. Start the app with the same image: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`. The `migrate`
     service re-applies any expand-only migrations newer than the dump.
-11. Run the verification queries below with `dc exec -T db psql -U flowline -d flowline`, and compare the counts with
-    the last known figures.
+11. Run the verification queries below (`dc exec -T db psql -U flowline -d flowline`) and compare with known counts.
 12. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
 13. Run the smoke suite from the operator machine with the pre-verified smoke accounts (`SMOKE_A_*` / `SMOKE_B_*`
     set privately): `node scripts/release/smoke.mjs --base "$BASE_URL"`.
-14. Sign in as `<owner>`, open one workspace, open one flow and its run history, and press **Test** on one
-    connection (proves the keys decrypt stored credentials).
+14. Sign in as `<owner>`, open a workspace, a flow and its run history, and press **Test** on one connection (keys decrypt).
 15. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
     secrets or customer data) under `artifacts/phase-4/restore/`.
 
@@ -93,14 +85,10 @@ Verification queries (read-only):
 -- Schema version: must equal schemaVersion from /api/health.
 select count(*) as migrations from drizzle.__drizzle_migrations;
 -- Core row counts: none may be zero unless it was zero before.
-select 'user' as t, count(*) from "user"
-union all select 'workspace', count(*) from workspace
-union all select 'workspace_member', count(*) from workspace_member
-union all select 'flow', count(*) from flow
-union all select 'flow_version', count(*) from flow_version
-union all select 'run', count(*) from run
-union all select 'connection', count(*) from connection
-union all select 'api_key', count(*) from api_key
+select 'user' as t, count(*) from "user" union all select 'workspace', count(*) from workspace
+union all select 'workspace_member', count(*) from workspace_member union all select 'flow', count(*) from flow
+union all select 'flow_version', count(*) from flow_version union all select 'run', count(*) from run
+union all select 'connection', count(*) from connection union all select 'api_key', count(*) from api_key
 union all select 'platform_admin', count(*) from platform_admin;
 -- Newest run: must be close to the dump time (allow a few minutes after the filename timestamp);
 -- a much later value means the wrong dump was restored.
@@ -113,9 +101,9 @@ select count(*) as orphan_members from workspace_member m
   where u.id is null or w.id is null;
 ```
 
-The automated drill [backup-restore.mjs](../../scripts/release/backup-restore.mjs) proves the same restore on the local
-staging stack (row and id digests, sign-in, decryption, wrong-key refusal). Re-run it on the approved target before
-calling the pilot infrastructure verified.
+The drill [backup-restore.mjs](../../scripts/release/backup-restore.mjs) proves the same restore on the local staging
+stack (row and id digests, sign-in, decryption, wrong-key refusal); re-run it on the approved target before calling the
+pilot infrastructure verified.
 
 ## 2. Rollback
 
@@ -138,11 +126,11 @@ Steps:
    image is on the host: `docker image inspect "flowline:$PREV_SHA" --format '{{.Id}}'`.
 3. Check the migrations between the two releases are expand-only:
    `git -C "$REPO_DIR" diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/` (`-C` anchors the path at the repo root, so
-   an empty result really means no new migrations), then read each new `.sql` file for `drop`, `rename` or type changes. If any is destructive, stop: choose roll forward or restore with the owner.
+   an empty result really means no new migrations), then read each new `.sql` file for `drop`, `rename` or type
+   changes. If any is destructive, stop: choose roll forward or restore with the owner.
 4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-rollback-$UTC.dump"`.
 5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`.
-6. Check `"$BASE_URL/api/health"`: revision is `<previous-sha>`, `schemaVersion` is unchanged (it never
-   goes down), `"db":"ok"` and `"worker":"ok"`.
+6. Check `"$BASE_URL/api/health"`: revision `<previous-sha>`, same `schemaVersion` (never lower), `"db":"ok"`, `"worker":"ok"`.
 7. Run the smoke suite: `node scripts/release/smoke.mjs --base "$BASE_URL"` (smoke accounts as in §1 step 13).
 8. Watch the monitor in `<alert-channel>` for 30 minutes; every alert from step 1 must show RECOVERED.
 9. Record the rollback (both SHAs, times, checks) under `artifacts/phase-4/rollback/`, and open an issue for the
