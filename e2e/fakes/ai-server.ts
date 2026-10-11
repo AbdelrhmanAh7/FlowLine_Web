@@ -422,7 +422,7 @@ function handleOpenAi(req: IncomingMessage, res: ServerResponse, url: URL, rawBo
   }
   // "slow": answer normally, but only after delayMs (lets tests change a connection while a call is in flight).
   if (fault?.mode === "slow") {
-    // CodeQL js/resource-exhaustion: the timer duration comes from a fixed step table (see slowDelayMs), never from the request value itself.
+    // CodeQL js/resource-exhaustion: the timer duration is the requested delayMs clamped to [0, 10 s] (see slowDelayMs), so it is always bounded.
     const delayMs = slowDelayMs(fault.delayMs);
     setTimeout(() => handleOpenAi(req, res, url, rawBody, port, true), delayMs);
     return true;
