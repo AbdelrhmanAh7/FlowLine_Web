@@ -68,7 +68,7 @@ current owner credentials, live account state and remote CI are unverified in th
 
 ## Requirements
 
-- Node.js 22.x (`engines` in `package.json`; CI and the release image use Node 22 LTS) and pnpm **10.32.1**
+- Node.js 24.x (`engines` in `package.json`; CI and the release image use Node 24 LTS) and pnpm **10.32.1**
   (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
 - Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
@@ -186,7 +186,7 @@ scripts/           Test stack, release (rollback, backup/restore, DB outage), lo
 tools/demo-video/  Isolated Remotion compositor for the demo media (own lockfile, not a workspace member)
 public/media/demo/ Generated landing demo videos, posters, captions and manifest.json
 docs/              Implementation plans, test plan, AI hub report/providers/routing/migration, security design, releases
-artifacts/         Evidence per phase (test output, screenshots, reviews, release checks)
+artifacts/         Evidence per phase as Markdown reports (raw output is not committed; older raw evidence: tag archive/pre-slimdown-2026-10-10)
 design-reference/  Design slide renders and extracted tokens
 ```
 
