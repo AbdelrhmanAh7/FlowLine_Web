@@ -1,8 +1,0 @@
-[batch A 20:14:30] checkpoint2=741f379 tree=3d12433 build=Nzpo9ICHJUYXqfrEtXerH headless(default) env: E2E_SCREENSHOT_DIR=artifacts/design-v2/gate/rerun-20260929-2012/screenshots PLAYWRIGHT_JSON_OUTPUT_NAME=artifacts/design-v2/gate/rerun-20260929-2012/results-A.json
-npx playwright test --project=chromium --workers=1 --reporter=list,json --output=artifacts/design-v2/gate/rerun-20260929-2012/test-results-A e2e/phase2.spec.ts:200 e2e/phase3.spec.ts:222 e2e/phase3.spec.ts:244 e2e/phase3.spec.ts:258 e2e/phase3.spec.ts:274 e2e/phase3.spec.ts:286 e2e/phase3.spec.ts:346
-[batch B 20:16:25] checkpoint3=7f98337 tree=cf57219 build=Nzpo9ICHJUYXqfrEtXerH
-npx playwright test --project=chromium --workers=1 --reporter=list,json --output=artifacts/design-v2/gate/rerun-20260929-2012/test-results-B e2e/prehydration.spec.ts:7 e2e/prehydration.spec.ts:20 e2e/reduced-motion.spec.ts:9 e2e/run-states.spec.ts:13 e2e/tenancy.spec.ts:5 e2e/tenancy.spec.ts:46 e2e/tenancy.spec.ts:52 e2e/theme.spec.ts:6 e2e/theme.spec.ts:23 e2e/theme.spec.ts:33 e2e/theme.spec.ts:44
-[batch C 20:17:05] checkpoint3=7f98337 tree=cf57219 build=Nzpo9ICHJUYXqfrEtXerH
-npx playwright test --project=chromium --workers=1 --reporter=list,json --output=artifacts/design-v2/gate/rerun-20260929-2012/test-results-C e2e/responsive.spec.ts:44 e2e/responsive.spec.ts:60 e2e/responsive.spec.ts:93 e2e/responsive.spec.ts:125 e2e/responsive.spec.ts:231
-[batch A retest (DV2-01) 20:18:13] checkpoint3=7f98337 tree=cf57219 build=Nzpo9ICHJUYXqfrEtXerH
-npx playwright test --project=chromium --workers=1 --reporter=list,json --output=artifacts/design-v2/gate/rerun-20260929-2012/test-results-A-retest e2e/phase2.spec.ts:200

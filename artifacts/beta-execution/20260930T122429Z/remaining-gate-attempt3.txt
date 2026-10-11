@@ -1,2 +1,0 @@
-2026-09-30T12:39:53.681Z test:integration exit=0
-2026-09-30T12:39:54.254Z check:evidence exit=0
