@@ -109,8 +109,22 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     // The nightly backup container would otherwise dump the empty or half-restored database and mark it LAST_OK.
     expect(stop).toMatch(/dc stop web worker backup/);
     const check = restore.slice(restore.indexOf("7. Check"), restore.indexOf("8. Restore"));
-    expect(check).toMatch(/pg_restore --list < backups\/<dump-file>/);
-    expect(check).toMatch(/pg_restore --list < backups\/pre-restore-<utc>\.dump/);
+    expect(check).toMatch(/pg_restore --list < "backups\/\$DUMP_FILE"/);
+    expect(check).toMatch(/pg_restore --list < "backups\/pre-restore-\$UTC\.dump"/);
+  });
+
+  it("@issue-68 AC1: commands are copy-pasteable shell, with variables defined once and no <placeholder> in a command", () => {
+    // `<name>` in a POSIX shell is input redirection, so a pasted command with one fails or does the wrong thing.
+    const commandSpans = [...runbook.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]).filter((c) => /^(dc|docker|git|node|curl|FLOWLINE_IMAGE=)\b/.test(c));
+    expect(commandSpans.length).toBeGreaterThan(10);
+    for (const command of commandSpans) expect(command, `command ${command}`).not.toMatch(/<[A-Za-z][\w-]*>/);
+    const setup = runbook.match(/```sh\n([\s\S]+?)```/)?.[1] ?? "";
+    for (const name of ["DEPLOY_DIR", "BASE_URL", "PREV_SHA", "CURRENT_SHA", "UTC"]) expect(setup, `${name} is defined`).toMatch(new RegExp(`\\b${name}=`));
+    expect(setup).toMatch(/^dc\(\) \{/m);
+    // DUMP_FILE is a bare file name, so "backups/$DUMP_FILE" never doubles the directory.
+    const pick = section(/Backup and restore/i).match(/\n2\. Pick the dump:[\s\S]*?\n3\. /)?.[0] ?? "";
+    expect(pick).toMatch(/DUMP_FILE="flowline-[0-9TZ]+\.dump"/);
+    expect(runbook).not.toMatch(/backups\/backups/);
   });
 
   it("@issue-68 AC4: the mandatory docs check passes for this change", () => {

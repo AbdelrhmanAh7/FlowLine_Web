@@ -5,15 +5,24 @@ and alerts" owner item (PP-06 of the paid-pilot PP-02..PP-09 list, tracked in is
 performs every real step; agents run none of it against a real environment. Nothing here changes the state of any
 item in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
 
-- Placeholders only: `<beta-host>`, `<deploy-dir>`, `<dump-file>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
+- Placeholders only: `<beta-host>`, `<deploy-dir>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
   `<alert-channel>`, `<owner>`. No credentials, hostnames or secrets belong in this file, in commands or in evidence.
 - NileQuant stays PAPER only. This runbook has no broker, order or trading steps and does not apply to NileQuant.
 - Billing stays sandbox-only; nothing here activates payments.
 - It builds on the beta stack in [docker-compose.beta.yml](../../deploy/beta/docker-compose.beta.yml) and the
   [private beta runbook](../implementation/PRIVATE_BETA_RUNBOOK.md) (§4 monitoring, §5 backups, §6 rollback).
 
-In the commands, `dc` stands for `docker compose -f docker-compose.beta.yml --env-file .env.beta`, run on
-`<beta-host>` from `<deploy-dir>`. `<utc>` is the current UTC time as `YYYYMMDDTHHMMSSZ`.
+Commands are meant to be pasted into a POSIX shell on `<beta-host>`, so they use shell variables, never `<...>`
+(the shell reads that as input redirection). `<...>` appears only in prose and in the quoted values below, which the
+owner replaces once per session before anything else:
+
+```sh
+DEPLOY_DIR="<deploy-dir>"; BASE_URL="https://<beta-host>"
+PREV_SHA="<previous-sha>"; CURRENT_SHA="<current-sha>"   # rollback and restore only
+cd "$DEPLOY_DIR"
+dc() { docker compose -f docker-compose.beta.yml --env-file .env.beta "$@"; }
+UTC=$(date -u +%Y%m%dT%H%M%SZ)   # names the safety dump; run again for a new one
+```
 
 How the paid-pilot owner items (issue #30) relate to this runbook (decisions are in §4):
 
@@ -43,34 +52,35 @@ How the paid-pilot owner items (issue #30) relate to this runbook (decisions are
 Use these when data is lost or corrupted. Practise them first on an isolated copy, never on the pilot itself.
 
 1. Get owner approval for the restore and note the incident start time and the reason in the incident record.
-2. Pick `<dump-file>`: the newest `backups/flowline-<utc>.dump` taken before the damage (`ls -l backups/`). Record
+2. Pick the dump: the newest `flowline-<utc>.dump` taken before the damage (`ls -l backups/`), then set
+   `DUMP_FILE` to its bare file name (no `backups/`), e.g. `DUMP_FILE="flowline-20260101T020000Z.dump"`. Record
    its timestamp: data written after it will be lost. The dump's real snapshot point is when `pg_dump` starts, slightly
    after the `<utc>` in the filename.
-3. Record the running release: `dc images web` and `curl -fsS https://<beta-host>/api/health` (revision and
+3. Record the running release: `dc images web` and `curl -fsS "$BASE_URL/api/health"` (revision and
    `schemaVersion`).
 4. Take a safety dump of the current state, even if damaged:
-   `dc exec -T db pg_dump -U flowline -Fc flowline > backups/pre-restore-<utc>.dump`.
+   `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-restore-$UTC.dump"`.
 5. Post a maintenance notice in `<alert-channel>` and acknowledge the alerts the next steps will trigger.
 6. Stop the writers and the nightly backup (it would dump the empty database as `LAST_OK`):
    `dc stop web worker backup`. Leave `db` running.
 7. Check both dumps are readable, since step 8 drops the only live copy:
-   `dc exec -T db pg_restore --list < backups/<dump-file> > /dev/null` and
-   `dc exec -T db pg_restore --list < backups/pre-restore-<utc>.dump > /dev/null`. If the first fails, pick the
+   `dc exec -T db pg_restore --list < "backups/$DUMP_FILE" > /dev/null` and
+   `dc exec -T db pg_restore --list < "backups/pre-restore-$UTC.dump" > /dev/null`. If the first fails, pick the
    previous dump; if the second fails, repeat step 4 and do not continue without a readable safety dump.
 8. Restore into a fresh, empty database, so no object absent from the dump survives (restoring over the old one would leave it):
    `dc exec -T db dropdb -U flowline --force --if-exists flowline`, then `dc exec -T db createdb -U flowline flowline`,
-   then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < backups/<dump-file>`.
-   On any error, stop: do not start `web` or `worker`, repeat this step with `backups/pre-restore-<utc>.dump`
-   (drop, create, restore), and escalate to `<owner>`.
+   then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < "backups/$DUMP_FILE"`.
+   On any error, stop: do not start `web` or `worker`, repeat this step with `"backups/pre-restore-$UTC.dump"`
+   in place of `"backups/$DUMP_FILE"` (drop, create, restore), and escalate to `<owner>`.
 9. Confirm `.env.beta` holds the same encryption keys and auth secret as when the dump was taken (compare with
    `<key-store>`; never print the values).
-10. Start the app with the same image: `FLOWLINE_IMAGE=flowline:<current-sha> dc up -d --wait`. The `migrate`
+10. Start the app with the same image: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`. The `migrate`
     service re-applies any expand-only migrations newer than the dump.
 11. Run the verification queries below with `dc exec -T db psql -U flowline -d flowline`, and compare the counts with
     the last known figures.
-12. Check `https://<beta-host>/api/health` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
+12. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
 13. Run the smoke suite from the operator machine with the pre-verified smoke accounts (`SMOKE_A_*` / `SMOKE_B_*`
-    set privately): `node scripts/release/smoke.mjs --base https://<beta-host>`.
+    set privately): `node scripts/release/smoke.mjs --base "$BASE_URL"`.
 14. Sign in as `<owner>`, open one workspace, open one flow and its run history, and press **Test** on one
     connection (proves the keys decrypt stored credentials).
 15. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
@@ -124,15 +134,15 @@ Steps:
 
 1. Note the alert, the time and `<current-sha>` in the incident record; post in `<alert-channel>`.
 2. Find `<previous-sha>`, the last release recorded as healthy under `artifacts/phase-4/release/`, and check its
-   image is on the host: `docker image inspect flowline:<previous-sha> --format '{{.Id}}'`.
+   image is on the host: `docker image inspect "flowline:$PREV_SHA" --format '{{.Id}}'`.
 3. Check the migrations between the two releases are expand-only:
-   `git diff --stat <previous-sha> <current-sha> -- drizzle/`, then read each new `.sql` file for `drop`, `rename`
+   `git diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/`, then read each new `.sql` file for `drop`, `rename`
    or type changes. If any is destructive, stop: choose roll forward or restore with the owner.
-4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > backups/pre-rollback-<utc>.dump`.
-5. Deploy the previous image: `FLOWLINE_IMAGE=flowline:<previous-sha> dc up -d --wait`.
-6. Check `https://<beta-host>/api/health`: revision is `<previous-sha>`, `schemaVersion` is unchanged (it never
+4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-rollback-$UTC.dump"`.
+5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`.
+6. Check `"$BASE_URL/api/health"`: revision is `<previous-sha>`, `schemaVersion` is unchanged (it never
    goes down), `"db":"ok"` and `"worker":"ok"`.
-7. Run the smoke suite: `node scripts/release/smoke.mjs --base https://<beta-host>` (smoke accounts as in §1 step 13).
+7. Run the smoke suite: `node scripts/release/smoke.mjs --base "$BASE_URL"` (smoke accounts as in §1 step 13).
 8. Watch the monitor in `<alert-channel>` for 30 minutes; every alert from step 1 must show RECOVERED.
 9. Record the rollback (both SHAs, times, checks) under `artifacts/phase-4/rollback/`, and open an issue for the
    fix. The fix ships later as a normal release, never by editing the running stack.
