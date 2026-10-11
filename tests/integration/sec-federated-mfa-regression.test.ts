@@ -181,6 +181,39 @@ describe("@issue-66 federated MFA enforcement (H3 regression)", () => {
     expect(cookieFrom(replayed, await sessionCookieName())).toBe("");
     expect(await sessionRows(user.id)).toHaveLength(1);
   });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: an MFA-enrolled member with no linked federated identity gets no session from the SSO callback", async () => {
+    const { ws } = await configuredTenant();
+    const user = await makeVerifiedUser("i66-ws-nolink");
+    await enrolTotp(user.id);
+    await addMember(ws.id, user.id, "viewer");
+    const attempt = await oidcAttempt(ws.slug, user.email);
+    const res = await ssoCallback(new Request(`${ORIGIN}/api/sso/callback?state=${attempt.state}&code=${attempt.code}`, { headers: { cookie: `fl_sso_state=${attempt.state}` } }));
+    // No linked identity and no signed-in initiator: the callback refuses the takeover; it neither starts the MFA step nor signs in.
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/sign-in?sso_error=auth.ssoAccountExists`);
+    expect(cookieFrom(res, FEDERATED_MFA_COOKIE)).toBe("");
+    await expectNoUsableSession(res, user.id);
+    expect(await signInAudits(ws.id, user.id)).toHaveLength(0);
+  });
+
+  it("@e2e @flow:federated-mfa @issue-66 AC3: the MFA step refuses a missing, malformed or unknown pending token", async () => {
+    const { user } = await workspaceMember("i66-ws-badtoken", true);
+    // Without the pending cookie there is no CSRF binding either, so the POST is refused before the token is looked at (403);
+    // the challenge lookup itself answers 401.
+    const noCookie = await challengePOST(new Request(`${ORIGIN}/api/federation/step-up`, { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ code: "123456" }) }), undefined);
+    expect(noCookie.status).toBe(403);
+    expect((await noCookie.json()).error.code).toBe("CSRF_TOKEN_INVALID");
+    await expectNoUsableSession(noCookie, user.id);
+    const noCookieLookup = await challengeGET(new Request(`${ORIGIN}/api/federation/step-up`), undefined);
+    expect(noCookieLookup.status).toBe(401);
+    for (const token of ["garbage", "A".repeat(43)]) {
+      const res = await submitCode(token, "123456");
+      expect(res.status).toBe(401);
+      expect((await res.json()).error.code).toBe("FEDERATED_MFA_INVALID");
+      await expectNoUsableSession(res, user.id);
+    }
+  });
 });
 
 const workspaceFailures = (workspaceId: string, userId: string) => db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, workspaceId), eq(schema.auditEvent.action, "sso.mfa_failed"), eq(schema.auditEvent.targetId, userId)));

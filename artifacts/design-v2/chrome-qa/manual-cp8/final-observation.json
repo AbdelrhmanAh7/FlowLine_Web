@@ -1,9 +1,0 @@
-{
-  "at": "2026-09-30T07:50:04.305Z",
-  "head": "fb563e517263800062adf5d5a31af672ebcc4da3",
-  "checkpoint": "a4eeabd35da560fd34d679fe3d6e9e349c43806b",
-  "tree": "be6dc87eec7effac79471e41fea67628e1ee95d0",
-  "build": null,
-  "buildReadError": "ENOENT: .next-test/BUILD_ID missing at final handoff verification",
-  "qaChromeClosed": true
-}
