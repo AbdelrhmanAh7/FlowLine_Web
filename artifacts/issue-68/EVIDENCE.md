@@ -1,8 +1,12 @@
 # Evidence — issue #68 (restore, rollback and alerting runbook draft)
 
-Tested commit: the PR head after the fresh-database fix (`git log -1 -- docs/runbooks/restore-rollback-alerts.md`; earlier `dc5866c`) (branch `ai/68`, on `origin/main`; runbook now 180 lines). Docs only; nothing was run
-against a real environment. Test: `tests/unit/restore-rollback-alerts-runbook.test.ts` (`@issue-68`), 7/7 passed with
-`vitest run --project unit` on that commit; it failed 6/6 on `ebc9937` before the runbook existed.
+Tested commit: `46487fd` (branch `ai/68`; the runbook and the test are unchanged by the later evidence-only commit). Runbook: 194 lines.
+Docs only; nothing was run against a real environment. Test: `tests/unit/restore-rollback-alerts-runbook.test.ts`
+(`@issue-68`), 9/9 passed with `vitest run --project unit` on `46487fd`; it failed before the runbook existed.
+`git diff --shortstat origin/main...46487fd`: 6 files, +370/-1 (runbook 194 + test 143 + this file + OWNER_ACTIONS link + docs ledger). This is
+above the ~300 target because of the test and the evidence; the runbook itself stays within its 200-line budget (AC5).
+Copy-paste fix (round 2): every command uses shell variables (`$DUMP_FILE`, `$UTC`, `$PREV_SHA`, `$CURRENT_SHA`, `$BASE_URL`),
+`DUMP_FILE` is a bare file name, and the AC1 test "commands are copy-pasteable shell" fails on any `<placeholder>` inside a command.
 
 Review fixes (CodeRabbit T1/T2/T3): T1 restore step 8 uses `--single-transaction --exit-on-error` and says to stop, keep
 `web`/`worker` down, restore the pre-restore dump and escalate on any error; T2 the newest-run check is now "close to the
