@@ -22,9 +22,9 @@ dump time" because `pg_dump` snapshots after the filename timestamp; T4 (round 2
 | REQ-FL-68-6 no secrets/hosts/identifiers/LIVE content | AC2 test (key, token, webhook, DB-password, IP, URL, domain, e-mail, LIVE patterns) |
 | REQ-FL-68-7 NileQuant PAPER only | AC2 test |
 | REQ-FL-68-8 OWNER_ACTIONS.md link, no state change | AC3 tests (link line names PP-06 and #30; O04/O08 rows unchanged; all runbook links resolve) |
-| REQ-FL-68-9 one PR, about 300 lines | AC5 test (runbook ≤ 200 lines); `git diff --shortstat origin/main...HEAD` at `dc5866c`: 6 files, +312/−1 (about 300, including this file) |
+| REQ-FL-68-9 one PR, about 300 lines | AC5 test (runbook ≤ 200 lines); shortstat above (+382/-1, 6 files): over the ~300 target because of the test and this file; the runbook itself is 195 lines |
 
-Also run on that commit: `scripts/ci/docs-check.mjs` on the branch file list (passed: 1 code file, 4 docs), ESLint on the
+Also run on that commit: `scripts/ci/docs-check.mjs` on the branch file list (passed: 1 code file, 5 docs incl. this file), ESLint on the
 test file (clean), `tsc --noEmit` (clean), and a relative-link check over the four changed docs (no broken links).
 PP-02..PP-09 read-through: the PP items are not on main's OWNER_ACTIONS.md (they live on the unmerged
 `codex/paid-pilot-round2-20261003` ledger), so the link sits next to the O04/O08 deployment rows and names PP-06/#30;
