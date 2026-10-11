@@ -42,7 +42,7 @@ The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI 
 ## Notes (important)
 - **VF-02 (packet ambiguity) remains:** VP-06 fails on `noPromise:cancelled` because the approved policy line `"Refunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days."` contains the word `cancelled`. The strict scorer keeps this as a failure under the written expectation. Both VP-05 and VP-06 replies include the same owner wording in this run, so a wording-only requirement cannot make VP-05 pass and VP-06 fail; the distinction is the pre-existing `mustNotPromise` on VP-06. This is documented as a fixture ambiguity (not a product defect).
 - **Run 5's VP-03 reply differs from run 4:** Run 4 VP-03 replied with the office price quote (Arabic + price), run 5 VP-03 replied with a minimal Arabic confirmation only. Cause not investigated; see VF-05 in `artifacts/company-builder/BUGS.md` (follow-up, not #142). The scorer's v2 checks fail this reply as intended.
-- **What is committed:** `results.json` (this run's output) is committed exactly as runs 1–4 were — the maintainers explicitly kept the field-validation harness and its run records as inputs of open work (#6/#141/#142, commit `b372098`, `docs/slimdown-plan.md` §"Keep"). The two PNG screenshots are **not** committed (`/artifacts/**` ignores everything except `*.md`); they remain local, as for runs 1–4. This `RESULTS.md` is the human-readable record.
+- **What is committed:** only this `RESULTS.md`. Per AGENTS.md (Evidence) raw `results.json` is not committed; it was produced by `field.spec.ts` and is attached to the PR. Runs 1–4 keep their earlier committed JSON untouched. Screenshots are not committed either.
 - **Packet naming:** every run names the packet it scored (`summary.packet = "packet.v2.json"`), and `summary.packetSha256` matches `SHA256SUMS`.
 
 ## Screenshots (local, git-ignored)
@@ -50,7 +50,7 @@ The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI 
 - `02-latest-result-en.png` — latest result view
 
 ## Results JSON (committed)
-- `results.json` — full run output as written by `field.spec.ts`
+- `results.json` — full run output as written by `field.spec.ts` (attached to the PR, not committed)
 
 ## Decisions
 - **Option 1 accepted (CTO, #142):** accept the v2 result (8/10) as is. The plan's check "VP-06 fails on missing owner wording, VP-05 passes" is superseded: both replies quote the approved policy line "reviewed by the owner", so owner wording cannot separate them. Issue #142's acceptance (replies without owner-decision wording score as failures) is met and proven by the committed negative control (`tests/unit/field-scoring.test.ts`).
