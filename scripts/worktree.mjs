@@ -6,8 +6,7 @@
 //                                                                 (no / or \, so the path stays inside .claude/worktrees/);
 //                                                                 use --branch for a branch such as feat/x
 //   pnpm wt list                                                  state of every worktree
-//   pnpm wt rm|remove <name|path>                                 remove a registered, unlocked lane if clean and pushed/merged;
-//                                                                 a dirty or unpushed lane is refused (exit 1)
+//   pnpm wt rm|remove <name|path>                                 remove a clean, pushed lane; refuse dirty/unpushed lanes (exit 1)
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
 //                                                                 (not while agents are starting lanes)
 // Removal never forces: main, locked, dirty or unpushed work is kept. Bare names select managed lanes only.
@@ -48,8 +47,7 @@ function worktrees(root) {
     .filter((w) => w.worktree);
 }
 
-// Only the link `add` made counts as the helper's own: a symlink to the main checkout's node_modules. A link someone
-// replaced it with (or a tracked one) is the lane's work and must neither hide from the dirty count nor be unlinked.
+// Recognize only the helper's link to the main install; preserve links pointing elsewhere.
 function isOwnModulesLink(path, root, platform) {
   const nm = join(path, "node_modules");
   try {
@@ -68,7 +66,6 @@ function state(path, root, platform) {
   return { dirty, head, pushed, ownLink: own };
 }
 
-// An explicit rm refuses (throws) when work would be kept; prune only reports it and moves on.
 function remove(w, root, platform, refuse = false) {
   const path = resolve(w.worktree);
   if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
@@ -80,19 +77,15 @@ function remove(w, root, platform, refuse = false) {
     console.log(`kept ${path}: ${reason}`);
     return false;
   }
-  // A junction/symlink is removed as a link only, so the shared install is never touched.
-  // If git refuses (e.g. an ignored file blocks removal), the link is put back so the lane keeps its install.
+  // Unlink only our install link; restore it if git refuses removal.
   const link = join(path, "node_modules");
   if (s.ownLink) unlinkSync(link);
   try {
     git(["worktree", "remove", path], root);
   } catch (error) {
     if (s.ownLink) {
-      try {
-        symlinkSync(join(root, "node_modules"), link, "junction");
-      } catch {
-        // keep the git error as the reported failure
-      }
+      try { symlinkSync(join(root, "node_modules"), link, "junction"); }
+      catch { /* Preserve the original git failure. */ }
     }
     throw error;
   }

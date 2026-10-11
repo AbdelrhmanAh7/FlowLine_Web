@@ -120,24 +120,20 @@ Download and open a trace on your own machine: `gh run download <run id> -R Abde
 
 ## Worktrees
 
-`pnpm wt` (`scripts/worktree.mjs`) manages agent lanes under `.claude/worktrees/<name>` (git-ignored), never folders beside the repo. Each lane gets a `node_modules` symlink to the main install. Run it from any checkout of the repo.
+`pnpm wt` manages agent lanes under `.claude/worktrees/<name>` (git-ignored), with `node_modules` linked to the main install. Run from any checkout. The branch defaults to the lane name; `add` always creates a new branch and refuses an existing one.
 
 ```bash
-# Each add uses its own lane name, so the block runs top to bottom.
-pnpm wt add my-lane                          # .claude/worktrees/my-lane on new branch my-lane from origin/main; prints the path
-pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch name; the lane name stays bare
-pnpm wt add base-lane --base origin/main     # --base picks the start point (default origin/main)
-pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false> per lane
-pnpm wt remove my-lane                       # same as: pnpm wt rm my-lane
-# pnpm wt rm /abs/path/to/external-lane     # placeholder: external lanes need an explicit path
-pnpm wt prune                                # git worktree prune, then remove every clean, pushed lane
+pnpm wt add my-lane                          # new branch my-lane from origin/main; prints the path
+pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch, bare lane name
+pnpm wt add base-lane --base origin/main      # choose the start point
+pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false>
+pnpm wt remove my-lane                       # alias of pnpm wt rm my-lane
+pnpm wt prune                                # clear stale registrations; remove clean, pushed lanes
 ```
 
-Safety rules (covered by `tests/unit/worktree-script.test.ts` and the scratch-clone acceptance test `tests/integration/worktree-cli.test.ts`):
+- Lane names must match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Invalid names fail before git runs. Use `--branch feat/x` for slashed branches.
+- `rm`/`remove` refuse dirty or unpushed work with exit 1: `refusing to remove <path>: N uncommitted change(s); commit or discard them first`, or `HEAD not on any remote branch; push it first`. Modified, staged and untracked files count, except the helper's untracked `node_modules` link to the main install. Tracked links or links pointing elsewhere are preserved. If git removal fails, the helper restores its install link.
+- Removal requires a registered worktree, refuses main and locked lanes, never forces, and never deletes the branch. Bare names select only managed lanes; external lanes require an explicit path (e.g. `pnpm wt rm ./external-lane`). Relative paths resolve from cwd; path comparisons normalize separators and ignore case only on Windows.
+- `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
 
-- **Lane names are bare:** `<name>` must match `^[A-Za-z0-9][A-Za-z0-9._-]*$`. Anything else (`feat/x`, `../sibling`, `.hidden`, spaces) fails with `invalid lane name "<name>"` and exit 1 before git runs; `rm`/`remove` apply the same check to a bare name (not to an explicit path). Use `--branch feat/x` for a slashed branch.
-- **Existing branch:** `add` does not reuse a branch. Git's `fatal: a branch named '<branch>' already exists` is printed, the exit code is 1 and no lane is created.
-- **Remove refuses dirty or unpushed work:** `rm`/`remove` checks the lane before touching it. Any modified, staged or untracked file counts as a change, except the `node_modules` symlink to the main install that `add` created; a `node_modules` link pointing elsewhere (or tracked by git) counts as work and is never unlinked. A dirty lane fails with exit 1 and `refusing to remove <path>: N uncommitted change(s); commit or discard them first`. A lane whose HEAD is on no remote branch fails with `refusing to remove <path>: HEAD not on any remote branch; push it first`. Nothing is unlinked or removed.
-- **Never forced:** the main checkout and locked worktrees are refused too (exit 1). Removal never uses `--force` and never deletes the branch.
-- **Name vs path:** `rm`/`remove` accept only registered worktrees. A bare name resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external lane needs an explicit path (absolute or containing `/` or `\`). Relative paths resolve from the current directory, with no managed-lane fallback.
-- **list and prune:** missing directories and locked entries are reported and skipped, not inspected. `prune` keeps dirty or unpushed lanes with `kept <path>: <reason>` and moves on; do not run it while agents are starting lanes. Both report per-lane errors, continue, and exit nonzero if any lane failed.
+Issue #67 coverage: stubbed unit tests in `tests/unit/worktree-script.test.ts`; real-git scratch-clone checks in `tests/integration/worktree-cli.test.ts`. This internal helper changes no app feature, so E2E: not needed — no user-facing flow is touched.

@@ -144,17 +144,14 @@ describe("worktree removal safeguards", () => {
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
-
   it.each(["rm", "remove"])("@issue-67 %s rejects an invalid bare name before any git call", (cmd) => {
     for (const name of [".hidden", "..", "a b", "-lane"]) expect(() => main([cmd, name])).toThrow(/invalid lane name/);
     expect(mocks.git).not.toHaveBeenCalled();
   });
-
   it("@issue-67 remove is an alias of rm", () => {
     expect(main(["remove", "lane"])).toBe(0);
     expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
   });
-
   it("@issue-67 ignores the helper's own node_modules link when counting changes", () => {
     dirty = "?? node_modules";
     expect(main(["rm", "lane"])).toBe(0);
@@ -162,7 +159,6 @@ describe("worktree removal safeguards", () => {
     dirty = "?? node_modules/\n?? node_modules2";
     expect(() => main(["rm", "lane"])).toThrow("2 uncommitted change(s)");
   });
-
   it("@issue-67 keeps a node_modules link that does not point at the main install (counted as work, never unlinked)", () => {
     mocks.readlink.mockReturnValue(join(external, "node_modules"));
     dirty = "?? node_modules";
@@ -173,14 +169,12 @@ describe("worktree removal safeguards", () => {
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(calls().filter(({ args }) => args[1] === "remove")).toHaveLength(1);
   });
-
   it("@issue-67 unlinks a dangling node_modules link (lstat, not exists)", () => {
     mocks.exists.mockReturnValue(false);
     expect(main(["rm", "lane"])).toBe(0);
     expect(mocks.stat).toHaveBeenCalledWith(join(lane, "node_modules"), { throwIfNoEntry: false });
     expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
   });
-
   it("@issue-67 restores the node_modules link when git worktree remove fails", () => {
     const base = mocks.git.getMockImplementation()!;
     mocks.git.mockImplementation((command, args, options) => {
@@ -258,17 +252,11 @@ describe("worktree add lane names", () => {
     expect(mocks.symlink).not.toHaveBeenCalled();
     expect(calls().some(({ args }) => args[1] === "add")).toBe(false);
   });
-
   it("propagates git error when branch already exists on add", () => {
-    mocks.git.mockImplementation((_command, args) => {
-      if (args[0] === "rev-parse" && args[1] === "--path-format=absolute") return join(root, ".git");
-      if (args.join(" ") === "worktree list --porcelain") return entries;
-      if (args[0] === "worktree" && args[1] === "add") {
-        const err = new Error("fatal: a branch named 'existing-branch' already exists") as Error & { status: number };
-        err.status = 128;
-        throw err;
-      }
-      return "";
+    const base = mocks.git.getMockImplementation()!;
+    mocks.git.mockImplementation((command, args, options) => {
+      if (args[0] === "worktree" && args[1] === "add") throw new Error("fatal: a branch named 'existing-branch' already exists");
+      return base(command, args, options);
     });
     expect(() => main(["add", "lane", "--branch", "existing-branch"])).toThrow(/branch named 'existing-branch' already exists/);
     expect(mocks.symlink).not.toHaveBeenCalled();
@@ -317,23 +305,15 @@ describe("worktree iteration", () => {
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
   });
-
-  it("prune prints a clear message and keeps a dirty worktree", () => {
-    dirty = " M file.ts";
+  it.each([
+    ["dirty", "1 uncommitted change(s)"], ["unpushed", "HEAD not on any remote branch"],
+  ])("prune prints a clear message and keeps %s work", (state, message) => {
+    if (state === "dirty") dirty = " M file.ts";
+    else pushed = "";
     entries = entry(root) + entry(lane);
     expect(main(["prune"])).toBe(0);
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("1 uncommitted change(s)"));
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([]);
-  });
-
-  it("prune prints a clear message and keeps an unpushed worktree", () => {
-    pushed = "";
-    entries = entry(root) + entry(lane);
-    expect(main(["prune"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("HEAD not on any remote branch"));
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining(message));
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([]);
   });
@@ -352,55 +332,31 @@ describe("path identity", () => {
 });
 
 describe("argument parsing and option handling", () => {
-  const managed = (name: string) => join(root, ".claude", "worktrees", name);
-
-  it("uses --base option when provided", () => {
-    expect(main(["add", "lane", "--base", "origin/develop"])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
-      .toEqual([["worktree", "add", "-b", "lane", managed("lane"), "origin/develop"]]);
+  it.each([
+    ["--base", "origin/develop", "lane", "origin/develop"],
+    ["--branch", "feature/custom", "feature/custom", "origin/main"],
+  ])("uses %s option when provided", (flag, value, branch, base) => {
+    expect(main(["add", "lane", flag, value])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args)).toEqual([["worktree", "add", "-b", branch, lane, base]]);
   });
-
-  it("uses --branch option when provided", () => {
-    expect(main(["add", "lane", "--branch", "feature/custom"])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
-      .toEqual([["worktree", "add", "-b", "feature/custom", managed("lane"), "origin/main"]]);
-  });
-
-  it("rejects unknown command with usage", () => {
-    expect(main(["unknown"])).toBe(2);
+  it.each([["unknown"], ["rm"]])("rejects %s with usage", (command) => {
+    expect(main([command])).toBe(2);
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
   });
-
-  it("rejects rm without name with usage", () => {
-    expect(main(["rm"])).toBe(2);
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
-  });
-
-  it("rejects unknown flag gracefully (treated as positional)", () => {
-    // Unknown flags are not parsed specially; they become part of rest
-    // This test documents current behavior: --unknown is ignored
+  it("ignores unknown flags (current parser behaviour)", () => {
     expect(main(["add", "lane", "--unknown", "value"])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
-      .toEqual([["worktree", "add", "-b", "lane", managed("lane"), "origin/main"]]);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args)).toEqual([["worktree", "add", "-b", "lane", lane, "origin/main"]]);
   });
-
   it("assertLaneName validates exported function directly", () => {
     expect(() => assertLaneName("valid-name")).not.toThrow();
     expect(() => assertLaneName("invalid/name")).toThrow(/invalid lane name/);
     expect(() => assertLaneName("")).toThrow(/invalid lane name/);
   });
 });
-
 describe("list command output format", () => {
-  it("shows branch name and dirty/pushed status for each lane", () => {
-    entries = entry(root) + entry(lane);
+  it.each(["lane", "detached"])("shows %s and dirty/pushed status", (branch) => {
+    entries = entry(root) + (branch === "detached" ? entry(lane).replace("branch refs/heads/lane", "") : entry(lane));
     expect(main(["list"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
-  });
-
-  it("shows detached HEAD when no branch", () => {
-    entries = entry(root) + entry(lane, "").replace("branch refs/heads/lane", "");
-    expect(main(["list"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(`${lane} | detached | dirty=0 | pushed=true`);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | ${branch} | dirty=0 | pushed=true`);
   });
 });

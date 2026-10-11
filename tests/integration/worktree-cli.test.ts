@@ -1,39 +1,22 @@
-/**
- * Acceptance tests for issue #67: the real `pnpm wt` CLI (scripts/worktree.mjs) against a scratch clone with a local
- * bare `origin`, using real git in a temp directory (no network, no database access, nothing outside the temp dir).
- */
+// Issue #67: real CLI in a scratch clone with a local bare origin; no network or database.
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 const script = fileURLToPath(new URL("../../scripts/worktree.mjs", import.meta.url));
 const guide = fileURLToPath(new URL("../../docs/DEVELOPER_GUIDE.md", import.meta.url));
-
-// Hermetic git: clear all inherited Git configuration (including command-scope GIT_CONFIG_COUNT/KEY_n/VALUE_n)
-// and repository-location variables, then set fixed identity.
-function gitEnv() {
-  const env = { ...process.env };
-  // Clear all Git configuration environment variables
-  for (const key of Object.keys(env)) {
-    if (key.startsWith("GIT_CONFIG_") || key === "GIT_DIR" || key === "GIT_WORK_TREE" || key === "GIT_NAMESPACE") {
-      delete env[key];
-    }
-  }
-  // Ensure clean config sources
-  env.GIT_CONFIG_GLOBAL = devNull;
-  env.GIT_CONFIG_NOSYSTEM = "1";
-  // Fixed identity
-  env.GIT_AUTHOR_NAME = "wt";
-  env.GIT_AUTHOR_EMAIL = "wt@example.test";
-  env.GIT_COMMITTER_NAME = "wt";
-  env.GIT_COMMITTER_EMAIL = "wt@example.test";
-  return env;
+// Isolate git from inherited configuration and repository-location variables.
+const env = { ...process.env };
+for (const key of Object.keys(env)) {
+  if (key.startsWith("GIT_CONFIG_") || ["GIT_DIR", "GIT_WORK_TREE", "GIT_NAMESPACE"].includes(key)) delete env[key];
 }
-
-const env = gitEnv();
+Object.assign(env, {
+  GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: "1",
+  GIT_AUTHOR_NAME: "wt", GIT_AUTHOR_EMAIL: "wt@example.test",
+  GIT_COMMITTER_NAME: "wt", GIT_COMMITTER_EMAIL: "wt@example.test",
+});
 let tmp: string;
 let repo: string;
 const git = (args: string[], cwd = repo) => {
@@ -46,13 +29,11 @@ const wt = (...args: string[]) => {
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 };
 const lanePath = (name: string) => join(repo, ".claude", "worktrees", name);
-
 beforeEach(() => {
   tmp = realpathSync(mkdtempSync(join(tmpdir(), "flowline-wt-")));
   repo = join(tmp, "repo");
   git(["init", "-q", "--bare", "-b", "main", join(tmp, "origin.git")], tmp);
   git(["init", "-q", "-b", "main", repo], tmp);
-  // Same ignore rules as the real repo for the paths the helper touches.
   writeFileSync(join(repo, ".gitignore"), "node_modules/\n.claude/worktrees/\n");
   git(["add", ".gitignore"]);
   git(["commit", "-qm", "init"]);
@@ -60,7 +41,6 @@ beforeEach(() => {
   git(["push", "-q", "-u", "origin", "main"]);
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
-
 describe("pnpm wt in a scratch clone", () => {
   it("@e2e @issue-67 AC1: create adds a managed lane on a new branch with node_modules linked", () => {
     const r = wt("add", "lane");
@@ -69,14 +49,12 @@ describe("pnpm wt in a scratch clone", () => {
     expect(git(["rev-parse", "--abbrev-ref", "HEAD"], lanePath("lane"))).toBe("lane");
     expect(lstatSync(join(lanePath("lane"), "node_modules")).isSymbolicLink()).toBe(true);
   });
-
   it("@e2e @issue-67 AC1: list shows a fresh lane as clean and pushed", () => {
     expect(wt("add", "lane").code).toBe(0);
     const r = wt("list");
     expect(r.code).toBe(0);
     expect(r.stdout).toContain(`${lanePath("lane")} | lane | dirty=0 | pushed=true`);
   });
-
   it("@e2e @issue-67 AC1: remove deletes a clean, pushed lane and keeps its branch", () => {
     expect(wt("add", "lane").code).toBe(0);
     const r = wt("remove", "lane");
@@ -87,7 +65,6 @@ describe("pnpm wt in a scratch clone", () => {
     expect(git(["branch", "--list", "lane"])).toContain("lane");
     expect(wt("list").stdout).not.toContain(lanePath("lane"));
   });
-
   it.each(["remove", "rm"])("@e2e @issue-67 AC2: %s refuses a dirty lane with a clear message and keeps the work", (cmd) => {
     expect(wt("add", "lane").code).toBe(0);
     writeFileSync(join(lanePath("lane"), "draft.txt"), "unsaved work\n");
@@ -98,7 +75,6 @@ describe("pnpm wt in a scratch clone", () => {
     expect(readFileSync(join(lanePath("lane"), "draft.txt"), "utf8")).toBe("unsaved work\n");
     expect(wt("list").stdout).toContain(`${lanePath("lane")} | lane | dirty=1 | pushed=true`);
   });
-
   it("@e2e @issue-67 AC1: create refuses an existing branch and creates no lane", () => {
     git(["branch", "taken"]);
     const r = wt("add", "taken");
@@ -106,13 +82,11 @@ describe("pnpm wt in a scratch clone", () => {
     expect(r.stderr).toMatch(/branch named 'taken' already exists/);
     expect(existsSync(lanePath("taken"))).toBe(false);
   });
-
   it("@e2e @issue-67 AC1: remove rejects an invalid bare lane name", () => {
     const r = wt("remove", ".hidden");
     expect(r.code).toBe(1);
     expect(r.stderr).toContain('invalid lane name ".hidden"');
   });
-
   it("@e2e @issue-67 AC1: create rejects an invalid lane name before running git", () => {
     const r = wt("add", "feat/x");
     expect(r.code).toBe(1);
@@ -121,7 +95,6 @@ describe("pnpm wt in a scratch clone", () => {
     expect(existsSync(join(repo, ".claude"))).toBe(false);
     expect(git(["branch", "--list", "feat/x"])).toBe("");
   });
-
   it("@e2e @issue-67 AC3: the developer guide documents create, list, remove and the dirty refusal message", () => {
     const docs = readFileSync(guide, "utf8");
     for (const example of ["pnpm wt add my-lane", "pnpm wt list", "pnpm wt remove my-lane", "refusing to remove", "uncommitted change(s)"]) {
