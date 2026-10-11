@@ -16,3 +16,7 @@ Scope: `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`. These are te
 - No e2e-army test: the change is internal to test doubles with no user-facing flow.
 
 CodeQL's own re-scan after merge is the final confirmation for each alert.
+
+## Size exception (issue cap: under 300 changed lines)
+
+The PR is about 415 changed lines (380 added, 35 removed against `main` at 6aa89ed), not under 300. **Reason:** review rounds asked for more proof, and that proof was added: the redirect normalisation bypasses, the regex-syntax warning, the deterministic `slowDelayMs` checks, and the doc-sync guard after the `$`-loss rounds. The contract test (201 lines) and `safety.ts` (107) are most of the size; product code changes are about 60 lines. Getting under 300 would mean deleting those assertions, which the project rules forbid. **Risk:** low. Only test doubles and their tests change; nothing is deployed. **Verified:** CI `gate`, `docs` and CodeQL green on 0bf9cdf, QA and security review passed on 0bf9cdf, and `tests/contract/codeql-fakes.test.ts` plus `tests/contract/billing.test.ts` pass locally (31 tests).
