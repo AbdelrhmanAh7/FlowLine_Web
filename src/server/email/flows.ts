@@ -134,15 +134,32 @@ export async function tokenState(purpose: Purpose, token: string): Promise<Token
 export async function consumeAccountToken(purpose: Purpose, token: string, value?: string, currentUserId?: string): Promise<TokenState | "done" | "transfer_required"> {
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
+
+  // Cheap input check first; the expensive hash waits until the token is confirmed live under its locks, so a burst of
+  // requests presenting one valid link cannot all hash at once.
+  if (purpose === "reset" && (!value || value.length < 8 || value.length > 128)) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
+
+  // Lock order is user row, then token row (also in the delete and verify flows). The user is found through an unlocked
+  // read, which may be stale: the token is re-read and re-validated under both locks below.
+  const [unlockedToken] = await db.select({ id: schema.emailToken.id, userId: schema.emailToken.userId }).from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose)));
+  if (!unlockedToken?.userId || (purpose === "delete" && unlockedToken.userId !== currentUserId)) return "invalid";
+  const tokenUserId = unlockedToken.userId;
+
   return db.transaction(async (tx) => {
     // Deletion cascades into retained files. Accounting must precede even the
     // token lock, and especially the workspace locks below (including shared W).
     if (purpose === "delete") await lockRetainedFileAccounting(tx);
-    const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
+
+    const [lockedUser] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, tokenUserId)).for("update");
+    if (!lockedUser) return "invalid";
+
+    const [row] = await tx.select().from(schema.emailToken).where(eq(schema.emailToken.id, unlockedToken.id)).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
     if (row.expiresAt <= new Date()) return "expired";
     if (!row.userId || (purpose === "delete" && row.userId !== currentUserId)) return "invalid";
+    if (row.userId !== lockedUser.id) return "invalid";
+
     if (purpose === "delete") {
       // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
       // before reading ownership: two co-owners deleting their accounts at once must not both pass the
@@ -187,15 +204,11 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       return "done";
     }
     if (purpose === "reset") {
-      if (!value || value.length < 8 || value.length > 128) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
-      const hashed = await hashPassword(value);
-      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the token row above, then
-      // the USER row, then the user's sessions, then their account rows. Federated sign-in, link confirmation and
-      // challenge completion lock the same rows user-first; taking an account or session lock before the user row
-      // here could deadlock against them (issue #41). The hash is computed first so the user lock is held only for
-      // the writes. Reset mutates no retained file, so it takes no retained-file accounting lock.
-      const [locked] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, row.userId)).for("update");
-      if (!locked) return "invalid";
+      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the user row and the token
+      // row are already held above; the user's sessions come next, then their account rows, the same order the
+      // federated transactions take (issue #41). The reverse could deadlock against a link confirmation, challenge
+      // completion or SSO callback. Reset mutates no retained file, so it takes no retained-file accounting lock.
+      const hashed = await hashPassword(value!);
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));

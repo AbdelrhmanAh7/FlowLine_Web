@@ -184,7 +184,7 @@ describe("password-reset recovery against a transaction that locks the user, ses
       resetting = consumeAccountToken("reset", f.token, NEW_PASSWORD).finally(() => { finished = true; });
       void resetting.catch(() => {});
       const wait = await blockedByObserver(otherClient, resetPid, () => finished);
-      // It has taken only its token row, so it holds nothing the other still needs. (Old order: it had already updated the
+      // It holds nothing yet (the user row is the first lock it takes, issue #45), so it holds nothing the other still needs. (Old order: it had already updated the
       // credential account and was queued at the session row, which the other's account lock then waited behind.)
       expect(wait.query).toMatch(/from "user"/i);
       expect(wait.query).toMatch(/for update/i);

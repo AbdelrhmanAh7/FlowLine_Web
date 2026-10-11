@@ -50,10 +50,10 @@ import { consumeAccountToken } from "@/server/email/flows";
 
 const TOKEN = "t".repeat(43);
 
-// The documented order for the tables a recovery transaction touches (docs/security/FEDERATED_MFA.md): the flow's own
-// pending-state row (the email token), the user row, the user's sessions, then their account rows. Every table the
+// The documented order for the tables a recovery transaction touches (docs/security/FEDERATED_MFA.md): the user row,
+// the flow's own pending-state row (the email token, issue #45), the user's sessions, then their account rows. Every table the
 // reset path touches must appear here, so adding one forces a decision about where it belongs and a doc update.
-const RANK: Record<string, number> = { email_token: 0, user: 1, session: 2, account: 3 };
+const RANK: Record<string, number> = { user: 0, email_token: 1, session: 2, account: 3 };
 /** Order of first acquisition per table: a row lock this transaction already holds is a no-op when taken again. */
 const firstTouches = (events: string[]) => [...new Set(events.map((event) => event.split(" ")[1]!))];
 
@@ -66,11 +66,11 @@ beforeEach(() => {
 });
 
 describe("password-reset recovery lock order (mocked transactions: statement order only; PostgreSQL deadlock behaviour runs in CI)", () => {
-  it("locks the token row, then the user row, then deletes the sessions, then writes the accounts and the user", async () => {
+  it("locks the user row, then the token row, then deletes the sessions, then writes the accounts and the user", async () => {
     await expect(consumeAccountToken("reset", TOKEN, "a-new-password")).resolves.toBe("done");
     expect(fx.events).toEqual([
-      "lock email_token for update",
       "lock user for update",
+      "lock email_token for update",
       "delete session",
       "update account", // the existing credential account gets the new hash
       "delete account", // historical tenant-created sso:* identities that were never mailbox-approved
@@ -86,8 +86,8 @@ describe("password-reset recovery lock order (mocked transactions: statement ord
     fx.credential = [];
     await expect(consumeAccountToken("reset", TOKEN, "a-new-password")).resolves.toBe("done");
     expect(fx.events).toEqual([
-      "lock email_token for update",
       "lock user for update",
+      "lock email_token for update",
       "delete session",
       "insert account", // its user_id foreign key also takes a key-share lock on the user row we already hold
       "delete account",
@@ -119,15 +119,15 @@ describe("password-reset recovery lock order (mocked transactions: statement ord
     expect(fx.events).not.toContain("retained-file accounting lock");
   });
 
-  it("refuses an invalid password before locking the user row", async () => {
+  it("refuses an invalid password before taking any lock", async () => {
     await expect(consumeAccountToken("reset", TOKEN, "short")).rejects.toMatchObject({ status: 400, code: "PASSWORD_LENGTH" });
-    expect(fx.events).toEqual(["lock email_token for update"]);
+    expect(fx.events).toEqual([]);
   });
 
   it("returns invalid and writes nothing when the user row is gone", async () => {
     fx.userRows = [];
     await expect(consumeAccountToken("reset", TOKEN, "a-new-password")).resolves.toBe("invalid");
-    expect(fx.events).toEqual(["lock email_token for update", "lock user for update"]);
+    expect(fx.events).toEqual(["lock user for update"]);
     expect(fx.written).toEqual([]);
   });
 });
