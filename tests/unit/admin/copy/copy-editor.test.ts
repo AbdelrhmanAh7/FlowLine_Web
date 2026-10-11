@@ -15,7 +15,17 @@ const { CopyEditor } = await import("@/app/admin/copy/copy-editor");
 const en = (await import("@/i18n/messages/en.json")).default as { platformAdmin: { copyEditor: Record<string, string> }; common: Record<string, string> };
 
 const render = (locale: Locale = "en") => renderToStaticMarkup(createElement(I18nProvider, { locale }, createElement(CopyEditor)));
-const text = (html: string) => html.replace(/<[^>]*>/g, "");
+/** Visible text of server-rendered markup: a character scan (no tag-stripping regex) that drops everything between "<" and ">". */
+const text = (html: string) => {
+  let out = "";
+  let inTag = false;
+  for (const ch of html) {
+    if (ch === "<") inTag = true;
+    else if (ch === ">" && inTag) inTag = false;
+    else if (!inTag) out += ch;
+  }
+  return out;
+};
 
 beforeEach(() => {
   queries.state = { isPending: false, isError: false, data: undefined, refetch: vi.fn() };
