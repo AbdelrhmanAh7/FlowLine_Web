@@ -3,6 +3,7 @@
  *   #5 stack-trace-exposure, #6 regex-injection, #7 resource-exhaustion, #9 unvalidated-redirect.
  * Notes and dismissal reasons: docs/security/codeql-triage-fakes.md.
  */
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { startFakeAi } from "../../e2e/fakes/ai-server";
 import { compileFaultPattern, safeRedirectTarget, slowDelayMs } from "../../e2e/fakes/safety";
@@ -43,6 +44,21 @@ describe("#6 regex injection: fault patterns are matched as text, never compiled
     expect(compileFaultPattern("a".repeat(201))).toBeNull();
   });
 
+  it("warns server-side when a pattern drops regex syntax, so a never-firing fault is visible", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await postJson(`${providers.url}/__fake/fault`, { provider: "slack", pathPattern: ".*", mode: "500", times: 1 });
+      expect(warn.mock.calls.flat().join("\n")).toMatch(/pathPattern/);
+      warn.mockClear();
+      // A lone `.` is a legitimate literal (`chat.postMessage`), so it stays silent.
+      await postJson(`${providers.url}/__fake/fault`, { provider: "slack", pathPattern: "chat.postMessage", mode: "500", times: 1 });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      await postJson(`${providers.url}/__fake/reset`, {});
+    }
+  });
+
   it("the control API answers 400 for an oversized pattern and accepts an invalid-regex text", async () => {
     expect((await postJson(`${providers.url}/__fake/fault`, { provider: "slack", pathPattern: "a".repeat(500), mode: "500" })).status).toBe(400);
     expect((await postJson(`${providers.url}/__fake/fault`, { provider: "slack", pathPattern: "(", mode: "500", times: 1 })).status).toBe(200);
@@ -56,7 +72,8 @@ describe("#9 redirect targets are allowlisted", () => {
     expect(safeRedirectTarget("http://localhost:3100/cb")).toBe("http://localhost:3100/cb");
     expect(safeRedirectTarget("http://127.0.0.1/cb")).toBe("http://127.0.0.1/cb");
     expect(safeRedirectTarget("http://[::1]:3100/cb")).toBe("http://[::1]:3100/cb");
-    for (const bad of ["", "https://evil.example/cb", "//evil.example/cb", "/\\evil.example", "javascript:alert(1)", "http://localhost.evil.example/cb", "http://user@evil.example/", "cb", "http://169.254.169.254/"]) {
+    for (const bad of ["", "https://evil.example/cb", "//evil.example/cb", "/\\evil.example", "javascript:alert(1)", "http://localhost.evil.example/cb", "http://user@evil.example/", "cb", "http://169.254.169.254/", // a relative path that normalises to a protocol-relative Location
+      "/..//evil", "/a/../..//evil", "/%2e%2e//evil", "/././/evil"]) {
       expect(safeRedirectTarget(bad), bad).toBeNull();
     }
   });
@@ -117,23 +134,23 @@ describe("#7 resource exhaustion: the fake AI server caps request bodies", () =>
     else expect(res).toBeInstanceOf(Error);
   });
 
-  it("a slow fault still answers after its delay, taken from the fixed step table (timer alert)", async () => {
+  it("a slow fault still answers after its exact delay, clamped to the 10 s ceiling (timer alert)", async () => {
     await postJson(`${ai.url}/__fake/openai/fault`, { mode: "slow", times: 1, path: "models", delayMs: 100 });
     const t0 = Date.now();
     const res = await fetch(`${ai.url}/openai/v1/models`, { headers: { authorization: "Bearer sk-fake-test" } });
     expect(res.status).toBe(200);
-    expect(Date.now() - t0).toBeGreaterThanOrEqual(200); // 100 ms rounds up to the 250 ms step
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(100); // the requested 100 ms, unchanged
   });
 
-  it("slowDelayMs maps requests onto the fixed step table (deterministic, no wall clock)", () => {
+  it("slowDelayMs clamps the requested delay to [0, 10 s] (deterministic, no wall clock)", () => {
     expect(slowDelayMs(0)).toBe(0); // an explicit 0 stays 0, not the 1000 ms default
     expect(slowDelayMs(-5)).toBe(0);
     expect(slowDelayMs(undefined)).toBe(1000);
     expect(slowDelayMs("abc")).toBe(1000);
-    expect(slowDelayMs(100)).toBe(250);
-    expect(slowDelayMs(3000)).toBe(5000);
+    expect(slowDelayMs(100)).toBe(100); // in-range values keep their exact timing
+    expect(slowDelayMs(3000)).toBe(3000);
     expect(slowDelayMs(10_000)).toBe(10_000);
-    expect(slowDelayMs(1e12)).toBe(10_000);
+    expect(slowDelayMs(1e12)).toBe(10_000); // the timer is always bounded (CodeQL timer alert)
   });
 
   it("still answers a normal chat request", async () => {
@@ -156,5 +173,18 @@ describe("#9 Paddle's success_url query parameter is allowlisted", () => {
     expect(ext.headers.get("location")).toMatch(/^\/paddle\/checkout\/txn_/);
     const local = await complete("http://localhost:3100/ok");
     expect(local.headers.get("location")).toBe("http://localhost:3100/ok");
+  });
+});
+
+describe("the triage notes stay in sync with the code (root cause of the $-loss review rounds)", () => {
+  it("keep the $ anchor syntax in the doc and the JSDoc, and document the clamped timer", () => {
+    const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
+    const doc = read("../../docs/security/codeql-triage-fakes.md");
+    const safety = read("../../e2e/fakes/safety.ts");
+    expect(doc).toContain("optional trailing `$` (ends with)");
+    expect(doc).toContain("`^/conversations\\.list$` still means that exact path");
+    expect(safety).toContain("trailing `$` (path ends with)");
+    expect(safety).toContain("`^/a\\.b$` still means");
+    expect(doc).toContain("clamp"); // the #7 row describes the timer handling the code actually has
   });
 });
