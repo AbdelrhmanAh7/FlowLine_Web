@@ -1,1 +1,3 @@
-ALTER TABLE "flow_version" ALTER COLUMN "version" DROP NOT NULL;
+ALTER TABLE "flow_version" ALTER COLUMN "version" DROP NOT NULL;--> statement-breakpoint
+DROP INDEX "flow_version_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "flow_version_unique" ON "flow_version" USING btree ("flow_id","version") WHERE "flow_version"."version" is not null;

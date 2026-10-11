@@ -336,7 +336,7 @@ describe("run snapshots do not use up version numbers (regression: #117)", () =>
   });
 });
 
-describe("legacy run snapshots are unnumbered by migration 0027 (#117)", () => {
+describe("legacy run snapshots are unnumbered by migration 0026 (#117)", () => {
   it("nulls the number of existing run snapshots, keeps the others, and the next publication starts at the highest kept number + 1", async () => {
     const { user, flow } = await setup();
     const [{ revision }] = await db.select({ revision: schema.flow.revision }).from(schema.flow).where(eq(schema.flow.id, flow.id));
@@ -345,7 +345,7 @@ describe("legacy run snapshots are unnumbered by migration 0027 (#117)", () => {
     const legacy = { flowId: flow.id, revision, name: flow.name, graph: flow.graph, createdBy: user.id };
     const [old] = await db.insert(schema.flowVersion).values({ ...legacy, version: 2, reason: "run" }).returning();
 
-    const file = readFileSync(new URL("../../drizzle/0027_flow_version_run_backfill.sql", import.meta.url), "utf8");
+    const file = readFileSync(new URL("../../drizzle/0026_flow_version_run_backfill.sql", import.meta.url), "utf8");
     for (const statement of file.split("--> statement-breakpoint")) await db.execute(sql.raw(statement));
 
     const rows = await db.select({ id: schema.flowVersion.id, version: schema.flowVersion.version }).from(schema.flowVersion).where(eq(schema.flowVersion.flowId, flow.id));

@@ -20,6 +20,7 @@ import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
 import { can, type Role } from "@/lib/permissions";
 import { pretty } from "@/lib/format";
+import { rerunOriginalKey } from "@/lib/run-status";
 import { useNow, useOnline, useViewport } from "@/lib/hooks";
 import { isActive, isOpen, type ApprovalDto, type RunDetailDto, type RunListItem, type RunStepDto } from "@/lib/types";
 
@@ -653,7 +654,7 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
         <legend className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runs.rerun.revision")}</legend>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "original"} onChange={() => setRevision("original")} />
-          {run.version === null ? t("runs.rerun.originalSnapshot") : t("runs.rerun.original", { version: run.version })}
+          {t(rerunOriginalKey(run.version), { version: run.version ?? "" })}
         </label>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "latest"} onChange={() => setRevision("latest")} />
