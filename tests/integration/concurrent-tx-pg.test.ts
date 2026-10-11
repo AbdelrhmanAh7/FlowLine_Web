@@ -13,8 +13,10 @@ const T2 = `scratch_cc2_${suffix}`;
 const lock = (c: Client, table: string) => c.query(`select id from ${table} where id = 1 for update`);
 
 let admin: Client;
+let since: Date; // server time before this file opened any adapter connection
 beforeAll(async () => {
   admin = await connect();
+  since = (await admin.query<{ now: Date }>("select now()")).rows[0].now;
   for (const t of [T1, T2]) await admin.query(`create table ${t} (id int primary key); insert into ${t} values (1)`);
 });
 afterAll(async () => {
@@ -44,8 +46,29 @@ describe("runConcurrentPg on scratch tables (two real connections)", () => {
     expect(result).toEqual(["a", "b"]);
   }, 10_000);
 
-  it("leaves no scratch-table lock behind", async () => {
-    const { rows } = await admin.query(`select id from ${T1} where id = 1 for update nowait`);
-    expect(rows).toEqual([{ id: 1 }]);
+  it("rejects at once with an error thrown before the barrier, while the other side waits there holding a lock", async () => {
+    // A fails before arrive(); B holds T2 and is parked at arrive() for good. Teardown must not wait on B.
+    const started = Date.now();
+    const outcome = await runConcurrentPg(
+      async ({ client }) => { await lock(client, T1); throw new Error("side A failed before arrive"); },
+      async ({ client, arrive }) => { await lock(client, T2); await arrive(); return "b"; },
+      { timeoutMs: 8_000 },
+    ).then((value) => ({ value }), (error: Error) => ({ error }));
+    expect((outcome as { error?: Error }).error?.message).toBe("side A failed before arrive");
+    expect(Date.now() - started).toBeLessThan(5_000); // well under timeoutMs: it did not wait for B or the timeout
+  }, 10_000);
+
+  it("leaves no scratch-table lock or open transaction behind", async () => {
+    for (const t of [T1, T2]) {
+      const { rows } = await admin.query(`select id from ${t} where id = 1 for update nowait`);
+      expect(rows).toEqual([{ id: 1 }]);
+    }
+    // Every adapter backend this file opened is gone (terminated or ended): none is left idle in a transaction.
+    const idleInTx = async () => (await admin.query<{ n: number }>(
+      `select count(*)::int as n from pg_stat_activity where datname = current_database()
+         and backend_start >= $1 and state like 'idle in transaction%' and pid <> pg_backend_pid()`,
+      [since],
+    )).rows[0].n;
+    await expect.poll(idleInTx, { timeout: 3_000 }).toBe(0);
   });
 });
