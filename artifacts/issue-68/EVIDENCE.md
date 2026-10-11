@@ -1,12 +1,12 @@
 # Evidence — issue #68 (restore, rollback and alerting runbook draft)
 
-Tested commit: `dc5866c` (branch `ai/68`, on `origin/main`; runbook now 180 lines). Docs only; nothing was run
-against a real environment. Test: `tests/unit/restore-rollback-alerts-runbook.test.ts` (`@issue-68`), 6/6 passed with
+Tested commit: the PR head after the fresh-database fix (`git log -1 -- docs/runbooks/restore-rollback-alerts.md`; earlier `dc5866c`) (branch `ai/68`, on `origin/main`; runbook now 180 lines). Docs only; nothing was run
+against a real environment. Test: `tests/unit/restore-rollback-alerts-runbook.test.ts` (`@issue-68`), 7/7 passed with
 `vitest run --project unit` on that commit; it failed 6/6 on `ebc9937` before the runbook existed.
 
 Review fixes (CodeRabbit T1/T2/T3): T1 restore step 8 uses `--single-transaction --exit-on-error` and says to stop, keep
 `web`/`worker` down, restore the pre-restore dump and escalate on any error; T2 the newest-run check is now "close to the
-dump time" because `pg_dump` snapshots after the filename timestamp; T3 AC5 is renamed as the runbook's own 200-line budget.
+dump time" because `pg_dump` snapshots after the filename timestamp; T4 (round 2) step 8 now drops and recreates the database before `pg_restore`, so objects absent from the dump cannot survive; T3 AC5 is renamed as the runbook's own 200-line budget.
 
 | REQ | Verified by |
 |---|---|

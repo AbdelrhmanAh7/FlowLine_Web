@@ -54,10 +54,11 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 6. Stop the writers: `dc stop web worker`. Leave `db` running.
 7. Check the dump is readable: `dc exec -T db pg_restore --list < backups/<dump-file> > /dev/null`. Stop here if it
    fails and pick the previous dump.
-8. Restore over the current database:
-   `dc exec -T db pg_restore -U flowline -d flowline --clean --if-exists --no-owner --single-transaction --exit-on-error < backups/<dump-file>`.
-   On any error, stop: do not start `web` or `worker`, restore `backups/pre-restore-<utc>.dump` the same way, and
-   escalate to `<owner>`.
+8. Restore into a fresh, empty database, so no object absent from the dump survives (restoring over the old one would leave it):
+   `dc exec -T db dropdb -U flowline --force --if-exists flowline`, then `dc exec -T db createdb -U flowline flowline`,
+   then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < backups/<dump-file>`.
+   On any error, stop: do not start `web` or `worker`, repeat this step with `backups/pre-restore-<utc>.dump`
+   (drop, create, restore), and escalate to `<owner>`.
 9. Confirm `.env.beta` holds the same encryption keys and auth secret as when the dump was taken (compare with
    `<key-store>`; never print the values).
 10. Start the app with the same image: `FLOWLINE_IMAGE=flowline:<current-sha> dc up -d --wait`. The `migrate`

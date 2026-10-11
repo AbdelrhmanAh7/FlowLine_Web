@@ -93,6 +93,16 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     for (const href of links) expect(existsSync(resolve(dirname(runbookPath), href)), `link ${href}`).toBe(true);
   });
 
+  it("@issue-68 AC1: the restore goes into a fresh database, all-or-nothing", () => {
+    const step = runbook.slice(runbook.indexOf("8. Restore into a fresh"), runbook.indexOf("9. Confirm"));
+    expect(step).toMatch(/dropdb .*--force/);
+    expect(step).toMatch(/createdb/);
+    expect(step).toMatch(/pg_restore .*--single-transaction --exit-on-error/);
+    expect(step).not.toMatch(/--clean/);
+    expect(step.indexOf("dropdb")).toBeLessThan(step.indexOf("createdb"));
+    expect(step.indexOf("createdb")).toBeLessThan(step.indexOf("pg_restore"));
+  });
+
   it("@issue-68 AC4: the mandatory docs check passes for this change", () => {
     const files = ["docs/runbooks/restore-rollback-alerts.md", "docs/implementation/OWNER_ACTIONS.md", "tests/unit/restore-rollback-alerts-runbook.test.ts"];
     expect(checkDocs(files).passed).toBe(true);
