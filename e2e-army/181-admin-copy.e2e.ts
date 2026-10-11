@@ -1,7 +1,11 @@
-// Issue #181: Comprehensive error handling tests for admin copy functionality
-// Tests cover server-to-client error flow for /admin/copy page and /api/platform/copy endpoints.
-// Tags: feat:fl-platform-admin (platform admin panel feature)
-
+// Issue #181 (part 3/3 of #119): the admin copy editor's error flow from server to client.
+// Request-level (no model). The throwaway stack has no platform admin (one needs an enrolled authenticator, a session MFA
+// proof and an admin row, which no endpoint creates), so this covers what the stack can observe: every refusal of
+// /api/platform/copy and /admin/copy is a bounded JSON error (or the localized 404 page), never a 500, HTML from the
+// API, a stack trace or an echo of the submitted data. The admin-only refusals (STEP_UP_REQUIRED, CSRF_TOKEN_INVALID,
+// UNSUPPORTED_MEDIA_TYPE, BODY_TOO_LARGE, VALIDATION, COPY_DUPLICATE_EDIT, REVISION_CONFLICT, INTERNAL) and how the
+// client's api() turns each into an ApiError are proven in tests/integration/platform-copy-errors.test.ts.
+// Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -10,10 +14,12 @@ const PASSWORD = "Army-Passw0rd!";
 const FIXED = "fl_test_beta_mode=open; fl_locale=en";
 /** Deterministic per stack: derived from a fixed seed and the stack URL, never from the clock. */
 const seeded = (base: string, seed: string) => createHash("sha256").update(`${base}|${seed}`).digest("base64url");
+const emailFor = (base: string, seed: string) => `army-181-${seeded(base, seed).slice(0, 10).toLowerCase().replace(/[^a-z0-9]/g, "x")}@flowline-e2e.test`;
 
 /** A verified, signed-in account through the product's own endpoints (test stack outbox); returns its session cookies. */
 async function signedIn(base: string, email: string) {
   const h = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED };
+  // A re-run on the same stack finds the account already there; sign-in below still has to succeed.
   const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD, name: "Army Bot" }) });
   if (up.ok) {
     let token: string | null = null;
@@ -22,7 +28,7 @@ async function signedIn(base: string, email: string) {
       const messages: { purpose?: string; link?: string }[] = (await r.json().catch(() => ({ messages: [] }))).messages ?? [];
       const link = messages.find((m) => m.purpose === "verify")?.link;
       token = link ? new URL(link).searchParams.get("token") : null;
-      if (!token) await new Promise((r) => setTimeout(r, 500));
+      if (!token) await new Promise((r) => setTimeout(r, 500)); // the outbox is written after the sign-up response
     }
     if (!token) throw new Error("no verification e-mail in the test outbox");
     const v = await fetch(`${base}/api/email`, { method: "POST", headers: h, body: JSON.stringify({ action: "verify", token }) });
@@ -30,132 +36,75 @@ async function signedIn(base: string, email: string) {
   }
   const res = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD }) });
   expect(res.status).toBe(200);
-  const session = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-  return { "content-type": "application/json", origin: new URL(base).origin, cookie: `${FIXED}; ${session}` };
+  return res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+}
+
+/** The bounded error contract the copy editor's api() client relies on: JSON `{ error: { code, message } }`, nothing else. */
+async function expectBoundedError(res: Response, status: number, code: string, mustNotEcho: string[] = []) {
+  const text = await res.text();
+  expect(res.status).toBe(status);
+  expect(res.headers.get("content-type") ?? "").toContain("application/json");
+  expect(res.headers.get("x-request-id")).toBeTruthy();
+  const body = JSON.parse(text) as { error: { code: string; message: string } };
+  expect(Object.keys(body)).toEqual(["error"]);
+  expect(body.error.code).toBe(code);
+  expect(typeof body.error.message).toBe("string");
+  expect(text).not.toMatch(/<html|\n\s+at |node_modules|\.tsx?:\d+/i);
+  for (const s of mustNotEcho) expect(text).not.toContain(s);
 }
 
 test(
-  "@issue-181 AC1: server errors on /api/platform/copy return JSON with error.code and no HTML/stack trace",
+  "@issue-181 AC: every refusal of /api/platform/copy reaches the client as a bounded JSON error (never 500, HTML, a stack or an echo)",
   { tags: ["feat:fl-platform-admin", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    // As an ordinary signed-in user (not platform admin), GET /api/platform/copy
-    const user = await signedIn(base, `army-181-user-${seeded(base, "user").slice(0, 10)}@flowline-e2e.test`);
-    const getRes = await fetch(`${base}/api/platform/copy`, { method: "GET", headers: user });
-    expect(getRes.status).toBe(404); // non-admin gets 404 per platformAdminOrNull
-    const getBody = await getRes.text();
-    expect(getRes.headers.get("content-type")).toContain("application/json");
-    const getJson = JSON.parse(getBody);
-    expect(getJson.error).toBeDefined();
-    expect(getJson.error.code).toBeDefined();
-    expect(getBody).not.toContain("<html");
-    expect(getBody).not.toContain("stack trace");
-    expect(getBody).not.toContain("at ");
+    const origin = new URL(base).origin;
+    const url = `${base}/api/platform/copy`;
+    const marker = `army-181-${seeded(base, "marker").slice(0, 12)}`;
+    const edit = JSON.stringify({ action: "edit", edits: [{ locale: "en", key: "meta.title", value: marker }], expectedRevision: 0 });
+    const publish = JSON.stringify({ action: "publish", expectedDraftRevision: 0, expectedPublishedRevision: 0 });
 
-    // PATCH /api/platform/copy (edit) also returns 404 with JSON error for non-admins
-    const patchRes = await fetch(`${base}/api/platform/copy`, {
-      method: "PATCH",
-      headers: user,
-      body: JSON.stringify({ action: "edit", edits: [], expectedRevision: 0 }),
-    });
-    expect(patchRes.status).toBe(404);
-    const patchBody = await patchRes.text();
-    expect(patchRes.headers.get("content-type")).toContain("application/json");
-    const patchJson = JSON.parse(patchBody);
-    expect(patchJson.error).toBeDefined();
-    expect(patchJson.error.code).toBeDefined();
+    // Signed out: the panel does not exist (404), for reads and writes alike.
+    await expectBoundedError(await fetch(url, { headers: { cookie: FIXED } }), 404, "NOT_FOUND");
+    await expectBoundedError(await fetch(url, { method: "PATCH", headers: { "content-type": "application/json", origin }, body: edit }), 404, "NOT_FOUND", [marker]);
 
-    // POST /api/platform/copy (publish) also returns 404 with JSON error for non-admins
-    const postRes = await fetch(`${base}/api/platform/copy`, {
-      method: "POST",
-      headers: user,
-      body: JSON.stringify({ action: "publish", expectedDraftRevision: 0, expectedPublishedRevision: 0 }),
-    });
-    expect(postRes.status).toBe(404);
-    const postBody = await postRes.text();
-    expect(postRes.headers.get("content-type")).toContain("application/json");
-    const postJson = JSON.parse(postBody);
-    expect(postJson.error).toBeDefined();
-    expect(postJson.error.code).toBeDefined();
+    // Signed in, but not a platform admin: still 404 for GET, PATCH (edit) and POST (publish).
+    const session = await signedIn(base, emailFor(base, "user"));
+    const user = { "content-type": "application/json", origin, cookie: `${FIXED}; ${session}` };
+    await expectBoundedError(await fetch(url, { headers: user }), 404, "NOT_FOUND");
+    await expectBoundedError(await fetch(url, { method: "PATCH", headers: user, body: edit }), 404, "NOT_FOUND", [marker]);
+    await expectBoundedError(await fetch(url, { method: "POST", headers: user, body: publish }), 404, "NOT_FOUND");
+
+    // Malformed JSON is never parsed for a non-admin: a 404, not a 400 or a 500.
+    await expectBoundedError(await fetch(url, { method: "PATCH", headers: user, body: `{"action":"edit",${marker}` }), 404, "NOT_FOUND", [marker]);
+
+    // An API key (Bearer) never reaches the panel, even with a valid session cookie.
+    await expectBoundedError(await fetch(url, { headers: { ...user, authorization: `Bearer ${marker}` } }), 404, "NOT_FOUND", [marker]);
+
+    // A cross-site write with the session cookie is refused before anything else runs.
+    const crossSite = { ...user, origin: "https://army-181.invalid", "sec-fetch-site": "cross-site" };
+    await expectBoundedError(await fetch(url, { method: "POST", headers: crossSite, body: publish }), 403, "CROSS_SITE_REQUEST");
   },
 );
 
 test(
-  "@issue-181 AC2: platform admin can reach /api/platform/copy and gets JSON error with code on conflict (409) and step-up (403)",
+  "@issue-181 AC: /admin/copy shows a non-admin the localized 404 page (Arabic RTL and English), never a server error",
   { tags: ["feat:fl-platform-admin", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    // The test stack may not have a platform admin pre-seeded; accept 200 or 404/403 with JSON error
-    const getRes = await fetch(`${base}/api/platform/copy`, {
-      method: "GET",
-      headers: { "content-type": "application/json", origin: new URL(base).origin, cookie: "" },
-    });
-    expect([200, 403, 404]).toContain(getRes.status);
-    const getBody = await getRes.text();
-    if (getRes.status !== 200) {
-      expect(getRes.headers.get("content-type")).toContain("application/json");
-      const getJson = JSON.parse(getBody);
-      expect(getJson.error).toBeDefined();
-      expect(getJson.error.code).toBeDefined();
-      expect(getBody).not.toContain("<html");
-      expect(getBody).not.toContain("stack trace");
-    }
-  },
-);
+    const session = await signedIn(base, emailFor(base, "page"));
+    const ar = await fetch(`${base}/admin/copy`, { headers: { cookie: `fl_test_beta_mode=open; fl_locale=ar; ${session}` } });
+    expect(ar.status).toBe(404);
+    const arHtml = await ar.text();
+    expect(arHtml).toMatch(/<html[^>]*\blang="ar"/);
+    expect(arHtml).toMatch(/<html[^>]*\bdir="rtl"/);
+    expect(arHtml).toContain("لم نعثر على هذه الصفحة");
+    expect(arHtml).not.toContain("platformAdmin.copyEditor");
 
-test(
-  "@issue-181 AC3: /admin/copy page gives 404 not 500 for non-admins",
-  { tags: ["feat:fl-platform-admin", "lvl:api"] },
-  async ({ app }) => {
-    const base = app.baseUrl!;
-    const user = await signedIn(base, `army-181-page-${seeded(base, "page").slice(0, 10)}@flowline-e2e.test`);
-    const pageRes = await fetch(`${base}/admin/copy`, { headers: user });
-    expect(pageRes.status).toBe(404);
-    const pageBody = await pageRes.text();
-    expect(pageBody).not.toContain("500");
-    expect(pageBody).not.toContain("Internal Server Error");
-  },
-);
-
-test(
-  "@issue-181 AC4: UI displays load error with retry button when copy API fails",
-  { tags: ["feat:fl-platform-admin", "lvl:ui"] },
-  async ({ app, screen }) => {
-    // This test assumes the test stack has a platform admin; if not, it will 404 which is also valid
-    await app.open("/en/admin/copy");
-    // Wait for either the page to load or an error to appear
-    await screen.waitForSelector("h1, [role='alert']");
-    const hasError = await screen.getByRole("alert").isVisible().catch(() => false);
-    if (hasError) {
-      // If there's a load error, verify it has a retry button
-      const retryButton = await screen.getByRole("button", { name: /retry/i }).isVisible().catch(() => false);
-      expect(retryButton).toBe(true);
-    } else {
-      // Page loaded successfully - verify structure
-      await expect(screen.getByText("Copy editor")).toBeVisible();
-      await expect(screen.getByLabel("Search keys or text")).toBeVisible();
-      await expect(screen.getByLabel("Group")).toBeVisible();
-    }
-  },
-);
-
-test(
-  "@issue-181 AC5: Arabic/RTL - error messages displayed in Arabic",
-  { tags: ["feat:fl-platform-admin", "lvl:ui"] },
-  async ({ app, screen }) => {
-    await app.open("/ar/admin/copy");
-    await screen.waitForSelector("h1, [role='alert']");
-    const dir = await screen.evaluate(() => document.documentElement.dir);
-    expect(dir).toBe("rtl");
-    const hasError = await screen.getByRole("alert").isVisible().catch(() => false);
-    if (hasError) {
-      // Error message should be in Arabic
-      const alertText = await screen.getByRole("alert").textContent();
-      expect(alertText).toMatch(/[\u0600-\u06FF]/); // Contains Arabic characters
-    } else {
-      await expect(screen.getByText("تحرير النصوص")).toBeVisible();
-      await expect(screen.getByLabel("ابحث بالمفتاح أو النص")).toBeVisible();
-      await expect(screen.getByLabel("المجموعة")).toBeVisible();
-    }
+    const en = await fetch(`${base}/admin/copy`, { headers: { cookie: `${FIXED}; ${session}` } });
+    expect(en.status).toBe(404);
+    const enHtml = await en.text();
+    expect(enHtml).toMatch(/<html[^>]*\bdir="ltr"/);
+    expect(enHtml).toContain("find that page");
   },
 );
