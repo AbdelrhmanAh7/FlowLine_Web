@@ -3,8 +3,9 @@
 Not user-facing, so no e2e-army test: `source-map-js` is used only by CSS build and test tooling (`postcss` via `next` and
 `vite`/`vitest`, `@tailwindcss/node`); no Flowline source imports it and no UI flow changes.
 
-Tested commit: `2d830e2afb56d2d2ec70828360985f58157b37f4` on `ai/62` (includes the merge of `origin/main` at `aee8385`; the
-commit that adds this file changes only Markdown). Run 2026-10-11 (UTC) on macOS, Node v26.10.0 (CI uses Node 24), pnpm
+Tested code: `b4c41a3e8203413bb97b8f03a80cffdd92fb90fb` on `ai/62` (includes the merge of `origin/main` at `aee8385`). Code
+and tests are identical to `2d830e2`; the later commits change only Markdown. The PR head is the commit that carries this
+file: CI `gate` on that head is the authority for the final candidate. Run 2026-10-11 (UTC) on macOS, Node v26.10.0 (CI uses Node 24), pnpm
 10.32.1, Vitest 5.0.2. Requirement IDs are those of the hub PRD draft `3f227121-0472-8132-9cd1-d43bb8d7ba54`, carried over
 from the earlier version of this file.
 
@@ -13,7 +14,7 @@ from the earlier version of this file.
 | REQ-FL-62-1 `pnpm-lock.yaml` resolves `source-map-js` ≥ 1.2.2 | `"source-map-js": ">=1.2.2"` in `pnpm-workspace.yaml` `overrides`; lockfile rebuilt from main's with `pnpm install --lockfile-only` (not hand-edited); `pnpm why source-map-js` | Lockfile diff vs `origin/main`: the override line and `source-map-js` 1.2.1 → 1.2.2 (package, snapshot, three dependents); 0 references to 1.2.1. `pnpm why`: "Found 1 version of source-map-js", 1.2.2 (the npm `latest` tag) |
 | REQ-FL-62-2 Tracked PR | PR #77 (`Closes #62`); `git diff origin/main --stat` | 8 files: lockfile and workspace (14 lines), the test (133), docs (26) and this file |
 | REQ-FL-62-3 Fast tier after the lockfile change | CI `gate` on the pushed head | **Pending**: the fast tier runs on GitHub Actions (owner rule 2026-10-08: no full suites locally). The local checks below are focused checks, not the fast tier (no integration shards, no Chromium). The fast tier passed on the previous head `a30b4e7` ([run 37807613926](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37807613926)), before the merge with main |
-| REQ-FL-62-4 Alert #3 closed as fixed | Dependabot, after merge to main | **Pending (after merge)**: [NEXT_ACTION.md](../../NEXT_ACTION.md) step 5 |
+| REQ-FL-62-4 Alert #3 closed as fixed | Dependabot, after merge to main | **Pending (after merge)**: [NEXT_ACTION.md](../../../NEXT_ACTION.md) step 5 |
 | REQ-FL-62-5 Open-alert query returns 0 or only alerts newer than #62 | `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` after merge | **Pending (after merge)**. Before merge (GraphQL `vulnerabilityAlerts(states: OPEN)`, 2026-10-11T21:38Z): 15 open, #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4), created 2026-10-08 12:17–12:18Z, after #62 (2026-10-07T15:00Z). Expected after merge: #3 fixed, #4–#17 left |
 | REQ-FL-62-6 Lockfile guard test | `tests/unit/dependency-advisories.test.ts` | 3 passed: semver order; fixtures (1.2.10 and 1.2.2 accepted, 1.2.1 and 1.2.2-beta.1 flagged); `@issue-62 AC1` on the real lockfile |
 
