@@ -44,9 +44,11 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     const check = between(runbook, "7. Check", "8. Restore");
     expect(check).toMatch(/pg_restore --list < "backups\/\$DUMP_FILE"/);
     expect(check).toMatch(/pg_restore --list < "backups\/pre-restore-\$UTC\.dump"/);
-    const step = between(runbook, "8. Restore into a fresh", "9. Confirm");
+    const step = between(runbook, "8. Restore into a fresh", "9. Check the cutoff");
     expect(step).toMatch(/dropdb .*--force[\s\S]*createdb[\s\S]*pg_restore .*--single-transaction --exit-on-error/);
     expect(step).not.toMatch(/--clean/);
+    expect(between(runbook, "9. Check the cutoff", "10. Confirm"), "cutoff read before writers start").toMatch(/max\(created_at\) from run/);
+    expect(runbook.split('FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up')[1], "no cutoff check once new runs exist").not.toMatch(/max\(created_at\)/);
   });
 
   it("@issue-68 AC1: commands are copy-pasteable shell, with variables defined once and no <placeholder> in a command", () => {
@@ -57,6 +59,8 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     const setup = runbook.match(/```sh\n([\s\S]+?)```/)?.[1] ?? "";
     for (const name of ["DEPLOY_DIR", "REPO_DIR", "BASE_URL", "PREV_SHA", "CURRENT_SHA", "UTC"]) expect(setup, `${name} is defined`).toMatch(new RegExp(`^${name}=|; ${name}=`, "m"));
     expect(setup).toMatch(/^dc\(\) \{/m);
+    expect(setup).toMatch(/operator machine.*BASE_URL and REPO_DIR/); // the smoke steps run there, not on the beta host
+    for (const command of commands.filter((c) => c.startsWith("node "))) expect(command, "repo scripts anchored at REPO_DIR").toMatch(/^node "\$REPO_DIR\/scripts\//);
     // DUMP_FILE is a bare file name, so "backups/$DUMP_FILE" never doubles the directory.
     expect(between(runbook, "2. Pick the dump:", "3. Record")).toMatch(/DUMP_FILE="flowline-[0-9TZ]+\.dump"/);
     expect(runbook).not.toMatch(/backups\/backups/);

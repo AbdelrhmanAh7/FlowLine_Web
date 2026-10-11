@@ -18,6 +18,7 @@ prose and in the quoted values below, which the owner replaces once per session 
 ```sh
 DEPLOY_DIR="<deploy-dir>"; BASE_URL="https://<beta-host>"
 REPO_DIR="<repo-checkout>"   # git checkout of the repo (the beta stack is its deploy/beta folder), not DEPLOY_DIR itself
+# Smoke steps run on the operator machine: set BASE_URL and REPO_DIR there too.
 PREV_SHA="<previous-sha>"; CURRENT_SHA="<current-sha>"   # rollback and restore only
 cd "$DEPLOY_DIR"
 dc() { docker compose -f docker-compose.beta.yml --env-file .env.beta "$@"; }
@@ -51,9 +52,8 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 
 1. Get owner approval for the restore and note the incident start time and the reason in the incident record.
 2. Pick the dump: the newest `flowline-<utc>.dump` taken before the damage (`ls -l backups/`), then set
-   `DUMP_FILE` to its bare file name (no `backups/`), e.g. `DUMP_FILE="flowline-20260101T020000Z.dump"`. Record
-   its timestamp: data written after it will be lost. The dump's real snapshot point is when `pg_dump` starts, slightly
-   after the `<utc>` in the filename.
+   `DUMP_FILE` to its bare file name (no `backups/`), e.g. `DUMP_FILE="flowline-20260101T020000Z.dump"`. Record its
+   timestamp: data written after it is lost (the snapshot point is when `pg_dump` starts, just after the filename's `<utc>`).
 3. Record the running release (revision and `schemaVersion`): `dc images web` and `curl -fsS "$BASE_URL/api/health"`.
 4. Take a safety dump of the current state, even if damaged:
    `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-restore-$UTC.dump"`.
@@ -68,15 +68,17 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
    then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < "backups/$DUMP_FILE"`.
    On any error, stop: do not start `web` or `worker`, repeat this step with `"backups/pre-restore-$UTC.dump"`
    in place of `"backups/$DUMP_FILE"` (drop, create, restore), and escalate to `<owner>`.
-9. Confirm `.env.beta` holds the keys and auth secret in use at dump time (compare with `<key-store>`; never print them).
-10. Start the app with the same image: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`. The `migrate`
+9. Check the cutoff before any writer starts: `dc exec -T db psql -U flowline -d flowline -c 'select max(created_at) from run'`
+   must be close to the dump time, at most a few minutes past the filename timestamp (writers from step 11 on would move it); much later: wrong dump, go back to step 7.
+10. Confirm `.env.beta` holds the keys and auth secret in use at dump time (compare with `<key-store>`; never print them).
+11. Start the app with the same image: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`. The `migrate`
     service re-applies any expand-only migrations newer than the dump.
-11. Run the verification queries below (`dc exec -T db psql -U flowline -d flowline`) and compare with known counts.
-12. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
-13. Run the smoke suite from the operator machine with the pre-verified smoke accounts (`SMOKE_A_*` / `SMOKE_B_*`
-    set privately): `node scripts/release/smoke.mjs --base "$BASE_URL"`.
-14. Sign in as `<owner>`, open a workspace, a flow and its run history, and press **Test** on one connection (keys decrypt).
-15. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
+12. Run the verification queries below (`dc exec -T db psql -U flowline -d flowline`) and compare with known counts.
+13. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
+14. On the operator machine (`BASE_URL`, `REPO_DIR` and the smoke accounts `SMOKE_A_*` / `SMOKE_B_*` set privately),
+    run the smoke suite: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
+15. Sign in as `<owner>`, open a workspace, a flow and its run history, and press **Test** on one connection (keys decrypt).
+16. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
     secrets or customer data) under `artifacts/phase-4/restore/`.
 
 Verification queries (read-only):
@@ -90,9 +92,6 @@ union all select 'workspace_member', count(*) from workspace_member union all se
 union all select 'flow_version', count(*) from flow_version union all select 'run', count(*) from run
 union all select 'connection', count(*) from connection union all select 'api_key', count(*) from api_key
 union all select 'platform_admin', count(*) from platform_admin;
--- Newest run: must be close to the dump time (allow a few minutes after the filename timestamp);
--- a much later value means the wrong dump was restored.
-select max(created_at) as newest_run from run;
 -- Runs cut off mid-flight by the backup show here; the worker resumes or fails them, check none stay stuck.
 select status, count(*) from run group by status order by status;
 -- Every membership points at a real user and workspace.
@@ -131,7 +130,7 @@ Steps:
 4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-rollback-$UTC.dump"`.
 5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`.
 6. Check `"$BASE_URL/api/health"`: revision `<previous-sha>`, same `schemaVersion` (never lower), `"db":"ok"`, `"worker":"ok"`.
-7. Run the smoke suite: `node scripts/release/smoke.mjs --base "$BASE_URL"` (smoke accounts as in §1 step 13).
+7. Run the smoke suite on the operator machine as in §1 step 14: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
 8. Watch the monitor in `<alert-channel>` for 30 minutes; every alert from step 1 must show RECOVERED.
 9. Record the rollback (both SHAs, times, checks) under `artifacts/phase-4/rollback/`, and open an issue for the
    fix. The fix ships later as a normal release, never by editing the running stack.
