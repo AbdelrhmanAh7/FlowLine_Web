@@ -29,6 +29,14 @@ async function freshEmail(base: string, seed: string): Promise<string> {
   }
   throw new Error(`no unused address left for seed ${seed}`);
 }
+/**
+ * A submit before React hydrates is a plain form POST that signs nobody up or in, so a fast tap could time out waiting for
+ * the next screen. Wait until React has attached its handlers to the auth form (no clock, no sleep: polled DOM state).
+ */
+const untilAuthFormHydrated = (browser: { evaluate<T>(fn: () => T): Promise<T> }) =>
+  expect
+    .poll(() => browser.evaluate(() => Object.keys(document.querySelector('form[method="post"]') ?? {}).some((k) => k.startsWith("__reactProps$"))))
+    .toBe(true);
 
 test(
   "@issue-124 AC1: with the test auto-verify opt-in, a new sign-up is verified and can sign in and create a workspace",
@@ -79,6 +87,7 @@ test(
     ]);
     const email = await freshEmail(base, "ui-auto-verified");
     await app.open("/sign-up");
+    await untilAuthFormHydrated(browser);
     await screen.getByLabel("Name").fill("Army 124");
     await screen.getByLabel("Email").fill(email);
     await screen.getByLabel("Password").fill(PASSWORD);
@@ -89,5 +98,29 @@ test(
     await screen.getByLabel("Workspace name").fill("Army 124 UI");
     await screen.getByRole("button", "Continue").tap();
     await expect(screen.getByRole("heading", "What do you want to automate first?")).toBeVisible();
+  },
+);
+
+test(
+  "@issue-124 AC1: in the browser, an auto-verified account signs in on the sign-in form with the credentials it signed up with",
+  { tags: ["feat:fl-sign-in", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    const base = app.baseUrl!;
+    const email = await freshEmail(base, "ui-sign-in-after-auto-verify");
+    const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: headers(base, `${BASE_COOKIES}; fl_test_auto_verify=1`), body: JSON.stringify({ email, password: PASSWORD, name: "Army 124" }) });
+    expect(up.status).toBe(200);
+    // Signing in needs no opt-in: the account itself was created verified.
+    await browser.setCookies([
+      { url: base, name: "fl_locale", value: "en" },
+      { url: base, name: "fl_test_beta_mode", value: "open" },
+    ]);
+    await app.open("/sign-in");
+    await untilAuthFormHydrated(browser);
+    await screen.getByLabel("Email").fill(email);
+    await screen.getByLabel("Password").fill(PASSWORD);
+    await screen.getByRole("button", "Sign in").tap();
+    // A new account has no workspace yet, so /app sends it on to onboarding; no "not verified" error on the way.
+    await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
+    await expect(screen.getByText("Verify your email first — open the link we sent you.")).not.toBeVisible();
   },
 );
