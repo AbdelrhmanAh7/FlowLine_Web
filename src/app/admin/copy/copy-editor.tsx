@@ -18,10 +18,34 @@ interface State {
 }
 interface Me { csrfToken: string; stepUpUntil: string | null }
 
+/** Resolves the text shown for a key: the draft override, then the base copy, then "". */
 function effective(state: State, locale: Locale, key: string) {
   return state.draft.value[locale]?.[key] ?? state.base[locale]?.[key] ?? "";
 }
 
+/**
+ * Platform-admin editor for the Arabic and English UI copy overrides.
+ *
+ * Loads the copy state from `GET /api/platform/copy` and the admin session from
+ * `GET /api/platform/me`. The left panel searches and filters keys by group; the
+ * right panel edits one key in both locales and previews the result.
+ *
+ * Writes need an active step-up: "Save draft" sends `PATCH /api/platform/copy`
+ * with `expectedRevision`, and "Apply" publishes the draft with `POST`. Both send
+ * the `x-flowline-csrf` header. "Reset" only restores the base text into the
+ * field; it does not save. There is no autosave.
+ *
+ * Props: none.
+ *
+ * @returns {JSX.Element} The full-page copy editor layout.
+ *
+ * @example
+ * // src/app/admin/copy/page.tsx
+ * export default async function CopyPage() {
+ *   if (!(await platformAdminOrNull())) notFound();
+ *   return <CopyEditor />;
+ * }
+ */
 export function CopyEditor() {
   const t = useT();
   const state = useQuery({ queryKey: ["platform-copy"], queryFn: () => api<State>("/api/platform/copy") });
