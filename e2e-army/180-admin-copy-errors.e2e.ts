@@ -1,13 +1,9 @@
 // Issue #180: Improve client-side error display for /admin/copy
-// Request-level test (no model). The e2e-army packages (`e2e`, `@e2e-dev/web`) expose no request interception that this
-// repo can verify, so forcing /api/platform/copy to 500 and asserting the friendly loadError + Retry UI is covered by
-// tests/unit/admin/copy/copy-errors.test.ts (error to message-key mapping) and tests/unit/admin/copy/copy-editor.test.ts
-// (load-error UI, meLoadError alert, Retry button). Here: the real endpoint refuses a non-admin with a JSON error body
-// that carries an error.code, so the editor always has a code to map and never receives HTML.
-//
-// Admin error paths (409 REVISION_CONFLICT, 403 STEP_UP_REQUIRED) require a platform admin session. The test stack does
-// not seed a platform admin by default, and there is no test API to promote a user. These paths are covered by the
-// unit tests for copyErrorKey and shouldRefetchAfterWriteError.
+// Request-level test (no model): verifies /api/platform/copy refuses non-admins with a JSON error carrying a code.
+// UI error states (loadError + Retry, meLoadError alert, save/publish error messages, refetch on conflict) are
+// covered by unit tests in tests/unit/admin/copy/ because the test stack does not seed a platform admin and
+// there is no test API to promote a user. Admin error paths (409 REVISION_CONFLICT, 403 STEP_UP_REQUIRED)
+// are covered by the unit tests for copyErrorKey and shouldRefetchAfterWriteError.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -42,7 +38,7 @@ async function signedIn(base: string, email: string) {
 }
 
 test(
-  "@issue-180 AC: /api/platform/copy refuses a non-admin with a JSON error that carries a code",
+  "@issue-180 AC: /api/platform/copy refuses a non-admin PATCH with 404 and a JSON error body carrying a code",
   { tags: ["feat:fl-platform-admin", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
@@ -60,5 +56,17 @@ test(
     const body = JSON.stringify(json);
     expect(body).not.toContain("<html");
     expect(body).not.toContain("stack trace");
+  },
+);
+
+test(
+  "@issue-180 AC: /admin/copy page returns 404 for a non-admin user (panel existence not confirmed)",
+  { tags: ["feat:fl-platform-admin", "lvl:ui"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const user = await signedIn(base, `army-180-ui-${seeded(base, "ui").slice(0, 10).toLowerCase().replace(/[^a-z0-9]/g, "x")}@flowline-e2e.test`);
+    // Non-admins should get a 404 page (not the copy editor) — the panel's existence is not confirmed
+    const res = await fetch(`${base}/admin/copy`, { headers: user });
+    expect(res.status).toBe(404);
   },
 );
