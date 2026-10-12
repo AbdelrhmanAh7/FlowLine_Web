@@ -37,6 +37,9 @@ Each result names the exact tree it was recorded on. Results are never carried o
 | `25e60c010a812c63785e0d9facf5c0bc8823ed04` (merge of `origin/main` into this branch after `290eb2b`; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
 | same | `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | clean |
 | `28348b415aa1f931236c5e993eaa2d0cba4849ed` (merge of `origin/main`; only `.md` files changed on top, no code or test change) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
+| `1e0aadf5f537f1693a85f0247a4967119544dded` (merge of `origin/main` `b1023c9`; clean tree; the PR diff against `b1023c9` is this file, `docs/GITHUB_WORKFLOW.md`, `docs/implementation/PROGRESS.md` and the ci-workflows test block) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
+| same | `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | clean |
+| same | `git show -s --format='%H %cI' 41c658f` (local hub checkout) and `f655e51` (this repo) | `41c658f0720effff140287e4101f6cbd2e951627 2026-10-06T05:45:20+03:00` (02:45:20Z); `f655e51caf115e0313fba01c452d5e158176f5b9 2026-10-06T05:22:11+03:00` (02:22:11Z) |
 
 Gate runs on a pull request execute on GitHub's synthetic merge commit of the PR head into `main` (for example the run that Actions showed as merge commit `1c28383`; GitHub recreates that synthetic commit on each push and its full SHA was not recorded, so it cannot be cited here), not on the PR head itself. A green `gate` is evidence for that synthetic merge tree only, not for the PR head alone. Final-candidate validation (a green `gate` and `docs` on the final PR head, plus the full tier dispatched once) is pending and is recorded on the PR, not here.
 
