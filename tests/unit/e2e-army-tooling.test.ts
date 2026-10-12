@@ -31,6 +31,38 @@ describe("cli-model adapter", () => {
     expect(calls[0].toolName).toBe("click");
     expect(JSON.parse(calls[0].input)).toEqual({ target: "Sign in" });
   });
+
+  it("retries a required tool call when the first answer names only tools that do not exist", async () => {
+    dir = mkdtempSync(join(tmpdir(), "fake-agy-"));
+    // First answer calls a hallucinated tool (non-empty tool_calls, but nothing usable); the second one is valid.
+    writeFileSync(join(dir, "first.json"), JSON.stringify({ text: "", tool_calls: [{ name: "teleport", arguments: {} }] }));
+    writeFileSync(join(dir, "second.json"), JSON.stringify({ text: "", tool_calls: [{ name: "click", arguments: { target: "Go" } }] }));
+    writeFileSync(join(dir, "agy"), `#!/bin/sh\necho x >> "${join(dir, "calls")}"\nif [ "$(wc -l < "${join(dir, "calls")}")" -le 1 ]; then cat "${join(dir, "first.json")}"; else cat "${join(dir, "second.json")}"; fi\n`);
+    chmodSync(join(dir, "agy"), 0o755);
+    vi.stubEnv("PATH", `${dir}:${process.env.PATH}`);
+    const res = await cliModel({ cli: "agy", timeoutMs: 20_000 }).doGenerate({
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+      tools: [{ type: "function", name: "click", description: "click", inputSchema: { type: "object" } }],
+      toolChoice: { type: "required" },
+    });
+    expect(readFileSync(join(dir, "calls"), "utf8").trim().split("\n")).toHaveLength(2);
+    const calls = res.content.filter((c: { type: string }) => c.type === "tool-call");
+    expect(calls.map((c: { toolName: string }) => c.toolName)).toEqual(["click"]);
+    expect(res.finishReason.unified).toBe("tool-calls");
+  });
+});
+
+describe("e2e-army hosts", () => {
+  it("the browser origin (e2e.config.ts) and the API origin (apiBase) default to the same hostname, so cookies set in one reach the other", async () => {
+    vi.stubEnv("E2E_ARMY_URL", "");
+    vi.stubEnv("E2E_ARMY_API", "");
+    delete process.env.E2E_ARMY_URL;
+    delete process.env.E2E_ARMY_API;
+    const { apiBase } = await import("../../e2e-army/lib.ts");
+    const configUrl = /process\.env\.E2E_ARMY_URL \?\? "([^"]+)"/.exec(readFileSync(join(root, "e2e.config.ts"), "utf8"))?.[1];
+    expect(configUrl).toBeDefined();
+    expect(new URL(apiBase()).host).toBe(new URL(configUrl!).host);
+  });
 });
 
 describe("e2e-army docs and suite", () => {

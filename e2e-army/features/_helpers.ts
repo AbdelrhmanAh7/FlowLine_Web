@@ -277,7 +277,10 @@ export async function connectAi(h: Http, workspaceId: string, label: string) {
   await h.put(`/api/workspaces/${workspaceId}/ai/policy`, { json: { allowUnknownCost: true } });
   return id;
 }
-/** A new workspace of an actor (UI tests use one per test so counts and lists are exact). */
+/** A new workspace of an actor (UI tests use one per test so counts and lists are exact). The name is seeded, so on a throwaway database
+ *  (the hub, CI) the slug and the routes repeat and agent steps replay from the cache. On a persistent local database the previous run's
+ *  workspace still owns the slug, so the product appends -2, -3 … and repeat local runs re-record the UI steps; there is no API to delete
+ *  a workspace, and reusing the old one would break the exact counts. */
 export async function freshWorkspace(h: Http, label: string) {
   return (await h.post("/api/workspaces", { json: { name: `UI ${seeded(label, 5)}` } })).json.workspace as { id: string; slug: string; name: string };
 }

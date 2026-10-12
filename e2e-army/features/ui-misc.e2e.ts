@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { apiBase, needsModel, freshEmail } from "../lib.ts";
-import { Http, PASSWORD, SEED_DOMAIN, anonymous, awaitMail, outbox } from "./_helpers.ts";
+import { Http, PASSWORD, SEED_DOMAIN, anonymous, awaitMail, outbox, tokenOf } from "./_helpers.ts";
 
 const cookie = (name: string, value: string) => [{ url: apiBase(), name, value }];
 
@@ -64,23 +64,24 @@ test("[fl-design-system.1] the design system page shows the product's building b
   expect((await anonymous().get("/design-system")).status).toBe(200);
 });
 
-test("[fl-email-flows.6] the resend-verification page accepts a request for an unverified account and sends a new verification link when the cooldown allows", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+test("[fl-email-flows.6] the resend-verification page answers neutrally for an unverified account and, inside the 60 s cooldown, sends no second mail", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const email = freshEmail("ui-resend", SEED_DOMAIN);
   const up = await new Http().post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Resend" } });
   expect(up.status).toBe(200);
+  // The sign-up mail is the token of this purpose that sets the 60 s cooldown (requestToken in src/server/email/flows.ts); the page below is
+  // used right after it, so a request-resend must be answered the same but must not mint or send another link. No sleep: the page shows its
+  // answer only after the server finished, so the outbox is final by then.
   const first = await awaitMail(anonymous(), email, "verify");
-  const before = (await outbox(anonymous(), email, "verify")).length;
+  expect(first.link).toMatch(/verify-email/);
   await browser.setCookies(cookie("fl_locale", "en"));
   await app.open("/resend-verification");
   await expect(screen.getByRole("heading", "Resend verification")).toBeVisible();
   await agent.act("request a new verification link for the email {email}", { params: { email } });
   await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
-  expect(first.link).toMatch(/verify-email/);
-  // Wait for a new verification email to be sent (cooldown respected by the backend; in test mode it is short).
-  await expect.poll(async () => (await outbox(anonymous(), email, "verify")).length, { timeout: 30_000, interval: 1000, message: "no new verification mail after resend" }).toBe(before + 1);
   const after = await outbox(anonymous(), email, "verify");
-  const newest = after[0]!;
-  expect(newest.link).not.toBe(first.link);
-  expect(newest.link).toMatch(/verify-email/);
+  expect(after).toHaveLength(1);
+  expect(after[0]!.link).toBe(first.link);
+  // The one link that exists still works.
+  expect((await anonymous().post("/api/email", { json: { action: "verify", token: tokenOf(first.link) } })).json.status).toBe("done");
 });

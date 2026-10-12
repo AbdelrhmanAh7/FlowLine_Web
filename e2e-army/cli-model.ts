@@ -95,10 +95,12 @@ export function cliModel(o: CliModelOpts): Any {
         const tools = (opts.tools ?? []).filter((t: Any) => t.type === "function");
         const text = `${protocol(tools, opts.toolChoice)}\n\n${render(opts.prompt, dir)}\n\n[ASSISTANT — reply with the JSON object only]`;
         let raw = await runCli(o, text, dir, opts.abortSignal);
-        let r = parse(raw);
-        if (tools.length && !r.calls.length && opts.toolChoice?.type === "required") { raw = await runCli(o, text + "\n\nYour previous answer had no tool call. Call a tool now.", dir, opts.abortSignal); r = parse(raw); }
         const names = new Set(tools.map((t: Any) => t.name));
-        const calls = r.calls.filter((c) => names.has(c.name));
+        const usable = (x: ReturnType<typeof parse>) => x.calls.filter((c) => names.has(c.name));
+        let r = parse(raw);
+        // Judge "did it call a tool" after dropping hallucinated tool names, so an answer with only unknown calls is retried too.
+        if (tools.length && !usable(r).length && opts.toolChoice?.type === "required") { raw = await runCli(o, text + "\n\nYour previous answer had no valid tool call. Call one of the AVAILABLE TOOLS now.", dir, opts.abortSignal); r = parse(raw); }
+        const calls = usable(r);
         const content: Any[] = [];
         if (r.text) content.push({ type: "text", text: r.text });
         calls.forEach((c, i) => content.push({ type: "tool-call", toolCallId: `call_${Date.now().toString(36)}_${i}`, toolName: c.name, input: JSON.stringify(c.arguments) }));
