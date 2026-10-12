@@ -63,4 +63,8 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
   it("passes the quoted approved policy line (runs 4 and 5 VP-05/VP-06 replies)", () => {
     expect(scoreOwnerDecision(`Hello,\n\n${POLICY}\n\n${GENERIC}`, OWNER)).toBe(true);
   });
+  it("known limit (VO-07): owner wording quoted from the policy passes even if the next step names the team", () => {
+    // Accepted in #142 (option 1): the check proves owner wording is present, not who decides this request.
+    expect(scoreOwnerDecision(`${POLICY}\n\n${GENERIC}`, OWNER)).toBe(true);
+  });
 });
