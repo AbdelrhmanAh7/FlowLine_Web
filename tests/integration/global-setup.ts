@@ -4,8 +4,13 @@ import { Client } from "pg";
 /** Integration tests only ever touch a separate test database: flowline_test (or flowline_test_<worktree> when agents work in parallel). */
 export default async function setup() {
   const url = process.env.DATABASE_URL ?? "";
-  if (!/\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(url)) {
+  if (!/\/flowline_test(_[a-z0-9]+)?(_staging)?(\?|$)/.test(url)) {
     throw new Error(`Integration tests must run against flowline_test (got ${url.replace(/\/\/[^@]*@/, "//***@")}). Use pnpm test:integration.`);
+  }
+  // Check if a worker is running against the database
+  const db = url.split('/').pop()?.split('?')[0];
+  if (db && db !== "flowline_test" && !db.startsWith("flowline_test_")) {
+    throw new Error(`Integration tests must run against flowline_test or flowline_test_<suffix>, not ${db}. Use pnpm test:integration.`);
   }
   execSync("npx tsx src/db/migrate.ts", { stdio: "inherit", env: process.env });
   // Platform credentials live in the DB (never env at runtime): mirror .env.test's fake OAuth/billing values into them.
@@ -15,5 +20,5 @@ export default async function setup() {
   await c.connect();
   const { rows } = await c.query("select count(*)::int as n from worker_heartbeat where last_seen_at > now() - interval '15 seconds'");
   await c.end();
-  if (rows[0].n > 0) throw new Error("A Flowline worker is running against flowline_test. Stop the E2E stack (pnpm dev:test) before pnpm test:integration.");
+  if (rows[0].n > 0) throw new Error(`A Flowline worker is running against ${db}. Stop the E2E stack (pnpm dev:test) before pnpm test:integration.`);
 }

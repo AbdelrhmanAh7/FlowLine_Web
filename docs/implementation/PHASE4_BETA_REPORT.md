@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Flows list publishedVersion only changes on publish (issue #204) — 2026-10-13
+
+Fix for regression #117: run snapshots no longer consume publication numbers. The `flow_version.version` column is now nullable; runs store NULL for "run" snapshots and publications use the next number from the shared sequence. Existing rows are backfilled to NULL in migration 0025. History orders by `createdAt` (not version) and the run inspector shows "run snapshot" instead of "v1 (the run's original revision)" for unnumbered snapshots. The flow list and dashboard now correctly report publishedVersion 1 after two runs and a publish. Verified by integration test `runs.test.ts` and e2e-army test `117-flows-list-dashboard.e2e.ts`. This unblocks the stable gate for feat:fl-flows-list.
+
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
 The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
