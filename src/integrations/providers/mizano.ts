@@ -41,6 +41,15 @@ const mizanoInvoice = z.object({
   dueDate: z.string().regex(DATE),
 });
 
+const mizanoCustomer = z.object({
+  id: z.string(),
+  name: z.string(),
+  company: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  taxId: z.string().optional(),
+});
+
 const provider: ProviderDef = {
   id: "mizano",
   name: "Mizano",
@@ -109,6 +118,105 @@ const provider: ProviderDef = {
             paid: i.balanceDue === "0.00",
           })),
         };
+      },
+    },
+    {
+      id: "mizano.create_customer",
+      version: 1,
+      provider: "mizano",
+      title: "Create customer",
+      description: "Create a new customer in Mizano with name, company, email, phone, and optional taxId.",
+      input: z.object({
+        name: z.string().min(1).max(200),
+        company: z.string().min(1).max(200),
+        email: z.string().email(),
+        phone: z.string().min(1).max(50),
+        taxId: z.string().max(50).optional(),
+      }),
+      output: z.object({
+        id: z.string(),
+        name: z.string(),
+        company: z.string(),
+        email: z.string(),
+        phone: z.string(),
+        taxId: z.string().optional(),
+      }),
+      sideEffect: "none",
+      requiredScopes: ["customers:create"],
+      async run(ctx, input) {
+        const idempotencyKey = ctx.idempotencyKey;
+        const { data } = await ctx.http.request<z.infer<typeof mizanoCustomer>>({
+          method: "POST",
+          path: "/api/customers",
+          baseUrl: base(ctx.credentials),
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+          json: {
+            name: input.name,
+            company: input.company,
+            email: input.email,
+            phone: input.phone,
+            taxId: input.taxId,
+          },
+        });
+        return data;
+      },
+    },
+    {
+      id: "mizano.create_draft_quote",
+      version: 1,
+      provider: "mizano",
+      title: "Create draft quote",
+      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
+      input: z.object({
+        customerId: z.string().min(1).max(200),
+        currency: z.string().length(3),
+        lines: z.array(
+          z.object({
+            item: z.string().min(1).max(200),
+            qty: z.string().regex(/^\d+(\.\d{1,2})?$/),
+            unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/),
+            taxRate: z.string().regex(/^\d+(\.\d{1,2})?$/),
+          }),
+        ),
+      }),
+      output: z.object({
+        id: z.string(),
+        customerId: z.string(),
+        currency: z.string(),
+        lines: z.array(
+          z.object({
+            item: z.string(),
+            qty: z.string(),
+            unitPrice: z.string(),
+            taxRate: z.string(),
+          }),
+        ),
+      }),
+      sideEffect: "none",
+      requiredScopes: ["quotes:create"],
+      async run(ctx, input) {
+        const idempotencyKey = ctx.idempotencyKey;
+        const { data } = await ctx.http.request({
+          method: "POST",
+          path: "/api/quotes",
+          baseUrl: base(ctx.credentials),
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+          json: {
+            customerId: input.customerId,
+            currency: input.currency,
+            lines: input.lines.map((line: { item: string; qty: string; unitPrice: string; taxRate: string }) => ({
+              item: line.item,
+              qty: line.qty,
+              unitPrice: line.unitPrice,
+              taxRate: line.taxRate,
+            })),
+          },
+        });
+        return data;
       },
     },
   ],
