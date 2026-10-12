@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## GitHub security settings handoff — 2026-10-12 (issue #160)
+
+**Blocked for engineers; deferred post-pilot by the owner.** Secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer remain unverified. No GitHub settings or application behaviour changed. Read-only issue/comment verification confirms the scope cut and open status; it does not verify enabled settings. [Owner handoff](OWNER_ACTIONS.md#issue-160-github-security-settings--post-pilot-owner-handoff) and [pending questions](../../AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required) record the next steps. Keep #160 open; no beta or production readiness verdict changes.
+
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
 The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.

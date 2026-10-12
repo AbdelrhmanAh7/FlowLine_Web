@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #160 handoff — 2026-10-12
+
+Implementation stopped at the brief's owner-only security-settings boundary. All acceptance criteria remain unverified and no settings changed. The owner deferred #160 post-pilot; resume only after reactivation by re-adding `pilot`, then the owner enables and verifies all three criteria in [AI_QUESTIONS.md](AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required). The harness must use `Refs #160` for this documentation handoff and keep the issue open. No application flow changes or e2e-army test apply; no push, PR creation or merge is authorized for this implementer.
+
 ## Current state
 
 - **Pilot round (2026-10-03):** all twelve pilot PRs are merged into main: #20 (CI tiers, always-reporting `gate`, `docs` check, `pnpm wt`), #12, #13, #16, #15, #17, #19, #14, #18, #21 (H3 federated MFA + TOTP replay guard), #31 (docs refresh, GitHub workflow) and #33 (90 s upload deadline). Every CodeRabbit thread was confirmed by CodeRabbit before merge; full-tier runs passed on code PRs #20, #21, and #33. No full-tier run is recorded on the final heads of code PRs #13–#19; keep this validation gap visible in the next steps. Open follow-ups: issues #27, #35, #36, #37; owner items #24 and #30.

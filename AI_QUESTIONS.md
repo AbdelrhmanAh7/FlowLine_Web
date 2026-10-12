@@ -71,3 +71,19 @@ Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
 - File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
 - Does not modify `transport.ts` — tests only
 - Uses real providers from `getProviderDef` as specified in the manager plan
+
+## Issue #160: GitHub security settings — blocked, owner action required
+
+The brief explicitly says these repository settings require owner access and cannot be changed by engineers under the secrets-settings hard rule. No settings were changed or inspected; all three acceptance criteria remain unverified. This handoff does not complete #160.
+
+Read-only verification on 2026-10-12: `gh issue view 160 --repo AbdelrhmanAh7/FlowLine_Web --json number,title,body,comments,labels,milestone,state,url` confirmed the issue is open, labelled `post-pilot` / `priority:p2`, in milestone `FL G6 · Post-pilot hardening: concurrency and quality`. The [owner's scope-cut comment](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/160#issuecomment-6113889098) defers it until after the pilot; reactivation requires re-adding the `pilot` label.
+
+Owner follow-up after reactivation:
+
+- AC1: enable secret scanning **and** push protection in Settings → Code security; record both enabled states.
+- AC2: enable Dependabot alerts; record the enabled state.
+- AC3: enable Copilot code review in Settings → Copilot; confirm it reviews a PR as a second reviewer alongside CodeRabbit, and record the review link. Keep the existing CodeRabbit confirmation requirement.
+
+Can the owner perform these actions and record dated, non-sensitive evidence on #160 when it is reactivated? Do not include secrets or alert payloads in evidence, and do not authorize spending through this handoff.
+
+Harness PR description: `Refs #160`. Keep the issue open for owner verification; merging this handoff must not close it. `E2E: not needed — documentation-only owner handoff; no application UI, API or job behaviour changes.` No e2e-army test applies. No CI/workflow, security configuration or dependency changes belong in this blocked task; separate documentation work remains under #161.

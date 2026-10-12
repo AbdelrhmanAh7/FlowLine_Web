@@ -1,5 +1,11 @@
 # Owner actions — private beta
 
+## Issue #160: GitHub security settings — post-pilot owner handoff
+
+[Issue #160](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/160) explicitly reserves secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer for the owner. All three acceptance criteria remain **unverified**; engineers changed no repository settings. The owner's scope cut dated 2026-10-12 defers this work until after the pilot, with reactivation by re-adding the `pilot` label. The issue remains open.
+
+Owner steps and verification requests are in [AI_QUESTIONS.md](../../AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required). Record dated, non-sensitive enabled-state evidence for secret scanning, push protection and Dependabot alerts, plus a Copilot review link alongside CodeRabbit. Use `Refs #160` on the handoff PR so merging does not close the incomplete settings issue. This does not change pilot scope, deployment approval or readiness.
+
 ## Issue #162: Owner Actions - Sensitive Components (tracking)
 
 This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. PR #185 is the only PR for this issue and it links #162 as `Refs #162`. A PR that touches this section must reference the issue as `Refs #162`, never with a closing keyword (`Closes`, `Fixes`, `Resolves`), so that merging it leaves #162 open; only the owner closes #162. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
