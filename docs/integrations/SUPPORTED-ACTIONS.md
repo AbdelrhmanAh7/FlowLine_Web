@@ -117,3 +117,11 @@ Uses the `pg` driver directly. The host/port pass the egress check (`assertHostA
 | `linear.create_issue` | non_idempotent | – | write | ✅ `issues(filter:{description:{contains:"flowline:{key}"}})` | `POST /graphql` — `mutation issueCreate` |
 
 `create_issue` appends `\n\n<!-- flowline:{idempotencyKey} -->` to the description. Identity: `{ viewer { id name email } }`.
+
+## mizano — scoped API key (api_key, `Authorization: Bearer`), host from the connect setting `baseUrl`
+
+| Action | Side effect | Sensitive | Required scopes | Verify | Real endpoint |
+|---|---|---|---|---|---|
+| `mizano.list_overdue_invoices` | none | – | invoices:read | – | `GET /api/invoices?status=overdue&asOf=YYYY-MM-DD` |
+
+The endpoint and response shape are **assumed** until Mizano's FlowLine integration API (MZ G5) is published; the adapter is covered only by mocked contract tests (`tests/contract/mizano.test.ts`). `baseUrl` must be a bare https origin. Amounts pass through as two-decimal strings. Identity: `GET /api/me`.
