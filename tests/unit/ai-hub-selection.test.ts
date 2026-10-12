@@ -73,6 +73,14 @@ describe("pinDefaultRoutes", () => {
     expect(pinDefaultRoutes(g, { connectionId: "not-a-uuid", modelId: "m" })).toBe(g);
   });
 
+  it("pins the default route onto AI steps with no route and no legacy model, and leaves routed steps alone", () => {
+    const explicit = { connectionId: C2, modelId: "x" };
+    const g = graph(undefined, explicit);
+    const [unrouted, routed] = pinDefaultRoutes(g, def).nodes;
+    expect((unrouted!.data.config as { route?: unknown }).route).toEqual(def);
+    expect((routed!.data.config as { route?: unknown }).route).toEqual(explicit);
+  });
+
   it("leaves a step with a legacy model string unpinned", () => {
     const g = { nodes: [{ id: "a", type: "ai.generate", position: { x: 0, y: 0 }, data: { label: "a", config: { instructions: "x", model: "gpt-4" } } }], edges: [] } as unknown as FlowGraph;
     const route = (pinDefaultRoutes(g, def).nodes[0]!.data.config as { route?: unknown }).route;
