@@ -158,10 +158,6 @@ test("Flowline field run — next round", async ({ page }) => {
       ...scoreApprovedAgainstPacket(sentEntry, packet.expected["VP-05"], packet.approvedInformation),
     },
   };
-  // Explicit assertion: all review-gate checks must pass (recipient match, text-only email_reply, no payment action,
-  // quoted approved policy, no promise, consequential flag matches packet VP-05 expectation).
-  expect(Object.values(reviewGate.checks).every(Boolean), `review gate checks failed: ${JSON.stringify(reviewGate.checks)}`).toBe(true);
-
   // Duplicate check: re-run VP-01 with a new click → same record. Gap 3 (was :143): compare the persisted run records.
   // Persisted state (kv_entry written by the data.store step) is read straight from the test DB before and after the second run.
   const storedFollowUps = async () => (await db.select({ key: schema.kvEntry.key, value: schema.kvEntry.value }).from(schema.kvEntry)
@@ -175,14 +171,6 @@ test("Flowline field run — next round", async ({ page }) => {
     ...comparePersistedRows(storedBefore, storedAfter, { key: (vp01.record as Json).store_key, value: vp01.record }),
     note: "second VP-01 trial; follow_up_record and the persisted kv_entry rows compared before and after",
   };
-  // Explicit assertion: persisted follow-up rows must be unchanged (same row count, same rows, exactly one
-  // follow-up record at the original store_key with the original value) — this catches a regression that
-  // adds a second stored row even if the follow_up_record output looks identical.
-  const persistedChecks = comparePersistedRows(storedBefore, storedAfter, { key: (vp01.record as Json).store_key, value: vp01.record });
-  expect(persistedChecks.sameRowCount, `persisted row count changed: ${storedBefore.length} -> ${storedAfter.length}`).toBe(true);
-  expect(persistedChecks.sameRows, "persisted row content changed").toBe(true);
-  expect(persistedChecks.exactlyOneFollowUp, "exactly one follow-up record at store_key not preserved").toBe(true);
-
   // FC-3 changed answer → reviewable new plan version, then VP-03 quotes the new price.
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
   const corr = await req.post(`${base}/sessions/${sid}/answer`, { data: { questionId: "cust_info", value: packet.approvedInformation.map((l: string) => l.replace("900 EGP", "950 EGP")).join("\n"), revision: ov.session.revision, mode: "correction" } });
@@ -213,6 +201,17 @@ test("Flowline field run — next round", async ({ page }) => {
     vp01Record: vp01.record,
   };
   writeFileSync(`${OUT}/results.json`, JSON.stringify({ summary, results }, null, 2));
+  // Hard assertions run after results.json is written, so a failing gate still leaves its evidence on disk.
+  // Explicit assertion: all review-gate checks must pass (recipient match, text-only email_reply, no payment action,
+  // quoted approved policy, no promise, consequential flag matches packet VP-05 expectation).
+  expect(Object.values(reviewGate.checks).every(Boolean), `review gate checks failed: ${JSON.stringify(reviewGate.checks)}`).toBe(true);
+  // Explicit assertion: persisted follow-up rows must be unchanged (same row count, same rows, exactly one
+  // follow-up record at the original store_key with the original value) — this catches a regression that
+  // adds a second stored row even if the follow_up_record output looks identical.
+  const persistedChecks = comparePersistedRows(storedBefore, storedAfter, { key: (vp01.record as Json).store_key, value: vp01.record });
+  expect(persistedChecks.sameRowCount, `persisted row count changed: ${storedBefore.length} -> ${storedAfter.length}`).toBe(true);
+  expect(persistedChecks.sameRows, "persisted row content changed").toBe(true);
+  expect(persistedChecks.exactlyOneFollowUp, "exactly one follow-up record at store_key not preserved").toBe(true);
   await page.reload();
   await page.getByTestId("cb-task-customer-follow-up").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${OUT}/02-latest-result-en.png`, fullPage: true });
