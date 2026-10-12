@@ -32,8 +32,8 @@ Arabic and light are the defaults. English and dark remain selectable. Use logic
 - **Save error** (`saveError`): fallback for `PATCH /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
 - **Publish error** (`publishError`): fallback for `POST /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
 - **Revision conflict** (`errors.REVISION_CONFLICT`): shown when the server returns `409 REVISION_CONFLICT`; renders the translated `errors.REVISION_CONFLICT` message for the active locale (never the raw server text) and refetches state.
-- **Step-up required** (`errors.STEP_UP_REQUIRED`): shown when the server returns `403 STEP_UP_REQUIRED`; refetches `me` and shows the step-up prompt.
-- **Server error** (`errors.INTERNAL` via `saveError`/`publishError`): shown for `5xx` responses; refetches state.
+- **Step-up required** (`platformAdmin.copyEditor.stepUp`): shown when the server returns `403 STEP_UP_REQUIRED`; refetches `me` and shows the step-up prompt.
+- **Server error** (`saveError`/`publishError`): shown for `5xx` responses; refetches state.
 - **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); renders the translated `errors.NETWORK` message (never the raw client text) and refetches state.
 All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
 
