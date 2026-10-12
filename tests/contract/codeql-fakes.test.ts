@@ -151,14 +151,16 @@ describe("the triage notes stay in sync with the code (root cause of the $-loss 
     const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
     const doc = read("../../docs/security/codeql-triage-fakes.md");
     const safety = read("../../e2e/fakes/safety.ts");
-    expect(doc).toContain("optional trailing `$` (ends with)");
+    expect(doc).toContain("optional trailing `$` (ends with; the anchor is the dollar sign)");
     expect(doc).toContain("`^/conversations\\.list$` still means that exact path");
-    expect(safety).toContain("trailing `$` (path ends with)");
+    expect(safety).toContain("trailing `$` (path ends with; the dollar sign)");
     expect(safety).toContain("`^/a\\.b$` still means");
     // Same checks with the anchor built from its char code (36), so a review tool that strips it from quoted text cannot misread them.
     const dollar = String.fromCharCode(36);
-    expect(doc).toContain(`trailing \`${dollar}\` (ends with)`);
-    expect(safety).toContain(`trailing \`${dollar}\` (path ends with)`);
+    expect(doc).toContain(`trailing \`${dollar}\` (ends with; the anchor is the dollar sign)`);
+    expect(safety).toContain(`trailing \`${dollar}\` (path ends with; the dollar sign)`);
+    // The anchor is also named in words, so quoted text that loses the symbol still documents it.
+    expect(doc).toContain("that exact path (caret, path, dollar sign)");
     expect(doc.split("\n").filter((line) => (line.match(/`/g) ?? []).length % 2 !== 0)).toEqual([]);
     expect(doc).toContain("bounded to [0, 10 s]");
     expect(doc).toContain("upper-bound");

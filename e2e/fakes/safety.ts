@@ -2,7 +2,7 @@ import type { IncomingMessage } from "node:http";
 const MAX_PATTERN_LENGTH = 200;
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const DROPPED_REGEX_SYNTAX = /[*+?|()[\]{}]/;
-/** Text matching: optional leading `^`, trailing `$` (path ends with); `^/a\.b$` still means "/a.b". */
+/** Text matching: optional leading `^` (caret), trailing `$` (path ends with; the dollar sign); `^/a\.b$` still means "/a.b". */
 export function compileFaultPattern(raw: unknown): { test(path: string): boolean } | null {
   if (typeof raw !== "string" || raw.length === 0 || raw.length > MAX_PATTERN_LENGTH) return null;
   const start = raw.startsWith("^");
