@@ -9,6 +9,7 @@ import { HubError, type AiModelCapabilities, type HubChatRequest } from "../type
  * Provider error TEXT is never passed through (it may echo the key or the request): only a bounded error code.
  */
 
+/** Rounds a finite, non-negative number; returns null for any other value (strings, NaN, Infinity, negatives). */
 export function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
 }
@@ -44,6 +45,11 @@ export function structuredOutputMode(caps: AiModelCapabilities, schema?: Record<
 }
 
 /** Parameter checks shared by all protocols: unsupported parameters are rejected, never silently dropped. */
+/**
+ * Checks a request against the model's capabilities and basic limits; returns nothing when it passes. Throws HubError
+ * AI_CAPABILITY_UNSUPPORTED for tools or streaming the route doesn't support, and AI_BAD_REQUEST for a non-positive
+ * or non-integer maxTokens, a temperature outside 0–2, or a tool name not matching /^[A-Za-z0-9_-]{1,64}$/.
+ */
 export function validateRequest(def: ProviderDefinition, model: string, req: HubChatRequest, caps: AiModelCapabilities, stream = false) {
   if (req.tools?.length && caps.tools === "UNSUPPORTED") throw new HubError("AI_CAPABILITY_UNSUPPORTED", `${model} doesn't support tool calls on ${def.name}`);
   if (stream && caps.streaming === "UNSUPPORTED") throw new HubError("AI_CAPABILITY_UNSUPPORTED", `${model} doesn't support streaming on ${def.name}`);
@@ -61,6 +67,7 @@ export function scrubProviderMessage(msg: unknown, apiKey: string): string {
 
 /* ───────────── SSE ───────────── */
 
+/** One dispatched SSE event: `event` is the event field or null, `data` is the data lines joined with "\n". */
 export interface SseEvent {
   event: string | null;
   data: string;
@@ -283,6 +290,10 @@ export function mapInBandError(def: ProviderDefinition, model: string, body: unk
 /** Finish reasons that mean the provider's safety system refused (only an error when nothing usable came back). */
 export const SAFETY_FINISH = new Set(["content_filter", "refusal", "safety", "blocklist", "prohibited_content", "spii", "recitation"]);
 
+/**
+ * Builds (does not throw) an AI_SAFETY_REFUSAL HubError for the provider. The reason is named only when it is a known
+ * safety reason (case-insensitive), otherwise "blocked"; the provider's free text is never copied into the error.
+ */
 export function safetyRefusal(def: ProviderDefinition, reason: string | null) {
   // Only a documented reason is named; free text from the provider is never copied into the error.
   const r = (reason ?? "").toLowerCase();
@@ -301,7 +312,10 @@ export function scrubHubError<E>(e: E, apiKey: string): E {
   return e;
 }
 
-/** Response bodies that aren't JSON. */
+/**
+ * Parses a successful response body as JSON and returns it unvalidated. Throws AI_BAD_RESPONSE (retryable, possibly
+ * charged) when the text isn't JSON.
+ */
 export function parseBody(def: ProviderDefinition, text: string): unknown {
   try {
     return JSON.parse(text);
@@ -310,6 +324,7 @@ export function parseBody(def: ProviderDefinition, text: string): unknown {
   }
 }
 
+/** Parses an error response body as JSON for error mapping; returns null instead of throwing when it isn't JSON. */
 export function errorBody(text: string): unknown {
   try {
     return JSON.parse(text);
