@@ -7,7 +7,6 @@ const C1 = "11111111-1111-4111-8111-111111111111";
 const C2 = "22222222-2222-4222-8222-222222222222";
 const conn = (id: string, over: Record<string, unknown> = {}) => ({ id, label: `conn-${id.slice(0, 2)}`, status: "CONNECTED", useRoles: ["owner", "editor"], ...over });
 
-/** Same call shape as drizzle: `await db.select(..).from(..).where(..)`; answers the queries in order. */
 function fakeDb(...answers: unknown[][]) {
   const calls: unknown[] = [];
   const db = { select: (cols?: unknown) => (calls.push(cols), { from: () => ({ where: async () => answers.shift() ?? [] }) }) };
@@ -26,12 +25,7 @@ describe("assertRoutesUsable", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it.each([
-    ["missing", [], "editor", "AI_CONNECTION_MISSING"],
-    ["revoked", [conn(C1, { status: "REVOKED" })], "editor", "AI_CONNECTION_REVOKED"],
-    ["viewer role", [conn(C1)], "viewer", "AI_ROUTE_FORBIDDEN"],
-    ["role not in useRoles", [conn(C1, { useRoles: ["owner"] })], "editor", "AI_ROUTE_FORBIDDEN"],
-  ])(`refuses a %s connection`, async (_case, conns, role, code) => {
+  it.each([["missing", [], "editor", "AI_CONNECTION_MISSING"], ["revoked", [conn(C1, { status: "REVOKED" })], "editor", "AI_CONNECTION_REVOKED"], ["viewer role", [conn(C1)], "viewer", "AI_ROUTE_FORBIDDEN"], ["role not in useRoles", [conn(C1, { useRoles: ["owner"] })], "editor", "AI_ROUTE_FORBIDDEN"]])(`refuses a %s connection`, async (_case, conns, role, code) => {
     const { db } = fakeDb(conns, [{ role }]);
     await expect(assertRoutesUsable(db, "u", "w", [{ connectionId: C1, modelId: "m" }])).rejects.toMatchObject({ code });
   });
@@ -44,11 +38,7 @@ describe("assertRoutesUsable", () => {
 
   it("validates all connection IDs when multiple are provided", async () => {
     const { db, calls } = fakeDb([conn(C1), conn(C2)], [{ role: "editor" }]);
-    await expect(assertRoutesUsable(db, "u", "w", [
-      { connectionId: C1, modelId: "m" },
-      { connectionId: C2, modelId: "m" },
-    ])).resolves.toBeUndefined();
-    // Verify that both connection IDs were processed (2 selects: aiConnection and workspaceMember)
+    await expect(assertRoutesUsable(db, "u", "w", [{ connectionId: C1, modelId: "m" }, { connectionId: C2, modelId: "m" }])).resolves.toBeUndefined();
     expect(calls).toHaveLength(2);
   });
 });
@@ -66,8 +56,7 @@ describe("assertRouteSelection", () => {
     const prev = graph({ connectionId: C1, modelId: "m" });
     const next = graph({ connectionId: C1, modelId: "m" }, { connectionId: C2, modelId: "m" });
     await expect(assertRouteSelection(db, "u", "w", next, prev)).resolves.toBeUndefined();
-    // Only C2 should be queried (the changed route)
-    expect(calls).toHaveLength(2); // 1 for connections, 1 for role
+    expect(calls).toHaveLength(2);
   });
 });
 
@@ -77,14 +66,7 @@ describe("aiRoutesIn", () => {
   });
 
   it("skips routes on non-AI nodes", () => {
-    const graphWithNonAi = {
-      nodes: [
-        { id: "ai-node", type: "ai.generate", position: { x: 0, y: 0 }, data: { label: "ai-node", config: { instructions: "x", route: { connectionId: C1, modelId: "m" } } } },
-        { id: "text-node", type: "text", position: { x: 10, y: 10 }, data: { label: "text-node", config: { text: "Hello" } } },
-        { id: "image-node", type: "image", position: { x: 20, y: 20 }, data: { label: "image-node", config: { image: "data:image/png;base64,..." } } },
-      ],
-      edges: [],
-    } as unknown as FlowGraph;
+    const graphWithNonAi = { nodes: [{ id: "ai-node", type: "ai.generate", position: { x: 0, y: 0 }, data: { label: "ai-node", config: { instructions: "x", route: { connectionId: C1, modelId: "m" } } } }, { id: "text-node", type: "text", position: { x: 10, y: 10 }, data: { label: "text-node", config: { text: "Hello" } } }, { id: "image-node", type: "image", position: { x: 20, y: 20 }, data: { label: "image-node", config: { image: "data:image/png;base64,..." } } }], edges: [] } as unknown as FlowGraph;
     expect(aiRoutesIn(graphWithNonAi)).toEqual([{ connectionId: C1, modelId: "m" }]);
   });
 });
