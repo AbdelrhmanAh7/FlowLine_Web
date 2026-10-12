@@ -4,6 +4,27 @@
 
 `consumeAccountToken("delete")` (`src/server/email/flows.ts`) now inserts its `account.deleted` audit rows before it locks the user's workspaces `FOR UPDATE`, so the key-share lock each insert takes on its workspace comes in the same order as in the SSO transactions (user row, then the audit insert) and is never awaited while holding a workspace. Rows are corrected under the workspace lock if a membership changed in between; `transfer_required` now rolls back. The person-visible result is unchanged. Two co-members deleting at once cannot deadlock on the shared workspace: every deletion first takes the installation-wide retained-file accounting lock, so deletions are serialized; a new two-connection test in `tests/integration/retained-file-locking.test.ts` pins this and fails when that lock is removed from deletion. Verified locally at `4736067` against a throwaway `flowline_test_109` database (PostgreSQL): `tests/integration/retained-file-locking.test.ts` (4/4), `email.test.ts` (9/9), `email-token-lock-order.test.ts` (3/3); `tests/unit/email-token-lock-order.test.ts` (10/10, mocked database); eslint and `pnpm typecheck`. The #108 deadlock test `account-delete-sso-lock-order.test.ts` is not on main (PR #214); copied uncommitted from `origin/ai/108` at `2ef1fb8`, it passed 2/2 against `4736067` on 2026-10-13. It must be re-run on the merged head once #214 lands. The e2e-army test `e2e-army/109-account-delete-shared-audit.e2e.ts` runs in the hub verify job, not locally. No full gate or browser run is claimed. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
 
+## Field-harness scoring review (#141 / PR #193) — 2026-10-12
+
+The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
+expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
+row with the original value before and after reprocessing. **Explicit assertions** in `field.spec.ts` now verify
+all review-gate checks (recipient, text-only `email_reply`, no payment action, quoted policy, no promise,
+consequential) and all persisted-row checks (`sameRowCount`, `sameRows`, `exactlyOneFollowUp`). Eight focused
+scoring tests pass on `4a241db` (including one that runs the real compiled customer-follow-up pack); the code under test is unchanged since `475c293`.
+Earlier `20261001-d224cfb` evidence is unchanged.
+The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
+3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
+This internal harness change does not change product behavior or beta readiness.
+
+Local verification on `4a241db` (all counts observed there; code under test unchanged since `475c293`): `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+test). Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run:
+`:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` checks forced true): 1 failed / 7 passed, and the approval-payload helpers
+(`scoreApprovedOutboxEntry`, `scoreApprovedAgainstPacket` forced true): 3 failed / 5 passed;
+`:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. On the later head `e3b6c75` (a merge of origin/main; #141 code unchanged since `475c293`) `pnpm typecheck` exited 0, ESLint on `tests/helpers/field-scoring.ts` and `tests/unit/flowline-field-scoring.test.ts` reported nothing, and the scoring test again passed 8/8 (the `artifacts/` field specs are ignored by ESLint); the hosted `gate` runs the rest. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
+checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
+
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
 The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
