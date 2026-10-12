@@ -7,7 +7,7 @@ Every piece of work is tracked on GitHub so its state is visible without reading
 - **Board:** [FlowLine — Delivery](https://github.com/users/AbdelrhmanAh7/projects/21) (Projects v2, linked to the repo). Fields: **Status** (Todo, In progress, In review, Blocked, Done), **Priority** (P0–P3), **Area**.
 - **Milestones** group work by delivery goal: *Paid pilot: security hardening*, *CI & repo workflow*, *Paid pilot: owner readiness*, *Field validation v2*. Add a milestone before starting a new goal.
 - **Every task starts as an issue** (or an existing one) with a milestone, a `type:` label, a `priority:` label and area. Work found during a task that is out of scope becomes a new issue, never a silent TODO.
-- **Every PR** links its issue (`Closes #N` in the body), carries the same milestone and labels, and is on the board. Status moves: Todo → In progress (branch exists) → In review (PR open) → Done (merged); Blocked when waiting on something external.
+- **Every PR** links its issue (`Closes #N` in the body; for an owner-tracking issue labelled `owner-only` or `needs-owner`, such as #162, use the non-closing `Refs #N` so merging leaves the issue open for the owner to close), carries the same milestone and labels, and is on the board. Status moves: Todo → In progress (branch exists) → In review (PR open) → Done (merged); Blocked when waiting on something external.
 
 ## Labels
 
