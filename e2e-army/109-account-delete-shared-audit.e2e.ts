@@ -2,8 +2,10 @@
 // workspaces FOR UPDATE. Request-level (no model): the person-visible result must not change. A member of a shared
 // workspace confirms the deletion link from the test outbox; the deletion finishes ("done"), the account can no longer
 // sign in, a forged token is refused, and the shared workspace's owner still sees one "account.deleted" audit event.
-// The lock order itself (and the deadlock it avoids) is proven on real PostgreSQL connections in
-// tests/integration/retained-file-locking.test.ts and tests/unit/email-token-lock-order.test.ts.
+// What pins the lock order is elsewhere: tests/unit/email-token-lock-order.test.ts records the statement order against
+// a mocked database (no PostgreSQL); tests/integration/retained-file-locking.test.ts runs two co-members' deletions on two
+// real connections (serialized by the retained-file accounting lock, no 40P01). The audit insert vs SSO sign-in race is
+// the #108 test (tests/integration/account-delete-sso-lock-order.test.ts), not part of this change.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
@@ -15,12 +17,12 @@ const FIXED = "fl_test_beta_mode=open; fl_locale=en";
 const seeded = (base: string, seed: string) => createHash("sha256").update(`${base}|${seed}`).digest("hex").slice(0, 12);
 const plain = (base: string) => ({ "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED });
 
-/** Polls the test-stack outbox for the newest link of one purpose and returns its token. */
+/** Polls the test-stack outbox (newest first) for the newest link of one purpose and returns its token. */
 async function outboxToken(base: string, email: string, purpose: string) {
   for (let i = 0; i < 24; i++) {
     const r = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: plain(base) });
     const messages: { purpose?: string; link?: string }[] = (await r.json().catch(() => ({ messages: [] }))).messages ?? [];
-    const link = messages.filter((m) => m.purpose === purpose).at(-1)?.link;
+    const link = messages.find((m) => m.purpose === purpose)?.link;
     const token = link ? new URL(link).searchParams.get("token") : null;
     if (token) return token;
     await new Promise((resolve) => setTimeout(resolve, 500)); // the outbox is written after the response
