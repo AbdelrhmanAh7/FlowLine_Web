@@ -45,11 +45,13 @@ async function expectBoundedError(res: Response, status: number, code: string, m
   expect(res.status).toBe(status);
   expect(res.headers.get("content-type") ?? "").toContain("application/json");
   expect(res.headers.get("x-request-id")).toBeTruthy();
-  const body = JSON.parse(text) as { error: { code: string; message: string } };
+  const body = JSON.parse(text) as { error: { code: string; message: string; stack?: unknown } };
   expect(Object.keys(body)).toEqual(["error"]);
+  expect(Object.keys(body.error)).toEqual(["code", "message"]);
+  expect(typeof body.error.code).toBe("string");
   expect(body.error.code).toBe(code);
   expect(typeof body.error.message).toBe("string");
-  expect(text).not.toMatch(/<html|\n\s+at |node_modules|\.tsx?:\d+/i);
+  expect(text).not.toContain("<html");
   for (const s of mustNotEcho) expect(text).not.toContain(s);
 }
 

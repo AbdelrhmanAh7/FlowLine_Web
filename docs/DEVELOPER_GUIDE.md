@@ -26,6 +26,17 @@ Use `t.plural()` for count messages and the translator's `number`, `date`, `rela
 
 Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Refusals of `/api/platform/copy` are bounded JSON errors `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; the codes listed in `docs/security/CREDENTIALS_DESIGN.md` item 10 are covered by `tests/integration/platform-copy-errors.test.ts` (including admin-only codes such as `STEP_UP_REQUIRED` and `REVISION_CONFLICT`), `tests/component/copy-editor.test.tsx` (component-level error handling for load, save, publish, step-up, network, and server errors in both locales), and `e2e-army/181-admin-copy.e2e.ts` (non-admin 404 and cross-site 403).
 
+**Copy editor error states (UI):** The copy editor surfaces the following user-facing error states, all translated in `src/i18n/messages/ar.json` and `en.json` under `platformAdmin.copyEditor.*` and `errors.*`:
+- **Load error** (`loadError`): shown when `GET /api/platform/copy` fails; includes a Retry button that calls `state.refetch()`.
+- **Me load error** (`stepUp`): shown when `GET /api/platform/me` fails; disables write controls until step-up is refreshed.
+- **Save error** (`saveError`): fallback for `PATCH /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Publish error** (`publishError`): fallback for `POST /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Revision conflict** (`errors.REVISION_CONFLICT`): shown when the server returns `409 REVISION_CONFLICT`; displays the server message and refetches state.
+- **Step-up required** (`errors.STEP_UP_REQUIRED`): shown when the server returns `403 STEP_UP_REQUIRED`; refetches `me` and shows the step-up prompt.
+- **Server error** (`errors.INTERNAL` via `saveError`/`publishError`): shown for `5xx` responses; refetches state.
+- **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); refetches state.
+All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
+
 ## Components and design
 
 Import shared primitives from `@/components/ui`. [FORMS.md](design-system/FORMS.md) describes schema forms and [CUSTOMIZE.md](design-system/CUSTOMIZE.md) describes the token pipeline. Change `fields.tsx` for shared input presentation and `button.tsx` for shared button presentation rather than copying their classes into pages.
