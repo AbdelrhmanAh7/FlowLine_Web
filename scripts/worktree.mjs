@@ -6,7 +6,8 @@
 //                                                                 (no / or \, so the path stays inside .claude/worktrees/);
 //                                                                 use --branch for a branch such as feat/x
 //   pnpm wt list                                                  state of every worktree
-//   pnpm wt rm <name|path>                                        remove a registered, unlocked lane if clean and pushed/merged
+//   pnpm wt rm|remove <name|path>                                 remove a registered, unlocked lane if clean and pushed/merged;
+//                                                                 an explicit rm/remove refuses dirty or unpushed work (exit 1)
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
 //                                                                 (not while agents are starting lanes)
 // Removal never forces: main, locked, dirty or unpushed work is kept. Bare names select managed lanes only.
@@ -15,7 +16,7 @@
 // The branch itself is never deleted.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, symlinkSync, unlinkSync } from "node:fs";
+import { existsSync, lstatSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,29 +48,39 @@ function worktrees(root) {
     .filter((w) => w.worktree);
 }
 
-function state(path) {
-  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter(Boolean).length;
+// Only the link `add` made counts as the helper's own: a symlink to the main checkout's node_modules. Git sees it as
+// untracked (the `node_modules/` ignore rule matches directories only), so a fresh lane would otherwise count as dirty
+// and could never be removed. A link someone replaced it with is the lane's work: still dirty, never unlinked.
+function isOwnModulesLink(path, root, platform) {
+  const nm = join(path, "node_modules");
+  try {
+    return lstatSync(nm, { throwIfNoEntry: false })?.isSymbolicLink() === true && samePath(resolve(path, readlinkSync(nm)), join(root, "node_modules"), platform);
+  } catch {
+    return false;
+  }
+}
+
+function state(path, root, platform) {
+  const own = isOwnModulesLink(path, root, platform);
+  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter((l) => l && !(own && l === "?? node_modules")).length;
   const head = git(["rev-parse", "HEAD"], path);
   const pushed = git(["branch", "-r", "--contains", head], path).length > 0;
-  return { dirty, head, pushed };
+  return { dirty, head, pushed, ownLink: own };
 }
 
-function unlinkModules(path) {
-  const nm = join(path, "node_modules");
-  // A junction/symlink is removed as a link only, so the shared install is never touched.
-  if (existsSync(nm) && lstatSync(nm).isSymbolicLink()) unlinkSync(nm);
-}
-
-function remove(w, root, platform) {
+function remove(w, root, platform, refuse = false) {
   const path = resolve(w.worktree);
   if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
   if (Object.hasOwn(w, "locked")) throw new Error(`refusing to remove locked worktree: ${path}`);
-  const s = state(path);
+  const s = state(path, root, platform);
   if (s.dirty || !s.pushed) {
+    // An explicit rm/remove must not silently skip work: refuse with exit 1. Prune keeps its "kept" report.
+    if (refuse) throw new Error(`refusing to remove ${path}: ${s.dirty ? `${s.dirty} uncommitted change(s); commit or discard them first` : "HEAD not on any remote branch; push it first"}`);
     console.log(`kept ${path}: ${s.dirty ? `${s.dirty} uncommitted change(s)` : "HEAD not on any remote branch"}`);
     return false;
   }
-  unlinkModules(path);
+  // A junction/symlink is removed as a link only, so the shared install is never touched.
+  if (s.ownLink) unlinkSync(join(path, "node_modules"));
   git(["worktree", "remove", path], root);
   console.log(`removed ${path}`);
   return true;
@@ -91,13 +102,13 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     git(["worktree", "add", "-b", opt("--branch", name), path, opt("--base", "origin/main")], root);
     symlinkSync(join(root, "node_modules"), join(path, "node_modules"), "junction");
     console.log(path);
-  } else if (cmd === "rm" && name) {
+  } else if ((cmd === "rm" || cmd === "remove") && name) {
     const entries = worktrees(root);
     const explicitPath = isAbsolute(name) || /[/\\]/.test(name);
     const target = explicitPath ? resolve(name) : resolve(dir, name);
     const w = entries.find((w) => samePath(w.worktree, target, platform));
     if (!w) throw new Error(`not a registered worktree: ${name}`);
-    if (remove(w, root, platform)) git(["worktree", "prune"], root);
+    if (remove(w, root, platform, true)) git(["worktree", "prune"], root);
   } else if (cmd === "list" || cmd === "prune") {
     if (cmd === "prune") git(["worktree", "prune"], root);
     let failed = false;
@@ -110,7 +121,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
         }
         if (cmd === "prune") remove(w, root, platform);
         else {
-          const s = state(w.worktree);
+          const s = state(w.worktree, root, platform);
           console.log(`${w.worktree} | ${w.branch?.replace("refs/heads/", "") ?? "detached"} | dirty=${s.dirty} | pushed=${s.pushed}`);
         }
       } catch (error) {
@@ -120,7 +131,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     }
     return failed ? 1 : 0;
   } else {
-    console.error("usage: pnpm wt add <name> [--base <ref>] [--branch <branch>] | list | rm <name|path> | prune");
+    console.error("usage: pnpm wt add <name> [--base <ref>] [--branch <branch>] | list | rm|remove <name|path> | prune");
     return 2;
   }
   return 0;
