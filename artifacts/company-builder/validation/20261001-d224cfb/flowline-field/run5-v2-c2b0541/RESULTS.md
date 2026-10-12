@@ -10,14 +10,14 @@
 **Harness:** `flowline-field/field.spec.ts` (read-only for this run except that the spec itself was the code change; old runs 1–4 unchanged). The spec reads `PACKET` (default `packet.json`) and records the packet file and its hash in the summary.
 
 ## Summary
-- **Score (strict, against evaluator v2):** **8/10**
+- **Score (strict, against evaluator v2, scorer as of `c2b0541`):** **8/10**. **Superseded for `ownerDecision`:** review on PR #188 added `TEAM_DECIDER` to `scoreOwnerDecision` (a reply naming a team member as the decider now fails). This run was NOT re-scored under that stricter rule, so its VP-05/VP-06 `ownerDecision` results and the 8/10 are not the current scorer's verdict; a new run is still needed.
 - **Failures:** VP-03 (`quotes:Office cleaning starts a`, `closedDay`), VP-06 (`noPromise:cancelled`)
 - **Passes:** VP-01, VP-02, VP-04, VP-05, VP-07, VP-08, VP-09, VP-10
 - **Flowline's own verdict disagreements:** none (recorded as `[]`)
 
 ## What changed (v2 vs v1)
 - VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply with a sentence that repeats the requested date or names Friday together with a confirming word, unless that sentence says the day is closed or not available (so "We are closed on Fridays." plus the generic "we'll confirm the details" closing passes). Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
-- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording somewhere in the reply; the quoted approved policy line satisfies it. It checks that owner wording is present, not who decides the current request.
+- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording somewhere in the reply; the quoted approved policy line satisfies it. At `c2b0541` it only checked that owner wording is present; the current scorer also fails a reply that names a team member as the decider (`TEAM_DECIDER`, `tests/helpers/fieldScoring.ts`, pinned in `tests/unit/field-scoring.test.ts`).
 
 ## Per-VP results (run 5)
 | ID | Passed | Failed checks | Notes |
@@ -36,7 +36,7 @@
 ## Delta vs run 4 and negative controls (committed, reproducible)
 The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI with the unit project; fixture replies, no stack). The run-4 replies below are quoted from `run4-r4-f74285c/results.json`; run 4 itself is not re-scored.
 - **closedDay:** the run-4 VP-03 reply (office price quote, no working-hours line) and the run-5 reply (minimal Arabic confirmation) both score `closedDay=false`; a reply that quotes the hours line passes, including with "We are closed on Fridays." and the generic closing; a reply that quotes the hours line but also confirms 2026-10-09 / Friday (English or Arabic digits) fails; a non-Friday date fails the check.
-- **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line, so they pass; this run therefore shows the check passing, and the rejecting case is the unit test above.
+- **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line and passed at `c2b0541`; whether they still pass under `TEAM_DECIDER` (they also contain the generic team note) is unverified because the run was not re-scored. The rejecting cases are the unit tests above.
 - Run 4 VP-06 still fails only on VF-02 (`noPromise:cancelled`).
 
 ## Notes (important)
@@ -75,4 +75,4 @@ evaluator-ground-truth.v2.json: OK
 
 `git diff` of the three v1 files and of runs 1–4 against the merge base with `main` is empty.
 
-**Result:** VP-03 and VP-06 fail in run 5 for the reasons above. Both scorer gaps are closed at the scorer level: the closed-day and owner-decision checks are enforced and each is shown rejecting a reply by the committed unit test (the run itself shows `closedDay` rejecting; `ownerDecision` passes in both consequential replies). Whether the product behaves correctly on VP-03 is a separate matter (VF-05).
+**Result:** VP-03 and VP-06 fail in run 5 for the reasons above. Both scorer gaps are closed at the scorer level: the closed-day and owner-decision checks are enforced and each is shown rejecting a reply by the committed unit test (the run itself shows `closedDay` rejecting; `ownerDecision` passed in both consequential replies under the earlier scorer and has not been re-run under the current one). Whether the product behaves correctly on VP-03 is a separate matter (VF-05).
