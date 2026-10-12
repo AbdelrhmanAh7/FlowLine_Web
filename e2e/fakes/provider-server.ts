@@ -1135,6 +1135,13 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
 };
 
+const mizano: Handler = (ctx, req, res, path, _url, _body, _account) => {
+  if (req.method === "GET" && path === "/api/health") {
+    return json(ctx, req, res, 200, { status: "ok", version: "fake" });
+  }
+  return json(ctx, req, res, 404, { message: "Not found" });
+};
+
 const github: Handler = (ctx, req, res, path, url, body, account) => {
   const s = ctx.state;
   const acct = ACCOUNTS[account];
@@ -1929,6 +1936,7 @@ const HANDLERS: Record<string, Handler> = {
   zendesk,
   airtable,
   snowflake,
+  mizano,
   github,
   stripe,
   paddle,
