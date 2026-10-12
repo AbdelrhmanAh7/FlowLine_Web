@@ -113,6 +113,15 @@ export function unpastableCommands(markdown: string): string[] {
     .filter((code) => SHELL_COMMAND.test(code) && ANGLE_PLACEHOLDER.test(code));
 }
 
+// Hand-typed links drift: a run link cited as `AbdelrahmanAh7/...` points at a repository that does not exist.
+const REPO_SLUG = "AbdelrhmanAh7/FlowLine_Web";
+
+export function foreignRepoLinks(markdown: string): string[] {
+  return [...markdown.matchAll(/(?:github\.com\/|repos\/)([\w.-]+\/FlowLine_Web)\b/gi)]
+    .map((m) => m[1]!)
+    .filter((slug) => slug !== REPO_SLUG);
+}
+
 describe("dependency advisories security check", () => {
   it("semver comparison correctly handles prereleases and stable versions", () => {
     expect(semverGte("1.2.1", "1.2.2")).toBe(false);
@@ -148,6 +157,16 @@ describe("dependency advisories security check", () => {
     expect(unpastableCommands("`pnpm exec vitest run tests/unit/<file>.test.ts`")).toHaveLength(1);
     for (const doc of ["docs/security/DEPENDENCIES.md", "artifacts/phase-4/issue-62/EVIDENCE.md"]) {
       expect(unpastableCommands(readFileSync(join(root, doc), "utf8")), doc).toEqual([]);
+    }
+  });
+
+  it("links in the advisory docs and #62 evidence point at this repository", () => {
+    expect(foreignRepoLinks("[run](https://github.com/AbdelrahmanAh7/FlowLine_Web/actions/runs/1)")).toEqual([
+      "AbdelrahmanAh7/FlowLine_Web",
+    ]);
+    expect(foreignRepoLinks("`gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts'`")).toEqual([]);
+    for (const doc of ["docs/security/DEPENDENCIES.md", "artifacts/phase-4/issue-62/EVIDENCE.md"]) {
+      expect(foreignRepoLinks(readFileSync(join(root, doc), "utf8")), doc).toEqual([]);
     }
   });
 });
