@@ -2,7 +2,16 @@
 
 ## Issue #162: Owner Actions - Sensitive Components (tracking)
 
-This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. A PR that touches this section must reference the issue as `Refs #162`, never with a closing keyword (`Closes`, `Fixes`, `Resolves`), so that merging it leaves #162 open; only the owner closes #162. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
+This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. PR #185 is the only PR for this issue and it links #162 as `Refs #162`. A PR that touches this section must reference the issue as `Refs #162`, never with a closing keyword (`Closes`, `Fixes`, `Resolves`), so that merging it leaves #162 open; only the owner closes #162. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
+
+### Keeping #162 open through the PR #185 merge
+
+Merging PR #185 must leave #162 open. Two checks make that true, and a reviewer or the owner can repeat both:
+
+1. **The live PR body uses the non-closing reference.** `gh pr view 185 --json body` starts with `Refs #162`, and `gh pr view 185 --json closingIssuesReferences` prints `[]` (GitHub records no closing link).
+2. **The merge squashes with an explicit message.** The merger passes a subject/body that does not attach a closing keyword to #162, for example `Owner actions: tracking doc for #162`. This is required because the branch's earlier commit messages, already pushed, quote the keyword in prose; the hub pushes fast-forward only and never rewrites history, so a plain squash would otherwise carry one of those lines into the merge commit on `main`. If #162 does get closed by the merge commit anyway, reopen it — the checklist above is still all ⏳ Pending.
+
+The start job that wrote the keyword into the PR body lives in the hub (`nql-agents/bin/implement.sh`), so its fix is a separate `nql-agents` issue (read the issue's `owner-only`/`needs-owner` label and emit the non-closing reference instead) and not a change to this repository.
 
 ### Owner-only checklist (from issue #162)
 

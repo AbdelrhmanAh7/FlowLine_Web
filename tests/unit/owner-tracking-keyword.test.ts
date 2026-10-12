@@ -23,6 +23,16 @@ describe("owner-tracking issues are linked with 'Refs #N', never 'Closes #N'", (
     expect(text).toMatch(/never with a closing keyword/);
   });
 
+  // The PR #185 threads recurred because the tracking doc never recorded HOW #162 stays open
+  // when the branch (whose own commit messages quote the keyword) is squash-merged. The doc
+  // now states the two checks the merger must repeat; this pins them so a rewrite cannot drop it.
+  it("OWNER_ACTIONS.md records how PR #185 keeps #162 open through the merge", () => {
+    const text = read("docs/implementation/OWNER_ACTIONS.md");
+    expect(text).toContain("closingIssuesReferences");
+    expect(text).toMatch(/fast-forward/);
+    expect(text).toMatch(/Refs #162/);
+  });
+
   // Root cause of the PR #185 loop: any wording that attaches a closing keyword
   // (Closes/Fixes/Resolves) to #162 lets GitHub close the founder's tracking issue on
   // merge. The repo must never tell an author to do that, so guard every file that
