@@ -31,9 +31,11 @@ jobs:
       WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'docs-not-needed') }}
       PR_BODY: ${{ github.event.pull_request.body }}
     steps:
+      # Only the checker is needed (it reads the PR file list from stdin), so no full checkout of the repository.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          sparse-checkout: scripts/ci
       - name: Require a docs update with code changes
         run: |
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/files" > "$RUNNER_TEMP/docs-files.json"

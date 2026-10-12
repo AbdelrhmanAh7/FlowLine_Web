@@ -1065,7 +1065,8 @@
     "Developer tools": "Developer tools",
     "Payments": "Payments",
     "Docs": "Docs",
-    "Project management": "Project management"
+    "Project management": "Project management",
+    "Finance": "Finance"
   },
   "integrationCatalog": {
     "google_sheets": {
@@ -1291,6 +1292,23 @@
       "fields": {
         "token": {
           "label": "API key"
+        }
+      }
+    },
+    "mizano": {
+      "description": "Read overdue invoices from Mizano for follow-up.",
+      "actions": {
+        "list_overdue_invoices": {
+          "title": "List overdue invoices",
+          "description": "List unpaid invoices past their due date on the date you choose, in the workspace currency."
+        }
+      },
+      "fields": {
+        "token": {
+          "label": "Scoped API key"
+        },
+        "baseUrl": {
+          "label": "Mizano URL"
         }
       }
     }

@@ -1113,7 +1113,8 @@
     "Developer tools": "أدوات المطوّرين",
     "Payments": "المدفوعات",
     "Docs": "المستندات",
-    "Project management": "إدارة المشاريع"
+    "Project management": "إدارة المشاريع",
+    "Finance": "المالية"
   },
   "integrationCatalog": {
     "google_sheets": {
@@ -1339,6 +1340,23 @@
       "fields": {
         "token": {
           "label": "مفتاح API"
+        }
+      }
+    },
+    "mizano": {
+      "description": "قراءة الفواتير المتأخرة من Mizano للمتابعة",
+      "actions": {
+        "list_overdue_invoices": {
+          "title": "عرض الفواتير المتأخرة",
+          "description": "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل"
+        }
+      },
+      "fields": {
+        "token": {
+          "label": "مفتاح API محدود النطاق"
+        },
+        "baseUrl": {
+          "label": "رابط Mizano"
         }
       }
     }
