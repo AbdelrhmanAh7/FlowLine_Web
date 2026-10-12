@@ -113,6 +113,11 @@ review thread; the additional assertion prevents a missing/wrong database observ
 Focused regressions cover altered approved drafts, absent/duplicate/changed stored rows, and all four original
 scoring gaps. Live-stack validation remains outstanding; unit results do not establish field-run completion.
 
+The review gate now requests the review on the trial that was scored for VP-05 (its id is recorded with the result)
+rather than re-posting `field-VP-05` without input. `store_key` and the stored value are confirmed against the pack:
+`follow_up_record.store_key` is what the `data.store` step uses as key and `record` as value
+(`src/company-builder/packs/customer-follow-up.ts`).
+
 **Operator and assistance:**
 
 - The operator was an AI agent (the implementer, with maximal familiarity), driving the real HTTP API of the

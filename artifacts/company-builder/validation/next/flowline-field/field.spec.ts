@@ -131,15 +131,15 @@ test("Flowline field run — next round", async ({ page }) => {
     checks.recordExists = typeof rec.key === "string";
     const passed = Object.values(checks).every(Boolean);
     if (passed && firstCorrectAt === null) firstCorrectAt = Date.now();
-    results.push({ id: r.id, passed, failed: Object.entries(checks).filter(([, v]) => !v).map(([k]) => k), checks, flowlineOwnVerdict: trial.verdict?.matchedOutcome ?? null, waitMs, reply: reply ? { to: reply.to, body: text } : null, handoff: person ? person.reason : null, record: rec });
+    results.push({ id: r.id, trialId: trial.id, passed, failed: Object.entries(checks).filter(([, v]) => !v).map(([k]) => k), checks, flowlineOwnVerdict: trial.verdict?.matchedOutcome ?? null, waitMs, reply: reply ? { to: reply.to, body: text } : null, handoff: person ? person.reason : null, record: rec });
   }
 
   // Review gate: nothing sent before approval; refund item labelled; the owner's approval puts exactly one text-only entry in the outbox.
   const vp01 = results.find((x) => x.id === "VP-01")!;
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
   const outboxBefore = ov.outbox.length;
-  const trialIdOf = async (key: string) => (await (await req.post(`${base}/installations/${inst.installationId}/tasks/customer-follow-up/trial`, { data: { trialKey: key } })).json()).trialId as string;
-  const vp05trial = await trialIdOf("field-VP-05");
+  // Review the trial that was scored (its id comes from the VP-05 run above), never a re-posted trial that could carry other input.
+  const vp05trial = results.find((x) => x.id === "VP-05")!.trialId as string;
   const rev05 = await (await req.post(`${base}/trials/${vp05trial}/review`, { data: {} })).json();
   ov = await (await req.get(`${base}/sessions/${sid}`)).json();
   const outboxAfterRequest = ov.outbox.length;
