@@ -53,9 +53,8 @@ export function structuredOutputMode(caps: AiModelCapabilities, schema?: Record<
   return caps.structuredOutput === "SUPPORTED" ? "native" : "prompted";
 }
 
-/** Parameter checks shared by all protocols: unsupported parameters are rejected, never silently dropped. */
 /**
- * Checks a request against the model's capabilities and basic limits; returns nothing when it passes. Throws HubError
+ * Parameter checks shared by all protocols: unsupported parameters are rejected, never silently dropped. Checks a request against the model's capabilities and basic limits; returns nothing when it passes. Throws HubError
  * AI_CAPABILITY_UNSUPPORTED for tools or streaming the route doesn't support, and AI_BAD_REQUEST for a non-positive
  * or non-integer maxTokens, a temperature outside 0–2, or a tool name not matching /^[A-Za-z0-9_-]{1,64}$/.
  */
@@ -345,7 +344,10 @@ export function errorBody(text: string): unknown {
   }
 }
 
-/** Safe model id in a URL path segment (Gemini puts the model id in the path). */
+/**
+ * Returns the model id unchanged when it is safe to place in a URL path segment (Gemini puts the model id in the path).
+ * Throws AI_BAD_REQUEST when it is empty, longer than 128 characters, or contains characters outside [A-Za-z0-9._-].
+ */
 export function pathModel(def: ProviderDefinition, model: string) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(model)) throw new HubError("AI_BAD_REQUEST", `"${model.slice(0, 60)}" isn't a valid ${def.name} model id`);
   return model;
