@@ -1,5 +1,6 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+<<<<<<< HEAD
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
@@ -21,6 +22,11 @@ test). Temporarily disabling each original fix in `tests/helpers/field-scoring.t
 `node node_modules/typescript/bin/tsc --noEmit` pass. The `pnpm typecheck` launcher stalled in an earlier attempt, so only the direct
 compiler command is recorded here. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
 checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
+=======
+## Company Builder refund note — 2026-10-04 (issue #49)
+
+The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
+>>>>>>> origin/main
 
 ## Focused-run evidence helpers: explicit child environment — 2026-10-03
 
