@@ -1,8 +1,8 @@
 /**
  * Tests for `src/ai/hub/selection.ts` (#174). The issue names `selectEngineByScore` and `selectFreeEndpoint`, which never
- * existed in this repo (`git log --all -S <name> -- src` is empty), so per the CTO decision on PR #183 the real exports are
- * tested and the first test pins that export list. Acceptance with this repo's Vitest (Jest's `--listTests` is rejected as
- * an unknown option): pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec
+ * existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the
+ * real exports are tested and the first test pins that export list. Acceptance with this repo's Vitest (Jest's `--listTests`
+ * is rejected as an unknown option): pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec
  */
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db";
