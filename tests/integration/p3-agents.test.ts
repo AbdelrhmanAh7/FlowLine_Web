@@ -10,6 +10,7 @@ import { decide } from "@/server/approvals";
 import { createFlow, saveFlow } from "@/server/flows";
 import { addSource, indexNextSource, setEnabled } from "@/server/knowledge";
 import { publishFlow } from "@/server/publish";
+import { enqueueRunEx } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { claimNextAgentRun, processAgentRun, recoverStaleAgentRuns, wakeAgentsForFinishedRuns } from "../../worker/agent-runner";
 import { claimNextRun, processRun } from "../../worker/runner";
@@ -220,6 +221,13 @@ describe("agents: tool permissions ALLOW / ASK / DENY enforced by the backend", 
     (g.nodes[1]!.data.config as { expression: string }).expression = '{ "v": n * 1000 }';
     await saveFlow(owner, flow.id, { baseRevision: f!.revision, graph: g });
     await publishFlow(owner, flow.id);
+    const [republished] = await db.select().from(schema.flow).where(eq(schema.flow.id, flow.id));
+    expect(republished!.publishedVersionId).not.toBe(f!.publishedVersionId);
+    // Enqueueing the version the approval covered is refused atomically (the old codex-poc-agent-approval-republish check).
+    await expectHttpError(
+      enqueueRunEx(owner, flow.id, { triggerKind: "agent", usePublished: true, expectPublishedVersionId: f!.publishedVersionId!, input: { n: 5 } }),
+      409, "WORKFLOW_REPUBLISHED",
+    );
 
     r = await runAgent(run.id);
     expect(r.status).toBe("waiting_approval"); // asks again for the new version
