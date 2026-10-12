@@ -28,11 +28,11 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 3. CodeRabbit budget for Flowline: at most 3 reviews per rolling hour (2 are reserved for another project); automatic re-review is off, so request `@coderabbitai review` after each fix push.
 4. Run the full CI tier once on the final candidate, just before merging: Actions → Gate → Run workflow, choose the branch and set `tier` to `full` (or `gh workflow run gate.yml --ref <branch> -f tier=full`). Labels never start CI. The owner verifies that run passed; merge when it and the required `gate` and `docs` checks are green, then move the item to Done and close the issue.
 5. Stacked PRs merge top-down after their base.
+6. Draft PRs are never merged, folded into another PR or carried by fast-forwarding their base branch (that makes GitHub mark the draft "merged" without its own review; this happened once with #34, see its exception record). Mark the draft ready so CodeRabbit reviews it, then merge it explicitly, or close it with a recorded reason.
 
 ## Security scanning and second reviewer
 
 Secret scanning with push protection, Dependabot alerts and CodeQL default setup are on (Dependabot update PRs are off to save the CodeRabbit budget). Automatic Copilot code review was not on at the last check; enabling it is an owner action tracked in #160. State, owner steps and how to handle a push-protection block or an alert: [REPO_SECURITY_SETTINGS.md](security/REPO_SECURITY_SETTINGS.md). Once Copilot reviews, its threads must be answered and resolved before merge like any other conversation. Every PR confirms its own posture with the PR template's *Security posture* line (rule in `AGENTS.md`): no push-protection bypass for a real credential, and any alert or review item raised on the PR handled as that doc says.
-6. Draft PRs are never merged, folded into another PR or carried by fast-forwarding their base branch (that makes GitHub mark the draft "merged" without its own review; this happened once with #34, see its exception record). Mark the draft ready so CodeRabbit reviews it, then merge it explicitly, or close it with a recorded reason.
 
 ## Exception records
 

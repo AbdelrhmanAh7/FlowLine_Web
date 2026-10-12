@@ -30,7 +30,7 @@ Copilot Pro adds automatic Copilot code review as a second reviewer next to Code
 
 - Ruleset: `gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'` lists `copilot_code_review` (rule parameters: `review_on_push`, `review_draft_pull_requests`).
 - Account setting: no repository API exposes a personal Copilot setting, and the ruleset command above stays unchanged. The record is the owner's statement of the toggle state on the settings page (text is enough; no screenshot of account details).
-- Ruleset source: the next PR into main, whoever opens it (a human, Dependabot or a bot), gets a review from the Copilot reviewer. Account source: the setting applies only to PRs created by the owner's account, so verify it on a PR the owner authored; a missing review on a Dependabot, bot or other contributor's PR does not disprove the setting and must not keep #160 open. In both cases `gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/$PR_NUMBER/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]` (shown as Copilot in the PR UI).
+- Ruleset source: the next PR into main, whoever opens it (a human, Dependabot or a bot), gets a review from the Copilot reviewer. Account source: the setting applies only to PRs created by the owner's account, so verify it on a PR the owner authored; a missing review on a Dependabot, bot or other contributor's PR does not disprove the setting and must not keep #160 open. In both cases `gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/${PR_NUMBER:?set PR_NUMBER first}/reviews --jq '.[].user.login'` includes `copilot-pull-request-reviewer[bot]` (shown as Copilot in the PR UI).
 
 After it is on, record the date and the source in the table above and in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md), then close issue #160, which stays open until then.
 
@@ -44,14 +44,14 @@ After it is on, record the date and the source in the table above and in [OWNER_
 
 ## Re-checking the state
 
-Read-only; needs `gh` signed in with repo access. Set `PR_NUMBER` to the PR you are checking first (for example `PR_NUMBER=123`):
+Read-only; needs `gh` signed in with repo access. Set `PR_NUMBER` to the PR you are checking first (for example `PR_NUMBER=123`); the last command stops with an error if it is unset:
 
 ```sh
 gh api repos/AbdelrhmanAh7/FlowLine_Web --jq '{visibility, security_and_analysis}'
 gh api repos/AbdelrhmanAh7/FlowLine_Web/code-scanning/default-setup --jq '{state, languages, query_suite}'
 gh api -i repos/AbdelrhmanAh7/FlowLine_Web/vulnerability-alerts | head -1   # 204 = Dependabot alerts on
 gh api repos/AbdelrhmanAh7/FlowLine_Web/rulesets/24420405 --jq '.rules[].type'   # copilot_code_review appears only for the ruleset source
-gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/$PR_NUMBER/reviews --jq '.[].user.login'   # copilot-pull-request-reviewer[bot] once Copilot reviewed that PR (either source)
+gh api repos/AbdelrhmanAh7/FlowLine_Web/pulls/${PR_NUMBER:?set PR_NUMBER first}/reviews --jq '.[].user.login'   # copilot-pull-request-reviewer[bot] once Copilot reviewed that PR (either source)
 ```
 
 ### In the GitHub UI (repository admin)
