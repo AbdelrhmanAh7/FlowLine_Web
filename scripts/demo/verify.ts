@@ -10,7 +10,7 @@ import type { DemoProps, EventsFile } from "../../tools/demo-video/src/props";
 import { BUDGET, CLIPS, VIEWPORT, workKey, type ClipId } from "./clips";
 import { sampleTimes } from "./deliver";
 import { codecString, extractFrame, probe, psnrAt, psnrRgb } from "./ffmpeg";
-import { budgetReport, readManifest, staleFiles, type ManifestFile } from "./manifest";
+import { budgetReport, readManifest, recordedCommits, staleFiles, type ManifestFile } from "./manifest";
 import { OUT, ROOT, WORK, themeTokens } from "./paths";
 
 const SHEETS = join(ROOT, "artifacts/demo-media");
@@ -137,10 +137,12 @@ export async function verify(_argv: string[] = []): Promise<number> {
     if (f.codec === "h264") await contactSheet(file, p.durationS, join(SHEETS, `${f.clip}.${f.locale}.${f.theme}.contact.jpg`));
   }
 
-  // Stale media: UI changes since the recorded commit.
-  const diff = spawnSync("git", ["diff", "--name-only", `${m.uiCommit}..HEAD`, "--", "src/"], { cwd: ROOT, encoding: "utf8" });
-  if (diff.status !== 0) notes.push(`stale check: recorded commit ${m.uiCommit.slice(0, 8)} is not in this checkout's history`);
-  else if (diff.stdout.trim()) console.log(`stale: ${diff.stdout.trim().split("\n").length} file(s) under src/ changed since ${m.uiCommit.slice(0, 8)}; re-run \`pnpm demo:build\``);
+  // Stale media: UI changes since the commit each recording was made from.
+  for (const [sha, what] of recordedCommits(m)) {
+    const diff = spawnSync("git", ["diff", "--name-only", `${sha}..HEAD`, "--", "src/"], { cwd: ROOT, encoding: "utf8" });
+    if (diff.status !== 0) notes.push(`stale check: recorded commit ${sha.slice(0, 8)} (${what.join(", ")}) is not in this checkout's history`);
+    else if (diff.stdout.trim()) console.log(`stale: ${diff.stdout.trim().split("\n").length} file(s) under src/ changed since ${sha.slice(0, 8)} (${what.join(", ")}); re-run \`pnpm demo:build\``);
+  }
 
   const total = m.files.reduce((s, f) => s + f.bytes, 0);
   for (const n of notes) console.log(`ok    ${n}`);

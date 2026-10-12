@@ -10,9 +10,9 @@ export const OUT = join(ROOT, "public/media/demo");
 export const LOCK = join(WORK, "build.lock");
 
 /** One demo build at a time on this machine (and never two Remotion renders fighting for RAM). */
-export function lockHeld(): number | null {
-  if (!existsSync(LOCK)) return null;
-  const pid = Number(readFileSync(LOCK, "utf8"));
+export function lockHeld(file = LOCK): number | null {
+  if (!existsSync(file)) return null;
+  const pid = Number(readFileSync(file, "utf8"));
   try {
     process.kill(pid, 0);
     return pid;

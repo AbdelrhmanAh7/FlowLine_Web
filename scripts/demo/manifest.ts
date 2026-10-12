@@ -39,6 +39,8 @@ export const ManifestSchema = z
     schema: z.literal(1),
     generatedAt: z.iso.datetime(),
     uiCommit: z.string().min(1),
+    /** Commit each `<clip>.<locale>.<theme>` recording was made from (a partial rebuild leaves the others at their own). */
+    recordings: z.record(z.string().min(1), z.string().min(1)).optional(),
     tooling: z.object({ playwright: z.string().min(1), remotion: z.string().min(1) }).strict(),
     clips: z.partialRecord(clipId, ClipEntrySchema),
     files: z.array(ManifestFileSchema),
@@ -124,9 +126,20 @@ export type ManifestUpdate = {
   /** Slices that were rebuilt: their old entries go, the new `files` come in. Others are kept. */
   replace: Slice[];
   uiCommit: string;
+  /** `<clip>.<locale>.<theme>` → commit it was recorded from, for the slices in this update. */
+  recordings?: Record<string, string>;
   generatedAt: string;
   tooling: Manifest["tooling"];
 };
+
+/** Recorded commit → the recordings made from it (`recordings`, else the single top-level `uiCommit` for everything). */
+export function recordedCommits(m: Pick<Manifest, "uiCommit" | "recordings">): Map<string, string[]> {
+  const by = new Map<string, string[]>();
+  const entries = Object.entries(m.recordings ?? {});
+  if (!entries.length) return new Map([[m.uiCommit, ["all clips"]]]);
+  for (const [key, sha] of entries) by.set(sha, [...(by.get(sha) ?? []), key]);
+  return by;
+}
 
 export function mergeManifest(old: Manifest | null, update: ManifestUpdate): Manifest {
   const inSlice = (f: ManifestFile, s: Slice) => f.clip === s.clip && f.locale === s.locale && (s.theme === undefined || !("theme" in f) || f.theme === s.theme);
@@ -138,6 +151,8 @@ export function mergeManifest(old: Manifest | null, update: ManifestUpdate): Man
     schema: 1,
     generatedAt: update.generatedAt,
     uiCommit: update.uiCommit,
+    // Provenance is per recording: rebuilding one slice must not re-stamp the commit of the slices it keeps.
+    ...(old?.recordings || update.recordings ? { recordings: { ...(old?.recordings ?? {}), ...(update.recordings ?? {}) } } : {}),
     tooling: update.tooling,
     clips: ordered,
     files: [...kept, ...update.files].sort(compareFiles),

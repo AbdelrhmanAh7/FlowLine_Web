@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { BUDGET } from "../../scripts/demo/clips";
 import { av1Args, encodeWithBudget, h264Args } from "../../scripts/demo/deliver";
 import { codecString, parseProbe, psnrRgb, type Probe } from "../../scripts/demo/ffmpeg";
-import { budgetReport, hashName, mergeManifest, staleFiles, validateManifest, writeManifest, readManifest, type Manifest, type ManifestFile } from "../../scripts/demo/manifest";
+import { budgetReport, hashName, mergeManifest, recordedCommits, staleFiles, validateManifest, writeManifest, readManifest, type Manifest, type ManifestFile } from "../../scripts/demo/manifest";
 
 const fixture = (): Manifest => JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/demo-manifest.json"), "utf8"));
 // Mutable, untyped view of the fixture so tests can break it in arbitrary ways.
@@ -69,6 +69,20 @@ describe("mergeManifest", () => {
     expect(m.uiCommit).toBe("abc1234");
     expect(Object.keys(m.clips)).toEqual(["hero", "build", "walkthrough"]);
     expect(m.files.map((f) => f.clip)).toEqual(["hero", "build", "walkthrough", "walkthrough"]);
+  });
+
+  it("keeps each recording's own commit when only one slice is rebuilt", () => {
+    const old = { ...validateManifest(fixture()), recordings: { "hero.ar.light": "aaaa111", "build.en.dark": "bbbb222" } };
+    const fresh = file({ path: "hero.ar.light.poster.deadbeef.jpg" });
+    const m = mergeManifest(old, { ...update([{ clip: "hero", locale: "ar", theme: "light" }], [fresh]), uiCommit: "cccc333", recordings: { "hero.ar.light": "cccc333" } });
+    expect(m.recordings).toEqual({ "hero.ar.light": "cccc333", "build.en.dark": "bbbb222" });
+    const by = recordedCommits(m);
+    expect([...by.keys()].sort()).toEqual(["bbbb222", "cccc333"]);
+    expect(by.get("bbbb222")).toEqual(["build.en.dark"]);
+  });
+
+  it("falls back to the top-level commit when no per-recording commits are recorded", () => {
+    expect(recordedCommits({ uiCommit: "abc1234" })).toEqual(new Map([["abc1234", ["all clips"]]]));
   });
 
   it("a slice without theme also replaces the locale's captions; another theme is kept", () => {

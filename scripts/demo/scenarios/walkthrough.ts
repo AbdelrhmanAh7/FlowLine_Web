@@ -3,7 +3,7 @@
 // beats logged here; the chapter cards are drawn by the compositor while the scenario holds.
 import { WORKSPACES } from "../seed";
 import { connectNodes, dropNode } from "./build";
-import { canvasReady, grow, holdUntil, nodeCard, runButton, runFinished, type Scenario } from "./common";
+import { canvasReady, escapeRegExp, grow, holdUntil, nodeCard, runButton, runFinished, type Scenario } from "./common";
 
 export const walkthrough: Scenario = {
   id: "walkthrough",
@@ -52,7 +52,7 @@ export const walkthrough: Scenario = {
     // Wait for the run to appear in the dock (queued/running) before focusing on nodes
     const runStatusQueued = ctx.t("runStatus.queued");
     const runStatusRunning = ctx.t("runStatus.running");
-    await page.getByTestId("run-dock").getByText(new RegExp(`${runStatusQueued}|${runStatusRunning}`)).first().waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByTestId("run-dock").getByText(new RegExp(`${escapeRegExp(runStatusQueued)}|${escapeRegExp(runStatusRunning)}`)).first().waitFor({ state: "visible", timeout: 15_000 });
     for (const id of ["trigger", "normalise", "is-hot", "hot"]) {
       await rec.focus(grow(await rec.box(nodeCard(page, id)), 400, 180), `node-${id}`);
       await holdUntil(ctx, rec.now() + 1.3);
@@ -66,7 +66,7 @@ export const walkthrough: Scenario = {
     // 4 · See what happened: the run inspector, one step's input and output
     rec.beat("ch4");
     await holdUntil(ctx, 39.6);
-    await rec.click(dock.getByRole("link", { name: new RegExp(t("runDock.openInspector")) }), "inspector", { dur: 0.7 });
+    await rec.click(dock.getByRole("link", { name: new RegExp(escapeRegExp(t("runDock.openInspector"))) }), "inspector", { dur: 0.7 });
     rec.beat("inspect");
     const panel = page.getByTestId("step-panel");
     await panel.waitFor({ state: "visible", timeout: 20_000 });

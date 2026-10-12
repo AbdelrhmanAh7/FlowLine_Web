@@ -11,6 +11,7 @@ import { BUDGET, CLIP_IDS, CLIPS, DISSOLVE_S, LOCALES, THEMES, VIEWPORT, workKey
 import { deliverClip } from "./deliver";
 import { doctor } from "./doctor";
 import { parseEvents } from "./events";
+import { readProvenance, writeProvenance } from "./provenance";
 import { probe } from "./ffmpeg";
 import { mergeManifest, readManifest, staleFiles, writeManifest, type ClipEntry, type Manifest, type ManifestFile, type Slice } from "./manifest";
 import { buildMaster } from "./master";
@@ -140,6 +141,7 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
   const t0 = Date.now();
   mkdirSync(dir, { recursive: true });
   let ev: EventsFile;
+  let uiCommit: string;
   if (rec) {
     for (let attempt = 1; ; attempt++) {
       try {
@@ -151,11 +153,14 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
         log(`${key}: recording attempt ${attempt} failed (${(e as Error).message.split("\n")[0]}); retrying`);
       }
     }
+    uiCommit = gitHead();
+    writeProvenance(dir, uiCommit);
     log(`${key}: recorded ${ev.duration.toFixed(2)} s`);
     if (flags.recordOnly) return null;
   } else {
     if (!existsSync(join(dir, "events.json"))) throw new Error(`${key}: --skip-record but ${dir}/events.json is missing`);
     ev = parseEvents(JSON.parse(readFileSync(join(dir, "events.json"), "utf8")));
+    uiCommit = readProvenance(dir); // the checkout that was recorded, not the one rendering now
   }
   await buildMaster(dir);
 
@@ -203,7 +208,7 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
       ...(sb.chapterMarks.length ? { chapters: sb.chapterMarks.map((c) => ({ id: c.id, t: Math.round(c.t * 100) / 100 })) } : {}),
     } as ClipEntry;
     log(`${key}: done in ${((Date.now() - t0) / 1000).toFixed(0)} s (${files.map((f) => `${f.path} ${(f.bytes / 1000).toFixed(0)} KB`).join(", ")})`);
-    return { entry, files, slice: { clip, locale, theme } as Slice };
+    return { entry, files, slice: { clip, locale, theme } as Slice, key, uiCommit };
   } finally {
     rmSync(join(pub, key), { recursive: true, force: true });
   }
@@ -253,7 +258,6 @@ async function build(argv: string[]) {
       recorder = (clip, locale, theme) => (dir) => record(b, s.url, all[clip], locale, theme, dir);
     }
     const tooling = { playwright: toolVersion("@playwright/test", ROOT), remotion: toolVersion("remotion", TOOL) };
-    const uiCommit = gitHead();
     for (const clip of flags.only)
       for (const locale of flags.locales)
         for (const theme of flags.themes) {
@@ -262,7 +266,7 @@ async function build(argv: string[]) {
           // The manifest is merged after every clip, so a later failure keeps the clips already built.
           let old: Manifest | null = null;
           if (existsSync(join(OUT, "manifest.json"))) old = await readManifest(OUT);
-          const m = mergeManifest(old, { clips: { [clip]: r.entry }, files: r.files as ManifestFile[], replace: [r.slice], uiCommit, generatedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"), tooling });
+          const m = mergeManifest(old, { clips: { [clip]: r.entry }, files: r.files as ManifestFile[], replace: [r.slice], uiCommit: r.uiCommit, recordings: { [r.key]: r.uiCommit }, generatedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"), tooling });
           await writeManifest(OUT, m);
           for (const f of await staleFiles(OUT, m)) unlinkSync(join(OUT, f));
         }

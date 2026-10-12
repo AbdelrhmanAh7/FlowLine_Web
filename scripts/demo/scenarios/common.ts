@@ -17,6 +17,9 @@ export function msg(locale: Locale, key: string, vars: Record<string, string | n
   return v.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
 }
 
+/** Literal text as a RegExp source: translated UI strings may contain `(`, `?`, `.`, `+` and must still match verbatim. */
+export const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export type ScenarioCtx = {
   page: Page;
   rec: Recorder;

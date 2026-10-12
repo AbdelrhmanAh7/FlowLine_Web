@@ -42,7 +42,7 @@ and `nice` / local port binding are blocked there.
 | `pnpm demo:build --only hero --locale ar` | One clip (about 3-5 min). `--only a,b` · `--locale ar\|en\|all` · `--theme light\|dark\|all` (dark twins are optional and not shipped) · `--concurrency 2` (Remotion render threads) |
 | `pnpm demo:build --only run --skip-record` | Reuse the recording in `tools/demo-video/.work/<clip>.<locale>.<theme>/` (re-master, re-compose, re-deliver). `--skip-render` also reuses the composed video and posters (delivery only). `--rebuild` forces a fresh production build of the app. |
 | `pnpm demo:build --record-only`, then `pnpm demo:build --skip-record` | Two phases for a shared machine: record (light, real time, about 2.5 min for everything) at normal priority, then render and encode (the heavy part) as a second command; on a machine with a job governor, start that second command through the governor's wrapper (a machine-local script, not part of this repo). Recording must not run under background QoS (`taskpolicy -b`): the throttled browser runs slow and the ±15 % length check fails. |
-| `pnpm demo:verify` | Validates `manifest.json` and every budget, probes each video (canvas, fps, BT.709, no audio, codec string), checks loop seams, the hero's accent colour and PSNR (when `.work` is present), flags stale media, and writes a 6-still contact sheet per clip to `artifacts/demo-media/` (git-ignored; copy the ones you attach to a PR under `artifacts/issue-<N>/`). Review the sheets before committing. |
+| `pnpm demo:verify` | Validates `manifest.json` and every budget, probes each video (canvas, fps, BT.709, no audio, codec string), checks loop seams, the hero's accent colour and PSNR (when `.work` is present), flags stale media, and writes a 6-still contact sheet per clip to `artifacts/demo-media/` (git-ignored; attach the ones you want to the PR, never commit them). Review the sheets before committing. |
 | `pnpm demo:studio` | Opens Remotion Studio on the composition (preview props in `tools/demo-video/src/defaultProps.ts`). |
 
 Set `DEMO_DEBUG=1` to print every storyboard beat with its recorded time.
@@ -117,11 +117,11 @@ the hero's decoded Run button within 6 levels per channel of `semantic.light.acc
 ## Manifest contract
 
 `public/media/demo/manifest.json` (`schema: 1`, validated by `scripts/demo/manifest.ts` and a fixture test) lists
-`uiCommit` (the recorded UI's commit), the tooling versions, per-clip metadata (`shape`, `aspect`, `width`, `height`,
+`uiCommit` (the commit of the latest recording) and `recordings` (the commit each `<clip>.<locale>.<theme>` was recorded from; written at record time, so `--skip-record` and partial rebuilds keep the right one), the tooling versions, per-clip metadata (`shape`, `aspect`, `width`, `height`,
 `fps`, `durationS`, `loop`, walkthrough `chapters` with their start times) and every file (`video` with `codec`, the
 `type` string from ffprobe such as `video/mp4; codecs="av01.0.09M.08"`, `bytes`, `sha256`, `bitrate`; `poster`;
 `captions` with `lang`; `chapter-still` with `chapter`). Landing code treats a missing manifest as "no demo yet".
-`demo:verify` prints `stale:` when `src/` changed since `uiCommit`; regenerate at UI freezes only (each full rebuild adds
+`demo:verify` prints `stale:` when `src/` changed since any recording's commit; regenerate at UI freezes only (each full rebuild adds
 about 15-20 MB of binaries to git history).
 
 ## Troubleshooting

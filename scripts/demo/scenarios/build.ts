@@ -1,7 +1,7 @@
 // Build tile, 8 s (square, full bleed): the empty canvas ("Start with a trigger"), the Add node palette, a search,
 // two steps dragged onto the canvas and the edge between them connected.
 import type { Page } from "@playwright/test";
-import { holdUntil, type ScenarioCtx, type Scenario } from "./common";
+import { escapeRegExp, holdUntil, type ScenarioCtx, type Scenario } from "./common";
 
 /**
  * Opens the palette, optionally searches, and drags `title` onto the pane at fraction `at` of the pane (mirrored in RTL)
@@ -12,7 +12,7 @@ export async function dropNode(ctx: ScenarioCtx, title: string, at: [number, num
   await rec.click(page.getByRole("button", { name: t("builder.addNode") }).first(), `${opts.label}-palette`, { dur: opts.fast ? 0.45 : 0.55 });
   const palette = page.getByRole("dialog", { name: t("palette.dialog") });
   if (opts.search) await rec.type(palette.getByLabel(t("palette.searchLabel")), opts.search, `${opts.label}-search`, { delayMs: opts.fast ? 35 : 45, focused: true });
-  const option = palette.getByRole("option", { name: new RegExp(title) }).first();
+  const option = palette.getByRole("option", { name: new RegExp(escapeRegExp(title)) }).first();
   const src = await rec.box(option);
   const pane = await rec.box(page.locator(".react-flow__pane"));
   const fx = ctx.locale === "ar" ? 1 - at[0] : at[0];

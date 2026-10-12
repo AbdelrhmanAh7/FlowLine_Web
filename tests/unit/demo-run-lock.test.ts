@@ -1,6 +1,8 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { LOCK, WORK, lockHeld } from "../../scripts/demo/paths";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { lockHeld } from "../../scripts/demo/paths";
 import { run } from "../../scripts/demo/run";
 
 describe("run()", () => {
@@ -16,26 +18,30 @@ describe("run()", () => {
 });
 
 describe("lockHeld()", () => {
+  // A temp file, never the real tools/demo-video/.work/build.lock: a test run must not steal or delete a live build's lock.
+  const dir = mkdtempSync(join(tmpdir(), "demo-lock-"));
+  const lock = join(dir, "build.lock");
   afterEach(() => {
     vi.restoreAllMocks();
-    rmSync(LOCK, { force: true });
+    rmSync(lock, { force: true });
   });
-  const setPid = () => {
-    mkdirSync(WORK, { recursive: true });
-    writeFileSync(LOCK, "4242");
-  };
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const setPid = () => writeFileSync(lock, "4242");
   it("keeps the lock when the pid exists but kill is not permitted (EPERM)", () => {
     setPid();
     vi.spyOn(process, "kill").mockImplementation(() => {
       throw Object.assign(new Error("eperm"), { code: "EPERM" });
     });
-    expect(lockHeld()).toBe(4242);
+    expect(lockHeld(lock)).toBe(4242);
   });
   it("frees the lock when the process is gone (ESRCH)", () => {
     setPid();
     vi.spyOn(process, "kill").mockImplementation(() => {
       throw Object.assign(new Error("esrch"), { code: "ESRCH" });
     });
-    expect(lockHeld()).toBeNull();
+    expect(lockHeld(lock)).toBeNull();
+  });
+  it("reports no holder when the lock file does not exist", () => {
+    expect(lockHeld(join(dir, "missing.lock"))).toBeNull();
   });
 });
