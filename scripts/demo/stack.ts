@@ -72,6 +72,8 @@ export async function startStack(opts: { rebuild?: boolean; log?: (s: string) =>
   };
   child.stdout?.on("data", keep);
   child.stderr?.on("data", keep);
+  let spawnError: Error | null = null;
+  child.on("error", (e) => (spawnError = e)); // a failed spawn must not become an uncaught 'error' event
   const stop = async () => {
     if (child.exitCode !== null || !child.pid) return;
     try {
@@ -83,6 +85,7 @@ export async function startStack(opts: { rebuild?: boolean; log?: (s: string) =>
   };
   const deadline = Date.now() + (reuse ? 3 : 15) * 60_000;
   while (!(await healthy())) {
+    if (spawnError) throw new Error(`could not start the demo stack: ${(spawnError as Error).message}`);
     if (child.exitCode !== null) throw new Error(`the demo stack exited (${child.exitCode}):\n${tail.join("\n")}`);
     if (Date.now() > deadline) {
       await stop();
