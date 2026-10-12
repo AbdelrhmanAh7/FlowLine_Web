@@ -13,7 +13,7 @@ import { closeDb } from "./helpers";
  *
  * - FLOWLINE_ENV=staging ignores BOTH opt-ins (env var and cookie): the account stays unverified, still gets its
  *   verification e-mail and cannot sign in. A stray `FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one configuration
- *   warning at the first sign-up attempt; the cookie is ignored silently.
+ *   warning when auth is built, before any sign-up; the cookie is ignored silently.
  * - Under FLOWLINE_ENV=test each opt-in verifies the sign-up and sends no verification e-mail; without an opt-in the
  *   default behaviour is unchanged (unverified + verification e-mail).
  */
@@ -35,8 +35,8 @@ const BASE = "http://localhost:3100";
 const PASSWORD = "Auto-Verify-Test-1";
 const email = (p: string) => `${p}-${randomUUID().slice(0, 8)}@flowline-av.test`;
 
-async function signUp(e: string, headers: Record<string, string> = {}) {
-  const res = await dispatchAuth(new Request(`${BASE}/api/auth/sign-up/email`, {
+async function signUp(e: string, headers: Record<string, string> = {}, dispatch = dispatchAuth) {
+  const res = await dispatch(new Request(`${BASE}/api/auth/sign-up/email`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: BASE, ...headers },
     body: JSON.stringify({ email: e, password: PASSWORD, name: "Auto Verify" }),
@@ -44,8 +44,8 @@ async function signUp(e: string, headers: Record<string, string> = {}) {
   return { status: res.status, body: (await res.json().catch(() => null)) as { token: string | null; user?: { emailVerified?: boolean } } | null };
 }
 
-async function signIn(e: string) {
-  const res = await dispatchAuth(new Request(`${BASE}/api/auth/sign-in/email`, {
+async function signIn(e: string, dispatch = dispatchAuth) {
+  const res = await dispatch(new Request(`${BASE}/api/auth/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: BASE },
     body: JSON.stringify({ email: e, password: PASSWORD }),
@@ -69,22 +69,28 @@ function autoVerifyWarnings() {
 }
 
 describe("sign-up auto-verify switch (#124)", () => {
-  it("staging: a stray FLOWLINE_TEST_AUTO_VERIFY=1 is ignored (unverified + verification e-mail) and logs exactly one warning", async () => {
+  it("staging: a stray FLOWLINE_TEST_AUTO_VERIFY=1 logs exactly one warning when auth is built and is ignored (unverified + verification e-mail)", async () => {
     process.env.FLOWLINE_ENV = "staging";
     process.env.FLOWLINE_BETA_MODE = "open";
     process.env[TEST_AUTO_VERIFY_ENV] = "1";
     const warnings = autoVerifyWarnings();
+    // Start a fresh server module graph under the staging env (the @/db pool is shared through globalThis): its
+    // once-per-process flag starts unset whatever ran before, and building auth alone must log the warning.
+    vi.resetModules();
+    const fresh = (await import("@/server/auth-dispatch")).dispatchAuth;
+    expect(warnings()).toHaveLength(1);
     const e = email("staging-env");
 
-    const up = await signUp(e);
+    const up = await signUp(e, {}, fresh);
     expect(up.status).toBe(200);
     expect(up.body?.user?.emailVerified).toBe(false);
     expect(await stored(e)).toEqual({ emailVerified: false, tokens: 1, outbox: 1 });
 
-    const signin = await signIn(e);
+    const signin = await signIn(e, fresh);
     expect(signin.status).toBe(403);
     expect(signin.body?.code).toBe("EMAIL_NOT_VERIFIED");
 
+    // Still one: sign-up and sign-in add no further warning.
     const lines = warnings();
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain(`${TEST_AUTO_VERIFY_ENV} is ignored`);

@@ -42,16 +42,31 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("auto-verify is impossible outside FLOWLINE_ENV=test", () => {
-  it.each([undefined, "", "production", "staging", "beta", "development", "Test", "test "])("ignores both opt-ins with FLOWLINE_ENV=%s and logs once", async (env) => {
+  it.each([undefined, "", "production", "staging", "beta", "development", "Test", "test "])("ignores both opt-ins with FLOWLINE_ENV=%s and logs once, when auth is built", async (env) => {
     vi.stubEnv("FLOWLINE_ENV", env as string);
     vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "1");
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const { autoVerifySignUps, before } = await load();
+    // Building auth alone logs it: no sign-up has been attempted yet.
+    expect(error).toHaveBeenCalledTimes(1);
     expect(autoVerifySignUps(OPT_IN_COOKIE)).toBe(false);
     expect(autoVerifySignUps(null)).toBe(false);
     expect(await before({ email: "x@example.test" }, { path: "/sign-up/email", headers: OPT_IN_COOKIE })).toBeUndefined();
     expect(error).toHaveBeenCalledTimes(1);
     expect(error.mock.calls[0]![0]).toContain("FLOWLINE_TEST_AUTO_VERIFY is ignored");
+  });
+
+  it("warns even when the only sign-up is refused by invite_only, and only once per process", async () => {
+    vi.stubEnv("FLOWLINE_ENV", "staging");
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "1");
+    vi.stubEnv("FLOWLINE_BETA_MODE", "invite_only");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { before } = await load();
+    expect(error).toHaveBeenCalledTimes(1);
+    await expect(before({ email: "r@example.test" }, { path: "/sign-up/email", headers: new Headers() })).rejects.toMatchObject({ body: { code: "BETA_INVITE_REQUIRED" } });
+    const { warnIfAutoVerifyIgnored } = await import("@/server/test-auto-verify");
+    warnIfAutoVerifyIgnored();
+    expect(error).toHaveBeenCalledTimes(1);
   });
 
   it("stays silent when the switch is not set", async () => {
@@ -67,6 +82,11 @@ describe("under FLOWLINE_ENV=test it needs an explicit opt-in", () => {
   beforeEach(() => vi.stubEnv("FLOWLINE_ENV", "test"));
 
   it("is off by default and for any value other than exactly 1", async () => {
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "1");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await load();
+    expect(error).not.toHaveBeenCalled(); // honoured under test, so no warning
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "");
     const { autoVerifySignUps } = await load();
     expect(autoVerifySignUps(PLAIN)).toBe(false);
     expect(autoVerifySignUps(null)).toBe(false);
