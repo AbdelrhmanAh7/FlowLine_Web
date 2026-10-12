@@ -56,3 +56,10 @@ failure, permissions changed mid-run, approval expired, membership revoked mid-s
 
 Codex reviews code, tests and security, and does agent-driven exploratory browser testing against the running
 stack. Findings are fixed and retested. This is not human UAT.
+
+## Landing hero interactions (#177)
+
+`e2e/landing.spec.ts` ("landing hero and main CTA") covers two hero interactions in English: the "Explore a workflow ↓"
+button navigates to `?section=flow-demo` and brings `#flow-demo` into view, and the "Start building — free" button
+opens `/sign-up`. Run it with `pnpm test:e2e landing.spec.ts --project=chromium --workers=1`. It needs the isolated test
+stack described in `docs/DEVELOPER_GUIDE.md`. The change only adds tests and does not alter a user-facing flow.
