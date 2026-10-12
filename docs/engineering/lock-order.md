@@ -29,3 +29,15 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 - [ ] Update this table, and FEDERATED_MFA.md for federated paths, in the same PR as the change.
 
 ## Worked examples
+
+### Email token vs user delete ([#45](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/45))
+
+- **Hazard:** `email_token.user_id` is `ON DELETE SET NULL` (`src/db/schema.ts`), so deleting a user updates every token row of that user after the user row is locked. When `consumeAccountToken` locked its own token row first, a password reset and a delete confirmation of one user could deadlock, and two resets with different tokens each held their own token while queueing at the user row.
+- **Rule:** lock the user row `FOR UPDATE`, then the token row `FOR UPDATE`, then (`delete`) the user's workspaces ordered by id; `delete` takes the retained-file accounting lock (`lockRetainedFileAccounting`, `src/server/retained-files.ts`) before all of them. Code that writes `email_token` rows of an existing user locks the user first. This is the table's order (user rank 1, token rank 2, workspace rank 5), so it needs no exception; the detailed rule is in [FEDERATED_MFA.md](../security/FEDERATED_MFA.md#email-token-lock-order).
+- **Code:** `consumeAccountToken` in `src/server/email/flows.ts` (fixed by PR #65), pinned by `tests/unit/email-token-lock-order.test.ts` and `tests/integration/email-token-lock-order.test.ts`.
+
+### Workspace `FOR UPDATE` vs SSO audit insert ([#47](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/47))
+
+- **Hazard:** `consumeAccountToken("delete")` locks every workspace of the user `FOR UPDATE` and later deletes the user. The SSO callback transactions in `completeSso` (`src/server/sso.ts`) share-lock the user first and call `audit()` (`src/server/audit.ts`) last; its `audit_event` insert key-share locks the same `workspace` row. A deletion that held workspace W before taking the user row (workspace rank 5, then user rank 1: backward) could wait for the user while the SSO transaction held the user `FOR SHARE` and waited for W, the same cycle as #42.
+- **Rule:** a transaction that locks a user's workspaces `FOR UPDATE` takes that user's row first and never waits for it while holding W. Deletion keeps `FOR UPDATE` on the workspaces because sole-member workspaces are deleted with the account (`tests/integration/retained-file-locking.test.ts`).
+- **Code:** since PR #65, `consumeAccountToken` in `src/server/email/flows.ts` locks the user row before the workspaces, so, read from the code on main, this pair no longer forms the cycle. This is not reproduced: the two-connection test is pending #108, and #109 (move the audit insert before the workspace lock) needs re-checking against this order.
