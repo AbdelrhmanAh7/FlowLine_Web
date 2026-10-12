@@ -102,14 +102,15 @@ result, never with the flow's own claims:
 
 - **Refunds and cancellations always need a person.** The pack:
   - identifies the request (topic `refund`: refund, cancel, cancellation, استرداد, إلغاء…);
-  - quotes only the approved policy lines and adds a fixed no-promise note;
+  - quotes only the approved policy lines and adds a fixed note that names the business owner as the decision maker for that request and promises no outcome;
   - flags the draft and the record `consequential: "refund_or_cancellation"` / `requires_human_decision: true`;
   - leaves the draft `awaiting_review`.
 
   The review inbox labels the item, and approving it only puts the draft text in the outbox. No refund or payment step
   exists in the flow; the node types are local only, and trials refuse anything else.
 
-  Check `consequential_needs_person`. Tests: unit REF-* (AR/EN refund and cancellation, tampering, no promise) and
+  Check `consequential_needs_person`. Tests: unit REF-* (AR/EN refund and cancellation, tampering, no promise, REF-NOTE
+  for the fixed note naming the owner as the decision maker) and
   integration REF (an editor can't approve, nothing is sent before the owner approves, billing is unchanged).
 - **Phone numbers as written.** Groups separated by spaces, dots, dashes or parentheses are joined for comparison only
   when they start with "+" or 0 and give 9–13 digits; no country code is guessed. `phone_display` keeps the written form.

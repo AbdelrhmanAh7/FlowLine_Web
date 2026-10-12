@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- One short paragraph: the change and the reason. -->
+<!-- One short paragraph: the change and the reason. Link the issue with `Closes #N`; for an owner-tracking issue (label `owner-only` or `needs-owner`) write `Refs #N` instead, so merging does not close it. -->
 
 ## Docs updated (mandatory — AGENTS.md "Docs (mandatory)")
 
