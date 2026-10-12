@@ -3,7 +3,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Text-level guards for .github/ (no YAML parser is a project dependency). They pin the invariants behind the required
 // `gate` and `docs` checks on main; behaviour that depends on GitHub itself can only be verified by a live run.
@@ -27,9 +27,40 @@ const triggerTypes = (text: string, event: string) => {
   return match ? match[1].split(",").map((type) => type.trim()) : null;
 };
 
+// A job's steps, parsed from the comment-stripped text (a commented-out line or a step name cannot count as a command).
+// Each step starts at `      - ` (six spaces); its keys sit at eight spaces. `run` is the command, or the block under `run: |`.
+type Step = { name?: string; uses?: string; run?: string; if?: string; raw: string };
+const steps = (jobText: string): Step[] =>
+  stripComments(jobText).split(/^ {6}- /m).slice(1).map((chunk) => {
+    const raw = `        ${chunk}`; // the first key shares the `- ` line: put it at the same indent as the others
+    const field = (key: string) => new RegExp(`^ {8}${key}:[ \\t]*(.*)$`, "m").exec(raw)?.[1].trim();
+    const block = new RegExp("^ {8}run:[ \\t]*\\|[ \\t]*\\n((?: {10}.*\\n?|[ \\t]*\\n)*)", "m").exec(raw)?.[1];
+    return { name: field("name"), uses: field("uses"), run: block !== undefined ? block.replace(/^ {10}/gm, "").trim() : field("run"), if: field("if"), raw };
+  });
+
+// The nightly job must be exactly: checkout, shared setup, create flowline_test, run the nightly project, in this order,
+// with no condition and no continue-on-error on any step. Returns the problems found (empty when the job is right).
+const nightlyProblems = (workflow: string): string[] => {
+  const job = jobs(stripComments(workflow)).nightly;
+  if (job === undefined) return ["no nightly job"];
+  const all = steps(job);
+  const problems: string[] = [];
+  const [checkout, setup, createdb, run] = all;
+  if (all.length !== 4) problems.push(`expected 4 steps, found ${all.length}`);
+  if (!checkout?.uses?.startsWith("actions/checkout@") || !/^ {10}persist-credentials: false$/m.test(checkout.raw)) problems.push("step 1 is not checkout with persist-credentials: false");
+  if (setup?.uses !== "./.github/actions/setup-gate" || !/^ {10}postgres: "true"$/m.test(setup.raw) || !/^ {10}sandbox-image: "true"$/m.test(setup.raw)) problems.push("step 2 is not setup-gate with postgres and sandbox-image");
+  if (createdb?.run !== "docker exec flowline-ci-postgres createdb -U flowline flowline_test") problems.push("step 3 does not create flowline_test");
+  if (run?.run !== "pnpm test:nightly") problems.push("step 4 does not run pnpm test:nightly");
+  for (const [i, step] of all.entries()) {
+    if (step.if !== undefined) problems.push(`step ${i + 1} has an if: condition`);
+    if (/^ {8}continue-on-error:/m.test(step.raw)) problems.push(`step ${i + 1} has continue-on-error`);
+  }
+  return problems;
+};
+
 describe("workflow files", () => {
-  it("finds the workflows and composite actions", () => {
-    expect(workflowFiles.sort()).toEqual([".github/workflows/ai-implementers.yml", ".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml"]);
+  it("has exactly the expected workflows and the shared composite actions", () => {
+    expect(workflowFiles.sort()).toEqual([".github/workflows/claude.yml", ".github/workflows/docs.yml", ".github/workflows/gate.yml", ".github/workflows/nightly.yml"]);
     expect(actionFiles.sort()).toEqual([".github/actions/gate-report/action.yml", ".github/actions/setup-gate/action.yml"]);
   });
 
@@ -41,15 +72,42 @@ describe("workflow files", () => {
   it.each(allFiles)("%s uses no floating runner image", (file) => {
     const text = read(file);
     expect(text).not.toMatch(/ubuntu-latest|windows-latest|macos-latest/);
-    // ai-implementers.yml is the one exception: it runs on the owner's Mac mini self-hosted runner.
-    const runner = file === ".github/workflows/ai-implementers.yml" ? "[self-hosted, macmini]" : "ubuntu-24.04";
-    for (const match of text.matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)) expect(match[1]).toBe(runner);
+    for (const match of text.matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)) expect(match[1]).toBe("ubuntu-24.04");
   });
 
-  it("keeps the self-hosted AI implementers away from fork and pull-request events", () => {
-    const text = stripComments(read(".github/workflows/ai-implementers.yml"));
-    expect(text).not.toMatch(/^ {2}pull_request(_target|_review|_review_comment)?:/m);
-    expect(jobs(text).mention).toMatch(/author_association == 'OWNER'/);
+  it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
+    expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
+  });
+});
+
+describe("next.config.ts guards production type-check", () => {
+  const nextConfig = stripComments(read("next.config.ts").replace(/^\s*\/\/.*$/gm, "")); // comments cannot satisfy the match
+
+  it("sets ignoreBuildErrors from exactly FLOWLINE_SKIP_BUILD_TYPECHECK=1 AND FLOWLINE_ENV=test", () => {
+    expect(nextConfig).toMatch(
+      /typescript:\s*\{\s*ignoreBuildErrors:\s*process\.env\.FLOWLINE_SKIP_BUILD_TYPECHECK === "1"\s*&&\s*process\.env\.FLOWLINE_ENV === "test"\s*\}/,
+    );
+  });
+
+  // Evaluates the real config under each environment: only the test build with the flag may skip the type-check.
+  it.each([
+    ["1", "test", true],
+    ["1", undefined, false],
+    ["1", "staging", false],
+    ["1", "production", false],
+    [undefined, "test", false],
+    ["0", "test", false],
+    [undefined, undefined, false],
+  ])("FLOWLINE_SKIP_BUILD_TYPECHECK=%s with FLOWLINE_ENV=%s skips type-checking: %s", async (skip, env, expected) => {
+    vi.resetModules();
+    vi.stubEnv("FLOWLINE_SKIP_BUILD_TYPECHECK", skip as string);
+    vi.stubEnv("FLOWLINE_ENV", env as string);
+    try {
+      const { default: config } = await import("../../next.config");
+      expect(config.typescript?.ignoreBuildErrors).toBe(expected);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
@@ -100,6 +158,160 @@ describe("gate.yml always reports a real `gate`", () => {
     expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
     expect(byJob.changes).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}pull-requests: read\n/m);
     expect(text.match(/pull-requests: read/g)).toHaveLength(1);
+  });
+
+  it("runs tsc --noEmit on every PR in the static leg, without a condition that skips it or continue-on-error", async () => {
+    // Browser jobs skip Next's own type-check only because this leg already type-checks the same commit.
+    const run = steps(byJob.checks).find((step) => step.run?.startsWith("pnpm gate --only=static,unit,contract"));
+    expect(run, "the static gate step").toBeDefined();
+    expect(run!.if).toBe("matrix.kind == 'static'");
+    expect(run!.raw).not.toMatch(/continue-on-error:/);
+    expect(byJob.checks).toMatch(/^ {10}- \{ part: static·unit·contract, kind: static, report: checks-static \}$/m);
+    const { expandSteps } = await import("../../scripts/gate-groups.mjs");
+    expect(expandSteps(["static"])).toContain("typecheck");
+    expect(read("scripts/gate.mjs")).toContain('typecheck: "pnpm typecheck"');
+    expect(JSON.parse(read("package.json")).scripts.typecheck).toBe("tsc --noEmit");
+  });
+
+  it("sets FLOWLINE_SKIP_BUILD_TYPECHECK only on browser build jobs, never on the typecheck job", () => {
+    // Browser jobs set it
+    // next.config.ts honours the skip only with FLOWLINE_ENV=test, so each browser job must carry both.
+    for (const job of ["chromium", "firefox", "webkit"]) {
+      expect(byJob[job], job).toMatch(/^ {6}FLOWLINE_SKIP_BUILD_TYPECHECK: "1"/m);
+      expect(byJob[job], job).toMatch(/^ {6}FLOWLINE_ENV: test\b/m);
+    }
+    // The checks job (which runs typecheck) must NOT set it
+    expect(byJob.checks).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    // The changes and gate jobs must NOT set it
+    expect(byJob.changes).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+    expect(byJob.gate).not.toContain("FLOWLINE_SKIP_BUILD_TYPECHECK");
+  });
+});
+
+describe("nightly.yml stays off the PR path", () => {
+  const text = read(".github/workflows/nightly.yml");
+
+  it("runs on a schedule or by dispatch only, never on pull_request or push", () => {
+    expect(stripComments(text)).toMatch(/^ {2}schedule:$/m);
+    expect(stripComments(text)).toMatch(/^ {2}workflow_dispatch:$/m);
+    expect(stripComments(text)).not.toMatch(/^ {2}(pull_request|pull_request_target|push):/m);
+  });
+
+  it("runs, in this order and unconditionally: checkout, shared setup, createdb flowline_test, pnpm test:nightly", () => {
+    // The container only has `flowline`; the suite migrates flowline_test, so it must exist before the tests run.
+    expect(nightlyProblems(text)).toEqual([]);
+    expect(steps(jobs(text).nightly).map((step) => step.run ?? step.uses?.replace(/@.*/, ""))).toEqual([
+      "actions/checkout",
+      "./.github/actions/setup-gate",
+      "docker exec flowline-ci-postgres createdb -U flowline flowline_test",
+      "pnpm test:nightly",
+    ]);
+    expect(read(".github/actions/setup-gate/action.yml")).toMatch(/POSTGRES_DB=flowline(?!_)/);
+    expect(stripComments(text)).not.toMatch(/run: pnpm test\s*$/m);
+  });
+
+  describe("the nightly step guard fails on a broken job (negative controls)", () => {
+    const checkout = "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n";
+    const setup = '      - uses: ./.github/actions/setup-gate\n        with:\n          postgres: "true"\n          sandbox-image: "true"\n';
+    const createdb = "      - name: Create the nightly database\n        run: docker exec flowline-ci-postgres createdb -U flowline flowline_test\n";
+    const test = "      - name: Run the nightly project\n        run: pnpm test:nightly\n";
+    // The report job's issue body mentions `pnpm test:nightly`, as the real file's does: it must not satisfy the guard.
+    const report = '  report:\n    steps:\n      - run: |\n          gh issue create --body "failed (`pnpm test:nightly`)"\n';
+    const workflow = (...parts: string[]) => `name: Nightly\njobs:\n  nightly:\n    runs-on: ubuntu-24.04\n    steps:\n${parts.join("")}${report}`;
+
+    it("accepts the intended job", () => {
+      expect(nightlyProblems(workflow(checkout, setup, createdb, test))).toEqual([]);
+    });
+
+    it.each([
+      ["createdb commented out", workflow(checkout, setup, createdb.replace("        run:", "        # run:"), test)],
+      ["createdb only in a step name", workflow(checkout, setup, "      - name: docker exec flowline-ci-postgres createdb -U flowline flowline_test\n        run: echo ok\n", test)],
+      ["createdb after pnpm test:nightly", workflow(checkout, setup, test, createdb)],
+      ["pnpm test:nightly missing (the report body still names it)", workflow(checkout, setup, createdb)],
+      ["pnpm test:nightly commented out", workflow(checkout, setup, createdb, test.replace("        run:", "        # run:"))],
+      ["pnpm test:nightly only in a step name", workflow(checkout, setup, createdb, "      - name: pnpm test:nightly\n        run: echo ok\n")],
+      ["createdb for another database", workflow(checkout, setup, createdb.replace("flowline_test", "flowline"), test)],
+      ["a step with an if: condition", workflow(checkout, setup, createdb, test.replace("        run:", "        if: always()\n        run:"))],
+      ["a step with continue-on-error", workflow(checkout, setup, createdb, test.replace("        run:", "        continue-on-error: true\n        run:"))],
+      ["checkout keeping credentials", workflow(checkout.replace("persist-credentials: false", "persist-credentials: true"), setup, createdb, test)],
+      ["setup without the sandbox image", workflow(checkout, setup.replace('sandbox-image: "true"', 'sandbox-image: "false"'), createdb, test)],
+      ["an extra step", workflow(checkout, setup, createdb, test, "      - run: echo done\n")],
+    ])("%s", (_name, broken) => {
+      expect(nightlyProblems(broken).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("reports a red nightly on main as one nightly-red issue, with write access only in that job", () => {
+    const report = jobs(text).report;
+    expect(report).toMatch(/^ {4}needs: nightly$/m);
+    expect(report).toMatch(/^ {4}if: \$\{\{ failure\(\) && github\.ref == 'refs\/heads\/main' \}\}$/m);
+    expect(report).toMatch(/^ {4}permissions:\n {6}issues: write\n/m);
+    expect(text).toMatch(/^permissions:\n {2}contents: read\n/m);
+    expect(text.match(/issues: write/g)).toHaveLength(1);
+  });
+
+  it("report job: one step, GH_TOKEN only from github.token in env, never printed, no continue-on-error, ≤ 5 minutes", () => {
+    const report = jobs(text).report;
+    expect(report).toMatch(/^ {4}timeout-minutes: [1-5]$/m);
+    expect(report).not.toMatch(/continue-on-error:/);
+    const [step, ...rest] = steps(report);
+    expect(rest).toEqual([]);
+    expect(step.if).toBeUndefined();
+    expect(step.raw).toMatch(/^ {10}GH_TOKEN: \$\{\{ github\.token \}\}$/m);
+    // The command block never mentions the token (no echo, print or xtrace of it), nor any other secret.
+    expect(step.run).not.toMatch(/GH_TOKEN|github\.token|secrets\.|set -x|xtrace/);
+    expect(step.run).toContain("set -euo pipefail");
+    // The list call has no error suppression, so an API failure fails the job instead of reading as "no open issue".
+    expect(step.run).toMatch(/^open=\$\(gh issue list --state open --label nightly-red --json number --jq '[^']+'\)$/m);
+    expect(step.run).toContain("gh label create nightly-red");
+    expect(step.run).toContain('gh issue comment "$open"');
+    expect(step.run).toContain("gh issue create --label nightly-red");
+    expect(step.run).toContain("|| gh issue create --title");
+  });
+
+  it("nightly job has timeout-minutes ≤ 30 and neither job uses continue-on-error", () => {
+    const nightlyJob = jobs(text).nightly;
+    expect(nightlyJob).toMatch(/^ {4}timeout-minutes: (?:[1-9]|[12][0-9]|30)$/m);
+    expect(nightlyJob).not.toMatch(/continue-on-error:\s*true/);
+    const reportJob = jobs(text).report;
+    expect(reportJob).not.toMatch(/continue-on-error:\s*true/);
+  });
+});
+
+describe("the nightly vitest project", () => {
+  it("is a named project that pnpm test:nightly selects, and the PR projects exclude exactly its files", async () => {
+    // A computed specifier: tsc rejects a literal ".mts" import path without allowImportingTsExtensions.
+    const { default: config } = (await import(new URL("../../vitest.config.mts", import.meta.url).href)) as { default: { test?: { projects?: unknown[] } } };
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const files = byName.nightly.include;
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) expect(() => read(file), file).not.toThrow();
+    expect(byName.unit.exclude).toEqual(files);
+    expect(byName.integration.exclude).toEqual(files);
+    expect(JSON.parse(read("package.json")).scripts["test:nightly"]).toMatch(/vitest run --project nightly$/);
+  });
+
+  it("includes every test file that was moved to nightly (no moved file silently dropped)", async () => {
+    const { default: config } = (await import(new URL("../../vitest.config.mts", import.meta.url).href)) as { default: { test?: { projects?: unknown[] } } };
+    const projects = (config.test?.projects ?? []) as { test: { name: string; include: string[]; exclude?: string[] } }[];
+    const byName = Object.fromEntries(projects.map((p) => [p.test.name, p.test]));
+    const nightlyFiles = byName.nightly.include;
+    // These are the files that the slim-down plan explicitly moves to nightly
+    const expectedNightlyFiles = [
+      "tests/integration/p2-code-sandbox.test.ts",
+      "tests/integration/company-builder-cli.test.ts",
+      "tests/unit/drizzle-tooling-prune.test.ts",
+    ];
+    for (const expected of expectedNightlyFiles) {
+      expect(nightlyFiles).toContain(expected);
+    }
+    // Ensure sec-* tests are NOT in nightly (they stay in per-PR integration)
+    const secTests = ["tests/integration/sec-upgrade.test.ts", "tests/integration/sec-cxh06-rotation.test.ts", "tests/integration/sec-cxh01-backfill.test.ts"];
+    for (const sec of secTests) {
+      expect(nightlyFiles).not.toContain(sec);
+      expect(byName.integration.exclude).not.toContain(sec);
+    }
   });
 });
 
@@ -244,6 +456,10 @@ describe("docs.yml always re-evaluates", () => {
 
   it("reruns on label and body edits", () => {
     expect(triggerTypes(text, "pull_request")).toEqual(["opened", "synchronize", "reopened", "ready_for_review", "labeled", "unlabeled", "edited"]);
+  });
+
+  it("checks out only the checker script, not the whole repository", () => {
+    expect(text).toMatch(/^ {10}sparse-checkout: scripts\/ci$/m);
   });
 
   it("skips only drafts, never on a label, an edit or a path", () => {
