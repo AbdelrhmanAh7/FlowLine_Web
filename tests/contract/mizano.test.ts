@@ -1,8 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
+import { createProviderHttp } from "@/integrations/http";
 import { getAction, getProvider } from "@/integrations/registry";
 import type { ActionContext, Credentials, HttpRequest, HttpResponse } from "@/integrations/types";
 import { runAction } from "./helpers";
+
+vi.mock("node:dns", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:dns")>();
+  const lookup = (host: string, options: unknown, cb: unknown) => {
+    if (host !== "mizano-internal.test") return (actual.lookup as unknown as (...a: unknown[]) => void)(host, options, cb);
+    (cb as (e: null, a: { address: string; family: number }[]) => void)(null, [{ address: "10.0.0.5", family: 4 }]);
+  };
+  return { ...actual, lookup: lookup as unknown as typeof actual.lookup };
+});
 
 const creds: Credentials = { type: "api_key", token: "mz_test_scoped", settings: { baseUrl: "https://mizano.test" } };
 
@@ -127,6 +137,12 @@ describe("mizano.list_overdue_invoices", () => {
     ctx.credentials = { ...creds, settings: { baseUrl: "https://169.254.169.254" } };
     await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow(/refused|private/);
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it("refuses a hostname that resolves to a private address inside the request, before connecting", async () => {
+    const baseUrl = "https://mizano-internal.test";
+    const http = createProviderHttp(getProvider("mizano")!, { ...creds, settings: { baseUrl } }, new AbortController().signal);
+    await expect(http.request({ method: "GET", path: "/api/me", baseUrl })).rejects.toMatchObject({ kind: "egress_blocked" });
   });
 
   it("returns the workspace identity from a well-formed /api/me response", async () => {
