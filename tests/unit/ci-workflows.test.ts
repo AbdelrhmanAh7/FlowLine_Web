@@ -312,12 +312,17 @@ describe("ai-implementers.yml (Mac mini hub)", () => {
   // commented-out `# cron: ...` / `# group: ...` or a match inside a trailing comment cannot satisfy these checks.
   const text = stripComments(read(".github/workflows/ai-implementers.yml"));
   const byJob = jobs(text);
-  const crons = [...text.matchAll(/^ {4}- cron: "([^"]+)"/gm)].map((match) => match[1]);
+  // Collect crons from both double-quoted and single-quoted YAML values (GitHub supports both).
+  const crons = [...text.matchAll(/^ {4}- cron: (?:"([^"]+)"|'([^']+)')/gm)].map((match) => match[1] ?? match[2]);
 
   it("ignores commented-out schedules and runners (guard against the raw-text false positive)", () => {
     const sample = stripComments('on:\n  schedule:\n    # - cron: "0 */2 * * *"\n    - cron: "5 * * * *"\n    # runs-on: [self-hosted, macmini]\n');
-    expect([...sample.matchAll(/^ {4}- cron: "([^"]+)"/gm)].map((match) => match[1])).toEqual(["5 * * * *"]);
+    const dualQuote = /^ {4}- cron: (?:"([^"]+)"|'([^']+)')/gm;
+    expect([...sample.matchAll(dualQuote)].map((m) => m[1] ?? m[2])).toEqual(["5 * * * *"]);
     expect(sample).not.toMatch(/^ {4}runs-on: \[self-hosted, macmini\]/m);
+    // Single-quoted crons are counted too (GitHub supports both styles).
+    const singleQuoted = stripComments("on:\n  schedule:\n    - cron: '10 * * * *'\n");
+    expect([...singleQuoted.matchAll(dualQuote)].map((m) => m[1] ?? m[2])).toEqual(["10 * * * *"]);
   });
 
   it("defines exactly the start, rescue and automerge schedules", () => {

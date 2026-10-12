@@ -9,7 +9,7 @@ error: cannot overwrite multiple values with a single value
 ```
 
 ## Root cause
-The self-hosted runner reuses its checkout workspace, so `.git/config` kept several `credential.helper` values from earlier runs. The hub script `git_as_owner` (hub `bin/common.sh`, outside this repo) then set a single value on that multi-valued key, and `git config` exited with status 5. Nothing in FlowLine code, tests or the repository CI (`gate`, `docs`) was at fault: `Gate` passed on `f655e51` and on the current `main` (`bc59cab`).
+The self-hosted runner reuses its checkout workspace, so `.git/config` kept several `credential.helper` values from earlier runs. The hub script `git_as_owner` (hub `bin/common.sh`, outside this repo) then set a single value on that multi-valued key, and `git config` exited with status 5. Nothing in FlowLine code, tests or the repository CI (`gate`, `docs`) was at fault: `Gate` passed on `f655e51` and on the then-current `main` (`bc59cab`, circa 2026-10-06; the current main at the time of this report is `b1023c9`).
 
 ## Resolution
 - The cleanup lives in the hub (`AbdelrhmanAh7/nql-agents`), commit [`41c658f0720effff140287e4101f6cbd2e951627`](https://github.com/AbdelrhmanAh7/nql-agents/commit/41c658f0720effff140287e4101f6cbd2e951627) "git_as_owner: reset credential.helper idempotently (second run in same workspace failed)", committed 2026-10-06T02:45:20Z (read with `git show -s --format=%cI 41c658f` in a local hub checkout): `git_as_owner` in `bin/common.sh` now runs `git config --local --unset-all` for `credential.helper` and `http.https://github.com/.extraheader` before re-adding them. That is 23 minutes after the failing merge `f655e51` (committed 2026-10-06T02:22:11Z, verifiable in this repo).
@@ -22,13 +22,11 @@ The self-hosted runner reuses its checkout workspace, so `.git/config` kept seve
 Recent scheduled `automerge` runs failed with `automerge.sh: line 103: syntax error near unexpected token 'done'` in the hub's `bin/automerge.sh`. That is a hub script bug, not a FlowLine one.
 
 ## Local verification
-Each result names the exact tree it was recorded on. Results are never carried over to a later commit.
+Every row below names the full SHA of the commit whose clean working tree was tested. Rows from an earlier revision that lacked a reproducible source tree have been removed.
 
 | Tested tree (full SHA) | Command | Result |
 |---|---|---|
-| Historical, no exact tree: an uncommitted working tree on top of `a4ddf610016cacfcb382c309e455f030a1030956`. It was **not** identical to `334948fd4758e97b89962d9b5943b8c999d3da36` (that commit also edits the then root-level `EVIDENCE.md`), and its fingerprint was not recorded. These three rows are kept for history only; no claim in this PR rests on them, and later rows re-run the same checks on exact commits | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 27 passed (before the removal 1 failed: the reverted workflow has no "Clean git credentials" step) |
-| same (historical) | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
-| same (historical) | full unit project | 1244 passed, 4 skipped; `egress.test.ts` and `codex-poc-egress-redirect.test.ts` failed on `listen EPERM` at 127.0.0.1 (local sandbox blocks port binding; unrelated) |
+
 | `686c38bf33941297ba08ae875123470b9807612a` (merge of `origin/main` `aee8385b07396871709052b6f2922ac8de7f1438` into this branch; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed (main's gate-report, gate and docs checks plus this PR's `ai-implementers.yml` block) |
 | same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
 | `66d739da5d565e48358ad36c1756414f758e2fdb` (HEAD before this note; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed |
