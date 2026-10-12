@@ -176,6 +176,11 @@ export function errorTokens(body: unknown): { tokens: Set<string>; message: stri
   return { tokens, message };
 }
 
+/**
+ * Provider-specific error tokens that indicate quota exhaustion: OpenAI insufficient_quota, Moonshot/Kimi
+ * exceeded_current_quota_error, Alibaba arrearage/budgetlimitexceeded/allocationquota.freetieronly, Vercel
+ * quota_for_entity_exceeded, Anthropic enforced_spend_limit_reached/billing_error, and Gemini payment_required/quota_exceeded.
+ */
 const QUOTA_TOKENS = [
   "insufficient_quota", // OpenAI: quota exhausted (vs rate limit)
   "exceeded_current_quota_error", // Moonshot/Kimi: insufficient balance (429)
