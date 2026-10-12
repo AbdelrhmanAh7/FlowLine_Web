@@ -55,16 +55,13 @@ export async function blockedByObserver(observer: Client, waiterPid: number, fin
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     if (finished()) throw new Error("Competing transaction completed before the lock barrier was released");
-    await observer.query("select pg_stat_clear_snapshot()");
-    const { rows } = await observer.query<{ query: string; wait_event_type: string }>(
-      "select query, wait_event_type from pg_stat_activity where pid = $1 and pg_backend_pid() = any(pg_blocking_pids(pid))", [waiterPid],
-    );
-    if (rows[0]?.wait_event_type === "Lock") {
-      // wait_event and pg_blocking_pids are read live, but `query` comes from the activity snapshot the probe took when
-      // it started, so it can still show the waiter's previous statement. The observer holds the lock while paused, so
-      // the waiter stays at this wait: read its statement again from a fresh snapshot.
+    // pg_blocking_pids is live; pg_stat_activity.query is not (it comes from a backend-status snapshot that can still
+    // show the waiter's previous statement), so wait on the former and read the statement only once the wait is seen.
+    // The observer holds the lock while paused, so the waiter stays at this statement.
+    const { rows: [probe] } = await observer.query<{ blocked: boolean }>("select pg_backend_pid() = any(pg_blocking_pids($1)) as blocked", [waiterPid]);
+    if (probe!.blocked) {
       await observer.query("select pg_stat_clear_snapshot()");
-      return (await observer.query<{ query: string; wait_event_type: string }>("select query, wait_event_type from pg_stat_activity where pid = $1", [waiterPid])).rows[0]!;
+      return (await observer.query<{ query: string }>("select query from pg_stat_activity where pid = $1", [waiterPid])).rows[0]!;
     }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
