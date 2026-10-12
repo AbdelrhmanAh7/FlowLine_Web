@@ -1,8 +1,13 @@
 // Issue #180: Improve client-side error display for /admin/copy
 // Request-level test (no model). The e2e-army packages (`e2e`, `@e2e-dev/web`) expose no request interception that this
 // repo can verify, so forcing /api/platform/copy to 500 and asserting the friendly loadError + Retry UI is covered by
-// tests/unit/admin/copy/copy-errors.test.ts (error to message-key mapping) instead. Here: the real endpoint refuses an
-// ordinary user with a JSON error body, so the editor always has an error.code to map and never receives HTML.
+// tests/unit/admin/copy/copy-errors.test.ts (error to message-key mapping) and tests/unit/admin/copy/copy-editor.test.ts
+// (load-error UI, meLoadError alert, Retry button). Here: the real endpoint refuses a non-admin with a JSON error body
+// that carries an error.code, so the editor always has a code to map and never receives HTML.
+//
+// Admin error paths (409 REVISION_CONFLICT, 403 STEP_UP_REQUIRED) require a platform admin session. The test stack does
+// not seed a platform admin by default, and there is no test API to promote a user. These paths are covered by the
+// unit tests for copyErrorKey and shouldRefetchAfterWriteError.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -51,5 +56,24 @@ test(
     expect(res.headers.get("content-type")).toContain("application/json");
     const json = JSON.parse(await res.text());
     expect(typeof json.error.code).toBe("string");
+    // Verify no HTML or stack trace leaks in the error response
+    const body = JSON.stringify(json);
+    expect(body).not.toContain("<html");
+    expect(body).not.toContain("stack trace");
+  },
+);
+
+test.skip(
+  "@issue-180 AC: platform admin gets JSON error with code on revision conflict (409) and step-up required (403)",
+  { tags: ["feat:fl-platform-admin", "lvl:api"] },
+  async ({ app: _app }) => {
+    // TODO: This test requires a platform admin session. The test stack does not seed one,
+    // and there is no test API to promote a user to platform admin.
+    // When a test admin seeding mechanism exists, implement:
+    // 1. Sign in as platform admin (or promote a test user)
+    // 2. PATCH /api/platform/copy with mismatched expectedRevision → expect 409, error.code === "REVISION_CONFLICT"
+    // 3. POST /api/platform/copy without step-up → expect 403, error.code === "STEP_UP_REQUIRED"
+    // 4. Verify both responses are JSON with error.code and no HTML/stack trace
+    // For now, the error-code mapping for these cases is covered by tests/unit/admin/copy/copy-errors.test.ts
   },
 );
