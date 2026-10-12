@@ -2,7 +2,7 @@
 
 ## Issue #141 handoff — 2026-10-12
 
-Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass at this head).
+Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass on `4a241db`; per-mutation results in `EVIDENCE.md`).
 Hard review-gate and persisted-row assertions now run after `results.json` is written, so a failing round still leaves its evidence.
 Run the next-round field spec with a new packet on an isolated test stack, using its matching test database;
 the live run remains unverified locally because `.env.test`, the server and Docker are unavailable. Preserve
