@@ -68,14 +68,6 @@ function autoVerifyWarnings() {
   return () => error.mock.calls.map((c) => String(c[0])).filter((m) => m.includes(TEST_AUTO_VERIFY_ENV));
 }
 
-/** Resets the module graph to clear the warned flag and any auth module cache. */
-async function resetAuthModule() {
-  vi.resetModules();
-  // Clear any cached auth instances to force rebuild with the new env.
-  const { instances } = await import("@/lib/auth");
-  instances.clear();
-}
-
 describe("sign-up auto-verify switch (#124)", () => {
   it("staging: a stray FLOWLINE_TEST_AUTO_VERIFY=1 logs exactly one warning when auth is built and is ignored (unverified + verification e-mail)", async () => {
     process.env.FLOWLINE_ENV = "staging";
@@ -84,7 +76,7 @@ describe("sign-up auto-verify switch (#124)", () => {
     const warnings = autoVerifyWarnings();
     // Start a fresh server module graph under the staging env (the @/db pool is shared through globalThis): its
     // once-per-process flag starts unset whatever ran before, and building auth alone must log the warning.
-    await resetAuthModule();
+    vi.resetModules();
     const fresh = (await import("@/server/auth-dispatch")).dispatchAuth;
     expect(warnings()).toHaveLength(1);
     const e = email("staging-env");
