@@ -3,14 +3,14 @@
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox proposal against the reviewed draft and requires one
-persisted VP-01 row with the original value before and after reprocessing. Six focused scoring tests pass;
-the two new regressions failed against the previous helpers. Earlier `20261001-d224cfb` evidence is unchanged.
+persisted VP-01 row with the original value before and after reprocessing. Seven focused scoring tests pass
+(including one that runs the real compiled customer-follow-up pack); the new regressions failed against the previous helpers. Earlier `20261001-d224cfb` evidence is unchanged.
 The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
 3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
 This internal harness change does not change product behavior or beta readiness.
 
-Local verification: `pnpm test flowline-field --maxWorkers=2` passes 6/6. Temporarily disabling each of the
-four original fixes independently yields 1 failed / 5 passed; all mutations were restored. `pnpm lint`
+Local verification: `pnpm test flowline-field --maxWorkers=2` passes 7/7 on head `d9a2d6e` (the run includes the real-pack test). Temporarily disabling each of the
+four original fixes independently yields 1 failed / 6 passed; all mutations were restored. `pnpm lint`
 passes. Explicit lint of the normally excluded field spec passes with its pre-existing unused `log` warning.
 `node node_modules/typescript/bin/tsc --noEmit` passes, as does a temporary tsconfig extending the repository
 config and explicitly including the field spec. The `pnpm typecheck` launcher stalled and was terminated;

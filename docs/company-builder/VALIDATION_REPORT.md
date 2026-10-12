@@ -116,7 +116,7 @@ scoring gaps. Live-stack validation remains outstanding; unit results do not est
 The review gate now requests the review on the trial that was scored for VP-05 (its id is recorded with the result)
 rather than re-posting `field-VP-05` without input. `store_key` and the stored value are confirmed against the pack:
 `follow_up_record.store_key` is what the `data.store` step uses as key and `record` as value
-(`src/company-builder/packs/customer-follow-up.ts`), and by a unit test that runs the real compiled pack and asserts its
+(`src/company-builder/packs/customer-follow-up.ts`), and by a unit test (part of the 7/7 `pnpm test flowline-field` run recorded in the Phase 4 report) that runs the real compiled pack and asserts its
 one persisted row equals the follow-up record at `store_key` (`tests/unit/flowline-field-scoring.test.ts`).
 
 **Operator and assistance:**
