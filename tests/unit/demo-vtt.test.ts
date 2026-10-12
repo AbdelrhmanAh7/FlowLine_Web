@@ -22,7 +22,7 @@ describe("writeVtt", () => {
   });
   it("rejects overlapping cues, arrows in text, empty or inverted cues", () => {
     expect(() => writeVtt([{ t0: 0, t1: 3, text: "a" }, { t0: 2, t1: 4, text: "b" }], "en")).toThrow(/overlaps/);
-    expect(() => writeVtt([{ t0: 0, t1: 3, text: "a --> b" }], "en")).toThrow(/-->/);
+    expect(() => writeVtt([{ t0: 0, t1: 3, text: "a --> b" }], "en")).toThrow("-->");
     expect(() => writeVtt([{ t0: 3, t1: 3, text: "a" }], "en")).toThrow(/before it starts/);
     expect(() => writeVtt([{ t0: 0, t1: 3, text: "  " }], "ar")).toThrow(/empty/);
   });
