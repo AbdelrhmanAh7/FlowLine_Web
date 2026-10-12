@@ -134,8 +134,7 @@ describe("dependency advisories security check", () => {
   });
 
   it("flags only versions below 1.2.2 and accepts later patches such as 1.2.10", () => {
-    // A 1.2.10 lockfile contains the text "source-map-js@1.2.1" as a prefix, so a substring check rejects it.
-    expect(lockfileWith("1.2.10")).toContain("source-map-js@1.2.1");
+    // Versions are compared whole and by semver, never by substring: 1.2.10 is read as 1.2.10, not as 1.2.1.
     expect(lockedSourceMapJsVersions(lockfileWith("1.2.10"))).toEqual(["1.2.10", "1.2.10"]);
     expect(vulnerableSourceMapJs(lockfileWith("1.2.10"))).toEqual([]);
     expect(vulnerableSourceMapJs(lockfileWith("1.2.2"))).toEqual([]);
@@ -168,5 +167,14 @@ describe("dependency advisories security check", () => {
     for (const doc of ["docs/security/DEPENDENCIES.md", "artifacts/phase-4/issue-62/EVIDENCE.md"]) {
       expect(foreignRepoLinks(readFileSync(join(root, doc), "utf8")), doc).toEqual([]);
     }
+  });
+
+  it("#62 evidence counts only a CI gate run as the fast tier, not the local focused checks", () => {
+    const evidence = readFileSync(join(root, "artifacts/phase-4/issue-62/EVIDENCE.md"), "utf8");
+    const fastTierRow = evidence.split("\n").find((line) => line.startsWith("| REQ-FL-62-3 "));
+    expect(fastTierRow, "REQ-FL-62-3 row").toBeDefined();
+    expect(fastTierRow).toMatch(/\]\(https:\/\/github\.com\/AbdelrhmanAh7\/FlowLine_Web\/actions\/runs\/\d+\)/);
+    expect(fastTierRow).toMatch(/`gate`/);
+    expect(fastTierRow).toMatch(/not counted as the fast tier/);
   });
 });
