@@ -44,6 +44,15 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`Friday 2026-10-09 is not available. ${HOURS_LINE}\n\nThank you — we'll confirm the details with you.`, date)).toBe(true);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nنحن مغلقون يوم الجمعة.\n\nشكرًا لك، وسنؤكد التفاصيل معك.`, date)).toBe(true);
   });
+  it("passes an Arabic negated-date sentence plus the hours line (trailing \\b never matched Arabic)", () => {
+    expect(scoreClosedDay(`يوم ٢٠٢٦-١٠-٠٩ غير متاح.\n\n${HOURS_LINE}`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاح`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ لا مؤكد، نأسف.`, date)).toBe(true);
+  });
+  it("fails an Arabic confirmation of the date even with the hours line", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح`, date)).toBe(false);
+  });
   it("fails a dotted date confirmation (09.10.2026) next to the hours line", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 09.10.2026 is confirmed.`, date)).toBe(false);
   });

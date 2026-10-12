@@ -17,7 +17,9 @@ const CONFIRM = /confirm|book|schedul|available|reserved|تأكيد|مؤكد|ح�
 // This negation only applies to general Friday statements; it does NOT override a specific date confirmation.
 const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
 // Patterns where a confirmation word is directly negated (e.g. "not available", "not confirmed", "cannot book").
-const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)\b/i;
+// JS `\b` is ASCII-only (no boundary between an Arabic letter and a space), so the Arabic branch ends with a Unicode-aware
+// lookahead (`u` flag) instead.
+const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?![\p{L}\p{N}])/iu;
 const FRIDAY = /friday|الجمعة/i;
 
 /**
