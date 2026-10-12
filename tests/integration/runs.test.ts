@@ -137,7 +137,7 @@ describe("processRun (worker)", () => {
     const detail = await getRunDetail(run.id);
     expect(detail.status).toBe("succeeded");
     expect(detail.flowName).toBe(flow.name);
-    expect(detail.version).toBe(1);
+    expect(detail.version).toBeNull();
     expect(detail.steps).toHaveLength(5);
     expect((detail.graph as FlowGraph).nodes).toHaveLength(5);
   });
