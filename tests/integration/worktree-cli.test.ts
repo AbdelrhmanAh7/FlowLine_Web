@@ -99,7 +99,12 @@ describe("pnpm wt in a scratch clone", () => {
     const docs = readFileSync(guide, "utf8");
     const pattern = /const LANE_NAME = \/(.+)\/;/.exec(readFileSync(script, "utf8"))?.[1];
     expect(pattern).toBeTruthy();
-    expect(docs).toContain(`\`${pattern}\``);
+    // The anchored pattern is documented in a fenced block, not an inline span: a closing
+    // backtick directly after the $ anchor ($ + backtick) is eaten by some shell/template
+        // pipelines, which made the span look unterminated in review. The fenced form has no
+    // such adjacency, and the simulation below proves the pattern survives that pipeline.
+    expect(docs).toContain(`  \`\`\`\n  ${pattern}\n  \`\`\``);
+    expect(docs.replace(/\$\`/g, "")).toContain(pattern);
     for (const example of ["pnpm wt add my-lane", "pnpm wt list", "pnpm wt remove my-lane", "refusing to remove", "uncommitted change(s)"]) {
       expect(docs).toContain(example);
     }
