@@ -747,6 +747,15 @@ const linear: Scenario = async (s) => {
   await revocation(s);
 };
 
+const mizano: Scenario = async (s) => {
+  await connectAndIdentity(s);
+  await s.check("read", async () => {
+    const out = await s.run<{ invoices: unknown[] }>("mizano.list_overdue_invoices", {});
+    return { overdue: out.invoices.length };
+  });
+  await revocation(s);
+};
+
 // ---------------------------------------------------------------- registry
 
 export const SCENARIOS: Record<Exclude<ProviderId, "postgres">, Scenario> = {
@@ -761,4 +770,5 @@ export const SCENARIOS: Record<Exclude<ProviderId, "postgres">, Scenario> = {
   stripe,
   notion,
   linear,
+  mizano,
 };
