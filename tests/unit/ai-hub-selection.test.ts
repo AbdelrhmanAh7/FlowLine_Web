@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db";
-import { aiRoutesIn, assertRouteSelection, assertRoutesUsable } from "@/ai/hub/selection";
+import { aiRoutesIn, assertRouteSelection, assertRoutesUsable, pinDefaultRoutes } from "@/ai/hub/selection";
 import type { FlowGraph } from "@/engine/types";
 
 const C1 = "11111111-1111-4111-8111-111111111111";
@@ -62,5 +62,20 @@ describe("assertRouteSelection", () => {
 describe("aiRoutesIn", () => {
   it("lists valid routes of AI steps and skips missing or malformed ones", () => {
     expect(aiRoutesIn(graph({ connectionId: C1, modelId: "m" }, undefined, { connectionId: "not-a-uuid", modelId: "m" }))).toEqual([{ connectionId: C1, modelId: "m" }]);
+  });
+});
+
+describe("pinDefaultRoutes", () => {
+  const def = { connectionId: C1, modelId: "m" };
+
+  it("returns the same graph when the default route is not valid", () => {
+    const g = graph(undefined);
+    expect(pinDefaultRoutes(g, { connectionId: "not-a-uuid", modelId: "m" })).toBe(g);
+  });
+
+  it("leaves a step with a legacy model string unpinned", () => {
+    const g = { nodes: [{ id: "a", type: "ai.generate", position: { x: 0, y: 0 }, data: { label: "a", config: { instructions: "x", model: "gpt-4" } } }], edges: [] } as unknown as FlowGraph;
+    const route = (pinDefaultRoutes(g, def).nodes[0]!.data.config as { route?: unknown }).route;
+    expect(route).toBeUndefined();
   });
 });
