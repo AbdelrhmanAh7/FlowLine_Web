@@ -24,25 +24,17 @@ Since #157 (`592a07a`) the workflow is gone from this repo: `.github/workflows/a
 Recent scheduled `automerge` runs failed with `automerge.sh: line 103: syntax error near unexpected token 'done'` in the hub's `bin/automerge.sh`. That is a hub script bug, not a FlowLine one.
 
 ## Local verification
-This report lives only here, under `artifacts/phase-4/issue-60/`; the branch has no root `EVIDENCE.md`. Every row below names the full SHA of the commit whose clean working tree was tested. Rows from an earlier revision that lacked a reproducible source tree have been removed.
+This report lives only here, under `artifacts/phase-4/issue-60/`; the branch has no root `EVIDENCE.md`. It records only the current tested source. Older rows (trees that still carried the removed `ai-implementers.yml` test block) were dropped because they no longer describe this branch; they remain in the git history of this file.
 
-| Tested tree (full SHA) | Command | Result |
-|---|---|---|
-| `686c38bf33941297ba08ae875123470b9807612a` (merge of `origin/main` `aee8385b07396871709052b6f2922ac8de7f1438` into this branch; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed (main's gate-report, gate and docs checks plus this PR's former `ai-implementers.yml` block) |
-| same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
-| `66d739da5d565e48358ad36c1756414f758e2fdb` (HEAD before this note; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed |
-| `89da178ced4c5797b655e7d8bfe68c958e124be7` (clean tree) | `vitest run tests/unit/ci-workflows.test.ts` | 55 passed |
-| same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
-| `25e60c010a812c63785e0d9facf5c0bc8823ed04` (merge of `origin/main` into this branch after `290eb2b`; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
-| same | `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | clean |
-| `28348b415aa1f931236c5e993eaa2d0cba4849ed` (merge of `origin/main`; only `.md` files changed on top, no code or test change) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
-| `1e0aadf5f537f1693a85f0247a4967119544dded` (merge of `origin/main` `b1023c9`; clean tree; the PR diff against `b1023c9` is this file, `docs/GITHUB_WORKFLOW.md`, `docs/implementation/PROGRESS.md` and the ci-workflows test block) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
-| same | `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | clean |
-| same | `git show -s --format='%H %cI' 41c658f` (local hub checkout) and `f655e51` (this repo) | `41c658f0720effff140287e4101f6cbd2e951627 2026-10-06T05:45:20+03:00` (02:45:20Z); `f655e51caf115e0313fba01c452d5e158176f5b9 2026-10-06T05:22:11+03:00` (02:22:11Z) |
-| `732be2ed9f58e171c561df2dff951f3bad71b01a` (clean tree; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 55 passed; lint clean; `pnpm typecheck` clean |
-| `ab236e1642f022974d79743c9e2543f99521a7df` (clean tree; `ai-implementers.yml` block removed after #157 deleted the workflow, #60 runner guard added; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 82 passed; lint clean; `pnpm typecheck` clean |
-| `848ef640799d3221832d87cab03cbfa3c4bebbf0` (merge of `origin/main` `2ca60e5` into this branch; clean tree; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 82 passed; lint clean; `pnpm typecheck` clean |
+Tested commit: `234c322afc9f8616b1160d5b168174e9d791598e` (clean working tree, `git status --short` empty). Source fingerprint, so the tested source can be matched after later commits: `git rev-parse <commit>:tests` = `c0fe1e7ad3a0b99ce5319ebefe345ebf9f4ef64f`, `git rev-parse <commit>:src` = `c7be09b06e30db7bd505b591880449295a3500ad`. The commit that adds this note changes only this file, so `git diff --stat 234c322 <that commit>` lists this file alone and both fingerprints are unchanged.
+
+| Command (on `234c322afc9f8616b1160d5b168174e9d791598e`) | Result |
+|---|---|
+| `pnpm exec vitest run --project unit tests/unit/ci-workflows.test.ts --maxWorkers=2` | 82 passed (1 file) |
+| `pnpm exec eslint tests/unit/ci-workflows.test.ts` | clean |
+| `pnpm typecheck` (`tsc --noEmit`, run outside the Bash sandbox so the hub's type-check slot lock works) | exit 0 |
+| `git show -s --format='%H %cI' 41c658f` (local hub checkout) and `f655e51` (this repo) | `41c658f0720effff140287e4101f6cbd2e951627 2026-10-06T05:45:20+03:00` (02:45:20Z); `f655e51caf115e0313fba01c452d5e158176f5b9 2026-10-06T05:22:11+03:00` (02:22:11Z) |
 
 Gate runs on a pull request execute on GitHub's synthetic merge commit of the PR head into `main` (for example `1c28383b47a83c1b5117887b7596f9ea7747fca3`, which merges PR head `279840db7ae7fce73db4c784f2b255c3fff1f24c` into `main` `efa3ef08720e39b7bde0e086c80364f753248a95`, read with `gh api repos/AbdelrhmanAh7/FlowLine_Web/commits/1c28383`; GitHub recreates that synthetic commit on each push), not on the PR head itself. A green `gate` is evidence for that synthetic merge tree only, not for the PR head alone. Final-candidate validation (a green `gate` and `docs` on the final PR head, plus the full tier dispatched once) is pending and is recorded on the PR, not here.
 
-Commits after `686c38bf33941297ba08ae875123470b9807612a` change only this evidence file, the ci-workflows tests, `AI_QUESTIONS.md`, `docs/GITHUB_WORKFLOW.md` and `docs/implementation/PROGRESS.md`, apart from merges of `origin/main`. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
+The PR diff against `main` (`2ca60e5`) is this file, `docs/GITHUB_WORKFLOW.md`, `docs/implementation/PROGRESS.md` and one test in `tests/unit/ci-workflows.test.ts`. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
