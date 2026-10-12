@@ -15,3 +15,5 @@
 ## Checks
 
 <!-- Focused checks run locally (commands + results). CI: fast tier by default; run the full tier once, just before merging, via Actions → Gate → Run workflow (tier=full). Labels do not start Gate. -->
+
+- [ ] Security posture (`docs/security/REPO_SECURITY_SETTINGS.md`): no push-protection bypass for a real credential; any secret-scanning, Dependabot, CodeQL or Copilot review item raised on this PR is handled as that doc says
