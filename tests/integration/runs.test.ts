@@ -346,7 +346,10 @@ describe("legacy run snapshots are unnumbered by migration 0026 (#117)", () => {
     const [old] = await db.insert(schema.flowVersion).values({ ...legacy, version: 2, reason: "run" }).returning();
 
     const file = readFileSync(new URL("../../drizzle/0026_flow_version_run_backfill.sql", import.meta.url), "utf8");
-    for (const statement of file.split("--> statement-breakpoint")) await db.execute(sql.raw(statement));
+    // One transaction: the trigger is disabled and re-enabled atomically, so a failure cannot leave it off.
+    await db.transaction(async (tx) => {
+      for (const statement of file.split("--> statement-breakpoint")) await tx.execute(sql.raw(statement));
+    });
 
     const rows = await db.select({ id: schema.flowVersion.id, version: schema.flowVersion.version }).from(schema.flowVersion).where(eq(schema.flowVersion.flowId, flow.id));
     expect(rows.find((r) => r.id === old.id)!.version).toBeNull();
