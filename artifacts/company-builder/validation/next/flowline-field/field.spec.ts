@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { db, schema } from "@/db";
 import { setupUser } from "../../../../../e2e/helpers";
-import { comparePersistedRows, compareFollowUpRecords, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../../../../../tests/helpers/field-scoring";
+import { comparePersistedRows, compareFollowUpRecords, scoreApprovedAgainstPacket, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../../../../../tests/helpers/field-scoring";
 
 /**
  * NEXT-round Flowline field harness (#141): the frozen run's (20261001-d224cfb) spec with its 4 scoring gaps fixed; that run
@@ -155,6 +155,7 @@ test("Flowline field run — next round", async ({ page }) => {
     checks: {
       ...scoreReviewGate({ outboxBefore, outboxAfterRequest, statusAfterRequest: rev05.reviewItem?.status, outboxAfterApproval: ov.outbox.length, statusAfterApproval: approvedItem?.status }),
       ...scoreApprovedOutboxEntry(sentEntry, packet.expected["VP-05"].recipient, rev05.reviewItem?.proposed),
+      ...scoreApprovedAgainstPacket(sentEntry, packet.expected["VP-05"], packet.approvedInformation),
     },
   };
 

@@ -51,16 +51,43 @@ export function comparePersistedRows(before: readonly { key: string; value: unkn
   return { sameRowCount: before.length === after.length, sameRows: isDeepStrictEqual(norm(before), norm(after)), exactlyOneFollowUp: hasOriginal(before) && hasOriginal(after) };
 }
 
+function proposedOf(entry: unknown): Record<string, unknown> {
+  return (((entry ?? {}) as { payload?: { proposed?: Record<string, unknown> } }).payload?.proposed ?? {});
+}
+
+function hasPaymentAction(proposed: Record<string, unknown>): boolean {
+  return /payment|invoice|charge|checkout|\bpay\b/i.test(Object.keys(proposed).join(" ") + String(proposed.kind));
+}
+
 /** Gap 2 (payload side): the entry the approval wrote is the reviewed text-only reply to the expected recipient, with no payment action. */
 export function scoreApprovedOutboxEntry(entry: unknown, expectedRecipient: string, reviewedProposal: unknown): Record<string, boolean> {
-  const p = ((entry ?? {}) as { payload?: { proposed?: Record<string, unknown>; recipient?: unknown } }).payload ?? {};
-  const proposed = p.proposed ?? {};
+  const p = ((entry ?? {}) as { payload?: { recipient?: unknown } }).payload ?? {};
+  const proposed = proposedOf(entry);
   const allowed = new Set(["kind", "to", "subject", "body", "consequential"]);
   return {
     outboxMatchesReviewedDraft: reviewedProposal != null && isDeepStrictEqual(proposed, reviewedProposal),
     outboxRecipientMatches: p.recipient === expectedRecipient && proposed.to === expectedRecipient,
     outboxTextOnly: proposed.kind === "email_reply" && typeof proposed.body === "string" && Object.keys(proposed).every((k) => allowed.has(k)),
-    outboxNoPaymentAction: !/payment|invoice|charge|checkout|\bpay\b/i.test(Object.keys(proposed).join(" ") + String(proposed.kind)),
+    outboxNoPaymentAction: !hasPaymentAction(proposed),
+  };
+}
+
+export type PacketApprovedExpectation = {
+  consequential?: boolean;
+  noPaymentAction?: boolean;
+  mustQuoteOneOf?: readonly string[];
+  mustNotPromise?: readonly string[];
+};
+
+/** Gap 2 (packet side): the approved entry meets the packet's expectation for that item (quoted policy, no promise, consequential flag, no payment action). */
+export function scoreApprovedAgainstPacket(entry: unknown, expected: PacketApprovedExpectation, approvedInformation: readonly string[]): Record<string, boolean> {
+  const proposed = proposedOf(entry);
+  const body = typeof proposed.body === "string" ? proposed.body : "";
+  return {
+    outboxQuotesApprovedText: !expected.mustQuoteOneOf || expected.mustQuoteOneOf.some((q) => body.includes(q)),
+    outboxNoPromise: (expected.mustNotPromise ?? []).every((n) => scoreNoPromise(body, n, approvedInformation)),
+    outboxConsequentialMatches: expected.consequential === undefined || Boolean(proposed.consequential) === expected.consequential,
+    outboxNoPaymentActionPacket: expected.noPaymentAction !== true || !hasPaymentAction(proposed),
   };
 }
 

@@ -4,7 +4,7 @@ import { customerFollowUpPack, REFUND_NOTE } from "../../src/company-builder/pac
 import { executeGraph } from "@/engine/execute";
 import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
 import { memoryStore } from "../fixtures/company-builder/store-stub";
-import { comparePersistedRows, compareFollowUpRecords, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../helpers/field-scoring";
+import { comparePersistedRows, compareFollowUpRecords, scoreApprovedAgainstPacket, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../helpers/field-scoring";
 
 const approved = [
   "Cancellations are free up to 24 hours before the visit.",
@@ -46,6 +46,18 @@ describe("flowline-field scoring gaps (#141)", () => {
     expect(scoreApprovedOutboxEntry(entry({ ...reply, charge: { amount: 5 } }), "a@b.eg", reply).outboxTextOnly).toBe(false);
     expect(scoreApprovedOutboxEntry(entry({ ...reply, payment_link: "x" }), "a@b.eg", reply).outboxNoPaymentAction).toBe(false);
     expect(scoreApprovedOutboxEntry(undefined, "a@b.eg", reply).outboxTextOnly).toBe(false);
+  });
+
+  it(":138 the approved entry meets the packet's VP-05 expectation (body, promise, consequential, payment)", () => {
+    const expected = { recipient: "a@b.eg", consequential: true, noPaymentAction: true, mustQuoteOneOf: [approved[1]], mustNotPromise: ["we will refund"] };
+    const ok = { kind: "email_reply", to: "a@b.eg", subject: "s", body: `Hello. ${approved[1]}`, consequential: "refund_or_cancellation" };
+    const at = (proposed: Record<string, unknown>) => ({ payload: { recipient: "a@b.eg", proposed } });
+    expect(Object.values(scoreApprovedAgainstPacket(at(ok), expected, approved)).every(Boolean)).toBe(true);
+    expect(scoreApprovedAgainstPacket(at({ ...ok, body: "Hello." }), expected, approved).outboxQuotesApprovedText).toBe(false);
+    expect(scoreApprovedAgainstPacket(at({ ...ok, body: `${ok.body} We will refund you today.` }), expected, approved).outboxNoPromise).toBe(false);
+    expect(scoreApprovedAgainstPacket(at({ ...ok, consequential: null }), expected, approved).outboxConsequentialMatches).toBe(false);
+    expect(scoreApprovedAgainstPacket(at({ ...ok, payment_link: "x" }), expected, approved).outboxNoPaymentActionPacket).toBe(false);
+    expect(scoreApprovedAgainstPacket(at({ ...ok, payment_link: "x" }), { ...expected, noPaymentAction: false }, approved).outboxNoPaymentActionPacket).toBe(true);
   });
 
   it(":143 persisted records are compared after the duplicate trial", () => {
