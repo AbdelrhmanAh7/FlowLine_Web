@@ -78,6 +78,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [security/REQUEST_BODY_LIMITS.md](security/REQUEST_BODY_LIMITS.md) | Request body limits | yes | approved |
 | [security/RETAINED_UPLOAD_ACCOUNTING.md](security/RETAINED_UPLOAD_ACCOUNTING.md) | Retained upload accounting | yes | approved |
 | [security/SECURITY_REVIEW_20261003.md](security/SECURITY_REVIEW_20261003.md) | Security review | yes | approved |
+| [security/codeql-triage-hashing.md](security/codeql-triage-hashing.md) | CodeQL triage C (password-hash alerts) | yes | draft |
 | [security/codeql-triage-tests.md](security/codeql-triage-tests.md) | CodeQL triage A (tests and e2e) | yes | draft |
 | [#68 runbook](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/68) | Restore/rollback/alerting runbook | yes | planned |
 | [#67 helper doc](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/67) | pnpm wt helper | no | planned |
