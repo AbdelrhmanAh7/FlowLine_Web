@@ -154,7 +154,9 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
 
   return db.transaction(async (tx) => {
     // Deletion cascades into retained files. Accounting must precede even the
-    // token lock, and especially the workspace locks below (including shared W).
+    // token lock, and especially the workspace locks below (including shared W). It is installation-wide, so it also
+    // serializes every deletion: two co-members of W can never both hold the KEY SHARE their audit insert takes on W
+    // while each waits to upgrade it to FOR UPDATE (40P01; tests/integration/retained-file-locking.test.ts).
     if (purpose === "delete") await lockRetainedFileAccounting(tx);
 
     const [lockedUser] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, tokenUserId)).for("update");
