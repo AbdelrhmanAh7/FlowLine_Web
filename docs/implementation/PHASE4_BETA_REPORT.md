@@ -174,4 +174,13 @@ See `BETA_LIMITATIONS.md`:
 `tests/unit/ai-hub-selection.test.ts` covers the real exports of `src/ai/hub/selection.ts`
 (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named
 `selectEngineByScore` and `selectFreeEndpoint`, which do not exist in this repo, so they are not tested.
+Search used: `grep -rn "selectEngineByScore\|selectFreeEndpoint" src tests docs` matches only this note,
+and `git log --all -S selectEngineByScore` finds no commit that added them.
+
+The issue's acceptance command cannot pass as written, for two reasons:
+- The unit project includes only `tests/unit/**/*.test.ts` (`vitest.config.mts`), so a `*selection.spec.ts`
+  file would never be collected; the file is named `ai-hub-selection.test.ts` to match that pattern.
+- `--listTests` is a Jest flag. The repo runs Vitest (`pnpm test` = `vitest run --project unit`). The
+  equivalent listing check is `npx vitest list --project unit | grep ai-hub-selection`.
+
 Tests only; no runtime change.
