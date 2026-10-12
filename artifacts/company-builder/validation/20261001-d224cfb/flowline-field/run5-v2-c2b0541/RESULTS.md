@@ -10,7 +10,7 @@
 **Harness:** `flowline-field/field.spec.ts` (read-only for this run except that the spec itself was the code change; old runs 1–4 unchanged). The spec reads `PACKET` (default `packet.json`) and records the packet file and its hash in the summary.
 
 ## Summary
-- **Score (strict, against evaluator v2, scorer as of `c2b0541`):** **8/10**. **Superseded for `ownerDecision`:** review on PR #188 added `TEAM_DECIDER` to `scoreOwnerDecision` (a reply naming a team member as the decider now fails). This run was NOT re-scored under that stricter rule, so its VP-05/VP-06 `ownerDecision` results and the 8/10 are not the current scorer's verdict; a new run is still needed.
+- **Score (strict, against evaluator v2, scorer as of `c2b0541`):** **8/10**. **Superseded for `ownerDecision`:** review on PR #188 added `TEAM_DECIDER` to `scoreOwnerDecision` (a reply naming a team member as the decider now fails), and later review removed approved policy quotes before the owner check (the quoted line alone no longer passes). This run was NOT re-scored under that stricter rule, so its VP-05/VP-06 `ownerDecision` results and the 8/10 are not the current scorer's verdict; a new run is still needed.
 - **Failures:** VP-03 (`quotes:Office cleaning starts a`, `closedDay`), VP-06 (`noPromise:cancelled`)
 - **Passes:** VP-01, VP-02, VP-04, VP-05, VP-07, VP-08, VP-09, VP-10
 - **Flowline's own verdict disagreements:** none (recorded as `[]`)

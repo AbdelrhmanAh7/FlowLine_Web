@@ -39,6 +39,9 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`We are closed on Fridays but your visit on 2026-10-09 is confirmed. ${HOURS_LINE}`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE} We are closed on Fridays but we confirm 2026-10-09 for you.`, date)).toBe(false);
   });
+  it("fails a reply that quotes the hours but says 2026-10-09 is bookable (reviewer P1 shape)", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYes, 2026-10-09 is bookable for you.`, date)).toBe(false);
+  });
   it("passes the ideal reply: closed on Fridays plus the product's generic closing (no false positive)", () => {
     expect(scoreClosedDay(`We are closed on Fridays. ${HOURS_LINE}\n\nThank you — we'll confirm the details with you.`, date)).toBe(true);
     expect(scoreClosedDay(`Friday 2026-10-09 is not available. ${HOURS_LINE}\n\nThank you — we'll confirm the details with you.`, date)).toBe(true);
@@ -68,16 +71,21 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
     expect(v2.expected["VP-01"].mustQualifyOwnerDecision).toBeUndefined();
   });
   it("fails a reply with only the generic team note", () => {
-    expect(scoreOwnerDecision(GENERIC, OWNER)).toBe(false);
+    expect(scoreOwnerDecision(GENERIC, OWNER, [POLICY])).toBe(false);
   });
   it("passes 'the owner will decide' (any case) with no team decider", () => {
-    expect(scoreOwnerDecision("Hello,\n\nThe Owner will decide on the refund.", OWNER)).toBe(true);
+    expect(scoreOwnerDecision("Hello,\n\nThe Owner will decide on the refund.", OWNER, [POLICY])).toBe(true);
   });
-  it("passes the quoted approved policy line when no team member is named as decider", () => {
-    expect(scoreOwnerDecision(`Hello,\n\n${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER)).toBe(true);
+  it("fails when the owner wording exists only inside the quoted approved policy (reviewer P1 shape)", () => {
+    expect(scoreOwnerDecision(`Hello,\n\n${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\n${GENERIC}`, OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\nA team member will review your refund request.`, OWNER, [POLICY])).toBe(false);
   });
-  it("fails owner wording quoted from the policy when the next step names a team member (reviewer P1 shape)", () => {
-    expect(scoreOwnerDecision(`${POLICY}\n\n${GENERIC}`, OWNER)).toBe(false);
-    expect(scoreOwnerDecision(`${POLICY}\n\nA team member will review your refund request.`, OWNER)).toBe(false);
+  it("fails a policy quote followed by a non-team decider that never mentions the owner", () => {
+    expect(scoreOwnerDecision(`${POLICY}\n\nA colleague will decide your refund.`, OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\nOur staff will decide on the refund.`, OWNER, [POLICY])).toBe(false);
+  });
+  it("passes a policy quote when the reply itself says the owner decides", () => {
+    expect(scoreOwnerDecision(`${POLICY}\n\nThe owner will decide on your refund.`, OWNER, [POLICY])).toBe(true);
   });
 });

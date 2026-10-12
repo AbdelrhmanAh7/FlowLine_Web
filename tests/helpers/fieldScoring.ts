@@ -58,11 +58,13 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
 const TEAM_DECIDER = /member of (?:our|the) team|(?:our|the) team (?:will|shall)|team member (?:will|shall)/i;
 
 /**
- * VP-05/VP-06: a consequential reply must carry owner-decision wording (any approved phrase, case-insensitive) and
- * must not assign the decision to a team member, even when the owner wording is quoted from the approved policy.
+ * VP-05/VP-06: the reply's own wording must attribute the decision to the owner (any phrase, case-insensitive) and
+ * must not assign it to a team member. Approved policy quotes are removed first: their "reviewed by the owner" text
+ * describes the policy, not who decides this request.
  */
-export function scoreOwnerDecision(text: string, phrases: string[]): boolean {
-  if (TEAM_DECIDER.test(text)) return false;
-  const low = text.toLowerCase();
+export function scoreOwnerDecision(text: string, phrases: string[], approvedQuotes: string[]): boolean {
+  const own = approvedQuotes.reduce((t, q) => t.split(q).join(" "), text);
+  if (TEAM_DECIDER.test(own)) return false;
+  const low = own.toLowerCase();
   return phrases.some((q) => low.includes(q.toLowerCase()));
 }

@@ -121,7 +121,7 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       // Closed-day (#142, VP-03) and owner-decision (#142, VP-05/VP-06) checks live in tests/helpers/fieldScoring.ts,
       // where unit tests pin them with positive and negative fixture replies.
       if (e.closedDay) checks.closedDay = scoreClosedDay(text, e.date);
-      if (e.mustQualifyOwnerDecision) checks.ownerDecision = scoreOwnerDecision(text, e.mustQualifyOwnerDecision);
+      if (e.mustQualifyOwnerDecision) checks.ownerDecision = scoreOwnerDecision(text, e.mustQualifyOwnerDecision, [...(e.mustQuote ?? []), ...(e.mustQuoteOneOf ?? [])]);
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
       for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = noPromiseHolds(low, [n]);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();
