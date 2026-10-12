@@ -1,5 +1,13 @@
 # Next action — 2026-10-03
 
+## Issue #141 handoff — 2026-10-12
+
+Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass on `4a241db`; per-mutation results in `EVIDENCE.md`).
+Hard review-gate and persisted-row assertions now run after `results.json` is written, so a failing round still leaves its evidence.
+Run the next-round field spec with a new packet on an isolated test stack, using its matching test database;
+the live run remains unverified locally because `.env.test`, the server and Docker are unavailable. Preserve
+the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this internal scoring-only change.
+
 ## Current state
 
 - **Pilot round (2026-10-03):** all twelve pilot PRs are merged into main: #20 (CI tiers, always-reporting `gate`, `docs` check, `pnpm wt`), #12, #13, #16, #15, #17, #19, #14, #18, #21 (H3 federated MFA + TOTP replay guard), #31 (docs refresh, GitHub workflow) and #33 (90 s upload deadline). Every CodeRabbit thread was confirmed by CodeRabbit before merge; full-tier runs passed on code PRs #20, #21, and #33. No full-tier run is recorded on the final heads of code PRs #13–#19; keep this validation gap visible in the next steps. Open follow-ups: issues #27, #35, #36, #37; owner items #24 and #30.
