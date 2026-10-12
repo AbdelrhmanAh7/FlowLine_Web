@@ -33,7 +33,9 @@ Each result names the exact tree it was recorded on. Results are never carried o
 | `66d739da5d565e48358ad36c1756414f758e2fdb` (HEAD before this note; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed |
 | `89da178ced4c5797b655e7d8bfe68c958e124be7` (clean tree) | `vitest run tests/unit/ci-workflows.test.ts` | 55 passed |
 | same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
+| `25e60c010a812c63785e0d9facf5c0bc8823ed04` (merge of `origin/main` into this branch after `290eb2b`; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 55 passed |
+| same | `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | clean |
 
-Gate runs on a pull request execute on GitHub's synthetic merge commit of the PR head into `main` (for example `1c28383`), not on the PR head itself, so a green `gate` is evidence for that merge tree only. Final-candidate validation (a green `gate` and `docs` on the final PR head, plus the full tier dispatched once) is pending and is recorded on the PR, not here.
+Gate runs on a pull request execute on GitHub's synthetic merge commit of the PR head into `main` (for example the run that Actions showed as merge commit `1c28383`; GitHub recreates that synthetic commit on each push and its full SHA was not recorded, so it cannot be cited here), not on the PR head itself, so a green `gate` is evidence for that merge tree only. Final-candidate validation (a green `gate` and `docs` on the final PR head, plus the full tier dispatched once) is pending and is recorded on the PR, not here.
 
-Commits after `686c38bf33941297ba08ae875123470b9807612a` change only this evidence file, the ci-workflows test block and `docs/GITHUB_WORKFLOW.md`. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
+Commits after `686c38bf33941297ba08ae875123470b9807612a` change only this evidence file, the ci-workflows test block and `docs/GITHUB_WORKFLOW.md`, apart from merges of `origin/main`. The required CI `gate` and `docs` checks on the PR head remain the authoritative full run; the full suite was not run locally (repo rule).
