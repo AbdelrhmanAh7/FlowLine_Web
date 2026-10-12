@@ -15,7 +15,7 @@ import { can, type Role } from "@/lib/permissions";
 
 interface VersionRow {
   id: string;
-  /** null for a run snapshot: it is pinned for a run but has no publication number (#204). */
+  /** null for a run snapshot: pinned for a run, with no publication number. */
   version: number | null;
   revision: number;
   reason: "save" | "run" | "overwrite" | "publish";
