@@ -47,6 +47,15 @@ Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, rema
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
 
+## CodeQL triage D: e2e fake servers — 2026-10-11 (Issue #114, part 4/4 of #63)
+
+Status: **implemented on ai/114** (PR #133), awaiting merge.
+
+- CodeQL alerts #5 (stack-trace exposure), #6 (regex injection), #7 (resource exhaustion) and #9 (unvalidated redirect) fixed in `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`, with shared helpers in `e2e/fakes/safety.ts`.
+- The Stripe fake's `success_url`/`cancel_url` redirect (part of #9) is dismissed with a written reason: it redirects to the URL the authenticated API caller registered, which `tests/contract/billing.test.ts` relies on.
+- Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
+- No e2e-army test: internal to test doubles, no user-facing flow.
+
 ## Branch maintenance — 2026-10-03
 
 Status: **merged into main** by [PR #20](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/20) (merge `db4b590`, final head `050407f`), built first on `claude/ci-trim-20261003` and the stacked `claude/ci-gate-always-report` (issues #22, #23).
