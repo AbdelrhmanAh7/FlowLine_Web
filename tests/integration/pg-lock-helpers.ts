@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Client } from "pg";
+import { vi } from "vitest";
+import { db } from "@/db";
 
 /**
  * Two-connection lock-order helpers (same technique as retained-file-locking.test.ts): run a production function on its
@@ -56,8 +59,28 @@ export async function blockedByObserver(observer: Client, waiterPid: number, fin
     const { rows } = await observer.query<{ query: string; wait_event_type: string }>(
       "select query, wait_event_type from pg_stat_activity where pid = $1 and pg_backend_pid() = any(pg_blocking_pids(pid))", [waiterPid],
     );
-    if (rows[0]?.wait_event_type === "Lock") return rows[0];
+    if (rows[0]?.wait_event_type === "Lock") {
+      // wait_event and pg_blocking_pids are read live, but `query` comes from the activity snapshot the probe took when
+      // it started, so it can still show the waiter's previous statement. The observer holds the lock while paused, so
+      // the waiter stays at this wait: read its statement again from a fresh snapshot.
+      await observer.query("select pg_stat_clear_snapshot()");
+      return (await observer.query<{ query: string; wait_event_type: string }>("select query, wait_event_type from pg_stat_activity where pid = $1", [waiterPid])).rows[0]!;
+    }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error("Competing transaction did not block on the expected connection");
+}
+
+type TransactionRunner = Pick<typeof db, "transaction">;
+
+/** Routes every `db.transaction` made inside `run(target, fn)` to that connection (and only those), so two production
+ * functions can run at once, each on its own PostgreSQL connection, without a test hook in production code. */
+export function routeTransactions() {
+  const route = new AsyncLocalStorage<TransactionRunner>();
+  const original = db.transaction.bind(db);
+  const spy = vi.spyOn(db, "transaction").mockImplementation(((callback: never, config?: never) => {
+    const target = route.getStore();
+    return target ? target.transaction(callback, config) : original(callback, config);
+  }) as never);
+  return { run: <T>(target: TransactionRunner, work: () => Promise<T>) => route.run(target, work), restore: () => spy.mockRestore() };
 }
