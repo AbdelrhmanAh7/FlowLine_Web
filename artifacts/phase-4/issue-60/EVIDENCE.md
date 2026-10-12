@@ -24,7 +24,7 @@ Since #157 (`592a07a`) the workflow is gone from this repo: `.github/workflows/a
 Recent scheduled `automerge` runs failed with `automerge.sh: line 103: syntax error near unexpected token 'done'` in the hub's `bin/automerge.sh`. That is a hub script bug, not a FlowLine one.
 
 ## Local verification
-Every row below names the full SHA of the commit whose clean working tree was tested. Rows from an earlier revision that lacked a reproducible source tree have been removed.
+This report lives only here, under `artifacts/phase-4/issue-60/`; the branch has no root `EVIDENCE.md`. Every row below names the full SHA of the commit whose clean working tree was tested. Rows from an earlier revision that lacked a reproducible source tree have been removed.
 
 | Tested tree (full SHA) | Command | Result |
 |---|---|---|
@@ -41,6 +41,7 @@ Every row below names the full SHA of the commit whose clean working tree was te
 | same | `git show -s --format='%H %cI' 41c658f` (local hub checkout) and `f655e51` (this repo) | `41c658f0720effff140287e4101f6cbd2e951627 2026-10-06T05:45:20+03:00` (02:45:20Z); `f655e51caf115e0313fba01c452d5e158176f5b9 2026-10-06T05:22:11+03:00` (02:22:11Z) |
 | `732be2ed9f58e171c561df2dff951f3bad71b01a` (clean tree; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 55 passed; lint clean; `pnpm typecheck` clean |
 | `ab236e1642f022974d79743c9e2543f99521a7df` (clean tree; `ai-implementers.yml` block removed after #157 deleted the workflow, #60 runner guard added; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 82 passed; lint clean; `pnpm typecheck` clean |
+| `848ef640799d3221832d87cab03cbfa3c4bebbf0` (merge of `origin/main` `2ca60e5` into this branch; clean tree; the commit after it changes only this file) | `vitest run --project unit tests/unit/ci-workflows.test.ts`, `eslint tests/unit/ci-workflows.test.ts`, `pnpm typecheck` | 82 passed; lint clean; `pnpm typecheck` clean |
 
 Gate runs on a pull request execute on GitHub's synthetic merge commit of the PR head into `main` (for example `1c28383b47a83c1b5117887b7596f9ea7747fca3`, which merges PR head `279840db7ae7fce73db4c784f2b255c3fff1f24c` into `main` `efa3ef08720e39b7bde0e086c80364f753248a95`, read with `gh api repos/AbdelrhmanAh7/FlowLine_Web/commits/1c28383`; GitHub recreates that synthetic commit on each push), not on the PR head itself. A green `gate` is evidence for that synthetic merge tree only, not for the PR head alone. Final-candidate validation (a green `gate` and `docs` on the final PR head, plus the full tier dispatched once) is pending and is recorded on the PR, not here.
 
