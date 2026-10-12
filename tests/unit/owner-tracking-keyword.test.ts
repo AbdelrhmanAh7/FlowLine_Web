@@ -22,4 +22,19 @@ describe("owner-tracking issues are linked with 'Refs #N', never 'Closes #N'", (
     expect(text).toContain("`Refs #162`");
     expect(text).toMatch(/never with a closing keyword/);
   });
+
+  // Root cause of the PR #185 loop: any wording that attaches a closing keyword
+  // (Closes/Fixes/Resolves) to #162 lets GitHub close the founder's tracking issue on
+  // merge. The repo must never tell an author to do that, so guard every file that
+  // documents how to link a PR and the tracking doc itself. The lookbehind skips the
+  // plain-English "only the owner closes #162", which is not a link directive.
+  const CLOSING_LINK = /(?<!\bowner )(?<!\bowner's )\b(closes|fixes|resolves)\s*:?\s*#162\b/i;
+  it.each([
+    "AGENTS.md",
+    "docs/GITHUB_WORKFLOW.md",
+    "docs/implementation/OWNER_ACTIONS.md",
+    ".github/pull_request_template.md",
+  ])("%s never attaches a closing keyword to issue #162", (path) => {
+    expect(read(path)).not.toMatch(CLOSING_LINK);
+  });
 });
