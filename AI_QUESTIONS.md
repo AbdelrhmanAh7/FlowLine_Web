@@ -1,73 +1,25 @@
-# AI_QUESTIONS.md
+# AI Questions — Issue #141
 
-## Issue #173: Add unit tests for hub transport
+## Status: IMPLEMENTATION COMPLETE
 
-### Name Mismatch
+All 4 scoring gaps in `artifacts/company-builder/validation/next/flowline-field/field.spec.ts` have been fixed and verified:
 
-The issue brief mentions testing functions that don't exist in `src/ai/hub/transport.ts`:
+1. **Gap 1 (:117)** — `scoreNoPromise` strips approved policy text and both EN/AR disclaimers
+2. **Gap 2 (:138)** — Review gate exercises approval side; `scoreApprovedOutboxEntry` verifies payload
+3. **Gap 3 (:143)** — Duplicate trial compares persisted `kv_entry` rows via direct DB queries
+4. **Gap 4 (:160)** — `verifyPacketDigest` runs before any scoring
 
-| Issue mentions | Actual export | Notes |
-|----------------|---------------|-------|
-| `createRequest` | `assertAllowedUrl` + `providerHeaders` | Validates URL against allowlist, builds headers |
-| `executeRequest` | `hubFetch` | Main fetch function with error mapping |
-| `handleResponse` | (part of `hubFetch`) | Error mapping: EGRESS_TOO_MANY_REDIRECTS→AI_REDIRECT_REFUSED, TimeoutError→AI_TIMEOUT, other→AI_UNAVAILABLE |
+### Verification
+- Unit tests: `pnpm test flowline-field-scoring` → 7/7 pass
+- Typecheck: `pnpm typecheck` → clean
+- Lint: `pnpm lint` → clean
+- Playwright field spec: requires live stack (runs in CI gate)
 
-The tests cover the actual exported functions with the same behavioral coverage.
+### Review Threads
+Both Codex review threads on PR #193 are OUTDATED — current code addresses all points:
+- Persisted-row check queries DB directly and asserts `sameRowCount`, `sameRows`, `exactlyOneFollowUp`
+- Approved outbox payload verified for recipient match, text-only, no payment action
+- `store_key` assumption proven by unit test running real pack
+- VP-05 trial reuses scored trial ID (commit e72777e)
 
-### Proposed Replacement Acceptance Check
-
-The original acceptance criterion uses a Jest flag that doesn't exist in vitest:
-
-```
-npx tsc --noEmit && npm test -- --listTests | grep transport.spec
-```
-
-**Proposed replacement:**
-
-```
-npx tsc --noEmit && npx vitest list --project unit | grep transport
-```
-
-This verifies:
-1. TypeScript compiles without errors
-2. The transport test file is discovered by vitest's unit project
-3. All transport-related tests are listed
-
-### Test Coverage Summary
-
-Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
-
-**assertAllowedUrl (createRequest equivalent)** - 6 tests:
-- Accepts allowlisted https host
-- Refuses http
-- Refuses IP address hosts
-- Refuses credentials in URL
-- Refuses unknown hosts
-- Works with dashscope placeholder hosts
-
-**providerHeaders** - 3 tests:
-- Keeps provider's fixed static headers (anthropic-version)
-- Adds header-mapped connection fields (OpenAI-Organization, OpenAI-Project)
-- Does not add headers for empty/missing fields
-
-**hubFetch (executeRequest equivalent)** - 8 tests:
-- Calls safeFetch with correct URL, auth header, maxRedirects: 0, JSON body
-- Uses fromOrigin to resolve against origin instead of base URL
-- Maps EGRESS_TOO_MANY_REDIRECTS → AI_REDIRECT_REFUSED
-- Maps TimeoutError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps AbortError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps other errors → AI_UNAVAILABLE (retryable)
-- Maps EGRESS_TOO_LARGE → AI_RESPONSE_TOO_LARGE (possibleCharge)
-- Maps other EgressError codes → AI_EGRESS_BLOCKED
-
-**resolveBaseUrl and resolveOrigin** - 2 tests:
-- Returns documented base URL without trailing slash
-- Fills dashscope placeholders from settings
-
-### Notes
-
-- No e2e-army test needed: this change only adds unit tests (pure test addition)
-- PR description should include: `E2E: not needed — unit tests only`
-- File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
-- Does not modify `transport.ts` — tests only
-- Uses real providers from `getProviderDef` as specified in the manager plan
+No further questions or blockers. Implementation is complete per the brief.
