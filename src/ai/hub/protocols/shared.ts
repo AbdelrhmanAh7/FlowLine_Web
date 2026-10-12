@@ -9,12 +9,18 @@ import { HubError, type AiModelCapabilities, type HubChatRequest } from "../type
  * Provider error TEXT is never passed through (it may echo the key or the request): only a bounded error code.
  */
 
-/** Rounds a finite, non-negative number; returns null for any other value (strings, NaN, Infinity, negatives). */
+/**
+ * Rounds a finite, non-negative number to an integer. Takes `v: unknown` and returns null for any non-number,
+ * NaN, Infinity or negative value (strings are not coerced).
+ */
 export function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
 }
 
-/** A tool call whose arguments aren't a JSON object: corrupt (or cut) model output, possibly billed. */
+/**
+ * Builds (does not throw) a retryable AI_BAD_RESPONSE HubError for a tool call whose arguments are not a JSON object,
+ * marked `possibleCharge` because the corrupt or cut output was still billed. `def.name` appears in the message.
+ */
 export function badToolArgs(def: ProviderDefinition) {
   return new HubError("AI_BAD_RESPONSE", `${def.name} returned a tool call whose arguments aren't valid JSON`, { retryable: true, possibleCharge: true });
 }
@@ -38,7 +44,10 @@ export function parseArgs(def: ProviderDefinition, a: unknown): Record<string, u
   throw badToolArgs(def);
 }
 
-/** Structured output is sent natively only when the route SUPPORTS it; otherwise the JSON is prompted and validated. */
+/**
+ * Returns "none" when there is no schema, "native" when the route's `structuredOutput` capability is SUPPORTED, and
+ * "prompted" otherwise (the JSON is requested in the prompt and validated afterwards).
+ */
 export function structuredOutputMode(caps: AiModelCapabilities, schema?: Record<string, unknown>): "native" | "prompted" | "none" {
   if (!schema) return "none";
   return caps.structuredOutput === "SUPPORTED" ? "native" : "prompted";
@@ -58,7 +67,10 @@ export function validateRequest(def: ProviderDefinition, model: string, req: Hub
   for (const t of req.tools ?? []) if (!/^[A-Za-z0-9_-]{1,64}$/.test(t.name)) throw new HubError("AI_BAD_REQUEST", `Tool name "${t.name.slice(0, 40)}" is not valid`);
 }
 
-/** Provider error text is untrusted and may echo parts of the key: scrub it and cap its length. */
+/**
+ * Returns a provider error message with the submitted API key and key-like tokens redacted, capped at 300 characters.
+ * Returns "" for a non-string input; never throws.
+ */
 export function scrubProviderMessage(msg: unknown, apiKey: string): string {
   if (typeof msg !== "string") return "";
   const masked = redactString(msg, apiKey ? [apiKey] : []).replace(/\b(sk|key|api)[-_][A-Za-z0-9_*.\-]{3,}/gi, "[REDACTED_API_KEY]");
