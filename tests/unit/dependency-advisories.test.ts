@@ -76,8 +76,10 @@ export function semverGte(v: string, min: string): boolean {
   return compareSemVer(v, min) >= 0;
 }
 
-// Dependabot alert #3 (GHSA-68fv-2mgg-jv7q): source-map-js below 1.2.2 is vulnerable.
+// Dependabot alert #3 (GHSA-68fv-2mgg-jv7q): source-map-js below 1.2.2 is vulnerable. The override stays on the
+// 1.x line that PostCSS and Tailwind declare, so a future 2.x is not forced on them.
 const PATCHED_SOURCE_MAP_JS = "1.2.2";
+const NEXT_SOURCE_MAP_JS_MAJOR = "2.0.0-0";
 
 // Every source-map-js version the lockfile names, as a package key (`source-map-js@1.2.2:`) or a
 // dependency entry (`source-map-js: 1.2.2`). Versions are read whole, so 1.2.10 is never taken for 1.2.1.
@@ -89,6 +91,10 @@ export function lockedSourceMapJsVersions(lockfile: string): string[] {
 
 export function vulnerableSourceMapJs(lockfile: string): string[] {
   return lockedSourceMapJsVersions(lockfile).filter((version) => !semverGte(version, PATCHED_SOURCE_MAP_JS));
+}
+
+export function incompatibleSourceMapJs(lockfile: string): string[] {
+  return lockedSourceMapJsVersions(lockfile).filter((version) => semverGte(version, NEXT_SOURCE_MAP_JS_MAJOR));
 }
 
 const lockfileWith = (version: string) =>
@@ -144,14 +150,21 @@ describe("dependency advisories security check", () => {
     expect(vulnerableSourceMapJs(lockfileWith("1.2.2"))).toEqual([]);
     expect(vulnerableSourceMapJs(lockfileWith("1.2.1"))).toEqual(["1.2.1", "1.2.1"]);
     expect(vulnerableSourceMapJs(lockfileWith("1.2.2-beta.1"))).toEqual(["1.2.2-beta.1", "1.2.2-beta.1"]);
+    expect(incompatibleSourceMapJs(lockfileWith("1.99.0"))).toEqual([]);
+    expect(incompatibleSourceMapJs(lockfileWith("2.0.0-beta.1"))).toEqual(["2.0.0-beta.1", "2.0.0-beta.1"]);
+    expect(incompatibleSourceMapJs(lockfileWith("2.0.0"))).toEqual(["2.0.0", "2.0.0"]);
     // Packages whose names merely end in source-map-js are not read as source-map-js.
     expect(lockedSourceMapJsVersions("  '@scope/source-map-js@1.0.0':\n      not-source-map-js: 1.0.0")).toEqual([]);
   });
 
-  it("@issue-62 AC1: lockfile resolves source-map-js >= 1.2.2", () => {
+  it("@issue-62 AC1: lockfile resolves source-map-js >= 1.2.2 and < 2", () => {
     const lockfile = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
     expect(lockedSourceMapJsVersions(lockfile).length).toBeGreaterThan(0);
     expect(vulnerableSourceMapJs(lockfile)).toEqual([]);
+    expect(incompatibleSourceMapJs(lockfile)).toEqual([]);
+    const workspace = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
+    expect(workspace).toMatch(/^ {2}"source-map-js": ">=1\.2\.2 <2"$/m);
+    expect(lockfile).toMatch(/^ {2}source-map-js: '>=1\.2\.2 <2'$/m);
   });
 
   it("commands in the advisory docs and #62 evidence paste into a shell without <placeholders>", () => {
