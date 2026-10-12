@@ -157,6 +157,9 @@ describe("the triage notes stay in sync with the code (root cause of the $-loss 
     expect(doc).toContain(`\`^/conversations\\.list${dollar}\` still means that exact path`);
     expect(safety).toContain(`trailing \`${dollar}\` (path ends with; the dollar sign)`);
     expect(safety).toContain(`\`^/a\\.b${dollar}\` still means`);
+    // Dropping the anchor leaves an empty code span; fail loudly on that exact corruption.
+    expect(doc).not.toContain("optional trailing `` (ends with");
+    expect(safety).not.toContain("trailing `` (path ends with");
     // The anchor is also named in words, so quoted text that loses the symbol still documents it.
     expect(doc).toContain("that exact path (caret, path, dollar sign)");
     expect(doc.split("\n").filter((line) => (line.match(/`/g) ?? []).length % 2 !== 0)).toEqual([]);
