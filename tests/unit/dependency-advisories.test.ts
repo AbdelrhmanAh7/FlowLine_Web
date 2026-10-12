@@ -63,7 +63,7 @@ export function compareSemVer(aStr: string, bStr: string): number {
     if (typeof aId === "number" && typeof bId === "number") {
       if (aId !== bId) return aId > bId ? 1 : -1;
     } else if (typeof aId === "string" && typeof bId === "string") {
-      if (aId !== bId) return aId.localeCompare(bId);
+      if (aId !== bId) return aId < bId ? -1 : 1;
     } else {
       return typeof aId === "number" ? -1 : 1;
     }
@@ -131,6 +131,10 @@ describe("dependency advisories security check", () => {
     expect(semverGte("1.2.2+build.1", "1.2.2")).toBe(true);
     expect(semverGte("1.2.3-alpha.1", "1.2.2")).toBe(true);
     expect(semverGte("1.2.3", "1.2.2")).toBe(true);
+    // SemVer §11: alphanumeric prerelease identifiers compare in ASCII order, whatever the locale ("B" < "a").
+    expect(compareSemVer("1.2.2-B", "1.2.2-a")).toBe(-1);
+    expect(compareSemVer("1.2.2-alpha.Z", "1.2.2-alpha.a")).toBe(-1);
+    expect(compareSemVer("1.2.2-rc", "1.2.2-beta")).toBe(1);
   });
 
   it("flags only versions below 1.2.2 and accepts later patches such as 1.2.10", () => {
