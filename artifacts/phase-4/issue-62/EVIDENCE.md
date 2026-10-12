@@ -3,11 +3,10 @@
 Not user-facing, so no e2e-army test: `source-map-js` is used only by CSS build and test tooling (`postcss` via `next` and
 `vite`/`vitest`, `@tailwindcss/node`); no Flowline source imports it and no UI flow changes.
 
-Tested code: `b4c41a3e8203413bb97b8f03a80cffdd92fb90fb` on `ai/62` (includes the merge of `origin/main` at `aee8385`) for
-the lockfile and the first three tests; `20af1e0e126567260aa151caeff340067e67acc3` for the fourth test (pasteable commands
-in the docs), re-run with 4/4 passing, `pnpm typecheck` exit 0 and eslint on the test file exit 0, on 2026-10-12 (UTC); 5/5
-after the link guard (`ac0d41b`). The last commit with code, tests or the lockfile is `ac0d41b06115697c6963c05916c0484be7fbb956`
-(it also carries the merge of `origin/main` at `b1023c9`); the commit that carries this version of the file changes only Markdown.
+Tested code: `3a1dbb8437071d4d0838e5bccc4351793afba3a5` on `ai/62`, the last commit that changes code, tests or the
+lockfile (it carries the merge of `origin/main` at `b1023c9` through `5820d53`); the commit that carries this version of
+the file changes only Markdown. Local focused checks were re-run on `3a1dbb8` on 2026-10-12 (UTC); earlier heads are named
+where a result comes from them.
 Run 2026-10-11 (UTC) on macOS, Node v26.10.0 (CI uses Node 24), pnpm
 10.32.1, Vitest 5.0.2. Requirement IDs are those of the hub PRD draft `3f227121-0472-8132-9cd1-d43bb8d7ba54`, carried over
 from the earlier version of this file.
@@ -16,23 +15,22 @@ from the earlier version of this file.
 |---|---|---|
 | REQ-FL-62-1 `pnpm-lock.yaml` resolves `source-map-js` ≥ 1.2.2 | `"source-map-js": ">=1.2.2"` in `pnpm-workspace.yaml` `overrides`; lockfile rebuilt from main's with `pnpm install --lockfile-only` (not hand-edited); `pnpm why source-map-js` | Lockfile diff vs `origin/main`: the override line and `source-map-js` 1.2.1 → 1.2.2 (package, snapshot, three dependents); 0 references to 1.2.1. `pnpm why`: "Found 1 version of source-map-js", 1.2.2 (the npm `latest` tag) |
 | REQ-FL-62-2 Tracked PR | PR #77 (`Closes #62`); `git diff origin/main --stat` | The lockfile and `pnpm-workspace.yaml`, the guard test, `docs/security/DEPENDENCIES.md`, `docs/DEVELOPER_GUIDE.md`, `docs/README.md`, `NEXT_ACTION.md` and this file (sizes are not copied here because every commit changes them; `git diff origin/main --stat` gives the current ones) |
-| REQ-FL-62-3 Fast tier after the lockfile change | The CI `gate` run (`.github/workflows/gate.yml`, fast tier), not the local commands below | **Passed** on `ac0d41b06115697c6963c05916c0484be7fbb956` ([run 38210127375](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/38210127375), `pull_request`): `changes`, `checks` (static·unit·contract, integration 1/3, 2/3, 3/3), `chromium` (`@critical`/`@cross-browser`) and `gate` succeeded; `firefox`/`webkit` skipped, as the fast tier does by design. Earlier heads were also green (`a923589`: run 38185082262), but `ac0d41b` is the one that counts: later commits change only Markdown, so CI on the pushed head reports `gate` for them. The local commands below are focused checks only and are not counted as the fast tier. The full tier (adds Firefox, WebKit, every Chromium spec) has not run: it is dispatched once on the final candidate before merge |
+| REQ-FL-62-3 Fast tier after the lockfile change | The CI `gate` run (`.github/workflows/gate.yml`, fast tier), not the local commands below | **Passed** on `3a1dbb8437071d4d0838e5bccc4351793afba3a5` ([run 38212264276](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/38212264276), `pull_request`): `changes`, `checks` (static·unit·contract, integration 1/3, 2/3, 3/3), `chromium` (`@critical`/`@cross-browser`) and `gate` succeeded; `firefox`/`webkit` skipped, as the fast tier does by design. Earlier heads were also green (`ac0d41b`: run 38210127375; `a923589`: run 38185082262), but `3a1dbb8` is the one that counts: later commits change only Markdown, so CI on the pushed head reports `gate` as a docs-only change for them. The local commands below are focused checks only and are not counted as the fast tier. The full tier (adds Firefox, WebKit, every Chromium spec) has not run: it is dispatched once on the final candidate before merge |
 | REQ-FL-62-4 Alert #3 closed as fixed | Dependabot, after merge to main | **Pending (after merge)**: [NEXT_ACTION.md](../../../NEXT_ACTION.md) step 5 |
 | REQ-FL-62-5 Open-alert query returns 0 or only alerts newer than #62 | `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` after merge | **Pending (after merge)**. Before merge (GraphQL `vulnerabilityAlerts(states: OPEN)`, 2026-10-11T21:38Z): 15 open, #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4), created 2026-10-08 12:17–12:18Z, after #62 (2026-10-07T15:00Z). Expected after merge: #3 fixed, #4–#17 left |
-| REQ-FL-62-6 Lockfile guard test | `tests/unit/dependency-advisories.test.ts` | 4 passed on `20af1e0`: semver order; fixtures (1.2.10 and 1.2.2 accepted, 1.2.1 and 1.2.2-beta.1 flagged); `@issue-62 AC1` on the real lockfile; no `<placeholder>` in the shell commands of `docs/security/DEPENDENCIES.md` and this file (fails on the old wording). A fifth test checks that every GitHub link and `repos/` path in those files names `AbdelrhmanAh7/FlowLine_Web`: it failed on `e583f83` (the `AbdelrahmanAh7` run link) and passes after the fix, 5/5. A sixth test checks that the REQ-FL-62-3 row cites a CI `gate` run link and keeps the local commands out of the fast tier; the fixture test no longer contains a substring check on `1.2.1` (6/6) |
+| REQ-FL-62-6 Lockfile guard test | `tests/unit/dependency-advisories.test.ts` | 6/6 passed on `3a1dbb8`: (1) semver order with prereleases; (2) fixtures, 1.2.10 and 1.2.2 accepted, 1.2.1 and 1.2.2-beta.1 flagged, read as whole versions with no substring check on `1.2.1`; (3) `@issue-62 AC1` on the real lockfile; (4) no `<placeholder>` in the shell commands of `docs/security/DEPENDENCIES.md` and this file (failed on the old wording); (5) every GitHub link and `repos/` path in those files names `AbdelrhmanAh7/FlowLine_Web` (failed on `e583f83`, which had the `AbdelrahmanAh7` run link); (6) the REQ-FL-62-3 row cites a CI `gate` run link and keeps the local commands out of the fast tier |
 
 Commands on the tested commit:
 
-- One Vitest file per run, for example `pnpm exec vitest run --project unit --maxWorkers=1 tests/unit/dependency-advisories.test.ts`
-  (the same command with `tests/unit/drizzle-tooling-prune.test.ts`, `tests/unit/docs-index.test.ts`,
-  `tests/unit/docs-check-script.test.ts` and `tests/unit/changed-scope.test.ts`): `dependency-advisories`
-  3/3 on `b4c41a3` and 4/4 on `20af1e0` and on `a923589` (2026-10-12), `drizzle-tooling-prune` 2/2, `docs-index` 4/4, `docs-check-script` 95/95, `changed-scope` 88/88. In the agent
-  sandbox, runs of several files (and the first attempt of `changed-scope`) stalled at Vitest start-up before any test ran.
+- One Vitest file per run: `pnpm exec vitest run --project unit --maxWorkers=1 tests/unit/dependency-advisories.test.ts`,
+  6/6 on `3a1dbb8` (2026-10-12). Earlier, on `a923589`, the same command with `tests/unit/drizzle-tooling-prune.test.ts`,
+  `tests/unit/docs-index.test.ts`, `tests/unit/docs-check-script.test.ts` and `tests/unit/changed-scope.test.ts` gave 2/2,
+  4/4, 95/95 and 88/88. In the agent sandbox, runs of several files stalled at Vitest start-up before any test ran.
 - Regression proof for the review finding at `dependency-advisories.test.ts:100`: with the old
   `not.toContain("source-map-js@1.2.1")` check re-added on the 1.2.10 fixture, the file fails with
   `AssertionError: expected 'packages:\n  source-map-js@1.2.10:\n …' not to contain 'source-map-js@1.2.1'`;
   with the fix (commit `4cd8221`), 3/3 pass.
-- `pnpm typecheck` (`tsc --noEmit`): exit 0 (re-run on `a923589`). `pnpm lint` (`eslint .`): exit 0; eslint on the test file re-run on `a923589`: exit 0.
+- `pnpm typecheck` (`tsc --noEmit`) and eslint on the test file: exit 0, re-run on `3a1dbb8`. `pnpm lint` (`eslint .`): exit 0 on `a923589`.
 - `node scripts/check-evidence-secrets.mjs`: exit 0, 0 hits across 154 files, but no local env file was found, so it
   compared nothing (not a pass on real secrets; CI runs it).
 
