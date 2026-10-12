@@ -62,18 +62,3 @@ test(
     expect(body).not.toContain("stack trace");
   },
 );
-
-test.skip(
-  "@issue-180 AC: platform admin gets JSON error with code on revision conflict (409) and step-up required (403)",
-  { tags: ["feat:fl-platform-admin", "lvl:api"] },
-  async ({ app: _app }) => {
-    // TODO: This test requires a platform admin session. The test stack does not seed one,
-    // and there is no test API to promote a user to platform admin.
-    // When a test admin seeding mechanism exists, implement:
-    // 1. Sign in as platform admin (or promote a test user)
-    // 2. PATCH /api/platform/copy with mismatched expectedRevision → expect 409, error.code === "REVISION_CONFLICT"
-    // 3. POST /api/platform/copy without step-up → expect 403, error.code === "STEP_UP_REQUIRED"
-    // 4. Verify both responses are JSON with error.code and no HTML/stack trace
-    // For now, the error-code mapping for these cases is covered by tests/unit/admin/copy/copy-errors.test.ts
-  },
-);
