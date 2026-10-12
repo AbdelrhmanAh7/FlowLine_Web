@@ -14,6 +14,8 @@ const DIR = "artifacts/company-builder/validation/20261001-d224cfb";
 // reproducible against v1 by default; a new run names the packet it scored.
 const PACKET_FILE = process.env.PACKET ?? "packet.json";
 const packet = JSON.parse(readFileSync(`${DIR}/packet/${PACKET_FILE}`, "utf8"));
+const checksumLine = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split("\n").find((l) => l.trim().endsWith(` ${PACKET_FILE}`));
+if (!checksumLine) throw new Error(`${PACKET_FILE} has no entry in packet/SHA256SUMS: refusing a run not bound to frozen packet contents`);
 const OUT = `${DIR}/flowline-field/${process.env.FIELD_RUN ?? "run"}`;
 // Run 1 typed services comma-separated (the instruction at the time). From run 2 the product instructs "name / other
 // name" for one service, so the answer follows the on-screen instruction.
@@ -165,10 +167,9 @@ test("Flowline field run — frozen packet", async ({ page }) => {
   fc3.vp03NoOldPrice = !String((v3.output.reply_draft as Json)?.body ?? "").includes("900 EGP");
 
   const metrics = await req.get(`${base}/sessions/${sid}/experiment`);
-  const checksums = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split("\n");
   const summary = {
     packet: PACKET_FILE,
-    packetSha256: (checksums.find((l) => l.trim().endsWith(` ${PACKET_FILE}`)) ?? "").split(" ")[0] || null,
+    packetSha256: checksumLine.split(" ")[0],
     runAt: new Date().toISOString(),
     mode: "DETERMINISTIC_TEST, sample-data trials through the real worker; agent-driven (times are machine times, NOT human setup time)",
     questionsAsked: asked,

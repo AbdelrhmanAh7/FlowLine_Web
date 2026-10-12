@@ -11,6 +11,8 @@
 
 ## Next steps
 
+0. **#142 (PR #188):** packet v2 scorer fixes (VP-03 closed day, VP-05/VP-06 owner decision) are merged-ready in code and unit-tested; the scoring record, run 6 (`FIELD_RUN=run6-v2-<sha> PACKET=packet.v2.json`) on a live isolated stack and model, is still to be recorded. Runs 1–5 stay untouched.
+
 1. Work the open follow-up issues on the [board](https://github.com/users/AbdelrhmanAh7/projects/21) under the constitution in `AGENTS.md` (every exception needs a recorded reason).
 2. Reconcile G2/G4 with their actual evidence and owner authorization before execution; main does not establish completion, and the only G4 record lives on draft PR #9 until that PR is reviewed and merged.
 3. Obtain a fresh issue #6 field-validation version without modifying frozen evidence; keep issue #6 open until the new run's evidence supports closure.

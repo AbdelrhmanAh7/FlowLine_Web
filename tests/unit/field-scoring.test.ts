@@ -56,6 +56,11 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح`, date)).toBe(false);
   });
+  it("fails confirmations worded outside the basic list, and a confirmation next to an unrelated negation", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit is set for 2026-10-09.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nSee you on 2026-10-09.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026-10-09 is confirmed, while later appointments are not available.`, date)).toBe(false);
+  });
   it("fails a dotted date confirmation (09.10.2026) next to the hours line", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 09.10.2026 is confirmed.`, date)).toBe(false);
   });

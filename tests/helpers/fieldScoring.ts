@@ -12,7 +12,7 @@ export function isFriday(isoDate: string): boolean {
 
 // Western and Arabic-Indic digits, so the Arabic-language VP-03 reply is covered too.
 const toWestern = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-const CONFIRM = /confirm|book|schedul|available|reserved|تأكيد|مؤكد|حجز|متاح|موعد/i;
+const CONFIRM = /confirm|book|schedul|available|reserved|\bset for\b|see you|expect you|we'll visit|we will visit|تأكيد|مؤكد|حجز|متاح|موعد/i;
 // A sentence that says the day is closed / not available is the correct answer, not a confirmation.
 // This negation only applies to general Friday statements; it does NOT override a specific date confirmation.
 const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
@@ -36,7 +36,9 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   const t = toWestern(text);
   const [y, m, d] = requestedDate.split("-");
   const dateForms = new RegExp(`${requestedDate}|\\b${d}[/.-]${m}[/.-]${y}\\b`);
-  return !t.split(/[!?؟\n]+|\.(?=\s|$)/).some((sentence) => {
+  // Clauses (split at commas, semicolons, "while/but/whereas"), so a negation elsewhere in the sentence ("..., while
+  // later slots are not available") cannot suppress the confirmation of the requested date.
+  return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:while|but|whereas)\b/i).some((sentence) => {
     const hasDateForm = dateForms.test(sentence);
     const hasFridayConfirm = FRIDAY.test(sentence) && CONFIRM.test(sentence);
     // A specific date confirmation always fails, even with a general "closed" word in the same sentence,
