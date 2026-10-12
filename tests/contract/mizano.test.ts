@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
-import { getAction } from "@/integrations/registry";
+import { getAction, getProvider } from "@/integrations/registry";
 import type { ActionContext, Credentials, HttpRequest, HttpResponse } from "@/integrations/types";
 import { runAction } from "./helpers";
 
@@ -106,5 +106,37 @@ describe("mizano.list_overdue_invoices", () => {
     ctx.credentials = { ...creds, settings: { baseUrl: "http://mizano.test/api" } };
     await expect(runAction("mizano.list_overdue_invoices", ctx, { asOf: "2026-09-30" })).rejects.toThrow("https origin");
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "https://127.0.0.1",
+    "https://localhost:8443",
+    "https://10.0.0.5",
+    "https://169.254.169.254",
+    "https://[::1]",
+    "https://api.internal",
+  ])("refuses a private or internal origin %s before any request is sent", async (baseUrl) => {
+    const { ctx, request } = ctxReturning(overdueResponse);
+    ctx.credentials = { ...creds, settings: { baseUrl } };
+    await expect(runAction("mizano.list_overdue_invoices", ctx, { asOf: "2026-09-30" })).rejects.toThrow(/refused|private|internal/);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("refuses a private origin on the connection check before any request is sent", async () => {
+    const { ctx, request } = ctxReturning({ id: "ws_1", workspaceName: "Cedar" });
+    ctx.credentials = { ...creds, settings: { baseUrl: "https://169.254.169.254" } };
+    await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow(/refused|private/);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("returns the workspace identity from a well-formed /api/me response", async () => {
+    const { ctx, request } = ctxReturning({ id: "ws_1", workspaceName: "Cedar Studio" });
+    await expect(getProvider("mizano")!.identity(ctx)).resolves.toEqual({ accountId: "ws_1", label: "Cedar Studio" });
+    expect(request.mock.calls[0][0].path).toBe("/api/me");
+  });
+
+  it("rejects an /api/me response that is not the expected identity shape", async () => {
+    const { ctx } = ctxReturning({ id: "ws_1", workspaceName: "" });
+    await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow();
   });
 });

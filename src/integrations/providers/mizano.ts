@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { checkUrl, EgressError } from "@/server/egress";
 import { ProviderError, type Credentials, type ProviderDef } from "../types";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONEY = /^\d+\.\d{2}$/;
 
-// The Mizano host is per workspace (a connect setting, not a secret). Only an https origin is accepted so the
-// scoped API key is never sent anywhere but the Mizano host the user typed.
+// The Mizano host is per workspace (a connect setting, not a secret). Only a public https origin is accepted so the
+// scoped API key is never sent anywhere but the Mizano host the user typed. checkUrl is the same guard safeFetch
+// applies to every request, so private, loopback, link-local and internal hosts are refused before a request is built.
 function base(creds: Credentials): string {
   const raw = creds.settings?.baseUrl;
   if (!raw) throw new ProviderError("client", "Mizano base URL is missing");
@@ -18,8 +20,19 @@ function base(creds: Credentials): string {
   if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) {
     throw new ProviderError("client", "Mizano base URL must be an https origin with no path");
   }
+  try {
+    checkUrl(url);
+  } catch (e) {
+    if (e instanceof EgressError) throw new ProviderError("egress_blocked", `Mizano base URL refused: ${e.message}`);
+    throw e;
+  }
   return url.origin;
 }
+
+const mizanoIdentity = z.object({
+  id: z.string().min(1).max(128),
+  workspaceName: z.string().min(1).max(200),
+});
 
 const mizanoInvoice = z.object({
   number: z.string(),
@@ -41,12 +54,13 @@ const provider: ProviderDef = {
     { key: "baseUrl", label: "Mizano URL", secret: false, placeholder: "https://mizano.example.com" },
   ],
   async identity(ctx) {
-    const { data } = await ctx.http.request<{ id: string; workspaceName: string }>({
+    const { data } = await ctx.http.request<unknown>({
       method: "GET",
       path: "/api/me",
       baseUrl: base(ctx.credentials),
     });
-    return { accountId: data.id, label: data.workspaceName };
+    const me = mizanoIdentity.parse(data);
+    return { accountId: me.id, label: me.workspaceName };
   },
   actions: [
     {

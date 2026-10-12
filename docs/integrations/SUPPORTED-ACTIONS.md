@@ -124,4 +124,4 @@ Uses the `pg` driver directly. The host/port pass the egress check (`assertHostA
 |---|---|---|---|---|---|
 | `mizano.list_overdue_invoices` | none | – | invoices:read | – | `GET /api/invoices?status=overdue&asOf=YYYY-MM-DD` |
 
-The endpoint and response shape are **assumed** until Mizano's FlowLine integration API (MZ G5) is published; the adapter is covered only by mocked contract tests (`tests/contract/mizano.test.ts`). `baseUrl` must be a bare https origin. Amounts pass through as two-decimal strings. Identity: `GET /api/me`.
+The endpoint and response shape are **assumed** until Mizano's FlowLine integration API (MZ G5) is published; the adapter is covered only by mocked contract tests (`tests/contract/mizano.test.ts`). `baseUrl` must be a bare https origin on a public host: the same egress guard as every provider request (`checkUrl`) refuses private, loopback, link-local and internal hosts before any request is built. The identity response (`GET /api/me`) must carry a non-empty `id` and `workspaceName`. Amounts pass through as two-decimal strings.
