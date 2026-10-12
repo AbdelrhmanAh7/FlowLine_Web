@@ -66,6 +66,7 @@ test(
     const base = app.baseUrl!;
     const user = await signedIn(base, `army-180-ui-${seeded(base, "ui").slice(0, 10).toLowerCase().replace(/[^a-z0-9]/g, "x")}@flowline-e2e.test`);
     // Non-admins should get a 404 page (not the copy editor) — the panel's existence is not confirmed
+    // per src/server/platform-access.ts: "Everyone who isn't an active admin gets 404 — the panel's existence isn't confirmed."
     const res = await fetch(`${base}/admin/copy`, { headers: user });
     expect(res.status).toBe(404);
   },
