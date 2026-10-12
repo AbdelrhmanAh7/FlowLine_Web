@@ -38,7 +38,7 @@ Use meaningful existing Lucide icons; preserve textual accessible names. Motion 
 
 Use the relevant `src/server/access.ts` helper (`requireWorkspace`, `requireFlow`, `requireRun`, etc.) before accessing workspace resources. Authentication alone is insufficient: enforce the requested role/capability and preserve non-member 404 behavior. Follow existing route wrappers for mutation validation and CSRF; App Router does not automatically protect arbitrary route handlers.
 
-Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. Engine connection rules belong in shared `checkConnection`.
+Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. A data backfill must be safe to run twice; when it overwrites data, it keeps the old values in a backup table and ships a reverse script under `drizzle/reverse/` (outside the journal, run by hand in one transaction), tested in `tests/integration/` (example: `flow-version-run-backfill.test.ts`). Engine connection rules belong in shared `checkConnection`.
 
 Provider credentials use uncontrolled `SecretInput` plus `takeSecret`; never store them in controlled form state, drafts, URLs, query caches or evidence. Follow `docs/security/CREDENTIALS_DESIGN.md`. Account login/recovery forms have their existing dedicated handling; do not generalize that exception to provider secrets.
 

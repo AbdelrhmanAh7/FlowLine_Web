@@ -51,7 +51,9 @@ local Ollama models (visual/copy review).
   `flow_version` holds immutable snapshots (`save` = Ctrl/⌘+S, `run` = pinned for each run,
   `overwrite` = the server copy kept before an explicit offline overwrite). Only `save`, `overwrite` and `publish`
   snapshots take a public version number (one sequence per flow); a `run` snapshot has `version = NULL`, so running a
-  flow never changes the number its next publication gets (#204). `run` and `run_step`
+  flow never changes the number its next publication gets (#204). Migration `0026_flow_version_run_backfill` clears the
+  numbers that older run snapshots still held and keeps them in `flow_version_run_number_backup`, so
+  `drizzle/reverse/0026_flow_version_run_backfill.sql` can restore them; numbered snapshots keep their numbers (#205). `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get
   **404, not 403**, so the existence of other workspaces is not revealed. Roles: owner > editor > viewer.
