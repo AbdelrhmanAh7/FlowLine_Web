@@ -172,6 +172,18 @@ See `BETA_LIMITATIONS.md`:
 ## Test coverage note: hub route selection (#174)
 
 `tests/unit/ai-hub-selection.test.ts` covers the real exports of `src/ai/hub/selection.ts`: `assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`.
-Root cause: #174 named `selectEngineByScore` and `selectFreeEndpoint`, which do not exist here (`rg -n 'selectEngineByScore|selectFreeEndpoint' src tests` finds nothing; `git log --all -S <name>` finds no commit), so they are not tested.
+Root cause: #174 named `selectEngineByScore` and `selectFreeEndpoint`, which do not exist here. Verified by:
+
+```bash
+git log --all -S selectEngineByScore
+# No output → function never defined
+
+git log --all -S selectFreeEndpoint
+# No output → function never defined
+
+rg -n 'selectEngineByScore|selectFreeEndpoint' src tests
+# No matches
+```
+
 The acceptance grep cannot pass: `--listTests` is Jest-only, and `selection.spec.ts` is outside the Vitest unit include `tests/unit/**/*.test.ts`. Run `pnpm exec vitest run --project unit tests/unit/ai-hub-selection.test.ts` instead.
 E2E: not needed — unit tests only; no runtime change.

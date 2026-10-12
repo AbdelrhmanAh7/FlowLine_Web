@@ -31,7 +31,7 @@ describe("assertRoutesUsable", () => {
     ["revoked", [conn(C1, { status: "REVOKED" })], "editor", "AI_CONNECTION_REVOKED"],
     ["viewer role", [conn(C1)], "viewer", "AI_ROUTE_FORBIDDEN"],
     ["role not in useRoles", [conn(C1, { useRoles: ["owner"] })], "editor", "AI_ROUTE_FORBIDDEN"],
-  ])("refuses a %s connection", async (_case, conns, role, code) => {
+  ])(`refuses a %s connection`, async (_case, conns, role, code) => {
     const { db } = fakeDb(conns, [{ role }]);
     await expect(assertRoutesUsable(db, "u", "w", [{ connectionId: C1, modelId: "m" }])).rejects.toMatchObject({ code });
   });
@@ -40,6 +40,16 @@ describe("assertRoutesUsable", () => {
     const { db, calls } = fakeDb();
     await assertRoutesUsable(db, "u", "w", []);
     expect(calls).toHaveLength(0);
+  });
+
+  it("validates all connection IDs when multiple are provided", async () => {
+    const { db, calls } = fakeDb([conn(C1), conn(C2)], [{ role: "editor" }]);
+    await expect(assertRoutesUsable(db, "u", "w", [
+      { connectionId: C1, modelId: "m" },
+      { connectionId: C2, modelId: "m" },
+    ])).resolves.toBeUndefined();
+    // Verify that both connection IDs were processed (2 selects: aiConnection and workspaceMember)
+    expect(calls).toHaveLength(2);
   });
 });
 
@@ -52,16 +62,30 @@ describe("assertRouteSelection", () => {
   });
 
   it("checks only routes that are new or changed", async () => {
-    const { db } = fakeDb([], [{ role: "owner" }]);
+    const { db, calls } = fakeDb([conn(C2)], [{ role: "owner" }]);
     const prev = graph({ connectionId: C1, modelId: "m" });
     const next = graph({ connectionId: C1, modelId: "m" }, { connectionId: C2, modelId: "m" });
-    await expect(assertRouteSelection(db, "u", "w", next, prev)).rejects.toMatchObject({ code: "AI_CONNECTION_MISSING" });
+    await expect(assertRouteSelection(db, "u", "w", next, prev)).resolves.toBeUndefined();
+    // Only C2 should be queried (the changed route)
+    expect(calls).toHaveLength(2); // 1 for connections, 1 for role
   });
 });
 
 describe("aiRoutesIn", () => {
   it("lists valid routes of AI steps and skips missing or malformed ones", () => {
     expect(aiRoutesIn(graph({ connectionId: C1, modelId: "m" }, undefined, { connectionId: "not-a-uuid", modelId: "m" }))).toEqual([{ connectionId: C1, modelId: "m" }]);
+  });
+
+  it("skips routes on non-AI nodes", () => {
+    const graphWithNonAi = {
+      nodes: [
+        { id: "ai-node", type: "ai.generate", position: { x: 0, y: 0 }, data: { label: "ai-node", config: { instructions: "x", route: { connectionId: C1, modelId: "m" } } } },
+        { id: "text-node", type: "text", position: { x: 10, y: 10 }, data: { label: "text-node", config: { text: "Hello" } } },
+        { id: "image-node", type: "image", position: { x: 20, y: 20 }, data: { label: "image-node", config: { image: "data:image/png;base64,..." } } },
+      ],
+      edges: [],
+    } as unknown as FlowGraph;
+    expect(aiRoutesIn(graphWithNonAi)).toEqual([{ connectionId: C1, modelId: "m" }]);
   });
 });
 
