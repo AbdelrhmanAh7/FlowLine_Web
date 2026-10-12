@@ -71,6 +71,7 @@ Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
 - File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
 - Does not modify `transport.ts` — tests only
 - Uses real providers from `getProviderDef` as specified in the manager plan
+
 ## Issue #110: Pilot plan → 2026-10-16 (no implementation possible in one PR)
 
 Checked on 2026-10-12 on branch `ai/110` at `b1023c9` (same as `origin/main`, so the branch had no earlier commits). No code was changed and no e2e-army test was added.
@@ -93,3 +94,4 @@ Checked on 2026-10-12 on branch `ai/110` at `b1023c9` (same as `origin/main`, so
 1. Should #110 be removed from the engineer dispatch queue (for example with a `tracking` or `owner-only` label)? It is a status issue that the hub closes itself.
 2. If you want e2e coverage of the 25 pilot features from this repo, which features should be split into separate issues? Ideally one issue per feature (or small group), each with its own acceptance criterion, so each can be one ~100–300-line PR with an `e2e-army/<issue>-<flow>.e2e.ts` test tagged `feat:<id>`.
 3. No test was added because the issue has no user-facing acceptance criterion of its own. A PR for this branch would contain only this note. Its description should state `E2E: not needed — tracking issue, no product change`.
+4. PR #209 says `Closes #110`. Merging it would close the hub's pilot-plan tracker before its checklist is done. Its body should say `Refs #110` instead (the hub closes #110 itself). Agents do not edit PR bodies, so the harness or the owner needs to change this.
