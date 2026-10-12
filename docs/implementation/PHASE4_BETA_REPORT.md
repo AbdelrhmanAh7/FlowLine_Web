@@ -18,8 +18,7 @@ test). Each original fix in `tests/helpers/field-scoring.ts` was disabled in tur
 `:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` checks forced true): 1 failed / 7 passed, and the approval-payload helpers
 (`scoreApprovedOutboxEntry`, `scoreApprovedAgainstPacket` forced true): 3 failed / 5 passed;
 `:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
-`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. Typecheck and lint were not re-run on this head by this
-fix round (docs-only change plus a merge-conflict resolution); the hosted `gate` runs them. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. On the later head `e3b6c75` (a merge of origin/main; #141 code unchanged since `475c293`) `pnpm typecheck` exited 0, ESLint on `tests/helpers/field-scoring.ts` and `tests/unit/flowline-field-scoring.test.ts` reported nothing, and the scoring test again passed 8/8 (the `artifacts/` field specs are ignored by ESLint); the hosted `gate` runs the rest. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
 checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
 
 ## Company Builder refund note — 2026-10-04 (issue #49)
