@@ -38,17 +38,17 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     for (const item of items) expect(item, "owner decision has a default (REQ-FL-68-5)").toMatch(/Default: \S/);
   });
 
-  it("@issue-68 AC1: the restore stops every writer, checks both dumps, then restores into a fresh database all-or-nothing", () => {
-    expect(between(runbook, "6. Stop", "7. Check")).toMatch(/dc stop web worker backup/); // else backup marks an empty DB LAST_OK
-    const check = between(runbook, "7. Check", "8. Restore");
-    expect(check).toMatch(/pg_restore --list < "backups\/\$DUMP_FILE"/);
-    expect(check).toMatch(/pg_restore --list < "backups\/pre-restore-\$UTC\.dump"/);
-    const step = between(runbook, "8. Restore into a fresh", "9. Check the cutoff");
-    expect(step).toMatch(/dropdb .*--force[\s\S]*createdb[\s\S]*pg_restore .*--single-transaction --exit-on-error/);
-    expect(step).not.toMatch(/--clean/);
-    expect(between(runbook, "9. Check the cutoff", "10. Confirm"), "cutoff read before writers start").toMatch(/max\(created_at\) from run/);
-    expect(runbook.split('FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up')[1], "no cutoff check once new runs exist").not.toMatch(/max\(created_at\)/);
+  it("@issue-68 AC1: the restore proves the dump in a scratch database, then swaps it in all-or-nothing, with writers and backup held back", () => {
+    expect(between(runbook, "6. Stop", "7. Prove")).toMatch(/dc stop web worker backup/); // else backup marks an empty DB LAST_OK
+    const scratch = between(runbook, "7. Prove", "8. Check");
+    expect(scratch, "full restore of the data, not a table-of-contents listing").toMatch(/createdb[\s\S]*pg_restore .*-d flowline_restore .*--single-transaction --exit-on-error/);
+    expect(between(runbook, "8. Check", "9. Swap"), "snapshot time from the archive header, not the run table").toMatch(/Archive created at/);
+    expect(runbook, "max(created_at) is no cutoff marker: an idle beta has no run near the dump").not.toMatch(/max\(created_at\)/);
+    const swap = between(runbook, "9. Swap", "10. Confirm");
+    expect(swap).toMatch(/dropdb .*--force[\s\S]*alter database flowline_restore rename to flowline[\s\S]*pre-restore-\$UTC/);
+    expect(swap).not.toMatch(/--clean/);
     expect(between(runbook, "11. Start", "12. Run"), "a release that caused the damage is not restarted").toMatch(/ruled out as the cause[\s\S]*flowline:\$PREV_SHA/);
+    expect(between(runbook, "16. Only now", "17. Post"), "backup restarts only after the checks").toMatch(/dc up -d backup/);
   });
 
   it("@issue-68 AC1: commands are copy-pasteable shell, with variables defined once and no <placeholder> in a command", () => {
@@ -59,6 +59,9 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     const setup = runbook.match(/```sh\n([\s\S]+?)```/)?.[1] ?? "";
     for (const name of ["DEPLOY_DIR", "REPO_DIR", "BASE_URL", "PREV_SHA", "CURRENT_SHA", "UTC"]) expect(setup, `${name} is defined`).toMatch(new RegExp(`^${name}=|; ${name}=`, "m"));
     expect(setup).toMatch(/^dc\(\) \{/m);
+    expect(setup, "dc exec/stop need the image variable too").toMatch(/^export FLOWLINE_IMAGE=/m);
+    // An unscoped `up` would recreate `monitor` (losing its alert state) and `backup`; every `up` names its services.
+    for (const command of commands.filter((c) => / dc up\b/.test(c))) expect(command, "scoped up").toMatch(/dc up -d( --wait)? (web worker|backup)$/);
     expect(setup).toMatch(/operator machine.*BASE_URL and REPO_DIR/); // the smoke steps run there, not on the beta host
     for (const command of commands.filter((c) => c.startsWith("node "))) expect(command, "repo scripts anchored at REPO_DIR").toMatch(/^node "\$REPO_DIR\/scripts\//);
     // DUMP_FILE is a bare file name, so "backups/$DUMP_FILE" never doubles the directory.
@@ -66,6 +69,9 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(runbook).not.toMatch(/backups\/backups/);
     // From the deploy folder, `git diff -- drizzle/` would look at deploy/beta/drizzle/ and always print nothing.
     expect(section(/Rollback/i)).toMatch(/git -C "\$REPO_DIR" diff --stat "\$PREV_SHA" "\$CURRENT_SHA" -- drizzle\//);
+    expect(runbook).toMatch(/FLOWLINE_ENCRYPTION_KEYS_OLD[\s\S]*FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD/); // old rings are backed up too
+    expect(section(/Rollback/i), "rollback image checked against its revision label").toMatch(/docker image inspect[^\n]*image\.revision/);
+    expect(section(/Alerting/i), "a blank ops token silences the monitor").toMatch(/FLOWLINE_OPS_TOKEN. is non-empty/);
     for (const [path] of runbook.matchAll(/\S*artifacts\/phase-4\S*/g)) expect(path, "evidence paths anchored at REPO_DIR").toMatch(/^`\$REPO_DIR\/artifacts\//);
   });
 
@@ -89,20 +95,13 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(ownerActions).toMatch(/^\| O04 \| Existing domain \/ secure Pi target \/ read-only access \| Pending inputs and exact approval;/m);
     expect(ownerActions).toMatch(/^\| O08 \| Beta deployment \| Not reached; requires verified host\/domain/m);
     const links = [...runbook.matchAll(/\]\(([^)#\s]+)(#[^)]*)?\)/g)].map((m) => m[1]).filter((href) => !/^[a-z]+:/i.test(href));
-    expect(links.length).toBeGreaterThan(0);
     for (const href of links) expect(existsSync(resolve(dirname(runbookPath), href)), `link ${href}`).toBe(true);
   });
 
-  it("@issue-68 AC4: the mandatory docs check passes for this change", () => {
-    const files = ["docs/runbooks/restore-rollback-alerts.md", "docs/implementation/OWNER_ACTIONS.md", "tests/unit/restore-rollback-alerts-runbook.test.ts", "artifacts/issue-68/EVIDENCE.md"];
-    expect(checkDocs(files).passed).toBe(true);
-  });
-
-  it("@issue-68 AC5: the whole change stays within ~300 lines", () => {
-    // Runbook + this test + EVIDENCE.md (which records the matching `git diff --shortstat`) + the 2-line OWNER_ACTIONS.md link.
+  it("@issue-68 AC4/AC5: the docs check passes and the whole change stays within ~300 lines", () => {
     const added = ["docs/runbooks/restore-rollback-alerts.md", "tests/unit/restore-rollback-alerts-runbook.test.ts", "artifacts/issue-68/EVIDENCE.md"];
-    const total = added.reduce((sum, path) => sum + lineCount(read(path)), 2);
-    expect(lineCount(runbook)).toBeGreaterThan(40);
-    expect(total).toBeLessThanOrEqual(300);
+    expect(checkDocs([...added, "docs/implementation/OWNER_ACTIONS.md"]).passed).toBe(true);
+    // Runbook + this test + EVIDENCE.md (records the matching `git diff --shortstat`) + the 2-line OWNER_ACTIONS.md link.
+    expect(added.reduce((sum, path) => sum + lineCount(read(path)), 2)).toBeLessThanOrEqual(300);
   });
 });

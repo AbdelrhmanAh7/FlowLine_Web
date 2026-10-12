@@ -5,8 +5,8 @@ and alerts" owner item (PP-06 of the paid-pilot PP-02..PP-09 list, tracked in is
 performs every real step; agents run none of it against a real environment. Nothing here changes the state of any
 item in [OWNER_ACTIONS.md](../implementation/OWNER_ACTIONS.md).
 
-- Placeholders only: `<beta-host>`, `<deploy-dir>`, `<repo-checkout>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
-  `<alert-channel>`, `<owner>`. No credentials, hostnames or secrets belong in this file, in commands or in evidence.
+- Placeholders only (`<beta-host>`, `<deploy-dir>`, `<repo-checkout>`, `<previous-sha>`, `<current-sha>`, `<key-store>`,
+  `<alert-channel>`, `<owner>`): no credentials, hostnames or secrets in this file, in commands or in evidence.
 - NileQuant stays PAPER only. This runbook has no broker, order or trading steps and does not apply to NileQuant.
   Billing stays sandbox-only; nothing here activates payments.
 - It builds on the beta stack in [docker-compose.beta.yml](../../deploy/beta/docker-compose.beta.yml) and the
@@ -20,16 +20,16 @@ DEPLOY_DIR="<deploy-dir>"; BASE_URL="https://<beta-host>"
 REPO_DIR="<repo-checkout>"   # git checkout of the repo (the beta stack is its deploy/beta folder), not DEPLOY_DIR itself
 # Smoke steps run on the operator machine: set BASE_URL and REPO_DIR there too.
 PREV_SHA="<previous-sha>"; CURRENT_SHA="<current-sha>"   # rollback and restore only
+export FLOWLINE_IMAGE="flowline:$CURRENT_SHA"   # the compose file needs it for every dc command; `up` steps override it per call
 cd "$DEPLOY_DIR"
 dc() { docker compose -f docker-compose.beta.yml --env-file .env.beta "$@"; }
 UTC=$(date -u +%Y%m%dT%H%M%SZ)   # names the safety dump; run again for a new one
 ```
 
-How the paid-pilot owner items (issue #30) relate to this runbook (decisions are in §4): PP-06 (approved deployment
-with restore, rollback and alerts) is this whole runbook. PP-02 (owner sign-in and admin MFA): the auth-failures alert
-and decision 3. PP-03, PP-04 (integrations, AI): the AI and integration step alerts. PP-05 (sandbox billing): the
-billing-webhook alert. PP-07 (policies and acceptance): decision 10. PP-08 (protected test configuration): decision 3.
-PP-09 (CI billing): not affected; this runbook adds no CI runs.
+Paid-pilot owner items (issue #30; decisions in §4): PP-06 (approved deployment with restore, rollback and alerts) is this
+whole runbook. PP-02 (owner sign-in, admin MFA): auth-failures alert, decision 3. PP-03, PP-04 (integrations, AI): the AI and
+integration step alerts. PP-05 (sandbox billing): billing-webhook alert. PP-07 (policies): decision 10. PP-08 (protected
+test configuration): decision 3. PP-09 (CI billing): not affected; this runbook adds no CI runs.
 
 ## 1. Backup and restore
 
@@ -41,10 +41,11 @@ PP-09 (CI billing): not affected; this runbook adds no CI runs.
   `<deploy-dir>/backups/flowline-<utc>.dump`, keeps `BACKUP_RETENTION_DAYS` days (default 14) and writes the
   `LAST_OK` / `LAST_FAILED` markers the monitor reads.
 - **Encryption keys and auth secret** (`FLOWLINE_ENCRYPTION_KEY`, `FLOWLINE_PLATFORM_ENCRYPTION_KEY`,
-  `BETTER_AUTH_SECRET`): not in the dump. They live in `.env.beta` and must also be kept in `<key-store>`, separately
-  from the dumps. A dump without the matching keys restores data whose stored credentials cannot be decrypted.
-- **Not backed up today**: the Caddy certificate volumes (re-issued on start), container logs (rotated), and any
-  off-host copy (the owner must choose one, see §4). A dump on the same disk as the database is not a real backup.
+  `BETTER_AUTH_SECRET`, plus `FLOWLINE_ENCRYPTION_KEYS_OLD` and `FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD` while a
+  rotation is unfinished): not in the dump. They live in `.env.beta` and must also be kept in `<key-store>`, separately
+  from the dumps, as the full rings active at each dump. Without them restored credentials cannot be decrypted.
+- **Not backed up today**: Caddy certificate volumes (re-issued), container logs (rotated), any off-host copy (owner
+  choice, §4). A dump on the same disk as the database is not a real backup.
 
 ### Restore steps
 
@@ -59,27 +60,29 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
    `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-restore-$UTC.dump"`.
 5. Post a maintenance notice in `<alert-channel>` and acknowledge the alerts the next steps will trigger.
 6. Stop the writers and the backup (it would mark an empty database `LAST_OK`), not `db`: `dc stop web worker backup`.
-7. Check both dumps are readable, since step 8 drops the only live copy:
-   `dc exec -T db pg_restore --list < "backups/$DUMP_FILE" > /dev/null` and
-   `dc exec -T db pg_restore --list < "backups/pre-restore-$UTC.dump" > /dev/null`. If the first fails, pick the
-   previous dump; if the second fails, repeat step 4 and do not continue without a readable safety dump.
-8. Restore into a fresh, empty database, so no object absent from the dump survives (restoring over the old one would leave it):
-   `dc exec -T db dropdb -U flowline --force --if-exists flowline`, then `dc exec -T db createdb -U flowline flowline`,
-   then `dc exec -T db pg_restore -U flowline -d flowline --no-owner --single-transaction --exit-on-error < "backups/$DUMP_FILE"`.
-   On any error, stop: do not start `web` or `worker`, repeat this step with `"backups/pre-restore-$UTC.dump"`
-   in place of `"backups/$DUMP_FILE"` (drop, create, restore), and escalate to `<owner>`.
-9. Check the cutoff before any writer starts: `dc exec -T db psql -U flowline -d flowline -c 'select max(created_at) from run'`
-   must be close to the dump time, at most a few minutes past the filename timestamp (writers from step 11 on would move it); much later: wrong dump, go back to step 7.
+7. Prove the chosen dump is complete before touching the live database (a `pg_restore --list` only reads the table of
+   contents, not the data): `dc exec -T db createdb -U flowline flowline_restore`, then
+   `dc exec -T db pg_restore -U flowline -d flowline_restore --no-owner --single-transaction --exit-on-error < "backups/$DUMP_FILE"`.
+   On any error: `dc exec -T db dropdb -U flowline --if-exists flowline_restore`, pick the previous dump and repeat. The
+   live database is still untouched. Also check the step 4 command exited 0 and that `backups/pre-restore-$UTC.dump` is non-empty.
+8. Check the dump's own snapshot time, which every dump holds: `dc exec -T db pg_restore --list < "backups/$DUMP_FILE" | head -n 12`
+   prints `Archive created at <time>`. It must be at most a few minutes after the filename `<utc>`; otherwise the file
+   is not the dump it claims to be: drop `flowline_restore` and go back to step 2.
+9. Swap it in, so no object absent from the dump survives: `dc exec -T db dropdb -U flowline --force --if-exists flowline`, then
+   `dc exec -T db psql -U flowline -d postgres -c 'alter database flowline_restore rename to flowline'`. On any
+   error stop: do not start `web` or `worker`, restore `"backups/pre-restore-$UTC.dump"` the same way (steps 7 and 9) and escalate to `<owner>`.
 10. Confirm `.env.beta` holds the keys and auth secret in use at dump time (compare with `<key-store>`; never print them).
-11. Start the app once the running release is ruled out as the cause: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`.
-    If it caused the damage or the cause is unknown, start the last healthy one (`FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`,
-    after the §2 step 3 migration check) or a fixed image instead. `migrate` re-applies expand-only migrations newer than the dump.
+11. Start the app once the running release is ruled out as the cause: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait web worker`
+    (only these, so `backup` stays stopped until step 16). If it caused the damage or the cause is unknown, start the last healthy
+    one (`FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait web worker`, after the §2 steps 2 and 3 checks) or a fixed image
+    instead. `migrate` re-applies expand-only migrations newer than the dump.
 12. Run the verification queries below (`dc exec -T db psql -U flowline -d flowline`) and compare with known counts.
 13. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
 14. On the operator machine (`BASE_URL`, `REPO_DIR` and the smoke accounts `SMOKE_A_*` / `SMOKE_B_*` set privately),
     run the smoke suite: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
 15. Sign in as `<owner>`, open a workspace, a flow and its run history, and press **Test** on one connection (keys decrypt).
-16. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
+16. Only now start the backup again, so a wrong database is never marked `LAST_OK`: `dc up -d backup`.
+17. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
     secrets or customer data) under `$REPO_DIR/artifacts/phase-4/restore/`.
 
 Verification queries (read-only):
@@ -101,9 +104,8 @@ select count(*) as orphan_members from workspace_member m
   where u.id is null or w.id is null;
 ```
 
-The drill [backup-restore.mjs](../../scripts/release/backup-restore.mjs) proves the same restore on the local staging
-stack (row and id digests, sign-in, decryption, wrong-key refusal); re-run it on the approved target before calling the
-pilot infrastructure verified.
+The drill [backup-restore.mjs](../../scripts/release/backup-restore.mjs) proves a restore on the local staging stack (digests,
+sign-in, decryption, wrong-key refusal); re-run it on the approved target before calling the pilot infrastructure verified.
 
 ## 2. Rollback
 
@@ -123,24 +125,28 @@ Steps:
 
 1. Note the alert, the time and `<current-sha>` in the incident record; post in `<alert-channel>`.
 2. Find `<previous-sha>`, the last release recorded as healthy under `$REPO_DIR/artifacts/phase-4/release/`, and check its
-   image is on the host: `docker image inspect "flowline:$PREV_SHA" --format '{{.Id}}'`.
+   image is the right build: `docker image inspect "flowline:$PREV_SHA" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'`
+   must print exactly `<previous-sha>`; if not (tag reassigned or wrong build loaded), stop.
 3. Check the migrations between the two releases are expand-only:
    `git -C "$REPO_DIR" diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/` (`-C` anchors the path at the repo root, so
    an empty result really means no new migrations), then read each new `.sql` file for `drop`, `rename` or type
    changes. If any is destructive, stop: choose roll forward or restore with the owner.
 4. Take a safety dump: `dc exec -T db pg_dump -U flowline -Fc flowline > "backups/pre-rollback-$UTC.dump"`.
-5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`.
+5. Deploy the previous image: `FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait web worker`. Name only these two (`migrate`
+   follows): `monitor` is not recreated, so it keeps its alert state and can announce RECOVERED in step 8.
 6. Check `"$BASE_URL/api/health"`: revision `<previous-sha>`, same `schemaVersion` (never lower), `"db":"ok"`, `"worker":"ok"`.
 7. Run the smoke suite on the operator machine as in §1 step 14: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
 8. Watch the monitor in `<alert-channel>` for 30 minutes; every alert from step 1 must show RECOVERED.
-9. Record the rollback (both SHAs, times, checks) under `$REPO_DIR/artifacts/phase-4/rollback/`, and open an issue for the
-   fix. The fix ships later as a normal release, never by editing the running stack.
+9. Record the rollback (both SHAs, times, checks) under `$REPO_DIR/artifacts/phase-4/rollback/` and open an issue for the
+   fix, which ships later as a normal release, never by editing the running stack.
 
 ## 3. Alerting
 
 Today the `monitor` service ([monitor.mjs](../../scripts/ops/monitor.mjs)) polls `/api/health` and `/api/ops/status`
-([ops.ts](../../src/server/ops.ts)) every 60 s, alerts to `FLOWLINE_ALERT_WEBHOOK_URL` after two failing polls in a
-row, and announces recovery once. Thresholds below match the built checks unless marked "not built".
+([ops.ts](../../src/server/ops.ts)) every 60 s, alerts to `FLOWLINE_ALERT_WEBHOOK_URL` after two failing polls in a row, and
+announces recovery once. Thresholds below match the built checks unless marked "not built". Before relying on them, confirm
+`FLOWLINE_OPS_TOKEN` is non-empty in `.env.beta`: with a blank token the monitor skips `/api/ops/status`, so every row except
+`/api/health` goes silent with no alert.
 
 | Alert | Source | Suggested threshold | Built? | Owner |
 |---|---|---|---|---|
@@ -155,16 +161,15 @@ row, and announces recovery once. Thresholds below match the built checks unless
 | Off-host backup age | age of the newest off-host copy | fail above 26 h | not built (no off-host copy yet) | `<owner>` |
 | Disk space | `disk`: free space on the data volume | warn below 15%, fail below 5% | yes | `<owner>` |
 | Billing webhooks (sandbox) | `billingWebhooks`: failed events in 24 h | warn at 1 | yes | `<owner>` |
-| Monitor blind | `ops`: `/api/ops/status` unusable | 2 failed polls | yes | `<owner>` |
+| Monitor blind | `ops`: `/api/ops/status` unusable | 2 failed polls; a blank `FLOWLINE_OPS_TOKEN` is not detected | yes, with a token | `<owner>` |
 
 For every alert the owner on duty:
 
 1. Acknowledges it in `<alert-channel>` within the agreed response time (see §4).
-2. Opens the detail: `dc logs --since 30m web worker`, and `/api/ops/status` on the internal network as in the
-   private beta runbook §4. Ask users for the `x-request-id` of failing requests.
-3. Decides: wait for recovery, roll back (§2), restore (§1), or follow the incident checklist in
-   [PRIVACY_AND_SAFETY.md](../implementation/PRIVACY_AND_SAFETY.md) §7.
-4. Posts the outcome and closes the alert once the monitor reports RECOVERED.
+2. Opens the detail: `dc logs --since 30m web worker`, and `/api/ops/status` as in the private beta runbook §4 (ask users
+   for the `x-request-id` of failing requests); decides: wait, roll back (§2), restore (§1), or follow the incident
+   checklist in [PRIVACY_AND_SAFETY.md](../implementation/PRIVACY_AND_SAFETY.md) §7.
+3. Posts the outcome and closes the alert once the monitor reports RECOVERED.
 
 ## 4. Owner decisions needed
 
