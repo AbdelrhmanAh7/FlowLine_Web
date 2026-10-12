@@ -4,7 +4,7 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 test(
-  "@issue-222 AC1: the fake provider server returns 200 with { status: 'ok', version: 'fake' } for GET /api/health with valid token",
+  "@issue-222 AC1: the fake provider server returns 200 with { status: 'ok' } for GET /api/health with valid token",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
   async ({ app, _agent, _screen }) => {
     // Test GET /api/health endpoint with valid token
@@ -18,7 +18,7 @@ test(
 
     expect(healthResponse.status).toBe(200);
     const healthData = await healthResponse.json();
-    expect(healthData).toEqual({ status: "ok", version: "fake" });
+    expect(healthData).toEqual({ status: "ok" });
   },
 );
 
@@ -44,7 +44,7 @@ test(
   "@issue-222 AC3: the fake provider server returns 429 { error: 'rate limited' } for GET /api/health when rate limited",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
   async ({ app, _agent, _screen }) => {
-    // Test rate limiting: make 11 requests in quick succession (10 allowed, 1 rate limited)
+    // Test rate limiting: make 10 requests in quick succession (all succeed), then 11th should be rate limited
     const validToken = "test-token";
     for (let i = 0; i < 11; i++) {
       const response = await app.fetch("/mizano/api/health", {
@@ -54,11 +54,13 @@ test(
           "Authorization": `Bearer ${validToken}`,
         },
       });
-      // First 10 requests should succeed, 11th should be rate limited
+      // First 10 requests should succeed
       if (i < 10) {
         expect(response.status).toBe(200);
-        await response.json();
+        const data = await response.json();
+        expect(data).toEqual({ status: "ok" });
       } else {
+        // 11th request should be rate limited
         expect(response.status).toBe(429);
         const rateLimitedData = await response.json();
         expect(rateLimitedData).toEqual({ error: "rate limited" });

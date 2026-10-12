@@ -1143,11 +1143,19 @@ const mizano: Handler = (ctx, req, res, path, _url, _body, _account) => {
     const key = `mizano-health:${_account}`;
     const now = Date.now();
     const window = ctx.state.counters[key] ?? 0;
-    if (window > 0 && now - window < 60_000) {
+    // If we have no window or it's been more than 60 seconds, reset
+    if (window === 0 || now - window >= 60_000) {
+      ctx.state.counters[key] = now;
+      return json(ctx, req, res, 200, { status: "ok" });
+    }
+    // Within 60 seconds, check if we've exceeded 10 requests
+    const count = (ctx.state.counters[key + ":count"] ?? 0) + 1;
+    if (count > 10) {
+      ctx.state.counters[key + ":count"] = count;
       return json(ctx, req, res, 429, { error: "rate limited" }, { "retry-after": "60" });
     }
-    ctx.state.counters[key] = now;
-    return json(ctx, req, res, 200, { status: "ok", version: "fake" });
+    ctx.state.counters[key + ":count"] = count;
+    return json(ctx, req, res, 200, { status: "ok" });
   }
   return json(ctx, req, res, 404, { message: "Not found" });
 };
