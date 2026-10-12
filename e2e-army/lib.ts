@@ -13,8 +13,10 @@ import { test } from "@e2e-dev/web";
 /** Agent steps need a model (E2E_ARMY_NOAGENT=1 is set by src/lib/e2earmy.ts when none is available): skip them, keep locator and API tests. */
 export const needsModel = () => { test.skip(process.env.E2E_ARMY_NOAGENT === "1", "no model available — agent steps skipped"); };
 
-/** Where the HTTP API lives: Mizano's Nest API has its own port (E2E_ARMY_API, `…/api`); FlowLine and NileQuant serve it from the web origin. */
-export const apiBase = () => (process.env.E2E_ARMY_API ?? process.env.E2E_ARMY_URL ?? "http://127.0.0.1:3100").replace(/\/+$/, "");
+/** Where the HTTP API lives: Mizano's Nest API has its own port (E2E_ARMY_API, `…/api`); FlowLine and NileQuant serve it from the web origin.
+ *  IMPORTANT: must use the same hostname as `e2e.config.ts` so browser cookies (locale, session) are sent to the API too.
+ *  Both default to `localhost:3100` — never mix `localhost` and `127.0.0.1` here. */
+export const apiBase = () => (process.env.E2E_ARMY_API ?? process.env.E2E_ARMY_URL ?? "http://localhost:3100").replace(/\/+$/, "");
 
 const SEED = process.env.E2E_ARMY_SEED ?? "nql-e2e-army-1";
 /** Deterministic test data: same (seed, name) → same value on every run and every machine. Use a distinct `name` per record inside one run. */
