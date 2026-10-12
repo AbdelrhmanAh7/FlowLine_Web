@@ -33,6 +33,16 @@ describe("owner-tracking issues are linked with 'Refs #N', never 'Closes #N'", (
     expect(text).toMatch(/Refs #162/);
   });
 
+  // The PR #185 review asked to "check that no commit message contains Closes/Fixes/Resolves #162".
+  // The repo cannot see the live PR body from a unit test, so the doc must carry the repeatable
+  // verification (the API fields to read and the commit-subject scan) and this pins it.
+  it("OWNER_ACTIONS.md records the repeatable verification of the live PR body", () => {
+    const text = read("docs/implementation/OWNER_ACTIONS.md");
+    expect(text).toMatch(/verified \d{4}-\d{2}-\d{2}/);
+    expect(text).toContain("gh pr view 185 --json body,closingIssuesReferences");
+    expect(text).toContain("git log --format=%s origin/main..HEAD");
+  });
+
   // Root cause of the PR #185 loop: any wording that attaches a closing keyword
   // (Closes/Fixes/Resolves) to #162 lets GitHub close the founder's tracking issue on
   // merge. The repo must never tell an author to do that, so guard every file that
