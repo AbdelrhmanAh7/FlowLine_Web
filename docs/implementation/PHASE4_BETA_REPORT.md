@@ -1,8 +1,21 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Flows list publishedVersion only changes on publish (issue #204) — 2026-10-13
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 
-Fix for regression #117: run snapshots no longer consume publication numbers. The `flow_version.version` column is now nullable; runs store NULL for "run" snapshots and publications use the next number from the shared sequence. Existing rows are backfilled to NULL in migration 0025. History orders by `createdAt` (not version) and the run inspector shows "run snapshot" instead of "v1 (the run's original revision)" for unnumbered snapshots. The flow list and dashboard now correctly report publishedVersion 1 after two runs and a publish. Verified by integration test `runs.test.ts` and e2e-army test `117-flows-list-dashboard.e2e.ts`. This unblocks the stable gate for feat:fl-flows-list.
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
+`version = NULL` (migration 0025 drops `NOT NULL`); only `save`, `overwrite` and `publish` snapshots are numbered.
+Migration 0025 also adds `flow_version.seq` (bigserial): the history panel orders by it, because `created_at` is the
+transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
+label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en); the API
+returns `version: null` for such runs.
+Not covered here: run snapshots written before 0025 keep their numbers (the 0002 immutability trigger blocks an
+`UPDATE` in this migration); the reversible backfill is #205 (PR #211, migration 0026), stacked on this PR.
+Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
+reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
+builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
+`e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
+
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05

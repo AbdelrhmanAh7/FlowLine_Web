@@ -413,7 +413,7 @@ function StepPanel({
             </StatusBadge>
           </h2>
           <p className="data mt-1 text-sm text-muted">
-            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {t("common.version", { version: run.version ?? "—" })} · {step.nodeType} · {step.nodeId}
+            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {run.version === null ? t("common.runSnapshot") : t("common.version", { version: run.version })} · {step.nodeType} · {step.nodeId}
             {step.attempts ? ` · ${t.plural("runs.panel.attempts", step.attempts)}` : ""}
           </p>
         </div>
@@ -653,7 +653,7 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
         <legend className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runs.rerun.revision")}</legend>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "original"} onChange={() => setRevision("original")} />
-          {t("runs.rerun.original", { version: run.version ?? "" })}
+          {run.version === null ? t("runs.rerun.originalSnapshot") : t("runs.rerun.original", { version: run.version })}
         </label>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "latest"} onChange={() => setRevision("latest")} />
