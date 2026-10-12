@@ -14,7 +14,10 @@ export function isFriday(isoDate: string): boolean {
 const toWestern = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 const CONFIRM = /confirm|book|schedul|available|reserved|تأكيد|مؤكد|حجز|متاح|موعد/i;
 // A sentence that says the day is closed / not available is the correct answer, not a confirmation.
+// This negation only applies to general Friday statements; it does NOT override a specific date confirmation.
 const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
+// Patterns where a confirmation word is directly negated (e.g. "not available", "not confirmed", "cannot book").
+const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)\b/i;
 const FRIDAY = /friday|الجمعة/i;
 
 /**
@@ -22,7 +25,8 @@ const FRIDAY = /friday|الجمعة/i;
  * does not present the requested date as bookable. It is judged sentence by sentence, so the generic closing
  * "Thank you, we'll confirm the details" (no mention of the day) is fine, and "We are closed on Fridays." passes. A
  * sentence fails when it repeats the requested date or names Friday together with a confirming word, unless that
- * same sentence says the day is closed or not available.
+ * same sentence says the day is closed or not available. A specific date confirmation (e.g. "2026-10-09 is confirmed")
+ * always fails, even if the same sentence mentions "closed" in a general sense.
  */
 export function scoreClosedDay(text: string, requestedDate: string): boolean {
   if (!isFriday(requestedDate)) return false;
@@ -31,8 +35,20 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   const [y, m, d] = requestedDate.split("-");
   const dateForms = new RegExp(`${requestedDate}|\\b${d}[/.-]${m}[/.-]${y}\\b`);
   return !t.split(/[!?؟\n]+|\.(?=\s|$)/).some((sentence) => {
-    if (NEGATION.test(sentence)) return false;
-    return dateForms.test(sentence) || (FRIDAY.test(sentence) && CONFIRM.test(sentence));
+    const hasDateForm = dateForms.test(sentence);
+    const hasFridayConfirm = FRIDAY.test(sentence) && CONFIRM.test(sentence);
+    // A specific date confirmation always fails, even with a general "closed" word in the same sentence,
+    // unless the confirmation is explicitly negated (e.g. "2026-10-09 is not available").
+    if (hasDateForm && CONFIRM.test(sentence)) {
+      if (NEGATED_CONFIRM.test(sentence)) return false;
+      return true;
+    }
+    // For Friday+confirm without a specific date, allow negation to override (e.g. "We are closed on Fridays.")
+    if (hasFridayConfirm) {
+      if (NEGATION.test(sentence)) return false;
+      return true;
+    }
+    return false;
   });
 }
 
