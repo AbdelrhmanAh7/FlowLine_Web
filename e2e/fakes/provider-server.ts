@@ -1139,6 +1139,14 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
 
 const mizano: Handler = (ctx, req, res, path, _url, _body, _account) => {
   if (req.method === "GET" && path === "/api/health") {
+    // Rate limiting: 10 requests per 60 seconds per account
+    const key = `mizano-health:${_account}`;
+    const now = Date.now();
+    const window = ctx.state.counters[key] ?? 0;
+    if (window > 0 && now - window < 60_000) {
+      return json(ctx, req, res, 429, { error: "rate limited" }, { "retry-after": "60" });
+    }
+    ctx.state.counters[key] = now;
     return json(ctx, req, res, 200, { status: "ok", version: "fake" });
   }
   return json(ctx, req, res, 404, { message: "Not found" });
