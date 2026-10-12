@@ -1,3 +1,12 @@
+/**
+ * Unit tests for `src/ai/hub/routing.ts` (issue #175).
+ *
+ * The issue brief names `routeToProvider` / `routeToHub`, which do not exist in this module. The
+ * real exports are tested instead: the pure helpers (deferFor, isRouteRef, routeSnapshot,
+ * privacyAllows, capabilityProblem, mayFallback) and the resolveRoute error paths.
+ * Acceptance (repo tooling — pnpm + Vitest):
+ *   pnpm exec tsc --noEmit && pnpm exec vitest list --project unit | grep routing.spec
+ */
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db";
 import type { AiPolicy } from "@/db/schema";
