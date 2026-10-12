@@ -5,7 +5,8 @@
 // What pins the lock order is elsewhere: tests/unit/email-token-lock-order.test.ts records the statement order against
 // a mocked database (no PostgreSQL); tests/integration/retained-file-locking.test.ts runs two co-members' deletions on two
 // real connections (serialized by the retained-file accounting lock, no 40P01). The audit insert vs SSO sign-in race is
-// the #108 test (tests/integration/account-delete-sso-lock-order.test.ts), not part of this change.
+// the #108 test (tests/integration/account-delete-sso-lock-order.test.ts), not part of this change. The deadlock between
+// audit insert and workspace lock is the #108 test, not this change.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
