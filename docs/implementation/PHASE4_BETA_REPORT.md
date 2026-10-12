@@ -1,8 +1,8 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## GitHub security settings handoff — 2026-10-12 (issue #160)
+## GitHub security settings (issue #160) — 2026-10-13
 
-**Blocked for engineers; deferred post-pilot by the owner.** Secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer remain unverified. No GitHub settings or application behaviour changed. Read-only issue/comment verification confirms the scope cut and open status; it does not verify enabled settings. [Owner handoff](OWNER_ACTIONS.md#issue-160-github-security-settings--post-pilot-owner-handoff) records the exact Settings paths, owner steps and evidence format. Keep #160 open; no beta or production readiness verdict changes.
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
 
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 

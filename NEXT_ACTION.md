@@ -1,8 +1,8 @@
 # Next action — 2026-10-03
 
-## Issue #160 handoff — 2026-10-12
+## Issue #160 — await the owner after the pilot (2026-10-13)
 
-Implementation stopped at the brief's owner-only security-settings boundary. All acceptance criteria remain unverified and no settings changed. The owner deferred #160 post-pilot; resume only after reactivation by re-adding `pilot`, then the owner enables and verifies all three criteria in [AI_QUESTIONS.md](AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required). The harness must use `Refs #160` for this documentation handoff and keep the issue open. No application flow changes or e2e-army test apply; no push, PR creation or merge is authorized for this implementer.
+Not done. The owner turns on the three GitHub security settings and records the evidence by following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers have nothing to do: only the repository owner can change these settings, and the secrets-settings hard rule keeps them owner-only. #160 stays open (PR #213 links it as `Refs #160`) and comes back when the owner re-adds the `pilot` label.
 
 ## Issue #141 handoff — 2026-10-12
 
