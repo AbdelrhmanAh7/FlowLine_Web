@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { createFlow, listFlows, saveFlow, softDeleteFlow } from "@/server/flows";
+import { publishFlow } from "@/server/publish";
 import { enqueueRun, getRunDetail, listRuns, rerunFromStep } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, recoverStaleRuns, processRun } from "../../worker/runner";
@@ -305,6 +306,20 @@ describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
     expect(untouched.runCount).toBe(0);
     expect(untouched.successRate).toBeNull();
     expect(untouched.lastRunStatus).toBeNull();
+  });
+});
+
+describe("runs do not use up publication numbers (regression: #204, #117)", () => {
+  it("the first publication after two runs is v1 and the flow list reports it", async () => {
+    const { user, ws, flow } = await setup();
+    const r1 = await enqueueRun(user, flow.id);
+    const r2 = await enqueueRun(user, flow.id);
+    await claimAndProcess(r1.id);
+    await claimAndProcess(r2.id);
+
+    const published = await publishFlow(user, flow.id);
+    expect(published.version).toBe(1);
+    expect((await listFlows(ws.id)).find((r) => r.id === flow.id)!.publishedVersion).toBe(1);
   });
 });
 
