@@ -72,9 +72,9 @@ function getTranslations(_locale: "en" | "ar") {
     "platformAdmin.copyEditor.loadError": { en: "Could not load the copy. Refresh and try again.", ar: "تعذّر تحميل النصوص. حاول التحديث." },
     "platformAdmin.copyEditor.saveError": { en: "Could not save the draft. Check the text and refresh if it changed elsewhere.", ar: "تعذّر حفظ المسودة. راجع النصوص وحدّث الصفحة إذا تغيّرت." },
     "platformAdmin.copyEditor.publishError": { en: "Could not publish. Refresh and review the draft before trying again.", ar: "تعذّر النشر. حدّث الصفحة وراجع المسودة قبل المحاولة." },
-    "errors.NETWORK": { en: "Could not reach Flowline — check your connection and try again.", ar: "تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا." },
+    "errors.NETWORK": { en: "Can't reach Flowline — check your connection and try again.", ar: "تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا." },
     "errors.INTERNAL": { en: "Something went wrong on our side", ar: "تعذّر إكمال الطلب. راجع الحالة الحالية قبل المحاولة مجددًا." },
-    "errors.REVISION_CONFLICT": { en: "This changed since you loaded it. Refresh and try again.", ar: "تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مجددًا." },
+    "errors.REVISION_CONFLICT": { en: "This changed since you loaded it. Reload and try again.", ar: "تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مجددًا." },
     "errors.STEP_UP_REQUIRED": { en: "Confirm with a code from your authenticator app to make changes.", ar: "أكّد برمز من تطبيق المصادقة لإجراء التغييرات." },
   } as const;
 }
@@ -159,7 +159,9 @@ describe("CopyEditor error handling (#181)", () => {
       expect(screen.getByRole("button", { name: /إعادة المحاولة/i })).toBeInTheDocument();
       // Verify Arabic locale by checking the error message is in Arabic
       const alert = screen.getByRole("alert");
-      expect(alert.textContent).toMatch(/[\u0600-\u06FF]/); // Contains Arabic characters
+      expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
+      expect(alert.textContent).not.toContain("(server text)");
+      expect(alert.textContent).not.toContain("(client text)"); // Contains Arabic characters
     });
 
     it("shows stepUp message when me query fails (state query succeeds)", async () => {
@@ -210,7 +212,7 @@ describe("CopyEditor error handling (#181)", () => {
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
       setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "This changed since you loaded it. Refresh and try again.")),
+        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
         () => Promise.resolve(createMockData("en").stateData), // refetch after error
       ]);
 
@@ -226,7 +228,7 @@ describe("CopyEditor error handling (#181)", () => {
       expect(saveButton).not.toBeDisabled();
       await user.click(saveButton);
 
-      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Refresh and try again."));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
     });
 
@@ -252,7 +254,7 @@ describe("CopyEditor error handling (#181)", () => {
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
       setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "This changed since you loaded it. Refresh and try again.")),
+        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
         () => Promise.resolve(createMockData("en").stateData), // refetch after error
       ]);
 
@@ -264,7 +266,7 @@ describe("CopyEditor error handling (#181)", () => {
       expect(applyButton).not.toBeDisabled();
       await user.click(applyButton);
 
-      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Refresh and try again."));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
     });
 
@@ -285,7 +287,7 @@ describe("CopyEditor error handling (#181)", () => {
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
       setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مجددًا.")),
+        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
         () => Promise.resolve(createMockData("ar").stateData),
       ]);
 
@@ -305,6 +307,8 @@ describe("CopyEditor error handling (#181)", () => {
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
+      expect(alert.textContent).not.toContain("(server text)");
+      expect(alert.textContent).not.toContain("(client text)");
     });
   });
 
@@ -421,6 +425,8 @@ describe("CopyEditor error handling (#181)", () => {
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
+      expect(alert.textContent).not.toContain("(server text)");
+      expect(alert.textContent).not.toContain("(client text)");
     });
   });
 
@@ -499,6 +505,8 @@ describe("CopyEditor error handling (#181)", () => {
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
+      expect(alert.textContent).not.toContain("(server text)");
+      expect(alert.textContent).not.toContain("(client text)");
     });
   });
 
@@ -520,7 +528,7 @@ describe("CopyEditor error handling (#181)", () => {
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
       setupApiMocks([
-        () => Promise.reject(new ApiError(0, "NETWORK", "Could not reach Flowline — check your connection and try again.", true)),
+        () => Promise.reject(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true)),
         () => Promise.resolve(createMockData("en").stateData),
       ]);
 
@@ -536,7 +544,7 @@ describe("CopyEditor error handling (#181)", () => {
       expect(saveButton).not.toBeDisabled();
       await user.click(saveButton);
 
-      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not reach Flowline — check your connection and try again."));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Can't reach Flowline — check your connection and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
     });
 
@@ -557,7 +565,7 @@ describe("CopyEditor error handling (#181)", () => {
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
       setupApiMocks([
-        () => Promise.reject(new ApiError(0, "NETWORK", "تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا.", true)),
+        () => Promise.reject(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true)),
         () => Promise.resolve(createMockData("ar").stateData),
       ]);
 
@@ -577,6 +585,8 @@ describe("CopyEditor error handling (#181)", () => {
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
+      expect(alert.textContent).not.toContain("(server text)");
+      expect(alert.textContent).not.toContain("(client text)");
     });
   });
 });

@@ -104,7 +104,7 @@ export function CopyEditor() {
       }
       if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
         await state.refetch();
-        setError(cause.message);
+        setError(t(cause.code === "NETWORK" ? "errors.NETWORK" : "errors.REVISION_CONFLICT"));
         return;
       }
     }
