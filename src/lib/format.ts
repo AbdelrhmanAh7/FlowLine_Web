@@ -35,106 +35,58 @@ export function initials(name: string) {
 }
 
 /**
- * Convert a number or string to a decimal string with a fixed scale, never using float math for rounding.
- * Used by every Mizano step to ensure money values are always formatted consistently.
+ * Convert a number or string to a fixed-scale decimal string for Mizano money fields. Pure string/digit
+ * manipulation: no float arithmetic and no rounding. Arabic-Indic digits (٠-٩) are normalised to 0-9.
  *
- * @param value - Number or string to convert. null/undefined are treated as 0.
- * @param scale - Number of decimal places (default: 2).
- * @returns Decimal string with exactly `scale` decimal places.
- * @throws If value is NaN, Infinity, -Infinity, or has more decimals than the scale.
+ * Numbers are read through their shortest round-trip text, so `0.1 + 0.2` (0.30000000000000004) has more
+ * decimals than a scale of 2 and is rejected; callers must pass exact values. Trailing zeros past the
+ * scale ("12.500") carry no information and are accepted.
+ *
+ * @param value - Finite number or numeric string (plain or exponent notation).
+ * @param scale - Decimal places in the result (default 2, integer 0-20).
+ * @throws If value is not a number/string, is NaN/Infinity, is not a plain decimal, or has more decimals than the scale.
  */
-export function toDecimalString(value: number | string | null | undefined, scale: number = 2): string {
-  // Handle null/undefined as 0
-  if (value == null) {
-    return `0.${"0".repeat(scale)}`;
+export function toDecimalString(value: number | string, scale: number = 2): string {
+  if (!Number.isInteger(scale) || scale < 0 || scale > 20) {
+    throw new Error("toDecimalString: scale must be an integer between 0 and 20");
   }
-
-  // Convert to string and normalize Arabic-Indic digits to Western digits
-  let strValue = String(value);
-
-  // Normalize Arabic-Indic digits (٠-٩) to Western digits (0-9)
-  strValue = strValue.replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632));
-
-  // Reject NaN and Infinity
-  if (strValue === "NaN" || strValue === "Infinity" || strValue === "-Infinity") {
+  if (typeof value !== "number" && typeof value !== "string") {
+    throw new Error("toDecimalString: value must be a number or a string");
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) {
     throw new Error("toDecimalString: value cannot be NaN or Infinity");
   }
 
-  // Handle scientific notation (e.g., "1e+21") by parsing manually to preserve precision
-  if (strValue.includes("e") || strValue.includes("E")) {
-    const match = strValue.match(/^([+-]?[\d.]+)[eE]([+-]?\d+)$/);
-    if (!match) {
-      throw new Error("toDecimalString: invalid scientific notation");
-    }
-
-    const mantissa = match[1];
-    const exponent = parseInt(match[2], 10);
-
-    // Parse mantissa into integer and fractional parts
-    const mantissaParts = mantissa.split(".");
-    let integerPart = mantissaParts[0] || "0";
-    let fractionalPart = mantissaParts[1] || "";
-
-    // Handle negative sign
-    const isNegative = integerPart.startsWith("-");
-    if (isNegative) {
-      integerPart = integerPart.slice(1);
-    }
-
-    // Combine all digits and determine total digit count
-    const allDigits = integerPart + fractionalPart;
-    const totalDigits = allDigits.length;
-
-    // Adjust decimal position based on exponent
-    // The decimal point starts after the first digit of integerPart
-    const decimalPos = integerPart.length;
-
-    // Calculate the new decimal position after applying the exponent
-    const newDecimalPos = decimalPos + exponent;
-
-    // Reconstruct the number with the new decimal position
-    if (newDecimalPos <= 0) {
-      // Decimal point is before the first digit (e.g., 0.00123 with scale 2)
-      const zerosNeeded = -newDecimalPos + 1; // +1 for the leading zero
-      const leadingZeros = "0".repeat(Math.max(0, zerosNeeded - 1));
-      integerPart = "0";
-      fractionalPart = leadingZeros + allDigits;
-    } else if (newDecimalPos >= totalDigits) {
-      // Decimal point is after the last digit (e.g., 123.45 with scale 2)
-      // When the decimal point is after all digits, the number is an integer
-      // The fractional part is all zeros
-      fractionalPart = "0".repeat(scale);
-    } else {
-      // Decimal point is in the middle (e.g., 12.345 with scale 2)
-      const digitsBeforeDecimal = allDigits.slice(0, newDecimalPos);
-      const digitsAfterDecimal = allDigits.slice(newDecimalPos);
-      integerPart = digitsBeforeDecimal;
-      fractionalPart = digitsAfterDecimal;
-    }
-
-    // Reconstruct the number
-    if (isNegative) {
-      strValue = `-${integerPart}.${fractionalPart}`;
-    } else {
-      strValue = `${integerPart}.${fractionalPart}`;
-    }
-  }
-
-  // Parse the string, keeping it as a string to avoid float arithmetic
-  // We need to split into integer and fractional parts
-  const parts = strValue.split(".");
-  const integerPart = parts[0] || "0";
-  const fractionalPart = parts[1] || "";
-
-  // Reject if fractional part is empty but there's a decimal point (e.g., "12.")
-  if (parts.length > 1 && parts[1] === "" && parts.length === 2) {
+  const text = String(value)
+    .trim()
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660));
+  const m = /^([+-]?)(\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!m || (m[2] === "" && m[3] === undefined)) {
     throw new Error("toDecimalString: invalid decimal value");
   }
+  const exponent = m[4] === undefined ? 0 : Number(m[4]);
+  if (Math.abs(exponent) > 1000) {
+    throw new Error("toDecimalString: exponent out of range");
+  }
 
-  // Pad fractional part to scale (truncate if longer than scale)
-  const truncatedFractional = fractionalPart.slice(0, scale);
-  const paddedFractional = truncatedFractional + "0".repeat(scale - truncatedFractional.length);
+  // Shift the decimal point by the exponent on the digit string.
+  let digits = m[2] + (m[3] ?? "");
+  let point = m[2].length + exponent;
+  if (point < 0) {
+    digits = "0".repeat(-point) + digits;
+    point = 0;
+  } else if (point > digits.length) {
+    digits += "0".repeat(point - digits.length);
+  }
+  const integer = digits.slice(0, point).replace(/^0+(?=\d)/, "") || "0";
+  let fraction = digits.slice(point);
+  while (fraction.length > scale && fraction.endsWith("0")) fraction = fraction.slice(0, -1);
+  if (fraction.length > scale) {
+    throw new Error(`toDecimalString: value has more than ${scale} decimal places`);
+  }
+  fraction = fraction.padEnd(scale, "0");
 
-  // Reconstruct the decimal string
-  return `${integerPart}.${paddedFractional}`;
+  const isZero = /^0*$/.test(integer + fraction);
+  const sign = m[1] === "-" && !isZero ? "-" : "";
+  return scale === 0 ? `${sign}${integer}` : `${sign}${integer}.${fraction}`;
 }
