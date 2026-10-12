@@ -4,13 +4,16 @@
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
 expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
-row with the original value before and after reprocessing. Eight focused scoring tests pass on head `9621678`
-(including one that runs the real compiled customer-follow-up pack). Earlier `20261001-d224cfb` evidence is unchanged.
+row with the original value before and after reprocessing. **Explicit assertions** in `field.spec.ts` now verify
+all review-gate checks (recipient, text-only `email_reply`, no payment action, quoted policy, no promise,
+consequential) and all persisted-row checks (`sameRowCount`, `sameRows`, `exactlyOneFollowUp`). Eight focused
+scoring tests pass on head `981b8b9` (including one that runs the real compiled customer-follow-up pack).
+Earlier `20261001-d224cfb` evidence is unchanged.
 The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
 3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
 This internal harness change does not change product behavior or beta readiness.
 
-Local verification on `9621678`: `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+Local verification on `981b8b9`: `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
 test). Temporarily disabling each original fix in `tests/helpers/field-scoring.ts` (restored from git after each run):
 `:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` disabled): 1 failed / 7 passed;
 `:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);

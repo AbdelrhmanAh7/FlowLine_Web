@@ -1,14 +1,14 @@
 # Evidence — Issue #141: Field validation harness scoring gaps
 
-Verified on head `9621678` (code; this file and the Phase 4 report are the docs commit after it).
+Verified on head `981b8b9` (code; this file and the Phase 4 report are the docs commit after it).
 
 ## Requirements and Verification
 
 | Req ID | Description | Verification Method | Result | Commit |
 |--------|-------------|---------------------|--------|--------|
 | #141:117 | Do not score approved policy text as a cancellation promise | Unit test `scoreNoPromise` in `tests/unit/flowline-field-scoring.test.ts` strips approved information and EN/AR disclaimers before matching | 8/8 pass; disabling the fix (legacy matching) yields 1 failed / 7 passed | 5048e83, 2440c13 |
-| #141:138 | Exercise the approval side of the review gate | Unit tests `scoreReviewGate`, `scoreApprovedOutboxEntry` and `scoreApprovedAgainstPacket` verify empty outbox before review, exactly one entry after approval, recipient match, text-only payload, no payment action, and the packet's VP-05 quoted policy, no-promise and consequential expectations | 8/8 pass; disabling `scoreReviewGate` yields 1 failed / 7 passed; the packet-expectation test (`9621678`) failed before the helper existed | 5048e83, 2440c13, 9621678 |
-| #141:143 | Compare persisted records after the duplicate trial | Unit test `comparePersistedRows` checks `sameRowCount`, `sameRows`, `exactlyOneFollowUp`; harness in `field.spec.ts` reads `kv_entry` before and after the second VP-01 run | 8/8 pass; disabling `comparePersistedRows` yields 3 failed / 5 passed (duplicate-scoring and real-pack tests depend on it too) | 5048e83, 2440c13 |
+| #141:138 | Exercise the approval side of the review gate | Unit tests `scoreReviewGate`, `scoreApprovedOutboxEntry` and `scoreApprovedAgainstPacket` verify empty outbox before review, exactly one entry after approval, recipient match, text-only payload, no payment action, and the packet's VP-05 quoted policy, no-promise and consequential expectations; **field.spec.ts now asserts all review-gate checks pass** | 8/8 pass; disabling `scoreReviewGate` yields 1 failed / 7 passed; the packet-expectation test (`9621678`) failed before the helper existed | 5048e83, 2440c13, 9621678, 981b8b9 |
+| #141:143 | Compare persisted records after the duplicate trial | Unit test `comparePersistedRows` checks `sameRowCount`, `sameRows`, `exactlyOneFollowUp`; harness in `field.spec.ts` reads `kv_entry` before and after the second VP-01 run **and explicitly asserts all three persisted-row checks** | 8/8 pass; disabling `comparePersistedRows` yields 3 failed / 5 passed (duplicate-scoring and real-pack tests depend on it too) | 5048e83, 2440c13, 981b8b9 |
 | #141:160 | Verify the packet digest before recording it | Unit test `verifyPacketDigest` validates SHA256SUMS against files and records the `packet.json` digest; harness in `field.spec.ts` runs it before any scoring | 8/8 pass; disabling the check yields 1 failed / 7 passed | 5048e83, 2440c13 |
 
 ## Additional Regression Tests
@@ -34,9 +34,10 @@ $ pnpm test flowline-field --maxWorkers=2
 
 ## Mutation Verification
 
-Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run (results above, head `9621678`). Every mutation makes at least one assertion fail, so the tests depend on the fixes.
+Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run (results above, head `981b8b9`). Every mutation makes at least one assertion fail, so the tests depend on the fixes.
 
 ## Notes
 
 - No e2e-army test added: this is an internal scoring harness change with no user-facing flow modification.
 - Live Playwright field spec (`field.spec.ts`) was not run: it needs a test stack (Docker, `.env.test`, `DATABASE_URL`). CI gate will execute the built branch.
+- **New explicit assertions in `field.spec.ts`**: review gate checks (line 163) and persisted-row checks (lines 182-184) now have `expect` assertions that fail the test if any check fails, directly addressing the review threads on PR #193.
