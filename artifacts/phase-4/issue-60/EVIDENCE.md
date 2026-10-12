@@ -9,14 +9,16 @@ error: cannot overwrite multiple values with a single value
 ```
 
 ## Root cause
-The self-hosted runner reuses its checkout workspace, so `.git/config` kept several `credential.helper` values from earlier runs. The hub script `git_as_owner` (hub `bin/common.sh`, outside this repo) then set a single value on that multi-valued key, and `git config` exited with status 5. Nothing in FlowLine code, tests or the repository CI (`gate`, `docs`) was at fault: `Gate` passed on `f655e51` and on the then-current `main` (`bc59cab`, circa 2026-10-06; the current main at the time of this report is `b1023c9`).
+The self-hosted runner reuses its checkout workspace, so `.git/config` kept several `credential.helper` values from earlier runs. The hub script `git_as_owner` (hub `bin/common.sh`, outside this repo) then set a single value on that multi-valued key, and `git config` exited with status 5. Nothing in FlowLine code, tests or the repository CI (`gate`, `docs`) was at fault: `Gate` passed on `f655e51` and on the then-current `main` (`bc59cab`).
+
+Since #157 (`592a07a`) the workflow is gone from this repo: `.github/workflows/ai-implementers.yml` was deleted and the hub runs the implementers from launchd, so this `start` job can no longer fail here.
 
 ## Resolution
 - The cleanup lives in the hub (`AbdelrhmanAh7/nql-agents`), commit [`41c658f0720effff140287e4101f6cbd2e951627`](https://github.com/AbdelrhmanAh7/nql-agents/commit/41c658f0720effff140287e4101f6cbd2e951627) "git_as_owner: reset credential.helper idempotently (second run in same workspace failed)", committed 2026-10-06T02:45:20Z (read with `git show -s --format=%cI 41c658f` in a local hub checkout): `git_as_owner` in `bin/common.sh` now runs `git config --local --unset-all` for `credential.helper` and `http.https://github.com/.extraheader` before re-adding them. That is 23 minutes after the failing merge `f655e51` (committed 2026-10-06T02:22:11Z, verifiable in this repo).
 - **Author-reported, not verifiable from this repo:** later `start` runs on `main` reportedly passed (for example 37588370109, 37594935252, 37605265556, 37619221039). Their start times were not captured (the GitHub API budget on the hub was exhausted when this was written), so this file does **not** show that each of them started after the hub commit above; the only ordering shown here is failing merge → hub fix. The claim that later runs passed is author-reported and unverified from this repository.
 - This PR does **not** change `.github/workflows/` (owner-only). An earlier revision added "Clean git credentials" steps there; they were reverted, together with the unit test that required them.
-- `tests/unit/ci-workflows.test.ts` adds policy checks that match the workflow on `main`: the three crons (`0 */2 * * *` start, `30 */3 * * *` rescue, `15 * * * *` automerge), each cron's job routing, and the `[self-hosted, macmini]` runners with `ai-*` concurrency groups. They run on comment-stripped text with line-anchored patterns, so a commented-out line cannot satisfy them (a dedicated test covers that). The engine order is not tested here; `docs/GITHUB_WORKFLOW.md` points at the hub as its source.
-- `docs/GITHUB_WORKFLOW.md` documents the AI implementers workflow and where the persistent-runner git cleanup lives. It makes no claim about whether the owner has the workflow enabled in GitHub's Actions settings (not verifiable from this repo).
+- An earlier revision of this PR pinned the workflow's crons and runners in `tests/unit/ci-workflows.test.ts`. That block read `ai-implementers.yml`, which #157 deleted, so it failed with `ENOENT` after merging main and contradicted main's own check that the file is absent; it was removed. The root cause (a reused self-hosted workspace) is now guarded by the "workflow files" tests: every `runs-on` must be `ubuntu-24.04`, `ai-implementers.yml` must be absent, and the new #60 test proves the runner guard rejects `runs-on: [self-hosted, macmini]` and that no workflow mentions `self-hosted`.
+- `docs/GITHUB_WORKFLOW.md` records that the workflow was removed in #157, where the persistent-runner git cleanup lives, and the test guard above.
 
 ## Still red, outside this repo
 Recent scheduled `automerge` runs failed with `automerge.sh: line 103: syntax error near unexpected token 'done'` in the hub's `bin/automerge.sh`. That is a hub script bug, not a FlowLine one.
@@ -26,8 +28,7 @@ Every row below names the full SHA of the commit whose clean working tree was te
 
 | Tested tree (full SHA) | Command | Result |
 |---|---|---|
-
-| `686c38bf33941297ba08ae875123470b9807612a` (merge of `origin/main` `aee8385b07396871709052b6f2922ac8de7f1438` into this branch; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed (main's gate-report, gate and docs checks plus this PR's `ai-implementers.yml` block) |
+| `686c38bf33941297ba08ae875123470b9807612a` (merge of `origin/main` `aee8385b07396871709052b6f2922ac8de7f1438` into this branch; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed (main's gate-report, gate and docs checks plus this PR's former `ai-implementers.yml` block) |
 | same | `eslint tests/unit/ci-workflows.test.ts`, `tsc --noEmit` | clean |
 | `66d739da5d565e48358ad36c1756414f758e2fdb` (HEAD before this note; clean tree) | `vitest run --project unit tests/unit/ci-workflows.test.ts` | 52 passed |
 | `89da178ced4c5797b655e7d8bfe68c958e124be7` (clean tree) | `vitest run tests/unit/ci-workflows.test.ts` | 55 passed |

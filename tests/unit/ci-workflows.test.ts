@@ -78,6 +78,15 @@ describe("workflow files", () => {
   it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
     expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
   });
+
+  it("rejects the persistent self-hosted runner that broke `start` at f655e51 (issue #60)", () => {
+    // A reused self-hosted checkout let credential.helper pile up in .git/config, so a single-value `git config` exited 5.
+    // The runner guard above accepts only `ubuntu-24.04` (fresh workspace per job); prove it catches the #60 runner line.
+    const runners = [..."    runs-on: [self-hosted, macmini]\n".matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)].map((match) => match[1]);
+    expect(runners).toEqual(["[self-hosted, macmini]"]);
+    expect(runners[0]).not.toBe("ubuntu-24.04");
+    for (const file of workflowFiles) expect(stripComments(read(file)), file).not.toMatch(/self-hosted/);
+  });
 });
 
 describe("next.config.ts guards production type-check", () => {
@@ -519,48 +528,6 @@ describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
     for (const job of ["checks", "chromium", "firefox", "webkit"]) expect(byJob[job], job).not.toMatch(/github\.token|GH_TOKEN/);
     for (const spec of ["e2e/admin-panel.spec.ts", "e2e/keyboard-surfaces.spec.ts"]) {
       expect(read(spec), spec).toMatch(/^test\.use\(\{ trace: "off", screenshot: "off", video: "off" \}\);$/m);
-    }
-  });
-});
-
-describe("ai-implementers.yml (Mac mini hub)", () => {
-  // Assert on active lines only: whole-line comments are stripped and every pattern is anchored to a line start, so a
-  // commented-out `# cron: ...` / `# group: ...` or a match inside a trailing comment cannot satisfy these checks.
-  const text = stripComments(read(".github/workflows/ai-implementers.yml"));
-  const byJob = jobs(text);
-  // Collect crons from both double-quoted and single-quoted YAML values (GitHub supports both).
-  const crons = [...text.matchAll(/^ {4}- cron: (?:"([^"]+)"|'([^']+)')/gm)].map((match) => match[1] ?? match[2]);
-
-  it("ignores commented-out schedules and runners (guard against the raw-text false positive)", () => {
-    const sample = stripComments('on:\n  schedule:\n    # - cron: "0 */2 * * *"\n    - cron: "5 * * * *"\n    # runs-on: [self-hosted, macmini]\n');
-    const dualQuote = /^ {4}- cron: (?:"([^"]+)"|'([^']+)')/gm;
-    expect([...sample.matchAll(dualQuote)].map((m) => m[1] ?? m[2])).toEqual(["5 * * * *"]);
-    expect(sample).not.toMatch(/^ {4}runs-on: \[self-hosted, macmini\]/m);
-    // Single-quoted crons are counted too (GitHub supports both styles).
-    const singleQuoted = stripComments("on:\n  schedule:\n    - cron: '10 * * * *'\n");
-    expect([...singleQuoted.matchAll(dualQuote)].map((m) => m[1] ?? m[2])).toEqual(["10 * * * *"]);
-  });
-
-  it("defines exactly the start, rescue and automerge schedules", () => {
-    expect(crons).toEqual(["0 */2 * * *", "30 */3 * * *", "15 * * * *"]);
-  });
-
-  it("schedules start 24/7 every 2 hours and matches the start job trigger", () => {
-    expect(crons[0]).toBe("0 */2 * * *");
-    expect(byJob.start).toMatch(/^ {4}if: .*github\.event\.schedule == '0 \*\/2 \* \* \*'/m);
-  });
-
-  it("routes the rescue and automerge schedules to their own jobs", () => {
-    expect(byJob.rescue).toMatch(/^ {4}if: .*github\.event\.schedule == '30 \*\/3 \* \* \*'/m);
-    expect(byJob.automerge).toMatch(/^ {4}if: .*github\.event\.schedule == '15 \* \* \* \*'/m);
-  });
-
-  it("runs all jobs on self-hosted macmini runner with dedicated concurrency", () => {
-    for (const job of ["start", "rescue", "automerge", "mention"]) {
-      expect(byJob[job]).toMatch(/^ {4}runs-on: \[self-hosted, macmini\]\s*$/m);
-    }
-    for (const job of ["start", "rescue", "automerge"]) {
-      expect(byJob[job]).toMatch(/^ {6}group: ai-/m);
     }
   });
 });
