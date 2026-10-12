@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { executeGraph } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
 import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
-import { customerFollowUpPack as pack, REFUND_NOTE, refundNoteIsPromiseFree } from "@/company-builder/packs/customer-follow-up";
+import { customerFollowUpPack as pack, noPromiseHolds, REFUND_NOTE, refundNoteIsPromiseFree } from "@/company-builder/packs/customer-follow-up";
 import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
+import packet from "../../artifacts/company-builder/validation/20261001-d224cfb/packet/packet.json";
 import { memoryStore } from "../fixtures/company-builder/store-stub";
 
 const params = { ...FOLLOW_UP_PARAMS, services: [...FOLLOW_UP_PARAMS.services], requiredDetails: [...FOLLOW_UP_PARAMS.requiredDetails], language: "en" };
@@ -219,6 +220,21 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
       // Even if repeated in draft text, all occurrences are stripped without masking other text
       const repeated = `${REFUND_NOTE.en.toLowerCase()} ${REFUND_NOTE.en.toLowerCase()}`;
       expect(refundNoteIsPromiseFree(repeated)).toBe(true);
+      // Negative cases: a real promise appended after the note is still caught.
+      expect(refundNoteIsPromiseFree(`${REFUND_NOTE.en} We will refund this request.`)).toBe(false);
+      expect(refundNoteIsPromiseFree(`${REFUND_NOTE.ar} سيتم الاسترداد.`)).toBe(false);
+    });
+    it("VP-05/VP-06 field scorer (noPromiseHolds, the function field.spec.ts calls) ignores the note but still catches promises", () => {
+      const exp = packet.expected as Record<string, { mustNotPromise?: string[] }>;
+      for (const id of ["VP-05", "VP-06"]) {
+        const terms = exp[id]!.mustNotPromise!;
+        expect(terms.length, id).toBeGreaterThan(0);
+        expect(noPromiseHolds(REFUND_NOTE.en, terms), `${id} note`).toBe(true);
+        expect(noPromiseHolds(`${REFUND_NOTE.en} ${REFUND_NOTE.en}`, terms), `${id} repeated`).toBe(true);
+        expect(noPromiseHolds(`${REFUND_NOTE.en} Your booking was refunded and has been cancelled.`, terms), `${id} promise`).toBe(false);
+      }
+      // Without the exclusion the note itself would trip the term, so the stripping is what makes this pass.
+      expect("nothing has been refunded or cancelled.".includes("refunded")).toBe(true);
     });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
       for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);

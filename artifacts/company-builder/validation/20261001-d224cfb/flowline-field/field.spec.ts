@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { setupUser } from "../../../../../e2e/helpers";
+import { noPromiseHolds } from "../../../../../src/company-builder/packs/customer-follow-up";
 
 /**
  * Flowline field run of the FROZEN validation packet (sha256 in ../packet/SHA256SUMS). Agent-driven through the real
@@ -114,7 +115,7 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       for (const q of e.mustQuote ?? []) checks[`quotes:${q.slice(0, 24)}`] = text.includes(q);
       if (e.mustQuoteOneOf) checks.quotesPolicy = e.mustQuoteOneOf.some((q: string) => text.includes(q));
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
-      for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = !low.replaceAll("nothing has been refunded or cancelled yet", "").replaceAll("nothing has been refunded or cancelled", "").includes(n);
+      for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = noPromiseHolds(low, [n]);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();
       if (e.suspiciousFlagged) checks.suspiciousFlagged = reply?.suspicious === true;
       if (e.language) checks.language = reply?.language === e.language;

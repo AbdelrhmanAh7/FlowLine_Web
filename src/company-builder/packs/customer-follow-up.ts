@@ -47,6 +47,16 @@ export const REFUND_NOTE = {
 };
 
 /**
+ * The field scorer's `mustNotPromise` check (VP-05/VP-06), shared by field.spec.ts and the unit tests: true when none of
+ * the terms appears in the lowercased draft once REFUND_NOTE's own non-promise sentence ("nothing has been refunded or
+ * cancelled", with or without a trailing "yet") is removed. Every occurrence is removed; other text is untouched.
+ */
+export function noPromiseHolds(text: string, terms: readonly string[]): boolean {
+  const stripped = text.toLowerCase().replaceAll("nothing has been refunded or cancelled yet", "").replaceAll("nothing has been refunded or cancelled", "");
+  return !terms.some((t) => stripped.includes(t));
+}
+
+/**
  * Returns true if the given text contains no prohibited promise language after stripping the non-promise sentence.
  * Used by validation scorers and tests to ensure VP-05/VP-06 are not triggered by REFUND_NOTE's non-promise wording.
  * Root cause fix for VP-05/VP-06 on ownerDecisionQualified: field.spec.ts excludes REFUND_NOTE before mustNotPromise checks.
