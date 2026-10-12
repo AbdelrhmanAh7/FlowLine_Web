@@ -44,7 +44,7 @@ Entries never contain the code, the pending token or its hash, or an exception m
 
 The federated authority transactions lock rows that other requests of the same user lock too: the user row, the sessions a link or challenge is bound to, the factor, the account rows and the tenant configuration. Two transactions that take the same rows in different orders can deadlock, and PostgreSQL then aborts one of them (SQLSTATE `40P01`) after `deadlock_timeout`. That was issue #37: `confirmSsoLink` locked the initiating session `FOR UPDATE` before the user row, while `completeFederatedChallenge` locked the user row before the initiator session `FOR SHARE`. A link confirmation and a challenge completion of one user sharing that session each held the row the other needed next.
 
-**Rule.** Every transaction in this area takes its row locks in the order below and never returns to an earlier step. Taking a lock this transaction already holds again is a no-op, so repeats do not count.
+**Rule.** Every transaction in this area takes its row locks in the order below and never returns to an earlier step. Taking a lock this transaction already holds again is a no-op, so repeats do not count. This rule applies after prerequisite #43 (`src/server/federated-locks.ts`) merged; password-reset recovery now follows the same order (see [Password-reset recovery lock order](#password-reset-recovery-lock-order)).
 
 1. The flow's own pending-state row: the `verification` row `sso-link:<hash>` or `federated-mfa:<hash>`, `FOR UPDATE`. The two flows never share one.
 2. The user row: `FOR UPDATE` where the transaction acts for the user, `FOR SHARE` in the read-only SSO callback fences.
