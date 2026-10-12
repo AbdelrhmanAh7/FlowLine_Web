@@ -168,3 +168,10 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Test coverage note: hub route selection (#174)
+
+`tests/unit/ai-hub-selection.test.ts` covers the real exports of `src/ai/hub/selection.ts`
+(`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named
+`selectEngineByScore` and `selectFreeEndpoint`, which do not exist in this repo, so they are not tested.
+Tests only; no runtime change.
