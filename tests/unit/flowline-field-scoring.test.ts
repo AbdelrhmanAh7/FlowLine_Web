@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { REFUND_NOTE } from "../../src/company-builder/packs/customer-follow-up";
+import { customerFollowUpPack, REFUND_NOTE } from "../../src/company-builder/packs/customer-follow-up";
+import { executeGraph } from "@/engine/execute";
+import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
+import { memoryStore } from "../fixtures/company-builder/store-stub";
 import { comparePersistedRows, compareFollowUpRecords, scoreApprovedOutboxEntry, scoreNoPromise, scoreReviewGate, verifyPacketDigest } from "../helpers/field-scoring";
 
 const approved = [
@@ -97,5 +100,26 @@ describe("flowline-field scoring gaps (#141)", () => {
     expect(score([stored, stored], [stored, stored]).exactlyOneFollowUp).toBe(false);
     const wrong = { ...stored, value: { ...record, request_id: "other" } };
     expect(score([wrong], [wrong]).exactlyOneFollowUp).toBe(false);
+  });
+
+  it("the real pack persists the follow-up under its store_key, so comparePersistedRows reads the record it compares", async () => {
+    // Confirms (against the pack, not a fixture) the two assumptions the duplicate check in field.spec.ts relies on:
+    // follow_up_record carries store_key, and the persisted kv_entry value is that whole record.
+    const params = { ...FOLLOW_UP_PARAMS, services: [...FOLLOW_UP_PARAMS.services], requiredDetails: [...FOLLOW_UP_PARAMS.requiredDetails], language: "en" };
+    const graph = customerFollowUpPack.compile(params, (id) => id);
+    const store = memoryStore();
+    const run = await executeGraph(graph, FOLLOW_UP_FIXTURES[0]!.input, { handler: store.handler });
+    expect(run.status, JSON.stringify(run.error)).toBe("succeeded");
+    const record = (run.output as Record<string, Record<string, unknown>>).follow_up_record!;
+    expect(typeof record.store_key).toBe("string");
+    const rows = [...store.entries]
+      .filter(([k]) => k.startsWith("cb_customer_follow_ups/"))
+      .map(([k, value]) => ({ key: k.slice("cb_customer_follow_ups/".length), value }));
+    expect(rows).toEqual([{ key: record.store_key, value: record }]);
+    const expected = { key: record.store_key, value: record };
+    expect(comparePersistedRows(rows, rows, expected)).toEqual({ sameRowCount: true, sameRows: true, exactlyOneFollowUp: true });
+    // The regression the reviewer described — a second stored row with the same follow_up_record — is caught by the row checks.
+    const second = { key: `${String(record.store_key)}-again`, value: record };
+    expect(comparePersistedRows(rows, [...rows, second], expected)).toMatchObject({ sameRowCount: false, sameRows: false });
   });
 });
