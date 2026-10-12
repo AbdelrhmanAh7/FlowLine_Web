@@ -14,7 +14,7 @@ Arabic is the default language (RTL), with English as a secondary language throu
 - **Triggers:** manual, webhook (signed, deduplicated, replay-safe), schedule, and an authenticated API (`/api/v1`,
   scoped API keys).
 - **Integrations:** Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion,
-  PostgreSQL and Linear. They come with OAuth or API-key connections, encrypted credentials, private connections, and
+  PostgreSQL, Linear and Mizano (read-only overdue invoices; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections, and
   repair and revocation handling. Per-workspace owners can also override the OAuth app used for a provider
   (Settings → OAuth apps).
 - **AI hub:** cloud-only, multi-provider. Each workspace brings its own keys in **Settings → AI Providers** — never
@@ -58,7 +58,7 @@ Arabic is the default language (RTL), with English as a secondary language throu
 | Phase 4 (private beta) | Historical code gate **PASS** on `e42667d`; not a gate for today's checkout. BETA INFRA VERIFIED **BLOCKED** · PRIVATE BETA READY **NO** · PUBLIC PRODUCTION APPROVED **NO**. Details: [`docs/implementation/PHASE4_BETA_REPORT.md`](docs/implementation/PHASE4_BETA_REPORT.md) |
 | AI provider hub | Core implementation **DONE** (historically contract-tested against protocol-accurate doubles). **LIVE CLOUD VERIFICATION IS BLOCKED**: no live certification evidence is recorded for the 20 connectable providers or 5 protocols; current owner keys/accounts are unverified and the spend cap is `$0`. Details: [`docs/ai/AI_HUB_REPORT.md`](docs/ai/AI_HUB_REPORT.md) |
 | Copilot | **EXPERIMENTAL.** Recorded frozen benchmark: historical local `qwen2.5:7b`, 5/12 vs target ≥10/12. The current hub runner supports the 12 English cases with zero-budget preflight; hosted results and Arabic evaluation remain unverified. See `scripts/diag/copilot-benchmark-hub.mts`. |
-| Integrations | Implemented and contract-tested against provider test doubles. PostgreSQL is live-verified (Phase 2). The other 11 (Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, Linear) are **not** live-verified — blocked on dedicated test accounts and OAuth apps. |
+| Integrations | Implemented and contract-tested against provider test doubles. PostgreSQL is live-verified (Phase 2). The other 12 (Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, Linear, Mizano) are **not** live-verified — blocked on dedicated test accounts and OAuth apps. |
 | Billing | Paddle adapter verified against contract tests and a fake Paddle only. No real Paddle sandbox run yet (needs a sandbox account + client-side token). No live payments. |
 | Private beta readiness | **NOT READY.** Host/domain, real email, Paddle sandbox and live integration certification remain unverified. The beta brief prefers the existing owner Pi, subject to exact approval; no paid VPS is authorized and the aggregate spend cap is `$0`. |
 | Public production | **NOT APPROVED.** Owner authorisation only. |
