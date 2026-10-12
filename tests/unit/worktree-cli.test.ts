@@ -1,6 +1,6 @@
-// Issue #67: real CLI in a scratch clone with a local bare origin; no network, no database.
+// Issue #67: real CLI in a scratch clone with a local bare origin; no network, no database (runs in the unit project).
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,8 +44,8 @@ afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 describe("pnpm wt in a scratch clone", () => {
   it.each(["remove", "rm"])("@issue-67 AC2: %s refuses a dirty lane with a clear message and keeps the work", (cmd) => {
     expect(wt("add", "lane").code).toBe(0);
-    // Drop the helper's untracked node_modules link so the lane's only change is the one below.
-    rmSync(join(lanePath("lane"), "node_modules"));
+    // A fresh lane is clean even though it holds the helper's untracked node_modules link.
+    expect(wt("list").stdout).toContain(`${lanePath("lane")} | lane | dirty=0 | pushed=true`);
     writeFileSync(join(lanePath("lane"), "draft.txt"), "unsaved work\n");
     const r = wt(cmd, "lane");
     expect(r.code).toBe(1);
@@ -54,6 +54,28 @@ describe("pnpm wt in a scratch clone", () => {
     expect(readFileSync(join(lanePath("lane"), "draft.txt"), "utf8")).toBe("unsaved work\n");
     expect(wt("list").stdout).toContain(`${lanePath("lane")} | lane | dirty=1 | pushed=true`);
   });
+  it("@issue-67 AC1: a fresh lane is created, listed, removed and its branch kept", () => {
+    const added = wt("add", "lane");
+    expect(added).toMatchObject({ code: 0, stdout: `${lanePath("lane")}\n` });
+    expect(lstatSync(join(lanePath("lane"), "node_modules")).isSymbolicLink()).toBe(true);
+    const removed = wt("remove", "lane");
+    expect(removed).toMatchObject({ code: 0, stdout: `removed ${lanePath("lane")}\n` });
+    expect(existsSync(lanePath("lane"))).toBe(false);
+    expect(git(["branch", "--list", "lane"])).toContain("lane");
+  });
+
+  it("@issue-67 AC1: an existing branch and an invalid name are rejected with exit 1", () => {
+    git(["branch", "taken"]);
+    const taken = wt("add", "taken");
+    expect(taken.code).toBe(1);
+    expect(taken.stderr).toContain("a branch named 'taken' already exists");
+    expect(existsSync(lanePath("taken"))).toBe(false);
+    const bad = wt("add", "feat/x");
+    expect(bad.code).toBe(1);
+    expect(bad.stderr).toContain("invalid lane name");
+    expect(existsSync(lanePath("feat"))).toBe(false);
+  });
+
   it("@issue-67 AC3: the developer guide documents the lane-name pattern and the commands", () => {
     const docs = readFileSync(guide, "utf8");
     const pattern = /const LANE_NAME = \/(.+)\/;/.exec(readFileSync(script, "utf8"))?.[1];

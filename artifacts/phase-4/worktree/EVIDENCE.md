@@ -1,22 +1,20 @@
 # Evidence: issue #67, `pnpm wt` docs and tests
 
-Tested SHA: `8be4637` (branch `ai/67`, base `origin/main`). Scope per the issue: docs and tests only, plus the minimal `remove` alias and the dirty-removal refusal (exit 1). The earlier node_modules-link detection, link-restore and dirty-count changes were reverted as out of scope.
+Scope per the issue: docs and tests for the wt helper, plus the minimal script changes the acceptance criteria need (`remove` alias, dirty-removal refusal with exit 1, and not counting the helper's own `node_modules` link as a change). The commit SHA these results belong to is the head of the `ai/67` PR; each command below was run on that head.
 
-## Checks at the tested SHA
+## Checks
 
-- `pnpm exec vitest run --project unit tests/unit/worktree-script.test.ts`: 42 passed (git stubbed; covers add, list, remove, dirty and unpushed refusal, existing branch, invalid name, argument parsing).
-- `tests/integration/worktree-cli.test.ts`: 3 passed, run with a temporary vitest config without the DB `globalSetup` (the spec needs no database; real git in a temp dir with a local bare `origin`, no network).
-- `pnpm typecheck` and `pnpm lint`: clean.
-- `node scripts/ci/docs-check.mjs` on the PR file list: passes (3 code files, 1 docs file).
+- `pnpm exec vitest run --project unit tests/unit/worktree-script.test.ts`: 76 passed (git and fs stubbed). `origin/main`'s existing tests are kept unchanged except the two that pinned the old "kept, exit 0" behaviour for an explicit `rm` of dirty or unpushed work; they now assert the refusal. New tests cover `remove`, dirty and unpushed refusal for `rm`/`remove`, prune keeping such lanes, list dirty/pushed output, an existing branch, and the own-link rules.
+- `pnpm exec vitest run --project unit tests/unit/worktree-cli.test.ts`: 5 passed, real git in a temp dir with a local bare `origin` (no network, no database). The spec lives in the `unit` project, so it runs under the repo's real vitest config with no temporary config.
+- `pnpm typecheck` and `pnpm exec eslint` on the changed files: clean.
 - `git diff --name-only origin/main..HEAD | grep '^.github/'`: no output.
-- Diff vs `origin/main`: 5 files, +223/−162 — within the issue's ~300-line limit.
 
-## Manual scratch clone (issue test plan)
+## Root cause of the "fresh lane is dirty" finding
 
-`node scripts/worktree.mjs` (what `pnpm wt` runs) in a temp clone with a local bare `origin`: `add my-lane` printed the path, exit 0. `list` printed `…/my-lane | my-lane | dirty=1 | pushed=true` — a fresh lane counts as dirty because the helper's untracked `node_modules` symlink is not covered by the `node_modules/` ignore rule (long-standing upstream behaviour, kept). `remove my-lane` refused with `refusing to remove …: 1 uncommitted change(s); commit or discard them first`, exit 1, work kept. After dropping that link and adding `draft.txt`, `remove` still refused (exit 1) and `draft.txt` was preserved. After removing `draft.txt`, `remove` printed `removed …`, exit 0, and the `my-lane` branch was kept. `add feat/x` failed with `invalid lane name`, exit 1; `add taken` failed with git's `fatal: a branch named 'taken' already exists`, exit 1.
+`add` links `node_modules` as a symlink; the repo's `node_modules/` ignore rule matches directories only, so git reports `?? node_modules` and `state()` counted it. A fresh lane therefore showed `dirty=1` and `rm`/`remove`/`prune` could never remove it (the unlink sat after the dirty check). Fix: `scripts/worktree.mjs` `isOwnModulesLink`/`state` ignore only a symlink that points to the main checkout's `node_modules`; a link elsewhere or a real directory still counts as work and is never unlinked. Tests: `tests/unit/worktree-script.test.ts` ("a fresh lane is clean…", "…points elsewhere…", "a real node_modules directory…") and `tests/unit/worktree-cli.test.ts` AC1 (real git: add, list `dirty=0`, remove, branch kept). The documented `add my-lane` then `remove my-lane` sequence works as written.
 
-## Deviations from the issue's scope
+## Limits
 
-- `remove` is an alias of `rm`; an explicit `rm`/`remove` of dirty or unpushed work now exits 1 with `refusing to remove …` (previously it printed `kept …` and exited 0). This is the behaviour the issue asks the docs and tests to pin. `prune` is unchanged.
-- The real-git acceptance test lives in `tests/integration/` (temp dir, no network, no DB); unit tests keep git stubbed. No e2e-army test: internal repository helper with no user-facing flow.
-- Windows path logic is stub-tested on macOS, not a native Windows run. Full suite and build deferred to CI per owner instruction.
+- Windows path logic is stub-tested on macOS, not a native Windows run.
+- Full suite and build are left to CI per owner instruction.
+- The earlier review thread about `AGENTS.md`, `PHASE4_BETA_REPORT.md` and the evidence size refers to a stale base: against `origin/main` this branch changes only `scripts/worktree.mjs`, the two test files, `docs/DEVELOPER_GUIDE.md` and this file.
