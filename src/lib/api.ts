@@ -26,7 +26,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   } catch {
     throw new ApiError(0, "NETWORK", "Can't reach Flowline — check your connection");
   }
-  const text = await res.text();
+  let text: string;
+  try {
+    text = await res.text();
+  } catch {
+    // Headers arrived but the body was cut off (connection reset): the outcome is unknown, so report it like a network failure.
+    throw new ApiError(0, "NETWORK", "Can't reach Flowline — check your connection");
+  }
   let body: unknown = null;
   try {
     body = text ? JSON.parse(text) : null;
