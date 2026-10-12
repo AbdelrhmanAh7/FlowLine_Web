@@ -2,9 +2,28 @@
 
 ## Issue #160: GitHub security settings — post-pilot owner handoff
 
-[Issue #160](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/160) explicitly reserves secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer for the owner. All three acceptance criteria remain **unverified**; engineers changed no repository settings. The owner's scope cut dated 2026-10-12 defers this work until after the pilot, with reactivation by re-adding the `pilot` label. The issue remains open.
+[Issue #160](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/160) explicitly reserves secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer for the owner. All three acceptance criteria remain **unverified**; engineers changed no repository settings. The owner's scope cut dated 2026-10-12 defers this work until after the pilot, with reactivation by re-adding the `pilot` label. The repo is public, so these features are free. The issue remains open.
 
-Owner steps and verification requests are in [AI_QUESTIONS.md](../../AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required). Record dated, non-sensitive enabled-state evidence for secret scanning, push protection and Dependabot alerts, plus a Copilot review link alongside CodeRabbit. Use `Refs #160` on the handoff PR so merging does not close the incomplete settings issue. This does not change pilot scope, deployment approval or readiness.
+**Reactivation:** re-add the `pilot` label to #160 to bring it back into the active sprint.
+
+### Owner steps
+
+| AC | Setting | Exact path | Action |
+|----|---------|------------|--------|
+| AC1 | Secret scanning + push protection | **Settings → Code security → Secret scanning** | Enable "Secret scanning". Under it, enable "Push protection". |
+| AC2 | Dependabot alerts | **Settings → Code security → Dependabot → Dependabot alerts** | Enable "Dependabot alerts". |
+| AC3 | Copilot code review | **Settings → Copilot → Code review** | Enable Copilot as a code reviewer. Add it as a second reviewer alongside CodeRabbit on PRs. |
+
+### Evidence format
+
+After enabling each setting, record a dated note on [issue #160](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/160) with:
+
+- **Date** the setting was enabled (e.g. `2026-11-XX`).
+- **Enabled state** for each AC (e.g. "Secret scanning: enabled, push protection: enabled").
+- **Copilot review link**: a link to any PR where Copilot submitted a review alongside CodeRabbit (AC3).
+- **No secrets or alert payloads** in the evidence. Do not include Dependabot alert details, secret values, or repository tokens.
+
+This handoff authorises no spending. Use `Refs #160` on the handoff PR so merging does not close the incomplete settings issue. This does not change pilot scope, deployment approval or readiness.
 
 ## Issue #162: Owner Actions - Sensitive Components (tracking)
 

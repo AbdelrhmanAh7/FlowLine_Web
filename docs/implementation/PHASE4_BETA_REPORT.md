@@ -2,7 +2,7 @@
 
 ## GitHub security settings handoff — 2026-10-12 (issue #160)
 
-**Blocked for engineers; deferred post-pilot by the owner.** Secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer remain unverified. No GitHub settings or application behaviour changed. Read-only issue/comment verification confirms the scope cut and open status; it does not verify enabled settings. [Owner handoff](OWNER_ACTIONS.md#issue-160-github-security-settings--post-pilot-owner-handoff) and [pending questions](../../AI_QUESTIONS.md#issue-160-github-security-settings--blocked-owner-action-required) record the next steps. Keep #160 open; no beta or production readiness verdict changes.
+**Blocked for engineers; deferred post-pilot by the owner.** Secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer remain unverified. No GitHub settings or application behaviour changed. Read-only issue/comment verification confirms the scope cut and open status; it does not verify enabled settings. [Owner handoff](OWNER_ACTIONS.md#issue-160-github-security-settings--post-pilot-owner-handoff) records the exact Settings paths, owner steps and evidence format. Keep #160 open; no beta or production readiness verdict changes.
 
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
