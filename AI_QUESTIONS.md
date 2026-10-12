@@ -1,73 +1,42 @@
 # AI_QUESTIONS.md
 
-## Issue #173: Add unit tests for hub transport
+## PR #69 / issue #67 — the last review thread cannot be cleared by code
 
-### Name Mismatch
+The only thing blocking PR #69 (`ai/67`, "Document and unit-test the `pnpm wt` worktree helper") is one unresolved
+review thread whose finding the branch already satisfies.
 
-The issue brief mentions testing functions that don't exist in `src/ai/hub/transport.ts`:
+- Thread `PRRT_kwDOUvLGYc6rRgdh` (comment `discussion_r4243216521`, path `AGENTS.md`, marked **[OUTDATED]**) asks to
+  split the `AGENTS.md` and report/evidence changes into a separate PR, or amend the issue scope, because the diff
+  went beyond the issue's ~300-line limit.
+- Those files are already gone from the branch, so there is nothing left to change:
+  - `git diff --name-status origin/main...HEAD` (base `9944c96`) is exactly four files, +206/−26:
+    `docs/DEVELOPER_GUIDE.md`, `scripts/worktree.mjs`, `tests/unit/worktree-cli.test.ts`,
+    `tests/unit/worktree-script.test.ts`.
+  - No `AGENTS.md` (reverted in `7e80449`), no `docs/implementation/PHASE4_BETA_REPORT.md`, no
+    `artifacts/phase-4/worktree/EVIDENCE.md` (`a3fa756`), no `.github/workflows` changes.
+- The deliverable is complete and green: `pnpm exec vitest run --project unit tests/unit/worktree-*.test.ts` = 81
+  passed; `pnpm typecheck` clean; `pnpm exec eslint` on the touched files clean; CI (`docs`, `gate`, CodeQL) green at
+  `a3fa756`.
 
-| Issue mentions | Actual export | Notes |
-|----------------|---------------|-------|
-| `createRequest` | `assertAllowedUrl` + `providerHeaders` | Validates URL against allowlist, builds headers |
-| `executeRequest` | `hubFetch` | Main fetch function with error mapping |
-| `handleResponse` | (part of `hubFetch`) | Error mapping: EGRESS_TOO_MANY_REDIRECTS→AI_REDIRECT_REFUSED, TimeoutError→AI_TIMEOUT, other→AI_UNAVAILABLE |
+### Why the automated loop cannot clear it
 
-The tests cover the actual exported functions with the same behavioral coverage.
+The hub's thread job (`nql-agents/src/jobs/threads.ts`) resolves a thread only when a verdict model returns `fixed`
+or `disagree` for **the code at the thread's path**. This finding is anchored to `AGENTS.md`, and the excerpt the
+model is handed (the agent constitution at the top of `AGENTS.md`) cannot describe a PR-scope complaint, so the model
+has returned `not_fixed` on every head (`logs/launchd-quality.log`). With no hub reply in the thread, `effRounds=0`,
+so neither loop-breaker (`rounds>=2` CTO decision, Watchdog `sightings>=3`) fires either. No commit on the branch can
+change that verdict.
 
-### Proposed Replacement Acceptance Check
+### Question for the owner / CTO
 
-The original acceptance criterion uses a Jest flag that doesn't exist in vitest:
+1. The finding is already satisfied by the current branch. Please confirm one of:
+   - **(a)** resolve the stale thread `PRRT_kwDOUvLGYc6rRgdh` with the recorded reason that the files it names are no
+     longer in the diff (Constitution art. 2: a thread may be resolved on the owner's recorded override), or
+   - **(b)** have the hub re-request a CodeRabbit re-check of the thread against `a3fa756` and resolve it if CodeRabbit
+     agrees it is done.
+2. If neither, say which concrete change to the branch would clear it.
 
-```
-npx tsc --noEmit && npm test -- --listTests | grep transport.spec
-```
+The `pnpm wt` helper, its unit tests and the `docs/DEVELOPER_GUIDE.md` section are done; nothing else is needed from
+the engineers. PR comments and thread resolution are owned by the harness, so this file is the escalation channel.
 
-**Proposed replacement:**
-
-```
-npx tsc --noEmit && npx vitest list --project unit | grep transport
-```
-
-This verifies:
-1. TypeScript compiles without errors
-2. The transport test file is discovered by vitest's unit project
-3. All transport-related tests are listed
-
-### Test Coverage Summary
-
-Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
-
-**assertAllowedUrl (createRequest equivalent)** - 6 tests:
-- Accepts allowlisted https host
-- Refuses http
-- Refuses IP address hosts
-- Refuses credentials in URL
-- Refuses unknown hosts
-- Works with dashscope placeholder hosts
-
-**providerHeaders** - 3 tests:
-- Keeps provider's fixed static headers (anthropic-version)
-- Adds header-mapped connection fields (OpenAI-Organization, OpenAI-Project)
-- Does not add headers for empty/missing fields
-
-**hubFetch (executeRequest equivalent)** - 8 tests:
-- Calls safeFetch with correct URL, auth header, maxRedirects: 0, JSON body
-- Uses fromOrigin to resolve against origin instead of base URL
-- Maps EGRESS_TOO_MANY_REDIRECTS → AI_REDIRECT_REFUSED
-- Maps TimeoutError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps AbortError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps other errors → AI_UNAVAILABLE (retryable)
-- Maps EGRESS_TOO_LARGE → AI_RESPONSE_TOO_LARGE (possibleCharge)
-- Maps other EgressError codes → AI_EGRESS_BLOCKED
-
-**resolveBaseUrl and resolveOrigin** - 2 tests:
-- Returns documented base URL without trailing slash
-- Fills dashscope placeholders from settings
-
-### Notes
-
-- No e2e-army test needed: this change only adds unit tests (pure test addition)
-- PR description should include: `E2E: not needed — unit tests only`
-- File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
-- Does not modify `transport.ts` — tests only
-- Uses real providers from `getProviderDef` as specified in the manager plan
+<sub>Supersedes the earlier stale `AI_QUESTIONS.md` content from issue #173 (PR #182, already merged).</sub>
