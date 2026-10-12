@@ -38,7 +38,13 @@ async function legacyFlow() {
   touchedFlows.push(flow.id);
   const saved = await saveFlow(user, flow.id, { baseRevision: flow.revision, createVersion: true });
   const legacy = { flowId: flow.id, revision: saved.flow.revision, name: flow.name, graph: flow.graph, reason: "run", createdBy: user.id };
-  const runs = await db.insert(schema.flowVersion).values([{ ...legacy, version: 2 }, { ...legacy, version: 3 }]).returning();
+  // Pre-#204 rows predate the insert trigger from 0026; ALTER TABLE locks the table, so no other session sees it off.
+  const runs = await db.transaction(async (tx) => {
+    await tx.execute(sql`alter table flow_version disable trigger flow_version_run_unnumbered`);
+    const rows = await tx.insert(schema.flowVersion).values([{ ...legacy, version: 2 }, { ...legacy, version: 3 }]).returning();
+    await tx.execute(sql`alter table flow_version enable trigger flow_version_run_unnumbered`);
+    return rows;
+  });
   return { user, ws, flow, save: saved.version!, runs };
 }
 
@@ -52,6 +58,11 @@ async function backup(flowId: string) {
     sql`select b.flow_version_id as id, b.version from flow_version_run_number_backup b join flow_version v on v.id = b.flow_version_id where v.flow_id = ${flowId} order by b.version`,
   );
   return rows.map((r) => [r.id, r.version]);
+}
+
+async function hasRunTrigger() {
+  const { rows } = await db.execute(sql`select 1 from pg_trigger where tgname = 'flow_version_run_unnumbered'`);
+  return rows.length === 1;
 }
 
 /** The immutability trigger (0002) must be back on after every step. */
@@ -97,6 +108,7 @@ describe("migration 0026: legacy run snapshots lose their number (#205)", () => 
     await apply(UP);
     await apply(REVERSE);
     expect(await numbers(flow.id)).toEqual(before);
+    expect(await hasRunTrigger()).toBe(false);
     await apply(REVERSE);
     expect(await numbers(flow.id)).toEqual(before);
     await expectImmutable(runs[1].id);
@@ -105,6 +117,22 @@ describe("migration 0026: legacy run snapshots lose their number (#205)", () => 
     const again = await numbers(flow.id);
     expect(again.get(save.id)).toBe(1);
     expect(runs.map((r) => again.get(r.id))).toEqual([null, null]);
+    expect(await hasRunTrigger()).toBe(true);
+  });
+
+  it("keeps run snapshots unnumbered when the previous image (after a rollback) still numbers them", async () => {
+    const { user, ws, flow } = await legacyFlow();
+    await apply(UP);
+
+    // What the previous image's insertVersion writes for a run: the next number in the flow's sequence.
+    const [run] = await db
+      .insert(schema.flowVersion)
+      .values({ flowId: flow.id, version: 4, revision: flow.revision, name: flow.name, graph: flow.graph, reason: "run", createdBy: user.id })
+      .returning();
+
+    expect(run.version).toBeNull();
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
+    expect((await listFlows(ws.id)).find((r) => r.id === flow.id)!.publishedVersion).toBe(2);
   });
 
   it("refuses to reverse when a later publication took a freed number, and leaves every row as it was", async () => {

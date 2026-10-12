@@ -53,7 +53,7 @@ local Ollama models (visual/copy review).
   snapshots take a public version number (one sequence per flow); a `run` snapshot has `version = NULL`, so running a
   flow never changes the number its next publication gets (#204). Migration `0026_flow_version_run_backfill` clears the
   numbers that older run snapshots still held and keeps them in `flow_version_run_number_backup`, so
-  `drizzle/reverse/0026_flow_version_run_backfill.sql` can restore them; numbered snapshots keep their numbers (#205). That reverse script is manual and idempotent, and it
+  `drizzle/reverse/0026_flow_version_run_backfill.sql` can restore them; numbered snapshots keep their numbers (#205). Its `BEFORE INSERT` trigger `flow_version_run_unnumbered` stores every new run snapshot unnumbered, so a rollback to an image that still numbers runs cannot bring the gap back. That reverse script is manual and idempotent, and it
   stays outside the drizzle journal and `src/db/migrate.ts`: the project has no down migrations (a rollback runs the
   previous image on the newer schema). `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
