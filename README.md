@@ -136,6 +136,9 @@ sign-up form signs them in straight away (issue #124). A single browser context 
 `FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one warning when the auth module first loads (the first request that
 uses auth, before any sign-up is handled, whether it is admitted, refused or social); the cookie is ignored silently.
 The private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
+The UI is Arabic by default; a tester that drives the forms by their English labels sets the cookie `fl_locale=en`
+first. The labels are then **Create account** on `/sign-up`, **Sign in** on `/sign-in` and **Resend** on
+`/resend-verification` (there is no "Sign Up" button).
 
 | Check | Command |
 |---|---|
