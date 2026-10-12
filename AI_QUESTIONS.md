@@ -71,3 +71,10 @@ Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
 - File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
 - Does not modify `transport.ts` — tests only
 - Uses real providers from `getProviderDef` as specified in the manager plan
+## Issue #108: account deletion vs SSO lock-order test
+
+The brief asks for a test that "reliably fails due to the lock ordering". On main the cycle is already gone: since PR #65 (#45) `consumeAccountToken("delete")` locks the user row before the workspaces, so the SSO sign-in's `audit_event` insert can no longer wait on a workspace the deletion holds while the deletion waits on the user row. A test that fails on main could not be committed either (the `gate` check must stay green, and AGENTS.md forbids red or skipped tests).
+
+What was done instead: `tests/integration/account-delete-sso-lock-order.test.ts` races the real functions in both orders and requires both to settle without `40P01`. It passes on main and was checked to fail against the pre-#65 `flows.ts` (`6aa89ed^`), where the SSO-first order ends in `deadlock detected` (`40P01`). So it is the regression test #47 asked for, run as "failing before the fix, passing after".
+
+Question for the CTO: is #109 ("apply the lock reordering fix") still needed? This test shows the deletion/SSO pair no longer deadlocks. Moving the audit insert before the workspace lock may still matter for the separate `changeRole`/`removeMember` gap (docs/security/FEDERATED_MFA.md, "Known gaps"). If so, #109 should be rescoped to that pair, or closed with this test as the evidence.
