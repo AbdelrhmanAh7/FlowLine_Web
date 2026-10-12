@@ -8,6 +8,8 @@ export default defineConfig({
   test: {
     projects: [
       { resolve: { alias }, test: { name: "unit", include: ["tests/unit/**/*.test.ts"], environment: "node" } },
+      // Component tests: React component tests with Testing Library in jsdom.
+      { resolve: { alias }, test: { name: "component", include: ["tests/component/**/*.test.tsx"], environment: "jsdom", globals: true, setupFiles: ["tests/component/setup.ts"] } },
       // Provider adapter contract tests: adapters vs. the local fake provider server (no DB, no network).
       { resolve: { alias }, test: { name: "contract", include: ["tests/contract/**/*.test.ts"], environment: "node", testTimeout: 20000, fileParallelism: false } },
       // Live/sandbox suite: real local Ollama, real Postgres, SaaS sandboxes (BLOCKED without credentials).

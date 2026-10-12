@@ -76,6 +76,9 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "26.6.3",
     "@types/papaparse": "5.5.2",
     "@types/pg": "8.23.1",
@@ -86,6 +89,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
     "husky": "9.1.7",
+    "jsdom": "26.1.0",
     "lint-staged": "17.6.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
