@@ -2,20 +2,21 @@
 
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
-The next-round harness compares the approved outbox proposal against the reviewed draft and requires one
-persisted VP-01 row with the original value before and after reprocessing. Seven focused scoring tests pass
-(including one that runs the real compiled customer-follow-up pack); the new regressions failed against the previous helpers. Earlier `20261001-d224cfb` evidence is unchanged.
+The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
+expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
+row with the original value before and after reprocessing. Eight focused scoring tests pass on head `9621678`
+(including one that runs the real compiled customer-follow-up pack). Earlier `20261001-d224cfb` evidence is unchanged.
 The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
 3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
 This internal harness change does not change product behavior or beta readiness.
 
-Local verification: `pnpm test flowline-field --maxWorkers=2` passes 7/7 on head `d9a2d6e` (the run includes the real-pack test). Temporarily disabling each of the
-four original fixes independently yields 1 failed / 6 passed; all mutations were restored. `pnpm lint`
-passes. Explicit lint of the normally excluded field spec passes with its pre-existing unused `log` warning.
-`node node_modules/typescript/bin/tsc --noEmit` passes, as does a temporary tsconfig extending the repository
-config and explicitly including the field spec. The `pnpm typecheck` launcher stalled and was terminated;
-the direct command executes that script's identical compiler/options. Playwright was attempted with a packet
-copy under `/tmp` and stopped during import with `DATABASE_URL is not set`; no live assertions ran. These
+Local verification on `9621678`: `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+test). Temporarily disabling each original fix in `tests/helpers/field-scoring.ts` (restored from git after each run):
+`:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` disabled): 1 failed / 7 passed;
+`:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. Lint on the touched helper and unit test and
+`node node_modules/typescript/bin/tsc --noEmit` pass. The `pnpm typecheck` launcher stalled in an earlier attempt, so only the direct
+compiler command is recorded here. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
 checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
 
 ## Focused-run evidence helpers: explicit child environment — 2026-10-03

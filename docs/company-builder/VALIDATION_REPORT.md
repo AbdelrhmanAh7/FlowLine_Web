@@ -99,7 +99,8 @@ recorded evidence are unchanged, so run 1-4 numbers stand as recorded.
 
 Details of the fixes: the no-promise check also strips the fixed English and Arabic `REFUND_NOTE` disclaimers; the review
 gate requires an empty outbox before the review is requested and, after approval, checks the new outbox entry (recipient
-equals the packet's VP-05 recipient, text-only `email_reply` payload, no payment action); the duplicate trial compares the
+equals the packet's VP-05 recipient, text-only `email_reply` payload, no payment action, and the packet's quoted policy,
+no-promise and consequential expectations); the duplicate trial compares the
 `follow_up_record` of both runs and the persisted `kv_entry` rows (namespace `cb_customer_follow_ups`, read from the test
 database, so the harness needs the same `DATABASE_URL` as the stack) before and after; the packet digest recorded is the
 `packet.json` line of `SHA256SUMS` (a missing `packet.json` entry is rejected).
@@ -116,7 +117,7 @@ scoring gaps. Live-stack validation remains outstanding; unit results do not est
 The review gate now requests the review on the trial that was scored for VP-05 (its id is recorded with the result)
 rather than re-posting `field-VP-05` without input. `store_key` and the stored value are confirmed against the pack:
 `follow_up_record.store_key` is what the `data.store` step uses as key and `record` as value
-(`src/company-builder/packs/customer-follow-up.ts`), and by a unit test (part of the 7/7 `pnpm test flowline-field` run recorded in the Phase 4 report) that runs the real compiled pack and asserts its
+(`src/company-builder/packs/customer-follow-up.ts`), and by a unit test (part of the 8/8 `pnpm test flowline-field` run on `9621678` recorded in the Phase 4 report) that runs the real compiled pack and asserts its
 one persisted row equals the follow-up record at `store_key` (`tests/unit/flowline-field-scoring.test.ts`).
 
 **Operator and assistance:**
