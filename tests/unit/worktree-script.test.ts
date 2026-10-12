@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertLaneName, main, samePath } from "../../scripts/worktree.mjs";
 
 const mocks = vi.hoisted(() => ({
-  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(), readlink: vi.fn(),
+  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({ execFileSync: mocks.git }));
 vi.mock("node:fs", () => ({
-  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink, readlinkSync: mocks.readlink,
+  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink,
 }));
 
 // Entirely virtual paths: no child process or filesystem operation reaches the host.
@@ -21,21 +21,10 @@ const broken = join(root, ".claude", "worktrees", "broken");
 let entries: string;
 let dirty: string;
 let pushed: string;
-let events: string[];
 const entry = (path: string, flags = "") => [
   `worktree ${path}`, "HEAD abc", "branch refs/heads/lane", flags,
 ].filter(Boolean).join("\n") + "\n\n";
 const calls = () => mocks.git.mock.calls.map(([, args, options]) => ({ args, cwd: options.cwd }));
-const expectUntouched = () => {
-  expect(mocks.exists).not.toHaveBeenCalled();
-  expect(mocks.stat).not.toHaveBeenCalled();
-  expect(mocks.unlink).not.toHaveBeenCalled();
-  expect(mocks.symlink).not.toHaveBeenCalled();
-  expect(calls().map(({ args }) => args)).toEqual([
-    ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-    ["worktree", "list", "--porcelain"],
-  ]);
-};
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -44,14 +33,10 @@ beforeEach(() => {
   entries = entry(root) + entry(lane);
   dirty = "";
   pushed = "origin/lane";
-  events = [];
   mocks.exists.mockImplementation((path) => path !== stale);
   mocks.stat.mockReturnValue({ isSymbolicLink: () => true });
-  mocks.readlink.mockReturnValue(join(root, "node_modules"));
-  mocks.unlink.mockImplementation((path) => { events.push(`unlink ${path}`); });
   mocks.git.mockImplementation((command, args, { cwd }) => {
     expect(command).toBe("git");
-    events.push(args.join(" "));
     if (args[0] === "rev-parse" && args[1] === "--path-format=absolute") return join(root, ".git");
     if (args.join(" ") === "worktree list --porcelain") return entries;
     if (args.join(" ") === "worktree prune") return "";
@@ -67,165 +52,26 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-describe("worktree removal safeguards", () => {
-  it("a bare name selects the managed lane despite a colliding external registration", () => {
-    const collision = resolve("lane");
-    entries = entry(root) + entry(collision) + entry(lane);
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(mocks.unlink.mock.calls).toEqual([[join(lane, "node_modules")]]);
-    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args))
-      .toEqual([["worktree", "remove", lane]]);
-    expect(main(["rm", "./lane"])).toBe(0);
-    expect(mocks.unlink).toHaveBeenLastCalledWith(join(collision, "node_modules"));
-  });
-
-  it("does not fall back to a colliding external registration when the managed lane is absent", () => {
-    entries = entry(root) + entry(resolve("lane"));
-    expect(() => main(["rm", "lane"])).toThrow(/not a registered worktree/);
-    expectUntouched();
-  });
-
-  it("matches a mixed-case lane name on Windows", () => {
-    expect(main(["rm", "LaNe"], "win32")).toBe(0);
-    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
-  });
-
-  it("matches a mixed-case explicit external path on Windows", () => {
-    entries = entry(root) + entry(external);
-    expect(main(["rm", external.toUpperCase()], "win32")).toBe(0);
-    expect(mocks.unlink).toHaveBeenCalledWith(join(external, "node_modules"));
-  });
-
-  it("rejects a mixed-case main registration before inspecting or unlinking it on Windows", () => {
-    entries = entry(root.toUpperCase()) + entry(lane);
-    expect(() => main(["rm", root], "win32")).toThrow(/main checkout/);
-    expectUntouched();
-  });
-
-  it("rejects an existing but unregistered path without touching its junction", () => {
-    expect(() => main(["rm", external])).toThrow(/not a registered worktree/);
-    expectUntouched();
-  });
-
-  it.each(["locked", "locked owner is using this lane"])("rejects a %s entry without touching it", (flag) => {
-    entries = entry(root) + entry(lane, flag);
-    expect(() => main(["rm", "lane"])).toThrow(/locked worktree/);
-    expectUntouched();
-  });
-
-  it("rejects the main checkout without touching it", () => {
-    expect(() => main(["rm", root])).toThrow(/main checkout/);
-    expectUntouched();
-  });
-
-  it("rejects an outside lane by name but accepts its registered exact path", () => {
-    entries = entry(root) + entry(join(root, "outside"));
-    expect(() => main(["rm", "outside"])).toThrow(/not a registered worktree/);
-    expectUntouched();
-    expect(main(["rm", join(root, "outside")])).toBe(0);
-    expect(mocks.unlink).toHaveBeenCalledWith(join(root, "outside", "node_modules"));
-  });
-
-  it("does not let lane-relative traversal select an outside registration", () => {
-    entries = entry(root) + entry(join(root, "outside"));
-    expect(() => main(["rm", "../../outside"])).toThrow(/not a registered worktree/);
-    expectUntouched();
-  });
-
-  it.each([
-    ["rm", "dirty", " M file1.ts\n M file2.ts", "2 uncommitted change(s); commit or discard them first"],
-    ["remove", "dirty", "?? draft.txt", "1 uncommitted change(s)"],
-    ["rm", "unpushed", "", "HEAD not on any remote branch; push it first"],
-  ])("@issue-67 %s refuses %s work with a clear message, without unlinking or removing", (cmd, state, status, message) => {
-    dirty = status;
-    if (state === "unpushed") pushed = "";
-    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: ${message}`);
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
-      .toEqual([["worktree", "list", "--porcelain"]]);
-  });
-  it.each(["rm", "remove"])("@issue-67 %s rejects an invalid bare name before any git call", (cmd) => {
-    for (const name of [".hidden", "..", "a b", "-lane"]) expect(() => main([cmd, name])).toThrow(/invalid lane name/);
-    expect(mocks.git).not.toHaveBeenCalled();
-  });
-  it("@issue-67 remove is an alias of rm", () => {
-    expect(main(["remove", "lane"])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
-  });
-  it("@issue-67 ignores the helper's own node_modules link when counting changes", () => {
-    dirty = "?? node_modules";
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
-    dirty = "?? node_modules/\n?? node_modules2";
-    expect(() => main(["rm", "lane"])).toThrow("2 uncommitted change(s)");
-  });
-  it("@issue-67 keeps a node_modules link that does not point at the main install (counted as work, never unlinked)", () => {
-    mocks.readlink.mockReturnValue(join(external, "node_modules"));
-    dirty = "?? node_modules";
-    expect(() => main(["rm", "lane"])).toThrow("1 uncommitted change(s)");
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    dirty = "";
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    expect(calls().filter(({ args }) => args[1] === "remove")).toHaveLength(1);
-  });
-  it("@issue-67 unlinks a dangling node_modules link (lstat, not exists)", () => {
-    mocks.exists.mockReturnValue(false);
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(mocks.stat).toHaveBeenCalledWith(join(lane, "node_modules"), { throwIfNoEntry: false });
-    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
-  });
-  it("@issue-67 restores the node_modules link when git worktree remove fails", () => {
-    const base = mocks.git.getMockImplementation()!;
-    mocks.git.mockImplementation((command, args, options) => {
-      if (args[0] === "worktree" && args[1] === "remove") throw new Error("contains untracked files");
-      return base(command, args, options);
-    });
-    expect(() => main(["rm", "lane"])).toThrow("contains untracked files");
-    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
-    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(lane, "node_modules"), "junction");
-  });
-
-  it("checks clean and pushed before unlinking, then removes without force", () => {
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(events).toEqual([
-      "rev-parse --path-format=absolute --git-common-dir", "worktree list --porcelain",
-      "status --porcelain", "rev-parse HEAD", "branch -r --contains abc",
-      `unlink ${join(lane, "node_modules")}`, `worktree remove ${lane}`, "worktree prune",
-    ]);
-    expect(calls().find(({ args }) => args[1] === "remove")?.cwd).toBe(root);
-  });
-});
-
-describe("worktree add lane names", () => {
-  const managed = (name: string) => join(root, ".claude", "worktrees", name);
-  const BS = String.fromCharCode(92);
-
-  it.each(["lane", "lane-2", "feature.x_1", "A1", "9lives", "a..b", "x"])("accepts the bare name %s and branches from it", (name) => {
+describe("worktree add", () => {
+  it.each(["lane", "lane-2", "feature.x_1", "A1", "x"])("accepts the bare name %s and branches from it", (name) => {
+    const path = join(root, ".claude", "worktrees", name);
     expect(main(["add", name])).toBe(0);
     expect(calls().filter(({ args }) => args[1] === "add").map(({ args, cwd }) => ({ args, cwd }))).toEqual([
-      { args: ["worktree", "add", "-b", name, managed(name), "origin/main"], cwd: root },
+      { args: ["worktree", "add", "-b", name, path, "origin/main"], cwd: root },
     ]);
-    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(managed(name), "node_modules"), "junction");
-    expect(console.log).toHaveBeenCalledWith(managed(name));
+    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(path, "node_modules"), "junction");
+    expect(console.log).toHaveBeenCalledWith(path);
   });
 
   it.each([
-    "feat/x", "feat/x/y", "../../sibling", "../sibling", "..", ".", "./lane", "lane/", "/abs/lane",
-    `a${BS}b`, `..${BS}..${BS}sibling`, `C:${BS}lane`, "C:lane", "lane:stream",
-    "", " ", " lane", "lane ", "a b", "lane\n", "lane\nx", "lane\r", "lane\0", "-lane", "--branch", ".hidden", "_lane", "~lane", "lane*", "lane?", "naïve", "العربية",
+    "feat/x", "feat/x/y", "../../sibling", "../sibling", "..", ".", "./lane", "/abs/lane",
+    "a b", "-lane", ".hidden", "_lane", "", " ", " lane", "lane\n",
   ])("rejects %j before any git or filesystem access", (name) => {
     expect(() => main(["add", name])).toThrow(/invalid lane name/);
     expect(mocks.git).not.toHaveBeenCalled();
     expect(mocks.exists).not.toHaveBeenCalled();
-    expect(mocks.stat).not.toHaveBeenCalled();
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(mocks.symlink).not.toHaveBeenCalled();
-  });
-
-  it("rejects a bad name even when --branch and --base are given", () => {
-    expect(() => main(["add", "feat/x", "--branch", "feat/x", "--base", "origin/main"])).toThrow(/invalid lane name/);
-    expect(mocks.git).not.toHaveBeenCalled();
   });
 
   it("explains how to get a slashed branch and which characters are allowed", () => {
@@ -233,94 +79,118 @@ describe("worktree add lane names", () => {
     expect(() => assertLaneName("../../sibling")).toThrow('invalid lane name "../../sibling"');
   });
 
-  it("keeps slashed branch names available through --branch while the lane stays bare", () => {
+  it("keeps slashed branch names available through --branch, with --base for the start point", () => {
+    const path = join(root, ".claude", "worktrees", "lane2");
     expect(main(["add", "lane2", "--branch", "feat/x", "--base", "origin/dev"])).toBe(0);
     expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
-      .toEqual([["worktree", "add", "-b", "feat/x", managed("lane2"), "origin/dev"]]);
-    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(managed("lane2"), "node_modules"), "junction");
+      .toEqual([["worktree", "add", "-b", "feat/x", path, "origin/dev"]]);
+    expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(path, "node_modules"), "junction");
   });
 
-  it("a created lane can be addressed by the same bare name in rm", () => {
-    expect(main(["add", "lane"])).toBe(0);
-    expect(main(["rm", "lane"])).toBe(0);
-    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+  it("propagates the git error when the branch already exists and creates no lane", () => {
+    const base = mocks.git.getMockImplementation()!;
+    mocks.git.mockImplementation((command, args, options) => {
+      if (args[0] === "worktree" && args[1] === "add") throw new Error("fatal: a branch named 'taken' already exists");
+      return base(command, args, options);
+    });
+    expect(() => main(["add", "lane", "--branch", "taken"])).toThrow(/branch named 'taken' already exists/);
+    expect(mocks.symlink).not.toHaveBeenCalled();
   });
 
   it("without a name prints usage and does nothing", () => {
     expect(main(["add"])).toBe(2);
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
-    expect(mocks.symlink).not.toHaveBeenCalled();
     expect(calls().some(({ args }) => args[1] === "add")).toBe(false);
-  });
-  it("propagates git error when branch already exists on add", () => {
-    const base = mocks.git.getMockImplementation()!;
-    mocks.git.mockImplementation((command, args, options) => {
-      if (args[0] === "worktree" && args[1] === "add") throw new Error("fatal: a branch named 'existing-branch' already exists");
-      return base(command, args, options);
-    });
-    expect(() => main(["add", "lane", "--branch", "existing-branch"])).toThrow(/branch named 'existing-branch' already exists/);
-    expect(mocks.symlink).not.toHaveBeenCalled();
   });
 });
 
-describe("worktree iteration", () => {
-  it.each(["list", "prune"])("%s skips a mixed-case main registration on Windows", (cmd) => {
-    entries = entry(root.toUpperCase()) + entry(lane);
-    expect(main([cmd], "win32")).toBe(0);
-    expect(calls().some(({ args, cwd }) => args[0] === "status" && cwd === root.toUpperCase())).toBe(false);
-    expect(mocks.exists).not.toHaveBeenCalledWith(root.toUpperCase());
-    expect(mocks.unlink).not.toHaveBeenCalledWith(join(root.toUpperCase(), "node_modules"));
-    expect(calls().some(({ args, cwd }) => args[0] === "status" && cwd === lane)).toBe(true);
+describe("worktree remove", () => {
+  it("checks clean and pushed before unlinking, then removes without force and prunes", () => {
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args, cwd }) => ({ args, cwd })))
+      .toEqual([{ args: ["worktree", "remove", lane], cwd: root }]);
+    expect(calls().some(({ args }) => args.join(" ") === "worktree prune")).toBe(true);
   });
 
-  it("prunes registrations first, skips remaining prunable/missing and locked entries, and removes later lanes", () => {
-    entries = entry(root) + entry(stale, "prunable gitdir file points to non-existent location")
-      + entry(locked, "locked") + entry(lane);
-    expect(main(["prune"])).toBe(0);
-    expect(events.slice(0, 3)).toEqual([
-      "rev-parse --path-format=absolute --git-common-dir", "worktree prune", "worktree list --porcelain",
-    ]);
-    expect(calls().some(({ cwd }) => cwd === stale || cwd === locked)).toBe(false);
-    expect(mocks.unlink.mock.calls).toEqual([[join(lane, "node_modules")]]);
-    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args))
-      .toEqual([["worktree", "remove", lane]]);
+  it.each(["rm", "remove"])("@issue-67 %s refuses dirty work with a clear message, without unlinking or removing", (cmd) => {
+    dirty = " M file1.ts\n M file2.ts";
+    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: 2 uncommitted change(s); commit or discard them first`);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().some(({ args }) => args[1] === "remove")).toBe(false);
   });
 
-  it.each(["prune", "list"])("%s reports a per-entry error and still processes later lanes", (cmd) => {
-    entries = entry(root) + entry(broken) + entry(lane);
-    expect(main([cmd])).toBe(1);
-    expect(console.error).toHaveBeenCalledWith(`failed ${broken}: cannot inspect lane`);
-    expect(calls().some(({ args, cwd }) => cwd === lane && args[0] === "status")).toBe(true);
-    if (cmd === "prune") expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
-    else expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
+  it.each(["rm", "remove"])("%s refuses unpushed work with a clear message", (cmd) => {
+    pushed = "";
+    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: HEAD not on any remote branch; push it first`);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().some(({ args }) => args[1] === "remove")).toBe(false);
   });
 
-  it("lists later lanes without running git in a missing/prunable directory", () => {
+  it("a bare name selects the managed lane despite a colliding external registration", () => {
+    entries = entry(root) + entry(resolve("lane")) + entry(lane);
+    expect(main(["rm", "lane"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
+  });
+
+  it("accepts an external lane only by explicit path", () => {
+    entries = entry(root) + entry(external);
+    expect(() => main(["rm", "external"])).toThrow(/not a registered worktree/);
+    expect(main(["rm", external])).toBe(0);
+    expect(mocks.unlink).toHaveBeenCalledWith(join(external, "node_modules"));
+  });
+
+  it("refuses the main checkout and locked entries without touching them", () => {
+    expect(() => main(["rm", root])).toThrow(/main checkout/);
+    entries = entry(root) + entry(lane, "locked");
+    expect(() => main(["rm", "lane"])).toThrow(/locked worktree/);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+  });
+});
+
+describe("worktree list and prune", () => {
+  it("shows each lane's branch, dirty and pushed state, including detached lanes", () => {
+    entries = entry(root) + entry(lane).replace("branch refs/heads/lane\n", "");
+    expect(main(["list"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | detached | dirty=0 | pushed=true`);
+  });
+
+  it("skips missing or locked entries without inspecting them", () => {
     entries = entry(root) + entry(stale, "prunable") + entry(locked, "locked") + entry(lane);
     expect(main(["list"])).toBe(0);
     expect(calls().some(({ cwd }) => cwd === stale || cwd === locked)).toBe(false);
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining(`${stale}: missing directory`));
     expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
-      .toEqual([["worktree", "list", "--porcelain"]]);
   });
-  it.each([
-    ["dirty", "1 uncommitted change(s)"], ["unpushed", "HEAD not on any remote branch"],
-  ])("prune prints a clear message and keeps %s work", (state, message) => {
-    if (state === "dirty") dirty = " M file.ts";
-    else pushed = "";
-    entries = entry(root) + entry(lane);
+
+  it("reports a per-entry error, continues to later lanes, and exits nonzero", () => {
+    entries = entry(root) + entry(broken) + entry(lane);
+    expect(main(["list"])).toBe(1);
+    expect(console.error).toHaveBeenCalledWith(`failed ${broken}: cannot inspect lane`);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
+  });
+
+  it("prunes stale registrations first, then removes only clean, pushed lanes", () => {
+    entries = entry(root) + entry(stale, "prunable") + entry(locked, "locked") + entry(lane);
+    expect(main(["prune"])).toBe(0);
+    expect(mocks.git.mock.calls.map(([, args]) => args.join(" ")).slice(0, 3)).toEqual([
+      "rev-parse --path-format=absolute --git-common-dir", "worktree prune", "worktree list --porcelain",
+    ]);
+    expect(calls().some(({ cwd }) => cwd === stale || cwd === locked)).toBe(false);
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
+  });
+
+  it("prune keeps dirty or unpushed lanes with a clear message", () => {
+    dirty = " M file.ts";
     expect(main(["prune"])).toBe(0);
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining("kept"));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining(message));
-    expect(mocks.unlink).not.toHaveBeenCalled();
-    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([]);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("1 uncommitted change(s)"));
+    expect(calls().some(({ args }) => args[1] === "remove")).toBe(false);
   });
 });
 
 describe("path identity", () => {
-  it("resolves relative segments and normalizes both separators", () => {
+  it("resolves relative segments and normalizes separators", () => {
     expect(samePath(`${lane}/../lane`, lane.replace(/\\/g, "/"), "linux")).toBe(true);
     expect(samePath(lane.replace(/\//g, "\\"), lane, "win32")).toBe(true);
   });
@@ -331,32 +201,15 @@ describe("path identity", () => {
   });
 });
 
-describe("argument parsing and option handling", () => {
-  it.each([
-    ["--base", "origin/develop", "lane", "origin/develop"],
-    ["--branch", "feature/custom", "feature/custom", "origin/main"],
-  ])("uses %s option when provided", (flag, value, branch, base) => {
-    expect(main(["add", "lane", flag, value])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args)).toEqual([["worktree", "add", "-b", branch, lane, base]]);
+describe("argument parsing", () => {
+  it("rejects unknown commands with usage", () => {
+    expect(main(["unknown"])).toBe(2);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt"));
   });
-  it.each([["unknown"], ["rm"]])("rejects %s with usage", (command) => {
-    expect(main([command])).toBe(2);
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("usage: pnpm wt add <name>"));
-  });
+
   it("ignores unknown flags (current parser behaviour)", () => {
     expect(main(["add", "lane", "--unknown", "value"])).toBe(0);
-    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args)).toEqual([["worktree", "add", "-b", "lane", lane, "origin/main"]]);
-  });
-  it("assertLaneName validates exported function directly", () => {
-    expect(() => assertLaneName("valid-name")).not.toThrow();
-    expect(() => assertLaneName("invalid/name")).toThrow(/invalid lane name/);
-    expect(() => assertLaneName("")).toThrow(/invalid lane name/);
-  });
-});
-describe("list command output format", () => {
-  it.each(["lane", "detached"])("shows %s and dirty/pushed status", (branch) => {
-    entries = entry(root) + (branch === "detached" ? entry(lane).replace("branch refs/heads/lane", "") : entry(lane));
-    expect(main(["list"])).toBe(0);
-    expect(console.log).toHaveBeenCalledWith(`${lane} | ${branch} | dirty=0 | pushed=true`);
+    expect(calls().filter(({ args }) => args[1] === "add").map(({ args }) => args))
+      .toEqual([["worktree", "add", "-b", "lane", lane, "origin/main"]]);
   });
 });

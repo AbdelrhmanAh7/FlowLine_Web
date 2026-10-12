@@ -120,24 +120,26 @@ Download and open a trace on your own machine: `gh run download <run id> -R Abde
 
 ## Worktrees
 
-`pnpm wt` manages agent lanes under `.claude/worktrees/<name>` (git-ignored), with `node_modules` linked to the main install. Run from any checkout. The branch defaults to the lane name; `add` always creates a new branch and refuses an existing one.
+Agent lanes live under `.claude/worktrees/<name>` (git-ignored), with `node_modules` linked to the main install. Run `pnpm wt` from any checkout; the branch defaults to the lane name, and `add` always creates a new branch.
 
 ```bash
-pnpm wt add my-lane                          # new branch my-lane from origin/main; prints the path
+pnpm wt add my-lane                               # new branch my-lane from origin/main; prints the path
 pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch, bare lane name
-pnpm wt add base-lane --base origin/main      # choose the start point
-pnpm wt list                                 # <path> | <branch> | dirty=<n> | pushed=<true|false>
-pnpm wt remove my-lane                       # alias of pnpm wt rm my-lane
-pnpm wt prune                                # clear stale registrations; remove clean, pushed lanes
+pnpm wt add base-lane --base origin/dev           # choose the start point
+pnpm wt list                                        # <path> | <branch> | dirty=<n> | pushed=<true|false>
+pnpm wt remove my-lane                              # alias of rm; refuses dirty or unpushed work
+pnpm wt prune                                       # clear stale registrations; remove clean, pushed lanes
 ```
 
-- Lane names must match this anchored pattern; invalid names fail before git runs:
+Safety rules:
+
+- Lane names must match this pattern; `add` rejects anything else before git runs:
 
   ```
   ^[A-Za-z0-9][A-Za-z0-9._-]*$
   ```
 
-  Use `--branch feat/x` for slashed branches.
-- `rm`/`remove` refuse dirty or unpushed work with exit 1: `refusing to remove <path>: N uncommitted change(s); commit or discard them first`, or `HEAD not on any remote branch; push it first`. Modified, staged and untracked files count, except the helper's untracked `node_modules` link to the main install. Tracked links or links pointing elsewhere are preserved. If git removal fails, the helper restores its install link.
-- Removal requires a registered worktree, refuses main and locked lanes, never forces, and never deletes the branch. Bare names select only managed lanes; external lanes require an explicit path (e.g. `pnpm wt rm ./external-lane`). Relative paths resolve from cwd; path comparisons normalize separators and ignore case only on Windows.
-- `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+  Use `--branch feat/x` for a slashed branch name.
+- `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
+- Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
+- `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.

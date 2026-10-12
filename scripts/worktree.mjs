@@ -6,7 +6,8 @@
 //                                                                 (no / or \, so the path stays inside .claude/worktrees/);
 //                                                                 use --branch for a branch such as feat/x
 //   pnpm wt list                                                  state of every worktree
-//   pnpm wt rm|remove <name|path>                                 remove a clean, pushed lane; refuse dirty/unpushed lanes (exit 1)
+//   pnpm wt rm|remove <name|path>                                 remove a registered, unlocked lane if clean and pushed/merged;
+//                                                                 an explicit rm/remove refuses dirty or unpushed work (exit 1)
 //   pnpm wt prune                                                 remove every worktree that is clean and pushed/merged
 //                                                                 (not while agents are starting lanes)
 // Removal never forces: main, locked, dirty or unpushed work is kept. Bare names select managed lanes only.
@@ -15,7 +16,7 @@
 // The branch itself is never deleted.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
+import { existsSync, lstatSync, symlinkSync, unlinkSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,58 +48,39 @@ function worktrees(root) {
     .filter((w) => w.worktree);
 }
 
-// Recognize only the helper's link to the main install; preserve links pointing elsewhere.
-function isOwnModulesLink(path, root, platform) {
-  const nm = join(path, "node_modules");
-  try {
-    return lstatSync(nm, { throwIfNoEntry: false })?.isSymbolicLink() === true && samePath(resolve(path, readlinkSync(nm)), join(root, "node_modules"), platform);
-  } catch {
-    return false;
-  }
-}
-
-function state(path, root, platform) {
-  // The link made by `add` is a symlink, which the `node_modules/` ignore rule (directories only) misses.
-  const own = isOwnModulesLink(path, root, platform);
-  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter((l) => l && !(own && l === "?? node_modules")).length;
+function state(path) {
+  const dirty = git(["status", "--porcelain"], path).split(/\r?\n/).filter(Boolean).length;
   const head = git(["rev-parse", "HEAD"], path);
   const pushed = git(["branch", "-r", "--contains", head], path).length > 0;
-  return { dirty, head, pushed, ownLink: own };
+  return { dirty, head, pushed };
+}
+
+function unlinkModules(path) {
+  const nm = join(path, "node_modules");
+  // A junction/symlink is removed as a link only, so the shared install is never touched.
+  if (existsSync(nm) && lstatSync(nm).isSymbolicLink()) unlinkSync(nm);
 }
 
 function remove(w, root, platform, refuse = false) {
   const path = resolve(w.worktree);
   if (samePath(path, root, platform)) throw new Error(`refusing to remove main checkout: ${path}`);
   if (Object.hasOwn(w, "locked")) throw new Error(`refusing to remove locked worktree: ${path}`);
-  const s = state(path, root, platform);
+  const s = state(path);
   if (s.dirty || !s.pushed) {
-    const reason = s.dirty ? `${s.dirty} uncommitted change(s); commit or discard them first` : "HEAD not on any remote branch; push it first";
-    if (refuse) throw new Error(`refusing to remove ${path}: ${reason}`);
-    console.log(`kept ${path}: ${reason}`);
+    // An explicit rm/remove must not silently skip work: refuse with exit 1. Prune keeps its "kept" report.
+    if (refuse) throw new Error(`refusing to remove ${path}: ${s.dirty ? `${s.dirty} uncommitted change(s); commit or discard them first` : "HEAD not on any remote branch; push it first"}`);
+    console.log(`kept ${path}: ${s.dirty ? `${s.dirty} uncommitted change(s)` : "HEAD not on any remote branch"}`);
     return false;
   }
-  // Unlink only our install link; restore it if git refuses removal.
-  const link = join(path, "node_modules");
-  if (s.ownLink) unlinkSync(link);
-  try {
-    git(["worktree", "remove", path], root);
-  } catch (error) {
-    if (s.ownLink) {
-      try { symlinkSync(join(root, "node_modules"), link, "junction"); }
-      catch { /* Preserve the original git failure. */ }
-    }
-    throw error;
-  }
+  unlinkModules(path);
+  git(["worktree", "remove", path], root);
   console.log(`removed ${path}`);
   return true;
 }
 
 export function main(argv = process.argv.slice(2), platform = process.platform) {
-  // Validate before any git or filesystem access. rm/remove also take explicit paths, so only bare names are checked.
-  const explicitPath = (arg) => isAbsolute(arg) || /[/\\]/.test(arg);
-  if (argv[1] !== undefined && (argv[0] === "add" || ((argv[0] === "rm" || argv[0] === "remove") && !explicitPath(argv[1])))) {
-    assertLaneName(argv[1]);
-  }
+  // Validate before any git or filesystem access.
+  if (argv[0] === "add" && argv[1] !== undefined) assertLaneName(argv[1]);
   const root = resolve(git(["rev-parse", "--path-format=absolute", "--git-common-dir"]), "..");
   const dir = join(root, ".claude", "worktrees");
   const [cmd, name, ...rest] = argv;
@@ -114,11 +96,11 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
     console.log(path);
   } else if ((cmd === "rm" || cmd === "remove") && name) {
     const entries = worktrees(root);
-    const target = explicitPath(name) ? resolve(name) : resolve(dir, name);
+    const explicitPath = isAbsolute(name) || /[/\\]/.test(name);
+    const target = explicitPath ? resolve(name) : resolve(dir, name);
     const w = entries.find((w) => samePath(w.worktree, target, platform));
     if (!w) throw new Error(`not a registered worktree: ${name}`);
-    remove(w, root, platform, true);
-    git(["worktree", "prune"], root);
+    if (remove(w, root, platform, true)) git(["worktree", "prune"], root);
   } else if (cmd === "list" || cmd === "prune") {
     if (cmd === "prune") git(["worktree", "prune"], root);
     let failed = false;
@@ -131,7 +113,7 @@ export function main(argv = process.argv.slice(2), platform = process.platform) 
         }
         if (cmd === "prune") remove(w, root, platform);
         else {
-          const s = state(w.worktree, root, platform);
+          const s = state(w.worktree);
           console.log(`${w.worktree} | ${w.branch?.replace("refs/heads/", "") ?? "detached"} | dirty=${s.dirty} | pushed=${s.pushed}`);
         }
       } catch (error) {
