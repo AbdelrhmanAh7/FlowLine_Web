@@ -8,11 +8,16 @@ import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
-const PASSWORD = "Army-Passw0rd!";
 const FIXED = "fl_test_beta_mode=open; fl_locale=en";
 /** Deterministic per stack: derived from a fixed seed and the stack URL, never from the clock. */
 const seeded = (base: string, seed: string, n = 10) =>
   createHash("sha256").update(`${base}|${seed}`).digest("base64url").slice(0, n).toLowerCase().replace(/[^a-z0-9]/g, "x");
+/**
+ * The throwaway account's password: E2E_ARMY_PASSWORD when the runner provides one, otherwise derived per stack (so a
+ * re-run on the same stack can still sign in). No credential is written in the source.
+ */
+const passwordFor = (base: string) =>
+  process.env.E2E_ARMY_PASSWORD || createHash("sha256").update(`${base}|army-117-password`).digest("base64url").slice(0, 24);
 
 type Headers = Record<string, string>;
 interface Res { status: number; json: unknown }
@@ -30,9 +35,10 @@ interface FlowRow {
 
 /** A verified, signed-in account through the product's own endpoints (test stack outbox); returns its request headers. */
 async function signedIn(base: string, email: string): Promise<Headers> {
+  const password = passwordFor(base);
   const h = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED };
   // A re-run on the same stack finds the account already there; sign-in below still has to succeed.
-  const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD, name: "Army Bot" }) });
+  const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password, name: "Army Bot" }) });
   if (up.ok) {
     let token: string | null = null;
     for (let i = 0; i < 24 && !token; i++) {
@@ -46,7 +52,7 @@ async function signedIn(base: string, email: string): Promise<Headers> {
     const v = await fetch(`${base}/api/email`, { method: "POST", headers: h, body: JSON.stringify({ action: "verify", token }) });
     if (!v.ok) throw new Error(`verify ${v.status}`);
   }
-  const res = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD }) });
+  const res = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password }) });
   expect(res.status).toBe(200);
   const session = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   return { ...h, cookie: `${FIXED}; ${session}` };
