@@ -9,8 +9,7 @@ import { checkDocs } from "../../scripts/ci/docs-check.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const runbookPath = resolve(root, "docs/runbooks/restore-rollback-alerts.md");
 const read = (path: string) => (existsSync(resolve(root, path)) ? readFileSync(resolve(root, path), "utf8") : "");
-const runbook = read("docs/runbooks/restore-rollback-alerts.md");
-const ownerActions = read("docs/implementation/OWNER_ACTIONS.md");
+const [runbook, ownerActions] = ["docs/runbooks/restore-rollback-alerts.md", "docs/implementation/OWNER_ACTIONS.md"].map(read);
 const lineCount = (text: string) => (text === "" ? 0 : text.replace(/\n$/, "").split("\n").length);
 // The body of the `## ` section whose heading matches, up to the next `## ` heading.
 const section = (heading: RegExp) => runbook.split(/^(?=## )/m).find((p) => p.startsWith("## ") && heading.test(p.split("\n")[0])) ?? "";
@@ -49,6 +48,7 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(step).not.toMatch(/--clean/);
     expect(between(runbook, "9. Check the cutoff", "10. Confirm"), "cutoff read before writers start").toMatch(/max\(created_at\) from run/);
     expect(runbook.split('FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up')[1], "no cutoff check once new runs exist").not.toMatch(/max\(created_at\)/);
+    expect(between(runbook, "11. Start", "12. Run"), "a release that caused the damage is not restarted").toMatch(/ruled out as the cause[\s\S]*flowline:\$PREV_SHA/);
   });
 
   it("@issue-68 AC1: commands are copy-pasteable shell, with variables defined once and no <placeholder> in a command", () => {
@@ -66,6 +66,7 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
     expect(runbook).not.toMatch(/backups\/backups/);
     // From the deploy folder, `git diff -- drizzle/` would look at deploy/beta/drizzle/ and always print nothing.
     expect(section(/Rollback/i)).toMatch(/git -C "\$REPO_DIR" diff --stat "\$PREV_SHA" "\$CURRENT_SHA" -- drizzle\//);
+    for (const [path] of runbook.matchAll(/\S*artifacts\/phase-4\S*/g)) expect(path, "evidence paths anchored at REPO_DIR").toMatch(/^`\$REPO_DIR\/artifacts\//);
   });
 
   it("@issue-68 AC2: has no secrets, real identifiers or LIVE-trading content and keeps NileQuant PAPER only", () => {
@@ -98,8 +99,7 @@ describe("@issue-68 restore, rollback and alerting runbook", () => {
   });
 
   it("@issue-68 AC5: the whole change stays within ~300 lines", () => {
-    // The PR adds the runbook, this test and the evidence, plus the OWNER_ACTIONS.md link line and its blank line.
-    // EVIDENCE.md records the matching `git diff --shortstat` of the branch.
+    // Runbook + this test + EVIDENCE.md (which records the matching `git diff --shortstat`) + the 2-line OWNER_ACTIONS.md link.
     const added = ["docs/runbooks/restore-rollback-alerts.md", "tests/unit/restore-rollback-alerts-runbook.test.ts", "artifacts/issue-68/EVIDENCE.md"];
     const total = added.reduce((sum, path) => sum + lineCount(read(path)), 2);
     expect(lineCount(runbook)).toBeGreaterThan(40);

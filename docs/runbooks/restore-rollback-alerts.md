@@ -71,15 +71,16 @@ Use these when data is lost or corrupted. Practise them first on an isolated cop
 9. Check the cutoff before any writer starts: `dc exec -T db psql -U flowline -d flowline -c 'select max(created_at) from run'`
    must be close to the dump time, at most a few minutes past the filename timestamp (writers from step 11 on would move it); much later: wrong dump, go back to step 7.
 10. Confirm `.env.beta` holds the keys and auth secret in use at dump time (compare with `<key-store>`; never print them).
-11. Start the app with the same image: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`. The `migrate`
-    service re-applies any expand-only migrations newer than the dump.
+11. Start the app once the running release is ruled out as the cause: `FLOWLINE_IMAGE="flowline:$CURRENT_SHA" dc up -d --wait`.
+    If it caused the damage or the cause is unknown, start the last healthy one (`FLOWLINE_IMAGE="flowline:$PREV_SHA" dc up -d --wait`,
+    after the §2 step 3 migration check) or a fixed image instead. `migrate` re-applies expand-only migrations newer than the dump.
 12. Run the verification queries below (`dc exec -T db psql -U flowline -d flowline`) and compare with known counts.
 13. Check `"$BASE_URL/api/health"` returns 200 with `"db":"ok"`, `"worker":"ok"` and the expected revision.
 14. On the operator machine (`BASE_URL`, `REPO_DIR` and the smoke accounts `SMOKE_A_*` / `SMOKE_B_*` set privately),
     run the smoke suite: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
 15. Sign in as `<owner>`, open a workspace, a flow and its run history, and press **Test** on one connection (keys decrypt).
 16. Post the all-clear in `<alert-channel>` and record the evidence (dump timestamp, counts, health, smoke result; no
-    secrets or customer data) under `artifacts/phase-4/restore/`.
+    secrets or customer data) under `$REPO_DIR/artifacts/phase-4/restore/`.
 
 Verification queries (read-only):
 
@@ -121,7 +122,7 @@ Criteria for choosing:
 Steps:
 
 1. Note the alert, the time and `<current-sha>` in the incident record; post in `<alert-channel>`.
-2. Find `<previous-sha>`, the last release recorded as healthy under `artifacts/phase-4/release/`, and check its
+2. Find `<previous-sha>`, the last release recorded as healthy under `$REPO_DIR/artifacts/phase-4/release/`, and check its
    image is on the host: `docker image inspect "flowline:$PREV_SHA" --format '{{.Id}}'`.
 3. Check the migrations between the two releases are expand-only:
    `git -C "$REPO_DIR" diff --stat "$PREV_SHA" "$CURRENT_SHA" -- drizzle/` (`-C` anchors the path at the repo root, so
@@ -132,7 +133,7 @@ Steps:
 6. Check `"$BASE_URL/api/health"`: revision `<previous-sha>`, same `schemaVersion` (never lower), `"db":"ok"`, `"worker":"ok"`.
 7. Run the smoke suite on the operator machine as in §1 step 14: `node "$REPO_DIR/scripts/release/smoke.mjs" --base "$BASE_URL"`.
 8. Watch the monitor in `<alert-channel>` for 30 minutes; every alert from step 1 must show RECOVERED.
-9. Record the rollback (both SHAs, times, checks) under `artifacts/phase-4/rollback/`, and open an issue for the
+9. Record the rollback (both SHAs, times, checks) under `$REPO_DIR/artifacts/phase-4/rollback/`, and open an issue for the
    fix. The fix ships later as a normal release, never by editing the running stack.
 
 ## 3. Alerting
