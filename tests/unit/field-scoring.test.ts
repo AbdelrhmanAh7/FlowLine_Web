@@ -61,14 +61,14 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
   it("fails a reply with only the generic team note", () => {
     expect(scoreOwnerDecision(GENERIC, OWNER)).toBe(false);
   });
-  it("passes 'the owner will decide' (any case)", () => {
-    expect(scoreOwnerDecision(`${GENERIC}\n\nThe Owner will decide on the refund.`, OWNER)).toBe(true);
+  it("passes 'the owner will decide' (any case) with no team decider", () => {
+    expect(scoreOwnerDecision("Hello,\n\nThe Owner will decide on the refund.", OWNER)).toBe(true);
   });
-  it("passes the quoted approved policy line (runs 4 and 5 VP-05/VP-06 replies)", () => {
-    expect(scoreOwnerDecision(`Hello,\n\n${POLICY}\n\n${GENERIC}`, OWNER)).toBe(true);
+  it("passes the quoted approved policy line when no team member is named as decider", () => {
+    expect(scoreOwnerDecision(`Hello,\n\n${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER)).toBe(true);
   });
-  it("known limit (VO-07): owner wording quoted from the policy passes even if the next step names the team", () => {
-    // Accepted in #142 (option 1): the check proves owner wording is present, not who decides this request.
-    expect(scoreOwnerDecision(`${POLICY}\n\n${GENERIC}`, OWNER)).toBe(true);
+  it("fails owner wording quoted from the policy when the next step names a team member (reviewer P1 shape)", () => {
+    expect(scoreOwnerDecision(`${POLICY}\n\n${GENERIC}`, OWNER)).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\nA team member will review your refund request.`, OWNER)).toBe(false);
   });
 });

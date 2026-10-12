@@ -52,12 +52,15 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   });
 }
 
+// A reply that hands the decision to a generic team member contradicts "refunds and cancellations are decided by the owner".
+const TEAM_DECIDER = /member of (?:our|the) team|(?:our|the) team (?:will|shall)|team member (?:will|shall)/i;
+
 /**
- * VP-05/VP-06: a consequential reply must carry owner-decision wording (any approved phrase, case-insensitive), not
- * only the generic "A member of our team will review…" note. It checks that the owner wording is present in the
- * reply (it may come from the quoted approved policy line); it does not prove who decides the current request.
+ * VP-05/VP-06: a consequential reply must carry owner-decision wording (any approved phrase, case-insensitive) and
+ * must not assign the decision to a team member, even when the owner wording is quoted from the approved policy.
  */
 export function scoreOwnerDecision(text: string, phrases: string[]): boolean {
+  if (TEAM_DECIDER.test(text)) return false;
   const low = text.toLowerCase();
   return phrases.some((q) => low.includes(q.toLowerCase()));
 }
