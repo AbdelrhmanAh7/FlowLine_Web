@@ -43,6 +43,9 @@ test(
   async ({ app }) => {
     const base = app.baseUrl!;
     const user = await signedIn(base, `army-180-user-${seeded(base, "user").slice(0, 10).toLowerCase().replace(/[^a-z0-9]/g, "x")}@flowline-e2e.test`);
+    // 404 is intentional (hides the panel): requirePlatformAdmin throws notFound() for non-admins before the body is
+    // validated or a step-up is checked (src/server/platform-access.ts requirePlatformAdmin, src/server/platform-http.ts platformWrite);
+    // route() serialises it as { error: { code: "NOT_FOUND", ... } } (src/server/http.ts).
     const res = await fetch(`${base}/api/platform/copy`, {
       method: "PATCH",
       headers: user,
