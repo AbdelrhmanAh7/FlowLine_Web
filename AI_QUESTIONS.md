@@ -95,3 +95,18 @@ Checked on 2026-10-12 on branch `ai/110` at `b1023c9` (same as `origin/main`, so
 2. If you want e2e coverage of the 25 pilot features from this repo, which features should be split into separate issues? Ideally one issue per feature (or small group), each with its own acceptance criterion, so each can be one ~100–300-line PR with an `e2e-army/<issue>-<flow>.e2e.ts` test tagged `feat:<id>`.
 3. No test was added because the issue has no user-facing acceptance criterion of its own. A PR for this branch would contain only this note. Its description should state `E2E: not needed — tracking issue, no product change`.
 4. PR #209 said `Closes #110`, which would have closed the hub's pilot-plan tracker on merge before its checklist was done. Fixed on 2026-10-12 (fix-review round 1): the first line of the PR body now says `Refs #110`, and `gh pr view 209 --json closingIssuesReferences` returns `[]`. The branch's commit messages only use `Refs #110`, so a squash merge does not close it either. The harness wrote `Closes #N` itself; if it regenerates the body, it must keep `Refs #110` for this tracker (see `docs/GITHUB_WORKFLOW.md`). Should the harness use `Refs #N` for every hub tracker issue (`<!-- nql-pilot-plan -->`)?
+
+## Issue #124: verification rounds on 1d8aeaa and 37ef3fe (sign-up click timeouts)
+
+Checked on 2026-10-12 at `ecd3bf0`. Every failure in those reports comes from the verifier's generated steps, not the product:
+
+- **"Click Sign Up times out".** There is no button with that name. The sign-up submit button is **Create account** (`src/app/(auth)/auth-form.tsx:255-256`, key `auth.createAccount`). Without the `fl_locale=en` cookie the page is in Arabic (Arabic is the default language), so the button reads `إنشاء حساب` and no English label matches. Nothing is submitted, so the locator wait runs out.
+- **"Sign-in returns 401 after the sign-up".** This follows from the step above. The sign-up never ran, so the account does not exist, and Better Auth answers 401 for an unknown address.
+- **"Click Resend Verification Email times out".** The `/resend-verification` button is **Resend** (`account.resend.submit`, rendered by `src/app/email-flow.tsx:79`). The same locale point applies.
+- **"Auto-verify AC not met".** The verify stack runs `FLOWLINE_ENV=test` without `FLOWLINE_TEST_AUTO_VERIFY=1` (by design: the env var turns auto-verify on for the whole server). A browser context opts in with the `fl_test_auto_verify=1` cookie, which the generated steps never set.
+
+**Proof with the real labels.** `e2e-army/124-test-auto-verify-signup.e2e.ts` (UI tests set `fl_locale=en`, `fl_test_beta_mode=open` and `fl_test_auto_verify=1`, then wait for hydration before clicking **Create account** and **Sign in**) and `e2e/test-auto-verify.spec.ts` (**Create account** → **Name your workspace** with the cookie; without it, **Check your inbox** and **Resend**).
+
+**Local checks at `ecd3bf0`.** `pnpm typecheck` passed. eslint on the changed files passed. `tests/unit/test-auto-verify.test.ts`: 16/16. `tests/integration/test-auto-verify-staging.test.ts`: 5/5 against a disposable `flowline_test_ai124`. The Playwright and e2e-army browser tests need a built test stack, so they were not run locally (owner rule: no local build). CI and the verify job run them.
+
+**Question for the hub.** Can the verifier's generated sign-up steps set `fl_locale=en` (or read the Arabic labels) and use the real button names? For the auto-verify AC they must also set the `fl_test_auto_verify=1` cookie, or start the stack with `FLOWLINE_TEST_AUTO_VERIFY=1`.
