@@ -2,7 +2,7 @@
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
-Not done. The owner turns on the three GitHub security settings and records the evidence by following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers have nothing to do: only the repository owner can change these settings, and the secrets-settings hard rule keeps them owner-only. #160 stays open (PR #213 links it as `Refs #160`) and comes back when the owner re-adds the `pilot` label.
+Not done. The owner turns on the three GitHub security settings and records the evidence by following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers have nothing to do: the secrets-settings hard rule keeps these settings owner-only. #160 stays open (PR #213 links it as `Refs #160`) and comes back when the owner re-adds the `pilot` label.
 
 ## Issue #141 handoff — 2026-10-12
 
