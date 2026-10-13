@@ -33,3 +33,7 @@ I did not re-create the page, the status badge or `e2e/account-security.spec.ts`
 3. Run #197 as written: new `two-factor-card.tsx`, `page.tsx` edit, `ar.json`/`en.json` keys under `account.security.twoFactor.*`, the new case in `e2e/account-security.spec.ts`, the e2e-army test, and one bullet in `docs/implementation/BETA_USER_GUIDE.md`.
 
 If you want #197 to proceed before #196 merges, say which branch to stack it on (`ai/196` once it has the page).
+
+## Re-check (2026-10-13, second dispatch)
+
+Still blocked. `ai/196` still has only f59477d committed; its worktree (`impl/FlowLine_Web-196`) holds the page, spec, menu link and i18n keys as uncommitted changes from a running agent. Stacking #197 on that unfinished state would conflict with #196's files (`page.tsx`, `e2e/account-security.spec.ts`, `en.json`/`ar.json`, `BETA_USER_GUIDE.md`). Re-dispatch #197 once #196 is committed and merged.
