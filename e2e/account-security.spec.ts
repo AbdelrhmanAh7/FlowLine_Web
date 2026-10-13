@@ -33,6 +33,12 @@ test("a signed-out visit to the security page redirects to sign-in", async ({ br
 
 test("enable two-step verification from the account page", async ({ page }) => {
   await setupUser(page);
+  // The otpauth URI holds the secret: the QR is drawn in the browser, so no request may leave our own origin.
+  const origin = new URL(BASE_URL).origin;
+  const foreign: string[] = [];
+  page.on("request", (r) => {
+    if (/^https?:/.test(r.url()) && new URL(r.url()).origin !== origin) foreign.push(r.url());
+  });
   await page.goto("/account/security");
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
 
@@ -51,6 +57,9 @@ test("enable two-step verification from the account page", async ({ page }) => {
   const secret = page.getByTestId("totp-secret");
   await expect(secret).toBeVisible();
   await expect(secret).toHaveAttribute("dir", "ltr");
+  const qr = page.getByTestId("totp-qr");
+  await expect(qr).toBeVisible();
+  await expect(qr.locator("svg")).toBeVisible();
   await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
   await expect(page.getByText(/shown only once/)).toBeVisible();
   const raw = base32Decode((await secret.textContent())!.trim());
@@ -62,6 +71,14 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.reload();
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
 
+  // Cancel hides the QR too.
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await expect(page.getByTestId("totp-qr")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByTestId("totp-qr")).toHaveCount(0);
+
   // Enabling again replaces the unconfirmed secret; the current code turns it On and hides the secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
@@ -72,7 +89,9 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
   await expect(page.getByText("On", { exact: true })).toBeVisible();
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("totp-qr")).toHaveCount(0);
   await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+  expect(foreign).toEqual([]);
   await page.reload();
   await expect(page.getByText("On", { exact: true })).toBeVisible();
 });

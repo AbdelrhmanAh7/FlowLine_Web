@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useToast } from "@/components/toast";
+import { TotpQr } from "@/components/totp-qr";
 import { Button, Field, Input, StatusBadge } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -69,6 +70,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       </div>
       {enabled ? null : enrolment ? (
         <div className="flex flex-col gap-3">
+          <TotpQr uri={enrolment.totpURI} />
           <Field label={t("account.security.twoFactor.secret")} htmlFor="two-factor-secret">
             <code id="two-factor-secret" dir="ltr" className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm" data-testid="totp-secret">
               {enrolment.secret}
