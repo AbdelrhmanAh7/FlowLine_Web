@@ -1,5 +1,13 @@
 # Next action — 2026-10-03
 
+## Issue #100 validation handoff — 2026-10-13
+
+Continue from `ai/100`, product candidate `d0bd9b52b1ea4bebd48e077ae32208f08ba753f1`.
+Fresh lint and 35 focused unit tests pass. Chromium could not start (`.env.test`
+missing); the test DB port probe returns `EPERM`. The harness must run browser
+and e2e-army checks, and record performance/real-media evidence before completion.
+See [AI_QUESTIONS.md](AI_QUESTIONS.md) and [evidence](artifacts/issue-100/EVIDENCE.md).
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.

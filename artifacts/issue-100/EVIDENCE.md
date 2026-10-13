@@ -2,6 +2,19 @@
 
 Part of #96. Tested tree: the commit that contains this file (`git log -1 --format=%H -- artifacts/issue-100/EVIDENCE.md`).
 
+## Fresh rescue verification — 2026-10-13
+
+Product candidate: `d0bd9b52b1ea4bebd48e077ae32208f08ba753f1` (no product changes this rescue).
+
+- `pnpm lint`: exit 0.
+- `node node_modules/typescript/bin/tsc --noEmit`: exit 0. The `pnpm typecheck` wrapper produced no output and was interrupted; the underlying repo typecheck completed directly.
+- `nice -n 10 pnpm exec vitest run --project unit tests/unit/demo-media.test.ts tests/unit/demo-markup.test.ts tests/unit/gate-groups.test.ts --maxWorkers=2`: 3 files, 35 tests passed, exit 0. The sandbox refused the priority adjustment; the command still ran.
+- `nice -n 10 pnpm exec playwright test e2e/landing-demo.spec.ts e2e/landing.spec.ts --project=chromium --workers=1`: exit 1, server startup `ENOENT .env.test`; **zero browser tests executed**.
+- Non-secret TCP probe of `127.0.0.1:5432`: `EPERM`. e2e-army was not executed because its app stack is unavailable; the hub launcher also reads Keychain credentials, excluded by this task's no-secrets rule.
+- Full suite/build intentionally not run under the owner instruction. Production Lighthouse, actual client bundle size and real-media Range remain unverified.
+
+The historical results below are not fresh verification of this candidate. See [pending checks](../../AI_QUESTIONS.md).
+
 | AC | Verified by | Status |
 |---|---|---|
 | 1 hero inside `.hero-scrub`, preloaded poster, loop after load, AV1 vs H.264, one file | `e2e/landing-demo.spec.ts` (hero, source choice), `e2e-army/100-landing-demo.e2e.ts` AC1, `tests/unit/demo-media.test.ts` (`chooseSource`), `tests/unit/demo-markup.test.ts` | unit + markup tests run locally and pass; browser specs run on CI |

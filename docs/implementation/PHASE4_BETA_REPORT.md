@@ -60,6 +60,13 @@ Status: **implemented on ai/114** (PR #133), awaiting merge.
 
 Status: **implemented on ai/100** (PR #136), awaiting merge. The media itself comes from #99; the embed is developed against fixtures and renders exactly as before when `public/media/demo/manifest.json` is absent.
 
+Rescue validation (2026-10-13, candidate `d0bd9b52b1ea4bebd48e077ae32208f08ba753f1`):
+`pnpm lint` exits 0; focused demo-media, demo-markup and gate-groups unit tests
+pass (35/35); direct `tsc --noEmit` exits 0. Playwright executes no tests: startup fails on missing `.env.test`;
+the sandbox also denies the Postgres TCP probe (`EPERM`). Browser/e2e-army,
+production performance and real-media Range evidence remain pending; #100 is
+not verified complete. [Validation handoff](../../AI_QUESTIONS.md).
+
 - Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
 - Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
 - Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md). Lighthouse before/after is not measured locally (needs a production build; CI).
