@@ -18,6 +18,15 @@ through merges of `origin/ai/197` (latest: its head `1329953`). Against
 Once #259 and #261 merge, merge `origin/main` into `ai/198`; the diff
 against main then shrinks to the list above.
 
+Rechecked for QA round 5 (head `32496f1`): `gh pr view` still shows #259
+OPEN (changes requested) and #261 OPEN, both `mergedAt: null`, and
+`origin/main` (`d136811`) has no `src/app/account/security/`. The scope
+finding therefore stays open by design (CTO: park, do not merge unreviewed
+code). The round's own findings are fixed: the army test is tagged only
+`feat:fl-accounts-sessions`, the status spec's API-enable comment says why
+it uses the API, and the guide's two-step bullet moved from Privacy to
+Getting in with user wording ("isn't available yet").
+
 ## Evidence (2026-10-14, isolated stack: throwaway PostgreSQL 16 cluster,
 database `flowline_test_q198`, app :3198, fakes :4198/:4199, `.env.test` from
 `.github/ci/env.test.template` with generated keys)

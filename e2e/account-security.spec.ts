@@ -12,7 +12,7 @@ test("user menu opens the security page and shows the two-step status", async ({
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
 
-  // Turn MFA on through the API (the UI flow is a later part), then the page reads On.
+  // Turn MFA on through the API so this status test does not depend on the UI enrolment flow, then the page reads On.
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
   expect(enable.ok()).toBeTruthy();
   const { totpURI } = (await enable.json()) as { totpURI: string };

@@ -60,6 +60,7 @@ user menu.
 1. **Getting in:** sign up with your invited email (or a beta code), then **verify your email** (the link is valid
    for 24 h).
    If you enrolled a Flowline authenticator, Google/GitHub/ZITADEL and workspace SSO also require its six-digit code before the account opens. The pending challenge expires after ten minutes; restart sign-in after expiry or changed account links. Older sessions without local MFA proof require sign-in again. Provider MFA, trusted devices and backup codes do not bypass this federated challenge. Workspace SSO linking requires signing in first, independent Flowline mailbox verification and explicit link confirmation. Flowline sign-out does not end the provider's session.
+   **Two-step verification:** Account, Security (user menu) shows whether it is on or off. To turn it on, choose Enable, enter your account password, scan the QR code with your authenticator app (or type the secret key shown below it), store the backup codes offline (shown once) and confirm with the 6-digit code. Turning it off from this page isn't available yet.
 2. **First workflow:** start from a credential-free template, run it, and inspect each step in Run history. Editing
    works on tablet and desktop; mobile is for monitoring.
 3. **Integrations:**
@@ -73,5 +74,4 @@ user menu.
 7. **Privacy:**
    - Your data runs your workflows and isn't used to train models.
    - Deleting your account takes an emailed confirmation link.
-   - Account, Security (user menu) shows whether two-step verification is on or off. To turn it on, choose Enable, enter your account password, scan the QR code with your authenticator app (or type the secret key shown below it), store the backup codes offline (shown once) and confirm with the 6-digit code; turning it off from this page is coming in a later part.
 8. **Help:** use "Report an issue", and include the Request ID shown with any error.
