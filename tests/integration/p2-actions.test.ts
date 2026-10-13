@@ -380,10 +380,13 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
   });
 
   it("rate limiting validates connection workspace before applying limits", async () => {
-    const { user, conn, flowOf } = await setup("WorkspaceValidation");
-    const zd = await conn("zendesk");
-    // Create a flow with a connection from a different workspace
-    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", zd.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 1 })));
+    const { user, flowOf } = await setup("WorkspaceValidation");
+    // Create a different workspace and user, and a connection in that workspace
+    const otherUser = await makeUser("other");
+    const otherWs = await createWorkspace(otherUser, unique("OtherWorkspace"));
+    const otherConn = await createConnection(db, otherUser.id, otherWs.id, "zendesk", "zendesk other", { email: "agent@other.test", token: "test-token", subdomain: "other" });
+    // Create a flow in the first workspace but using the connection from the other workspace
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", otherConn.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 1 })));
     await fake.reset();
     const r = await enqueueRun(user, flow.id);
     await claimAndProcess(r.id);

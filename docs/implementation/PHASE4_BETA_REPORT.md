@@ -40,10 +40,10 @@ Implemented per-connection send rate limiting with audit view and UI configurati
 - Approval for high-volume broadcasts: Not in scope for this MVP, create issue #166 (✓ documented)
 
 **Verification:**
-- Typecheck passes: ✓
-- ESLint passes: ✓
-- Integration tests pass (when PostgreSQL is available): ✓ (tests added, CI will run)
-- e2e-army test passes: ✓ (tests added, CI will run)
+- Typecheck passes: ✓ (verified locally)
+- ESLint passes: ✓ (verified locally)
+- Integration tests: added (test file updated with cross-workspace validation test), CI will verify
+- e2e-army test: added (request-level guard test), CI will verify
 
 **Next steps:**
 - Issue #166: Implement threshold-based approval rules beyond sensitive flag
