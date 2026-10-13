@@ -14,7 +14,7 @@ import { metaText } from "@/lib/meta-text";
 import { useToast } from "@/components/toast";
 import { Radio, Button, Dialog, Drawer, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, TabPanel, Tabs, cx, useConfirm, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { approvalActionId, stepApprovalId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText } from "@/i18n/engine-text";
+import { approvalActionId, stepApprovalId, denyReasonText, runLabel, skipReasonText, statusWord, stepErrorText, flowVersionLabel, rerunOriginalLabel } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import type { MessageKey } from "@/i18n/types";
 import { api } from "@/lib/api";
@@ -413,7 +413,7 @@ function StepPanel({
             </StatusBadge>
           </h2>
           <p className="data mt-1 text-sm text-muted">
-            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {t("common.version", { version: run.version ?? "—" })} · {step.nodeType} · {step.nodeId}
+            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {flowVersionLabel(t, run.version)} · {step.nodeType} · {step.nodeId}
             {step.attempts ? ` · ${t.plural("runs.panel.attempts", step.attempts)}` : ""}
           </p>
         </div>
@@ -653,7 +653,7 @@ function RerunDialog({ run, step, onClose, onStarted }: { run: RunDetailDto; ste
         <legend className="mb-1 text-xs font-medium tracking-[0.4px] text-muted uppercase">{t("runs.rerun.revision")}</legend>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "original"} onChange={() => setRevision("original")} />
-          {t("runs.rerun.original", { version: run.version ?? "" })}
+          {rerunOriginalLabel(t, run.version)}
         </label>
         <label className="flex items-center gap-2">
           <Radio name="rev" checked={revision === "latest"} onChange={() => setRevision("latest")} />

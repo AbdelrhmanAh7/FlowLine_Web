@@ -41,6 +41,16 @@ export function statusWord(t: Translator, status: string): string {
   return optional(t, `statusWord.${status}`, status);
 }
 
+/** A flow snapshot's label: "Version 3", or "Run snapshot" for a run's pin, which has no publication number (version null). */
+export function flowVersionLabel(t: Translator, version: number | null): string {
+  return version === null ? t("common.runSnapshot") : t("common.version", { version });
+}
+
+/** The re-run dialog's choice to re-run on the run's own snapshot, numbered or not. */
+export function rerunOriginalLabel(t: Translator, version: number | null): string {
+  return version === null ? t("runs.rerun.originalSnapshot") : t("runs.rerun.original", { version });
+}
+
 /* ───────── Permissions ───────── */
 
 /** Translated twin of `denyReason` in `src/lib/permissions.ts` (identical English output). */
