@@ -27,7 +27,7 @@ checks used Node 26.10.0; the project's supported Node 24 validation remains for
 
 ## Dependabot alert #3, `source-map-js` — 2026-10-12 (issue #62)
 
-`source-map-js` 1.2.1 (GHSA-68fv-2mgg-jv7q, high; CSS build and test tooling only, no Flowline source imports it) is raised by the override `"source-map-js": ">=1.2.2 <2"` in `pnpm-workspace.yaml`; the lockfile was regenerated with `pnpm install --lockfile-only` and resolves only 1.2.2. Guarded by `tests/unit/dependency-advisories.test.ts`; details in [DEPENDENCIES.md](../security/DEPENDENCIES.md), evidence in [artifacts/issue-62/EVIDENCE.md](../../artifacts/issue-62/EVIDENCE.md). **Pending after PR #77 merges:** alert #3 closed as `fixed` and the open-alert query checked ([NEXT_ACTION.md](../../NEXT_ACTION.md) step 5). Open alerts #4–#17 (`next`, `shell-quote`, `sharp`) are newer and not covered here. This changes no private-beta or production acceptance.
+`source-map-js` 1.2.1 (GHSA-68fv-2mgg-jv7q, high; CSS build and test tooling only, no Flowline source imports it) is raised by the override `"source-map-js": ">=1.2.2 <2"` in `pnpm-workspace.yaml`; the lockfile was regenerated with `pnpm install --lockfile-only` and resolves only 1.2.2. Guarded by `tests/unit/dependency-advisories.test.ts`; details in [DEPENDENCIES.md](../security/DEPENDENCIES.md), evidence in [artifacts/phase-4/issue-62/EVIDENCE.md](../../artifacts/phase-4/issue-62/EVIDENCE.md). **Pending after PR #77 merges:** alert #3 closed as `fixed` and the open-alert query checked ([NEXT_ACTION.md](../../NEXT_ACTION.md) step 5). Open alerts #4–#17 (`next`, `shell-quote`, `sharp`) are newer and not covered here. This changes no private-beta or production acceptance.
 
 ## Company Builder refund note — 2026-10-04 (issue #49)
 

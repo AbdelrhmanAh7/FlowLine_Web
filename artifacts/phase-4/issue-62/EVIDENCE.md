@@ -3,17 +3,16 @@
 Not user-facing, so no e2e-army test: `source-map-js` is used only by CSS build and test tooling (`postcss` via `next` and
 `vite`/`vitest`, `@tailwindcss/node`); no Flowline source imports it and no UI flow changes.
 
-Tested code: `166ae0c9cc6bcbaf49fb7e75a40587e6144942ae` on `ai/62`. It adds one guard test (the #62 entry in the Phase 4
-ledger, `docs/implementation/PHASE4_BETA_REPORT.md`) and a Status line in `docs/security/DEPENDENCIES.md` on top of
-`01040ef`. The lockfile and `pnpm-workspace.yaml` are the same as on `d9ea108`, which bounded the override to the 1.x line
-(`>=1.2.2 <2`) after `1817362` switched the guard test's prerelease comparison to ASCII order. The merges of main since then
-(`ea62eaf`, `4c60626` and `2b1efd1`, which merged `860b9f8`) change none of the #62 code files. Their only conflict, in the
-Phase 4 ledger, kept both main's section and the #62 one, and the new test now checks that. The commit that carries this
-version of the file changes only Markdown. Local focused checks were re-run on `166ae0c` on 2026-10-13 (UTC). Results from
-earlier heads name their head.
-Run 2026-10-11 (UTC) on macOS, Node v26.10.0 (CI uses Node 24), pnpm
-10.32.1, Vitest 5.0.2. Requirement IDs are those of the hub PRD draft `3f227121-0472-8132-9cd1-d43bb8d7ba54`, carried over
-from the earlier version of this file.
+Tested code: `c3634f798ff9232ddcc5927e76f55edff8edbea3` on `ai/62`. It adds the guard test (the #62 entry in the Phase 4
+ledger, `docs/implementation/PHASE4_BETA_REPORT.md`) and a Status line in `docs/security/DEPENDENCIES.md` on top of the
+rebased main (`0b847de`). The lockfile and `pnpm-workspace.yaml` are the same as on `d9ea108`, which bounded the override to
+the 1.x line (`>=1.2.2 <2`) after `1817362` switched the guard test's prerelease comparison to ASCII order. The merges of main
+since then (`0b847de` enabling GitHub security features) change none of the #62 code files. Their only conflict, in the Phase 4
+ledger, kept both main's section and the #62 one, and the new test now checks that. The commit that carries this version of
+the file changes only Markdown. Local focused checks were re-run on `c3634f7` on 2026-10-13 (UTC). Results from earlier heads
+name their head.
+Run 2026-10-13 (UTC) on macOS, Node v26.10.0 (CI uses Node 24), pnpm 10.32.1, Vitest 5.0.2. Requirement IDs are those of the
+hub PRD draft `3f227121-0472-8132-9cd1-d43bb8d7ba54`, carried over from the earlier version of this file.
 
 | Requirement | Verified by | Result on the tested commit |
 |---|---|---|
@@ -27,7 +26,7 @@ from the earlier version of this file.
 Commands on the tested commit:
 
 - One Vitest file per run: `pnpm exec vitest run --project unit --maxWorkers=1 tests/unit/dependency-advisories.test.ts`,
-  7/7 on `166ae0c` (2026-10-13). With the ledger replaced by main's version, or with its evidence link pointing at
+  7/7 on `c3634f7` (2026-10-13). With the ledger replaced by main's version, or with its evidence link pointing at
   `artifacts/issue-62/`, test (7) fails; the ledger was restored from git after both runs. Earlier, on `a923589`, the same command with `tests/unit/drizzle-tooling-prune.test.ts`,
   `tests/unit/docs-index.test.ts`, `tests/unit/docs-check-script.test.ts` and `tests/unit/changed-scope.test.ts` gave 2/2,
   4/4, 95/95 and 88/88. In the agent sandbox, runs of several files stalled at Vitest start-up before any test ran.
@@ -35,8 +34,8 @@ Commands on the tested commit:
   `not.toContain("source-map-js@1.2.1")` check re-added on the 1.2.10 fixture, the file fails with
   `AssertionError: expected 'packages:\n  source-map-js@1.2.10:\n …' not to contain 'source-map-js@1.2.1'`;
   with the fix (commit `4cd8221`), 3/3 pass.
-- `pnpm typecheck` (`tsc --noEmit`) and eslint on the test file: exit 0, re-run on `166ae0c`. `pnpm why source-map-js` on `166ae0c`: "Found 1 version of source-map-js", 1.2.2. `pnpm lint` (`eslint .`): exit 0 on `a923589`.
-- `node scripts/check-evidence-secrets.mjs`: exit 0, 0 hits across 154 files, but no local env file was found, so it
+- `pnpm typecheck` (`tsc --noEmit`) and eslint on the test file: exit 0, re-run on `c3634f7`. `pnpm why source-map-js` on `c3634f7`: "Found 1 version of source-map-js", 1.2.2. `pnpm lint` (`eslint .`): exit 0 on `c3634f7`.
+- `node scripts/check-evidence-secrets.mjs`: exit 0, 0 hits across 160 files, but no local env file was found, so it
   compared nothing (not a pass on real secrets; CI runs it).
 
 Not run locally (CI runs them): the full unit, contract and integration suites, the build and the Chromium specs.
