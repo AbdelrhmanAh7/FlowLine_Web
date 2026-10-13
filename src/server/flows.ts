@@ -13,6 +13,7 @@ import { MAX_EDGES, MAX_NODES, validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "./access";
 import { consumeFault } from "./faults";
 import { HttpError, notFound } from "./http";
+import { n8nToFlow } from "./n8n-import";
 
 const position = z.object({ x: z.number().finite(), y: z.number().finite() });
 const nodeSchema = z.object({
@@ -72,12 +73,18 @@ export async function listFlows(workspaceId: string) {
  * step labels are copied in that language (they are the user's data from then on). Without it, the templates' own
  * English is used.
  */
-export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }, locale?: Locale) {
+export async function createFlow(
+  user: CurrentUser,
+  workspaceId: string,
+  input: { name?: string; templateId?: string; n8n?: unknown },
+  locale?: Locale,
+) {
   const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
+  const imported = input.n8n !== undefined ? n8nToFlow(input.n8n) : null;
   const localized = template ? (locale ? localizeTemplate(createTranslator(locale), template) : { name: template.name, graph: structuredClone(template.graph) }) : null;
-  const name = flowNameSchema.parse(input.name ?? localized?.name ?? "Untitled flow");
-  const graph: FlowGraph = localized?.graph ?? structuredClone(BLANK_GRAPH);
+  const name = flowNameSchema.parse(input.name ?? imported?.name ?? localized?.name ?? "Untitled flow");
+  const graph: FlowGraph = imported?.graph ?? localized?.graph ?? structuredClone(BLANK_GRAPH);
   const [row] = await db
     .insert(schema.flow)
     .values({ workspaceId, name, graph, templateId: template?.id ?? null, createdBy: user.id, updatedBy: user.id })
