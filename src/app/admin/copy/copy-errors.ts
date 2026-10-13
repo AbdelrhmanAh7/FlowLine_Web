@@ -41,9 +41,10 @@ export function copyErrorKey(
  *
  * We refetch in two cases where the client's revision may be stale:
  * 1. Revision conflict (409 REVISION_CONFLICT) — the draft was modified by another session.
- * 2. Network error (status 0) — the request never reached the server OR the response was lost
- *    (connection reset, timeout). In this case the write MAY have committed on the server, so we
- *    must refetch to reconcile.
+ * 2. Network failure (status 0) — the request outcome is unknown, so the write MAY have committed on the
+ *    server and we must reconcile. `api()` in `src/lib/api.ts` reports every ambiguous failure as status 0:
+ *    it wraps both a rejected `fetch()` and a `res.text()` that rejects because the connection dropped while
+ *    the response body was being read (headers already received, body lost), so neither escapes this predicate.
  *
  * Validation errors (400), permission errors (401, 403), not found (404), and server errors (5xx)
  * do not trigger a refetch because either the write definitely failed (4xx) or the server state
