@@ -35,6 +35,7 @@ $ npx vitest run --project unit tests/unit/email-token-lock-order.test.ts
         Tests  10 passed (10)
 ```
 
-- Typecheck: `npx tsc --noEmit` exit 0. Lint: `npx eslint` on the four touched test/e2e files — no findings.
+- Typecheck: `npx tsc --noEmit` exit 0. Lint: `npx eslint src/server/email/flows.ts` plus every touched test, helper and e2e-army file — no findings (re-run on the final head).
+- The final commit changes only comments in `flows.ts` and the header of `account-delete-key-share-upgrade.test.ts` plus docs; after it, eslint (all eight touched files), `tsc --noEmit` and `email-token-lock-order.test.ts` (10/10) were re-run. The database-backed results above were observed on `6323281` and are not re-claimed for the later head.
 - Full suite, build and browser runs are delegated to hosted CI (per the task brief); no full gate or Playwright run is claimed here.
 - The `#108` test file and the `pg-lock-helpers.ts` `routeTransactions` helper are byte-identical to `origin/ai/108` (`2ef1fb8`), so PR #214 and this PR merge cleanly in either order.

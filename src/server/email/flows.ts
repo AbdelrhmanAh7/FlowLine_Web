@@ -172,16 +172,17 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     if (purpose === "delete") {
       const userId = row.userId;
       const sameMembership = (a: Membership) => (b: Membership) => a.workspaceId === b.workspaceId && a.role === b.role;
-      // Lock order (#47, #109): user row (above), then the audit rows, then the workspaces FOR UPDATE.
-      // The audit_event insert key-shares its workspace via FK; writing it before taking the workspace FOR UPDATE
-      // avoids the KEY SHARE → FOR UPDATE upgrade that could deadlock two concurrent deletions (40P01).
-      // The retained-file accounting lock serializes all deletions globally, but this order is safe even without it.
+      // Lock order (#47, #109): user row (above), then the audit rows, then the workspaces FOR UPDATE: the same order as the
+      // SSO transaction (user row, audit insert, then W), so neither side awaits the user row while holding W.
+      // The audit_event insert key-shares its workspace via FK, so this order takes KEY SHARE on W and then asks for W FOR
+      // UPDATE in the same transaction. The retained-file accounting lock above is what keeps two co-members of W from
+      // both holding that KEY SHARE and each waiting to upgrade it (40P01): it is load-bearing, do not remove or narrow it
+      // (negative control: tests/integration/account-delete-key-share-upgrade.test.ts).
       // No membership of this user can be added meanwhile (a workspace_member insert key-shares the user row held above);
       // changes are reconciled below.
       const seen: Membership[] = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, userId));
-      // Write audit rows first (key-share on each workspace), then lock every workspace this user belongs to
-      // (deterministic order, same row lock as changeRole/removeMember). Two co-owners deleting at once
-      // are serialized by the accounting lock; this order prevents a 40P01 upgrade even without it.
+      // Audit rows first, then lock every workspace this user belongs to (deterministic order, same row lock as
+      // changeRole/removeMember).
       if (seen.length) await tx.insert(schema.auditEvent).values(seen.map((m) => deletionAudit(userId, m)));
       if (seen.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, seen.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
       const memberships = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));

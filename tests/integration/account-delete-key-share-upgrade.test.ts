@@ -10,9 +10,10 @@ import { addMember, closeDb, makeUser, unique } from "./helpers";
 import { connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
 
 // This test verifies the fix for issue #109 (part 2 of #47): the deletion now writes its
-// audit rows before locking the workspaces FOR UPDATE. This order avoids the KEY SHARE →
-// FOR UPDATE upgrade *when combined with the retained-file accounting lock*, which serializes
-// all deletions globally. Without the accounting lock, two co-members deleting at once can
+// audit rows before locking the workspaces FOR UPDATE, which matches the SSO transaction's
+// order but itself takes KEY SHARE on the workspace and then upgrades it to FOR UPDATE. Only
+// the retained-file accounting lock, which serializes all deletions globally, keeps two
+// co-members from deadlocking on that upgrade. Without the accounting lock, two co-members deleting at once can
 // each hold a key-share (from their audit inserts) and both wait for FOR UPDATE, causing
 // a 40P01 deadlock. This test uses fault injection (mocking out the accounting lock) to
 // prove that the accounting lock is load-bearing: with only the accounting lock removed,
