@@ -68,14 +68,18 @@ const TEAM_DECIDER = new RegExp(
   "i",
 );
 
+// The owner as the decider in the reply's own words, beyond the packet's two literal phrases: the product says "The
+// business owner decides this refund or cancellation request." (run 6), which the literal list missed.
+const OWNER_DECIDER = /\bowner\s+(?:(?:will|shall|must)\s+)?(?:decides?|reviews?|approves?)\b|\b(?:decided|reviewed|approved)\s+by\s+the\s+(?:business\s+)?owner\b/i;
+
 /**
- * VP-05/VP-06: the reply's own wording must attribute the decision to the owner (any phrase, case-insensitive) and
- * must not assign it to a team member. Approved policy quotes are removed first: their "reviewed by the owner" text
- * describes the policy, not who decides this request.
+ * VP-05/VP-06: the reply's own wording must attribute the decision to the owner (a packet phrase, case-insensitive, or
+ * an owner-decides sentence) and must not assign it to a team member. Approved policy quotes are removed first: their
+ * "reviewed by the owner" text describes the policy, not who decides this request.
  */
 export function scoreOwnerDecision(text: string, phrases: string[], approvedQuotes: string[]): boolean {
   const own = approvedQuotes.reduce((t, q) => t.split(q).join(" "), text);
   if (TEAM_DECIDER.test(own)) return false;
   const low = own.toLowerCase();
-  return phrases.some((q) => low.includes(q.toLowerCase()));
+  return phrases.some((q) => low.includes(q.toLowerCase())) || OWNER_DECIDER.test(own);
 }

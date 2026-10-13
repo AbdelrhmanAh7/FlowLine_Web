@@ -109,6 +109,13 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
     expect(scoreOwnerDecision(`${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER, v2.approvedInformation)).toBe(false);
     expect(scoreOwnerDecision(`${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER, vp06.mustQuote)).toBe(true); // the old strip list: the loophole
   });
+  it("passes the product's explicit owner-decision sentence (run 6 VP-05/VP-06 reply), not only the packet's literal phrases", () => {
+    const run6 = `Hello,\n\nCancellations are free up to 24 hours before the visit.\n\n${POLICY}\n\nThe business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.\n\nThank you — we'll confirm the details with you.`;
+    expect(scoreOwnerDecision(run6, OWNER, v2.approvedInformation)).toBe(true);
+    expect(scoreOwnerDecision("Your refund will be decided by the owner.", OWNER, [POLICY])).toBe(true);
+    expect(scoreOwnerDecision("The owner decides. Our staff will decide this refund today.", OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("The owner is on holiday; we will reply soon.", OWNER, [POLICY])).toBe(false);
+  });
   it("re-scores the committed run-4 replies under the current scorer (not a new run)", () => {
     const run4 = JSON.parse(readFileSync("artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run4-r4-f74285c/results.json", "utf8"));
     const body = (id: string) => (run4.results.find((r: { id: string }) => r.id === id).reply.body as string);
