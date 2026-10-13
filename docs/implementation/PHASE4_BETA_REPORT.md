@@ -9,8 +9,8 @@ Migration 0025 also adds `flow_version.seq` (bigserial): the history panel order
 transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
 label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en); the API
 returns `version: null` for such runs.
-Not covered here: run snapshots written before 0025 keep their numbers (the 0002 immutability trigger blocks an
-`UPDATE` in this migration); the reversible backfill is #205 (PR #211, migration 0026), stacked on this PR.
+Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version` on
+`reason = 'run'` rows, and recreates the trigger, so pre-existing runs no longer consume publication numbers.
 Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
 reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
 builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
