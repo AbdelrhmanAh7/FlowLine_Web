@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duration, initials, percent, pretty, timeAgo } from "@/lib/format";
+import { duration, initials, percent, pretty, timeAgo, toDecimalString } from "@/lib/format";
 import { CATALOGUES } from "@/i18n/translate";
 
 describe("lib/format helpers", () => {
@@ -90,6 +90,63 @@ describe("lib/format helpers", () => {
       expect(timeAgo(undefined, now)).toBe(CATALOGUES.en.common.never);
       expect(timeAgo(null, now, "ar")).toBe(CATALOGUES.ar.common.never);
       expect(timeAgo(undefined, now, "ar")).toBe(CATALOGUES.ar.common.never);
+    });
+  });
+
+  describe("toDecimalString", () => {
+    it("rounds to two decimal places", () => {
+      expect(toDecimalString("12.5")).toBe("12.50");
+      expect(toDecimalString(12.5)).toBe("12.50");
+      expect(toDecimalString("12.50")).toBe("12.50");
+      expect(toDecimalString(0)).toBe("0.00");
+      expect(toDecimalString("0")).toBe("0.00");
+    });
+
+    it("handles large exponents", () => {
+      expect(toDecimalString(1e21)).toBe("1000000000000000000000.00");
+      expect(toDecimalString("1e21")).toBe("1000000000000000000000.00");
+    });
+
+    it("handles negative numbers", () => {
+      expect(toDecimalString(-3.1)).toBe("-3.10");
+      expect(toDecimalString("-0")).toBe("0.00");
+      expect(toDecimalString("-12.5")).toBe("-12.50");
+    });
+
+    it("handles different scales", () => {
+      expect(toDecimalString("12.5", 0)).toBe("13");
+      expect(toDecimalString("12.5", 4)).toBe("12.5000");
+      expect(toDecimalString("12.5", 1)).toBe("12.5");
+    });
+
+    it("handles Arabic-Indic digits", () => {
+      expect(toDecimalString("١٢٫٥٠")).toBe("12.50");
+      expect(toDecimalString("١٢.٥")).toBe("12.50");
+    });
+
+    it("rejects NaN", () => {
+      expect(() => toDecimalString(NaN)).toThrow(RangeError);
+    });
+
+    it("rejects Infinity", () => {
+      expect(() => toDecimalString(Infinity)).toThrow(RangeError);
+      expect(() => toDecimalString(-Infinity)).toThrow(RangeError);
+    });
+
+    it("rejects strings with more decimals than scale", () => {
+      expect(() => toDecimalString("1.234", 2)).toThrow(RangeError);
+      expect(() => toDecimalString("1.2345", 2)).toThrow(RangeError);
+      expect(() => toDecimalString(0.1 + 0.2, 2)).toThrow(RangeError);
+    });
+
+    it("rejects empty strings", () => {
+      expect(() => toDecimalString("")).toThrow(RangeError);
+    });
+
+    it("rejects invalid strings", () => {
+      expect(() => toDecimalString("abc")).toThrow(RangeError);
+      expect(() => toDecimalString("1e")).toThrow(RangeError);
+      expect(() => toDecimalString("1.2.3")).toThrow(RangeError);
     });
   });
 });
