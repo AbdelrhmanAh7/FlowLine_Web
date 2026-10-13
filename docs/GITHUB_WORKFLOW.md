@@ -43,3 +43,10 @@ Approved by: <owner; delegated reviewer only where the affected rule permits del
 ```
 
 A missed record is added retroactively on the PR as soon as it is found, labelled as retroactive.
+
+## AI implementers (Mac mini hub)
+
+The AI implementers no longer run from GitHub Actions: `.github/workflows/ai-implementers.yml` (self-hosted `[self-hosted, macmini]` runner) was removed in #157 (`592a07a`), and the hub's launchd jobs on the Mac mini schedule them (see `docs/slimdown-plan.md`). Engine order and scheduling live in the hub (`AbdelrhmanAh7/nql-agents`), not in this repository.
+
+- **Issue #60 (CI red at `f655e51`, PR #54):** the `start` job failed with `git config` exit 5 ("cannot overwrite multiple values with a single value") because the persistent self-hosted runner reused its checkout, so `credential.helper` held several values in `.git/config`. The cleanup is in the hub: `git_as_owner` in `bin/common.sh` runs `git config --local --unset-all` before re-adding the keys (hub commit [`41c658f`](https://github.com/AbdelrhmanAh7/nql-agents/commit/41c658f0720effff140287e4101f6cbd2e951627), 2026-10-06T02:45:20Z). Evidence: `artifacts/phase-4/issue-60/EVIDENCE.md`.
+- **Guard in this repo:** `tests/unit/ci-workflows.test.ts` ("workflow files") requires every `runs-on` to be `ubuntu-24.04` (a fresh workspace per job), forbids `ai-implementers.yml`, and checks that no workflow mentions `self-hosted`, so a persistent runner cannot come back unnoticed.
