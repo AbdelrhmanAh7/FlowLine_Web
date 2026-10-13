@@ -18,6 +18,10 @@ reports it) and `tests/integration/flows.test.ts` (history order; fails on `crea
 builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
 `e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
 
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
+
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
