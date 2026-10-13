@@ -1,5 +1,32 @@
 # Owner actions — private beta
 
+## Issue #162: Owner Actions - Sensitive Components (tracking)
+
+This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. PR #185 is the only PR for this issue and it links #162 as `Refs #162`. A PR that touches this section must reference the issue as `Refs #162`, never with a closing keyword (`Closes`, `Fixes`, `Resolves`), so that merging it leaves #162 open; only the owner closes #162. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
+
+### Keeping #162 open through the PR #185 merge
+
+Merging PR #185 must leave #162 open. Two checks make that true, and a reviewer or the owner can repeat both:
+
+1. **The live PR body uses the non-closing reference — verified 2026-10-12.** `gh pr view 185 --json body,closingIssuesReferences` returned a body whose first line is `Refs #162` and `"closingIssuesReferences":[]`, and the PR is no longer a draft, so GitHub records no closing link for #162.
+2. **The merge squashes with an explicit message.** The merger passes a subject/body that does not attach a closing keyword to #162, for example `Owner actions: tracking doc for #162`. This is required because the branch's earlier commit bodies, already pushed, quote the keyword in prose (`git log --format=%s origin/main..HEAD` finds no such keyword in any subject, only in those bodies); the hub pushes fast-forward only and never rewrites history, so a default squash description could otherwise carry one of those lines into the merge commit on `main`. If #162 does get closed by the merge commit anyway, reopen it — the checklist below is still all ⏳ Pending.
+
+The start job that wrote the keyword into the PR body lives in the hub (`nql-agents/bin/implement.sh`), so its fix is a separate `nql-agents` issue (read the issue's `owner-only`/`needs-owner` label and emit the non-closing reference instead) and not a change to this repository.
+
+### Owner-only checklist (from issue #162)
+
+| # | Action | Status | Blocked by | Notes |
+|---|--------|--------|------------|-------|
+| 1 | Real provider and AI account setup | ⏳ Pending | Money/legal | Requires real provider credentials and contracts |
+| 2 | Sandbox payments configuration | ⏳ Pending | Money/legal | Requires payment provider accounts and legal review |
+| 3 | Approved deployment with restore/rollback/alerts | ⏳ Pending | Money/people | Requires production approval and runbook sign-off |
+| 4 | Pricing and terms finalization | ⏳ Pending | Legal | Requires legal sign-off on pricing and ToS |
+| 5 | Customer test coordination | ⏳ Pending | People | Requires real customers and NDA/legal clearance |
+
+**Status legend:** ⏳ Pending = owner action required; ✅ Done = completed and verified; 🚫 Blocked = cannot proceed.
+
+---
+
 ## Pending owner checks — 2026-10-03
 
 These checks remain unverified from the repository. Confirm the running app and account before using the local URLs below; no browser session or listener was checked in this docs pass. Record only non-secret completion state; no passwords, OTPs, recovery codes, seeds or provider secrets belong in chat.
@@ -71,6 +98,8 @@ The historical handoff requested a privately saved Google client file. Its prese
 | O10 | Claude independent review | Pending; executor checks and helper implementation checks are not coordinator review |
 | O11 | Legal/business attestations | Google User Data Policy accepted by owner. Any further binding policy/identity attestations require takeover |
 | O12 | Git publication if it triggers deploy/cost | `.github/workflows/gate.yml` now defines PR/push/manual CI. Deployment hooks and external app triggers are unverified; publication remains outside this docs task |
+
+Paid-pilot PP-06 (approved deployment with restore, rollback and alerts; PP-02..PP-09 are tracked in #30), related to O04 and O08 above: draft procedure for owner review in [restore-rollback-alerts.md](../runbooks/restore-rollback-alerts.md). It is a draft, not executed; it changes no item's state.
 
 The earlier handoff reported Google policy/client creation, Sheets/Gmail enablement and External/Testing identity configuration. These external account states are unverified here; live provider certification remains unverified.
 

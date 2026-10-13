@@ -1,5 +1,30 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Field-harness scoring review (#141 / PR #193) — 2026-10-12
+
+The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
+expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
+row with the original value before and after reprocessing. **Explicit assertions** in `field.spec.ts` now verify
+all review-gate checks (recipient, text-only `email_reply`, no payment action, quoted policy, no promise,
+consequential) and all persisted-row checks (`sameRowCount`, `sameRows`, `exactlyOneFollowUp`). Eight focused
+scoring tests pass on `4a241db` (including one that runs the real compiled customer-follow-up pack); the code under test is unchanged since `475c293`.
+Earlier `20261001-d224cfb` evidence is unchanged.
+The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
+3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
+This internal harness change does not change product behavior or beta readiness.
+
+Local verification on `4a241db` (all counts observed there; code under test unchanged since `475c293`): `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+test). Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run:
+`:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` checks forced true): 1 failed / 7 passed, and the approval-payload helpers
+(`scoreApprovedOutboxEntry`, `scoreApprovedAgainstPacket` forced true): 3 failed / 5 passed;
+`:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. On the later head `e3b6c75` (a merge of origin/main; #141 code unchanged since `475c293`) `pnpm typecheck` exited 0, ESLint on `tests/helpers/field-scoring.ts` and `tests/unit/flowline-field-scoring.test.ts` reported nothing, and the scoring test again passed 8/8 (the `artifacts/` field specs are ignored by ESLint); the hosted `gate` runs the rest. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
+checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
+
+## Company Builder refund note — 2026-10-04 (issue #49)
+
+The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
+
 ## Focused-run evidence helpers: explicit child environment — 2026-10-03
 
 Issue #36: the four local focused-run helpers (`upload-admission/run-focused.mjs`, `federated-mfa/run-focused.mjs`, `run-auth-focused.mjs`, `artifacts/phase-4/security-auth/run-focused.mjs`) no longer start Vitest with `...process.env`. They use the allowlist in `scripts/focused-run-env.mjs` (OS/runtime names plus the synthetic values each helper builds), record variable names only (never values) in new result JSON or stderr, and support `--dry-run`. [Allowlist and limits](../../artifacts/phase-4/paid-pilot-round1/upload-admission/README.md#child-environment-issue-36). Verified locally on Windows only: unit test, dry-runs, and a probe launching `npx tsx` and a Vitest unit run under the allowlist. The helpers were **not re-run against a database** (no Docker started), the Linux path is unit-tested by name only, and the earlier recorded runs predate the change and used the ambient shell. `check-drizzle-prune.mjs` and the gate/release/Company Builder scripts still pass `process.env` (not focused database runs); the frozen `artifacts/beta-execution` helpers are historical. This does not change release scope or the unverified items below.
@@ -21,6 +46,15 @@ Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, rema
 ## PR #16 request-body follow-up — 2026-10-03
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
+
+## CodeQL triage D: e2e fake servers — 2026-10-11 (Issue #114, part 4/4 of #63)
+
+Status: **implemented on ai/114** (PR #133), awaiting merge.
+
+- CodeQL alerts #5 (stack-trace exposure), #6 (regex injection), #7 (resource exhaustion) and #9 (unvalidated redirect) fixed in `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`, with shared helpers in `e2e/fakes/safety.ts`.
+- The Stripe fake's `success_url`/`cancel_url` redirect (part of #9) is dismissed with a written reason: it redirects to the URL the authenticated API caller registered, which `tests/contract/billing.test.ts` relies on.
+- Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
+- No e2e-army test: internal to test doubles, no user-facing flow.
 
 ## Branch maintenance — 2026-10-03
 

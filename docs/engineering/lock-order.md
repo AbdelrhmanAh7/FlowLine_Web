@@ -30,6 +30,18 @@ A transaction takes lower ranks first and never goes back to a lower rank.
 
 ## Worked examples
 
+### Example #41: password reset vs SSO link confirmation ([#41](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/41))
+
+**Hazard (before #45):** `consumeAccountToken("reset")` in `src/server/email/flows.ts` wrote the credential `account` row (rank 4), deleted the user's `session` rows (rank 3), then updated the `user` row (rank 1), while `confirmSsoLink` in `src/server/sso-link.ts` locks user (rank 1), session (rank 3), account (rank 4) in that order. Interleaved, reset held the account row and waited for a session that link confirmation held, which waited for the account row: account → session → user against user → session → account.
+
+**Ordering rule:** user (1) → session (3) → account (4), the same order as `confirmSsoLink` (`src/server/sso-link.ts`, via `lockUserThenSessions` in `src/server/federated-locks.ts`). Implemented in `consumeAccountToken` in `src/server/email/flows.ts`: it takes the user row `FOR UPDATE` before the token row and before any reset write. A second reset or a link confirmation for the same user queues at the user row and cannot hold a lower-ranked row first. The reset still writes account before session (the rank 4 exception); the user row held `FOR UPDATE` is what makes that safe. Pinned by `tests/unit/email-token-lock-order.test.ts` and `tests/integration/email-token-lock-order.test.ts` (landed with #45 in PR #65).
+
+### Example #42: member role change vs SSO audit ([#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42))
+
+**Hazard (before #42):** `changeRole` (or `removeMember`) in `src/server/members.ts` locked the `workspace` row `FOR UPDATE` (rank 5), then wrote the member row (rank 6). SSO transactions (`confirmSsoLink`, `src/server/sso-link.ts` and callbacks in `src/server/sso.ts`, `src/server/federated-mfa.ts`) lock that member row (rank 6, `FOR UPDATE` or `FOR SHARE`), then `audit()` in `src/server/audit.ts` inserts an `audit_event` row (rank 7) that takes a key-share lock on the same `workspace` row (rank 5). Each held the row the other needed next, so one aborted with `40P01`.
+
+**Ordering rule:** workspace (5) → member (6) → audit (7), with the workspace lock taken `FOR NO KEY UPDATE`. The SSO paths still reach back from the audit insert to the workspace row (a documented exception, see rank 5), and that is safe because `FOR NO KEY UPDATE` does not conflict with `FOR KEY SHARE`, so the insert never waits for a member change. Implemented in `lockWorkspaceMembership` (`src/server/members.ts`), pinned by `tests/unit/member-lock-order.test.ts` and `tests/integration/member-lock-order.test.ts`.
+
 ### Email token vs user delete ([#45](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/45))
 
 - **Hazard:** `email_token.user_id` is `ON DELETE SET NULL` (`src/db/schema.ts`), so deleting a user updates every token row of that user after the user row is locked. When `consumeAccountToken` locked its own token row first, a password reset and a delete confirmation of one user could deadlock, and two resets with different tokens each held their own token while queueing at the user row.
