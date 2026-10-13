@@ -13,9 +13,9 @@ afterAll(closeDb);
 const UP = "0026_flow_version_run_backfill.sql";
 const REVERSE = "reverse/0026_flow_version_run_backfill.sql";
 
-/** Runs one SQL file the way drizzle's migrator does: every statement of the file inside one transaction. */
+/** Runs one SQL file the way drizzle's migrator does: every statement of the file inside one transaction. psql meta-commands (`\set …`) are skipped. */
 async function apply(file: string) {
-  const text = readFileSync(new URL(`../../drizzle/${file}`, import.meta.url), "utf8");
+  const text = readFileSync(new URL(`../../drizzle/${file}`, import.meta.url), "utf8").replace(/^\\.*$/gm, "");
   await db.transaction(async (tx) => {
     for (const statement of text.split("--> statement-breakpoint")) if (statement.trim()) await tx.execute(sql.raw(statement));
   });
@@ -30,7 +30,7 @@ afterEach(async () => {
   }
 });
 
-/** A flow as a pre-#204 database holds it: save v1, then two manual runs whose snapshots took v2 and v3. */
+/** Legacy-shaped rows, as a pre-#204 image writes them (also after a rollback past 0025): save v1, then two runs whose snapshots took v2 and v3. */
 async function legacyFlow() {
   const user = await makeUser("backfill");
   const ws = await createWorkspace(user, unique("Backfill"));
@@ -104,6 +104,9 @@ describe("migration 0026: legacy run snapshots lose their number (#205)", () => 
   it("is reversible: the reverse step restores the original numbers, can also run twice, and the backfill applies again", async () => {
     const { flow, save, runs } = await legacyFlow();
     const before = await numbers(flow.id);
+
+    // Run by hand with psql: the file itself stops at the first error, so a failed reverse cannot exit 0.
+    expect(readFileSync(new URL(`../../drizzle/${REVERSE}`, import.meta.url), "utf8").split("\n")[0]).toBe("\\set ON_ERROR_STOP on");
 
     await apply(UP);
     await apply(REVERSE);

@@ -1,6 +1,6 @@
 {
-  "id": "f6457d6c-1059-44fd-bf5f-50e0ef3ea69f",
-  "prevId": "7ff6ffe3-2490-4807-ac74-0b535138ef7a",
+  "id": "04483923-da22-4d39-93a7-da49789eaea5",
+  "prevId": "2fc18db5-8aae-4626-b67c-72f06ae1a01a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5244,6 +5244,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "seq": {
+          "name": "seq",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {

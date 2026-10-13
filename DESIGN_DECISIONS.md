@@ -51,11 +51,15 @@ local Ollama models (visual/copy review).
   `flow_version` holds immutable snapshots (`save` = Ctrl/⌘+S, `run` = pinned for each run,
   `overwrite` = the server copy kept before an explicit offline overwrite). Only `save`, `overwrite` and `publish`
   snapshots take a public version number (one sequence per flow); a `run` snapshot has `version = NULL`, so running a
-  flow never changes the number its next publication gets (#204). Migration `0026_flow_version_run_backfill` clears the
-  numbers that older run snapshots still held and keeps them in `flow_version_run_number_backup`, so
-  `drizzle/reverse/0026_flow_version_run_backfill.sql` can restore them; numbered snapshots keep their numbers (#205). Its `BEFORE INSERT` trigger `flow_version_run_unnumbered` stores every new run snapshot unnumbered, so a rollback to an image that still numbers runs cannot bring the gap back. That reverse script is manual and idempotent, and it
-  stays outside the drizzle journal and `src/db/migrate.ts`: the project has no down migrations (a rollback runs the
-  previous image on the newer schema). `run` and `run_step`
+  flow never changes the number its next publication gets (#204). Migration 0025 nulls the numbers older run snapshots held,
+  without a backup. A rollback to an image from before #204 numbers the run snapshots it inserts again. Migration
+  `0026_flow_version_run_backfill` clears those numbers, backs them up in `flow_version_run_number_backup`, and adds
+  the `BEFORE INSERT` trigger `flow_version_run_unnumbered`, which stores every new run snapshot unnumbered (#205).
+  Its UPDATE is idempotent and safe to run again by hand. `drizzle/reverse/0026_flow_version_run_backfill.sql` restores
+  the backed-up numbers and drops the trigger. That script is manual, idempotent and outside the drizzle journal and
+  `src/db/migrate.ts`; the project has no down migrations (a rollback runs the previous image on the newer schema). Run it
+  with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. History lists snapshots by `seq` (insertion order), not `created_at`
+  (the transaction start time). `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get
   **404, not 403**, so the existence of other workspaces is not revealed. Roles: owner > editor > viewer.

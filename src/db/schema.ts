@@ -212,11 +212,13 @@ export const flowVersion = pgTable(
     reason: text("reason").notNull(),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Insertion order: history sorts by this, since created_at is the transaction start and can tie or run backwards. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );
 
-/** Numbers that pre-#204 run snapshots held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
+/** Numbers that run snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
 export const flowVersionRunNumberBackup = pgTable("flow_version_run_number_backup", {
   flowVersionId: uuid("flow_version_id")
     .primaryKey()

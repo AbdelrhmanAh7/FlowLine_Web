@@ -1,11 +1,72 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Legacy run snapshots lose their version number — 2026-10-12 (issue #205)
+## Run snapshots stay unnumbered after a rollback: reversible backfill 0026 (issue #205, PR #211) — 2026-10-13
 
-Follow-up to #204 (PR #207) for the P1 review thread on PR #139. Since #204, a new run snapshot stores `flow_version.version = NULL`, but run snapshots written before it still hold a number, so the next publication of such a flow skips past them. Migration `0026_flow_version_run_backfill` copies those numbers into `flow_version_run_number_backup` and then sets them to NULL; save, overwrite and publish snapshots keep their numbers, including a publication already numbered after legacy runs. Each statement is a no-op on a second run. The immutability trigger is off only for the UPDATE, inside drizzle's migration transaction. The migration also adds a `BEFORE INSERT` trigger, `flow_version_run_unnumbered`, that stores every new run snapshot with `version = NULL`. A rollback to the previous image, which still numbers its runs, therefore cannot bring the defect back. `drizzle/reverse/0026_flow_version_run_backfill.sql` drops that trigger and puts the numbers back. It stays outside the journal and is run by hand with `psql -v ON_ERROR_STOP=1 --single-transaction -f`; without `ON_ERROR_STOP`, psql continues after an error and can still exit 0. If a later save or publication has taken a freed number, the unique index refuses and nothing changes. Merge order: 0026 needs #204's migration 0025 (nullable `flow_version.version`), and PR #207 (#204) is still open, so PR #211's diff against main also shows #204's commits (0025, schema, `flows.ts`, `runs.ts`, the history panel and `e2e-army/117-flows-list-dashboard.e2e.ts`). #205 adds none of them. Retargeting to `ai/204` does not help, because that branch is behind main. Merge #207 first, then rebase `ai/205` onto main so only the #205 files remain. Verified locally on 2026-10-12 against throwaway PostgreSQL databases:
-- `tests/integration/flow-version-run-backfill.test.ts`, 4/4 on `flowline_test_205`. It uses legacy-shaped rows (save v1, run snapshots v2 and v3). Results: the backfill keeps v1, clears the run numbers and backs them up; the trigger is enabled again; the next publication and the flows list `publishedVersion` are v2; a second run changes nothing; the reverse restores v2/v3, also when run twice, and the backfill applies again; the reverse fails atomically after a publication took v2. Before the migration existed, the same file failed 4/4. Re-run after the CTO rework (AI_QUESTIONS.md entry reverted, design note added): 4/4, and `tests/integration/runs.test.ts` 16/16. 2026-10-13, after adding the rollback trigger, on a fresh `flowline_test_205`: 5/5 (new case: a numbered run insert from the previous image is stored unnumbered and the next publication is v2; the reverse drops the trigger, and the backfill recreates it), `runs.test.ts` 16/16. The real files were also run through `psql -v ON_ERROR_STOP=1 --single-transaction -f`: reverse twice, then forward twice, all exit 0, trigger present. A failing statement gives a non-zero exit.
-- Upgrade: a database migrated with `main`'s migrations to 0024 held save 1, run 2, run 3 and publish 4. drizzle's migrator was then run twice on this branch. Result: save 1, publish 4, run NULL/NULL, backup {2, 3}, trigger enabled, 27 journal rows. The reverse file restored 1/2/3/4.
-- `drizzle-kit check` and `drizzle-kit generate` (no changes), `pnpm typecheck` and eslint on the changed files are clean. Not run locally: the rest of the integration suite and the browser suites (CI runs them).
+Follow-up to #204 for the P1 review thread on PR #139. #204's migration 0025 nulls the version numbers that legacy run
+snapshots held, but keeps no backup. Run snapshots can be numbered again afterwards, because the previous image (the
+supported rollback) numbers every run it inserts. Migration `0026_flow_version_run_backfill` copies any numbered run
+snapshot's number into `flow_version_run_number_backup` and sets it to NULL. Save, overwrite and publish snapshots keep
+their numbers. It also adds the `BEFORE INSERT` trigger `flow_version_run_unnumbered`, which stores every new run snapshot
+with `version = NULL`. Each statement is a no-op on a second run. The immutability trigger is off only for the UPDATE,
+inside drizzle's migration transaction. `drizzle/reverse/0026_flow_version_run_backfill.sql` drops the trigger and puts the
+backed-up numbers back. Numbers cleared by 0025 cannot be restored. The script stays outside the journal, starts with
+`\set ON_ERROR_STOP on`, and is run by hand with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. If a later save or
+publication has taken a freed number, the unique index refuses and nothing changes.
+Base: PR #207 (#204) is still open. `ai/205` merges `ai/204` at `f1f9d33`, so `git diff origin/ai/204...ai/205` holds only
+the #205 files: 0026 and its snapshot and journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test
+and these docs. Against main, the PR also shows #204's commits until #207 merges. These include
+`e2e-army/117-flows-list-dashboard.e2e.ts`, which is #204's test and is not deleted here, because deleting it would remove it
+from main. Merge #207 first.
+Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge of `ai/204` `f1f9d33`. Results:
+- `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (save v1, run snapshots
+  v2 and v3, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up the run numbers, and the
+  next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The reverse restores
+  v2/v3, also when run twice, and the backfill then applies again. A numbered run insert after the backfill is stored
+  unnumbered. The reverse fails atomically after a publication took v2.
+- `flow-version-backfill.test.ts` (#204): 2/2. `runs.test.ts`: 16/16. Through `psql -v ON_ERROR_STOP=1
+  --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
+- `drizzle-kit check` and `drizzle-kit generate` (no changes), `pnpm typecheck`, and eslint on the changed files are clean.
+  The full integration and browser suites were not run locally; CI runs them.
+
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
+`version = NULL` (migration 0025 drops `NOT NULL`); only `save`, `overwrite` and `publish` snapshots are numbered.
+Migration 0025 also adds `flow_version.seq` (bigserial): the history panel orders by it, because `created_at` is the
+transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
+label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en) through one
+helper pair, `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts` (unit test
+`tests/unit/flow-version-label.test.ts`: no "Version —" or "(v)" label in either language); the API returns `version: null`
+for such runs.
+Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version` on
+`reason = 'run'` rows, and recreates the trigger, so pre-existing runs no longer consume publication numbers.
+Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
+reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
+builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
+`e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
+
+## Field-harness scoring review (#141 / PR #193) — 2026-10-12
+
+The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
+expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
+row with the original value before and after reprocessing. **Explicit assertions** in `field.spec.ts` now verify
+all review-gate checks (recipient, text-only `email_reply`, no payment action, quoted policy, no promise,
+consequential) and all persisted-row checks (`sameRowCount`, `sameRows`, `exactlyOneFollowUp`). Eight focused
+scoring tests pass on `4a241db` (including one that runs the real compiled customer-follow-up pack); the code under test is unchanged since `475c293`.
+Earlier `20261001-d224cfb` evidence is unchanged.
+The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
+3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
+This internal harness change does not change product behavior or beta readiness.
+
+Local verification on `4a241db` (all counts observed there; code under test unchanged since `475c293`): `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+test). Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run:
+`:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` checks forced true): 1 failed / 7 passed, and the approval-payload helpers
+(`scoreApprovedOutboxEntry`, `scoreApprovedAgainstPacket` forced true): 3 failed / 5 passed;
+`:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. On the later head `e3b6c75` (a merge of origin/main; #141 code unchanged since `475c293`) `pnpm typecheck` exited 0, ESLint on `tests/helpers/field-scoring.ts` and `tests/unit/flowline-field-scoring.test.ts` reported nothing, and the scoring test again passed 8/8 (the `artifacts/` field specs are ignored by ESLint); the hosted `gate` runs the rest. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
+checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
 
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
@@ -28,6 +89,15 @@ Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, rema
 ## PR #16 request-body follow-up — 2026-10-03
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
+
+## CodeQL triage D: e2e fake servers — 2026-10-11 (Issue #114, part 4/4 of #63)
+
+Status: **implemented on ai/114** (PR #133), awaiting merge.
+
+- CodeQL alerts #5 (stack-trace exposure), #6 (regex injection), #7 (resource exhaustion) and #9 (unvalidated redirect) fixed in `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`, with shared helpers in `e2e/fakes/safety.ts`.
+- The Stripe fake's `success_url`/`cancel_url` redirect (part of #9) is dismissed with a written reason: it redirects to the URL the authenticated API caller registered, which `tests/contract/billing.test.ts` relies on.
+- Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
+- No e2e-army test: internal to test doubles, no user-facing flow.
 
 ## Branch maintenance — 2026-10-03
 

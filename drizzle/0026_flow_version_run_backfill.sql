@@ -1,8 +1,10 @@
--- #205 (P1 thread from PR #139): run snapshots written before #204 still hold a public version number, so the next
--- publication of such a flow skips past them. This clears those numbers. Idempotent: a second run leaves the same
--- state. Reversible: the old numbers are kept in flow_version_run_number_backup, and
--- drizzle/reverse/0026_flow_version_run_backfill.sql puts them back. drizzle's migrator runs this file in one
--- transaction, so the immutability trigger (0002) is off only for the UPDATE and a failure rolls everything back.
+-- #205 (P1 thread from PR #139): legacy run snapshots must not hold a public version number, or the next publication
+-- of the flow skips past them. #204's 0025 nulls the numbers present when it runs, without a backup. Numbered run
+-- snapshots can still appear afterwards: the previous image (the supported rollback) numbers every run it inserts.
+-- This clears them too. Idempotent: a second run leaves the same state. Reversible: the old numbers are kept in
+-- flow_version_run_number_backup, and drizzle/reverse/0026_flow_version_run_backfill.sql puts them back. drizzle's
+-- migrator runs this file in one transaction, so the immutability trigger (0002) is off only for the UPDATE and a
+-- failure rolls everything back.
 CREATE TABLE IF NOT EXISTS "flow_version_run_number_backup" (
 	"flow_version_id" uuid PRIMARY KEY NOT NULL,
 	"version" integer NOT NULL,

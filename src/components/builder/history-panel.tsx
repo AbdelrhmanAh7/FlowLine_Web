@@ -8,7 +8,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Button, Select, Skeleton, StatusBadge, cx, useSidePanel } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { denyReasonText } from "@/i18n/engine-text";
+import { denyReasonText, flowVersionLabel } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
 import { api } from "@/lib/api";
 import { can, type Role } from "@/lib/permissions";
@@ -100,7 +100,7 @@ export function HistoryPanel({
                 aria-current={open === v.id ? "true" : undefined}
                 className={cx("flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-start text-sm", open === v.id ? "border-accent bg-card" : "border-line hover:bg-card")}
               >
-                <span className="data text-hi">{v.version === null ? t("history.reason.run") : t("common.version", { version: v.version })}</span>
+                <span className="data text-hi">{flowVersionLabel(t, v.version)}</span>
                 <StatusBadge tone={v.reason === "publish" ? "success" : "muted"}>{t.has(`history.reason.${v.reason}`) ? t(`history.reason.${v.reason}`) : v.reason}</StatusBadge>
                 {v.id === publishedVersionId && <StatusBadge tone="accent">{t("history.live")}</StatusBadge>}
                 <span className="data ms-auto text-muted">{t.relative(v.createdAt)}</span>
@@ -114,7 +114,7 @@ export function HistoryPanel({
           {detail.data ? (
             <>
               <p className="text-sm text-med">
-                {detail.data.version === null ? t("history.reason.run") : t("common.version", { version: detail.data.version })} · {t.plural("history.steps", detail.data.graph.nodes.length)}
+                {flowVersionLabel(t, detail.data.version)} · {t.plural("history.steps", detail.data.graph.nodes.length)}
               </p>
               <ul className="flex flex-col gap-0.5 text-sm">
                 {detail.data.graph.nodes.map((n) => (
