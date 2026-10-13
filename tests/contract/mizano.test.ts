@@ -156,3 +156,54 @@ describe("mizano.list_overdue_invoices", () => {
     await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow();
   });
 });
+
+describe("mizano.create_customer", () => {
+  const validInput = { name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" };
+
+  it("rejects a response missing the required id field", async () => {
+    const { ctx } = ctxReturning({ name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" });
+    await expect(runAction("mizano.create_customer", ctx, validInput)).rejects.toThrow();
+  });
+
+  it("rejects a response where id is a number instead of a string", async () => {
+    const { ctx } = ctxReturning({ id: 123, name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" });
+    await expect(runAction("mizano.create_customer", ctx, validInput)).rejects.toThrow();
+  });
+});
+
+describe("mizano.create_draft_quote", () => {
+  const validInput = {
+    customerId: "cust_1",
+    currency: "EGP",
+    lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
+  };
+
+  it("rejects a response missing the required id field", async () => {
+    const { ctx } = ctxReturning({
+      customerId: "cust_1",
+      currency: "EGP",
+      lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
+    });
+    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+  });
+
+  it("rejects a response where a line has unitPrice as a number instead of a decimal string", async () => {
+    const { ctx } = ctxReturning({
+      id: "quote_1",
+      customerId: "cust_1",
+      currency: "EGP",
+      lines: [{ item: "Widget", qty: "2", unitPrice: 500, taxRate: "14.00" }],
+    });
+    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+  });
+
+  it("rejects a response where currency is missing or invalid", async () => {
+    const { ctx } = ctxReturning({
+      id: "quote_1",
+      customerId: "cust_1",
+      currency: "egp",
+      lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
+    });
+    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+  });
+});
