@@ -1,31 +1,31 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Run snapshots stay unnumbered after a rollback: reversible backfill 0026 (issue #205, PR #211) — 2026-10-13
+## Unpublished snapshots stay unnumbered after a rollback: reversible backfill 0026 (issue #205, PR #211) — 2026-10-13
 
-Follow-up to #204 for the P1 review thread on PR #139. #204's migration 0025 nulls the version numbers that legacy run
-snapshots held, but keeps no backup. Run snapshots can be numbered again afterwards, because the previous image (the
-supported rollback) numbers every run it inserts. Migration `0026_flow_version_run_backfill` copies any numbered run
-snapshot's number into `flow_version_run_number_backup` and sets it to NULL. Save, overwrite and publish snapshots keep
-their numbers. It also adds the `BEFORE INSERT` trigger `flow_version_run_unnumbered`, which stores every new run snapshot
-with `version = NULL`. Each statement is a no-op on a second run. The immutability trigger is off only for the UPDATE,
-inside drizzle's migration transaction. `drizzle/reverse/0026_flow_version_run_backfill.sql` drops the trigger and puts the
-backed-up numbers back. Numbers cleared by 0025 cannot be restored. The script stays outside the journal, starts with
-`\set ON_ERROR_STOP on`, and is run by hand with
-`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. If a later save or
-publication has taken a freed number, the unique index refuses and nothing changes.
-Status on 2026-10-13: **implemented on ai/205** (PR #211), not merged. It depends on #204 (PR #207, also not merged):
-0026 follows 0025 in the journal and needs its nullable `version`. #205 adds only 0026 with its snapshot and journal entry,
-the backup table in `src/db/schema.ts`, the reverse script, the test and these docs.
-Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at `e4ba1bc`. Results:
-- `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (save v1, run snapshots
-  v2 and v3, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up the run numbers, and the
-  next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The reverse restores
-  v2/v3, also when run twice, and the backfill then applies again. A numbered run insert after the backfill is stored
-  unnumbered. The reverse fails atomically after a publication took v2.
-- `flow-version-backfill.test.ts` (#204): 2/2. `runs.test.ts`: 18/18. Through `psql -v ON_ERROR_STOP=1
-  --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
-- `drizzle-kit check` and `drizzle-kit generate` (no changes), `pnpm typecheck`, and eslint on the changed files are clean.
-  The full integration and browser suites were not run locally; CI runs them.
+Follow-up to #204 for the P1 review thread on PR #139. #204 numbers publications only, and its migration 0025 nulls the
+version numbers that legacy save, run and overwrite snapshots held, but keeps no backup. Those snapshots can be numbered
+again afterwards, because the previous image (the supported rollback) numbers every save, run and overwrite it inserts.
+Migration `0026_flow_version_run_backfill` copies the number of any numbered non-publication snapshot into
+`flow_version_number_backup` and sets it to NULL; publication numbers are kept. It also adds the `BEFORE INSERT` trigger
+`flow_version_unpublished_unnumbered`, which stores every new non-publication snapshot with `version = NULL`. Each
+statement is a no-op on a second run. The immutability trigger is off only for the UPDATE, inside drizzle's migration
+transaction. `drizzle/reverse/0026_flow_version_run_backfill.sql` drops the trigger and puts the backed-up numbers back.
+Numbers cleared by 0025 cannot be restored. The script stays outside the journal, starts with `\set ON_ERROR_STOP on`, and
+is run by hand with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+If a later publication has taken a freed number, the unique index refuses and nothing changes.
+Status on 2026-10-13: **implemented on ai/205** (PR #211, base `ai/204`), not merged. It depends on #204 (PR #207, also
+not merged): 0026 follows 0025 in the journal and needs its nullable `version`. #205 adds only 0026 with its snapshot and
+journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test and these docs.
+Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at `193d392`. Results:
+- `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (publication v1, then
+  save v2, run v3 and overwrite v4, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up
+  v2–v4, and the next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The
+  reverse restores v2–v4, also when run twice, and the backfill then applies again. Numbered save, run and overwrite
+  inserts after the backfill are stored unnumbered. The reverse fails atomically after a publication took v2.
+- `flow-version-backfill.test.ts` (#204): 3/3. `runs.test.ts`: 20/20. The migrator applied all 27 journal entries. Through
+  `psql -v ON_ERROR_STOP=1 --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
+- `drizzle-kit check`, `pnpm typecheck`, and eslint on the changed files are clean. The full integration and browser
+  suites were not run locally; CI runs them.
 
 ## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 

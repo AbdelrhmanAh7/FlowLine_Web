@@ -1,5 +1,5 @@
 {
-  "id": "04483923-da22-4d39-93a7-da49789eaea5",
+  "id": "abd76734-1b20-4592-a20e-3ae9a3ffc33f",
   "prevId": "2fc18db5-8aae-4626-b67c-72f06ae1a01a",
   "version": "7",
   "dialect": "postgresql",
@@ -5303,8 +5303,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.flow_version_run_number_backup": {
-      "name": "flow_version_run_number_backup",
+    "public.flow_version_number_backup": {
+      "name": "flow_version_number_backup",
       "schema": "",
       "columns": {
         "flow_version_id": {
@@ -5329,9 +5329,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "flow_version_run_number_backup_flow_version_id_flow_version_id_fk": {
-          "name": "flow_version_run_number_backup_flow_version_id_flow_version_id_fk",
-          "tableFrom": "flow_version_run_number_backup",
+        "flow_version_number_backup_flow_version_id_flow_version_id_fk": {
+          "name": "flow_version_number_backup_flow_version_id_flow_version_id_fk",
+          "tableFrom": "flow_version_number_backup",
           "tableTo": "flow_version",
           "columnsFrom": [
             "flow_version_id"

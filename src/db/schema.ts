@@ -216,8 +216,8 @@ export const flowVersion = pgTable(
   (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );
 
-/** Numbers that run snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
-export const flowVersionRunNumberBackup = pgTable("flow_version_run_number_backup", {
+/** Numbers that save, run and overwrite snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
+export const flowVersionNumberBackup = pgTable("flow_version_number_backup", {
   flowVersionId: uuid("flow_version_id")
     .primaryKey()
     .references(() => flowVersion.id, { onDelete: "cascade" }),
