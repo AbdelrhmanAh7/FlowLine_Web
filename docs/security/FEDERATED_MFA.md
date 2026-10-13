@@ -61,7 +61,7 @@ Two facts matter when adding a lock. The unissued session is created by Better A
 **Known gaps (read from the code while auditing this; not reproduced and not changed by this fix).** The rule covers the paths above, not these:
 
 - `changeRole` and `removeMember` in `src/server/members.ts` lock the `workspace` row and then the member row. The SSO transactions hold the member row (step 5) and later insert an `audit_event` row, which needs a key-share lock on the `workspace` row, so a role change or removal of the same member at the same moment can deadlock with them.
-- The two SSO callback transactions in `src/server/sso.ts` share-lock the provider link `account` row (`currentLink`) after the `workspace_member` row, the reverse of steps 4 and 5. A transaction that locks that account row `FOR UPDATE` before the member row could form a cycle with them. Read from the code, not reproduced; no tracking issue yet. Listed in [lock-order.md](../engineering/lock-order.md).
+- The two SSO callback transactions in `src/server/sso.ts` share-lock the provider link `account` row (`currentLink`) after the `workspace_member` row, the reverse of steps 4 and 5. A transaction that locks that account row `FOR UPDATE` before the member row could form a cycle with them. Read from the code, not reproduced; tracked in [#241](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/241) (part of [#192](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/192)). Listed in [lock-order.md](../engineering/lock-order.md).
 
 This needs its own change and test; until then a PostgreSQL deadlock abort is the failure mode, not a silent bypass.
 
