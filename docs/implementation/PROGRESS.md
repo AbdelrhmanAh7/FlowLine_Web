@@ -66,3 +66,11 @@ All times are 2026-09-27, local. Branch `phase-2`.
 | Codex retest on `c7b7b54`; clear auth message on server outages | changed items 6/7, journeys 6 PASS / 1 BLOCKED (Phase 3 roles) | `bee4390` |
 | **Final gate on `bee4390`** | lint ✓, typecheck ✓, unit 80/80, contract 82/82, integration 110/110, E2E 32/32, live 9 PASS / 11 BLOCKED → **NOT PASS — BLOCKED** (SaaS sandbox credentials) | `5db5e86` |
 | Owner decision 2026-09-28: 11 SaaS live checks out of scope for the Phase 2 gate only; baseline re-verified (no code change since `bee4390`) | **PASS — revised Phase 2 scope; 11 external live checks deferred** (still BLOCKED; release rows R-01…R-11) | decision commit follows |
+
+# G5 · Mizano connector v1 (#144) progress log
+
+All times are 2026-10-13, local. Part of milestone FL G5 · Mizano connector v1 (due 2026-11-20).
+
+| Step | Result | Commit |
+|---|---|---|
+| #146 Money helper `toDecimalString`: convert flow numbers to Mizano decimal strings — pure string/BigInt based, no float rounding; accepts number or string; normalises Arabic-Indic digits; rejects NaN/Infinity/malformed input; throws on more decimals than the scale (e.g. `0.1 + 0.2` rejected); expands scientific notation exactly (e.g. `1e21` → `"1000000000000000000000.00"`); unit tested in `tests/unit/lib-format.test.ts` (25 tests); not yet wired into Mizano step implementations | **PASS** — lint ✓, typecheck ✓, unit 25/25 | `36c3785` |
