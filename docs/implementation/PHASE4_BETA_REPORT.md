@@ -26,6 +26,12 @@ Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at
   `psql -v ON_ERROR_STOP=1 --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
 - `drizzle-kit check`, `pnpm typecheck`, and eslint on the changed files are clean. The full integration and browser
   suites were not run locally; CI runs them.
+- CI on PR #211 (run 38459555397, head `58a91c0`): the three integration shards pass, including the backfill test
+  (5/5), and so does chromium. The `checks (static·unit·contract)` leg fails 1 of 1518 unit tests, so `gate` is red. The failing test is
+  `tests/unit/e2e-army-tooling.test.ts` > "no test or helper waits with a fixed delay" (rule added on main by #85). It fails on
+  #204's `e2e-army/117-flows-list-dashboard.e2e.ts:43` (a `setTimeout` in the outbox wait), which `ai/205` inherits
+  from `ai/204`. PR #207 fails with the same error. #205 must not touch that spec, so the fix is #204's (replace the loop
+  with `expect.poll`); #211 turns green once `ai/204` carries that fix.
 
 ## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 
