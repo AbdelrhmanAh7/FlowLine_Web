@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #160 — await the owner after the pilot (2026-10-13)
+
+Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
+
 ## Issue #141 handoff — 2026-10-12
 
 Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass on `4a241db`; per-mutation results in `EVIDENCE.md`).
@@ -23,5 +27,6 @@ the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this inter
 2. Reconcile G2/G4 with their actual evidence and owner authorization before execution; main does not establish completion, and the only G4 record lives on draft PR #9 until that PR is reviewed and merged.
 3. Obtain a fresh issue #6 field-validation version without modifying frozen evidence; keep issue #6 open until the new run's evidence supports closure.
 4. Owner completes the Google → ZITADEL → FlowLine round-trip and TOTP/bootstrap privately, following [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md) (bounded provider checks: [BETA_EXECUTION_BRIEF.md](docs/implementation/BETA_EXECUTION_BRIEF.md)). Keep `PRIVATE_BETA_READY: NO` until provider, security, field-validation, and owner checks are evidenced.
+5. After PR #77 (issue #62, `source-map-js` override) merges: confirm Dependabot alert #3 (GHSA-68fv-2mgg-jv7q) is closed as `fixed`, and that every alert left in `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` was created after issue #62 (2026-10-07T15:00Z); record both on issue #62, then close it. On 2026-10-11 the open alerts were #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4, created 2026-10-08), which need their own issues; no tracking issue was found ([evidence](artifacts/phase-4/issue-62/EVIDENCE.md)).
 
 Production deployment, live payments, invitations, DNS/Pi changes, and spending remain unapproved. No production readiness is implied by the stack implementation, review, or CI.
