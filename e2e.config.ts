@@ -7,11 +7,13 @@
 // No key or secret is read here: the model CLIs use their own logins.
 import type { E2EConfig } from "e2e";
 import { web } from "@e2e-dev/web";
+import { appUrl } from "./e2e-army/lib";
 
 process.env.E2E_TELEMETRY_DISABLED = "1";
 process.env.DO_NOT_TRACK = "1";
 
-const url = process.env.E2E_ARMY_URL ?? "http://localhost:3100";
+// One default for the browser and the API helpers (apiBase), so cookies set by either reach the other.
+const url = appUrl();
 const app = process.env.E2E_ARMY_URL
   ? { url, identity: "flowline-web" }
   : {

@@ -53,15 +53,20 @@ describe("cli-model adapter", () => {
 });
 
 describe("e2e-army hosts", () => {
-  it("the browser origin (e2e.config.ts) and the API origin (apiBase) default to the same hostname, so cookies set in one reach the other", async () => {
+  it("the browser origin (e2e.config.ts) and the API origin (apiBase) come from one appUrl(), so cookies set in one reach the other", async () => {
+    const config = readFileSync(join(root, "e2e.config.ts"), "utf8");
+    expect(config).toMatch(/import \{ appUrl \} from "\.\/e2e-army\/lib"/);
+    expect(config).toMatch(/const url = appUrl\(\);/);
+    expect(config).not.toMatch(/https?:\/\/(localhost|127\.0\.0\.1)/);
+    const { apiBase, appUrl } = await import("../../e2e-army/lib.ts");
+    for (const url of ["", "http://127.0.0.1:3100", "http://localhost:3200/"]) {
+      vi.stubEnv("E2E_ARMY_URL", url);
+      vi.stubEnv("E2E_ARMY_API", "");
+      expect(new URL(apiBase()).host).toBe(new URL(appUrl()).host);
+    }
     vi.stubEnv("E2E_ARMY_URL", "");
-    vi.stubEnv("E2E_ARMY_API", "");
-    delete process.env.E2E_ARMY_URL;
-    delete process.env.E2E_ARMY_API;
-    const { apiBase } = await import("../../e2e-army/lib.ts");
-    const configUrl = /process\.env\.E2E_ARMY_URL \?\? "([^"]+)"/.exec(readFileSync(join(root, "e2e.config.ts"), "utf8"))?.[1];
-    expect(configUrl).toBeDefined();
-    expect(new URL(apiBase()).host).toBe(new URL(configUrl!).host);
+    expect(appUrl()).toBe("http://localhost:3100");
+    vi.unstubAllEnvs();
   });
 });
 

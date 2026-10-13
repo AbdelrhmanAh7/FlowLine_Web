@@ -64,13 +64,14 @@ test("[fl-design-system.1] the design system page shows the product's building b
   expect((await anonymous().get("/design-system")).status).toBe(200);
 });
 
-test("[fl-email-flows.6] the resend-verification page answers neutrally for an unverified account and, after the 60 s cooldown, sends no second mail", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+test("[fl-email-flows.6] the resend-verification page answers neutrally for an unverified account and, inside the 60 s cooldown, sends no second mail", { tags: ["feat:fl-email-flows", "shard:ui-auth2", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
   needsModel();
   const email = freshEmail("ui-resend", SEED_DOMAIN);
   const up = await new Http().post("/api/auth/sign-up/email", { json: { email, password: PASSWORD, name: "Army Resend" } });
   expect(up.status).toBe(200);
   // The sign-up mail is the token of this purpose that sets the 60 s cooldown (requestToken in src/server/email/flows.ts); the page below is
-  // used right after it, so a request-resend must be answered the same but must not mint or send another link. Wait for the cooldown to pass.
+  // used right after it, so a request-resend must be answered the same but must not mint or send another link. No sleep: the page shows its
+  // answer only after the server finished, so the outbox is final by then.
   const first = await awaitMail(anonymous(), email, "verify");
   expect(first.link).toMatch(/verify-email/);
   await browser.setCookies(cookie("fl_locale", "en"));
@@ -78,8 +79,6 @@ test("[fl-email-flows.6] the resend-verification page answers neutrally for an u
   await expect(screen.getByRole("heading", "Resend verification")).toBeVisible();
   await agent.act("request a new verification link for the email {email}", { params: { email } });
   await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
-  // Wait for the 60 s cooldown to pass before checking the outbox.
-  await new Promise((resolve) => setTimeout(resolve, 60_000));
   const after = await outbox(anonymous(), email, "verify");
   expect(after).toHaveLength(1);
   expect(after[0]!.link).toBe(first.link);
