@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 import React from "react";
+import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -16,16 +18,13 @@ vi.mock("next/link", () => {
   return { default: Link };
 });
 
-// Mock @tanstack/react-query
+// Stub only the query hooks; keep the real QueryClient/QueryClientProvider so
+// renderWithProviders below builds a working client instead of a mock instance.
+// A test file that always controls query state (like copy-editor.test.tsx) may
+// override this mock itself with vi.mock("@tanstack/react-query", ...).
 vi.mock("@tanstack/react-query", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return {
-    ...actual,
-    useQuery: vi.fn(),
-    useMutation: vi.fn(),
-    QueryClient: vi.fn(),
-    QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
-  };
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: vi.fn(), useMutation: vi.fn() };
 });
 
 // Mock i18n client
@@ -33,7 +32,7 @@ vi.mock("@/i18n/client", () => ({
   useT: () => (key: string) => key,
 }));
 
-// Mock api
+// Mock api (ApiError mirrors src/lib/api: status, code, message, isNetwork).
 vi.mock("@/lib/api", () => ({
   api: vi.fn(),
   ApiError: class ApiError extends Error {
@@ -44,7 +43,9 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
-// Mock UI components
+// Mock UI components. Covers every import CopyEditor (`@/components/ui`) uses —
+// Select, Button, Card, Input, Textarea — as plain DOM elements; add a stub here
+// before importing any new primitive in a tested component.
 vi.mock("@/components/ui", () => ({
   Select: vi.fn(({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) =>
     React.createElement("select", props, children)
@@ -64,8 +65,6 @@ vi.mock("@/components/language-switcher", () => ({
   LanguageSwitcher: vi.fn(() => React.createElement("div", { "data-testid": "language-switcher" })),
 }));
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false },
@@ -76,5 +75,3 @@ const queryClient = new QueryClient({
 export function renderWithProviders(ui: React.ReactNode) {
   return render(React.createElement(QueryClientProvider, { client: queryClient }, ui));
 }
-
-import { render } from "@testing-library/react";

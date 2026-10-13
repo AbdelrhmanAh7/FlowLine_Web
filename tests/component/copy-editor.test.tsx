@@ -8,21 +8,25 @@
 /// <reference types="@testing-library/jest-dom" />
 
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { CopyEditor } from "@/app/admin/copy/copy-editor";
 import { api, ApiError } from "@/lib/api";
 import { renderWithProviders } from "./setup";
 import React from "react";
 
-const mockApi = vi.mocked(api);
+// vi.hoisted runs before the hoisted vi.mock factories below, so the mocks are
+// always initialised when the component reads them.
 const mockUseQuery = vi.hoisted(() => vi.fn());
 const mockUseT = vi.hoisted(() => vi.fn());
+const mockApi = vi.mocked(api);
 
 vi.mock("@/i18n/client", () => ({
   useT: () => mockUseT,
 }));
 
+// useQuery is fully mocked, so api() is only ever called by an actual save/publish
+// write; the tests below assert that call explicitly.
 vi.mock("@tanstack/react-query", () => ({
   useQuery: mockUseQuery,
   useMutation: vi.fn(),
@@ -30,7 +34,7 @@ vi.mock("@tanstack/react-query", () => ({
   QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-const user = userEvent.setup();
+let user: UserEvent;
 
 function createMockData(_locale: "en" | "ar") {
   const stateData = {
@@ -79,20 +83,23 @@ function getTranslations(_locale: "en" | "ar") {
   } as const;
 }
 
-function setupApiMocks(calls: Array<() => Promise<unknown>>) {
-  mockApi.mockImplementation((_args) => {
-    const call = calls.shift();
-    if (call) return call();
-    return Promise.reject(new Error("Unexpected api call"));
-  });
+/**
+ * The next api() call — the single save/publish write each test exercises — rejects
+ * with `error`; any further api() call fails the test. Refetches go through the
+ * mocked useQuery, so they never touch api().
+ */
+function rejectWrite(error: unknown) {
+  mockApi.mockRejectedValueOnce(error);
 }
 
 describe("CopyEditor error handling (#181)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.mockReset();
+    mockApi.mockImplementation(() => Promise.reject(new Error("Unexpected api call")));
     mockUseQuery.mockReset();
     mockUseT.mockReset();
+    user = userEvent.setup();
   });
 
   afterEach(() => {
@@ -116,17 +123,14 @@ describe("CopyEditor error handling (#181)", () => {
       });
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      setupApiMocks([
-        () => Promise.reject(new ApiError(500, "INTERNAL", "Server error")),
-        () => Promise.resolve(createMockData("en").meData),
-      ]);
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not load the copy. Refresh and try again."));
       const retryButton = screen.getByRole("button", { name: /retry/i });
       expect(retryButton).toBeInTheDocument();
+      // The load-error branch reads the mocked query; it must not call the write api().
+      expect(mockApi).not.toHaveBeenCalled();
 
       await user.click(retryButton);
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
@@ -147,16 +151,12 @@ describe("CopyEditor error handling (#181)", () => {
       });
 
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
-      
-      setupApiMocks([
-        () => Promise.reject(new ApiError(500, "INTERNAL", "Server error")),
-        () => Promise.resolve(createMockData("ar").meData),
-      ]);
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تعذّر تحميل النصوص. حاول التحديث."));
       expect(screen.getByRole("button", { name: /إعادة المحاولة/i })).toBeInTheDocument();
+      expect(mockApi).not.toHaveBeenCalled();
       // Verify Arabic locale by checking the error message is in Arabic
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
@@ -179,11 +179,6 @@ describe("CopyEditor error handling (#181)", () => {
       });
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      setupApiMocks([
-        () => Promise.resolve(createMockData("en").stateData),
-        () => Promise.reject(new ApiError(500, "INTERNAL", "Server error")),
-      ]);
 
       renderWithProviders(<CopyEditor />);
 
@@ -191,6 +186,7 @@ describe("CopyEditor error handling (#181)", () => {
       await waitFor(() => expect(screen.getByText("Confirm your identity in the admin panel before saving or publishing.")).toBeInTheDocument());
       // Editor content should still render since state query succeeded
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
+      expect(mockApi).not.toHaveBeenCalled();
     });
   });
 
@@ -211,10 +207,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
-        () => Promise.resolve(createMockData("en").stateData), // refetch after error
-      ]);
+      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
@@ -230,6 +223,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
     it("shows conflict error and refetches state on publish", async () => {
@@ -253,10 +248,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
-        () => Promise.resolve(createMockData("en").stateData), // refetch after error
-      ]);
+      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
@@ -268,6 +260,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "POST" }));
     });
 
     it("shows conflict error in Arabic", async () => {
@@ -286,10 +280,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)")),
-        () => Promise.resolve(createMockData("ar").stateData),
-      ]);
+      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
@@ -309,6 +300,8 @@ describe("CopyEditor error handling (#181)", () => {
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
       expect(alert.textContent).not.toContain("(server text)");
       expect(alert.textContent).not.toContain("(client text)");
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
   });
 
@@ -329,10 +322,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes.")),
-        () => Promise.resolve({ data: { csrfToken: "csrf-token", stepUpUntil: null } }), // me refetch
-      ]);
+      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
 
       renderWithProviders(<CopyEditor />);
 
@@ -348,6 +338,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Confirm your identity in the admin panel before saving or publishing."));
       await waitFor(() => expect(meRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
     it("refetches me and shows stepUp error on publish", async () => {
@@ -371,10 +363,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes.")),
-        () => Promise.resolve({ data: { csrfToken: "csrf-token", stepUpUntil: null } }),
-      ]);
+      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
 
       renderWithProviders(<CopyEditor />);
 
@@ -386,6 +375,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Confirm your identity in the admin panel before saving or publishing."));
       await waitFor(() => expect(meRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "POST" }));
     });
 
     it("shows stepUp error in Arabic", async () => {
@@ -404,10 +395,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(403, "STEP_UP_REQUIRED", "أكّد برمز من تطبيق المصادقة لإجراء التغييرات.")),
-        () => Promise.resolve({ data: { csrfToken: "csrf-token", stepUpUntil: null } }),
-      ]);
+      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "أكّد برمز من تطبيق المصادقة لإجراء التغييرات."));
 
       renderWithProviders(<CopyEditor />);
 
@@ -427,6 +415,8 @@ describe("CopyEditor error handling (#181)", () => {
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
       expect(alert.textContent).not.toContain("(server text)");
       expect(alert.textContent).not.toContain("(client text)");
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
   });
 
@@ -447,10 +437,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(500, "INTERNAL", "Something went wrong on our side")),
-        () => Promise.resolve(createMockData("en").stateData),
-      ]);
+      rejectWrite(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
       renderWithProviders(<CopyEditor />);
 
@@ -466,6 +453,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not save the draft. Check the text and refresh if it changed elsewhere."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
     it("shows serverError in Arabic", async () => {
@@ -484,10 +473,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(500, "INTERNAL", "Something went wrong on our side")),
-        () => Promise.resolve(createMockData("ar").stateData),
-      ]);
+      rejectWrite(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
       renderWithProviders(<CopyEditor />);
 
@@ -507,6 +493,8 @@ describe("CopyEditor error handling (#181)", () => {
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
       expect(alert.textContent).not.toContain("(server text)");
       expect(alert.textContent).not.toContain("(client text)");
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
   });
 
@@ -527,10 +515,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true)),
-        () => Promise.resolve(createMockData("en").stateData),
-      ]);
+      rejectWrite(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
       renderWithProviders(<CopyEditor />);
 
@@ -546,6 +531,8 @@ describe("CopyEditor error handling (#181)", () => {
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Can't reach Flowline — check your connection and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
     it("shows networkError in Arabic", async () => {
@@ -564,10 +551,7 @@ describe("CopyEditor error handling (#181)", () => {
 
       mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
       
-      setupApiMocks([
-        () => Promise.reject(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true)),
-        () => Promise.resolve(createMockData("ar").stateData),
-      ]);
+      rejectWrite(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
       renderWithProviders(<CopyEditor />);
 
@@ -587,6 +571,8 @@ describe("CopyEditor error handling (#181)", () => {
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
       expect(alert.textContent).not.toContain("(server text)");
       expect(alert.textContent).not.toContain("(client text)");
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
   });
 });
