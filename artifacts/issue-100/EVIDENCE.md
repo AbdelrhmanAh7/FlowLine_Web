@@ -1,61 +1,64 @@
-# Issue 100: landing demo embed, how each acceptance item is verified
+# Issue #100 acceptance evidence — 2026-10-13
 
-Part of #96. Tested tree: the commit that contains this file (`git log -1 --format=%H -- artifacts/issue-100/EVIDENCE.md`).
+Part of #96. Product SHA tested: `daa1a0d0b7f100bc11e847a012211644dfce664b`.
+The only functional diff in this verification commit is the AC1 test correction in
+`e2e-army/100-landing-demo.e2e.ts`: poster requests are permitted; video requests
+for all four below-fold tiles must be absent. No product code changed.
 
-## Fresh rescue verification — 2026-10-13
+## First-hand runs in this session
 
-Product candidate: `d0bd9b52b1ea4bebd48e077ae32208f08ba753f1` (no product changes this rescue).
-
+- `nice -n 10 pnpm exec playwright test e2e/landing-demo.spec.ts e2e/landing.spec.ts --project=chromium --workers=1`:
+  **46 passed, 1 skipped**, exit 0. The skip is the real-media immutable/Range test;
+  `public/media/demo/manifest.json` is absent. Browser assertions cover EN and AR.
+- `E2E_ARMY_CLI=none E2E_ARMY_NOAGENT=1 nice -n 10 pnpm e2e:army e2e-army/100-landing-demo.e2e.ts`:
+  **4 passed, 0 skipped**, exit 0; run `01a13558-8993-7242-96c5-2271ae0d5836`.
+  No model credentials needed: all four issue tests use browser assertions.
+- `nice -n 10 pnpm exec vitest run --project unit tests/unit/demo-media.test.ts tests/unit/demo-markup.test.ts tests/unit/gate-groups.test.ts --maxWorkers=2`:
+  **35 passed**, exit 0. The sandbox refused `nice`; the tests executed normally.
 - `pnpm lint`: exit 0.
-- `node node_modules/typescript/bin/tsc --noEmit`: exit 0. The `pnpm typecheck` wrapper produced no output and was interrupted; the underlying repo typecheck completed directly.
-- `nice -n 10 pnpm exec vitest run --project unit tests/unit/demo-media.test.ts tests/unit/demo-markup.test.ts tests/unit/gate-groups.test.ts --maxWorkers=2`: 3 files, 35 tests passed, exit 0. The sandbox refused the priority adjustment; the command still ran.
-- `nice -n 10 pnpm exec playwright test e2e/landing-demo.spec.ts e2e/landing.spec.ts --project=chromium --workers=1`: exit 1, server startup `ENOENT .env.test`; **zero browser tests executed**.
-- Non-secret TCP probe of `127.0.0.1:5432`: `EPERM`. e2e-army was not executed because its app stack is unavailable; the hub launcher also reads Keychain credentials, excluded by this task's no-secrets rule.
-- Full suite/build intentionally not run under the owner instruction. Production Lighthouse, actual client bundle size and real-media Range remain unverified.
+- `node node_modules/typescript/bin/tsc --noEmit`: exit 0 after restoring declared
+  dependencies with `pnpm install --frozen-lockfile --ignore-scripts` (no lockfile changes).
+  `pnpm typecheck` was stopped because its machine-wide wrapper could not remove
+  a lock under `agents/locks/`; this direct command runs the repo's underlying check.
 
-The historical results below are not fresh verification of this candidate. See [pending checks](../../AI_QUESTIONS.md).
+## Root cause of missing browser evidence
 
-| AC | Verified by | Status |
+The original stack failed before running tests because `.env.test` was absent.
+After supplying disposable settings, the sandbox's TCP restriction required an
+approved execution; port 5432 was reachable but its PostgreSQL server had no
+`test` role. Instead of changing that server, this session initialized a disposable
+UTF-8 cluster under `/private/tmp/flowline-100-pg`, port 55432, user `test`,
+database `flowline_test`. The existing test-stack launcher migrated and seeded it.
+App port remained 3100. No development DB or production credentials were used.
+
+The first e2e-army run executed four tests: three passed and AC1 failed because
+its `/templates.` predicate also matched the eagerly loaded poster. The corrected
+predicate matches `.mp4` for **all four tiles**; the rerun passed all four tests.
+Existing pause/retry regression tests were exercised, rather than inferred from code.
+
+| REQ / AC | Evidence | Result |
 |---|---|---|
-| 1 hero inside `.hero-scrub`, preloaded poster, loop after load, AV1 vs H.264, one file | `e2e/landing-demo.spec.ts` (hero, source choice), `e2e-army/100-landing-demo.e2e.ts` AC1, `tests/unit/demo-media.test.ts` (`chooseSource`), `tests/unit/demo-markup.test.ts` | unit + markup tests run locally and pass; browser specs run on CI |
-| 2 reduce / saveData / 2g: no video request, Play demo, plays once, live toggle | `e2e/landing-demo.spec.ts` (reduced motion, saveData, 2g, slow-2g, live toggle), `shouldSkipVideo` unit test | browser specs run on CI |
-| 3 Pause/Play >= 44x44, `aria-pressed`, keyboard, session; rejected `play()` | `e2e/landing-demo.spec.ts` (Pause/Play, rejected play), `startPlayback` unit test with a stub | unit run locally; browser on CI |
-| 4 walkthrough: `showModal`, Esc + focus, controls, EN/AR tracks, stepper, RTL-flipped keys, stills (reduced motion or no playable video) | `e2e/landing-demo.spec.ts` (4 walkthrough tests, incl. the media-error stills fallback), `e2e-army` AC4 (also Arabic copy and `::cue` styles), markup test | browser specs run on CI |
-| 5 bento: four tiles, spans, lazy start, copy, note | `e2e/landing-demo.spec.ts` (bento, phone), `e2e-army` AC5 | browser specs run on CI |
-| 6 RTL/EN no overflow 360/768/1024/1440, inline-end controls, identical i18n keys | `e2e/landing-demo.spec.ts` (overflow loop), `tests/unit/demo-media.test.ts` (keys) and the `Messages` type (ar is the source of truth) | keys: local; overflow: CI |
-| 7 Lighthouse, CLS 0, <= 6 KB gz JS, headers + Range | CLS: fixed `aspect-ratio` box (markup test). Headers: `tests/unit/demo-media.test.ts`. Range 206: `e2e/landing-demo.spec.ts` "served media" (skips until #99's media is in the tree). JS size: esbuild estimate below. Lighthouse needs a production build | JS estimate about 3.2 KB gz; Lighthouse **not measured here** (see below) |
-| 8 no manifest: page unchanged, no console errors | `e2e/landing-demo.spec.ts` "without a manifest", `readDemoManifest` unit test | CI |
-| 9 tests green | `pnpm lint`, `pnpm typecheck`, the unit files above: green locally | full suite runs on CI (owner rule) |
-| 10 docs | `docs/landing/DEMO_MEDIA.md`, `docs/DEVELOPER_GUIDE.md`, `docs/README.md` | done |
+| AC1 hero markup, preload, mute, lazy start, codec and one video | Chromium demo tests + army AC1; unit source/markup tests | Passed behavior assertions; actual production LCP unmeasured |
+| AC2 reduced motion, Save-Data, 2g, explicit single play, live toggle | Chromium demo tests | Passed |
+| AC3 keyboard Pause/Play, size, session, rejected play | Chromium demo tests + army AC3 + unit stub | Passed |
+| AC4 dialog, captions, stepper, RTL keys, stills, media-error retry | Chromium EN/AR demo tests + army AC4 | Passed |
+| AC5 bento layout, copy and lazy video | Chromium desktop/phone tests + army AC5 | Passed |
+| AC6 EN/AR overflow 360/768/1024/1440, keys | Chromium demo/landing tests + unit i18n test | Passed |
+| AC7 production Lighthouse before/after, measured CLS, actual added gzip, immutable/Range delivery | Header configuration unit test only | **Pending production measurements and real-media HTTP test** |
+| AC8 missing manifest | Chromium fallback test + reader unit tests | Passed |
+| AC9 relevant tests | 46 browser + 4 army + 35 unit passed; 1 real-media browser test skipped | Focused runs passed; complete matrix pending skipped test and hosted CI |
+| AC10 docs | Consumption guide, this report, active phase ledger and NEXT_ACTION | Updated; completion remains pending |
 
-## Not run locally, and why
+Fixtures total **14,772 bytes** (sum of file sizes, not filesystem allocation), below
+150 KB. Prior esbuild estimates on `0578080` are **not** evidence for the current
+Next production bundle. No full suite/build ran locally, per owner instruction.
+No Lighthouse score, CLS=0, production LCP, Range=206 or CI success is claimed.
 
-- The Playwright and e2e-army specs need Postgres and a local port; the implementer sandbox blocks both (`connect EPERM 127.0.0.1:5432`).
-  They are written against the final markup and run on CI.
-- No production build here (owner rule: the full suite and build run on GitHub-hosted CI). Lighthouse before/after numbers and the
-  gzip size of the added client JS (`demo-video`, `demo-walkthrough`, `demo-source`) must be taken from the CI build; the command is in
-  #96 "Prior attempt".
+## Remaining handoff
 
-## Re-check on `0578080` (2026-10-11, after merging `origin/main` at `aee8385`)
-
-Run in the implementer worktree on `05780806d195de5f5677d729b14d3d7719610055`:
-
-- `pnpm typecheck`: no errors.
-- `pnpm exec eslint` on every file this branch changes under `src/`, `e2e/`, `e2e-army/`, `tests/unit/`, plus `next.config.ts` and
-  `playwright.config.ts`: exit 0.
-- `pnpm exec vitest run tests/unit/demo-media.test.ts tests/unit/demo-markup.test.ts`: 2 files, 24 tests passed.
-- `pnpm exec vitest run tests/unit/i18n.test.ts tests/unit/landing-header.test.ts tests/unit/i18n-content-text.test.ts`: 3 files,
-  65 tests passed. The 23 `landing.demo.*` keys are identical in `ar.json` and `en.json`.
-- Added client JS, an **estimate** rather than the Next build: esbuild 0.25.12 `--bundle --minify --format=esm --splitting` of
-  `demo-video.tsx` and `demo-walkthrough.tsx`, with React, `@/i18n/*` and `@/lib/demo-media` (type-only) left external because the
-  page already loads them, gives 7,919 bytes minified and **3,248 bytes gzip -9** in total (`demo-source` chunk 1,890, walkthrough 1,818,
-  video entry 125). That is under the 6 KB budget. The CI build is the authoritative number.
-- Fixtures in `e2e/fixtures/demo/`: 32 KB total (cap 150 KB).
-
-
-## Review round 2 (2026-10-13, after merging `origin/main`)
-
-- Fixes: `src/components/landing/demo-video.tsx` (an automatic start rechecks eligibility after the source choice; `key` remount on locale/theme change; a tap passes `user` so the H.264 fallback in `attachSource` runs), `src/components/landing/demo-walkthrough.tsx` (a failed `src` is dropped before the retry; stills stay until a play succeeds), `src/lib/demo-source.ts` (`attachSource`, moved out of the component so it is unit-testable).
-- Tests: `tests/unit/demo-media.test.ts` (`attachSource`: 2 tests) with `demo-markup` and `gate-groups` files: 35 passed. New browser spec "reopening after a media error" in `e2e/landing-demo.spec.ts` runs on CI (no Postgres/port in the implementer sandbox).
-- `pnpm typecheck` and `eslint` on the changed files: clean.
-- Gate group: `e2e/landing-demo.spec.ts` is in the `product` group (`scripts/gate-groups.mjs`), asserted by `tests/unit/gate-groups.test.ts`.
+The harness must supply production before/after Lighthouse and added-client-gzip
+measurements, then test immutable headers and Range against #99's content-hashed
+media. Only after those and required hosted checks pass can #100 be complete.
+The inherited implementation predates layer planning and exceeds the small-PR
+limit. This session does not rewrite pushed history or claim to have split it;
+the harness/owner must arrange reviewable layers before merge.

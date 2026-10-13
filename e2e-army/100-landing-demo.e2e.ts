@@ -52,7 +52,7 @@ test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after 
   const chosen = hits.filter((p) => /\/hero\..*\.mp4$/.test(p));
   expect(chosen[0]).toContain(".av1."); // AV1 smooth + power efficient wins over H.264
   expect(await browser.evaluate(() => (document.querySelector("video[data-demo-clip='hero']") as HTMLVideoElement).muted)).toBe(true);
-  expect(hits.some((p) => p.includes("/templates."))).toBe(false); // bento tiles below the fold are not fetched
+  expect(hits.filter((p) => /\/(templates|build|run|history)\..*\.mp4$/.test(p))).toEqual([]); // Posters may load eagerly; below-fold videos must not fetch.
 });
 
 test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play button of at least 44x44 px that sticks", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
