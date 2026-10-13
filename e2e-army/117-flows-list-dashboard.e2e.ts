@@ -106,10 +106,11 @@ async function runToEnd(http: Http, flowId: string) {
 
 test(
   "@issue-117 AC1: the flow list and dashboard show each flow's last run, success rate and first published version (v1)",
-  { tags: ["feat:fl-flows-list", "lvl:api"] },
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api", "feat:fl-flow-versions", "feat:fl-run-execution", "feat:fl-run-history", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    const http = client(base, await signedIn(base, `army-117-${seeded(base, "army-117-owner")}@flowline-e2e.test`));
+    const headers = await signedIn(base, `army-117-${seeded(base, "army-117-owner")}@flowline-e2e.test`);
+    const http = client(base, headers);
     const created = await http.post("/api/workspaces", { name: `List ${seeded(base, "army-117-ws", 6)}` });
     expect(created.status).toBe(201);
     const ws = (created.json as { workspace: { id: string } }).workspace;
@@ -134,5 +135,14 @@ test(
     // The dashboard counts the same flows; the two runs of `good` did not use up its publication numbers.
     const overview = (await http.get(`${w}/overview`)).json;
     expect(overview).toMatchObject({ flows: 3, activeRuns: 0 });
+
+    // The list and runs screens load under the workspace's real slug; the literal route placeholder "[slug]" is no
+    // workspace, so it gets the ordinary 404 page (a verify run that opened /w/[slug]/flows saw exactly that).
+    const page = (path: string) => fetch(`${base}${path}`, { headers: { cookie: headers.cookie } }).then((r) => r.status);
+    const slug = (created.json as { workspace: { slug: string } }).workspace.slug;
+    for (const view of ["flows", "runs"]) {
+      expect(await page(`/w/${slug}/${view}`)).toBe(200);
+      expect(await page(`/w/${encodeURIComponent("[slug]")}/${view}`)).toBe(404);
+    }
   },
 );
