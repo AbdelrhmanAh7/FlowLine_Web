@@ -53,7 +53,7 @@ The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI 
 - `results.json` — full run output as written by `field.spec.ts`; attached to the PR, not committed (AGENTS.md evidence rule)
 
 ## Decisions
-- **Scoring record:** the scoring record for #142 is a run on the current head scored by the merged scorer (`run6-v2-<sha>`, `PACKET=packet.v2.json`). It has NOT been recorded yet: it needs a live isolated stack plus a model, which the implementer environment of the last review round did not have. Until then this run 5 is historical (scored at `c2b0541`) and the 8/10 is not the current scorer's verdict. If the run-4/5 VP-05/VP-06 replies fail `ownerDecision` under `TEAM_DECIDER`, that is a product follow-up (VO-07), not a reason to weaken the scorer.
+- **Scoring record:** the scoring record for #142 is a run on the current head scored by the merged scorer (`run6-v2-<sha>`, `PACKET=packet.v2.json`). It has NOT been recorded yet: it needs a live isolated test stack (Postgres plus `pnpm dev:test`, which runs its own fake AI provider, so no real model), which the implementer environment of the last review rounds could not start. Until then this run 5 is historical (scored at `c2b0541`) and the 8/10 is not the current scorer's verdict. If the run-4/5 VP-05/VP-06 replies fail `ownerDecision` under `TEAM_DECIDER`, that is a product follow-up (VO-07), not a reason to weaken the scorer.
 - VP-06 fails only on VF-02 (`mustNotPromise: "cancelled"`), unchanged from runs 1–4; not touched here. VP-03's missing price quote (VF-05) and an explicit owner-decision sentence (VO-07) are logged as follow-ups, not #142.
 - No product code changed.
 
