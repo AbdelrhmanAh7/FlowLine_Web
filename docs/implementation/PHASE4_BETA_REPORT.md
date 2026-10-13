@@ -30,20 +30,31 @@ Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at
 ## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
-per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
-`version = NULL` (`insertVersion` in `src/server/flows.ts`; migration 0025 drops `NOT NULL`); only `save`, `overwrite`
-and `publish` snapshots are numbered. Draft edits (autosave, which bumps `flow.revision`) never wrote a snapshot and
-still don't. Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version`
-on `reason = 'run'` rows and recreates the trigger. History now orders by `created_at` (version can be NULL). The history
-panel and the run inspector label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`,
-`runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts`;
-the run detail API (`/api/runs/:id`, `/api/v1/runs/:id`) returns `version: null` for such runs.
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
 Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
-keeps publishedVersion 1; draft edits and a run before the first publish give v1; two runs then publish give v1; the three
-fail without the fix with 4≠2, 2≠1 and 3≠1), `tests/integration/flow-version-backfill.test.ts`,
-`tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`, `pnpm typecheck`, eslint on the changed
-files and `drizzle-kit check`. Open for the CTO, in `AI_QUESTIONS.md`: whether Ctrl/⌘+S saves keep taking numbers from the
-publication sequence, and a follow-up for strict insertion order in history (removed from this PR to keep it minimal).
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
+stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
+## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
+
+`consumeAccountToken("delete")` (`src/server/email/flows.ts`) now inserts its `account.deleted` audit rows before it locks the user's workspaces `FOR UPDATE`, so the key-share lock each insert takes on its workspace comes in the same order as in the SSO transactions (user row, then the audit insert) and is never awaited while holding a workspace. Rows are corrected under the workspace lock if a membership changed in between; `transfer_required` now rolls back. The person-visible result is unchanged. Two co-members deleting at once cannot deadlock on the shared workspace: every deletion first takes the installation-wide retained-file accounting lock, so deletions are serialized; a new two-connection test in `tests/integration/retained-file-locking.test.ts` pins this. Verified locally at `6323281` (the last code and test change on this branch; later commits only touch docs and comments) against a throwaway `flowline_test_109` database (PostgreSQL): `tests/integration/retained-file-locking.test.ts` (4/4), `email.test.ts` (9/9), `email-token-lock-order.test.ts` (3/3); `tests/unit/email-token-lock-order.test.ts` (10/10, mocked database); eslint and `pnpm typecheck`. The e2e-army test `e2e-army/109-account-delete-shared-audit.e2e.ts` runs in the hub verify job, not locally. No full gate or browser run is claimed. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
+
+Review rounds 1–2 resolution — 2026-10-13 (same issue): the #108 deadlock test `tests/integration/account-delete-sso-lock-order.test.ts` is now **part of this change** (copied verbatim from `origin/ai/108` at `2ef1fb8`, together with the `routeTransactions` helper it needs in `tests/integration/pg-lock-helpers.ts`), so the issue's "passes the deadlock test" criterion is verified on the head being merged, not claimed: it passes 2/2 on this branch against a throwaway `flowline_test_109r3` database. The key-share → `FOR UPDATE` upgrade the reorder could introduce is now pinned by a real negative control, `tests/integration/account-delete-key-share-upgrade.test.ts`: with only the accounting lock removed (a test-only mock), the same two co-member deletions, each paused after its audit insert and released together, leave one transaction aborted with `40P01` at the workspace `FOR UPDATE` while holding its key-share — proving the accounting lock is load-bearing (the earlier "the test fails" sentence in lock-order.md was a counterfactual; it is now an executed test). The e2e-army header was corrected to name exactly what each test pins. Local runs on this head: `retained-file-locking.test.ts` 4/4, `account-delete-sso-lock-order.test.ts` 2/2, `account-delete-key-share-upgrade.test.ts` 1/1 (three consecutive runs), `email.test.ts` 9/9, `tests/unit/email-token-lock-order.test.ts` 10/10. The #108 test file is identical to PR #214's, so merging either first keeps the other merge clean.
 
 ## GitHub security settings (issue #160) — 2026-10-13
 

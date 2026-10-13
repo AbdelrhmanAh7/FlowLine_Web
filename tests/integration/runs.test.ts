@@ -336,6 +336,29 @@ describe("runs do not use up publication numbers (regression: #204, #117)", () =
     expect(await publishedVersion(ws.id, flow.id)).toBe(1);
   });
 
+  it("Ctrl/⌘+S saves and an offline overwrite before the first publication leave it at v1", async () => {
+    const { user, ws, flow } = await setup();
+    const saved = await saveFlow(user, flow.id, { baseRevision: flow.revision, createVersion: true });
+    expect(saved.version).toMatchObject({ reason: "save", version: null });
+    await saveFlow(user, flow.id, { baseRevision: flow.revision, name: unique("Offline"), force: true });
+
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+  });
+
+  it("publish, save, overwrite, two runs, then publish gives v2", async () => {
+    const { user, ws, flow } = await setup();
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    const saved = await saveFlow(user, flow.id, { baseRevision: flow.revision, createVersion: true });
+    await saveFlow(user, flow.id, { baseRevision: saved.flow.revision - 1, name: unique("Offline"), force: true });
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(2);
+  });
+
   it("the first publication after two runs is v1 and the flow list reports it", async () => {
     const { user, ws, flow } = await setup();
     const r1 = await enqueueRun(user, flow.id);

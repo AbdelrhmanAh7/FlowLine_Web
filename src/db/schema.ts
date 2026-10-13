@@ -203,7 +203,7 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    /** NULL for "run" snapshots: a run pins its graph without using up a publication number (#204). */
+    /** Publication number; NULL for save, overwrite and run snapshots, so only publishing moves it (#204). */
     version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),

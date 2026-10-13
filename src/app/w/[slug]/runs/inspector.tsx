@@ -413,7 +413,7 @@ function StepPanel({
             </StatusBadge>
           </h2>
           <p className="data mt-1 text-sm text-muted">
-            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {flowVersionLabel(t, run.version)} · {step.nodeType} · {step.nodeId}
+            {t.duration(step.durationMs)} · {t("runs.panel.runRef", { number: run.number })} · {flowVersionLabel(t, run.version, run.versionReason ?? undefined)} · {step.nodeType} · {step.nodeId}
             {step.attempts ? ` · ${t.plural("runs.panel.attempts", step.attempts)}` : ""}
           </p>
         </div>

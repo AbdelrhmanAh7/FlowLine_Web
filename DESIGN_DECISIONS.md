@@ -49,17 +49,20 @@ local Ollama models (visual/copy review).
   (validation). Connection rules exist once (`checkConnection`), so the canvas and server agree.
 - **Persistence**: `flow` holds the working draft plus a monotonic `revision` for optimistic concurrency.
   `flow_version` holds immutable snapshots (`save` = Ctrl/⌘+S, `run` = pinned for each run,
-  `overwrite` = the server copy kept before an explicit offline overwrite). Only `save`, `overwrite` and `publish`
-  snapshots take a public version number (one sequence per flow); a `run` snapshot has `version = NULL`, so running a
-  flow never changes the number its next publication gets (#204). Migration 0025 nulls the numbers older run snapshots held,
-  without a backup. A rollback to an image from before #204 numbers the run snapshots it inserts again. Migration
-  `0026_flow_version_run_backfill` clears those numbers, backs them up in `flow_version_run_number_backup`, and adds
-  the `BEFORE INSERT` trigger `flow_version_run_unnumbered`, which stores every new run snapshot unnumbered (#205).
-  Its UPDATE is idempotent and safe to run again by hand. `drizzle/reverse/0026_flow_version_run_backfill.sql` restores
-  the backed-up numbers and drops the trigger. That script is manual, idempotent and outside the drizzle journal and
-  `src/db/migrate.ts`; the project has no down migrations (a rollback runs the previous image on the newer schema). Run it
-  with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
-  History lists snapshots newest first by `created_at`.
+  `overwrite` = the server copy kept before an explicit offline overwrite). Only `publish` snapshots take a public
+  version number (1, 2, 3… per flow, derived from earlier publications only); `save`, `overwrite` and `run` snapshots
+  have `version = NULL` and the history panel names them by reason ("Saved snapshot", "Copy kept before overwrite",
+  "Run snapshot"), so saving or running a flow never changes the number its next publication gets (#204). History
+  lists snapshots newest first by `created_at` (`now()`, the transaction start), so two snapshots written by
+  overlapping transactions can show in commit order rather than insertion order; strict insertion order is a
+  follow-up, not part of #204. Migration 0025 nulls the numbers older non-publication snapshots held, without a backup.
+  A rollback to an image from before #204 numbers the save, overwrite and run snapshots it inserts again. Migration
+  `0026_flow_version_run_backfill` clears those numbers, backs them up in `flow_version_number_backup`, and adds the
+  `BEFORE INSERT` trigger `flow_version_unpublished_unnumbered`, which stores every new non-publication snapshot
+  unnumbered (#205). Its UPDATE is idempotent and safe to run again by hand. `drizzle/reverse/0026_flow_version_run_backfill.sql`
+  restores the backed-up numbers and drops the trigger. That script is manual, idempotent and outside the drizzle journal
+  and `src/db/migrate.ts`; the project has no down migrations (a rollback runs the previous image on the newer schema).
+  Run it with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
   `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get
