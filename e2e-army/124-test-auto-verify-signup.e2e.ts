@@ -159,3 +159,35 @@ test(
     await expect(screen.getByText("Verify your email first — open the link we sent you.")).not.toBeVisible();
   },
 );
+
+test(
+  "@issue-124 AC2: in the browser, without an opt-in Create account on /sign-up shows Check your inbox and e-mails a link, and Resend on /resend-verification answers with its honest status line",
+  { tags: ["feat:fl-sign-up", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    const base = app.baseUrl!;
+    await browser.setCookies([
+      { url: base, name: "fl_locale", value: "en" },
+      { url: base, name: "fl_test_beta_mode", value: "open" },
+    ]);
+    const email = await freshEmail(base, "ui-default-check-inbox");
+    await app.open("/sign-up");
+    await untilAuthFormHydrated(browser);
+    await screen.getByLabel("Name").fill("Army 124");
+    await screen.getByLabel("Email").fill(email);
+    await screen.getByLabel("Password").fill(PASSWORD);
+    await screen.getByRole("button", "Create account").tap();
+    await expect(screen.getByRole("heading", "Check your inbox")).toBeVisible();
+    // Delivery may finish just after the response (src/server/email/flows.ts), so poll the test outbox for the link.
+    const verifyLinkSent = async () => {
+      const res = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: headers(base, BASE_COOKIES) });
+      return ((await res.json()) as { messages: { link: string | null }[] }).messages.some((m) => m.link?.includes("/verify-email?token="));
+    };
+    await expect.poll(verifyLinkSent).toBe(true);
+
+    // The page never says whether the address has an account (no "Verification resent"): its one success line is generic.
+    await app.open("/resend-verification");
+    await screen.getByLabel("Email").fill(email);
+    await screen.getByRole("button", "Resend").tap();
+    await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
+  },
+);

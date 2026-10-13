@@ -140,7 +140,9 @@ uses auth, before any sign-up is handled, whether it is admitted, refused or soc
 The private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
 The UI is Arabic by default; a tester that drives the forms by their English labels sets the cookie `fl_locale=en`
 first. The labels are then **Create account** on `/sign-up`, **Sign in** on `/sign-in` and **Resend** on
-`/resend-verification` (there is no "Sign Up" button).
+`/resend-verification` (there is no "Sign Up" button). After **Resend** the page answers only
+"If the account is eligible, an email will arrive shortly.": it never says "Verification resent" or anything else
+that would reveal whether the address has an account.
 
 | Check | Command |
 |---|---|
