@@ -66,6 +66,9 @@ describe("e2e-army hosts", () => {
     }
     vi.stubEnv("E2E_ARMY_URL", "");
     expect(appUrl()).toBe("http://localhost:3100");
+    // The default must also be the stack's own origin (BETTER_AUTH_URL / FLOWLINE_PUBLIC_URL), or the app sets cookies for another host.
+    const { testStack } = await import("../../scripts/test-stack.cjs");
+    expect(appUrl()).toBe(testStack({ NODE_ENV: "test" }).baseUrl);
     vi.unstubAllEnvs();
   });
 });
