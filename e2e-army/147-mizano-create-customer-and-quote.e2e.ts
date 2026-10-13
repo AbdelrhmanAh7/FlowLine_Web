@@ -1,7 +1,8 @@
 // Issue #147 (Mizano connector v1): the integrations catalog offers Mizano's "Create customer" and "Create draft quote" steps.
 // Only the catalog is checked here: no Mizano workspace is reachable from the throwaway stack, so a real run (and the
-// "same run does not create a second customer/quote" criterion) is covered by the mocked contract tests in
-// tests/contract/mizano.test.ts, where the provider sends Idempotency-Key from the engine's per-(run, node) key.
+// "same run does not create a second customer/quote" criterion, AC2) is proved in tests/contract/mizano.test.ts by
+// "mizano create steps against a stateful fake that dedupes on Idempotency-Key": two executions of one run leave one
+// customer and one quote in the fake, a new run a second pair. Live proof waits on the Mizano scoped API key (MZ G5).
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 

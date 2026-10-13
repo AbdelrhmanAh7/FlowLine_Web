@@ -438,3 +438,56 @@ describe("mizano.create_draft_quote", () => {
     expect(q.lines[0].taxRate).toBe("15.75");
   });
 });
+
+// AC2 (#147): "re-running the same run does not create a second customer/quote". The e2e stack cannot reach a Mizano
+// workspace, so the outcome is proved here against a stateful fake that behaves like the documented contract: a POST
+// with an Idempotency-Key it has already seen replays the stored record instead of inserting a new one.
+describe("mizano create steps against a stateful fake that dedupes on Idempotency-Key", () => {
+  function fakeMizano() {
+    const stored = new Map<string, unknown>();
+    const created = { customers: [] as unknown[], quotes: [] as unknown[] };
+    const http: ActionContext["http"] = {
+      request: (async (req: HttpRequest): Promise<HttpResponse<unknown>> => {
+        const key = req.headers?.["Idempotency-Key"];
+        if (!key) throw new Error("Mizano would reject a create without an Idempotency-Key");
+        const slot = `${req.path}|${key}`;
+        if (!stored.has(slot)) {
+          const list = req.path === "/api/customers" ? created.customers : created.quotes;
+          const record = { id: `${req.path === "/api/customers" ? "cust" : "quote"}_${list.length + 1}`, ...(req.json as object) };
+          list.push(record);
+          stored.set(slot, record);
+        }
+        return { status: 200, headers: new Headers(), data: stored.get(slot) };
+      }) as ActionContext["http"]["request"],
+    };
+    const ctxFor = (idempotencyKey: string): ActionContext => ({
+      http,
+      credentials: creds,
+      idempotencyKey,
+      signal: new AbortController().signal,
+      log: () => {},
+    });
+    return { created, ctxFor };
+  }
+
+  const customer = { name: "Test Customer", company: "Test Company Ltd", email: "test@example.com", phone: "+1-555-0123" };
+  const quote = { customerId: "cust_1", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
+
+  it("creates one customer and one quote when the same run executes twice, and a second pair for a new run", async () => {
+    const { created, ctxFor } = fakeMizano();
+    const run1 = ctxFor("fl_run1_node1");
+    const first = await runAction("mizano.create_customer", run1, customer);
+    const again = await runAction("mizano.create_customer", run1, customer);
+    expect(again).toEqual(first);
+    const q1 = await runAction("mizano.create_draft_quote", ctxFor("fl_run1_node2"), quote);
+    const q1Again = await runAction("mizano.create_draft_quote", ctxFor("fl_run1_node2"), quote);
+    expect(q1Again).toEqual(q1);
+    expect(created.customers).toHaveLength(1);
+    expect(created.quotes).toHaveLength(1);
+
+    await runAction("mizano.create_customer", ctxFor("fl_run2_node1"), customer);
+    await runAction("mizano.create_draft_quote", ctxFor("fl_run2_node2"), quote);
+    expect(created.customers).toHaveLength(2);
+    expect(created.quotes).toHaveLength(2);
+  });
+});
