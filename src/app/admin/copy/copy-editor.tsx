@@ -82,7 +82,7 @@ export function CopyEditor() {
     return () => window.clearTimeout(timer);
   }, [meData?.stepUpUntil, refetchMe]);
 
-  // Writes wait for a copy reload in flight (handleWriteError starts one after a failure), so they never send a stale revision.
+  // Save and Apply stay disabled while the copy state is fetching (handleWriteError starts a reload after a failure), so a retry does not race it.
   const canWrite = stepUpActive && !pending && !state.isFetching;
 
   async function requireCurrentStepUp() {
