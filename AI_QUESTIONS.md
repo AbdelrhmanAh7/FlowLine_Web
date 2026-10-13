@@ -17,3 +17,6 @@ checked against the Mizano provider too), then re-run
 `ops/verify/e2e-army/run-local.sh FlowLine_Web <ref> -- --tag feat:fl-integrations`.
 
 **In this repo:** only fixed the stale statements in `SCOPE_MATRIX.md` (P2-03, P2-07: "12 providers" → 13 incl. Mizano).
+
+**Regression test added here:** `e2e-army/252-integrations-catalog.e2e.ts` (UI-level, `feat:fl-integrations`) asserts Mizano is in the catalog
+next to the other providers. The exact 13-id API check cannot live in this repo because `/api/integrations/catalog` needs a signed-in session.
