@@ -899,6 +899,7 @@
     "lease_lost": "lease lost",
     "budget_blocked": "budget blocked",
     "connection_blocked": "connection blocked",
+    "outbound_capped": "outbound capped",
     "ai_instructions_quarantined": "ai instructions quarantined",
     "ai_fallback": "ai route fallback"
   },
@@ -1685,7 +1686,9 @@
       "requireApproval": "Require human approval before running",
       "alwaysRequired": "Always required for this action.",
       "attemptsNonIdempotent": "Lost responses are verified or sent for review — never blindly retried.",
-      "attemptsIdempotent": "Retries use exponential backoff with jitter."
+      "attemptsIdempotent": "Retries use exponential backoff with jitter.",
+      "maxSendsPerMinute": "Max sends per minute",
+      "maxSendsPerMinuteHint": "Rate limit for side-effect actions on this connection (default: 60)"
     }
   },
   "runDock": {

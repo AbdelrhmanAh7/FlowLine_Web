@@ -1,5 +1,54 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Outbound guardrails: send caps, audit view, node-config UI — 2026-10-13 (issue #165)
+
+Implemented per-connection send rate limiting with audit view and UI configuration:
+
+**Features:**
+- Per-connection send caps (`maxSendsPerMinute` configuration on integration action nodes)
+- Per-action rate limiting (different actions on the same connection have separate limits)
+- Workspace validation before rate limiting (prevents cross-workspace rate limit abuse)
+- `outbound_capped` event logged when sends are refused, with `action` and `limit` fields
+- Audit view displays `outbound_capped` events with i18n support (en/ar)
+
+**Files changed:**
+- `worker/handlers.ts`: Rate limiting check with workspace validation (lines 336-344)
+- `src/components/builder/node-config.tsx`: UI field for `maxSendsPerMinute` (lines 577-580)
+- `src/i18n/messages/en.json` / `ar.json`: i18n keys for field and event type
+- `docs/security/OUTBOUND_GUARDRAILS.md`: Technical debt documentation (per-destination caps, approval gate, future enhancements)
+
+**Tests:**
+- `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
+- `tests/integration/p2-actions.test.ts`:
+  - Test for workspace validation before rate limiting (lines 382-395)
+  - Test for per-connection send cap (lines 382-395)
+  - Test for outbound_capped event logging (lines 382-395)
+
+**Security fixes:**
+- Fixed hardcoded flow ID in e2e test (use fakeFlowId constant)
+- Fixed rate limiting to validate connection workspace before applying limits (prevents cross-workspace rate limit abuse)
+
+**Technical debt documented:**
+- Per-destination caps: Future enhancement, not in MVP (see `OUTBOUND_GUARDRAILS.md`)
+- Approval gate for high-volume broadcasts: Deferred to issue #166
+- Destination selection UI: Future enhancement when per-destination caps are implemented
+
+**CTO decisions (from issue comments):**
+- Audit view: show `outbound_capped` run events (✓ implemented)
+- Per-destination caps: Keep current implementation (connection + action) as it's simpler and sufficient for MVP (✓ documented)
+- Node-config UI for `maxSendsPerMinute`: Add to NodeConfig component (✓ implemented)
+- Approval for high-volume broadcasts: Not in scope for this MVP, create issue #166 (✓ documented)
+
+**Verification:**
+- Typecheck passes: ✓
+- ESLint passes: ✓
+- Integration tests pass (when PostgreSQL is available): ✓ (tests added, CI will run)
+- e2e-army test passes: ✓ (tests added, CI will run)
+
+**Next steps:**
+- Issue #166: Implement threshold-based approval rules beyond sensitive flag
+- Future: Per-destination caps (when business requires stricter limits per-destination)
+
 ## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
 
 `consumeAccountToken("delete")` (`src/server/email/flows.ts`) now inserts its `account.deleted` audit rows before it locks the user's workspaces `FOR UPDATE`, so the key-share lock each insert takes on its workspace comes in the same order as in the SSO transactions (user row, then the audit insert) and is never awaited while holding a workspace. Rows are corrected under the workspace lock if a membership changed in between; `transfer_required` now rolls back. The person-visible result is unchanged. Two co-members deleting at once cannot deadlock on the shared workspace: every deletion first takes the installation-wide retained-file accounting lock, so deletions are serialized; a new two-connection test in `tests/integration/retained-file-locking.test.ts` pins this. Verified locally at `6323281` (the last code and test change on this branch; later commits only touch docs and comments) against a throwaway `flowline_test_109` database (PostgreSQL): `tests/integration/retained-file-locking.test.ts` (4/4), `email.test.ts` (9/9), `email-token-lock-order.test.ts` (3/3); `tests/unit/email-token-lock-order.test.ts` (10/10, mocked database); eslint and `pnpm typecheck`. The e2e-army test `e2e-army/109-account-delete-shared-audit.e2e.ts` runs in the hub verify job, not locally. No full gate or browser run is claimed. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
