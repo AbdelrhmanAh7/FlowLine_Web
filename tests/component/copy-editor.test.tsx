@@ -2,8 +2,8 @@
  * #181 Component tests for CopyEditor error handling.
  * Covers: load error with retry, me load error, save/publish REVISION_CONFLICT with refetch,
  * STEP_UP_REQUIRED with me refetch and stepUp error, 5xx server error, network error.
- * The copy-load, revision-conflict, step-up, 5xx and network cases assert the Arabic message as
- * well; the me-load error and the save/publish pair run in English only.
+ * The load error, save revision-conflict, save step-up, 5xx and network cases assert the Arabic
+ * message as well; the me-load error and the publish paths run in English only.
  */
 
 /// <reference types="@testing-library/jest-dom" />
