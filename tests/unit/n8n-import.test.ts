@@ -21,7 +21,7 @@ describe("n8nToFlow", () => {
     expect(graph.nodes.map((n) => n.type)).toEqual(["trigger.webhook", "code.js", "http.request"]);
     expect(graph.nodes[0].position).toEqual({ x: 0, y: 20 });
     expect(graph.nodes[2].position).toEqual({ x: 480, y: 20 });
-    expect(graph.nodes[1].data.config).toMatchObject({ code: "return items;" });
+    expect((graph.nodes[1].data.config as { code: string }).code).toContain("return items;");
     expect(graph.nodes[2].data.config).toMatchObject({ method: "POST", url: '"https://example.com/hook"', sideEffect: "non_idempotent" });
     expect(graph.nodes[2].data.config).not.toHaveProperty("retry");
   });
@@ -60,5 +60,43 @@ describe("n8nToFlow", () => {
     const bad = { ...workflow, connections: { Webhook: { main: [[{ node: "Ghost", type: "main", index: 0 }]] } } };
     expect(() => n8nToFlow(bad)).toThrow(/Ghost/);
     expect(() => n8nToFlow(bad)).toThrow(HttpError);
+  });
+
+  it("prepends a warning comment to imported Function/Code bodies", () => {
+    const { graph } = n8nToFlow(workflow);
+    const code = graph.nodes[1];
+    expect(code.type).toBe("code.js");
+    expect((code.data.config as { code: string }).code).toContain("// Code uses n8n items API - review before running");
+  });
+
+  it("adds a branch note to IF/Switch placeholders with multiple outputs", () => {
+    const branched = {
+      nodes: [
+        { name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} },
+        { name: "Route", type: "n8n-nodes-base.if", position: [240, 0], parameters: {} },
+        { name: "A", type: "n8n-nodes-base.httpRequest", position: [480, 0], parameters: { url: "https://example.com/a" } },
+        { name: "B", type: "n8n-nodes-base.httpRequest", position: [480, 200], parameters: { url: "https://example.com/b" } },
+      ],
+      connections: {
+        Hook: { main: [[{ node: "Route", type: "main", index: 0 }]] },
+        Route: { main: [[{ node: "A", type: "main", index: 0 }], [{ node: "B", type: "main", index: 0 }]] },
+      },
+    };
+    const { graph } = n8nToFlow(branched);
+    const route = graph.nodes[1];
+    expect(route.type).toBe("transform.json");
+    expect(route.data.label).toBe("Unsupported n8n node: n8n-nodes-base.if — replace");
+    expect((route.data.config as { expression: string }).expression).toContain("Additional branches not imported in MVP - manual replacement needed");
+  });
+
+  it("replaces n8n expressions in HTTP URLs with placeholders", () => {
+    const withExpr = {
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Fetch", type: "n8n-nodes-base.httpRequest", position: [240, 0], parameters: { url: "https://example.com/{{ $json.id }}" } }],
+      connections: { Hook: { main: [[{ node: "Fetch", type: "main", index: 0 }]] } },
+    };
+    const { graph } = n8nToFlow(withExpr);
+    const fetch = graph.nodes[1];
+    expect(fetch.type).toBe("http.request");
+    expect((fetch.data.config as { url: string }).url).toContain("[EXPRESSION:={{...}}]");
   });
 });

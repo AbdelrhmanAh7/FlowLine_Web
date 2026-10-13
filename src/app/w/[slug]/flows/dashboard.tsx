@@ -97,6 +97,7 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const create = useCreateFlow();
+  const fileRef = useRef<HTMLInputElement>(null);
   const submit = () => {
     let parsed: unknown;
     try {
@@ -108,9 +109,18 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
     setError(null);
     create.mutate({ n8n: parsed });
   };
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then((content) => setText(content));
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>
       <p className="mt-2 text-sm text-muted">{t("flows.importN8nHint")}</p>
+      <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label={t("flows.importN8nFile")} onChange={onFile} />
+      <Button variant="ghost" className="mt-2" onClick={() => fileRef.current?.click()}>
+        {t("flows.importN8nFile")}
+      </Button>
       <Textarea
         aria-label={t("flows.importN8nLabel")}
         mono

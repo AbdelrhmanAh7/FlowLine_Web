@@ -48,3 +48,30 @@ test(
     await expect(screen.getByRole("alert").first()).toBeVisible();
   },
 );
+
+test(
+  "@issue-164 AC3: the import dialog renders correctly in Arabic (RTL)",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen, browser }) => {
+    await app.open("/ar");
+    await agent.act("افتح صفحة مسارات العمل من التنقل");
+    await agent.act("انقر على استيراد من n8n");
+    await agent.assert("يظهر حوار الاستيراد بالعربية مع اتجاه RTL");
+    await expect(screen.getByText("استيراد مسار عمل من n8n")).toBeVisible();
+    await expect(screen.getByText("الصق JSON لمسار العمل المُصدَّر من n8n. تُستورد عقد الويب هوك والكود وطلب HTTP، وتصبح العقد الأخرى عناصر نائبة تستبدلها قبل تشغيل المسار.")).toBeVisible();
+    const dir = await browser.evaluate(() => document.documentElement.dir);
+    expect(dir).toBe("rtl");
+  },
+);
+
+test(
+  "@issue-164 AC4: the import dialog has a file upload button for .json files",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/");
+    await agent.act("open the Flows page from the navigation");
+    await agent.act("click Import from n8n");
+    await agent.assert("the dialog shows an Upload .json file button");
+    await expect(screen.getByRole("button", { name: "Upload .json file" })).toBeVisible();
+  },
+);

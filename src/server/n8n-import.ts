@@ -23,23 +23,25 @@ const workflowSchema = z.object({
 
 const HTTP_METHODS: HttpConfig["method"][] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const CODE_PARAMETERS = ["functionCode", "jsCode"] as const;
+const CODE_WARNING = "// Code uses n8n items API - review before running\n";
 
 function invalid(message: string): never {
   throw new HttpError(400, "INVALID_N8N_JSON", message);
 }
 
-function unsupported(id: string, n8nType: string, position: { x: number; y: number }): FlowNode<"transform.json"> {
+function unsupported(id: string, n8nType: string, position: { x: number; y: number }, branchNote?: string): FlowNode<"transform.json"> {
   const shortType = n8nType.slice(0, 50);
   const token = n8nType.replace(/[^A-Za-z0-9]/g, "_").toUpperCase();
+  const expression = branchNote ? `"REPLACE_WITH_${token} — ${branchNote}"` : `"REPLACE_WITH_${token}"`;
   return {
     id,
     type: "transform.json",
     position,
-    data: { label: `Unsupported n8n node: ${shortType} — replace`, config: { expression: `"REPLACE_WITH_${token}"` } },
+    data: { label: `Unsupported n8n node: ${shortType} — replace`, config: { expression } },
   };
 }
 
-function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string, position: { x: number; y: number }): FlowNode {
+function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string, position: { x: number; y: number }, branchNote?: string): FlowNode {
   const label = n.name.slice(0, 80);
   const params = n.parameters ?? {};
 
@@ -49,17 +51,19 @@ function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string,
 
   if (["n8n-nodes-base.function", "n8n-nodes-base.functionItem", "n8n-nodes-base.code"].includes(n.type)) {
     const code = CODE_PARAMETERS.map((key) => params[key]).find((v): v is string => typeof v === "string");
-    if (code !== undefined) return { id, type: "code.js", position, data: { label, config: { code, timeoutMs: 5000 } } };
+    if (code !== undefined) return { id, type: "code.js", position, data: { label, config: { code: CODE_WARNING + code, timeoutMs: 5000 } } };
   }
 
   if (n.type === "n8n-nodes-base.httpRequest") {
     const method = String(params.requestMethod ?? "GET").toUpperCase() as HttpConfig["method"];
     const url = params.url;
-    if (typeof url === "string" && !url.includes("{{") && !url.startsWith("=") && HTTP_METHODS.includes(method)) {
+    if (typeof url === "string" && HTTP_METHODS.includes(method)) {
       const safe = method === "GET";
+      // Replace n8n expressions {{...}} and credential refs with placeholders that block runs.
+      const safeUrl = url.replace(/\{\{[^}]*\}\}/g, "[EXPRESSION:={{...}}]").replace(/\[CREDENTIAL:[^\]]*\]/g, "[CREDENTIAL:name]");
       const config: HttpConfig = {
         method,
-        url: JSON.stringify(url),
+        url: JSON.stringify(safeUrl),
         headers: "",
         body: "",
         timeoutMs: 15000,
@@ -70,7 +74,7 @@ function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string,
     }
   }
 
-  return unsupported(id, n.type, position);
+  return unsupported(id, n.type, position, branchNote);
 }
 
 /** Converts an n8n workflow export into a FlowLine graph. Unsupported nodes become labelled placeholders that block runs. */
@@ -103,6 +107,14 @@ export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
 
   return {
     name: workflow.name?.trim().slice(0, 80) || "Imported n8n workflow",
-    graph: { nodes: nodes.map(({ n, id, position }) => mapNode(n, id, position)), edges },
+    graph: {
+      nodes: nodes.map(({ n, id, position }) => {
+        const branches = workflow.connections?.[n.name]?.main?.length ?? 0;
+        const isBranchNode = ["n8n-nodes-base.if", "n8n-nodes-base.switch"].includes(n.type);
+        const note = isBranchNode && branches > 1 ? "Additional branches not imported in MVP - manual replacement needed" : undefined;
+        return mapNode(n, id, position, note);
+      }),
+      edges,
+    },
   };
 }
