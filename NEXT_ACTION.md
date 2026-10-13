@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #160 — await the owner after the pilot (2026-10-13)
+
+Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
+
 ## Issue #141 handoff — 2026-10-12
 
 Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass on `4a241db`; per-mutation results in `EVIDENCE.md`).
