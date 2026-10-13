@@ -17,6 +17,50 @@ export interface LocalTemplate {
   graph: FlowGraph;
 }
 
+/**
+ * Parse a FlowLine template export JSON into a LocalTemplate.
+ * The JSON has extra fields (format, version) and plain string types for nodes/edges.
+ */
+function parseTemplateExport(json: unknown): LocalTemplate {
+  const parsed = json as {
+    format: string;
+    version: number;
+    id: string;
+    name: string;
+    description: string;
+    sample: string;
+    result: string;
+    category: string;
+    goal: string;
+    graph: FlowGraph;
+  };
+
+  if (typeof parsed.id !== "string" || typeof parsed.name !== "string") {
+    throw new Error(`Invalid template export: missing or non-string id or name`);
+  }
+
+  if (parsed.category !== "Sales" && parsed.category !== "Support" && parsed.category !== "Data ops" &&
+      parsed.category !== "Finance" && parsed.category !== "Marketing" && parsed.category !== "Engineering" &&
+      parsed.category !== "Operations" && parsed.category !== "Personal") {
+    throw new Error(`Invalid template category: ${parsed.category}`);
+  }
+
+  if (parsed.goal !== "sales" && parsed.goal !== "support" && parsed.goal !== "data" && parsed.goal !== "engineering") {
+    throw new Error(`Invalid template goal: ${parsed.goal}`);
+  }
+
+  return {
+    id: parsed.id,
+    name: parsed.name,
+    description: parsed.description,
+    sample: parsed.sample,
+    result: parsed.result,
+    category: parsed.category as LocalTemplate["category"],
+    goal: parsed.goal as LocalTemplate["goal"],
+    graph: parsed.graph,
+  };
+}
+
 const X = [0, 300, 600, 900];
 
 /** Templates that run entirely on local nodes. The first three ids are relied on by tests, scripts and saved flows. */
@@ -134,7 +178,7 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
     },
   },
   ...LOCAL_SCENARIOS,
-  etaInvoiceNotifyExport as LocalTemplate,
+  parseTemplateExport(etaInvoiceNotifyExport),
 ];
 
 /** The few examples the landing page shows; the in-app gallery lists every template. */
