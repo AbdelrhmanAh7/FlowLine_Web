@@ -133,7 +133,9 @@ export function foreignRepoLinks(markdown: string): string[] {
 const PHASE_LEDGER = "docs/implementation/PHASE4_BETA_REPORT.md";
 
 export function ledgerSection(markdown: string, issue: number): string | undefined {
-  const heading = new RegExp(`^## .*\\(issue #${issue}\\)\\s*$`);
+  // Concatenated, not a template literal: a template closing right after the "$" anchor puts a dollar sign next to a
+  // backtick, a String.replace pattern that review tooling expanded, so reviewers saw an unclosed literal (#62 QA).
+  const heading = new RegExp("^## .*\\(issue #" + issue + "\\)\\s*$");
   return markdown.split(/^(?=## )/m).find((section) => heading.test(section.split("\n")[0]!));
 }
 
@@ -206,6 +208,17 @@ describe("dependency advisories security check", () => {
     expect(fastTierRow).toMatch(/\]\(https:\/\/github\.com\/AbdelrhmanAh7\/FlowLine_Web\/actions\/runs\/\d+\)/);
     expect(fastTierRow).toMatch(/`gate`/);
     expect(fastTierRow).toMatch(/not counted as the fast tier/);
+  });
+
+  it("ledgerSection matches only a level-2 heading that ends with the exact (issue #N)", () => {
+    const md = "## A (issue #62)  \n\nbody a\n## B (issue #620)\n## C (issue #62) later\n### D (issue #62)\n";
+    expect(ledgerSection(md, 62)).toBe("## A (issue #62)  \n\nbody a\n");
+    expect(ledgerSection("## B (issue #620)\n", 62)).toBeUndefined();
+    expect(ledgerSection("## C (issue #62) later\n", 62)).toBeUndefined();
+    expect(ledgerSection("### D (issue #62)\n", 62)).toBeUndefined();
+    // Guards the root cause above: no dollar sign directly before a backtick anywhere in this file.
+    const source = readFileSync(join(root, "tests/unit/dependency-advisories.test.ts"), "utf8");
+    expect(source.includes("$" + "`"), "dollar sign before a backtick").toBe(false);
   });
 
   it("the Phase 4 ledger records #62 with its evidence and the pending post-merge alert check", () => {
