@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
 import { createProviderHttp } from "@/integrations/http";
 import { getAction, getProvider } from "@/integrations/registry";
@@ -157,53 +158,60 @@ describe("mizano.list_overdue_invoices", () => {
   });
 });
 
+/** Asserts the rejection is a zod schema failure at the given path, not an unrelated error (e.g. an unregistered action). */
+async function expectSchemaRejection(promise: Promise<unknown>, path: (string | number)[]) {
+  const err = await promise.then(
+    () => null,
+    (e: unknown) => e,
+  );
+  expect(err).toBeInstanceOf(ZodError);
+  expect((err as ZodError).issues.some((issue) => JSON.stringify(issue.path) === JSON.stringify(path))).toBe(true);
+}
+
 describe("mizano.create_customer", () => {
   const validInput = { name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" };
+  const validResponse = { id: "cust_1", ...validInput };
+
+  it("accepts a well-formed response (control for the rejections below)", async () => {
+    const { ctx } = ctxReturning(validResponse);
+    await expect(runAction("mizano.create_customer", ctx, validInput)).resolves.toMatchObject({ id: "cust_1" });
+  });
 
   it("rejects a response missing the required id field", async () => {
-    const { ctx } = ctxReturning({ name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" });
-    await expect(runAction("mizano.create_customer", ctx, validInput)).rejects.toThrow();
+    const { id: _id, ...noId } = validResponse;
+    const { ctx } = ctxReturning(noId);
+    await expectSchemaRejection(runAction("mizano.create_customer", ctx, validInput), ["id"]);
   });
 
   it("rejects a response where id is a number instead of a string", async () => {
-    const { ctx } = ctxReturning({ id: 123, name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" });
-    await expect(runAction("mizano.create_customer", ctx, validInput)).rejects.toThrow();
+    const { ctx } = ctxReturning({ ...validResponse, id: 123 });
+    await expectSchemaRejection(runAction("mizano.create_customer", ctx, validInput), ["id"]);
   });
 });
 
 describe("mizano.create_draft_quote", () => {
-  const validInput = {
-    customerId: "cust_1",
-    currency: "EGP",
-    lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
-  };
+  const line = { item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" };
+  const validInput = { customerId: "cust_1", currency: "EGP", lines: [line] };
+  const validResponse = { id: "quote_1", customerId: "cust_1", currency: "EGP", lines: [line] };
+
+  it("accepts a well-formed response (control for the rejections below)", async () => {
+    const { ctx } = ctxReturning(validResponse);
+    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).resolves.toMatchObject({ id: "quote_1" });
+  });
 
   it("rejects a response missing the required id field", async () => {
-    const { ctx } = ctxReturning({
-      customerId: "cust_1",
-      currency: "EGP",
-      lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
-    });
-    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+    const { id: _id, ...noId } = validResponse;
+    const { ctx } = ctxReturning(noId);
+    await expectSchemaRejection(runAction("mizano.create_draft_quote", ctx, validInput), ["id"]);
   });
 
   it("rejects a response where a line has unitPrice as a number instead of a decimal string", async () => {
-    const { ctx } = ctxReturning({
-      id: "quote_1",
-      customerId: "cust_1",
-      currency: "EGP",
-      lines: [{ item: "Widget", qty: "2", unitPrice: 500, taxRate: "14.00" }],
-    });
-    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+    const { ctx } = ctxReturning({ ...validResponse, lines: [{ ...line, unitPrice: 500 }] });
+    await expectSchemaRejection(runAction("mizano.create_draft_quote", ctx, validInput), ["lines", 0, "unitPrice"]);
   });
 
-  it("rejects a response where currency is missing or invalid", async () => {
-    const { ctx } = ctxReturning({
-      id: "quote_1",
-      customerId: "cust_1",
-      currency: "egp",
-      lines: [{ item: "Widget", qty: "2", unitPrice: "100.00", taxRate: "14.00" }],
-    });
-    await expect(runAction("mizano.create_draft_quote", ctx, validInput)).rejects.toThrow();
+  it("rejects a response where currency is not an upper-case ISO code", async () => {
+    const { ctx } = ctxReturning({ ...validResponse, currency: "egp" });
+    await expectSchemaRejection(runAction("mizano.create_draft_quote", ctx, validInput), ["currency"]);
   });
 });
