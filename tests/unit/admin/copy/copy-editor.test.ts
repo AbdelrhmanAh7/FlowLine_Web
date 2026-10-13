@@ -16,7 +16,7 @@ const { CopyEditor } = await import("@/app/admin/copy/copy-editor");
 
 const render = (locale: Locale) => renderToStaticMarkup(createElement(I18nProvider, { locale }, createElement(CopyEditor)));
 /** `text` as React writes it into markup (& < > " ' escaped), as a RegExp source with its metacharacters escaped. */
-const inMarkup = (text: string) => renderToStaticMarkup(createElement(Fragment, null, text)).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const inMarkup = (text: string) => renderToStaticMarkup(createElement(Fragment, null, text)).replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
 /** A copy state that loaded: one key in both locales, draft and published at revision 1. */
 const loaded = { base: { ar: { "meta.title": "فلولاين" }, en: { "meta.title": "Flowline" } }, draft: { value: { ar: {}, en: {} }, revision: 1, setAt: null }, published: { value: { ar: {}, en: {} }, revision: 1, setAt: null } };
 const session = { csrfToken: "t", stepUpUntil: null };
