@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
+
 ## Run snapshots no longer use up version numbers — 2026-10-12 (issue #117)
 
 The stable gate's `fl-flows-list` check failed on `main` @ `d211653`: a flow published after two manual runs listed `publishedVersion: 3` instead of 1 (its `lastRunStatus` was already `succeeded`; the issue text cut the message off). Root cause: every manual run pinned its graph in a `flow_version` row with `reason = 'run'`, and `insertVersion` (`src/server/flows.ts`) gave that row the next number from `max(version)`, the same sequence publications use. Fix: a run snapshot is stored with `version = NULL` (`flow_version.version` nullable, unique index partial on `version is not null`, migration `0025_flow_version_run_unnumbered`). `insertVersion` takes the next number from `max(version)` over rows with `version IS NOT NULL` only, so only save, overwrite and publish rows count. The same migration then sets existing run snapshots to NULL, with the immutability trigger disabled only for that one statement inside the migration transaction (the backfill was a separate `0026` until 2026-10-12, when it was folded into 0025 so the PR carries one drizzle snapshot instead of two identical ones). The flows list and dashboard fields are unchanged. The builder history panel and the re-run dialog label unnumbered snapshots (`runs.rerun.originalSnapshot`, ar/en). Verified locally on 2026-10-12, against throwaway databases on PostgreSQL 16:
