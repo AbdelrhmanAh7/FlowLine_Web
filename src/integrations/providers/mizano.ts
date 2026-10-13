@@ -162,7 +162,7 @@ const provider: ProviderDef = {
             company: input.company,
             email: input.email,
             phone: input.phone,
-            taxId: input.taxId,
+            ...(input.taxId !== undefined && { taxId: input.taxId }),
           },
         });
         return data as MizanoCustomer;
@@ -184,7 +184,7 @@ const provider: ProviderDef = {
             unitPrice: decimalString,
             taxRate: decimalString,
           }),
-        ),
+        ).min(1).max(200),
       }),
       output: z.object({
         id: z.string(),
