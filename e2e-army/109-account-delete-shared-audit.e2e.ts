@@ -3,10 +3,12 @@
 // workspace confirms the deletion link from the test outbox; the deletion finishes ("done"), the account can no longer
 // sign in, a forged token is refused, and the shared workspace's owner still sees one "account.deleted" audit event.
 // This test pins only that behaviour. The lock order is pinned elsewhere: tests/unit/email-token-lock-order.test.ts
-// records the statement order against a mocked database (no PostgreSQL), and tests/integration/retained-file-locking.test.ts
-// runs two co-members' deletions on two real connections (serialized by the retained-file accounting lock, no 40P01).
-// Neither reproduces the audit insert vs SSO sign-in race: that is the #108 test (account-delete-sso-lock-order.test.ts,
-// PR #214), which is not part of this change.
+// records the statement order against a mocked database (no PostgreSQL); tests/integration/retained-file-locking.test.ts
+// runs two co-members' deletions on two real connections (serialized by the retained-file accounting lock, no 40P01);
+// tests/integration/account-delete-key-share-upgrade.test.ts is the negative control proving that serialization is
+// load-bearing (with only the accounting lock removed, the same two deletions abort with 40P01 at the workspace
+// FOR UPDATE); and tests/integration/account-delete-sso-lock-order.test.ts (the #108 test, part of this change)
+// reproduces the audit insert vs SSO sign-in race on two real connections.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";

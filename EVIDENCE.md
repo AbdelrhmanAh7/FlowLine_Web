@@ -1,52 +1,41 @@
-# Evidence — Issue #141: Field validation harness scoring gaps
+# Evidence — Issue #109: Fix lock order in consumeAccountToken to resolve deadlock
 
-Code under test: `tests/helpers/field-scoring.ts`, `tests/unit/flowline-field-scoring.test.ts` and the next-round `field.spec.ts`, unchanged since `475c293`. Every result below was observed on `4a241db` (the merge of origin/main into `ai/141`; later commits on the branch are docs-only). Earlier recordings on `8e0090c`, `981b8b9` and `9621678` are superseded by this one.
+Part 2/2 of #47. Code under test: `src/server/email/flows.ts` (`consumeAccountToken`, the `delete`
+branch). Every result below was observed on `a6ed821` (the test head of this branch; the only later
+commit is docs-only) with the fix from `0798411` plus the tests added by this change, against a
+throwaway `flowline_test_109r3` database (PostgreSQL 16, `FLOWLINE_ENV=test`, sandbox off) — the
+same code the PR merges.
 
 ## Requirements and Verification
 
 | Req ID | Description | Verification Method | Result | Commit |
 |--------|-------------|---------------------|--------|--------|
-| #141:117 | Do not score approved policy text as a cancellation promise | Unit test `scoreNoPromise` in `tests/unit/flowline-field-scoring.test.ts` strips approved information and EN/AR disclaimers before matching | 8/8 pass; reverting to legacy matching yields **1 failed / 7 passed** (assertion `:117 approved policy text is not a cancellation promise` fails) | 4a241db |
-| #141:138 | Exercise the approval side of the review gate | Unit tests `scoreReviewGate`, `scoreApprovedOutboxEntry` and `scoreApprovedAgainstPacket` verify empty outbox before review, exactly one entry after approval, recipient match, text-only payload, no payment action, and the packet's VP-05 quoted policy, no-promise and consequential expectations; **field.spec.ts now asserts all review-gate checks pass** | 8/8 pass; disabling `scoreReviewGate` alone yields **1 failed / 7 passed** (`:138 the review gate is exercised on the approval side too`); disabling the approval-payload helpers `scoreApprovedOutboxEntry` and `scoreApprovedAgainstPacket` yields **3 failed / 5 passed** (that test, `:138 the approved entry meets the packet's VP-05 expectation` and `approval preserves the exact reviewed draft`) | 4a241db |
-| #141:143 | Compare persisted records after the duplicate trial | Unit test `comparePersistedRows` checks `sameRowCount`, `sameRows`, `exactlyOneFollowUp`; harness in `field.spec.ts` reads `kv_entry` before and after the second VP-01 run **and explicitly asserts all three persisted-row checks** | 8/8 pass; reverting `comparePersistedRows` yields **3 failed / 5 passed** (assertions `:143 persisted records are compared after the duplicate trial`, `duplicate scoring requires one persisted copy`, `the real pack persists the follow-up under its store_key` fail) | 4a241db |
-| #141:160 | Verify the packet digest before recording it | Unit test `verifyPacketDigest` validates SHA256SUMS against files and records the `packet.json` digest; harness in `field.spec.ts` runs it before any scoring | 8/8 pass; reverting the check yields **1 failed / 7 passed** (assertion `:160 the packet digest is verified before it is recorded` fails) | 4a241db |
-
-## Revert-Fails Proof (observed on `4a241db`)
-
-| Gap | Command | Failing Assertion(s) | Result After Restore |
-|-----|---------|---------------------|---------------------|
-| :117 | `pnpm test flowline-field` (with `scoreNoPromise` reverted to legacy) | `:117 approved policy text is not a cancellation promise` | 8/8 pass |
-| :138 | `pnpm test flowline-field` (with `scoreReviewGate` checks forced true) | `:138 the review gate is exercised on the approval side too` (1 failed / 7 passed) | 8/8 pass |
-| :138 | `pnpm test flowline-field` (with the checks of `scoreApprovedOutboxEntry` and `scoreApprovedAgainstPacket` forced true) | `:138 the review gate is exercised on the approval side too`, `:138 the approved entry meets the packet's VP-05 expectation`, `approval preserves the exact reviewed draft` (3 failed / 5 passed) | 8/8 pass |
-| :143 | `pnpm test flowline-field` (with `comparePersistedRows` reverted) | `:143 persisted records are compared after the duplicate trial`, `duplicate scoring requires one persisted copy`, `the real pack persists the follow-up under its store_key` | 8/8 pass |
-| :160 | `pnpm test flowline-field` (with `verifyPacketDigest` reverted) | `:160 the packet digest is verified before it is recorded` | 8/8 pass |
-
-## Additional Regression Tests
-
-| Test | Purpose | Verifies |
-|------|---------|----------|
-| `:138 the approved entry meets the packet's VP-05 expectation` | Approved body must quote the packet policy, make no promise, match the consequential flag, and carry no payment action when the packet says so | `scoreApprovedAgainstPacket` |
-| `approval preserves the exact reviewed draft` | Approval payload must equal the reviewed proposal exactly | `outboxMatchesReviewedDraft` |
-| `duplicate scoring requires one persisted copy` | Prevents empty snapshots or duplicate rows from passing | `exactlyOneFollowUp` |
-| `the real pack persists the follow-up under its store_key` | Confirms `follow_up_record.store_key` matches the `data.store` key and the persisted value equals the record | Runs the compiled customer-follow-up pack against a memory store |
+| #109:1 | Change the lock order in `consumeAccountToken`: the audit row insert comes before the workspace `FOR UPDATE` lock | Source: `src/server/email/flows.ts:175-184` — membership read under the user lock, `audit_event` insert(s), then `SELECT … FROM workspace … FOR UPDATE` ordered by id; statement order pinned by `tests/unit/email-token-lock-order.test.ts` (`insert:audit_event` before `lock:workspace:update`) | 10/10 pass (mocked database) | `0798411` + this change |
+| #109:2 | The fix passes the deadlock test | `tests/integration/account-delete-sso-lock-order.test.ts` (the #108 test, copied verbatim from `origin/ai/108` at `2ef1fb8` so it is part of this PR): deletion vs the user's own SSO sign-in in flight, both orders, two real connections, waits observed through `pg_blocking_pids` | 2/2 pass on this head; without the fix (pre-#65 order) the SSO-first case is seen waiting at `delete from "user"` holding W and deadlocks on release (negative control recorded on `2ef1fb8`) | this change |
+| #109:3 | The fix passes `tests/integration/retained-file-locking.test.ts:122` | `tests/integration/retained-file-locking.test.ts` ("account deletion locks W, admission waits at accounting, then both commit without a deadlock") plus its three sibling tests on the same file | 4/4 pass | this change |
+| #109:4 | Two co-members of one shared workspace deleting at once cannot deadlock (the reorder's key-share → `FOR UPDATE` upgrade) | Positive: `retained-file-locking.test.ts` "two co-members of one workspace confirm deletion at once" — the second deletion is observed waiting at `pg_advisory_xact_lock` (via `pg_blocking_pids`) while the first holds the key-share, then both finish. Negative control: `tests/integration/account-delete-key-share-upgrade.test.ts` — with only the accounting lock removed (test-only mock), the same two deletions each pause after their audit insert and, released together, one aborts with `40P01` at the workspace `FOR UPDATE` while holding its key-share | Positive 1/1 (both finish, both audit rows survive); negative control 1/1, stable across three consecutive runs — proves the accounting lock is load-bearing | this change |
+| #109:5 | Person-visible behaviour of account deletion is unchanged | `tests/integration/email.test.ts` (rollback on `transfer_required`, exactly one `account.deleted` record after the deletion) and the e2e-army request test `e2e-army/109-account-delete-shared-audit.e2e.ts` (runs in the hub verify job, not locally) | 9/9 pass locally; e2e-army runs in CI | `0798411` + this change |
 
 ## Test Execution Evidence
 
 ```
-$ pnpm test flowline-field
+$ node scripts/with-env.mjs .env.test npx vitest run --project integration \
+    tests/integration/retained-file-locking.test.ts \
+    tests/integration/account-delete-sso-lock-order.test.ts \
+    tests/integration/email.test.ts
+  Test Files  3 passed (3)
+        Tests  15 passed (15)
+
+$ node scripts/with-env.mjs .env.test npx vitest run --project integration \
+    tests/integration/account-delete-key-share-upgrade.test.ts
+  Test Files  1 passed (1)          # also passed on two further consecutive runs
+        Tests  1 passed (1)
+
+$ npx vitest run --project unit tests/unit/email-token-lock-order.test.ts
   Test Files  1 passed (1)
-        Tests  8 passed (8)
+        Tests  10 passed (10)
 ```
 
-- Typecheck and lint: see the Phase 4 report entry for what was run on this head and what was not
-- Frozen run `20261001-d224cfb` evidence unchanged (`git diff origin/main...HEAD` lists no file under `artifacts/company-builder/validation/20261001-d224cfb/` or other earlier runs)
-
-## Mutation Verification
-
-Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run (results above, `4a241db`). Every mutation makes at least one assertion fail, so the tests depend on the fixes.
-
-## Notes
-
-- No e2e-army test added: this is an internal scoring harness change with no user-facing flow modification.
-- Live Playwright field spec (`field.spec.ts`) was not run: it needs a test stack (Docker, `.env.test`, `DATABASE_URL`). CI gate will execute the built branch.
-- **New explicit assertions in `field.spec.ts`**: review gate checks (line 207) and persisted-row checks (lines 212-214) now have `expect` assertions that fail the test if any check fails, directly addressing the review threads on PR #193.
+- Typecheck: `npx tsc --noEmit` exit 0. Lint: `npx eslint` on the four touched test/e2e files — no findings.
+- Full suite, build and browser runs are delegated to hosted CI (per the task brief); no full gate or Playwright run is claimed here.
+- The `#108` test file and the `pg-lock-helpers.ts` `routeTransactions` helper are byte-identical to `origin/ai/108` (`2ef1fb8`), so PR #214 and this PR merge cleanly in either order.
