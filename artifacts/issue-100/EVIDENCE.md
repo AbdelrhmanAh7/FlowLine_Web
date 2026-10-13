@@ -39,3 +39,10 @@ Run in the implementer worktree on `05780806d195de5f5677d729b14d3d7719610055`:
   video entry 125). That is under the 6 KB budget. The CI build is the authoritative number.
 - Fixtures in `e2e/fixtures/demo/`: 32 KB total (cap 150 KB).
 
+
+## Review round 2 (2026-10-13, after merging `origin/main`)
+
+- Fixes: `src/components/landing/demo-video.tsx` (an automatic start rechecks eligibility after the source choice; `key` remount on locale/theme change; a tap passes `user` so the H.264 fallback in `attachSource` runs), `src/components/landing/demo-walkthrough.tsx` (a failed `src` is dropped before the retry; stills stay until a play succeeds), `src/lib/demo-source.ts` (`attachSource`, moved out of the component so it is unit-testable).
+- Tests: `tests/unit/demo-media.test.ts` (`attachSource`: 2 tests) with `demo-markup` and `gate-groups` files: 35 passed. New browser spec "reopening after a media error" in `e2e/landing-demo.spec.ts` runs on CI (no Postgres/port in the implementer sandbox).
+- `pnpm typecheck` and `eslint` on the changed files: clean.
+- Gate group: `e2e/landing-demo.spec.ts` is in the `product` group (`scripts/gate-groups.mjs`), asserted by `tests/unit/gate-groups.test.ts`.

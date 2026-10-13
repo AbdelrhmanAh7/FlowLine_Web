@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n/client";
 import type { ClipView } from "@/lib/demo-media";
-import { chooseSource, shouldSkipVideo, startPlayback, type VideoSource } from "@/lib/demo-source";
+import { attachSource, shouldSkipVideo, startPlayback } from "@/lib/demo-source";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 /** The visitor's own pause, kept for the session (WCAG 2.2.2). */
@@ -16,19 +16,6 @@ const connection = () => (navigator as Navigator & { connection?: Connection }).
 const storedPause = () => { try { return sessionStorage.getItem(PAUSE_KEY) === "1"; } catch { return false; } };
 const storePause = (on: boolean) => { try { if (on) sessionStorage.setItem(PAUSE_KEY, "1"); else sessionStorage.removeItem(PAUSE_KEY); } catch { /* private mode: the pause just is not remembered */ } };
 
-/** Picks the file once (MediaCapabilities, section 6 of #96) and sets `src` only then, so exactly one video file is downloaded. */
-export async function attachSource(v: HTMLVideoElement, sources: VideoSource[], force: boolean): Promise<boolean> {
-  if (v.getAttribute("src")) return true;
-  const mc = navigator.mediaCapabilities;
-  const caps = { decodingInfo: mc?.decodingInfo ? (c: Parameters<NonNullable<typeof mc.decodingInfo>>[0]) => mc.decodingInfo(c) : undefined, canPlayType: v.canPlayType.bind(v) };
-  // A visitor's tap may fall back to the H.264 file, but only when the browser says it can play it; otherwise poster + Play stay.
-  const forced = force ? sources.find((s) => s.codec === "h264" && v.canPlayType(s.type) !== "") : undefined;
-  const picked = (await chooseSource(sources, caps)) ?? forced;
-  if (!picked) return false;
-  if (!v.getAttribute("src")) v.src = picked.src;
-  return true;
-}
-
 /**
  * A recorded product loop (issue 100). Server markup is correct without JS: a muted, looping `<video preload="none">` with its poster
  * (the LCP element) inside a fixed aspect-ratio box (CLS 0), no `autoplay` attribute and an H.264 `<source>` as the no-JS default.
@@ -37,7 +24,12 @@ export async function attachSource(v: HTMLVideoElement, sources: VideoSource[], 
  * (plays once, no loop). A rejected play() (iOS Low Power Mode) shows the same button and the first tap on the tile starts it.
  * Loops over 5 s get a Pause/Play button (>= 44x44, aria-pressed) whose state is remembered for the session.
  */
-export function DemoVideo({ view, label, className }: { view: ClipView; label: string; className?: string }) {
+export function DemoVideo(props: { view: ClipView; label: string; className?: string }) {
+  // A new locale/theme brings other files: remount so a file attached imperatively to the old element never outlives its source set.
+  return <DemoVideoPlayer key={props.view.poster.src} {...props} />;
+}
+
+function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: string; className?: string }) {
   const t = useT();
   const tile = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement | null>(null);
@@ -48,6 +40,8 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
   const [ready, setReady] = useState(false);
   const [ended, setEnded] = useState(false);
   const starting = useRef(false);
+  /** Whether an automatic start may still go ahead (visible, tab shown, no reduced motion/Save-Data, no pause by the visitor); kept current by `sync`. */
+  const allowed = useRef(true);
   /** The visitor pressed Play while autoplay was off (reduced motion, Save-Data, 2g): that single run is theirs, scrolling does not undo it. */
   const userStarted = useRef(false);
 
@@ -57,14 +51,17 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
     if (el) { el.muted = true; el.setAttribute("muted", ""); }
   }, []);
 
-  const play = useCallback(async (once: boolean) => {
+  /** `once`: play a single run (no loop). `user`: the visitor asked for it (a tap), so it does not wait for the automatic conditions. */
+  const play = useCallback(async (once: boolean, user: boolean) => {
     const v = video.current;
     if (!v || starting.current) return;
     starting.current = true;
     try {
       v.muted = true;
       v.loop = view.loop && !once;
-      if (!(await attachSource(v, view.sources, once))) return;
+      if (!(await attachSource(v, view.sources, user))) return;
+      // Choosing the file is async: the tile may have left the screen, the tab been hidden or reduce switched on meanwhile.
+      if (!user && !allowed.current) return;
       // We are about to play: let the browser fetch now. Without this a `preload="none"` element only starts the download inside play(),
       // so anything that defers play() (a blocked or stubbed player) would never request the file it just chose.
       v.preload = "auto";
@@ -88,9 +85,10 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
     const sync = () => {
       const skipNow = shouldSkipVideo(mq.matches, conn);
       setSkip(skipNow);
+      allowed.current = !skipNow && !document.hidden && visible && !userPaused.current;
       if (skipNow) { if (!v.paused && !userStarted.current) v.pause(); return; }
       if (document.hidden || !visible || userPaused.current) { if (!v.paused) v.pause(); return; }
-      if (loaded && v.paused) void play(false);
+      if (loaded && v.paused) void play(false, false);
     };
     // A changed preference (reduce switched on, data saver, slower network) ends any run the visitor started under the old one.
     const onPreference = () => { userStarted.current = false; sync(); };
@@ -123,7 +121,7 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
     userPaused.current = false;
     storePause(false);
     userStarted.current = skip;
-    void play(skip);
+    void play(skip, true);
   };
 
   // Only once JS runs (a button that does nothing without JS would be dead): long loops always, any clip when it needs a tap to start.
@@ -134,7 +132,7 @@ export function DemoVideo({ view, label, className }: { view: ClipView; label: s
       ref={tile}
       style={{ aspectRatio: view.aspect }}
       className={`relative w-full overflow-hidden bg-card ${className ?? ""}`}
-      onClick={() => { if (blocked && video.current?.paused && !userPaused.current) void play(skip); }}
+      onClick={() => { if (blocked && video.current?.paused && !userPaused.current) void play(skip, true); }}
     >
       <video
         ref={setVideo}

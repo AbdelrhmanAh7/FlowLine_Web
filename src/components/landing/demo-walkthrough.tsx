@@ -4,8 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useDir, useLocale, useT } from "@/i18n/client";
 import type { MessageKey } from "@/i18n/types";
 import type { WalkthroughView } from "@/lib/demo-media";
-import { shouldSkipVideo, startPlayback } from "@/lib/demo-source";
-import { attachSource } from "./demo-video";
+import { attachSource, shouldSkipVideo, startPlayback } from "@/lib/demo-source";
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const btn = "inline-flex min-h-11 items-center justify-center rounded-lg border border-line-strong bg-card px-4 text-base text-hi transition-colors duration-[var(--dur-base)] hover:bg-elevated disabled:cursor-not-allowed disabled:text-muted disabled:hover:bg-card";
@@ -18,6 +17,11 @@ const btn = "inline-flex min-h-11 items-center justify-center rounded-lg border 
  * without playback. No API calls; works logged out.
  */
 export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
+  // A new locale/theme brings other files: remount so a file attached to the old element never outlives its source set.
+  return <DemoWalkthroughDialog key={view.poster.src} view={view} />;
+}
+
+function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
   const t = useT();
   const locale = useLocale();
   const dir = useDir();
@@ -29,6 +33,8 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
   const [reduced, setReduced] = useState(false);
   /** The video cannot play here (no decodable file, or it failed to load): the stills carry the walkthrough instead. */
   const [noVideo, setNoVideo] = useState(false);
+  /** The player reported a media error: the failed `src` must be dropped before a retry, or the retry would reuse it. */
+  const errored = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia(REDUCED_MOTION);
@@ -49,14 +55,15 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
     const v = video.current;
     if (!d || d.open) return;
     d.showModal();
-    setNoVideo(false); // a stale error from an earlier open must not make the stills permanent
     if (!v) return;
+    // Retry after an error from scratch; the stills stay until a play succeeds (a failed file is not declared fixed by reopening).
+    if (errored.current) { errored.current = false; v.removeAttribute("src"); v.load(); }
     // Choosing the file does not download it (preload="none"); bytes flow only when the visitor, or autoplay below, starts playback.
     if (!(await attachSource(v, view.sources, true))) { setNoVideo(true); return; }
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (!shouldSkipVideo(window.matchMedia(REDUCED_MOTION).matches, conn)) {
       v.muted = true;
-      await startPlayback(v, () => { /* blocked: the native controls are right there */ });
+      if (await startPlayback(v, () => { /* blocked: the native controls are right there */ })) setNoVideo(false);
     }
   };
 
@@ -121,7 +128,7 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
             className="w-full rounded-lg bg-card"
             aria-label={t("landing.demo.walkthroughAria")}
             onTimeUpdate={onTime}
-            onError={() => setNoVideo(true)}
+            onError={() => { errored.current = true; setNoVideo(true); }}
           >
             {fallback && <source src={fallback.src} type={fallback.type} />}
             {order.map((lang) => view.captions[lang] && (

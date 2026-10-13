@@ -49,7 +49,7 @@ styled by `::cue` in `globals.css`). The stepper has one button per manifest cha
 arrows follow the reading direction (flipped in RTL), Home/End jump. Choosing a chapter seeks the video to its start time.
 Under reduced motion nothing plays by itself. Under reduced motion, or when the video cannot play (a media `error`), the active
 chapter's **still** and text are shown, so the walkthrough works without playback. Turning reduced motion on while it plays pauses it at
-once; reopening the dialog retries the video (an earlier error does not stick). A visitor's tap may use the H.264 file when no codec
+once; reopening the dialog drops a failed file and retries the video, and the stills stay until that retry plays. A visitor's tap may use the H.264 file when no codec
 was reported playable, but only if `canPlayType` accepts it; otherwise only the poster remains. Caption track labels come from
 `landing.demo.captionLang.*`. No API calls; it works logged out.
 

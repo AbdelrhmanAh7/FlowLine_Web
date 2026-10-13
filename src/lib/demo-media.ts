@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { VideoSource } from "./demo-source";
 
-export { chooseSource, shouldSkipVideo, startPlayback, type DecodeCaps, type VideoSource } from "./demo-source";
+export { attachSource, chooseSource, shouldSkipVideo, startPlayback, type DecodeCaps, type VideoSource } from "./demo-source";
 
 /**
  * Landing demo media manifest (#100, contract in #96 section 9). `public/media/demo/manifest.json` is written by the media

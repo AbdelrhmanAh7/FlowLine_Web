@@ -59,3 +59,19 @@ export async function startPlayback(video: { play(): Promise<void> | undefined }
     return false;
   }
 }
+
+/**
+ * Picks the file once and sets `src` only then, so exactly one video file is downloaded. `userRequested` is a visitor's own tap on
+ * Play: it may fall back to the H.264 file when the browser says it can play it, even where automatic selection found nothing;
+ * otherwise poster + Play stay. Returns false when no file can play.
+ */
+export async function attachSource(v: HTMLVideoElement, sources: VideoSource[], userRequested: boolean): Promise<boolean> {
+  if (v.getAttribute("src")) return true;
+  const mc = typeof navigator === "undefined" ? undefined : navigator.mediaCapabilities;
+  const caps: DecodeCaps = { decodingInfo: mc?.decodingInfo ? (c) => mc.decodingInfo(c) : undefined, canPlayType: v.canPlayType.bind(v) };
+  const forced = userRequested ? sources.find((s) => s.codec === "h264" && v.canPlayType(s.type) !== "") : undefined;
+  const picked = (await chooseSource(sources, caps)) ?? forced;
+  if (!picked) return false;
+  if (!v.getAttribute("src")) v.src = picked.src;
+  return true;
+}

@@ -274,6 +274,26 @@ test.describe("with a manifest", () => {
     await context.close();
   });
 
+  test("walkthrough: reopening after a media error drops the failed file, retries, and keeps the stills until playback succeeds", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    await page.getByTestId("demo-watch").click();
+    const dialog = page.getByTestId("demo-walkthrough");
+    const video = dialog.locator("video");
+    await expect.poll(() => paused(video)).toBe(false);
+    await video.evaluate((v: HTMLVideoElement) => v.dispatchEvent(new Event("error")));
+    await expect(dialog.getByTestId("demo-chapter-still")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await page.evaluate(() => ((window as unknown as { __rejectPlay: boolean }).__rejectPlay = true));
+    await page.getByTestId("demo-watch").click();
+    await expect(dialog.getByTestId("demo-chapter-still")).toBeVisible(); // the retry did not play: the fallback stays
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => ((window as unknown as { __rejectPlay: boolean }).__rejectPlay = false));
+    await page.getByTestId("demo-watch").click();
+    await expect(dialog.getByTestId("demo-chapter-still")).toHaveCount(0); // played again: the stills give way to the video
+    await context.close();
+  });
+
   test("bento: four tiles with spans, heading + line each, the honest note, started only when visible", async ({ browser }) => {
     const { context, page, videos } = await open(browser);
     const section = page.locator("#demo");

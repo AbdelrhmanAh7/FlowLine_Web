@@ -52,6 +52,14 @@ Status: **implemented on ai/114** (PR #133), awaiting merge.
 - Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
 - No e2e-army test: internal to test doubles, no user-facing flow.
 
+## Landing demo media, embed — 2026-10-13 (Issue #100, part 2/2 of #96)
+
+Status: **implemented on ai/100** (PR #136), awaiting merge. The media itself comes from #99; the embed is developed against fixtures and renders exactly as before when `public/media/demo/manifest.json` is absent.
+
+- Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
+- Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
+- Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md). Lighthouse before/after is not measured locally (needs a production build; CI).
+
 ## Branch maintenance — 2026-10-03
 
 Status: **merged into main** by [PR #20](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/20) (merge `db4b590`, final head `050407f`), built first on `claude/ci-trim-20261003` and the stacked `claude/ci-gate-always-report` (issues #22, #23).

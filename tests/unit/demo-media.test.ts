@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import nextConfig from "../../next.config";
-import { chooseSource, clipView, fileFor, parseManifest, readDemoManifest, shouldSkipVideo, startPlayback, walkthroughView, type VideoSource } from "@/lib/demo-media";
+import { attachSource, chooseSource, clipView, fileFor, parseManifest, readDemoManifest, shouldSkipVideo, startPlayback, walkthroughView, type VideoSource } from "@/lib/demo-media";
 import fixture from "../../e2e/fixtures/demo/manifest.json";
 import ar from "@/i18n/messages/ar.json";
 import en from "@/i18n/messages/en.json";
@@ -143,5 +143,41 @@ describe("delivery and copy", () => {
     const a = flat((ar as { landing: { demo: unknown } }).landing.demo).sort();
     expect(a).toEqual(flat((en as { landing: { demo: unknown } }).landing.demo).sort());
     expect(a).toHaveLength(25);
+  });
+});
+
+describe("attachSource", () => {
+  const video = (playable: string[]) => {
+    const attrs = new Map<string, string>();
+    return {
+      getAttribute: (n: string) => attrs.get(n) ?? null,
+      set src(v: string) { attrs.set("src", v); },
+      canPlayType: (t: string) => (playable.includes(t) ? "probably" : ""),
+    } as unknown as HTMLVideoElement;
+  };
+  const none = { mediaCapabilities: { decodingInfo: async () => ({ supported: false, smooth: false, powerEfficient: false }) } };
+
+  it("does not pick a file when MediaCapabilities supports neither, unless the visitor asked and H.264 can play", async () => {
+    vi.stubGlobal("navigator", none);
+    try {
+      expect(await attachSource(video([h264.type]), [av1, h264], false)).toBe(false);
+      const v = video([h264.type]);
+      expect(await attachSource(v, [av1, h264], true)).toBe(true);
+      expect(v.getAttribute("src")).toBe(h264.src);
+      expect(await attachSource(video([]), [av1, h264], true)).toBe(false); // the browser cannot play H.264 either
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it("keeps the file it already attached (one download)", async () => {
+    vi.stubGlobal("navigator", none);
+    try {
+      const v = video([h264.type]);
+      await attachSource(v, [av1, h264], true);
+      expect(await attachSource(v, [av1], false)).toBe(true);
+      expect(v.getAttribute("src")).toBe(h264.src);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
