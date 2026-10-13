@@ -212,8 +212,6 @@ export const flowVersion = pgTable(
     reason: text("reason").notNull(),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /** Insertion order: history sorts by this, since created_at is the transaction start and can tie or run backwards. */
-    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );

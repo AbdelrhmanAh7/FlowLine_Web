@@ -4,19 +4,19 @@
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
-`version = NULL` (migration 0025 drops `NOT NULL`); only `save`, `overwrite` and `publish` snapshots are numbered.
-Migration 0025 also adds `flow_version.seq` (bigserial): the history panel orders by it, because `created_at` is the
-transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
-label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en) through one
-helper pair, `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts` (unit test
-`tests/unit/flow-version-label.test.ts`: no "Version —" or "(v)" label in either language); the API returns `version: null`
-for such runs.
-Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version` on
-`reason = 'run'` rows, and recreates the trigger, so pre-existing runs no longer consume publication numbers.
-Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
-reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
-builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
-`e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
+`version = NULL` (`insertVersion` in `src/server/flows.ts`; migration 0025 drops `NOT NULL`); only `save`, `overwrite`
+and `publish` snapshots are numbered. Draft edits (autosave, which bumps `flow.revision`) never wrote a snapshot and
+still don't. Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version`
+on `reason = 'run'` rows and recreates the trigger. History now orders by `created_at` (version can be NULL). The history
+panel and the run inspector label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`,
+`runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts`;
+the run detail API (`/api/runs/:id`, `/api/v1/runs/:id`) returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; draft edits and a run before the first publish give v1; two runs then publish give v1; the three
+fail without the fix with 4≠2, 2≠1 and 3≠1), `tests/integration/flow-version-backfill.test.ts`,
+`tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`, `pnpm typecheck`, eslint on the changed
+files and `drizzle-kit check`. Open for the CTO, in `AI_QUESTIONS.md`: whether Ctrl/⌘+S saves keep taking numbers from the
+publication sequence, and a follow-up for strict insertion order in history (removed from this PR to keep it minimal).
 
 ## GitHub security settings (issue #160) — 2026-10-13
 

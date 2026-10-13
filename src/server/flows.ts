@@ -157,7 +157,7 @@ export async function listVersions(flowId: string) {
     .select({ id: schema.flowVersion.id, version: schema.flowVersion.version, revision: schema.flowVersion.revision, reason: schema.flowVersion.reason, createdAt: schema.flowVersion.createdAt })
     .from(schema.flowVersion)
     .where(eq(schema.flowVersion.flowId, flowId))
-    .orderBy(desc(schema.flowVersion.seq))
+    .orderBy(desc(schema.flowVersion.createdAt))
     .limit(50);
 }
 

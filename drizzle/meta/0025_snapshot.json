@@ -5244,12 +5244,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "seq": {
-          "name": "seq",
-          "type": "bigserial",
-          "primaryKey": false,
-          "notNull": true
         }
       },
       "indexes": {

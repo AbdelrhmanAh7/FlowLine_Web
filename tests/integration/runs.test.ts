@@ -310,6 +310,32 @@ describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
 });
 
 describe("runs do not use up publication numbers (regression: #204, #117)", () => {
+  const publishedVersion = async (wsId: string, flowId: string) => (await listFlows(wsId)).find((r) => r.id === flowId)!.publishedVersion;
+
+  it("publish once, run twice: the flow list keeps publishedVersion 1", async () => {
+    const { user, ws, flow } = await setup();
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    const r1 = await enqueueRun(user, flow.id);
+    const r2 = await enqueueRun(user, flow.id);
+    await claimAndProcess(r1.id);
+    await claimAndProcess(r2.id);
+
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+    // The next publication is v2: the two runs in between took no number.
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(2);
+  });
+
+  it("draft revisions (edits without Ctrl/⌘+S) and runs leave the first publication at v1", async () => {
+    const { user, ws, flow } = await setup();
+    const edited = await saveFlow(user, flow.id, { baseRevision: flow.revision, name: unique("Renamed") });
+    await saveFlow(user, flow.id, { baseRevision: edited.flow.revision, graph: flow.graph as FlowGraph });
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+  });
+
   it("the first publication after two runs is v1 and the flow list reports it", async () => {
     const { user, ws, flow } = await setup();
     const r1 = await enqueueRun(user, flow.id);
@@ -319,7 +345,7 @@ describe("runs do not use up publication numbers (regression: #204, #117)", () =
 
     const published = await publishFlow(user, flow.id);
     expect(published.version).toBe(1);
-    expect((await listFlows(ws.id)).find((r) => r.id === flow.id)!.publishedVersion).toBe(1);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
   });
 });
 
