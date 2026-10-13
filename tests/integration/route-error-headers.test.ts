@@ -42,6 +42,13 @@ describe("route() error responses carry no-store + no-referrer", () => {
     expectNoStore(noCsrf.headers);
   });
 
+  it("platform copy: 404 without a session (what the e2e-army test relies on)", async () => {
+    as(null);
+    const res = await call(copyGET, new Request("http://localhost:3100/api/platform/copy"));
+    expect(res.status).toBe(404);
+    expectNoStore(res.headers);
+  });
+
   it("a non-platform route: 401 without a session", async () => {
     as(null);
     const res = await call(meGET, new Request("http://localhost:3100/api/me"));

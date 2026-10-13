@@ -2,7 +2,7 @@
 
 ## route() error headers (issue #200) — 2026-10-13
 
-`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
+`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
 
 ## GitHub security settings (issue #160) — 2026-10-13
 
