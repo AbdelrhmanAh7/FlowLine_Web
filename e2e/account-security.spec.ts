@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, EN_STATE } from "../playwright.config";
+import { AR_STATE, BASE_URL, EN_STATE } from "../playwright.config";
 import { PASSWORD, setupUser } from "./helpers";
 import { base32Decode, totpCodeFor } from "./tools/totp";
 
@@ -36,8 +36,10 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // The otpauth URI holds the secret: the QR is drawn in the browser, so no request may leave our own origin.
   const origin = new URL(BASE_URL).origin;
   const foreign: string[] = [];
+  let enableCalls = 0;
   page.on("request", (r) => {
     if (/^https?:/.test(r.url()) && new URL(r.url()).origin !== origin) foreign.push(r.url());
+    if (r.method() === "POST" && new URL(r.url()).pathname === "/api/auth/two-factor/enable") enableCalls++;
   });
   await page.goto("/account/security");
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
@@ -51,7 +53,8 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await expect(page.getByText("That password isn't correct.")).toBeVisible();
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 
-  // The right password shows the secret and backup codes (left-to-right) with the one-time warning.
+  // The right password shows the QR, the secret below it and backup codes (left-to-right) with the one-time warning.
+  const callsBefore = enableCalls;
   await page.getByLabel("Account password").fill(PASSWORD);
   await page.getByRole("button", { name: "Enable" }).click();
   const secret = page.getByTestId("totp-secret");
@@ -60,6 +63,11 @@ test("enable two-step verification from the account page", async ({ page }) => {
   const qr = page.getByTestId("totp-qr");
   await expect(qr).toBeVisible();
   await expect(qr.locator("svg")).toBeVisible();
+  // One enable call feeds both the QR and the text secret (one totpURI state).
+  expect(enableCalls - callsBefore).toBe(1);
+  expect((await secret.boundingBox())!.y).toBeGreaterThan((await qr.boundingBox())!.y);
+  // White square so the code scans on the dark theme.
+  await expect(qr).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
   await expect(page.getByText(/shown only once/)).toBeVisible();
   const raw = base32Decode((await secret.textContent())!.trim());
@@ -94,4 +102,25 @@ test("enable two-step verification from the account page", async ({ page }) => {
   expect(foreign).toEqual([]);
   await page.reload();
   await expect(page.getByText("On", { exact: true })).toBeVisible();
+});
+
+test("the enrolment QR stays inside the page in Arabic (RTL)", async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: BASE_URL, storageState: AR_STATE });
+  const page = await context.newPage();
+  await setupUser(page);
+  await page.goto("/account/security");
+  expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  await page.getByLabel("كلمة مرور الحساب").fill(PASSWORD);
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  const qr = page.getByTestId("totp-qr");
+  await expect(qr).toBeVisible();
+  const box = (await qr.boundingBox())!;
+  const column = (await page.locator("main").boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(column.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(column.x + column.width);
+  expect(column.x + column.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+  await expect(page.getByTestId("totp-secret")).toHaveAttribute("dir", "ltr");
+  await context.close();
 });
