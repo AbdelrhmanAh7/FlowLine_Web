@@ -1,4 +1,5 @@
 import { LOCAL_SCENARIOS } from "./local-scenarios";
+import etaInvoiceNotifyExport from "./templates/mena/eta-invoice-notify.v1.json";
 import type { FlowGraph } from "./types";
 
 export type TemplateGoal = "sales" | "support" | "data" | "engineering";
@@ -133,6 +134,7 @@ export const LOCAL_TEMPLATES: LocalTemplate[] = [
     },
   },
   ...LOCAL_SCENARIOS,
+  etaInvoiceNotifyExport as LocalTemplate,
 ];
 
 /** The few examples the landing page shows; the in-app gallery lists every template. */

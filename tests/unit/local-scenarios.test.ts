@@ -44,8 +44,8 @@ async function run(id: string, input?: unknown) {
 }
 
 describe("local template catalogue", () => {
-  it("keeps the original three first, then appends the twelve scenarios", () => {
-    expect(LOCAL_TEMPLATES.map((t) => t.id)).toEqual(["lead-qualifier", "ticket-priority", "order-totals", ...NEW_IDS]);
+  it("keeps the original three first, then appends the twelve scenarios and the MENA ETA template", () => {
+    expect(LOCAL_TEMPLATES.map((t) => t.id)).toEqual(["lead-qualifier", "ticket-priority", "order-totals", ...NEW_IDS, "eta-invoice-notify"]);
     expect(LOCAL_SCENARIOS.map((t) => t.id)).toEqual(NEW_IDS);
     expect(new Set(LOCAL_TEMPLATES.map((t) => t.id)).size).toBe(LOCAL_TEMPLATES.length);
   });
@@ -80,6 +80,18 @@ describe("local template catalogue", () => {
     expect(ok.data.config).toEqual({ key: "approved", expression: "" });
     expect(await run("order-totals")).toEqual({ review: { total: 298.5, lines: 2 } });
     expect(await run("order-totals", { items: [{ sku: "A-1", qty: 2, price: 10 }] })).toEqual({ approved: { total: 20, lines: 1 } });
+  });
+
+  it("eta-invoice-notify lists only the invoices still pending ETA submission", async () => {
+    expect(await run("eta-invoice-notify")).toEqual({
+      eta_follow_up: [
+        { number: "INV-1041", customer: "Nile Trading", total: 12500 },
+        { number: "INV-1043", customer: "Cairo Tech", total: 4200 },
+      ],
+    });
+    expect(await run("eta-invoice-notify", { invoices: [{ number: "INV-9", customer: "Delta", total: 1, status: "submitted" }] })).toEqual({
+      eta_clear: { note: "No invoices are waiting for ETA submission." },
+    });
   });
 
   it("running every template leaves the template and its sample untouched", async () => {
