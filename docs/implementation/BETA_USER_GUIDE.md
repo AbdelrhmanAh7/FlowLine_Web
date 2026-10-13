@@ -73,4 +73,5 @@ user menu.
 7. **Privacy:**
    - Your data runs your workflows and isn't used to train models.
    - Deleting your account takes an emailed confirmation link.
+   - Account, Security (user menu) shows whether two-step verification is on or off; turning it on or off from this page is coming in later parts.
 8. **Help:** use "Report an issue", and include the Request ID shown with any error.
