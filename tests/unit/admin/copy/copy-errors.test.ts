@@ -57,6 +57,34 @@ describe("handleWriteError (what the editor does after a failed save or publish)
     expect(fx.refetchCopy).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { on: "PLATFORM_REAUTH_REQUIRED (401)", cause: new ApiError(401, "PLATFORM_REAUTH_REQUIRED", "Sign in again") },
+    { on: "PLATFORM_MFA_REQUIRED (403)", cause: new ApiError(403, "PLATFORM_MFA_REQUIRED", "Complete your authenticator challenge") },
+  ])("on $on shows the sign-in-again message, disables writes, re-reads the session and does not reload the copy", async ({ cause }) => {
+    for (const fallback of FALLBACKS) {
+      const fx = editor("2026-10-13T12:01:00.000Z"); // a step-up that still looks valid must not re-enable the buttons
+      await handleWriteError(cause, fallback, fx);
+      expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.reauthRequired");
+      expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(false);
+      expect(fx.refetchMe).toHaveBeenCalledTimes(1);
+      expect(fx.refetchCopy).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([
+    { on: "RATE_LIMITED (429)", cause: new ApiError(429, "RATE_LIMITED", "Too many changes") },
+    { on: "a 429 without a JSON body", cause: new ApiError(429, "HTTP_429", "Request failed (429)") },
+  ])("on $on shows the rate-limit message and leaves the editor, the session and the copy state alone", async ({ cause }) => {
+    for (const fallback of FALLBACKS) {
+      const fx = editor();
+      await handleWriteError(cause, fallback, fx);
+      expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.rateLimited");
+      expect(fx.setStepUpActive).not.toHaveBeenCalled();
+      expect(fx.refetchMe).not.toHaveBeenCalled();
+      expect(fx.refetchCopy).not.toHaveBeenCalled();
+    }
+  });
+
   it("on STEP_UP_REQUIRED keeps writes disabled when re-reading the session returns no data", async () => {
     const fx = editor("2026-10-13T12:01:00.000Z");
     fx.refetchMe.mockResolvedValueOnce({ data: undefined });
