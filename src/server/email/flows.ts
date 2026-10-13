@@ -228,11 +228,15 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       return "done";
     }
     if (purpose === "reset") {
+      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the user row and the token
+      // row are already held above; the user's sessions come next, then their account rows, the same order the
+      // federated transactions take (issue #41). The reverse could deadlock against a link confirmation, challenge
+      // completion or SSO callback. Reset mutates no retained file, so it takes no retained-file accounting lock.
       const hashed = await hashPassword(value!);
+      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
-      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       // Historical tenant-created identities have no independently proven mailbox
       // ownership. Recovery removes those methods; explicitly mailbox-approved
       // links retain normal recovery behaviour.
