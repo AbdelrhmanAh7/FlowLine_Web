@@ -7,8 +7,10 @@ per-flow sequence, so two runs before the first publish made it v3 instead of v1
 `version = NULL` (migration 0025 drops `NOT NULL`); only `save`, `overwrite` and `publish` snapshots are numbered.
 Migration 0025 also adds `flow_version.seq` (bigserial): the history panel orders by it, because `created_at` is the
 transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
-label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en); the API
-returns `version: null` for such runs.
+label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en) through one
+helper pair, `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts` (unit test
+`tests/unit/flow-version-label.test.ts`: no "Version —" or "(v)" label in either language); the API returns `version: null`
+for such runs.
 Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version` on
 `reason = 'run'` rows, and recreates the trigger, so pre-existing runs no longer consume publication numbers.
 Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
