@@ -1,6 +1,6 @@
 # Evidence — issue #239: Mizano create steps send `ctx.idempotencyKey` unchanged, and the same key on a repeat
 
-Outcome: **superseded by #147.** Both acceptance criteria are already met in the parent's own describe blocks on branch `ai/147` (head `b32a51b`, commit `779c3b1` "assert real idempotency key"). This branch therefore adds no test code; it only records where the criteria are met.
+Outcome: **blocked until #147 merges (PR #219, still open on 2026-10-13).** Both acceptance criteria are already met in the parent's own describe blocks on branch `ai/147` (head `b32a51b`, commit `779c3b1` "assert real idempotency key"). This branch adds no test code. CTO decision (issue #239 comments): wait for #147 to merge to main, then rebase `ai/239` and, if the criteria are not already covered there, apply the two assertion replacements and the double-call tests in `tests/contract/mizano.test.ts`. Do not copy #147's logic into this PR.
 
 Checked on 2026-10-13: macOS, Node 26.10.0, Vitest 5.0.2, `origin/main` `9c754b2`, `origin/ai/147` `b32a51b`. An evidence file cannot name the commit that contains it. The PR head SHA is on PR #246.
 
