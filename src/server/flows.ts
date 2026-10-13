@@ -140,14 +140,19 @@ export async function saveFlow(user: CurrentUser, flowId: string, input: SaveFlo
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** Only a publication takes a public version number (1, 2, 3… per flow); save, overwrite and run snapshots stay unnumbered. */
 export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof schema.flow.$inferSelect, reason: "save" | "run" | "overwrite" | "publish") {
-  const [{ next }] = await tx
-    .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
-    .from(schema.flowVersion)
-    .where(eq(schema.flowVersion.flowId, flow.id));
+  let version: number | null = null;
+  if (reason === "publish") {
+    const [{ next }] = await tx
+      .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
+      .from(schema.flowVersion)
+      .where(and(eq(schema.flowVersion.flowId, flow.id), eq(schema.flowVersion.reason, "publish")));
+    version = next;
+  }
   const [v] = await tx
     .insert(schema.flowVersion)
-    .values({ flowId: flow.id, version: reason === "run" ? null : next, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
+    .values({ flowId: flow.id, version, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
     .returning();
   return v;
 }

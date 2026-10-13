@@ -3,20 +3,22 @@
 ## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
-per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
-`version = NULL` (`insertVersion` in `src/server/flows.ts`; migration 0025 drops `NOT NULL`); only `save`, `overwrite`
-and `publish` snapshots are numbered. Draft edits (autosave, which bumps `flow.revision`) never wrote a snapshot and
-still don't. Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version`
-on `reason = 'run'` rows and recreates the trigger. History now orders by `created_at` (version can be NULL). The history
-panel and the run inspector label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`,
-`runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts`;
-the run detail API (`/api/runs/:id`, `/api/v1/runs/:id`) returns `version: null` for such runs.
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
 Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
-keeps publishedVersion 1; draft edits and a run before the first publish give v1; two runs then publish give v1; the three
-fail without the fix with 4≠2, 2≠1 and 3≠1), `tests/integration/flow-version-backfill.test.ts`,
-`tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`, `pnpm typecheck`, eslint on the changed
-files and `drizzle-kit check`. Open for the CTO, in `AI_QUESTIONS.md`: whether Ctrl/⌘+S saves keep taking numbers from the
-publication sequence, and a follow-up for strict insertion order in history (removed from this PR to keep it minimal).
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. Open in `AI_QUESTIONS.md`: a follow-up for strict insertion order in
+history (removed from this PR to keep it minimal).
 
 ## GitHub security settings (issue #160) — 2026-10-13
 

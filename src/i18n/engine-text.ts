@@ -36,9 +36,10 @@ export function runLabel(t: Translator, status: string): string {
   return optional(t, `runStatus.${status}`, status);
 }
 
-/** A flow snapshot's label: "Version 3", or "Run snapshot" for a run's pin, which has no publication number (version null). */
-export function flowVersionLabel(t: Translator, version: number | null): string {
-  return version === null ? t("common.runSnapshot") : t("common.version", { version });
+/** A flow snapshot's label: "Version 3" for a publication; save, overwrite and run snapshots have no number (version null). */
+export function flowVersionLabel(t: Translator, version: number | null, reason: string = "run"): string {
+  if (version !== null) return t("common.version", { version });
+  return t(reason === "save" ? "common.savedSnapshot" : reason === "overwrite" ? "common.overwriteSnapshot" : "common.runSnapshot");
 }
 
 /** The re-run dialog's choice to re-run on the run's own snapshot, numbered or not. */

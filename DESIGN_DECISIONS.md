@@ -49,9 +49,11 @@ local Ollama models (visual/copy review).
   (validation). Connection rules exist once (`checkConnection`), so the canvas and server agree.
 - **Persistence**: `flow` holds the working draft plus a monotonic `revision` for optimistic concurrency.
   `flow_version` holds immutable snapshots (`save` = Ctrl/⌘+S, `run` = pinned for each run,
-  `overwrite` = the server copy kept before an explicit offline overwrite). Only `save`, `overwrite` and `publish`
-  snapshots take a public version number (one sequence per flow); a `run` snapshot has `version = NULL`, so running a
-  flow never changes the number its next publication gets (#204). History lists snapshots newest first by `created_at`.
+  `overwrite` = the server copy kept before an explicit offline overwrite). Only `publish` snapshots take a public
+  version number (1, 2, 3… per flow, derived from earlier publications only); `save`, `overwrite` and `run` snapshots
+  have `version = NULL` and the history panel names them by reason ("Saved snapshot", "Copy kept before overwrite",
+  "Run snapshot"), so saving or running a flow never changes the number its next publication gets (#204). History
+  lists snapshots newest first by `created_at`.
   `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get

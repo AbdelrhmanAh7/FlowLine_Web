@@ -138,6 +138,8 @@
   "common": {
     "version": "Version {version}",
     "runSnapshot": "Run snapshot",
+    "savedSnapshot": "Saved snapshot",
+    "overwriteSnapshot": "Copy kept before overwrite",
     "cancel": "Cancel",
     "retry": "Retry",
     "back": "Back",
