@@ -202,3 +202,7 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. PR #245's recurring closing-link finding came from the live body, despite local notes claiming otherwise. The PR template now requires live linkage verification for deferred criteria; the harness must preserve `Refs #161` and `Refs #24` and obtain reviewer confirmation before merge. No security setting was changed.

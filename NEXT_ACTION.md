@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #161 — PR #245 linkage review (2026-10-13)
+
+Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.

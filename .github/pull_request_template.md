@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- One short paragraph: the change and the reason. Link the issue with `Closes #N`; for an owner-tracking issue (label `owner-only` or `needs-owner`) write `Refs #N` instead, so merging does not close it. -->
+<!-- One short paragraph: the change and the reason. Link the issue with `Closes #N`; for an owner-tracking issue (label `owner-only` or `needs-owner`) write `Refs #N` instead, so merging does not close it. If acceptance criteria are deferred to another issue, also use `Refs #N` and link the follow-up. Verify the live body before merge with `gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`; local notes do not change GitHub linkage. -->
 
 ## Docs updated (mandatory — AGENTS.md "Docs (mandatory)")
 

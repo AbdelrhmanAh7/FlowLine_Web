@@ -164,3 +164,14 @@ describe("issue #160: one honest record of the owner's GitHub security steps", (
     }
   });
 });
+
+// PR #245 kept closing #161 because local notes never changed the live PR body.
+describe("partial issue completion keeps the issue open", () => {
+  it("the PR template requires Refs for acceptance criteria deferred to another issue", () => {
+    const template = read(".github/pull_request_template.md");
+    expect(template).toMatch(/acceptance criteria.*deferred/i);
+    expect(template).toContain("Refs #N");
+    expect(template).toContain("closingIssuesReferences");
+    expect(template).toContain("YOUR_PR_NUMBER");
+  });
+});
