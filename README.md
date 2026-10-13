@@ -154,7 +154,8 @@ has at least one test, titled `[<feature>.<n>]` and tagged `feat:<feature>`, `sh
 `job` tests are request-level, no model). Shards (budget 5 min per shard, enforced by `scripts/e2e-army.mjs`; not yet timed in CI): smoke, core-api, flows-api, runs, triggers, schedule,
 ai-api, platform-api, ui-auth, ui-auth2, ui-flows, ui-builder, ui-settings, ui-ai, ui-admin, ui-misc; run one with
 `pnpm e2e:army --shard-id core-api`. Every PR adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each
-feature its changed files touch (waiver: `E2E: not needed — <reason>` in the PR). The hub's verify job posts the `e2e-army`
+feature its changed files touch, backend-only changes included (they run the feature's api-level shard; waiver: `E2E: not needed — <reason>` in the PR).
+Files no feature claims run the smoke shard and are reported as "feature map gap" until the hub's feature map claims them. The hub's verify job posts the `e2e-army`
 status; the owner adds the GitHub Actions workflow separately (AI PRs do not change `.github/workflows`).
 
 CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,

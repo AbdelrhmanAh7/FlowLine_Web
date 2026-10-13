@@ -129,6 +129,17 @@ describe("e2e-army docs and suite", () => {
     expect(top.length).toBeLessThanOrEqual(8);
   });
 
+  it("AGENTS.md, README and DEVELOPER_GUIDE state the feat:<id> rule for every PR (not only user-flow PRs), the waiver and the feature map gap", () => {
+    for (const file of ["AGENTS.md", "README.md", "docs/DEVELOPER_GUIDE.md"]) {
+      const text = readFileSync(join(root, file), "utf8").replace(/\s+/g, " ");
+      // The rule sentence itself must not be scoped to user-flow PRs.
+      expect(text, file).toMatch(/Every PR[^.]*adds or updates an `e2e-army\/\*\.e2e\.ts` test tagged `feat:<id>` for each feature its changed files touch/);
+      expect(text, file).toMatch(/backend-only/);
+      expect(text, file).toContain("E2E: not needed — <reason>");
+      expect(text, file).toMatch(/smoke shard[^.]*"feature map gap"/);
+    }
+  });
+
   it("every feature test carries feat:/shard:/lvl: tags and its shard tag matches its file", () => {
     const own: Record<string, string[]> = { "ui-auth": ["ui-auth", "ui-auth2"], "ui-misc": ["ui-misc", "ui-auth2"] };
     const dirName = join(root, "e2e-army", "features");
