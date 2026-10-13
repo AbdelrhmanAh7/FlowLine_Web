@@ -1,5 +1,5 @@
 // Issue #145: the Mizano connection type (a per-workspace base URL plus a scoped API key, stored encrypted) and the
-// "Test connection" action that verifies a SAVED connection by calling the provider's identity() (/api/me).
+// "Test connection" action that verifies a SAVED connection by calling the provider's identity() (for Mizano GET /api/health, then GET /api/me).
 //
 // Request-level test (AC1: the key is encrypted and never returned; AC2: Test connection checks the saved credentials
 // and takes no body, so a caller cannot point the stored key at another host). The UI test then drives the saved
@@ -68,7 +68,7 @@ test(
     const base = app.baseUrl!;
     const owner = await signedIn(base, `army-145-owner-${seeded(base, "owner")}@flowline-e2e.test`);
     const { workspace, text, connection } = await savedMizano(base, owner);
-    // AC1: the key is verified against /api/me and stored, but never echoed back.
+    // AC1: the key is verified against /api/health + /api/me and stored, but never echoed back.
     expect(text).not.toContain(KEY);
     expect(connection.accountLabel).toBe("Alice A Mizano");
     expect(connection.settings.baseUrl).toBe(MIZANO_URL);

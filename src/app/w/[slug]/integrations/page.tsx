@@ -8,10 +8,11 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Checkbox, Button, Card, Dialog, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
+import { connectionTestErrorText } from "@/i18n/connection-test";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
 import { dataText } from "@/i18n/workspace-text";
-import { ApiError, api } from "@/lib/api";
+import { api } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogProvider, type ConnectionDto } from "@/lib/catalog";
 import { useOnline } from "@/lib/hooks";
 import { focusIsFree } from "@/components/ui/focus-return";
@@ -211,7 +212,7 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   const test = useMutation({
     mutationFn: () => api<{ ok: true; accountLabel: string }>(`/api/workspaces/${workspace.id}/connections/${c.id}/test`, { method: "POST" }),
     onSuccess: (r) => toast(t("integrations.card.testOk", { account: r.accountLabel }), "success"),
-    onError: (e) => toast(testErrorText(t, e), "danger"),
+    onError: (e) => toast(connectionTestErrorText(t, e), "danger"),
   });
   const remove = useMutation({
     mutationFn: () => api(`/api/connections/${c.id}`, { method: "DELETE" }),
@@ -265,14 +266,6 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
       </Card>
     </li>
   );
-}
-
-/** A failed connection test shows a fixed, translated line per bounded code — never the provider's own text. */
-function testErrorText(t: ReturnType<typeof useT>, err: unknown): string {
-  const code = err instanceof ApiError ? err.code : null;
-  if (code === "AUTHENTICATION_FAILED") return t("integrations.card.testAuthFailed");
-  if (code === "PROVIDER_UNREACHABLE") return t("integrations.card.testUnreachable");
-  return apiErrorMessage(t, err, t("integrations.card.testError"));
 }
 
 /** The callback carries only a bounded outcome code (never a provider message): translate it. */
