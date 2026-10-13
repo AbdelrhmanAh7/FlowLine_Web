@@ -181,7 +181,14 @@ describe("lib/format helpers", () => {
 
     it("rejects Persian digits (U+06F0-U+06F9) and the Arabic decimal separator (U+066B)", () => {
       expect(() => toDecimalString("۱۲.۵")).toThrow(/invalid decimal/);
-      expect(() => toDecimalString("١٢٫٥")).toThrow(/invalid decimal/);
+      expect(() => toDecimalString("١٢٫۵")).toThrow(/invalid decimal/);
+    });
+
+    it("pins rejection of Persian digits (U+06F0-U+06F9) and U+066B", () => {
+      expect(() => toDecimalString("۱۲.۵")).toThrow(/invalid decimal/);
+      expect(() => toDecimalString("۱۲.۵۰")).toThrow(/invalid decimal/);
+      expect(() => toDecimalString("۱۰۰۰")).toThrow(/invalid decimal/);
+      expect(() => toDecimalString("1,000")).toThrow(/invalid decimal/);
     });
 
     it("rejects malformed and non-numeric input", () => {
