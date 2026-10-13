@@ -117,3 +117,13 @@ Uses the `pg` driver directly. The host/port pass the egress check (`assertHostA
 | `linear.create_issue` | non_idempotent | – | write | ✅ `issues(filter:{description:{contains:"flowline:{key}"}})` | `POST /graphql` — `mutation issueCreate` |
 
 `create_issue` appends `\n\n<!-- flowline:{idempotencyKey} -->` to the description. Identity: `{ viewer { id name email } }`.
+
+## mizano — scoped API key (api_key, `Authorization: Bearer`), host from the connect setting `baseUrl`
+
+| Action | Side effect | Sensitive | Required scopes | Verify | Real endpoint |
+|---|---|---|---|---|---|
+| `mizano.list_overdue_invoices` | none | – | invoices:read | – | `GET /api/invoices?status=overdue&asOf=YYYY-MM-DD` |
+
+The endpoint and response shape are **assumed** until Mizano's FlowLine integration API (MZ G5) is published; the adapter is covered only by mocked contract tests (`tests/contract/mizano.test.ts`). `baseUrl` must be a bare https origin. `base()` refuses private, loopback, link-local and internal literal hosts before any request is built (`checkUrl`). A hostname is checked again at connect time by the egress guard in `safeFetch` (every resolved address must be public), which covers every request including the per-request `baseUrl`; `tests/contract/mizano.test.ts` proves it for a name that resolves to 10.0.0.5. A test stack on a tailnet host needs `FLOWLINE_EGRESS_ALLOWLIST`. The identity response (`GET /api/me`) must carry a non-empty `id` and `workspaceName`. Amounts pass through as two-decimal strings.
+
+The fake provider server (`e2e/fakes/provider-server.ts`, path prefix `/mizano`) answers only `GET /api/health` with 200 `{ status: "ok", version: "fake" }` (part of #145, #222), including repeated probes without a handler rate limit. It sits behind the server's generic Bearer check, so a missing or unknown token gets 401 `{ message: "Unauthorized" }`. Authenticated requests to any other path or method get 404 `{ message: "Not found" }`. `/api/me` and `/api/invoices` are not faked yet. `tests/contract/mizano-fake.test.ts` covers the handler.

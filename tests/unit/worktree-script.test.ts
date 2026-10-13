@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertLaneName, main, samePath } from "../../scripts/worktree.mjs";
 
 const mocks = vi.hoisted(() => ({
-  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(),
+  git: vi.fn(), exists: vi.fn(), stat: vi.fn(), unlink: vi.fn(), symlink: vi.fn(), readlink: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({ execFileSync: mocks.git }));
 vi.mock("node:fs", () => ({
-  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink,
+  existsSync: mocks.exists, lstatSync: mocks.stat, unlinkSync: mocks.unlink, symlinkSync: mocks.symlink, readlinkSync: mocks.readlink,
 }));
 
 // Entirely virtual paths: no child process or filesystem operation reaches the host.
@@ -47,6 +47,7 @@ beforeEach(() => {
   events = [];
   mocks.exists.mockImplementation((path) => path !== stale);
   mocks.stat.mockReturnValue({ isSymbolicLink: () => true });
+  mocks.readlink.mockReturnValue(join(root, "node_modules"));
   mocks.unlink.mockImplementation((path) => { events.push(`unlink ${path}`); });
   mocks.git.mockImplementation((command, args, { cwd }) => {
     expect(command).toBe("git");
@@ -131,13 +132,46 @@ describe("worktree removal safeguards", () => {
     expectUntouched();
   });
 
-  it.each(["dirty", "unpushed"])("keeps %s work without unlinking or pruning", (state) => {
-    if (state === "dirty") dirty = " M file.ts";
-    else pushed = "";
-    expect(main(["rm", "lane"])).toBe(0);
+  it.each(["rm", "remove"])("%s refuses dirty work with a clear message, exit 1 semantics, and removes nothing", (cmd) => {
+    dirty = " M file.ts\n?? draft.txt";
+    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: 2 uncommitted change(s); commit or discard them first`);
     expect(mocks.unlink).not.toHaveBeenCalled();
     expect(calls().filter(({ args }) => args[0] === "worktree").map(({ args }) => args))
       .toEqual([["worktree", "list", "--porcelain"]]);
+  });
+
+  it.each(["rm", "remove"])("%s refuses unpushed work and removes nothing", (cmd) => {
+    pushed = "";
+    expect(() => main([cmd, "lane"])).toThrow(`refusing to remove ${lane}: HEAD not on any remote branch; push it first`);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().filter(({ args }) => args[1] === "remove")).toEqual([]);
+  });
+
+  it("remove is an alias of rm", () => {
+    expect(main(["remove", "lane"])).toBe(0);
+    expect(calls().filter(({ args }) => args[1] === "remove").map(({ args }) => args)).toEqual([["worktree", "remove", lane]]);
+  });
+
+  it("a fresh lane is clean: the helper's own untracked node_modules link is not counted, then unlinked", () => {
+    dirty = "?? node_modules";
+    expect(main(["list"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
+    expect(main(["remove", "lane"])).toBe(0);
+    expect(mocks.unlink.mock.calls).toEqual([[join(lane, "node_modules")]]);
+  });
+
+  it("a node_modules link that points elsewhere is the lane's work: dirty, never unlinked", () => {
+    dirty = "?? node_modules";
+    mocks.readlink.mockReturnValue(join(external, "node_modules"));
+    expect(() => main(["rm", "lane"])).toThrow(/1 uncommitted change\(s\)/);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+  });
+
+  it("a real node_modules directory is neither ignored nor unlinked", () => {
+    dirty = "?? node_modules";
+    mocks.stat.mockReturnValue({ isSymbolicLink: () => false });
+    expect(() => main(["rm", "lane"])).toThrow(/1 uncommitted change\(s\)/);
+    expect(mocks.unlink).not.toHaveBeenCalled();
   });
 
   it("checks clean and pushed before unlinking, then removes without force", () => {
@@ -194,6 +228,17 @@ describe("worktree add lane names", () => {
     expect(mocks.symlink).toHaveBeenCalledWith(join(root, "node_modules"), join(managed("lane2"), "node_modules"), "junction");
   });
 
+  it("propagates git's error when the branch already exists and links no node_modules", () => {
+    const base = mocks.git.getMockImplementation()!;
+    mocks.git.mockImplementation((command, args, options) => {
+      if (args[0] === "worktree" && args[1] === "add") throw new Error("fatal: a branch named 'lane' already exists");
+      return base(command, args, options);
+    });
+    expect(() => main(["add", "lane"])).toThrow(/branch named 'lane' already exists/);
+    expect(mocks.symlink).not.toHaveBeenCalled();
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
   it("a created lane can be addressed by the same bare name in rm", () => {
     expect(main(["add", "lane"])).toBe(0);
     expect(main(["rm", "lane"])).toBe(0);
@@ -238,6 +283,22 @@ describe("worktree iteration", () => {
     expect(calls().some(({ args, cwd }) => cwd === lane && args[0] === "status")).toBe(true);
     if (cmd === "prune") expect(mocks.unlink).toHaveBeenCalledWith(join(lane, "node_modules"));
     else expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=0 | pushed=true`);
+  });
+
+  it.each(["dirty", "unpushed"])("prune keeps %s work with a reason and exits 0", (kind) => {
+    if (kind === "dirty") dirty = " M file.ts";
+    else pushed = "";
+    expect(main(["prune"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`kept ${lane}: ${kind === "dirty" ? "1 uncommitted change(s)" : "HEAD not on any remote branch"}`);
+    expect(mocks.unlink).not.toHaveBeenCalled();
+    expect(calls().filter(({ args }) => args[1] === "remove")).toEqual([]);
+  });
+
+  it("list shows the dirty count and pushed state of a lane", () => {
+    dirty = " M a.ts\n?? b.ts";
+    pushed = "";
+    expect(main(["list"])).toBe(0);
+    expect(console.log).toHaveBeenCalledWith(`${lane} | lane | dirty=2 | pushed=false`);
   });
 
   it("lists later lanes without running git in a missing/prunable directory", () => {
