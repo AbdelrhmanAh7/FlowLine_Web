@@ -53,7 +53,9 @@ local Ollama models (visual/copy review).
   version number (1, 2, 3… per flow, derived from earlier publications only); `save`, `overwrite` and `run` snapshots
   have `version = NULL` and the history panel names them by reason ("Saved snapshot", "Copy kept before overwrite",
   "Run snapshot"), so saving or running a flow never changes the number its next publication gets (#204). History
-  lists snapshots newest first by `created_at`.
+  lists snapshots newest first by `created_at` (`now()`, the transaction start), so two snapshots written by
+  overlapping transactions can show in commit order rather than insertion order; strict insertion order is a
+  follow-up, not part of #204.
   `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get

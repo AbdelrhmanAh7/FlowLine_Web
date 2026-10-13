@@ -17,8 +17,9 @@ keeps publishedVersion 1; saves and an overwrite before the first publish give v
 then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
 `tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
 subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. Open in `AI_QUESTIONS.md`: a follow-up for strict insertion order in
-history (removed from this PR to keep it minimal).
+`pnpm typecheck` and eslint on the changed files. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
 ## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
 
