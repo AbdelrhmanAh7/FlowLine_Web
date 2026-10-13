@@ -1137,27 +1137,39 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
 };
 
-const mizano: Handler = (ctx, req, res, path, _url, _body, _account) => {
-  if (req.method === "GET" && path === "/api/health") {
-    // Rate limiting: 10 requests per 60 seconds per account
-    const key = `mizano-health:${_account}`;
-    const now = Date.now();
-    const window = ctx.state.counters[key] ?? 0;
-    // If we have no window or it's been more than 60 seconds, reset
-    if (window === 0 || now - window >= 60_000) {
-      ctx.state.counters[key] = now;
-      return json(ctx, req, res, 200, { status: "ok" });
-    }
-    // Within 60 seconds, check if we've exceeded 10 requests
-    const count = (ctx.state.counters[key + ":count"] ?? 0) + 1;
-    if (count > 10) {
-      ctx.state.counters[key + ":count"] = count;
-      return json(ctx, req, res, 429, { error: "rate limited" }, { "retry-after": "60" });
-    }
-    ctx.state.counters[key + ":count"] = count;
-    return json(ctx, req, res, 200, { status: "ok" });
+// Mizano health probe (issue #222): GET /api/health only. This server is test-only infrastructure — it
+// listens on 127.0.0.1 and runs only under FLOWLINE_ENV=test suites — so every measure below is cheap
+// insurance for a test process talking to itself, kept because the acceptance contract asks for it.
+const MIZANO_HEALTH_MAX_REQUESTS = 10; // per account, per fixed window
+const MIZANO_HEALTH_WINDOW_MS = 60_000;
+
+const mizano: Handler = (ctx, req, res, path, _url, _body, account) => {
+  // Authorization, defense in depth: dispatch already authenticated this request (authenticate() +
+  // authFail() at the call site), and the handler re-checks the Bearer token itself so /api/health can
+  // never be reached with a missing or unknown token — same 401 { message: "Unauthorized" } as authFail.
+  const auth = authenticate(ctx.state, "mizano", req);
+  if (!auth.ok) return authFail(ctx, "mizano", req, res, auth.reason);
+  if (req.method !== "GET" || path !== "/api/health") {
+    return json(ctx, req, res, 404, { message: "Not found" });
   }
-  return json(ctx, req, res, 404, { message: "Not found" });
+  // Rate limit: a fixed window per account — at most MIZANO_HEALTH_MAX_REQUESTS health probes per
+  // MIZANO_HEALTH_WINDOW_MS, then 429 with retry-after, so a runaway test loop cannot pin the server.
+  const key = `mizano-health:${account}`;
+  const now = Date.now();
+  const windowStart = ctx.state.counters[key] ?? 0;
+  if (windowStart === 0 || now - windowStart >= MIZANO_HEALTH_WINDOW_MS) {
+    ctx.state.counters[key] = now;
+    ctx.state.counters[`${key}:count`] = 1;
+  } else {
+    const count = (ctx.state.counters[`${key}:count`] ?? 0) + 1;
+    ctx.state.counters[`${key}:count`] = count;
+    if (count > MIZANO_HEALTH_MAX_REQUESTS) {
+      return json(ctx, req, res, 429, { error: "rate limited" }, { "retry-after": String(MIZANO_HEALTH_WINDOW_MS / 1000) });
+    }
+  }
+  // version: "fake" is the acceptance contract of #222, not a real version string: it lets a test prove
+  // it reached this fake server rather than a real Mizano host. It discloses nothing about any real system.
+  return json(ctx, req, res, 200, { status: "ok", version: "fake" });
 };
 
 const github: Handler = (ctx, req, res, path, url, body, account) => {
