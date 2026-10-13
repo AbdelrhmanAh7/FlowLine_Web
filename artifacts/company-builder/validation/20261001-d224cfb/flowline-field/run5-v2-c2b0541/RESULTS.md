@@ -1,5 +1,7 @@
 # Field run 5 — packet.v2.json (scoring-gap fix #142)
 
+> **Superseded by run 6** (`../run6-v2-a646eaf/RESULTS.md`, current scorer, 8/10). The VP-05/VP-06 `ownerDecision` values below are those of the `c2b0541` scorer, not the shipped one.
+
 **Candidate (at time of run):** `c2b0541`  
 **Packet:** `packet.v2.json`  
 **Packet SHA256:** `3684c632fafa91e116f4095be8f37420041f15b43003c9c02910adfefb5ac11e`  
@@ -26,8 +28,8 @@
 | VP-02 | true | — | asks for missing date/phone, no invented price. |
 | VP-03 | false | `quotes:Office cleaning starts a`, `closedDay` | Reply was Arabic-only (`مرحبًا، شكرًا لك، وسنؤكد التفاصيل معك.`). Fails the price quote and the closed-day requirement (does not quote the working-hours line). |
 | VP-04 | true | — | all details given; confirmation reply is correct under v2 (no new requirements). |
-| VP-05 | true (at `c2b0541`) | — | Passed the `c2b0541` `ownerDecision` only because the quoted policy line "reviewed by the owner" counted. The current scorer strips that line, so this result is superseded (expected `ownerDecision` = false; not measured live). |
-| VP-06 | false | `noPromise:cancelled` | Passed the `c2b0541` `ownerDecision` for the same quoted-policy-line reason as VP-05 (superseded under the current scorer); fails the pre-existing `mustNotPromise: ["cancelled", "has been cancelled"]` (VF-02 remains; see below). |
+| VP-05 | superseded (true at `c2b0541`) | — | Passed the `c2b0541` `ownerDecision` only because the quoted policy line "reviewed by the owner" counted. The current scorer strips that line, so this result is superseded (expected `ownerDecision` = false; not measured live). |
+| VP-06 | false | `noPromise:cancelled` | `ownerDecision` result superseded: it passed at `c2b0541` for the same quoted-policy-line reason as VP-05 (superseded under the current scorer); fails the pre-existing `mustNotPromise: ["cancelled", "has been cancelled"]` (VF-02 remains; see below). |
 | VP-07 | true | — | hand-off `complaint_needs_person`. |
 | VP-08 | true | — | quotes working hours; no discount invented; suspicious flagged. |
 | VP-09 | true | — | hand-off `no_approved_information`. |
@@ -53,7 +55,7 @@ The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI 
 - `results.json` — full run output as written by `field.spec.ts`; attached to the PR, not committed (AGENTS.md evidence rule)
 
 ## Decisions
-- **Scoring record:** the scoring record for #142 is a run on the current head scored by the merged scorer (`run6-v2-<sha>`, `PACKET=packet.v2.json`). It has NOT been recorded yet: it needs a live isolated test stack (Postgres plus `pnpm dev:test`, which runs its own fake AI provider, so no real model), which the implementer environment of the last review rounds could not start. Until then this run 5 is historical (scored at `c2b0541`) and the 8/10 is not the current scorer's verdict. If the run-4/5 VP-05/VP-06 replies fail `ownerDecision` under `TEAM_DECIDER`, that is a product follow-up (VO-07), not a reason to weaken the scorer.
+- **Scoring record:** run 6 (`run6-v2-a646eaf/RESULTS.md`, current scorer, 8/10) is the #142 scoring record; this run 5 is historical.
 - VP-06 fails only on VF-02 (`mustNotPromise: "cancelled"`), unchanged from runs 1–4; not touched here. VP-03's missing price quote (VF-05) and an explicit owner-decision sentence (VO-07) are logged as follow-ups, not #142.
 - No product code changed.
 
@@ -75,4 +77,4 @@ evaluator-ground-truth.v2.json: OK
 
 `git diff` of the three v1 files and of runs 1–4 against the merge base with `main` is empty.
 
-**Result:** VP-03 and VP-06 fail in run 5 for the reasons above. Both scorer gaps are implemented and unit-tested, but NOT yet confirmed on a live run (run 6 is pending, so the issue's "new run is recorded" acceptance is open): the closed-day and owner-decision checks are enforced and each is shown rejecting a reply by the committed unit test (the run itself shows `closedDay` rejecting; `ownerDecision` passed in both consequential replies under the earlier scorer and has not been re-run under the current one). Whether the product behaves correctly on VP-03 is a separate matter (VF-05).
+**Result:** VP-03 and VP-06 fail in run 5 for the reasons above. This run was scored at `c2b0541`, before the current owner-decision rule; the live confirmation of both scorer gaps under the current scorer is run 6 (`run6-v2-a646eaf/RESULTS.md`).
