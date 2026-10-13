@@ -1303,19 +1303,13 @@
       }
     },
     "mizano": {
-      "description": "قراءة الفواتير المتأخرة من Mizano للمتابعة",
-      "actions": {
-        "list_overdue_invoices": {
-          "title": "عرض الفواتير المتأخرة",
-          "description": "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل"
-        }
-      },
+      "description": "ربط FlowLine بمساحة حسابات Mizano باستخدام مفتاح API ذو نطاق محدد.",
       "fields": {
-        "token": {
-          "label": "مفتاح API محدود النطاق"
-        },
         "baseUrl": {
-          "label": "رابط Mizano"
+          "label": "رابط الأساس"
+        },
+        "token": {
+          "label": "مفتاح API"
         }
       }
     }

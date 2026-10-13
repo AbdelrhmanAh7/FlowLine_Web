@@ -1255,19 +1255,13 @@
       }
     },
     "mizano": {
-      "description": "Read overdue invoices from Mizano for follow-up.",
-      "actions": {
-        "list_overdue_invoices": {
-          "title": "List overdue invoices",
-          "description": "List unpaid invoices past their due date on the date you choose, in the workspace currency."
-        }
-      },
+      "description": "Connect FlowLine to your Mizano accounting workspace with a scoped API key.",
       "fields": {
-        "token": {
-          "label": "Scoped API key"
-        },
         "baseUrl": {
-          "label": "Mizano URL"
+          "label": "Base URL"
+        },
+        "token": {
+          "label": "API key"
         }
       }
     }
