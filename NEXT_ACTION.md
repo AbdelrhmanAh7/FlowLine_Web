@@ -1,16 +1,8 @@
 # Next action — 2026-10-03
 
-## Issue #198 — implementation present; prerequisite and scope blocked (2026-10-14)
+## Issue #198 — implemented; waits for #259 and #261 (2026-10-14)
 
-The branch contains the QR component, integration, guide update and tests.
-PR #259 (#197) and PR #261 (#196) are still unmerged; merging their branches
-early caused the 15-file diff against main. Requeue once both merge and
-repair `ai/198` onto reviewed main, retaining only #198 changes and its
-test-first order. Extend the army test to exercise QR visibility, then run
-focused validation. Runtime checks need an isolated test stack (`.env.test`
-is absent here). See [AI_QUESTIONS.md](AI_QUESTIONS.md) and the
-[status ledger](docs/implementation/ISSUE_198_STATUS.md) for observed evidence.
-#198 and #195 remain open.
+The QR enrolment is implemented and passes `e2e/account-security.spec.ts` on an isolated stack ([status](docs/implementation/ISSUE_198_STATUS.md)). `ai/198` still carries #196/#197 code because PRs #259 and #261 are unmerged; after both merge, merge `origin/main` into `ai/198` so the diff against main is QR-only. #198 and #195 stay open until then.
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
