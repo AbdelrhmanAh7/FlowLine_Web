@@ -1,34 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/lib/api";
-import { handleWriteError, shouldRefetchAfterWriteError } from "@/app/admin/copy/copy-errors";
+import { handleWriteError } from "@/app/admin/copy/copy-errors";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const bodyReadRejects = (status: number) => vi.fn(async () => ({
-  ok: status >= 200 && status < 300,
-  status,
-  text: async () => { throw new TypeError("terminated"); },
-}));
-
 describe("api() response-body failures", () => {
-  it("reports a body read that rejects as a network ApiError so writes get reconciled", async () => {
-    vi.stubGlobal("fetch", bodyReadRejects(200));
+  it.each([200, 409])("reports a body cut off mid-read (HTTP %i) as a network ApiError, so the copy editor shows the network message and reloads", async (status) => {
+    // Headers arrived but the body never did: the write may or may not have committed (and a 409 is not a trustworthy conflict).
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: status < 300, status, text: async () => { throw new TypeError("terminated"); } })));
     const err = await api("/api/platform/copy", { method: "PATCH", json: {} }).catch((e: unknown) => e) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.isNetwork).toBe(true);
-    // What the editor's handleWriteError then does with this ambiguous failure: reload the copy state, show the network message.
     const fx = { t: (key: string) => key, setError: vi.fn(), setStepUpActive: vi.fn(), refetchMe: vi.fn(async () => ({})), refetchCopy: vi.fn(async () => undefined) };
     await handleWriteError(err, "platformAdmin.copyEditor.saveError", fx);
-    expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
     expect(fx.setError).toHaveBeenCalledExactlyOnceWith("platformAdmin.copyEditor.networkError");
-  });
-
-  it("treats a lost body on a non-2xx response as ambiguous too (reconcile, never a misleading conflict)", async () => {
-    // Headers say 409, but the body never arrives — the write may or may not have committed.
-    vi.stubGlobal("fetch", bodyReadRejects(409));
-    const err = await api("/api/platform/copy", { method: "PATCH", json: {} }).catch((e: unknown) => e) as ApiError;
-    expect(err.isNetwork).toBe(true);
-    expect(shouldRefetchAfterWriteError(err)).toBe(true);
+    expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
   });
 
   it("still parses a normal response body", async () => {

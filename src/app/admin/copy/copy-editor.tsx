@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Select, Button, Card, Input, Textarea } from "@/components/ui";
+import { Select, Button, Card, ErrorState, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { api } from "@/lib/api";
 import { handleWriteError } from "./copy-errors";
@@ -49,7 +49,7 @@ function effective(state: State, locale: Locale, key: string) {
 export function CopyEditor() {
   const t = useT();
   const state = useQuery({ queryKey: ["platform-copy"], queryFn: () => api<State>("/api/platform/copy") });
-  const { data: meData, refetch: refetchMe, isError: meError } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
+  const { data: meData, refetch: refetchMe, isLoadingError: meError } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
   const [key, setKey] = useState("meta.title");
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
@@ -94,7 +94,6 @@ export function CopyEditor() {
     return false;
   }
 
-  // What a failed save/publish does (message, step-up resync, copy refetch) lives in copy-errors.ts handleWriteError.
   const writeError = { t, setError, setStepUpActive, refetchMe, refetchCopy: state.refetch };
 
   async function save() {
@@ -149,12 +148,7 @@ export function CopyEditor() {
       {meError && <p role="alert" className="text-danger">{t("platformAdmin.copyEditor.meLoadError")}</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {message && <p role="status" className="text-success">{message}</p>}
-      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? (
-        <div className="flex items-center gap-3">
-          <p role="alert">{t("platformAdmin.copyEditor.loadError")}</p>
-          <Button variant="ghost" size="sm" onClick={() => state.refetch()}>{t("common.retry")}</Button>
-        </div>
-      ) : draft && <>
+      {state.isPending ? <p>{t("common.loading")}</p> : state.isLoadingError ? <ErrorState title={t("platformAdmin.copyEditor.loadError")} onRetry={() => state.refetch()} /> : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <Card className="p-4">
             <label className="block text-sm font-medium" htmlFor="copy-search">{t("platformAdmin.copyEditor.search")}</label>

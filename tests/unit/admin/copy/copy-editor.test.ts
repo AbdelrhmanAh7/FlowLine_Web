@@ -2,6 +2,7 @@ import { createElement, type FunctionComponent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "@/i18n/config";
+import { createTranslator } from "@/i18n/translate";
 
 // Server render with a stubbed query layer: the editor's first paint for each load state (effects and handlers do not run here).
 const queries = vi.hoisted(() => ({ state: {} as Record<string, unknown>, me: {} as Record<string, unknown> }));
@@ -12,57 +13,47 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined
 
 const I18nProvider = (await import("@/i18n/client")).I18nProvider as FunctionComponent<{ locale: Locale }>;
 const { CopyEditor } = await import("@/app/admin/copy/copy-editor");
-const en = (await import("@/i18n/messages/en.json")).default as { platformAdmin: { copyEditor: Record<string, string> }; common: Record<string, string> };
 
-const render = (locale: Locale = "en") => renderToStaticMarkup(createElement(I18nProvider, { locale }, createElement(CopyEditor)));
-/** Visible text of server-rendered markup: a character scan (no tag-stripping regex) that drops everything between "<" and ">". */
-const text = (html: string) => {
-  let out = "";
-  let inTag = false;
-  for (const ch of html) {
-    if (ch === "<") inTag = true;
-    else if (ch === ">" && inTag) inTag = false;
-    else if (!inTag) out += ch;
-  }
-  return out;
-};
+const render = (locale: Locale) => renderToStaticMarkup(createElement(I18nProvider, { locale }, createElement(CopyEditor)));
+/** A copy state that loaded: one key in both locales, draft and published at revision 1. */
+const loaded = { base: { ar: { "meta.title": "فلولاين" }, en: { "meta.title": "Flowline" } }, draft: { value: { ar: {}, en: {} }, revision: 1, setAt: null }, published: { value: { ar: {}, en: {} }, revision: 1, setAt: null } };
+const session = { csrfToken: "t", stepUpUntil: null };
 
 beforeEach(() => {
-  queries.state = { isPending: false, isError: false, data: undefined, refetch: vi.fn() };
-  queries.me = { data: { csrfToken: "t", stepUpUntil: null }, isError: false, refetch: vi.fn() };
+  queries.state = { isPending: false, isError: false, isLoadingError: false, data: loaded, refetch: vi.fn() };
+  queries.me = { data: session, isError: false, isLoadingError: false, refetch: vi.fn() };
 });
 
-describe("CopyEditor error display", () => {
-  it("shows the admin-session alert (and keeps the page standing) when /api/platform/me fails", () => {
-    queries.me = { data: undefined, isError: true, refetch: vi.fn() };
-    const html = render();
-    expect(html).toMatch(/<p role="alert"[^>]*>[^<]*<\/p>/);
-    expect(text(html)).toContain(en.platformAdmin.copyEditor.meLoadError);
-    expect(text(html)).toContain(en.platformAdmin.copyEditor.title);
+describe.each(["en", "ar"] as const)("CopyEditor error display (%s)", (locale) => {
+  const t = createTranslator(locale);
+
+  it("shows the admin-session alert, and keeps the page standing, when /api/platform/me never loaded", () => {
+    queries.me = { data: undefined, isError: true, isLoadingError: true, refetch: vi.fn() };
+    const html = render(locale);
+    expect(html).toMatch(new RegExp(`<p role="alert"[^>]*>${t("platformAdmin.copyEditor.meLoadError")}</p>`));
+    expect(html).toContain(t("platformAdmin.copyEditor.title"));
   });
 
-  it("shows the load error with a Retry button when the copy state fails to load", () => {
-    queries.state = { isPending: false, isError: true, data: undefined, refetch: vi.fn() };
-    const html = render();
-    expect(text(html)).toContain(en.platformAdmin.copyEditor.loadError);
-    expect(html).toMatch(new RegExp(`<button[^>]*>${en.common.retry}</button>`));
+  it("shows the load error with a Retry button when the copy state never loaded", () => {
+    queries.state = { isPending: false, isError: true, isLoadingError: true, data: undefined, refetch: vi.fn() };
+    const html = render(locale);
+    expect(html).toContain(t("platformAdmin.copyEditor.loadError"));
+    expect(html).toMatch(new RegExp(`<button[^>]*>${t("ui.retry")}</button>`));
+    expect(html).not.toContain("platformAdmin.copyEditor"); // a missing translation would show the raw key
   });
 
-  it("shows no error alert while loading or when everything loaded", () => {
-    queries.state = { isPending: true, isError: false, data: undefined, refetch: vi.fn() };
-    const html = render();
+  it("keeps the editor, with no load or session alert, when a later reload fails", () => {
+    queries.state = { isPending: false, isError: true, isLoadingError: false, data: loaded, refetch: vi.fn() };
+    queries.me = { data: session, isError: true, isLoadingError: false, refetch: vi.fn() };
+    const html = render(locale);
+    expect(html).toContain(t("platformAdmin.copyEditor.search"));
     expect(html).not.toContain('role="alert"');
-    expect(text(html)).toContain(en.common.loading);
   });
 
-  it("renders the Arabic messages and Retry label for the same failures (no raw keys)", () => {
-    queries.me = { data: undefined, isError: true, refetch: vi.fn() };
-    queries.state = { isPending: false, isError: true, data: undefined, refetch: vi.fn() };
-    const html = render("ar");
-    const out = text(html);
-    expect(out).not.toContain("platformAdmin.copyEditor");
-    expect(out).toContain("تعذّر تحميل جلسة الإدارة");
-    expect(out).toContain("تعذّر تحميل النصوص");
-    expect(html).toMatch(/<button[^>]*>إعادة المحاولة<\/button>/); // common.retry in ar.json
+  it("shows no error alert while loading", () => {
+    queries.state = { isPending: true, isError: false, isLoadingError: false, data: undefined, refetch: vi.fn() };
+    const html = render(locale);
+    expect(html).not.toContain('role="alert"');
+    expect(html).toContain(t("common.loading"));
   });
 });
