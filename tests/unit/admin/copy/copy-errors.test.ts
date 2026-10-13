@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { ApiError } from "@/lib/api";
-import { copyErrorKey, shouldRefetchAfterWriteError } from "@/app/admin/copy/copy-errors";
+import { copyErrorKey, handleWriteError, shouldRefetchAfterWriteError, type CopyErrorKey, type WriteErrorEffects } from "@/app/admin/copy/copy-errors";
 
 describe("copyErrorKey", () => {
   const saveFallback = "platformAdmin.copyEditor.saveError";
@@ -68,5 +68,80 @@ describe("shouldRefetchAfterWriteError", () => {
     expect(shouldRefetchAfterWriteError(new ApiError(500, "INTERNAL", "Server error"))).toBe(false);
     expect(shouldRefetchAfterWriteError(new Error("generic"))).toBe(false);
     expect(shouldRefetchAfterWriteError(null)).toBe(false);
+  });
+});
+
+describe("handleWriteError (what the editor does after a failed save or publish)", () => {
+  /** The editor's state setters and queries as fakes; `t` tags the key so each test sees which message was shown. */
+  const editor = (stepUpUntil: string | null = null) => ({
+    t: vi.fn((key: CopyErrorKey) => "t:" + key),
+    setError: vi.fn<WriteErrorEffects["setError"]>(),
+    setStepUpActive: vi.fn<WriteErrorEffects["setStepUpActive"]>(),
+    refetchMe: vi.fn<WriteErrorEffects["refetchMe"]>(async () => ({ data: { stepUpUntil } })),
+    refetchCopy: vi.fn<WriteErrorEffects["refetchCopy"]>(async () => undefined),
+  });
+  // Only Date is faked, so step-up expiry is judged against a fixed "now"; promises and timers stay real.
+  beforeEach(() => { vi.useFakeTimers({ now: new Date("2026-10-13T12:00:00.000Z"), toFake: ["Date"] }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("on REVISION_CONFLICT reloads the copy state and shows the conflict message", async () => {
+    const fx = editor();
+    await handleWriteError(new ApiError(409, "REVISION_CONFLICT", "Draft changed. Reload and try again."), "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.conflict");
+    expect(fx.refetchMe).not.toHaveBeenCalled();
+    expect(fx.setStepUpActive).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { refreshed: "still valid", stepUpUntil: "2026-10-13T12:01:00.000Z", active: true },
+    { refreshed: "expired", stepUpUntil: "2026-10-13T11:59:00.000Z", active: false },
+    { refreshed: "missing", stepUpUntil: null, active: false },
+  ])("on STEP_UP_REQUIRED with the refreshed step-up $refreshed: re-reads the session, sets stepUpActive to $active, shows the step-up message, keeps the copy state", async ({ stepUpUntil, active }) => {
+    const fx = editor(stepUpUntil);
+    await handleWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step-up required"), "platformAdmin.copyEditor.publishError", fx);
+    expect(fx.refetchMe).toHaveBeenCalledTimes(1);
+    expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(active);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.stepUp");
+    expect(fx.refetchCopy).not.toHaveBeenCalled();
+  });
+
+  it("on STEP_UP_REQUIRED keeps writes disabled when re-reading the session returns no data", async () => {
+    const fx = editor("2026-10-13T12:01:00.000Z");
+    fx.refetchMe.mockResolvedValueOnce({ data: undefined });
+    await handleWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step-up required"), "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(false);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.stepUp");
+  });
+
+  it("on a network failure (the write may have committed) reloads the copy state and shows the network message", async () => {
+    const fx = editor();
+    await handleWriteError(new ApiError(0, "NETWORK", "Can't reach Flowline — check your connection"), "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.networkError");
+    expect(fx.refetchMe).not.toHaveBeenCalled();
+  });
+
+  it("on a 5xx shows the translated server-error message, not the server's text, and keeps the copy state", async () => {
+    const fx = editor();
+    await handleWriteError(new ApiError(500, "INTERNAL", "Something went wrong on our side"), "platformAdmin.copyEditor.publishError", fx);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.serverError");
+    expect(fx.refetchCopy).not.toHaveBeenCalled();
+    expect(fx.refetchMe).not.toHaveBeenCalled();
+  });
+
+  it("on any other failure shows the save or publish fallback and keeps the copy state", async () => {
+    const cases = [
+      [new ApiError(400, "VALIDATION", "Invalid request"), "platformAdmin.copyEditor.saveError"],
+      [new ApiError(400, "VALIDATION", "Invalid request"), "platformAdmin.copyEditor.publishError"],
+      [new Error("not an ApiError"), "platformAdmin.copyEditor.saveError"],
+    ] as const;
+    for (const [cause, fallback] of cases) {
+      const fx = editor();
+      await handleWriteError(cause, fallback, fx);
+      expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:" + fallback);
+      expect(fx.refetchCopy).not.toHaveBeenCalled();
+      expect(fx.refetchMe).not.toHaveBeenCalled();
+    }
   });
 });

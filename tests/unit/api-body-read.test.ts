@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/lib/api";
-import { copyErrorKey, shouldRefetchAfterWriteError } from "@/app/admin/copy/copy-errors";
+import { handleWriteError, shouldRefetchAfterWriteError } from "@/app/admin/copy/copy-errors";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -16,9 +16,11 @@ describe("api() response-body failures", () => {
     const err = await api("/api/platform/copy", { method: "PATCH", json: {} }).catch((e: unknown) => e) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.isNetwork).toBe(true);
-    // The full choice the editor's handleWriteError makes for this ambiguous failure:
-    expect(copyErrorKey(err, "platformAdmin.copyEditor.saveError")).toBe("platformAdmin.copyEditor.networkError");
-    expect(shouldRefetchAfterWriteError(err)).toBe(true);
+    // What the editor's handleWriteError then does with this ambiguous failure: reload the copy state, show the network message.
+    const fx = { t: (key: string) => key, setError: vi.fn(), setStepUpActive: vi.fn(), refetchMe: vi.fn(async () => ({})), refetchCopy: vi.fn(async () => undefined) };
+    await handleWriteError(err, "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("platformAdmin.copyEditor.networkError");
   });
 
   it("treats a lost body on a non-2xx response as ambiguous too (reconcile, never a misleading conflict)", async () => {

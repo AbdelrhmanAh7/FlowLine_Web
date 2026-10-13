@@ -1,5 +1,10 @@
 import { ApiError } from "@/lib/api";
 
+/** The message key a failed save or publish falls back to. */
+export type CopyWriteFallbackKey = "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError";
+/** Every message key a failed save or publish can show. */
+export type CopyErrorKey = CopyWriteFallbackKey | "platformAdmin.copyEditor.conflict" | "platformAdmin.copyEditor.stepUp" | "platformAdmin.copyEditor.networkError" | "platformAdmin.copyEditor.serverError";
+
 /**
  * Maps an error cause to a user-friendly translation key for the copy editor.
  * Never exposes raw server messages or stack traces to the UI.
@@ -8,10 +13,7 @@ import { ApiError } from "@/lib/api";
  * @param fallbackKey - Default translation key for save/publish errors
  * @returns A translation key under platformAdmin.copyEditor.*
  */
-export function copyErrorKey(
-  cause: unknown,
-  fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError"
-): "platformAdmin.copyEditor.conflict" | "platformAdmin.copyEditor.stepUp" | "platformAdmin.copyEditor.networkError" | "platformAdmin.copyEditor.serverError" | "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError" {
+export function copyErrorKey(cause: unknown, fallbackKey: CopyWriteFallbackKey): CopyErrorKey {
   if (cause instanceof ApiError) {
     // Revision conflict (409) — the draft changed since load
     if (cause.code === "REVISION_CONFLICT") {
@@ -56,4 +58,30 @@ export function shouldRefetchAfterWriteError(cause: unknown): boolean {
   if (!(cause instanceof ApiError)) return false;
   // Refetch on revision conflict OR network failure (outcome unknown: the write may have committed).
   return cause.code === "REVISION_CONFLICT" || cause.isNetwork;
+}
+
+/** The editor state and queries `handleWriteError` reads and updates (CopyEditor passes its own). */
+export interface WriteErrorEffects {
+  t: (key: CopyErrorKey) => string;
+  setError: (message: string) => void;
+  setStepUpActive: (active: boolean) => void;
+  refetchMe: () => Promise<{ data?: { stepUpUntil: string | null } }>;
+  refetchCopy: () => Promise<unknown>;
+}
+
+/**
+ * The copy editor's response to a failed save or publish.
+ *
+ * A step-up refusal re-reads the admin session and keeps the write buttons enabled only while the refreshed
+ * step-up is still valid. The copy state is refetched when `shouldRefetchAfterWriteError` says the loaded
+ * revision may be stale. Then the alert shows the translated `copyErrorKey` message, never the server's text.
+ */
+export async function handleWriteError(cause: unknown, fallbackKey: CopyWriteFallbackKey, fx: WriteErrorEffects): Promise<void> {
+  if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
+    const refreshed = await fx.refetchMe();
+    const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
+    fx.setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
+  }
+  if (shouldRefetchAfterWriteError(cause)) await fx.refetchCopy();
+  fx.setError(fx.t(copyErrorKey(cause, fallbackKey)));
 }

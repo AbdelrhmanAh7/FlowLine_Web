@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { ApiError, api } from "@/lib/api";
-import { copyErrorKey, shouldRefetchAfterWriteError } from "./copy-errors";
+import { api } from "@/lib/api";
+import { handleWriteError } from "./copy-errors";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -94,17 +94,8 @@ export function CopyEditor() {
     return false;
   }
 
-  async function handleWriteError(cause: unknown, fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError") {
-    const errorKey = copyErrorKey(cause, fallbackKey);
-    // For step-up errors, we still want to refresh the me query and update stepUpActive
-    if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
-      const refreshed = await refetchMe();
-      const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
-      setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
-    }
-    if (shouldRefetchAfterWriteError(cause)) await state.refetch();
-    setError(t(errorKey));
-  }
+  // What a failed save/publish does (message, step-up resync, copy refetch) lives in copy-errors.ts handleWriteError.
+  const writeError = { t, setError, setStepUpActive, refetchMe, refetchCopy: state.refetch };
 
   async function save() {
     if (!draft || !meData || !dirty) return;
@@ -123,7 +114,7 @@ export function CopyEditor() {
       setEdits({});
       setMessage(t("platformAdmin.copyEditor.saved"));
     } catch (cause) {
-      await handleWriteError(cause, "platformAdmin.copyEditor.saveError");
+      await handleWriteError(cause, "platformAdmin.copyEditor.saveError", writeError);
     } finally { setPending(false); }
   }
 
@@ -140,7 +131,7 @@ export function CopyEditor() {
       await state.refetch();
       setMessage(t("platformAdmin.copyEditor.applied"));
     } catch (cause) {
-      await handleWriteError(cause, "platformAdmin.copyEditor.publishError");
+      await handleWriteError(cause, "platformAdmin.copyEditor.publishError", writeError);
     } finally { setPending(false); }
   }
 
