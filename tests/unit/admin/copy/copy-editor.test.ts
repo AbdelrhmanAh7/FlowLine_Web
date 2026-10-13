@@ -142,6 +142,46 @@ describe("CopyEditor failures (interaction, en)", () => {
     expect(refetch).not.toHaveBeenCalled(); // a step-up refusal never touched the draft, so no reload
   });
 
+  it("shows the translated server error after a failed publish, then clears it when Apply is retried and succeeds", async () => {
+    const refetch = vi.fn(async () => undefined);
+    writable(refetch);
+    queries.state = { ...queries.state, data: { ...loaded, draft: { ...loaded.draft, value: { ar: {}, en: { "meta.title": "New" } }, revision: 2 } } };
+    vi.mocked(api).mockRejectedValueOnce(new ApiError(500, "INTERNAL", "boom")).mockResolvedValueOnce(undefined);
+    await mount();
+    const apply = () => button(t("platformAdmin.copyEditor.apply"))!;
+    expect(apply().disabled).toBe(false);
+    await click(apply());
+    expect(alert()).toBe(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
+    expect(refetch).toHaveBeenCalledTimes(1); // the publish may have committed, so the state reloads
+    expect(apply().disabled).toBe(false);
+    await click(apply()); // the admin retries
+    expect(api).toHaveBeenCalledTimes(2);
+    expect(alert()).toBe(""); // the earlier error is cleared
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(t("platformAdmin.copyEditor.applied"));
+    expect(refetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("disables Save and re-reads the session, without reloading the copy, when the admin session expired", async () => {
+    const refetch = vi.fn(async () => undefined);
+    writable(refetch);
+    vi.mocked(api).mockRejectedValueOnce(new ApiError(401, "PLATFORM_REAUTH_REQUIRED", "Sign in again"));
+    await mount();
+    await type("#copy-en", "New title");
+    await click(button(t("platformAdmin.copyEditor.save"))!);
+    expect(alert()).toBe(t("platformAdmin.copyEditor.reauthRequired"));
+    expect(queries.me.refetch).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+    expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
+  });
+
+  it("keeps Save disabled while the copy state reloads after a failure", async () => {
+    writable(vi.fn(async () => undefined));
+    queries.state = { ...queries.state, isFetching: true };
+    await mount();
+    await type("#copy-en", "New title");
+    expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
+  });
+
   it("disables Save when the session has no step-up yet", async () => {
     writable(vi.fn(async () => undefined));
     queries.me = { data: session, isError: false, isLoadingError: false, refetch: vi.fn() };
