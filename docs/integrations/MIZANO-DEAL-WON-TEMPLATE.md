@@ -13,5 +13,9 @@ The Slack text reads the customer and line count from the prepare step, not from
 
 Verification: `tests/integration/deal-won-mizano-approval.test.ts` (the real worker + approval flow with recording stand-ins for the two Mizano actions until #147 merges: pending approval sends nothing, approve creates customer then quote then posts to Slack, reject fails with `APPROVAL_REJECTED` and calls nothing), `tests/unit/deal-won-mizano-template.test.ts` (engine wiring and data flow with a mocked host: pending, rejected, approved, not won) and `e2e-army/149-deal-won-mizano-quote.e2e.ts` (gallery listing in EN and AR, Use opens the flow).
 
+## Acceptance status (issue #149)
 
-A browser-level happy-path e2e (approve in the UI, draft quote at a fake Mizano server) waits for #147 (real actions) and #225 (fake `mizano` handler), per the CTO decision on #149; the worker-level test above covers the approval behaviour meanwhile.
+- **AC1, gallery listing (EN + AR):** met, `e2e-army/149-deal-won-mizano-quote.e2e.ts`.
+- **AC2, approval blocks; reject ends the run without Mizano calls:** met, verified on the real worker path (`tests/integration/deal-won-mizano-approval.test.ts`). The Mizano create actions are recording stand-ins until #147 merges.
+- **AC3, happy-path e2e with a mocked Mizano:** met at worker level only (same integration test: approve, customer then quote then Slack message). The browser-level e2e-army happy path (approve in the UI, draft quote at a fake Mizano server) is deferred until #147 (real actions) and #225 (fake `mizano` handler) merge, per the CTO decision on #149; the throwaway e2e stack cannot reach a Mizano workspace before then. Not claimed as done.
+- **Approval shows customer + lines:** the approval shows the customer only (CTO decision on #149); lines appear in the "Prepare customer and quote" step output. The follow-up for an approval that shows both is tracked outside this PR.
