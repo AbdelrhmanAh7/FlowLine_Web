@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toDecimalString, duration, initials, percent, pretty, timeAgo } from "@/lib/format";
+import { duration, initials, percent, pretty, timeAgo, toDecimalString } from "@/lib/format";
 import { CATALOGUES } from "@/i18n/translate";
 
 describe("lib/format helpers", () => {
@@ -179,8 +179,13 @@ describe("lib/format helpers", () => {
       expect(() => toDecimalString("٠.١٢٣")).toThrow(/more than 2 decimal/);
     });
 
+    it("rejects Persian digits (U+06F0-U+06F9) and the Arabic decimal separator (U+066B)", () => {
+      expect(() => toDecimalString("۱۲.۵")).toThrow(/invalid decimal/);
+      expect(() => toDecimalString("١٢٫٥")).toThrow(/invalid decimal/);
+    });
+
     it("rejects malformed and non-numeric input", () => {
-      for (const bad of ["", "  ", "abc", "12.", ".", "1,5", "1.2.3", "12 5", "1e", "0x10", "--1", "1e5000", "١٢٫٥"]) {
+      for (const bad of ["", "  ", "abc", "12.", ".", "1,5", "1.2.3", "12 5", "1e", "0x10", "--1", "1e5000", "١٢٫٥", "۱۲.۵"]) {
         expect(() => toDecimalString(bad), JSON.stringify(bad)).toThrow();
       }
       expect(() => toDecimalString(null as unknown as number)).toThrow(/number or a string/);

@@ -46,7 +46,7 @@ export function initials(name: string) {
  * @param scale - Decimal places in the result (default 2, integer 0-20).
  * @throws If value is not a number/string, is NaN/Infinity, is not a plain decimal, or has more decimals than the scale.
  */
-export function toDecimalString(value: number | string, scale: number = 2): string {
+export function toDecimalString(value: number | string, scale = 2): string {
   if (!Number.isInteger(scale) || scale < 0 || scale > 20) {
     throw new Error("toDecimalString: scale must be an integer between 0 and 20");
   }
