@@ -169,7 +169,7 @@ describe("mizano.create_customer", () => {
 
   it("is registered as a write action", () => {
     const found = getAction("mizano.create_customer");
-    expect(found?.action.sideEffect).toBe("idempotent");
+    expect(found?.action.sideEffect).toBe("non_idempotent");
     expect(found?.provider.id).toBe("mizano");
   });
 
@@ -294,7 +294,7 @@ describe("mizano.create_draft_quote", () => {
 
   it("is registered as a write action", () => {
     const found = getAction("mizano.create_draft_quote");
-    expect(found?.action.sideEffect).toBe("idempotent");
+    expect(found?.action.sideEffect).toBe("non_idempotent");
     expect(found?.provider.id).toBe("mizano");
   });
 
