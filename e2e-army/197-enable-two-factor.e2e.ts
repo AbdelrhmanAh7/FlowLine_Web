@@ -13,6 +13,6 @@ test(
     await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "not-the-real-password-1" } });
     await agent.assert("an error message is shown and no secret key is displayed");
     await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
-    await expect(screen.getByText("Off", { exact: true })).toBeVisible();
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
   },
 );
