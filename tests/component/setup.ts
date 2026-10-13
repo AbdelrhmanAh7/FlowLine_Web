@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import React from "react";
-import { render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock next/navigation
@@ -65,13 +65,13 @@ vi.mock("@/components/language-switcher", () => ({
   LanguageSwitcher: vi.fn(() => React.createElement("div", { "data-testid": "language-switcher" })),
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
+// RTL's automatic cleanup only registers when vitest globals are on; unmount explicitly.
+afterEach(() => cleanup());
 
+/** Renders `ui` under a fresh QueryClient so no cache state leaks between tests. */
 export function renderWithProviders(ui: React.ReactNode) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(React.createElement(QueryClientProvider, { client: queryClient }, ui));
 }
