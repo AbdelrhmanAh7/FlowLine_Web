@@ -82,7 +82,8 @@ export function CopyEditor() {
     return () => window.clearTimeout(timer);
   }, [meData?.stepUpUntil, refetchMe]);
 
-  const canWrite = stepUpActive && !pending;
+  // Writes wait for a copy reload in flight (handleWriteError starts one after a failure), so they never send a stale revision.
+  const canWrite = stepUpActive && !pending && !state.isFetching;
 
   async function requireCurrentStepUp() {
     const expiresAt = meData?.stepUpUntil ? Date.parse(meData.stepUpUntil) : Number.NaN;

@@ -3361,8 +3361,8 @@
       "loadError": "Could not load the copy. Refresh and try again.",
       "saveError": "Could not save the draft. Check the text and try again.",
       "publishError": "Could not publish. Review the draft and try again.",
-      "conflict": "This copy was changed by someone else. Refresh to see the latest version.",
-      "networkError": "Could not reach the server. Check your connection and try again.",
+      "conflict": "This copy changed elsewhere since you loaded it. Review the latest version before you try again.",
+      "networkError": "The connection failed, so the change may not have gone through. Check the copy before you try again.",
       "serverError": "The server encountered an error. Try again in a moment.",
       "meLoadError": "Could not load your admin session. Refresh the page and try again."
     },

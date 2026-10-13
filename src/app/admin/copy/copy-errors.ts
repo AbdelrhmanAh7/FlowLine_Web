@@ -20,14 +20,15 @@ export interface WriteErrorEffects {
   setError: (message: string) => void;
   setStepUpActive: (active: boolean) => void;
   refetchMe: () => Promise<{ data?: { stepUpUntil: string | null } }>;
-  refetchCopy: () => Promise<unknown>;
+  refetchCopy: () => Promise<unknown>; // TanStack's refetch: it never rejects, so it may run unawaited
 }
 
 /**
- * The copy editor's response to a failed save or publish. The translated message comes first, so a slow, retried or
- * offline-paused reload never hides it. Then a step-up refusal re-reads the admin session and keeps the write buttons
- * enabled only while the refreshed step-up is valid; any other failure reloads the copy state, because the loaded
- * revision may be stale (a conflict) or the write may have committed (a lost or cut-off response, a gateway timeout).
+ * The copy editor's response to a failed save or publish. The translated message comes first. A step-up refusal then
+ * re-reads the admin session and keeps the write buttons enabled only while the refreshed step-up is valid. Any other
+ * failure starts a reload of the copy state, because the loaded revision may be stale (a conflict) or the write may have
+ * committed (a lost or cut-off response, a gateway timeout). The reload is not awaited: TanStack retries it with backoff
+ * and pauses it offline, which would keep the editor locked; CopyEditor disables Save and Apply while it fetches.
  */
 export async function handleWriteError(cause: unknown, fallbackKey: CopyWriteFallbackKey, fx: WriteErrorEffects): Promise<void> {
   fx.setError(fx.t(copyErrorKey(cause, fallbackKey)));
@@ -36,6 +37,6 @@ export async function handleWriteError(cause: unknown, fallbackKey: CopyWriteFal
     const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
     fx.setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
   } else {
-    await fx.refetchCopy();
+    void fx.refetchCopy();
   }
 }

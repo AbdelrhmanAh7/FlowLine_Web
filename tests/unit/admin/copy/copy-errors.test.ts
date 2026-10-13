@@ -64,12 +64,14 @@ describe("handleWriteError (what the editor does after a failed save or publish)
     expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(false);
   });
 
-  it("shows the message before any reload settles, so a retried or offline-paused refetch cannot hide it", () => {
+  it("shows the message first and does not wait for the copy reload, which TanStack may retry or pause while offline", async () => {
     const never = () => new Promise<never>(() => {}); // like a TanStack refetch paused while the browser is offline
     const network = editor();
     network.refetchCopy.mockImplementationOnce(never);
-    void handleWriteError(new ApiError(0, "NETWORK", "Can't reach Flowline"), "platformAdmin.copyEditor.saveError", network);
+    await handleWriteError(new ApiError(0, "NETWORK", "Can't reach Flowline"), "platformAdmin.copyEditor.saveError", network); // resolves: the editor unlocks
     expect(network.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.networkError");
+    expect(network.refetchCopy).toHaveBeenCalledTimes(1);
+    // A step-up refusal waits for the session re-read (it decides stepUpActive), but its message is already shown.
     const stepUp = editor();
     stepUp.refetchMe.mockImplementationOnce(never);
     void handleWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step-up required"), "platformAdmin.copyEditor.saveError", stepUp);
