@@ -93,8 +93,9 @@ function tier(p: PriceSnapshot, inputTokens: number): { input: number; output: n
 /**
  * Actual cost of an attempt in micros, or null when the price is unknown.
  * Cache reads without their own price (or priced above input) are charged at the input price; reasoning tokens are
- * charged as output; the long-context tier applies above its input-token threshold; the result is rounded to a whole
- * micro before the flat per-call price is added.
+ * charged as output; the long-context tier is chosen by the total input tokens (fresh + cache reads + cache writes)
+ * and applies only once they exceed its threshold; the result is rounded to a whole micro before the flat per-call
+ * price is added.
  * @param p The resolved price (micros per million tokens), or null when unknown.
  * @param u The attempt's normalised token usage.
  * @returns The cost in micros of the price's currency, or null when the price is unknown, when the usage has cache
