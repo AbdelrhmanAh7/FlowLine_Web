@@ -4,46 +4,48 @@ import { HttpError, route } from "@/server/http";
 
 const url = "http://localhost/api/x";
 
-// Depends on #200: handleRoute must set cache-control and referrer-policy on every error response.
+// Handler-level check of #200: handleRoute sets no-store and no-referrer on every error response it builds.
 async function expectSecureError(handler: () => Promise<Response> | Response, status: number, code: string, req?: Request) {
-  const wrapped = route(async () => handler());
-  const res = await wrapped(req ?? new Request(url, { method: "GET" }), {});
+  const run = vi.fn(async () => handler());
+  const res = await route(run)(req ?? new Request(url, { method: "GET" }), {});
   expect(res.status).toBe(status);
   expect((await res.json()).error.code).toBe(code);
   expect(res.headers.get("cache-control")).toBe("no-store");
   expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+  return run;
 }
 
-describe.skip("route() error responses — depends on #200 adding no-store/no-referrer headers", () => {
+describe("route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("sets no-store and no-referrer on an HttpError response", async () => {
+  it("sets both headers on an HttpError response", async () => {
     await expectSecureError(() => {
       throw new HttpError(403, "FORBIDDEN", "x");
     }, 403, "FORBIDDEN");
   });
 
-  it("sets no-store and no-referrer on a validation (ZodError) response", async () => {
+  it("sets both headers on a validation (ZodError) response", async () => {
     await expectSecureError(() => {
       z.string().parse(1);
       return new Response("unreachable");
     }, 400, "VALIDATION");
   });
 
-  it("sets no-store and no-referrer on an unhandled 500 response", async () => {
+  it("sets both headers on an unhandled 500 response", async () => {
     await expectSecureError(() => {
       throw new Error("boom");
     }, 500, "INTERNAL");
   });
 
-  it("sets no-store and no-referrer on a cross-site CSRF refusal", async () => {
+  it("refuses a cookie-bearing cross-site POST before the handler runs, with both headers", async () => {
     const req = new Request(url, {
       method: "POST",
       headers: { cookie: "a=b", origin: "https://evil.example" },
     });
-    await expectSecureError(() => new Response("ok"), 403, "CROSS_SITE_REQUEST", req);
+    const run = await expectSecureError(() => new Response("ok"), 403, "CROSS_SITE_REQUEST", req);
+    expect(run).not.toHaveBeenCalled();
   });
 });
