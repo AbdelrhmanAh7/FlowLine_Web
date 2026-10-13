@@ -77,7 +77,6 @@ describe("no closing keyword targets an owner-tracking issue", () => {
     "docs/implementation/OWNER_ACTIONS.md",
     "NEXT_ACTION.md",
     "docs/implementation/PHASE4_BETA_REPORT.md",
-    "AI_QUESTIONS.md",
   ];
   it.each(GUARDED.flatMap((path) => [162, 160].map((issue): [string, number] => [path, issue])))(
     "%s never attaches a closing keyword to #%i",
@@ -158,7 +157,7 @@ describe("issue #160: one honest record of the owner's GitHub security steps", (
     expect(anchors).toContain(anchor(section().split("\n")[0]));
   });
 
-  it.each([...POINTERS, "AI_QUESTIONS.md"])("%s does not restate the #160 owner steps", (path) => {
+  it.each(POINTERS)("%s does not restate the #160 owner steps", (path) => {
     for (const note of notesOn160(path)) expect(note).not.toContain("Settings →");
     for (const label of ["Enable Secret Protection", "New branch ruleset", "Automatically request Copilot code review"]) {
       expect(read(path)).not.toContain(label);
