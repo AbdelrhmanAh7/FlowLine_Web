@@ -51,6 +51,9 @@ export function copyErrorKey(
  * is unknown but the client's revision is still valid (5xx).
  */
 export function shouldRefetchAfterWriteError(cause: unknown): boolean {
-  // Refetch on revision conflict OR network error (lost response where write may have committed)
-  return cause instanceof ApiError && (cause.code === "REVISION_CONFLICT" || cause.isNetwork);
+  // Only api() failures reach the editor; api() normalises every ambiguous outcome (a rejected fetch()
+  // and a res.text() that rejects mid-read) to a status-0 network ApiError, so isNetwork covers both.
+  if (!(cause instanceof ApiError)) return false;
+  // Refetch on revision conflict OR network failure (outcome unknown: the write may have committed).
+  return cause.code === "REVISION_CONFLICT" || cause.isNetwork;
 }
