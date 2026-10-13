@@ -148,6 +148,48 @@ describe("retained accounting lock order", () => {
     }
   });
 
+  // #109: deletion inserts its audit rows (FOR KEY SHARE on each workspace) before it locks the workspaces FOR UPDATE.
+  // Two co-members deleting at once would each hold KEY SHARE on the shared W and wait for the other's to clear (40P01);
+  // the accounting lock, the first statement of every deletion, serializes them before any workspace lock.
+  it("two co-members of one workspace confirm deletion at once: the second waits at accounting, both finish", async () => {
+    const { workspace } = await setup();
+    const [first, second] = [await makeUser("co-member-a"), await makeUser("co-member-b")];
+    await db.insert(schema.workspaceMember).values([first, second].map(u => ({ workspaceId: workspace.id, userId: u.id, role: "editor" as const })));
+    const [firstToken, secondToken] = [await deleteToken(first.id), await deleteToken(second.id)];
+    const firstClient = await connect();
+    const secondClient = await connect();
+    const firstDb = drizzle(firstClient, { schema });
+    const secondDb = drizzle(secondClient, { schema });
+    // Paused while the first deletion holds KEY SHARE on W (its audit row) and before its workspace FOR UPDATE.
+    const pause = pauseAfter(firstClient, /insert into "audit_event"/i);
+    const transaction = vi.spyOn(db, "transaction")
+      .mockImplementationOnce(firstDb.transaction.bind(firstDb))
+      .mockImplementationOnce(secondDb.transaction.bind(secondDb));
+    let deletingFirst: Promise<unknown> | undefined;
+    let deletingSecond: Promise<unknown> | undefined;
+    try {
+      const pid = (await secondClient.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
+      deletingFirst = consumeAccountToken("delete", firstToken, undefined, first.id);
+      await Promise.race([pause.reached, deletingFirst.then(() => { throw new Error("Deletion completed without reaching the audit barrier"); })]);
+      let finished = false;
+      deletingSecond = consumeAccountToken("delete", secondToken, undefined, second.id).finally(() => { finished = true; });
+      void deletingSecond.catch(() => {});
+      const wait = await blockedByObserver(firstClient, pid, () => finished);
+      expect(wait.query).toContain("pg_advisory_xact_lock");
+      pause.resume();
+      await expect(deletingFirst).resolves.toBe("done");
+      await expect(deletingSecond).resolves.toBe("done");
+      const audit = await db.select().from(schema.auditEvent).where(eq(schema.auditEvent.workspaceId, workspace.id));
+      expect(audit.filter(e => e.action === "account.deleted").map(e => e.targetId).sort()).toEqual([first.id, second.id].sort());
+    } finally {
+      pause.resume();
+      await Promise.allSettled([deletingFirst, deletingSecond]);
+      pause.restore();
+      transaction.mockRestore();
+      await Promise.all([firstClient.end(), secondClient.end()]);
+    }
+  });
+
   it("source deletion takes accounting before its source lock, so account cascades wait safely", async () => {
     const { user, workspace, source } = await setup();
     const token = await deleteToken(user.id);
