@@ -12,5 +12,11 @@ test(
     await agent.assert("the Two-step verification status reads Off and an Enable button is shown");
     await expect(screen.getByText("Off", { exact: true })).toBeVisible();
     await expect(screen.getByRole("button", { name: "Disable" })).toHaveCount(0);
+    await agent.act("click Enable to open the account password form");
+    await expect(screen.getByLabel("Account password")).toBeVisible();
+    await agent.act("cancel the account password form");
+    await agent.assert("two-step verification is still Off, the password form is hidden, and Enable is available");
+    await expect(screen.getByLabel("Account password")).toHaveCount(0);
+    await expect(screen.getByRole("button", { name: "Enable" })).toBeVisible();
   },
 );
