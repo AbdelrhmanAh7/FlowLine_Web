@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { ApiError, api } from "@/lib/api";
+import type { MessageKey } from "@/i18n/types";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -104,7 +105,8 @@ export function CopyEditor() {
       }
       if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
         await state.refetch();
-        setError(t(cause.code === "NETWORK" ? "errors.NETWORK" : "errors.REVISION_CONFLICT"));
+        const errorKey = `errors.${cause.code}` as MessageKey;
+        setError(t(errorKey));
         return;
       }
     }

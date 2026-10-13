@@ -81,15 +81,6 @@ function getTranslations(_locale: "en" | "ar") {
   } as const;
 }
 
-/**
- * The next api() call — the single save/publish write each test exercises — rejects
- * with `error`; any further api() call fails the test. Refetches go through the
- * mocked useQuery, so they never touch api().
- */
-function rejectWrite(error: unknown) {
-  mockApi.mockRejectedValueOnce(error);
-}
-
 describe("CopyEditor error handling (#181)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,23 +95,63 @@ describe("CopyEditor error handling (#181)", () => {
     vi.restoreAllMocks();
   });
 
+  function setupMocks(locale: "en" | "ar", options: {
+    stateError?: boolean;
+    meError?: boolean;
+    stateData?: ReturnType<typeof createMockData>["stateData"];
+    meData?: ReturnType<typeof createMockData>["meData"];
+  } = {}) {
+    const stateData = options.stateData ?? createMockData(locale).stateData;
+    const meData = options.meData ?? createMockData(locale).meData;
+    const stateRefetch = vi.fn().mockResolvedValue(stateData);
+    const meRefetch = vi.fn().mockResolvedValue(meData);
+
+    mockUseQuery.mockImplementation((opt: { queryKey?: readonly unknown[] }) => {
+      const queryKey = opt?.queryKey?.[0];
+      if (queryKey === "platform-copy") {
+        return {
+          data: stateData,
+          isError: options.stateError ?? false,
+          isPending: false,
+          error: options.stateError ? new Error("Server error") : null,
+          refetch: stateRefetch,
+        };
+      } else if (queryKey === "platform-me") {
+        return {
+          data: options.meError ? undefined : meData,
+          isError: options.meError ?? false,
+          isPending: false,
+          error: options.meError ? new Error("Server error") : null,
+          refetch: meRefetch,
+        };
+      }
+      return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
+    });
+
+    mockUseT.mockImplementation((key: string) => getTranslations(locale)[key as keyof ReturnType<typeof getTranslations>]?.[locale] ?? key);
+
+    return { stateRefetch, meRefetch, stateData, meData };
+  }
+
+  async function makeEditAndSave(locale: "en" | "ar", saveButtonName: RegExp) {
+    const englishLabel = locale === "ar" ? "الإنجليزية" : "English";
+    const englishTextarea = screen.getByLabelText(englishLabel);
+    await user.type(englishTextarea, " edited");
+
+    const saveButton = screen.getByRole("button", { name: saveButtonName });
+    expect(saveButton).not.toBeDisabled();
+    await user.click(saveButton);
+  }
+
+  async function makePublish(locale: "en" | "ar", applyButtonName: RegExp) {
+    const applyButton = screen.getByRole("button", { name: applyButtonName });
+    expect(applyButton).not.toBeDisabled();
+    await user.click(applyButton);
+  }
+
   describe("Load error states", () => {
     it("shows load error alert with retry button when state query fails (English)", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
-
-      // Override mock to return our refetch functions
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: true, isPending: false, error: new Error("Server error"), refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
+      const { stateRefetch } = setupMocks("en", { stateError: true });
 
       renderWithProviders(<CopyEditor />);
 
@@ -135,20 +166,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows load error alert with retry button when state query fails (Arabic/RTL)", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("ar").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("ar").meData);
-
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("ar").stateData, isError: true, isPending: false, error: new Error("Server error"), refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("ar").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
+      const { stateRefetch } = setupMocks("ar", { stateError: true });
 
       renderWithProviders(<CopyEditor />);
 
@@ -159,24 +177,14 @@ describe("CopyEditor error handling (#181)", () => {
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
       expect(alert.textContent).not.toContain("(server text)");
-      expect(alert.textContent).not.toContain("(client text)"); // Contains Arabic characters
+      expect(alert.textContent).not.toContain("(client text)");
+
+      await user.click(screen.getByRole("button", { name: /إعادة المحاولة/i }));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
     });
 
     it("shows stepUp message when me query fails (state query succeeds)", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
-
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: undefined, isError: true, isPending: false, error: new Error("Server error"), refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
+      const { stateRefetch, meRefetch } = setupMocks("en", { meError: true });
 
       renderWithProviders(<CopyEditor />);
 
@@ -190,34 +198,15 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: REVISION_CONFLICT", () => {
     it("shows conflict error and refetches state on save", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
+      const { stateRefetch, meRefetch } = setupMocks("en");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
+      mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      // Make an edit to enable the save button
-      const englishTextarea = screen.getByLabelText("English");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /save draft/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("en", /save draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
@@ -226,35 +215,19 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows conflict error and refetches state on publish", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
-
       const publishedDifferentData = {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
+      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: publishedDifferentData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
+      mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      const applyButton = screen.getByRole("button", { name: /publish draft/i });
-      expect(applyButton).not.toBeDisabled();
-      await user.click(applyButton);
+      await makePublish("en", /publish draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("This changed since you loaded it. Reload and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
@@ -263,34 +236,15 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows conflict error in Arabic", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("ar").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("ar").meData);
+      const { stateRefetch, meRefetch } = setupMocks("ar");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("ar").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("ar").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
-      
-      rejectWrite(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
+      mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("تحرير النصوص")).toBeInTheDocument());
 
-      // Make an edit to enable the save button (use Arabic label)
-      const englishTextarea = screen.getByLabelText("الإنجليزية");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /حفظ في المسودة/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مجددًا."));
       // Verify Arabic locale by checking the alert contains Arabic characters
@@ -305,34 +259,17 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: STEP_UP_REQUIRED", () => {
     it("refetches me and shows stepUp error on save", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
+      const { stateRefetch, meRefetch, meData } = setupMocks("en");
+      // meRefetch returns stepUpUntil: null to simulate step-up expired
+      meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
+      mockApi.mockRejectedValueOnce(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      // Make an edit to enable the save button
-      const englishTextarea = screen.getByLabelText("English");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /save draft/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("en", /save draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Confirm your identity in the admin panel before saving or publishing."));
       await waitFor(() => expect(meRefetch).toHaveBeenCalled());
@@ -341,35 +278,21 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("refetches me and shows stepUp error on publish", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
-
       const publishedDifferentData = {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
+      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+      // meRefetch returns stepUpUntil: null to simulate step-up expired
+      meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: publishedDifferentData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
+      mockApi.mockRejectedValueOnce(new ApiError(403, "STEP_UP_REQUIRED", "Confirm with a code from your authenticator app to make changes."));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      const applyButton = screen.getByRole("button", { name: /publish draft/i });
-      expect(applyButton).not.toBeDisabled();
-      await user.click(applyButton);
+      await makePublish("en", /publish draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Confirm your identity in the admin panel before saving or publishing."));
       await waitFor(() => expect(meRefetch).toHaveBeenCalled());
@@ -378,34 +301,17 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows stepUp error in Arabic", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("ar").stateData);
-      const meRefetch = vi.fn().mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
+      const { stateRefetch, meRefetch } = setupMocks("ar");
+      // meRefetch returns stepUpUntil: null to simulate step-up expired
+      meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("ar").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("ar").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
-      
-      rejectWrite(new ApiError(403, "STEP_UP_REQUIRED", "أكّد برمز من تطبيق المصادقة لإجراء التغييرات."));
+      mockApi.mockRejectedValueOnce(new ApiError(403, "STEP_UP_REQUIRED", "أكّد برمز من تطبيق المصادقة لإجراء التغييرات."));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("تحرير النصوص")).toBeInTheDocument());
 
-      // Make an edit to enable the save button (use Arabic label)
-      const englishTextarea = screen.getByLabelText("الإنجليزية");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /حفظ في المسودة/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("أكّد هويتك في لوحة الإدارة قبل الحفظ أو النشر."));
       // Verify Arabic locale by checking the alert contains Arabic characters
@@ -420,34 +326,15 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: 5xx server error", () => {
     it("shows serverError and refetches state on save", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
+      const { stateRefetch, meRefetch } = setupMocks("en");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
+      mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      // Make an edit to enable the save button
-      const englishTextarea = screen.getByLabelText("English");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /save draft/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("en", /save draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not save the draft. Check the text and refresh if it changed elsewhere."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
@@ -455,35 +342,37 @@ describe("CopyEditor error handling (#181)", () => {
       expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
+    it("shows serverError and refetches state on publish", async () => {
+      const publishedDifferentData = {
+        ...createMockData("en").stateData,
+        published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
+      };
+      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+
+      mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
+
+      renderWithProviders(<CopyEditor />);
+
+      await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
+
+      await makePublish("en", /publish draft/i);
+
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not publish. Refresh and review the draft before trying again."));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "POST" }));
+    });
+
     it("shows serverError in Arabic", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("ar").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("ar").meData);
+      const { stateRefetch, meRefetch } = setupMocks("ar");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("ar").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("ar").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
-      
-      rejectWrite(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
+      mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("تحرير النصوص")).toBeInTheDocument());
 
-      // Make an edit to enable the save button (use Arabic label)
-      const englishTextarea = screen.getByLabelText("الإنجليزية");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /حفظ في المسودة/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تعذّر حفظ المسودة. راجع النصوص وحدّث الصفحة إذا تغيّرت."));
       // Verify Arabic locale by checking the alert contains Arabic characters
@@ -498,34 +387,15 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: network error", () => {
     it("shows networkError and refetches state on save", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("en").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("en").meData);
+      const { stateRefetch, meRefetch } = setupMocks("en");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("en").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("en").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("en")[key as keyof ReturnType<typeof getTranslations>]?.en ?? key);
-      
-      rejectWrite(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
+      mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
 
-      // Make an edit to enable the save button
-      const englishTextarea = screen.getByLabelText("English");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /save draft/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("en", /save draft/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Can't reach Flowline — check your connection and try again."));
       await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
@@ -533,35 +403,37 @@ describe("CopyEditor error handling (#181)", () => {
       expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "PATCH" }));
     });
 
+    it("shows networkError and refetches state on publish", async () => {
+      const publishedDifferentData = {
+        ...createMockData("en").stateData,
+        published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
+      };
+      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+
+      mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
+
+      renderWithProviders(<CopyEditor />);
+
+      await waitFor(() => expect(screen.getByText("Copy editor")).toBeInTheDocument());
+
+      await makePublish("en", /publish draft/i);
+
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Can't reach Flowline — check your connection and try again."));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith("/api/platform/copy", expect.objectContaining({ method: "POST" }));
+    });
+
     it("shows networkError in Arabic", async () => {
-      const stateRefetch = vi.fn().mockResolvedValue(createMockData("ar").stateData);
-      const meRefetch = vi.fn().mockResolvedValue(createMockData("ar").meData);
+      const { stateRefetch, meRefetch } = setupMocks("ar");
 
-      mockUseQuery.mockImplementation((options: { queryKey?: readonly unknown[] }) => {
-        const queryKey = options?.queryKey?.[0];
-        if (queryKey === "platform-copy") {
-          return { data: createMockData("ar").stateData, isError: false, isPending: false, error: null, refetch: stateRefetch };
-        } else if (queryKey === "platform-me") {
-          return { data: createMockData("ar").meData, isError: false, isPending: false, error: null, refetch: meRefetch };
-        }
-        return { data: undefined, isError: false, isPending: false, error: null, refetch: vi.fn() };
-      });
-
-      mockUseT.mockImplementation((key: string) => getTranslations("ar")[key as keyof ReturnType<typeof getTranslations>]?.ar ?? key);
-      
-      rejectWrite(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
+      mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
       renderWithProviders(<CopyEditor />);
 
       await waitFor(() => expect(screen.getByText("تحرير النصوص")).toBeInTheDocument());
 
-      // Make an edit to enable the save button (use Arabic label)
-      const englishTextarea = screen.getByLabelText("الإنجليزية");
-      await user.type(englishTextarea, " edited");
-      
-      const saveButton = screen.getByRole("button", { name: /حفظ في المسودة/i });
-      expect(saveButton).not.toBeDisabled();
-      await user.click(saveButton);
+      await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا."));
       // Verify Arabic locale by checking the alert contains Arabic characters

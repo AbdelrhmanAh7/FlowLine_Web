@@ -24,7 +24,7 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Refusals of `/api/platform/copy` are bounded JSON errors `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; the codes listed in `docs/security/CREDENTIALS_DESIGN.md` item 10 are covered by `tests/integration/platform-copy-errors.test.ts` (including admin-only codes such as `STEP_UP_REQUIRED` and `REVISION_CONFLICT`), `tests/component/copy-editor.test.tsx` (component-level error handling for the load, save, publish, step-up, 5xx and network states; the load error, the save revision-conflict, the save step-up, the 5xx and the network cases assert the Arabic message too, while the me-load error and the publish paths are asserted in English only), and `e2e-army/181-admin-copy.e2e.ts` (non-admin 404 and cross-site 403).
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Refusals of `/api/platform/copy` are bounded JSON errors `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; the codes listed in `docs/security/CREDENTIALS_DESIGN.md` item 10 are covered by `tests/integration/platform-copy-errors.test.ts` (including admin-only codes such as `STEP_UP_REQUIRED` and `REVISION_CONFLICT`), `tests/component/copy-editor.test.tsx` (component-level error handling for the load, save, publish, step-up, 5xx and network states; the load error, save revision-conflict, save step-up, save 5xx, and save network cases assert the Arabic message; the me-load error, REVISION_CONFLICT publish, STEP_UP_REQUIRED publish, 5xx publish, and network publish paths are asserted in English only), and `e2e-army/181-admin-copy.e2e.ts` (non-admin 404 and cross-site 403).
 
 **Copy editor error states (UI):** The copy editor surfaces the following user-facing error states, all translated in `src/i18n/messages/ar.json` and `en.json` under `platformAdmin.copyEditor.*` and `errors.*`:
 - **Load error** (`loadError`): shown when `GET /api/platform/copy` fails; includes a Retry button that calls `state.refetch()`.
@@ -36,6 +36,14 @@ Arabic and light are the defaults. English and dark remain selectable. Use logic
 - **Server error** (`saveError`/`publishError`): shown for `5xx` responses; refetches state.
 - **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); renders the translated `errors.NETWORK` message (never the raw client text) and refetches state.
 All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
+
+**Component test coverage (as of #181):** `tests/component/copy-editor.test.tsx` covers:
+- Load error with retry button (English and Arabic)
+- Me load error / step-up prompt (English only)
+- REVISION_CONFLICT on save (English and Arabic); on publish (English only)
+- STEP_UP_REQUIRED on save (English and Arabic); on publish (English only)
+- 5xx server error on save (English and Arabic); on publish (English only)
+- Network error on save (English and Arabic); on publish (English only)
 
 ## Components and design
 

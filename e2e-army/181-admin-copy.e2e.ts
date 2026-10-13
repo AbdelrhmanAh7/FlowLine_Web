@@ -56,7 +56,7 @@ async function expectBoundedError(res: Response, status: number, code: string, m
 }
 
 test(
-  "@issue-181 AC: every refusal of /api/platform/copy reaches the client as a bounded JSON error (never 500, HTML, a stack or an echo)",
+  "@issue-181 AC1: every refusal of /api/platform/copy reaches the client as a bounded JSON error (never 500, HTML, a stack or an echo)",
   { tags: ["feat:fl-platform-admin", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
@@ -90,7 +90,7 @@ test(
 );
 
 test(
-  "@issue-181 AC: /admin/copy shows a non-admin the localized 404 page (Arabic RTL and English), never a server error",
+  "@issue-181 AC3: /admin/copy shows a non-admin the localized 404 page (Arabic RTL and English), never a server error",
   { tags: ["feat:fl-platform-admin", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
