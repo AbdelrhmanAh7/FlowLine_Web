@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -128,6 +128,19 @@ export function foreignRepoLinks(markdown: string): string[] {
     .filter((slug) => slug !== REPO_SLUG);
 }
 
+// The active phase's status ledger (AGENTS.md, "Docs (mandatory)") keeps one "## … (issue #N)" section per task. A
+// merge of main has already conflicted in it, so the #62 section is checked here rather than trusted to survive.
+const PHASE_LEDGER = "docs/implementation/PHASE4_BETA_REPORT.md";
+
+export function ledgerSection(markdown: string, issue: number): string | undefined {
+  const heading = new RegExp(`^## .*\\(issue #${issue}\\)\\s*$`);
+  return markdown.split(/^(?=## )/m).find((section) => heading.test(section.split("\n")[0]!));
+}
+
+export function relativeLinks(markdown: string): string[] {
+  return [...markdown.matchAll(/\]\((?![a-z]+:|#)([^)#\s]+)[^)]*\)/gi)].map((m) => m[1]!);
+}
+
 describe("dependency advisories security check", () => {
   it("semver comparison correctly handles prereleases and stable versions", () => {
     expect(semverGte("1.2.1", "1.2.2")).toBe(false);
@@ -193,5 +206,20 @@ describe("dependency advisories security check", () => {
     expect(fastTierRow).toMatch(/\]\(https:\/\/github\.com\/AbdelrhmanAh7\/FlowLine_Web\/actions\/runs\/\d+\)/);
     expect(fastTierRow).toMatch(/`gate`/);
     expect(fastTierRow).toMatch(/not counted as the fast tier/);
+  });
+
+  it("the Phase 4 ledger records #62 with its evidence and the pending post-merge alert check", () => {
+    const fixture = "# Report\n\n## Other task — 2026-10-12 (issue #61)\n\nSee [x](../x.md#top).\n\n### Sub (issue #62)\n";
+    expect(ledgerSection(fixture, 62)).toBeUndefined();
+    expect(relativeLinks(ledgerSection(fixture, 61)!)).toEqual(["../x.md"]);
+
+    const entry = ledgerSection(readFileSync(join(root, PHASE_LEDGER), "utf8"), 62);
+    expect(entry, `${PHASE_LEDGER} has a "## … (issue #62)" section`).toBeDefined();
+    expect(entry).toMatch(/source-map-js": ">=1\.2\.2 <2"/);
+    expect(entry).toMatch(/\*\*Pending after PR #77 merges:\*\* alert #3 closed as `fixed`/);
+    const links = relativeLinks(entry!);
+    expect(links).toEqual(expect.arrayContaining(["../../artifacts/phase-4/issue-62/EVIDENCE.md", "../../NEXT_ACTION.md"]));
+    for (const link of links) expect(existsSync(join(root, dirname(PHASE_LEDGER), link)), link).toBe(true);
+    expect(readFileSync(join(root, "NEXT_ACTION.md"), "utf8")).toMatch(/^\d+\. After PR #77 \(issue #62\b.*alert #3/m);
   });
 });
