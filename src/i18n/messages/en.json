@@ -3686,6 +3686,11 @@
       "private": "🔒 Private — only its creator's runs can use it",
       "shared": "Shared with the workspace",
       "reconnect": "Reconnect",
+      "test": "Test connection",
+      "testOk": "Connection OK — {account}",
+      "testError": "Couldn't test the connection",
+      "testAuthFailed": "Invalid API key — check the key and that it grants access",
+      "testUnreachable": "Couldn't reach the provider — check the URL and that it is running",
       "confirmRemove": "Confirm remove",
       "remove": "Remove"
     },

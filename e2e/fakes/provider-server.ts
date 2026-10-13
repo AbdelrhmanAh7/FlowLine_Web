@@ -1926,6 +1926,22 @@ const linear: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 400, { errors: [{ message: "Unknown query" }] });
 };
 
+const mizano: Handler = (ctx, req, res, path, _url, _body, account) => {
+  const acct = ACCOUNTS[account];
+  // The connection check (MZ G5): the scoped API key arrives as `Authorization: Bearer`, so a wrong key is
+  // rejected before the handler runs (the shared authenticate/authFail path). /api/health is what the flow calls;
+  // /api/me is the identity the connect flow stores.
+  if (req.method === "GET" && path === "/api/health") return json(ctx, req, res, 200, { status: "healthy", version: "test" });
+  if (req.method === "GET" && path === "/api/me") return json(ctx, req, res, 200, { id: `mizano-ws-${account}`, workspaceName: `${acct.name} Mizano` });
+  if (req.method === "GET" && path === "/api/invoices") {
+    return json(ctx, req, res, 200, {
+      currency: "EGP",
+      invoices: [{ number: "INV-9001", customerName: "Cedar Studio", balanceDue: "1200.00", dueDate: "2026-09-10" }],
+    });
+  }
+  return json(ctx, req, res, 404, { message: "Not found" });
+};
+
 const HANDLERS: Record<string, Handler> = {
   google_sheets: googleSheets,
   gmail,
@@ -1939,6 +1955,7 @@ const HANDLERS: Record<string, Handler> = {
   paddle,
   notion,
   linear,
+  mizano,
 };
 
 // ---------------------------------------------------------------- control API

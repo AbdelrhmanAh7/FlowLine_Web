@@ -11,7 +11,7 @@ import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
 import { dataText } from "@/i18n/workspace-text";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { SIDE_EFFECT_LABEL, useCatalog, useConnections, type CatalogProvider, type ConnectionDto } from "@/lib/catalog";
 import { useOnline } from "@/lib/hooks";
 import { focusIsFree } from "@/components/ui/focus-return";
@@ -206,6 +206,13 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const returnAfterRemoval = () => document.getElementById(`connect-${c.provider}`) ?? document.getElementById("int-search");
+  // Testing a SAVED connection: the stored key is only ever sent to the connection's own saved URL (never an
+  // unsaved one), so the route takes no body and the server's bounded code decides the message.
+  const test = useMutation({
+    mutationFn: () => api<{ ok: true; accountLabel: string }>(`/api/workspaces/${workspace.id}/connections/${c.id}/test`, { method: "POST" }),
+    onSuccess: (r) => toast(t("integrations.card.testOk", { account: r.accountLabel }), "success"),
+    onError: (e) => toast(testErrorText(t, e), "danger"),
+  });
   const remove = useMutation({
     mutationFn: () => api(`/api/connections/${c.id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -238,6 +245,9 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
           <Button size="sm" onClick={onReconnect} disabledReason={viewerReason}>
             {t("integrations.card.reconnect")}
           </Button>
+          <Button size="sm" onClick={() => test.mutate()} loading={test.isPending} disabledReason={viewerReason}>
+            {t("integrations.card.test")}
+          </Button>
           <Button size="sm" variant="danger-ghost" aria-expanded={confirm} onClick={() => setConfirm(true)} disabledReason={viewerReason}>
             {t("integrations.card.remove")}
           </Button>
@@ -255,6 +265,14 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
       </Card>
     </li>
   );
+}
+
+/** A failed connection test shows a fixed, translated line per bounded code — never the provider's own text. */
+function testErrorText(t: ReturnType<typeof useT>, err: unknown): string {
+  const code = err instanceof ApiError ? err.code : null;
+  if (code === "AUTHENTICATION_FAILED") return t("integrations.card.testAuthFailed");
+  if (code === "PROVIDER_UNREACHABLE") return t("integrations.card.testUnreachable");
+  return apiErrorMessage(t, err, t("integrations.card.testError"));
 }
 
 /** The callback carries only a bounded outcome code (never a provider message): translate it. */
