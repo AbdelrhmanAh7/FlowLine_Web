@@ -1137,6 +1137,14 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
 };
 
+// Mizano (#222): health probe only. Dispatch has already checked the Bearer token (401 { message: "Unauthorized" }).
+const mizano: Handler = (ctx, req, res, path) => {
+  if (req.method === "GET" && path === "/api/health") {
+    return json(ctx, req, res, 200, { status: "ok", version: "fake" });
+  }
+  return json(ctx, req, res, 404, { message: "Not found" });
+};
+
 const github: Handler = (ctx, req, res, path, url, body, account) => {
   const s = ctx.state;
   const acct = ACCOUNTS[account];
@@ -1934,6 +1942,7 @@ const HANDLERS: Record<string, Handler> = {
   zendesk,
   airtable,
   snowflake,
+  mizano,
   github,
   stripe,
   paddle,
