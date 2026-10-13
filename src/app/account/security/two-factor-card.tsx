@@ -15,20 +15,22 @@ interface Enrolment {
   backupCodes: string[];
 }
 
-/** Two-step verification card: status, and the enrol flow (password -> secret + backup codes -> 6-digit code). The password is an uncontrolled SecretInput cleared on submit; the secret and codes live in state only until confirmed or cancelled. */
+/** Two-step verification card: status, the enrol flow (password -> secret + backup codes -> 6-digit code) and Disable (password only, as better-auth takes no code). The password is an uncontrolled SecretInput cleared on submit; the secret and codes live in state only until confirmed or cancelled. */
 export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const t = useT();
   const toast = useToast();
   const router = useRouter();
   const [askPassword, setAskPassword] = useState(false);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
-  const [pending, setPending] = useState<"enable" | "verify" | null>(null);
+  const [askDisable, setAskDisable] = useState(false);
+  const [pending, setPending] = useState<"enable" | "verify" | "disable" | null>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const cancel = () => {
     takeSecret(passwordRef.current);
     setAskPassword(false);
+    setAskDisable(false);
     setEnrolment(null);
   };
 
@@ -61,13 +63,55 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     }
   };
 
+  const disable = async () => {
+    const password = takeSecret(passwordRef.current) ?? "";
+    setPending("disable");
+    try {
+      await api("/api/auth/two-factor/disable", { method: "POST", json: { password } });
+      setAskDisable(false);
+      toast(t("account.security.twoFactor.disabled"), "success");
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
+    } finally {
+      setPending(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
         <StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
       </div>
-      {enabled ? null : enrolment ? (
+      {enabled ? (
+        askDisable ? (
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void disable();
+            }}
+          >
+            <p className="text-sm text-med">{t("account.security.twoFactor.disableBody")}</p>
+            <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-disable-password">
+              <SecretInput ref={passwordRef} id="two-factor-disable-password" maxLength={128} />
+            </Field>
+            <div className="flex gap-2">
+              <Button type="submit" variant="danger" loading={pending === "disable"}>
+                {t("account.security.twoFactor.disable")}
+              </Button>
+              <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            </div>
+          </form>
+        ) : (
+          <div>
+            <Button variant="danger" onClick={() => setAskDisable(true)}>
+              {t("account.security.twoFactor.disable")}
+            </Button>
+          </div>
+        )
+      ) : enrolment ? (
         <div className="flex flex-col gap-3">
           <Field label={t("account.security.twoFactor.secret")} htmlFor="two-factor-secret">
             <code id="two-factor-secret" dir="ltr" className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm" data-testid="totp-secret">

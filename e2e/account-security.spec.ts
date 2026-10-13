@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { BASE_URL, EN_STATE } from "../playwright.config";
 import { PASSWORD, setupUser } from "./helpers";
 import { base32Decode, totpCodeFor } from "./tools/totp";
@@ -75,4 +75,67 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await expect(page.getByTestId("backup-codes")).toHaveCount(0);
   await page.reload();
   await expect(page.getByText("On", { exact: true })).toBeVisible();
+});
+
+async function signOut(page: Page, slug: string) {
+  await page.goto(`/w/${slug}/flows`);
+  await page.getByRole("complementary", { name: "Workspace navigation" }).getByRole("button", { name: /E2E User/ }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/sign-in/);
+}
+
+async function signIn(page: Page, email: string) {
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+}
+
+test("enable, sign in with the code, disable", async ({ page }) => {
+  test.setTimeout(120_000);
+  const { email, workspace } = await setupUser(page);
+
+  // Enable through the UI and keep the secret to compute sign-in codes.
+  await page.goto("/account/security");
+  await expect(page.getByRole("button", { name: "Disable" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+  const raw = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
+  await page.getByLabel("Authentication code").fill(totpCodeFor(raw));
+  await page.getByRole("button", { name: "Confirm and turn on" }).click();
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+
+  // Sign out and in: the prompt appears, a wrong code is refused, the next window's code signs in.
+  await signOut(page, workspace.slug);
+  await signIn(page, email);
+  await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
+  await page.getByLabel("Authentication code").fill("000000");
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByText("That code isn't valid. Try the current one.")).toBeVisible();
+  await page.getByLabel("Authentication code").fill(totpCodeFor(raw, Date.now() + 30_000));
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page).not.toHaveURL(/\/sign-in/);
+
+  // Disable: a wrong password is refused and it stays On; the right one turns it Off (still Off after a reload).
+  await page.goto("/account/security");
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Disable" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "Disable" }).click();
+  await page.getByLabel("Account password").fill("not-the-password-1");
+  await page.getByRole("button", { name: "Disable" }).click();
+  await expect(page.getByText("That password isn't correct.")).toBeVisible();
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Disable" }).click();
+  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+
+  // Signing out and in again shows no prompt.
+  await signOut(page, workspace.slug);
+  await signIn(page, email);
+  await expect(page).not.toHaveURL(/\/sign-in/);
+  await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
 });

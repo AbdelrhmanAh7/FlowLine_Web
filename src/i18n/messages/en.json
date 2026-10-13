@@ -2303,7 +2303,10 @@
         "passwordInvalid": "That password isn't correct.",
         "secret": "Secret key (add it to your authenticator app)",
         "backupCodes": "Backup codes — shown only once, store them offline.",
-        "confirm": "Confirm and turn on"
+        "confirm": "Confirm and turn on",
+        "disable": "Disable",
+        "disableBody": "Turning this off removes the extra sign-in code. Enter your account password to confirm.",
+        "disabled": "Two-step verification is off."
       }
     },
     "settings": {
