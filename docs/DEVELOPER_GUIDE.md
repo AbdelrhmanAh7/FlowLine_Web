@@ -79,6 +79,15 @@ Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`;
 
 Natural-language e2e-army tests (`e2e-army/<issue>-<flow>.e2e.ts`, the blocking `e2e-army` status) are copied and run by the hub's verify job, which type-checks them against its own `e2e` and `@e2e-dev/web` packages. Those packages are not dependencies here yet (issue #85, PR #88 adds them), so `tsconfig.json` excludes `e2e-army/` from `pnpm typecheck`; drop that exclusion when they land. `pnpm lint` still covers the folder.
 
+### Field-run and other synthetic sign-up harnesses
+
+A harness that creates its own users through the public `/api/auth/sign-up/email` endpoint and reads the verification link from `/api/test/outbox` (the `signUpFieldUser` helper of the field-validation v2 harness, `scripts/field-validation/v2/signup.ts`, which lives on branch `claude/issue-6` and is not on `main` yet) needs the target server started with **both**:
+
+- `FLOWLINE_ENV=test`: the test outbox and the other `/api/test/*` routes answer only in the test environment; elsewhere they are 404.
+- `FLOWLINE_BETA_MODE=open`: with `invite_only`, a sign-up without an invitation, access code or `FLOWLINE_BETA_ADMINS` entry is refused (`src/server/beta.ts`), and so are a missing or invalid value, which default to `invite_only` and log a configuration error. `FLOWLINE_ENV=test` does not relax this by itself; only the isolated E2E stack's per-context `fl_test_beta_mode` cookie does.
+
+Start the stack with both variables set (the isolated stack from `scripts/test-stack.cjs` and the `flowline_test_<suffix>` database rules in "CI gate" below still apply), for example `FLOWLINE_ENV=test FLOWLINE_BETA_MODE=open` in the server's process environment, never in a shared env file. The v2 harness README on that branch does not list `FLOWLINE_BETA_MODE=open` yet; add it there when the branch is merged.
+
 ### Git hooks and local CI
 
 `pnpm install` runs `prepare: husky || true` (so a production-only install without dev dependencies, where the `husky` executable is absent, still succeeds, as in Husky's documentation), which installs the hooks in `.husky/` (husky sets `core.hooksPath=.husky/_`, a path that only exists in a checkout where `pnpm install` ran). They are deliberately fast; the full CI runs on the owner's Mac mini through the hub's `localci` job, which posts the GitHub commit statuses under the workflows' job names.
