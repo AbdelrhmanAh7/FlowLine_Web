@@ -41,7 +41,7 @@ All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the dr
 - Catalogue check: every key the error states render exists in both catalogues and resolves to text (Arabic differs from English).
 - Load error with a Retry button that refetches the copy; the write `api()` is not called.
 - Admin session (`me`) load error: the editor still renders, the step-up prompt shows and "Publish draft" is disabled.
-- On save and on publish: `REVISION_CONFLICT` and `NETWORK` render the translated `errors.*` message (never the server or client text) and refetch the copy; a 5xx renders `saveError`/`publishError` and refetches; `STEP_UP_REQUIRED` refetches only the admin session, shows the step-up alert plus the standing prompt and disables the write button. Each case asserts the exact `api()` call (URL, method, CSRF header).
+- On save and on publish: `REVISION_CONFLICT` and `NETWORK` render the translated `errors.*` message (never the server or client text) and refetch the copy; a 5xx renders `saveError`/`publishError` and refetches; `STEP_UP_REQUIRED` refetches only the admin session, shows the step-up alert plus the standing prompt and disables the write button. Each write case asserts it sent exactly one `api()` call, compared whole: URL, method, CSRF header and JSON body (the save body carries the typed edit and `expectedRevision`; the publish body carries `expectedDraftRevision` and `expectedPublishedRevision`). The load and admin-session cases assert that `api()` is never called.
 
 ## Components and design
 

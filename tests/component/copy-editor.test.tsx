@@ -117,10 +117,25 @@ describe("CopyEditor error handling (#181)", () => {
       return save;
     }
 
+    // The exact request each write sends: the typed English edit against draft revision 2, or a publish of
+    // draft revision 2 over published revision 1, always with the session's CSRF token.
     const writes = [
-      { name: "save", method: "PATCH", fallback: "platformAdmin.copyEditor.saveError" as const },
-      { name: "publish", method: "POST", fallback: "platformAdmin.copyEditor.publishError" as const },
+      {
+        name: "save",
+        fallback: "platformAdmin.copyEditor.saveError" as const,
+        request: { method: "PATCH", json: { action: "edit", edits: [{ locale: "en", key: "meta.title", value: "Draft edited" }], expectedRevision: 2 } },
+      },
+      {
+        name: "publish",
+        fallback: "platformAdmin.copyEditor.publishError" as const,
+        request: { method: "POST", json: { action: "publish", expectedDraftRevision: 2, expectedPublishedRevision: 1 } },
+      },
     ];
+
+    function expectOneWrite(request: (typeof writes)[number]["request"]) {
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      expect(mockApi).toHaveBeenCalledWith(COPY_URL, { ...request, headers: { "x-flowline-csrf": "csrf-token" } });
+    }
 
     async function trigger(name: string, t: Translator) {
       renderWithProviders(<CopyEditor />);
@@ -159,7 +174,7 @@ describe("CopyEditor error handling (#181)", () => {
       });
     });
 
-    describe.each(writes)("$name errors", ({ name, method, fallback }) => {
+    describe.each(writes)("$name errors", ({ name, request, fallback }) => {
       it.each([
         ["REVISION_CONFLICT", new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"), "errors.REVISION_CONFLICT" as const],
         ["NETWORK", new ApiError(0, "NETWORK", "Failed to fetch (client text)", true), "errors.NETWORK" as const],
@@ -174,8 +189,7 @@ describe("CopyEditor error handling (#181)", () => {
         expect(alert.textContent).not.toContain("(client text)");
         if (locale === "ar") expect(alert.textContent).toMatch(ARABIC);
         expect(stateRefetch).toHaveBeenCalledTimes(1);
-        expect(mockApi).toHaveBeenCalledTimes(1);
-        expect(mockApi).toHaveBeenCalledWith(COPY_URL, expect.objectContaining({ method, headers: { "x-flowline-csrf": "csrf-token" } }));
+        expectOneWrite(request);
       });
 
       it("a 5xx renders the fallback message (not the server text) and refetches the copy", async () => {
@@ -187,8 +201,7 @@ describe("CopyEditor error handling (#181)", () => {
         expect(alert).toHaveTextContent(t(fallback));
         expect(alert.textContent).not.toContain("(server text)");
         expect(stateRefetch).toHaveBeenCalledTimes(1);
-        expect(mockApi).toHaveBeenCalledTimes(1);
-        expect(mockApi).toHaveBeenCalledWith(COPY_URL, expect.objectContaining({ method }));
+        expectOneWrite(request);
       });
 
       it("STEP_UP_REQUIRED refetches the admin session, shows the step-up prompt and disables writes", async () => {
@@ -210,8 +223,7 @@ describe("CopyEditor error handling (#181)", () => {
         // Only the session is refreshed: the copy state is left alone.
         expect(stateRefetch).not.toHaveBeenCalled();
         expect(screen.getByRole("alert").textContent).not.toContain("(server text)");
-        expect(mockApi).toHaveBeenCalledTimes(1);
-        expect(mockApi).toHaveBeenCalledWith(COPY_URL, expect.objectContaining({ method }));
+        expectOneWrite(request);
       });
     });
   });
