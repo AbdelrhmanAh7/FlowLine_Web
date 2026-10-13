@@ -1,9 +1,9 @@
 /**
- * Tests for `src/ai/hub/selection.ts` (#174). The issue names `selectEngineByScore` and `selectFreeEndpoint`, which never
- * existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the
- * real exports are tested and the first test pins that export list. Acceptance with this repo's Vitest (Jest's `--listTests`
- * is rejected as an unknown option): pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec
- */
+ * Tests for `src/ai/hub/selection.ts` (#174). The issue names `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this
+ * repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the real exports are tested and the
+ * first test pins that export list. Acceptance with this repo's Vitest (Jest's `--listTests` is rejected as an unknown option):
+ * pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db";
 import * as selection from "@/ai/hub/selection";
@@ -33,6 +33,13 @@ it("selection.ts exports exactly the four functions tested below; selectEngineBy
   expect(Object.keys(selection).sort()).toEqual(["aiRoutesIn", "assertRouteSelection", "assertRoutesUsable", "pinDefaultRoutes"]);
   expect(selection).not.toHaveProperty("selectEngineByScore");
   expect(selection).not.toHaveProperty("selectFreeEndpoint");
+});
+
+it("documents copy-pasteable commands: no <placeholder> (a POSIX shell redirection) in this header or the #174 note", () => {
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
+  const texts = [read("./selection.spec.test.ts").split("*/")[0], read("../../docs/implementation/PHASE4_BETA_REPORT.md").split("hub route selection (#174)")[1]];
+  for (const text of texts) expect(text).toContain('git log --all -S "selectEngineByScore" -- src');
+  expect(texts.join("\n")).not.toMatch(/<[\w-]+>/);
 });
 
 describe("assertRoutesUsable", () => {
@@ -79,16 +86,12 @@ describe("assertRouteSelection", () => {
   });
 });
 
-describe("aiRoutesIn", () => {
-  it("lists valid routes of AI steps only, skipping missing or malformed routes and non-AI steps", () => {
-    expect(aiRoutesIn(graph({ route: R1 }, {}, { route: BAD }, { type: "transform.json", route: R2 }))).toEqual([R1]);
-  });
+it("aiRoutesIn lists valid routes of AI steps only, skipping missing or malformed routes and non-AI steps", () => {
+  expect(aiRoutesIn(graph({ route: R1 }, {}, { route: BAD }, { type: "transform.json", route: R2 }))).toEqual([R1]);
 });
 
-describe("pinDefaultRoutes", () => {
-  it("pins only a valid default, onto a step whose legacy model is blank but never onto a real legacy model", () => {
-    const g = graph({ model: "gpt-4" }, { model: "  " });
-    expect(pinDefaultRoutes(g, BAD)).toBe(g);
-    expect(pinDefaultRoutes(g, R1).nodes.map((n) => (n.data.config as { route?: unknown }).route)).toEqual([undefined, R1]);
-  });
+it("pinDefaultRoutes pins only a valid default, onto a step whose legacy model is blank but never onto a real legacy model", () => {
+  const g = graph({ model: "gpt-4" }, { model: "  " });
+  expect(pinDefaultRoutes(g, BAD)).toBe(g);
+  expect(pinDefaultRoutes(g, R1).nodes.map((n) => (n.data.config as { route?: unknown }).route)).toEqual([undefined, R1]);
 });
