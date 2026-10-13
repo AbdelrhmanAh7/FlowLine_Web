@@ -2236,6 +2236,28 @@
         "s2": "Set the Linear team ID",
         "s3": "Publish, then add the webhook URL + secret in GitHub (pull_request events)"
       }
+    },
+    "deal-won-mizano-quote": {
+      "name": "Deal won → Mizano quote",
+      "description": "When a deal is won, ask for approval, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+      "nodes": {
+        "deal": "Deal",
+        "won": "Deal won?",
+        "prepare": "Prepare customer and quote",
+        "customer": "Mizano — Create customer (needs approval)",
+        "quote": "Mizano — Create draft quote",
+        "notify": "Slack — Quote ready",
+        "skipped": "Deal not won"
+      },
+      "requires": {
+        "mizano": "Create the customer and the draft quote",
+        "slack": "Tell your team the quote is ready"
+      },
+      "setup": {
+        "s1": "Choose the Mizano and Slack connections",
+        "s2": "Set your sales channel ID",
+        "s3": "Each run waits for approval before anything is created in Mizano"
+      }
     }
   },
   "account": {

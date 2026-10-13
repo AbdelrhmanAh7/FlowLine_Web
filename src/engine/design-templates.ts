@@ -218,4 +218,44 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
       edges: [edge("hook", "opened"), edge("opened", "pr", "true"), edge("pr", "files"), edge("files", "review"), edge("review", "isRisky"), edge("isRisky", "issue", "true"), edge("isRisky", "fine", "false"), edge("opened", "ignored", "false")],
     },
   },
+  {
+    id: "deal-won-mizano-quote",
+    name: "Deal won → Mizano quote",
+    description: "When a deal is won, ask for approval, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+    category: "Sales",
+    goal: "sales",
+    requires: [
+      { provider: "mizano", purpose: "Create the customer and the draft quote" },
+      { provider: "slack", purpose: "Tell your team the quote is ready" },
+    ],
+    setup: ["Choose the Mizano and Slack connections", "Set your sales channel ID", "Each run waits for approval before anything is created in Mizano"],
+    graph: {
+      nodes: [
+        n("deal", "trigger.manual", "Deal", 0, 160, {
+          samplePayload: J({
+            deal: {
+              stage: "won",
+              currency: "EGP",
+              customer: { name: "Mona Hassan", company: "Nile Bakery", email: "mona@nilebakery.example", phone: "+20 100 555 0142", taxId: "EG-100-200-300" },
+              lines: [
+                { item: "Oven service plan", qty: 1, unitPrice: 4800, taxRate: 14 },
+                { item: "Spare gasket kit", qty: 3, unitPrice: 125.5, taxRate: 14 },
+              ],
+            },
+          }),
+        }),
+        n("won", "logic.condition", "Deal won?", 260, 160, { expression: 'deal.stage = "won"' }),
+        n("prepare", "transform.json", "Prepare customer and quote", 520, 60, {
+          // Mizano takes amounts as decimal strings with two places, so numbers are formatted here, once.
+          expression:
+            '(\n  $money := function($v) { $formatNumber($number($v), "0.00") };\n  {\n    "customer": {\n      "name": deal.customer.name,\n      "company": deal.customer.company,\n      "email": deal.customer.email,\n      "phone": deal.customer.phone,\n      "taxId": deal.customer.taxId\n    },\n    "currency": deal.currency,\n    "lines": [deal.lines.{ "item": item, "qty": $money(qty), "unitPrice": $money(unitPrice), "taxRate": $money(taxRate) }]\n  }\n)',
+        }),
+        act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", "customer", { requireApproval: true }),
+        act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", '{\n  "customerId": id,\n  "currency": $steps.prepare.currency,\n  "lines": $steps.prepare.lines\n}'),
+        act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.customer.company & " (" & $count(lines) & " lines)"\n}'),
+        n("skipped", "output", "Deal not won", 520, 280, { key: "status", expression: '"deal not won: nothing sent to Mizano"' }),
+      ],
+      edges: [edge("deal", "won"), edge("won", "prepare", "true"), edge("prepare", "customer"), edge("customer", "quote"), edge("quote", "notify"), edge("won", "skipped", "false")],
+    },
+  },
 ];
