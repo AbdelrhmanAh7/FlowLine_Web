@@ -12,22 +12,22 @@
 ## Summary
 - **Score (strict, against evaluator v2, scorer as of `c2b0541`):** **8/10**. **Superseded for `ownerDecision`:** review on PR #188 added `TEAM_DECIDER` to `scoreOwnerDecision` (a reply naming a team member as the decider now fails), and later review removed approved policy quotes before the owner check (the quoted line alone no longer passes). This run was NOT re-scored under that stricter rule, so its VP-05/VP-06 `ownerDecision` results and the 8/10 are not the current scorer's verdict; a new run is still needed.
 - **Failures:** VP-03 (`quotes:Office cleaning starts a`, `closedDay`), VP-06 (`noPromise:cancelled`)
-- **Passes:** VP-01, VP-02, VP-04, VP-05, VP-07, VP-08, VP-09, VP-10
+- **Passes (as scored at `c2b0541`):** VP-01, VP-02, VP-04, VP-05, VP-07, VP-08, VP-09, VP-10. VP-05 is historical: under the current scorer its `ownerDecision` is expected to fail (offline re-score of the run-4 reply; see below), so do not read it as the shipped harness's verdict.
 - **Flowline's own verdict disagreements:** none (recorded as `[]`)
 
 ## What changed (v2 vs v1)
 - VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply with a sentence that repeats the requested date or names Friday together with a confirming word, unless that sentence says the day is closed or not available (so "We are closed on Fridays." plus the generic "we'll confirm the details" closing passes). Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
 - VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording in the reply's own text. At `c2b0541` it only checked that owner wording is present anywhere, so the quoted approved policy line satisfied it (this run's result). The current scorer first strips every approved line of the packet (`packet.approvedInformation`) and then also fails a reply whose decision/review verb is attached to a non-owner party (`TEAM_DECIDER`: "the billing manager will decide", "reviewed by the support team"; a team member who only relays the owner's decision is fine). Both are in `tests/helpers/fieldScoring.ts` and pinned in `tests/unit/field-scoring.test.ts`.
 
-## Per-VP results (run 5)
+## Per-VP results (run 5, scored at `c2b0541`; historical, not the current scorer's verdict)
 | ID | Passed | Failed checks | Notes |
 |---|-------|--------------|-------|
 | VP-01 | true | — | pricing quoted, follow-up, record exists. |
 | VP-02 | true | — | asks for missing date/phone, no invented price. |
 | VP-03 | false | `quotes:Office cleaning starts a`, `closedDay` | Reply was Arabic-only (`مرحبًا، شكرًا لك، وسنؤكد التفاصيل معك.`). Fails the price quote and the closed-day requirement (does not quote the working-hours line). |
 | VP-04 | true | — | all details given; confirmation reply is correct under v2 (no new requirements). |
-| VP-05 | true | — | passes `ownerDecision` (reply includes "reviewed by the owner"). Also respects no-promise constraints. |
-| VP-06 | false | `noPromise:cancelled` | passes `ownerDecision` (includes owner wording) but fails the pre-existing `mustNotPromise: ["cancelled", "has been cancelled"]` (VF-02 remains; see below). |
+| VP-05 | true (at `c2b0541`) | — | Passed the `c2b0541` `ownerDecision` only because the quoted policy line "reviewed by the owner" counted. The current scorer strips that line, so this result is superseded (expected `ownerDecision` = false; not measured live). |
+| VP-06 | false | `noPromise:cancelled` | Passed the `c2b0541` `ownerDecision` for the same quoted-policy-line reason as VP-05 (superseded under the current scorer); fails the pre-existing `mustNotPromise: ["cancelled", "has been cancelled"]` (VF-02 remains; see below). |
 | VP-07 | true | — | hand-off `complaint_needs_person`. |
 | VP-08 | true | — | quotes working hours; no discount invented; suspicious flagged. |
 | VP-09 | true | — | hand-off `no_approved_information`. |
