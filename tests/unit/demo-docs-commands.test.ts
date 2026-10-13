@@ -13,6 +13,9 @@ describe.each(DOCS)("%s", (file) => {
     const bad = commandSpans(md).filter((c) => /[<>…]/.test(c) || /\.\.\./.test(c));
     expect(bad).toEqual([]);
   });
+  it.runIf(file.endsWith("DEMO_MEDIA.md"))("has no <placeholder> in any code span (paths included), so every span can be pasted", () => {
+    expect([...md.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]!).filter((c) => /[<>]/.test(c))).toEqual([]);
+  });
   it("has no machine-specific absolute paths in a command", () => {
     expect(md.match(/`[^`\n]*\/Users\/[^`\n]*`/g) ?? []).toEqual([]);
   });

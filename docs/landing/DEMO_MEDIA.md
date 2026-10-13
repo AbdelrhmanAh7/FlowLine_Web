@@ -40,7 +40,7 @@ and `nice` / local port binding are blocked there.
 |---|---|
 | `pnpm demo:build` | Every clip, both locales, light theme (about 35-40 min on the Mac mini; the walkthrough is about 10 min per locale). |
 | `pnpm demo:build --only hero --locale ar` | One clip (about 3-5 min). `--only a,b` · `--locale ar\|en\|all` · `--theme light\|dark\|all` (dark twins are optional and not shipped) · `--concurrency 2` (Remotion render threads) |
-| `pnpm demo:build --only run --skip-record` | Reuse the recording in `tools/demo-video/.work/<clip>.<locale>.<theme>/` (re-master, re-compose, re-deliver). `--skip-render` also reuses the composed video and posters (delivery only). `--rebuild` forces a fresh production build of the app. |
+| `pnpm demo:build --only run --skip-record` | Reuse the recording in `tools/demo-video/.work/` (one folder per clip, locale and theme, for example `hero.ar.light`) (re-master, re-compose, re-deliver). `--skip-render` also reuses the composed video and posters (delivery only). `--rebuild` forces a fresh production build of the app. |
 | `pnpm demo:build --record-only`, then `pnpm demo:build --skip-record` | Two phases for a shared machine: record (light, real time, about 2.5 min for everything) at normal priority, then render and encode (the heavy part) as a second command; on a machine with a job governor, start that second command through the governor's wrapper (a machine-local script, not part of this repo). Recording must not run under background QoS (`taskpolicy -b`): the throttled browser runs slow and the ±15 % length check fails. |
 | `pnpm demo:verify` | Validates `manifest.json` and every budget, probes each video (canvas, fps, BT.709, no audio, codec string), checks loop seams, the hero's accent colour and PSNR (when `.work` is present), flags stale media, and writes a 6-still contact sheet per clip to `artifacts/demo-media/` (git-ignored; attach the ones you want to the PR, never commit them). Review the sheets before committing. |
 | `pnpm demo:studio` | Opens Remotion Studio on the composition (preview props in `tools/demo-video/src/defaultProps.ts`). |
@@ -82,7 +82,7 @@ Set `DEMO_DEBUG=1` to print every storyboard beat with its recorded time.
 
 ## Editing storyboards and captions
 
-`scripts/demo/storyboard/<clip>.json` declares the beats a scenario must log, the hero chips, the walkthrough chapters
+`scripts/demo/storyboard/` (one JSON file per clip, for example `hero.json`) declares the beats a scenario must log, the hero chips, the walkthrough chapters
 (card text, length, and `still`: when the chapter's still is taken), the end card and the poster moment. Captions are
 `{ "beat": "run", "at": 0.2, "dur": 5.8, "ar": "…", "en": "…" }`: they resolve against the **recorded** beat time, never
 absolute seconds, so a slower app moves them with it; when a slow beat pushes a caption into the next one, the earlier
@@ -117,7 +117,7 @@ the hero's decoded Run button within 6 levels per channel of `semantic.light.acc
 ## Manifest contract
 
 `public/media/demo/manifest.json` (`schema: 1`, validated by `scripts/demo/manifest.ts` and a fixture test) lists
-`uiCommit` (the commit of the latest recording) and `recordings` (the commit each `<clip>.<locale>.<theme>` was recorded from; written at record time, so `--skip-record` and partial rebuilds keep the right one), the tooling versions, per-clip metadata (`shape`, `aspect`, `width`, `height`,
+`uiCommit` (the commit of the latest recording) and `recordings` (the commit each clip, locale and theme (for example `hero.ar.light`) was recorded from; written at record time, so `--skip-record` and partial rebuilds keep the right one), the tooling versions, per-clip metadata (`shape`, `aspect`, `width`, `height`,
 `fps`, `durationS`, `loop`, walkthrough `chapters` with their start times) and every file (`video` with `codec`, the
 `type` string from ffprobe such as `video/mp4; codecs="av01.0.09M.08"`, `bytes`, `sha256`, `bitrate`; `poster`;
 `captions` with `lang`; `chapter-still` with `chapter`). Landing code treats a missing manifest as "no demo yet".
@@ -131,7 +131,7 @@ about 15-20 MB of binaries to git history).
 | `Chromium … sandbox` / `listen EPERM` / `setpriority: Operation not permitted` | run outside the agent sandbox |
 | `another demo build is running (pid N)` | wait, or remove a stale `tools/demo-video/.work/build.lock` |
 | `another next build is running` | a gate/e2e build owns `.next-test`; wait for it |
-| A recording fails | the error names the locator and time; `tools/demo-video/.work/<clip>.<locale>.<theme>/failure.png` shows the page; `DEMO_DEBUG=1` prints the beats |
+| A recording fails | the error names the locator and time; `failure.png` in the recording's folder under `tools/demo-video/.work/` (for example `hero.ar.light`) shows the page; `DEMO_DEBUG=1` prints the beats |
 | `recorded 9.3 s, storyboard 8 s` | the scenario is too slow: shorten its moves or holds (its `holdUntil` pads only when it is early). Under a CPU governor or background QoS, record with `--record-only` at normal priority first |
 | `honesty guard: the DOM contained …` | the scenario opened something with test-double or real-looking data; film another element |
 | `Version mismatch … zod` | `tools/demo-video` pins zod 4.5.4 for Remotion; run `pnpm demo:setup` again |
