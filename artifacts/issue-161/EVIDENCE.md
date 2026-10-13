@@ -1,6 +1,6 @@
 # Evidence — issue #161 (docs for security posture)
 
-Tested at base SHA 0b847de (changes uncommitted at writing; see the PR head for the final SHA). Docs-only; no e2e-army test.
+Verified by reading the diff against main at head 3d940e6 (the PR head is authoritative; later commits only touch this note). Docs-only; no e2e-army test.
 
 | AC | Verification |
 |----|--------------|
