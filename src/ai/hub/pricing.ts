@@ -3,7 +3,8 @@ import { priceFor } from "@/server/prices";
 import type { HubChatRequest, NormalisedUsage } from "./types";
 
 /**
- * Pricing math for the hub. Rules:
+ * Pricing math for the hub. `PriceSnapshot` is a resolved price: per-million-token prices in micros (millionths of
+ * the price's currency unit) plus an optional flat per-call price, tagged with where it came from. Rules:
  * - A price is either KNOWN (input AND output per-token prices present) or UNKNOWN. Unknown is never treated as 0.
  * - Sources, in order: the workspace's own price table (`ai:<provider>/<model>`, owner-entered, in the workspace
  *   currency) → the public catalogue (ai_model.pricing: official pricing page or documented listing, with its
@@ -15,16 +16,34 @@ import type { HubChatRequest, NormalisedUsage } from "./types";
  */
 export type PriceSnapshot = AiModelPricing & { perCallMicros?: number; source: "workspace_price_table" | "catalogue" };
 
-/** A usable per-token price: a finite, non-negative number (a malformed stored value is UNKNOWN, never 0). */
+/**
+ * A usable price value: a finite, non-negative number (a malformed stored value is UNKNOWN, never 0).
+ * @param n Any stored value, e.g. a price in micros per million tokens.
+ * @returns True (and narrows `n` to `number`) when it is a finite number >= 0.
+ */
 export function validPrice(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0;
 }
 
+/**
+ * Converts a workspace price-table entry into a snapshot with source `workspace_price_table`.
+ * @param p The owner-entered entry (micros per million tokens, workspace currency); may be undefined.
+ * @returns The snapshot, or null when the entry is missing or its input or output price is not a valid price.
+ */
 export function fromPriceEntry(p: PriceEntry | undefined): PriceSnapshot | null {
   if (!p || !validPrice(p.inputPerMTokMicros) || !validPrice(p.outputPerMTokMicros)) return null;
   return { inputPerMTokMicros: p.inputPerMTokMicros, outputPerMTokMicros: p.outputPerMTokMicros, perCallMicros: p.perCallMicros, source: "workspace_price_table" };
 }
 
+/**
+ * Resolves the price of a model: the workspace price table first, then the public catalogue, else unknown.
+ * @param prices The workspace price table, looked up under the key `ai:<provider>/<modelId>`.
+ * @param provider Provider id, part of the price-table key.
+ * @param modelId Model id, part of the price-table key.
+ * @param catalogue The catalogue pricing (`ai_model.pricing`) for the model, if any.
+ * @param ctx The workspace `currency` and the connection's `region`; a catalogue price with a different currency or region is not used.
+ * @returns A snapshot (source `workspace_price_table` or `catalogue`), or null when the price is unknown.
+ */
 export function resolvePrice(
   prices: PriceTable,
   provider: string,
@@ -40,7 +59,11 @@ export function resolvePrice(
   return { ...catalogue, source: "catalogue" };
 }
 
-/** A route is FREE only when its price is known, verified (catalogue: official page or documented listing) and zero. */
+/**
+ * A route is FREE only when its price is known, verified (catalogue: official page or documented listing) and zero.
+ * @param p The resolved price, or null when unknown.
+ * @returns True only for a catalogue price with zero input and output prices, no per-call price and no positive cache-write price.
+ */
 export function isVerifiedZeroPrice(p: PriceSnapshot | null): boolean {
   return Boolean(
     p &&
@@ -66,7 +89,15 @@ function tier(p: PriceSnapshot, inputTokens: number): { input: number; output: n
   return { input: p.inputPerMTokMicros!, output: p.outputPerMTokMicros! };
 }
 
-/** Actual cost of an attempt in micros, or null when the price is unknown. */
+/**
+ * Actual cost of an attempt in micros, or null when the price is unknown.
+ * Cache reads without their own price (or priced above input) are charged at the input price; reasoning tokens are
+ * charged as output; the long-context tier applies above its input-token threshold; the result is rounded to a whole
+ * micro before the flat per-call price is added.
+ * @param p The resolved price (micros per million tokens), or null when unknown.
+ * @param u The attempt's normalised token usage.
+ * @returns The cost in micros of the price's currency, or null when the price is unknown (including cache writes without a cache-write price).
+ */
 export function costMicros(p: PriceSnapshot | null, u: NormalisedUsage): number | null {
   if (!p || p.inputPerMTokMicros == null || p.outputPerMTokMicros == null) return null;
   if ((u.cacheWriteTokens ?? 0) > 0 && p.cacheWritePerMTokMicros == null) return null;
@@ -88,6 +119,8 @@ const MESSAGE_FRAMING_CHARS = 16;
  * definitions and the output schema, plus per-message framing. Serialised as JSON, so keys and quotes are counted
  * too: a conservative bound, never an optimistic one. The ONE size used for budget reservations, policy ranking
  * (LOW_COST) and agent cost limits.
+ * @param req The hub chat request about to be sent to a protocol.
+ * @returns The size of the model input, in characters.
  */
 export function requestInputChars(req: HubChatRequest): number {
   return (
@@ -102,12 +135,21 @@ export function requestInputChars(req: HubChatRequest): number {
 /**
  * Upper-bound input token count for a prompt, used for budget reservation. ~2 chars/token covers non-Latin
  * scripts (Arabic tokenises much denser than English), so the reservation is defensible, not optimistic.
+ * @param chars Prompt size in characters (e.g. from `requestInputChars`).
+ * @returns The token upper bound: `ceil(chars / 2) + 16`.
  */
 export function maxInputTokens(chars: number) {
   return Math.ceil(chars / 2) + 16;
 }
 
-/** Defensible maximum cost of one attempt: every input token uncached + every allowed output token. Null if unknown. */
+/**
+ * Defensible maximum cost of one attempt: every input token uncached + every allowed output token. Null if unknown.
+ * Input is priced at the higher of the input and cache-write prices; the result is rounded up to a whole micro and includes the flat per-call price.
+ * @param p The resolved price (micros per million tokens), or null when unknown.
+ * @param promptChars Prompt size in characters, converted with `maxInputTokens`.
+ * @param maxOutputTokens The most output tokens the attempt may produce.
+ * @returns The maximum cost in micros of the price's currency, or null when the price is unknown.
+ */
 export function maxCostMicros(p: PriceSnapshot | null, promptChars: number, maxOutputTokens: number): number | null {
   if (!p || p.inputPerMTokMicros == null || p.outputPerMTokMicros == null) return null;
   const inTok = maxInputTokens(promptChars);
