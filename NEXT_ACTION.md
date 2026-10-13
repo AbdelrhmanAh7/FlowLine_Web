@@ -4,6 +4,18 @@
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
 
+## Issue #221 — `fl-auth-api` failure is in the hub, not the product (2026-10-13)
+
+No product or test change; this repo cannot fix it. The hub ran the `core-api` shard twice on one stack with the same `E2E_ARMY_SEED`, so the second run reused accounts the first run had already created and verified. Product behaviour is correct: an unverified account is refused at sign-in (`requireEmailVerification`, `src/lib/auth.ts:45`), but a verified account signs in with 200.
+
+Evidence (hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`, `main` @ `2ca60e5`):
+
+- Run 1 (fresh DB): `fl-auth-api.1`–`.5` pass (lines 57-61).
+- Run 2 (same stack, same seed; the quota fallback in `src/jobs/stable.ts` re-ran the whole shard): `fl-auth-api.1` gets 200 instead of 403, and `fl-email-flows`, `fl-onboarding`, `fl-workspaces`, `fl-members` fail on reused data (lines 476-560, 689-703).
+- The confirm run (`confirmFailures`, `src/jobs/e2eregress.ts:56`) lacks `E2E_ARMY_STAGE: "next"`, finds no tests (`NO_TESTS`), and so keeps the failure.
+
+Hub-side fix (repo `nql-agents`): give each re-run its own seed or a fresh DB, re-run only the tests that hit the quota, and pass `E2E_ARMY_STAGE: "next"` to `confirmFailures`. Separate hub task; then re-run `ops/verify/e2e-army/run-local.sh FlowLine_Web <ref> -- --tag feat:fl-auth-api`. This PR must say `E2E: not needed — no product change` and use `Refs #221`.
+
 ## Issue #141 handoff — 2026-10-12
 
 Status: awaiting review + CI. PR #193 review follow-up is implemented on `ai/141`; the harness pushes and manages review replies. Both open Codex findings are met at `field.spec.ts`: persisted `kv_entry` rows read from the DB before/after the duplicate run (`:167-184`, helper `comparePersistedRows`), and the approved outbox entry's recipient, text-only payload and no-payment check (`:150-163`, `scoreApprovedOutboxEntry`/`scoreApprovedAgainstPacket`); unit tests in `tests/unit/flowline-field-scoring.test.ts` (8/8 pass on `4a241db`; per-mutation results in `EVIDENCE.md`).
