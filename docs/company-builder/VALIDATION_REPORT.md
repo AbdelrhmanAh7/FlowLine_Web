@@ -90,6 +90,36 @@ by derivation only, into:
 Flowline was set up only from participant fields. The expectations are read only by the scorer
 (`flowline-field/field.spec.ts`).
 
+**Next round (issue #141):** the frozen run's scorer has four known scoring gaps (approved policy text scored as a
+cancellation promise; the review gate's approval side not exercised; the duplicate trial's persisted record not compared;
+the packet digest recorded without being verified). They are fixed only in the next round's harness,
+`artifacts/company-builder/validation/next/flowline-field/field.spec.ts` (needs `FIELD_PACKET_DIR`), whose pure scoring
+lives in `tests/helpers/field-scoring.ts` and is covered by `pnpm test flowline-field`. The frozen run's spec, results and
+recorded evidence are unchanged, so run 1-4 numbers stand as recorded.
+
+Details of the fixes: the no-promise check also strips the fixed English and Arabic `REFUND_NOTE` disclaimers; the review
+gate requires an empty outbox before the review is requested and, after approval, checks the new outbox entry (recipient
+equals the packet's VP-05 recipient, text-only `email_reply` payload, no payment action, and the packet's quoted policy,
+no-promise and consequential expectations); the duplicate trial compares the
+`follow_up_record` of both runs and the persisted `kv_entry` rows (namespace `cb_customer_follow_ups`, read from the test
+database, so the harness needs the same `DATABASE_URL` as the stack) before and after; the packet digest recorded is the
+`packet.json` line of `SHA256SUMS` (a missing `packet.json` entry is rejected).
+
+Review follow-up (#141, PR #193): approval now also requires the outbox proposal to equal the reviewed draft,
+including its body, subject and consequential flag. Duplicate scoring requires exactly one row at VP-01's
+`store_key`, with the original stored value, in both snapshots; two empty snapshots cannot pass. Both helper
+callers (the next-round harness and unit tests) supply the original observations. JSONB property order does
+not affect the persisted-value comparison. The existing direct `kv_entry` reads address the persisted-state
+review thread; the additional assertion prevents a missing/wrong database observation from scoring as success.
+Focused regressions cover altered approved drafts, absent/duplicate/changed stored rows, and all four original
+scoring gaps. Live-stack validation remains outstanding; unit results do not establish field-run completion.
+
+The review gate now requests the review on the trial that was scored for VP-05 (its id is recorded with the result)
+rather than re-posting `field-VP-05` without input. `store_key` and the stored value are confirmed against the pack:
+`follow_up_record.store_key` is what the `data.store` step uses as key and `record` as value
+(`src/company-builder/packs/customer-follow-up.ts`), and by a unit test (part of the 8/8 `pnpm test flowline-field` run on `4a241db` recorded in the Phase 4 report and `EVIDENCE.md`) that runs the real compiled pack and asserts its
+one persisted row equals the follow-up record at `store_key` (`tests/unit/flowline-field-scoring.test.ts`).
+
 **Operator and assistance:**
 
 - The operator was an AI agent (the implementer, with maximal familiarity), driving the real HTTP API of the

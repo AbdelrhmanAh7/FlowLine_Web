@@ -78,6 +78,15 @@ describe("workflow files", () => {
   it("has no self-hosted workflow (the hub's AI implementers run from launchd on the Mac, not from Actions)", () => {
     expect(workflowFiles).not.toContain(".github/workflows/ai-implementers.yml");
   });
+
+  it("rejects the persistent self-hosted runner that broke `start` at f655e51 (issue #60)", () => {
+    // A reused self-hosted checkout let credential.helper pile up in .git/config, so a single-value `git config` exited 5.
+    // The runner guard above accepts only `ubuntu-24.04` (fresh workspace per job); prove it catches the #60 runner line.
+    const runners = [..."    runs-on: [self-hosted, macmini]\n".matchAll(/^\s*runs-on:\s*(.+?)\s*$/gm)].map((match) => match[1]);
+    expect(runners).toEqual(["[self-hosted, macmini]"]);
+    expect(runners[0]).not.toBe("ubuntu-24.04");
+    for (const file of workflowFiles) expect(stripComments(read(file)), file).not.toMatch(/self-hosted/);
+  });
 });
 
 describe("next.config.ts guards production type-check", () => {
