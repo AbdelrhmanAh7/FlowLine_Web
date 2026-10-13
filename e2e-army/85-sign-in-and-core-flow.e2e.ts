@@ -30,10 +30,12 @@ async function signUpVerified(base: string, email: string) {
   if (!v.ok) throw new Error(`verify ${v.status}`);
 }
 
-test("@issue-85 landing: the page shows the product promise and a call to action", { tags: ["feat:fl-landing"] }, async ({ app, screen }) => {
+test("@issue-85 landing: the page shows the product promise and a call to action", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
+  await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
   await app.open("/");
-  await expect(screen.getByRole("heading").first()).toBeVisible();
-  await expect(screen.getByRole("link").first()).toBeVisible();
+  await expect(screen.getByRole("heading", { level: 1 })).toContainText("Less repetitive work.");
+  await expect(screen.getByRole("link", "Start free")).toBeVisible();
+  await expect(screen.getByRole("link", "Sign in")).toBeVisible();
 });
 
 test("@issue-85 Arabic: the default language is Arabic and the page is right-to-left", { tags: ["feat:fl-i18n-rtl"] }, async ({ app, browser }) => {
