@@ -36,7 +36,7 @@ export function initials(name: string) {
 
 /**
  * Convert a number or string to a fixed-scale decimal string for Mizano money fields. Pure string/digit
- * manipulation: no float arithmetic and no rounding. Arabic-Indic digits (٠-٩) are normalised to 0-9.
+ * manipulation: no float arithmetic and no rounding. Arabic-Indic digits (U+0660–U+0669) are normalised to 0-9.
  *
  * Numbers are read through their shortest round-trip text, so `0.1 + 0.2` (0.30000000000000004) has more
  * decimals than a scale of 2 and is rejected; callers must pass exact values. Trailing zeros past the
@@ -59,7 +59,7 @@ export function toDecimalString(value: number | string, scale = 2): string {
 
   const text = String(value)
     .trim()
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660));
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660));
   const m = /^([+-]?)(\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(text);
   if (!m || (m[2] === "" && m[3] === undefined)) {
     throw new Error("toDecimalString: invalid decimal value");
