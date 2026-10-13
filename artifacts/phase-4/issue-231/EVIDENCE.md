@@ -13,29 +13,46 @@ tests, so the tests run and pass on a `main`-based branch. A tests-only branch c
 | `docs/DEVELOPER_GUIDE.md` | documents the helper, its no-rounding/no-truncation policy and its rejection of Persian digits / `٫` |
 | this file | evidence |
 
-Tested SHA: `348b9f56f58140bdba7c737d964f42998c5c04f7` (branch `ai/231`, 2026-10-14; commits after it are this
-evidence file and the one-line `DEVELOPER_GUIDE.md` update only — the tests and helper are unchanged).
+Tested SHA: `e7e6ff22d1db85dc65bec39e7cdce96e89d04e72` (branch `ai/231`, 2026-10-14). The only commit after it
+is this evidence file; the helper and the tests are unchanged by it.
 
 ```
-$ nice -n 10 pnpm exec vitest run --project unit tests/unit/lib-format.test.ts --maxWorkers=2
+$ nice -n 10 pnpm exec vitest run --project unit tests/unit/lib-format.test.ts tests/unit/latin-digits.test.ts --maxWorkers=2
  RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-231
 
- Test Files  1 passed (1)
-      Tests  85 passed (85)
-   Start at  02:18:49
-   Duration  204ms (transform 59%, import 24%, tests 16%, worker 1%)
+ Test Files  2 passed (2)
+      Tests  88 passed (88)
+   Start at  02:26:32
+   Duration  247ms (tests 49%, transform 36%, import 13%, worker 2%)
 
 $ pnpm typecheck
 > tsc --noEmit            # exit 0, no output
-$ pnpm exec eslint src/lib/format.ts tests/unit/lib-format.test.ts
+$ pnpm exec eslint src/lib/format.ts tests/unit/lib-format.test.ts tests/unit/latin-digits.test.ts
 # exit 0, no output
 ```
 
-85 executed, 0 failed, 0 skipped (the file also pins `percent`, `pretty`, `initials`, `duration`, `timeAgo`).
+88 executed, 0 failed, 0 skipped: 85 in `tests/unit/lib-format.test.ts` (the file also pins `percent`,
+`pretty`, `initials`, `duration`, `timeAgo`) and 3 in `tests/unit/latin-digits.test.ts`.
+
+### CI regression fixed on this branch (`src/lib/format.ts:39,62`)
+
+The first CI run for this PR (run 38483680909, job 115592126340, merge SHA `b97d81d`) failed the static leg
+on **1 unit test, 1586 passed**: `tests/unit/latin-digits.test.ts:34` — that product-rule test (owner
+2026-10-01: digits are always 0–9 across the product) scans every `src/**/*.ts(x)` line for literal
+Arabic-Indic (U+0660–U+0669) or Persian (U+06F0–U+06F9) digits and exempts only the input-normalisation
+table in `src/company-builder/packs/customer-follow-up.ts`. The helper embedded those characters literally
+in its JSDoc (`:39`) and its normalisation regex (`:62`).
+
+Fix: reference the code points as `\u0660-\u0669` in the regex and `U+0660–U+0669` in the JSDoc. The
+character class `String.prototype.replace` sees is identical, so behaviour is unchanged, and the
+product-rule test stays strict instead of being widened with a second exemption. The failing assertion is
+the regression test: it reported `[ 'src/lib/format.ts:39', 'src/lib/format.ts:62' ]` before the fix and
+`[]` after it (3/3 pass now).
 
 ## Acceptance criteria — verified on this branch (not on `ai/146`)
 
-Line numbers are from `tests/unit/lib-format.test.ts` on `348b9f5`.
+Line numbers are from `tests/unit/lib-format.test.ts` on `e7e6ff2` (unchanged since `348b9f5`: the fix at
+`:39`/`:62` and this file are the only commits in between).
 
 | AC | Test (file:line) | Assertion |
 |---|---|---|
@@ -52,9 +69,12 @@ Scale-0 is not special: `describe("scale 0 (integer) cases")` (`:367`–`:399`) 
 
 ## Reconciliation with PR #212 (`ai/146`) and #230
 
-- **`ai/146` (PR #212)** is the canonical helper. After this branch's fix the `toDecimalString` **body is
-  identical** to `ai/146`'s (verified with `diff`; the only difference is two explanatory comment lines in
-  this branch). These tests exercise exactly that behaviour.
+- **`ai/146` (PR #212)** is the canonical helper. After this branch's fix the `toDecimalString` **logic is
+  identical** to `ai/146`'s: the only differences in the body are two explanatory comment lines (scale-0) and
+  the Arabic-Indic normalisation written as `[\u0660-\u0669]` instead of the literal characters, so the
+  product-rule scan (`tests/unit/latin-digits.test.ts`) passes; the JSDoc spells the same range as
+  `U+0660–U+0669`. Both forms compile to the same character class, so behaviour is unchanged. These tests
+  exercise exactly that behaviour.
 - **`ai/230`** is a second, **divergent** implementation: it returns `RangeError` with different messages,
   **accepts** Persian digits (`۰-۹`) and the Arabic decimal separator `٫`, and normalises them — the opposite
   of the `ai/146` policy this branch tests. It must not merge as-is over `ai/146`; see #249/#230.
