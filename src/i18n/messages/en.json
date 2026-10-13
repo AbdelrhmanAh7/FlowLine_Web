@@ -2084,6 +2084,7 @@
     },
     "viewer": "Viewers can't create flows",
     "offline": "You're offline — reconnect to create flows",
+    "actionsMissing": "This template needs app actions that aren't available yet",
     "requirements": "Requirements",
     "req": {
       "builtIn": "Built in",

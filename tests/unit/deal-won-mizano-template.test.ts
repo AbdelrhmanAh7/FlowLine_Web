@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DESIGN_TEMPLATES } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, missingTemplateActions } from "@/engine/design-templates";
+import { getAction } from "@/integrations/registry";
 import { executeGraph, NodeError, sampleInputFor, type HostHandler } from "@/engine/execute";
 import type { FlowGraph } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
@@ -42,6 +43,18 @@ function mockMizano(decision: "pending" | "approved" | "rejected") {
 }
 
 describe("Deal won → Mizano quote template", () => {
+  it("lists the actions it calls that no adapter provides, so the gallery and createFlow can hold it back", () => {
+    const registry = { has: (id: string) => getAction(id) !== undefined };
+    const calledIds = ["mizano.create_customer", "mizano.create_draft_quote", "slack.post_message"];
+    expect(missingTemplateActions(tpl.graph, new Set())).toEqual(calledIds);
+    expect(missingTemplateActions(tpl.graph, new Set(calledIds))).toEqual([]);
+    // Against the real registry: exactly the Mizano actions that are not registered yet (none once #147 is merged); Slack always resolves.
+    expect(missingTemplateActions(tpl.graph, registry)).toEqual(calledIds.filter((id) => !registry.has(id)));
+    expect(registry.has("slack.post_message")).toBe(true);
+    // The check does not hold back any other template.
+    for (const other of DESIGN_TEMPLATES.filter((t) => t.id !== tpl.id)) expect(missingTemplateActions(other.graph, registry), other.id).toEqual([]);
+  });
+
   it("needs only the Mizano and Slack connections, and nothing else, before it can run", () => {
     expect(validateGraph(setUp())).toEqual([]);
     expect(validateGraph(tpl.graph).map((i) => i.code)).toEqual(["MISSING_CONNECTION", "MISSING_CONNECTION", "MISSING_CONNECTION", "SETUP_REQUIRED"]);

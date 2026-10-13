@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
-import { DESIGN_TEMPLATES, type DesignTemplate } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, missingTemplateActions, type DesignTemplate } from "@/engine/design-templates";
 import { useAiOverview, type AiStatusDto } from "@/lib/ai";
-import { useConnections } from "@/lib/catalog";
+import { useCatalog, useConnections } from "@/lib/catalog";
+import type { FlowGraph } from "@/engine/types";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
@@ -44,6 +45,10 @@ export default function TemplatesPage() {
   };
   const local = useMemo(() => LOCAL_TEMPLATES.filter(match("localTemplates")), [cat, q, t]); // eslint-disable-line react-hooks/exhaustive-deps
   const planned = useMemo(() => DESIGN_TEMPLATES.filter(match("designTemplates")), [cat, q, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  const catalog = useCatalog(workspace.id);
+  const available = useMemo(() => new Set(catalog.data?.providers.flatMap((p) => p.actions.map((a) => a.id))), [catalog.data]);
+  // Until the catalog loads nothing is blocked; the server refuses a template with missing actions anyway.
+  const blockedReason = (tpl: { graph: FlowGraph }) => (catalog.data && missingTemplateActions(tpl.graph, available).length > 0 ? t("templates.actionsMissing") : null);
   const useReason = !canEdit ? t("templates.viewer") : !online ? t("templates.offline") : null;
   const categoryLabel = (c: string) => (c === "All" ? t("templates.all") : tr(t, `templateCategory.${c}`, c));
 
@@ -156,7 +161,7 @@ export default function TemplatesPage() {
                             <span className="data text-xs text-muted uppercase">
                               {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
                             </span>
-                            <Button size="sm" variant="primary" disabledReason={useReason} loading={create.isPending && create.variables?.templateId === tpl.id} onClick={() => create.mutate({ templateId: tpl.id })}>
+                            <Button size="sm" variant="primary" disabledReason={useReason ?? blockedReason(tpl)} loading={create.isPending && create.variables?.templateId === tpl.id} onClick={() => create.mutate({ templateId: tpl.id })}>
                               {t("templates.use")}
                             </Button>
                           </div>

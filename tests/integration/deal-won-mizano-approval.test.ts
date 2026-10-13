@@ -9,6 +9,7 @@ import mizano from "@/integrations/providers/mizano";
 import type { ActionDef } from "@/integrations/types";
 import { decide } from "@/server/approvals";
 import { createConnection } from "@/server/connections";
+import { getAction } from "@/integrations/registry";
 import { createFlow, saveFlow } from "@/server/flows";
 import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
@@ -22,35 +23,48 @@ import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers"
  */
 let fake: Fake;
 const calls: { action: string; args: unknown }[] = [];
-const added: ActionDef[] = [];
 const realIdentity = mizano.identity;
+/** Undo for each action we touched: remove the stand-in we pushed, or put back the real `run` we replaced. */
+const restore: (() => void)[] = [];
 
-const stand = (id: string, run: (args: Record<string, unknown>) => unknown): ActionDef =>
-  ({
+/** Record calls to `id`. If #147's real action is registered its `run` is replaced (and restored); otherwise a stand-in is registered. */
+function record(id: string, response: Record<string, unknown>) {
+  const rec = async (_ctx: unknown, args: Record<string, unknown>) => {
+    calls.push({ action: id, args });
+    return response; // realistic: an id, not an echo of the request
+  };
+  const existing = mizano.actions.find((a) => a.id === id);
+  if (existing) {
+    const real = existing.run;
+    existing.run = rec as unknown as ActionDef["run"];
+    restore.push(() => void (existing.run = real));
+    return;
+  }
+  const stand = {
     id,
     version: 1,
     provider: "mizano",
     title: id,
     description: id,
     input: z.record(z.string(), z.unknown()),
-    // Realistic Mizano responses: they carry ids and totals only, they do not echo the request.
     output: z.record(z.string(), z.unknown()),
     sideEffect: "non_idempotent",
     requiredScopes: [],
-    async run(_ctx: unknown, args: Record<string, unknown>) {
-      calls.push({ action: id, args });
-      return run(args);
-    },
-  }) as unknown as ActionDef;
+    run: rec,
+  } as unknown as ActionDef;
+  mizano.actions.push(stand);
+  restore.push(() => {
+    const i = mizano.actions.indexOf(stand);
+    if (i !== -1) mizano.actions.splice(i, 1);
+  });
+}
 
 beforeAll(async () => {
   fake = await startFake();
   mizano.identity = async () => ({ accountId: "mz-test", label: "Mizano test" });
-  added.push(stand("mizano.create_customer", () => ({ id: "cust-1" })), stand("mizano.create_draft_quote", () => ({ id: "Q-1" })));
-  mizano.actions.push(...added);
 });
 afterAll(async () => {
-  for (const a of added) mizano.actions.splice(mizano.actions.indexOf(a), 1);
+  while (restore.length) restore.pop()!();
   mizano.identity = realIdentity;
   stopSandbox();
   await fake.close();
@@ -79,7 +93,28 @@ async function startRun() {
   return { user, ws, run, approval: approval! };
 }
 
+describe("Deal won → Mizano quote: availability", () => {
+  it("is refused with TEMPLATE_UNAVAILABLE while an action it calls is not registered, and allowed once it is", async () => {
+    const user = await makeUser("dwm-avail");
+    const ws = await createWorkspace(user, unique("DealWonAvail"));
+    const missing = ["mizano.create_customer", "mizano.create_draft_quote"].filter((id) => !getAction(id));
+    if (missing.length > 0) {
+      await expect(createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" })).rejects.toMatchObject({ status: 409, code: "TEMPLATE_UNAVAILABLE" });
+    }
+    record("mizano.create_customer", { id: "cust-1" });
+    record("mizano.create_draft_quote", { id: "Q-1" });
+    const flow = await createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" });
+    expect(flow.templateId).toBe("deal-won-mizano-quote");
+    while (restore.length) restore.pop()!(); // later tests register their own recorders
+  });
+});
+
 describe("Deal won → Mizano quote: real worker approval path", () => {
+  beforeAll(() => {
+    record("mizano.create_customer", { id: "cust-1" });
+    record("mizano.create_draft_quote", { id: "Q-1" });
+  });
+
   it("waits for approval with nothing sent to Mizano, shows the customer, then runs once approved", async () => {
     const { user, ws, run, approval } = await startRun();
     expect((await freshRun(run.id)).status).toBe("waiting_approval");

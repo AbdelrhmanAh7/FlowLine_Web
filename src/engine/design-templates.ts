@@ -19,6 +19,12 @@ export interface DesignTemplate {
   graph: FlowGraph;
 }
 
+/** Action ids the template's steps call that are not in `available` (the provider registry / catalog). A template with any can't run yet. */
+export function missingTemplateActions(graph: FlowGraph, available: { has(actionId: string): boolean }): string[] {
+  const ids = graph.nodes.flatMap((node) => (node.type === "integration.action" ? [String((node.data.config as { actionId?: unknown }).actionId ?? "")] : []));
+  return [...new Set(ids.filter((id) => id && !available.has(id)))];
+}
+
 const J = (v: unknown) => JSON.stringify(v, null, 2);
 let e = 0;
 const edge = (source: string, target: string, sourceHandle: string | null = null): FlowEdge => ({ id: `te${++e}-${source}-${target}`, source, target, sourceHandle });
