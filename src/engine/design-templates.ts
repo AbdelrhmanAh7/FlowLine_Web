@@ -252,7 +252,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
         }),
         act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", "customer", { requireApproval: true }),
         act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", '{\n  "customerId": id,\n  "currency": $steps.prepare.currency,\n  "lines": $steps.prepare.lines\n}'),
-        act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.customer.company & " (" & $count(lines) & " lines)"\n}'),
+        act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.prepare.customer.company & " (" & $count($steps.prepare.lines) & " lines)"\n}'),
         n("skipped", "output", "Deal not won", 520, 280, { key: "status", expression: '"deal not won: nothing sent to Mizano"' }),
       ],
       edges: [edge("deal", "won"), edge("won", "prepare", "true"), edge("prepare", "customer"), edge("customer", "quote"), edge("quote", "notify"), edge("won", "skipped", "false")],

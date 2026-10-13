@@ -5,8 +5,9 @@ import type { FlowGraph } from "@/engine/types";
 import { validateGraph } from "@/engine/validate";
 
 /**
- * "Deal won → Mizano quote" run through the engine with a mocked Mizano: a host handler stands in for the worker,
- * applying the same approval gate (a pending approval pauses the run, a rejection fails it before the call).
+ * "Deal won → Mizano quote" run through the engine with a mocked Mizano: a host handler stands in for the worker's approval gate.
+ * This checks the graph wiring and data flow; the real worker, approval and rejection path is
+ * tests/integration/deal-won-mizano-approval.test.ts.
  */
 
 const tpl = DESIGN_TEMPLATES.find((t) => t.id === "deal-won-mizano-quote")!;
@@ -33,8 +34,8 @@ function mockMizano(decision: "pending" | "approved" | "rejected") {
       if (decision === "rejected") throw new NodeError("APPROVAL_REJECTED", `${cfg.actionId} was rejected`);
     }
     calls.push({ action: cfg.actionId, args });
-    if (cfg.actionId === "mizano.create_customer") return { kind: "ok", output: { id: "cust-1", ...args } };
-    if (cfg.actionId === "mizano.create_draft_quote") return { kind: "ok", output: { id: "Q-1", ...args } };
+    if (cfg.actionId === "mizano.create_customer") return { kind: "ok", output: { id: "cust-1" } }; // like Mizano: an id, not an echo of the request
+    if (cfg.actionId === "mizano.create_draft_quote") return { kind: "ok", output: { id: "Q-1" } };
     return { kind: "ok", output: { ok: true } };
   };
   return { calls, handler };
