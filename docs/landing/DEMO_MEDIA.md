@@ -11,7 +11,8 @@ umbrella: [#96](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/96).
 **The manifest is the only coupling.** `src/lib/demo-media.ts` reads `public/media/demo/manifest.json` on the server (`schema: 1`,
 a `hero` clip required). Missing, unreadable or invalid: `readDemoManifest` returns `null` and the page renders exactly as before
 (today's `HeroPin` illustration, no section, no button, no console output). Malformed clips and files are dropped; file paths must
-be plain names (no folders).
+be plain names (no folders). Note: production performance (Lighthouse, CLS), actual client gzip and real-media HTTP headers/Range
+delivery are unverified until #99 media lands and a production build is measured.
 
 | Piece | File | What it does |
 |---|---|---|

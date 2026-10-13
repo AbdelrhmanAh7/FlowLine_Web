@@ -66,9 +66,12 @@ function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
     // Choosing the file does not download it (preload="none"); bytes flow only when the visitor, or autoplay below, starts playback.
     if (!(await attachSource(v, view.sources, true))) { setNoVideo(true); return; }
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-    if (!shouldSkipVideo(window.matchMedia(REDUCED_MOTION).matches, conn)) {
+    const reduced = window.matchMedia(REDUCED_MOTION).matches;
+    if (!shouldSkipVideo(reduced, conn)) {
       v.muted = true;
       if (await startPlayback(v, () => { /* blocked: the native controls are right there */ })) setNoVideo(false);
+    } else {
+      setNoVideo(true);
     }
   };
 

@@ -48,7 +48,7 @@ Existing pause/retry regression tests were exercised, rather than inferred from 
 | AC4 dialog, captions, stepper, RTL keys, stills, media-error retry | Chromium EN/AR demo tests + army AC4 | Passed |
 | AC5 bento layout, copy and lazy video | Chromium desktop/phone tests + army AC5 | Passed |
 | AC6 EN/AR overflow 360/768/1024/1440, keys | Chromium demo/landing tests + unit i18n test | Passed |
-| AC7 production Lighthouse before/after, measured CLS, actual added gzip, immutable/Range delivery | Header configuration unit test only | **Pending production measurements and real-media HTTP test** |
+| AC7 production Lighthouse before/after, measured CLS, actual added gzip, immutable/Range delivery | Header configuration unit test only | **Pending production measurements and real-media HTTP test** (AC7 is marked unverified) |
 | AC8 missing manifest | Chromium fallback test + reader unit tests | Passed |
 | AC9 relevant tests | 46 browser + 4 army + 35 unit passed; 1 real-media browser test skipped | Focused runs passed; complete matrix pending skipped test and hosted CI |
 | AC10 docs | Consumption guide, this report, active phase ledger and NEXT_ACTION | Updated; completion remains pending |
