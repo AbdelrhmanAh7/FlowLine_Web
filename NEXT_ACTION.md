@@ -1,5 +1,15 @@
 # Next action — 2026-10-03
 
+## Issue #198 — prerequisite missing (2026-10-13)
+
+Blocked: #197 is open and refreshed main (`9c754b2`) lacks the enrolment
+component and account-security E2E spec; #196's page is absent too. Requeue
+after both prerequisites merge and rebase `ai/198`, then start with the
+test-only e2e-army commit. No QR implementation or validation is claimed;
+see [AI_QUESTIONS.md](AI_QUESTIONS.md) and the
+[status ledger](docs/implementation/ISSUE_198_STATUS.md). Do not close #198
+or #195 from this docs-only handoff.
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
