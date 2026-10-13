@@ -56,8 +56,17 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   });
 }
 
-// A reply that hands the decision to a generic team member contradicts "refunds and cancellations are decided by the owner".
-const TEAM_DECIDER = /member of (?:our|the) team|(?:our|the) team (?:will|shall)|team member (?:will|shall)/i;
+// A reply that hands the decision to someone other than the owner contradicts "refunds and cancellations are decided by
+// the owner". It is the decision/review verb that must be attached to the non-owner party: "a member of our team will
+// contact you with that decision" does not decide anything, "the billing manager will decide" does. The gap between
+// party and verb stops at punctuation, so "the owner will decide; a team member will contact you" is not misread.
+const NON_OWNER = "(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)";
+const DECISION_VERB = "(?:decide|review|approve|reject|refuse|grant|handle|process|assess|determine)";
+const TEAM_DECIDER = new RegExp(
+  `\\b${NON_OWNER}\\b[^.!?\\n;,]{0,40}?\\b(?:will|shall|would|must|can|may)\\s+(?:also\\s+|then\\s+)?${DECISION_VERB}\\b` +
+    `|\\b(?:decided|reviewed|approved|rejected|handled|processed|assessed|determined)\\s+by\\s+(?:our|the|a|an)\\s+${NON_OWNER}\\b`,
+  "i",
+);
 
 /**
  * VP-05/VP-06: the reply's own wording must attribute the decision to the owner (any phrase, case-insensitive) and

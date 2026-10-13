@@ -93,4 +93,28 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
   it("passes a policy quote when the reply itself says the owner decides", () => {
     expect(scoreOwnerDecision(`${POLICY}\n\nThe owner will decide on your refund.`, OWNER, [POLICY])).toBe(true);
   });
+  it("does not misread a team member who only relays the owner's decision (reviewer P1 shape)", () => {
+    expect(scoreOwnerDecision("The owner will decide on the refund; a member of our team will contact you with that decision.", OWNER, [POLICY])).toBe(true);
+    expect(scoreOwnerDecision("The owner will decide. Our team will get back to you by phone.", OWNER, [POLICY])).toBe(true);
+  });
+  it("fails a non-owner decider even when the owner is named elsewhere or the policy line is quoted", () => {
+    expect(scoreOwnerDecision(`${POLICY}\n\nThe billing manager will decide on your refund.`, OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("The owner will decide in general, but the billing manager will decide this refund.", OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("The owner will decide. Your request is reviewed by the support team.", OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("The owner will decide. Our staff can approve it today.", OWNER, [POLICY])).toBe(false);
+  });
+  it("VP-06 shape: the refund-policy line is not in mustQuote, but stripping every approved line still rejects it", () => {
+    const vp06 = v2.expected["VP-06"];
+    expect(vp06.mustQuote).not.toContain(POLICY);
+    expect(scoreOwnerDecision(`${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER, v2.approvedInformation)).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\nNothing has been refunded or cancelled yet.`, OWNER, vp06.mustQuote)).toBe(true); // the old strip list: the loophole
+  });
+  it("re-scores the committed run-4 replies under the current scorer (not a new run)", () => {
+    const run4 = JSON.parse(readFileSync("artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run4-r4-f74285c/results.json", "utf8"));
+    const body = (id: string) => (run4.results.find((r: { id: string }) => r.id === id).reply.body as string);
+    const approved = () => v2.approvedInformation as string[]; // what field.spec.ts strips (every approved line)
+    expect(scoreClosedDay(body("VP-03"), v2.expected["VP-03"].date)).toBe(false);
+    expect(scoreOwnerDecision(body("VP-05"), OWNER, approved())).toBe(false);
+    expect(scoreOwnerDecision(body("VP-06"), OWNER, approved())).toBe(false);
+  });
 });

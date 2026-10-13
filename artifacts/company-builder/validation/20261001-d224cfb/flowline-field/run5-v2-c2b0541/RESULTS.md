@@ -17,7 +17,7 @@
 
 ## What changed (v2 vs v1)
 - VP-03 (closed day): requested date 2026-10-09 is a Friday. The business works Saturday to Thursday. Evaluator v2 adds `closedDay: true` and the corresponding check in the scorer: the reply must quote the approved working-hours line `"We work Saturday to Thursday, 9:00 to 18:00."` (and not merely confirm the date as bookable). The scorer (`tests/helpers/fieldScoring.ts` `scoreClosedDay`) also rejects a reply with a sentence that repeats the requested date or names Friday together with a confirming word, unless that sentence says the day is closed or not available (so "We are closed on Fridays." plus the generic "we'll confirm the details" closing passes). Packet dates are date-only ISO strings (UTC midnight), so `getUTCDay() === 5` is the calendar weekday.
-- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording somewhere in the reply; the quoted approved policy line satisfies it. At `c2b0541` it only checked that owner wording is present; the current scorer also fails a reply that names a team member as the decider (`TEAM_DECIDER`, `tests/helpers/fieldScoring.ts`, pinned in `tests/unit/field-scoring.test.ts`).
+- VP-05 and VP-06: evaluator v2 adds `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` (case-insensitive). The scorer (`scoreOwnerDecision`) requires this wording in the reply's own text. At `c2b0541` it only checked that owner wording is present anywhere, so the quoted approved policy line satisfied it (this run's result). The current scorer first strips every approved line of the packet (`packet.approvedInformation`) and then also fails a reply whose decision/review verb is attached to a non-owner party (`TEAM_DECIDER`: "the billing manager will decide", "reviewed by the support team"; a team member who only relays the owner's decision is fine). Both are in `tests/helpers/fieldScoring.ts` and pinned in `tests/unit/field-scoring.test.ts`.
 
 ## Per-VP results (run 5)
 | ID | Passed | Failed checks | Notes |
@@ -36,7 +36,7 @@
 ## Delta vs run 4 and negative controls (committed, reproducible)
 The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI with the unit project; fixture replies, no stack). The run-4 replies below are quoted from `run4-r4-f74285c/results.json`; run 4 itself is not re-scored.
 - **closedDay:** the run-4 VP-03 reply (office price quote, no working-hours line) and the run-5 reply (minimal Arabic confirmation) both score `closedDay=false`; a reply that quotes the hours line passes, including with "We are closed on Fridays." and the generic closing; a reply that quotes the hours line but also confirms 2026-10-09 / Friday (English or Arabic digits) fails; a non-Friday date fails the check.
-- **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line and passed at `c2b0541`; whether they still pass under `TEAM_DECIDER` (they also contain the generic team note) is unverified because the run was not re-scored. The rejecting cases are the unit tests above.
+- **ownerDecision:** a reply with only the generic "A member of our team will review your request and confirm the next step." note scores `ownerDecision=false`; "The owner will decide…" (any case) and the quoted policy line "reviewed by the owner" pass. The run-4 and run-5 VP-05/VP-06 replies carry the policy line and passed at `c2b0541`; the run-4 VP-05/VP-06 replies are re-scored offline under the current scorer by a unit test (`re-scores the committed run-4 replies…`, not a new run): **`ownerDecision` = false for both** (the policy line is stripped and the product's own note is "A member of our team will review…", a non-owner decider), and `closedDay` = false for VP-03. Run 5's raw `results.json` is not committed, so its replies cannot be re-scored here; the product text for VP-05/VP-06 is unchanged since run 4 (no product code changed), so the same outcome is expected, but that is not measured.
 - Run 4 VP-06 still fails only on VF-02 (`noPromise:cancelled`).
 
 ## Notes (important)
@@ -49,8 +49,8 @@ The two new checks are pinned by `tests/unit/field-scoring.test.ts` (runs in CI 
 - `01-plan-en.png` — generated plan (English)
 - `02-latest-result-en.png` — latest result view
 
-## Results JSON (committed)
-- `results.json` — full run output as written by `field.spec.ts` (attached to the PR, not committed)
+## Results JSON (not committed)
+- `results.json` — full run output as written by `field.spec.ts`; attached to the PR, not committed (AGENTS.md evidence rule)
 
 ## Decisions
 - **Scoring record:** the scoring record for #142 is a run on the current head scored by the merged scorer (`run6-v2-<sha>`, `PACKET=packet.v2.json`). It has NOT been recorded yet: it needs a live isolated stack plus a model, which the implementer environment of the last review round did not have. Until then this run 5 is historical (scored at `c2b0541`) and the 8/10 is not the current scorer's verdict. If the run-4/5 VP-05/VP-06 replies fail `ownerDecision` under `TEAM_DECIDER`, that is a product follow-up (VO-07), not a reason to weaken the scorer.
