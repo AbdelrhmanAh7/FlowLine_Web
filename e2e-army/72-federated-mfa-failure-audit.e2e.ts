@@ -21,14 +21,15 @@ async function signedIn(base: string, email: string) {
   // A re-run on the same stack finds the account already there; sign-in below still has to succeed.
   const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD, name: "Army Bot" }) });
   if (up.ok) {
-    let token: string | null = null;
-    for (let i = 0; i < 24 && !token; i++) {
+    let token = null as string | null;
+    // the outbox is written after the sign-up response: poll until the verify mail is there (bounded by the poll timeout, no fixed delay)
+    await expect.poll(async () => {
       const r = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: h });
       const messages: { purpose?: string; link?: string }[] = (await r.json().catch(() => ({ messages: [] }))).messages ?? [];
       const link = messages.find((m) => m.purpose === "verify")?.link;
       token = link ? new URL(link).searchParams.get("token") : null;
-      if (!token) await new Promise((r) => setTimeout(r, 500)); // the outbox is written after the sign-up response
-    }
+      return token !== null;
+    }, { timeout: 12_000, interval: 250, message: "no verification e-mail in the test outbox" }).toBe(true);
     if (!token) throw new Error("no verification e-mail in the test outbox");
     const v = await fetch(`${base}/api/email`, { method: "POST", headers: h, body: JSON.stringify({ action: "verify", token }) });
     if (!v.ok) throw new Error(`verify ${v.status}`);
