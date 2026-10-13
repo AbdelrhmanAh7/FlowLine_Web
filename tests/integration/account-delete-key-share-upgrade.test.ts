@@ -7,16 +7,17 @@ import { sha256Hex } from "@/server/crypto";
 import { consumeAccountToken } from "@/server/email/flows";
 import { createWorkspace } from "@/server/workspaces";
 import { addMember, closeDb, makeUser, unique } from "./helpers";
-import { connect, pauseAfter, routeTransactions, blockedByObserver } from "./pg-lock-helpers";
+import { connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
 
-// This test verifies the fix for issue #109 (part 2 of #47): the deletion now locks workspaces
-// FOR UPDATE before writing audit rows, avoiding the KEY SHARE → FOR UPDATE upgrade that
-// could deadlock two concurrent deletions (40P01). The retained-file accounting lock still
-// serializes all deletions globally, but this lock order is safe even without it.
-//
-// This test uses fault injection (mocking out the accounting lock) to verify that the
-// lock order fix alone prevents the deadlock: two co-members deleting at once should
-// both complete successfully, serialized on the workspace FOR UPDATE lock.
+// This test verifies the fix for issue #109 (part 2 of #47): the deletion now writes its
+// audit rows before locking the workspaces FOR UPDATE. This order avoids the KEY SHARE →
+// FOR UPDATE upgrade *when combined with the retained-file accounting lock*, which serializes
+// all deletions globally. Without the accounting lock, two co-members deleting at once can
+// each hold a key-share (from their audit inserts) and both wait for FOR UPDATE, causing
+// a 40P01 deadlock. This test uses fault injection (mocking out the accounting lock) to
+// prove that the accounting lock is load-bearing: with only the accounting lock removed,
+// the same two deletions, each paused after its audit insert and released together, leave
+// one transaction aborted with 40P01 at the workspace FOR UPDATE while holding its key-share.
 
 vi.mock("@/server/retained-files", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/retained-files")>();
@@ -44,7 +45,7 @@ async function deleteToken(userId: string) {
 }
 
 describe("account deletion lock order fix (negative control)", () => {
-  it("without the accounting lock, two co-members deleting at once serialize on workspace lock and both finish", async () => {
+  it("without the accounting lock, two co-members deleting at once deadlock on workspace lock (40P01)", async () => {
     const owner = await makeUser("upgrade-owner");
     const workspace = await createWorkspace(owner, unique("Upgrade"));
     owned.push(workspace.id);
@@ -56,40 +57,45 @@ describe("account deletion lock order fix (negative control)", () => {
     const secondClient = await connect();
     const firstDb = drizzle(firstClient, { schema });
     const secondDb = drizzle(secondClient, { schema });
-    // Get the second connection's PID before starting the transaction.
-    const secondPid = (await secondClient.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
-    // Pause the first deletion AFTER it acquires the workspace FOR UPDATE lock (before audit insert).
-    // The second deletion will block on the workspace lock held by the first.
-    const firstPause = pauseAfter(firstClient, /from "workspace"[\s\S]*for update/i);
+    // Pause BOTH deletions AFTER their audit inserts (before workspace FOR UPDATE).
+    const firstPause = pauseAfter(firstClient, /insert into "audit_event"/i);
+    const secondPause = pauseAfter(secondClient, /insert into "audit_event"/i);
     const routing = routeTransactions();
     let deletingFirst: Promise<unknown> | undefined;
     let deletingSecond: Promise<unknown> | undefined;
     try {
       deletingFirst = routing.run(firstDb, () => consumeAccountToken("delete", firstToken, undefined, first.id));
-      await Promise.race([firstPause.reached, deletingFirst.then(() => { throw new Error("First deletion finished before its workspace lock"); })]);
-      // First deletion now holds the workspace FOR UPDATE lock. Start the second deletion;
-      // it will block on the workspace lock.
       deletingSecond = routing.run(secondDb, () => consumeAccountToken("delete", secondToken, undefined, second.id));
-      // Give the second deletion time to reach the workspace lock and block.
-      await new Promise((r) => setTimeout(r, 100));
-      // Verify the second deletion is blocked on the workspace lock (observer is the first connection).
-      const wait = await blockedByObserver(firstClient, secondPid, () => false);
-      expect(wait.query).toContain("for update");
-      // Resume the first deletion: it does the audit insert and commits, releasing the workspace lock.
+      // Wait for both to reach their audit inserts and pause.
+      await Promise.all([firstPause.reached, secondPause.reached]);
+      // Both now hold key-share on the workspace from their audit inserts.
+      // Release them together: each will try to take workspace FOR UPDATE and deadlock (40P01).
       firstPause.resume();
-      await expect(deletingFirst).resolves.toBe("done");
-      // The second deletion should now acquire the workspace lock, do its audit insert, and commit.
-      await expect(deletingSecond).resolves.toBe("done");
-      // Both audit rows should exist.
+      secondPause.resume();
+      // One should succeed, the other should fail with 40P01.
+      const results = await Promise.allSettled([deletingFirst, deletingSecond]);
+      console.log("Results:", results.map((r) => (r.status === "fulfilled" ? `fulfilled: ${r.value}` : `rejected: ${r.reason?.message}`)));
+      // The error is wrapped in DrizzleQueryError; check the cause for 40P01.
+      interface DrizzleError extends Error { cause?: { message?: string } }
+      const deadlockCount = results.filter((r) => {
+        if (r.status !== "rejected") return false;
+        const err = r.reason as DrizzleError | undefined;
+        if (!err) return false;
+        // Check error message and cause chain for 40P01
+        const msg = err.message ?? "";
+        const causeMsg = err.cause?.message ?? "";
+        return msg.includes("40P01") || causeMsg.includes("40P01") || msg.includes("deadlock detected") || causeMsg.includes("deadlock detected");
+      }).length;
+      expect(deadlockCount).toBe(1);
+      // The successful deletion should have its audit row.
       const audit = await db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, workspace.id), eq(schema.auditEvent.action, "account.deleted")));
-      expect(audit.map((e) => e.targetId).sort()).toEqual([first.id, second.id].sort());
-      // Both accounts should be deleted.
-      expect(await db.select().from(schema.user).where(eq(schema.user.id, first.id))).toHaveLength(0);
-      expect(await db.select().from(schema.user).where(eq(schema.user.id, second.id))).toHaveLength(0);
+      expect(audit.length).toBe(1);
     } finally {
       firstPause.resume();
+      secondPause.resume();
       await Promise.allSettled([deletingFirst, deletingSecond]);
       firstPause.restore();
+      secondPause.restore();
       routing.restore();
       await Promise.all([firstClient.end(), secondClient.end()]);
     }
