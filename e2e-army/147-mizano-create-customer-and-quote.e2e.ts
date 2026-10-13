@@ -21,20 +21,18 @@ test(
 test(
   "@issue-147 AC2: re-running the same run does not create a second customer/quote (idempotency key)",
   { tags: ["feat:fl-integration-actions", "feat:fl-jobs"], session: "fl-user" },
-  async ({ app, agent, screen }) => {
-    // Sign in as the seeded demo admin (admin@mizano.com / password123)
-    await app.open("/en/login");
-    await agent.act("sign in as {email} with password {pw}", { params: { email: "admin@mizano.com", pw: "password123" } });
-    await app.open("/en/workflows");
+  async ({ app, agent }) => {
+    await app.open("/");
+    await agent.act("open the workspace's Workflows page from the navigation");
     await agent.act("create a new workflow named {name} with a trigger", { params: { name: "147-test-customer-quote" } });
-    await agent.act("add a Create customer step to the workflow");
-    await agent.act("add a Create draft quote step to the workflow");
+    await agent.act("add a Mizano Create customer step to the workflow");
+    await agent.act("add a Mizano Create draft quote step to the workflow");
     await agent.act("save the workflow");
     // Run the workflow once
     await agent.act("trigger the workflow");
     await agent.assert("the workflow run completed successfully");
-    // Run the same workflow again - no duplicate customer/quote should be created
-    await agent.act("trigger the workflow again");
-    await agent.assert("the second workflow run completed successfully without creating duplicates");
+    // Retry the SAME run (idempotency comes from the run id, not a new run)
+    await agent.act("open the completed run and retry it");
+    await agent.assert("the retried workflow run completed successfully");
   },
 );

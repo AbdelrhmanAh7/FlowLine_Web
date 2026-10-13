@@ -168,7 +168,7 @@ describe("mizano.list_overdue_invoices", () => {
 
     it("is registered as a write action", () => {
       const found = getAction("mizano.create_customer");
-      expect(found?.action.sideEffect).toBe("none");
+      expect(found?.action.sideEffect).toBe("idempotent");
       expect(found?.provider.id).toBe("mizano");
     });
 
@@ -261,7 +261,7 @@ describe("mizano.list_overdue_invoices", () => {
 
     it("is registered as a write action", () => {
       const found = getAction("mizano.create_draft_quote");
-      expect(found?.action.sideEffect).toBe("none");
+      expect(found?.action.sideEffect).toBe("idempotent");
       expect(found?.provider.id).toBe("mizano");
     });
 
@@ -308,7 +308,7 @@ describe("mizano.list_overdue_invoices", () => {
       await expect(
         runAction("mizano.create_draft_quote", ctx, {
           customerId: "cust_123",
-          currency: "XYZ",
+          currency: "xyz",
           lines: [
             { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
           ],
@@ -356,7 +356,15 @@ describe("mizano.list_overdue_invoices", () => {
     });
 
     it("accepts decimal strings for qty, unitPrice, and taxRate", async () => {
-      const { ctx } = ctxReturning(quoteResponse);
+      const decimalQuote = {
+        id: "quote_456",
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [
+          { item: "Consulting", qty: "10.5", unitPrice: "500.50", taxRate: "15.75" },
+        ],
+      };
+      const { ctx } = ctxReturning(decimalQuote);
       const out = await runAction("mizano.create_draft_quote", ctx, {
         customerId: "cust_123",
         currency: "EGP",
@@ -364,9 +372,10 @@ describe("mizano.list_overdue_invoices", () => {
           { item: "Consulting", qty: "10.5", unitPrice: "500.50", taxRate: "15.75" },
         ],
       });
-      expect(out.lines[0].qty).toBe("10.5");
-      expect(out.lines[0].unitPrice).toBe("500.50");
-      expect(out.lines[0].taxRate).toBe("15.75");
+      const q = out as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+      expect(q.lines[0].qty).toBe("10.5");
+      expect(q.lines[0].unitPrice).toBe("500.50");
+      expect(q.lines[0].taxRate).toBe("15.75");
     });
   });
 });

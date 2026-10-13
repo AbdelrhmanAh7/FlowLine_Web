@@ -41,7 +41,7 @@ const mizanoInvoice = z.object({
   dueDate: z.string().regex(DATE),
 });
 
-const mizanoCustomer = z.object({
+const _mizanoCustomerSchema = z.object({
   id: z.string(),
   name: z.string(),
   company: z.string(),
@@ -49,13 +49,18 @@ const mizanoCustomer = z.object({
   phone: z.string(),
   taxId: z.string().optional(),
 });
+type MizanoCustomer = z.infer<typeof _mizanoCustomerSchema>;
+
+const decimalString = z
+  .string()
+  .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
 
 const provider: ProviderDef = {
   id: "mizano",
   name: "Mizano",
   icon: "📒",
   category: "Finance",
-  description: "Read overdue invoices from Mizano for follow-up.",
+  description: "Mizano accounting connector.",
   authType: "api_key",
   apiBase: "",
   connectFields: [
@@ -83,7 +88,7 @@ const provider: ProviderDef = {
       }),
       output: z.object({
         asOf: z.string().regex(DATE),
-        currency: z.string().length(3),
+        currency: z.string().regex(/^[A-Z]{3}$/),
         invoices: z
           .array(
             z.object({
@@ -141,11 +146,11 @@ const provider: ProviderDef = {
         phone: z.string(),
         taxId: z.string().optional(),
       }),
-      sideEffect: "none",
+      sideEffect: "idempotent",
       requiredScopes: ["customers:create"],
       async run(ctx, input) {
         const idempotencyKey = ctx.idempotencyKey;
-        const { data } = await ctx.http.request<z.infer<typeof mizanoCustomer>>({
+        const { data } = await ctx.http.request<MizanoCustomer>({
           method: "POST",
           path: "/api/customers",
           baseUrl: base(ctx.credentials),
@@ -160,7 +165,7 @@ const provider: ProviderDef = {
             taxId: input.taxId,
           },
         });
-        return data;
+        return data as MizanoCustomer;
       },
     },
     {
@@ -171,30 +176,30 @@ const provider: ProviderDef = {
       description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
       input: z.object({
         customerId: z.string().min(1).max(200),
-        currency: z.string().length(3),
+        currency: z.string().regex(/^[A-Z]{3}$/),
         lines: z.array(
           z.object({
             item: z.string().min(1).max(200),
-            qty: z.string().regex(/^\d+(\.\d{1,2})?$/),
-            unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/),
-            taxRate: z.string().regex(/^\d+(\.\d{1,2})?$/),
+            qty: decimalString,
+            unitPrice: decimalString,
+            taxRate: decimalString,
           }),
         ),
       }),
       output: z.object({
         id: z.string(),
         customerId: z.string(),
-        currency: z.string(),
+        currency: z.string().regex(/^[A-Z]{3}$/),
         lines: z.array(
           z.object({
             item: z.string(),
-            qty: z.string(),
-            unitPrice: z.string(),
-            taxRate: z.string(),
+            qty: decimalString,
+            unitPrice: decimalString,
+            taxRate: decimalString,
           }),
         ),
       }),
-      sideEffect: "none",
+      sideEffect: "idempotent",
       requiredScopes: ["quotes:create"],
       async run(ctx, input) {
         const idempotencyKey = ctx.idempotencyKey;
@@ -208,15 +213,15 @@ const provider: ProviderDef = {
           json: {
             customerId: input.customerId,
             currency: input.currency,
-            lines: input.lines.map((line: { item: string; qty: string; unitPrice: string; taxRate: string }) => ({
-              item: line.item,
-              qty: line.qty,
-              unitPrice: line.unitPrice,
-              taxRate: line.taxRate,
-            })),
+            lines: input.lines,
           },
         });
-        return data;
+        return data as {
+          id: string;
+          customerId: string;
+          currency: string;
+          lines: Array<{ item: string; qty: string; unitPrice: string; taxRate: string }>;
+        };
       },
     },
   ],
