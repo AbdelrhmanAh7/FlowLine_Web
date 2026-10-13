@@ -25,7 +25,15 @@ export function useLocale(): Locale {
 }
 
 export function useDir(): "rtl" | "ltr" {
-  return dirOf(useLocale());
+  // Primary: locale from the translator context (set by server-rendered I18nProvider).
+  // Fallback: document.documentElement.dir (set on <html> by the server layout).
+  // This ensures correct direction even if hydration order or context timing causes a mismatch.
+  const localeDir = dirOf(useLocale());
+  if (typeof document !== "undefined") {
+    const docDir = document.documentElement.dir;
+    if (docDir === "rtl" || docDir === "ltr") return docDir;
+  }
+  return localeDir;
 }
 
 /** Stores the choice in the `fl_locale` cookie and re-renders server components (html lang/dir included). */

@@ -236,10 +236,12 @@ test.describe("with a manifest", () => {
     const dialog = page.getByTestId("demo-walkthrough");
     await expect(dialog.locator("video track[default]")).toHaveAttribute("srclang", "ar");
     const steps = dialog.getByTestId("demo-stepper").locator("[data-chapter]");
-    await steps.nth(1).focus();
-    await page.keyboard.press("ArrowLeft"); // RTL: Left is forward
+    // Start from chapter 1 (index 1), then test RTL arrow key navigation
+    await steps.nth(1).click();
+    await expect(steps.nth(1)).toHaveAttribute("aria-current", "step");
+    await page.keyboard.press("ArrowLeft"); // RTL: Left is forward -> chapter 2
     await expect(steps.nth(2)).toHaveAttribute("aria-current", "step");
-    await page.keyboard.press("ArrowRight"); // RTL: Right is back
+    await page.keyboard.press("ArrowRight"); // RTL: Right is back -> chapter 1
     await expect(steps.nth(1)).toHaveAttribute("aria-current", "step");
     await context.close();
   });

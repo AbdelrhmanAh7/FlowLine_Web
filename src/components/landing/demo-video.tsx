@@ -40,6 +40,8 @@ function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: st
   const [ready, setReady] = useState(false);
   const [ended, setEnded] = useState(false);
   const starting = useRef(false);
+  /** Current intersection visibility (updated by IntersectionObserver). */
+  const visible = useRef(false);
   /** Whether an automatic start may still go ahead (visible, tab shown, no reduced motion/Save-Data, no pause by the visitor); kept current by `sync`. */
   const allowed = useRef(true);
   /** The visitor pressed Play while autoplay was off (reduced motion, Save-Data, 2g): that single run is theirs, scrolling does not undo it. */
@@ -59,14 +61,28 @@ function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: st
     try {
       v.muted = true;
       v.loop = view.loop && !once;
+      // Clear any previous src so attachSource re-evaluates the codec choice (especially after a failed playback).
+      v.removeAttribute("src");
+      v.load();
       if (!(await attachSource(v, view.sources, user))) return;
       // Choosing the file is async: the tile may have left the screen, the tab been hidden or reduce switched on meanwhile.
-      if (!user && !allowed.current) return;
+      // Re-check eligibility after the async source selection.
+      if (!user) {
+        const mq = window.matchMedia(REDUCED_MOTION);
+        const conn = connection();
+        const skipNow = shouldSkipVideo(mq.matches, conn);
+        if (skipNow || document.hidden || !visible.current || userPaused.current) return;
+      }
       // We are about to play: let the browser fetch now. Without this a `preload="none"` element only starts the download inside play(),
       // so anything that defers play() (a blocked or stubbed player) would never request the file it just chose.
       v.preload = "auto";
       setBlocked(false);
-      await startPlayback(v, () => setBlocked(true));
+      await startPlayback(v, (_err) => {
+        setBlocked(true);
+        // On blocked play (e.g. iOS Low Power Mode), clear src so a subsequent user tap can retry with H.264 fallback.
+        v.removeAttribute("src");
+        v.load();
+      });
     } finally {
       starting.current = false;
     }
@@ -78,23 +94,22 @@ function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: st
     if (!v || !box) return;
     const mq = window.matchMedia(REDUCED_MOTION);
     const conn = connection();
-    let visible = false;
     let loaded = document.readyState === "complete";
     userPaused.current = storedPause();
     setReady(true);
     const sync = () => {
       const skipNow = shouldSkipVideo(mq.matches, conn);
       setSkip(skipNow);
-      allowed.current = !skipNow && !document.hidden && visible && !userPaused.current;
+      allowed.current = !skipNow && !document.hidden && visible.current && !userPaused.current;
       if (skipNow) { if (!v.paused && !userStarted.current) v.pause(); return; }
-      if (document.hidden || !visible || userPaused.current) { if (!v.paused) v.pause(); return; }
+      if (document.hidden || !visible.current || userPaused.current) { if (!v.paused) v.pause(); return; }
       if (loaded && v.paused) void play(false, false);
     };
     // A changed preference (reduce switched on, data saver, slower network) ends any run the visitor started under the old one.
     const onPreference = () => { userStarted.current = false; sync(); };
     const onLoad = () => { loaded = true; sync(); };
     if (!loaded) window.addEventListener("load", onLoad, { once: true });
-    const io = new IntersectionObserver(([e]) => { visible = !!e?.isIntersecting; sync(); }, { threshold: 0.25, rootMargin: "200px" });
+    const io = new IntersectionObserver(([e]) => { visible.current = !!e?.isIntersecting; sync(); }, { threshold: 0.25, rootMargin: "200px" });
     io.observe(box);
     mq.addEventListener("change", onPreference);
     conn?.addEventListener?.("change", onPreference);
@@ -159,7 +174,8 @@ function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: st
           data-demo-toggle=""
           aria-pressed={!playing}
           onClick={(e) => { e.stopPropagation(); toggle(); }}
-          className="absolute end-3 bottom-3 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-line-strong bg-surface/95 px-4 text-base text-hi transition-colors duration-[var(--dur-base)] hover:bg-elevated"
+          className="absolute end-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-lg border border-line-strong bg-surface/95 px-4 text-base text-hi transition-colors duration-[var(--dur-base)] hover:bg-elevated"
+          style={{ minHeight: 44, minWidth: 44 }}
         >
           {playing ? t("landing.demo.pause") : t("landing.demo.play")}
         </button>

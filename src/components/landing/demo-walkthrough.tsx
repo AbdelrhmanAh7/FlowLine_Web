@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useDir, useLocale, useT } from "@/i18n/client";
+import { useLocale, useT } from "@/i18n/client";
 import type { MessageKey } from "@/i18n/types";
 import type { WalkthroughView } from "@/lib/demo-media";
 import { attachSource, shouldSkipVideo, startPlayback } from "@/lib/demo-source";
@@ -24,7 +24,6 @@ export function DemoWalkthrough({ view }: { view: WalkthroughView }) {
 function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
   const t = useT();
   const locale = useLocale();
-  const dir = useDir();
   const opener = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -57,7 +56,13 @@ function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
     d.showModal();
     if (!v) return;
     // Retry after an error from scratch; the stills stay until a play succeeds (a failed file is not declared fixed by reopening).
-    if (errored.current) { errored.current = false; v.removeAttribute("src"); v.load(); }
+    if (errored.current) {
+      errored.current = false;
+      // Remove all <source> children so v.load() doesn't re-select the fallback source.
+      while (v.firstChild) v.removeChild(v.firstChild);
+      v.removeAttribute("src");
+      v.load();
+    }
     // Choosing the file does not download it (preload="none"); bytes flow only when the visitor, or autoplay below, starts playback.
     if (!(await attachSource(v, view.sources, true))) { setNoVideo(true); return; }
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
@@ -77,8 +82,17 @@ function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
   };
 
   const onKeys = (e: KeyboardEvent) => {
-    const ahead = dir === "rtl" ? "ArrowLeft" : "ArrowRight";
-    const behind = dir === "rtl" ? "ArrowRight" : "ArrowLeft";
+    // Only handle keys when the stepper or its children are focused, or when the dialog itself is focused.
+    // This prevents conflicts with video controls (Space, ArrowLeft/Right for seeking) when the video is focused.
+    const target = e.target as HTMLElement;
+    const stepper = dialog.current?.querySelector('[data-testid="demo-stepper"]');
+    const isInStepper = stepper && (target === stepper || stepper.contains(target));
+    const isDialog = target === dialog.current;
+    if (!isInStepper && !isDialog) return;
+    // Read direction from the document element (set by server layout) for maximum reliability.
+    const docDir = typeof document !== "undefined" ? document.documentElement.dir : "ltr";
+    const ahead = docDir === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const behind = docDir === "rtl" ? "ArrowRight" : "ArrowLeft";
     if (e.key === ahead) select(active + 1, true);
     else if (e.key === behind) select(active - 1, true);
     else if (e.key === "Home") select(0, true);
@@ -110,6 +124,7 @@ function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
         className="demo-dialog m-auto w-[min(72rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-xl border border-line bg-surface p-0 text-hi"
         onClose={() => { video.current?.pause(); opener.current?.focus(); }}
         onClick={(e) => { if (e.target === dialog.current) dialog.current?.close(); }}
+        onKeyDown={onKeys}
       >
         <div className="flex max-h-[calc(100dvh-2rem)] flex-col gap-3 overflow-y-auto p-4">
           <div className="flex justify-end">
