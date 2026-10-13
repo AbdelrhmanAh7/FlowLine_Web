@@ -78,7 +78,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
           </Field>
           <div>
             <p className="text-sm text-warning">{t("account.security.twoFactor.backupCodes")}</p>
-            <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
+            <ul className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
                 <li key={c}>{c}</li>
               ))}
