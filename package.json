@@ -31,6 +31,7 @@
     "gate:full": "node scripts/gate.mjs --tier=full",
     "dev:test": "node scripts/dev-test.mjs",
     "stop:test": "node scripts/stop-test-stack.mjs",
+    "test:nightly": "node scripts/with-env.mjs .env.test vitest run --project nightly",
     "test:contract": "vitest run --project contract",
     "test:live": "node scripts/with-env.mjs .env vitest run --project live",
     "test:live:saas": "node scripts/with-env.mjs .env vitest run --project live tests/live/saas.test.ts tests/live/certification.test.ts",

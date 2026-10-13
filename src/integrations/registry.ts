@@ -11,8 +11,9 @@ import stripe from "./providers/stripe";
 import notion from "./providers/notion";
 import postgres from "./providers/postgres";
 import linear from "./providers/linear";
+import mizano from "./providers/mizano";
 
-const PROVIDERS: ProviderDef[] = [googleSheets, gmail, slack, hubspot, zendesk, airtable, snowflake, github, stripe, notion, postgres, linear];
+const PROVIDERS: ProviderDef[] = [googleSheets, gmail, slack, hubspot, zendesk, airtable, snowflake, github, stripe, notion, postgres, linear, mizano];
 
 export function listProviders(): ProviderDef[] {
   return PROVIDERS;
