@@ -25,7 +25,7 @@ be plain names (no folders).
 ### Behaviour of a loop (`DemoVideo`)
 
 - **Server markup is correct without JS**: `<video muted playsInline loop preload="none" poster width height aria-label>` in a box
-  with a fixed `aspect-ratio` (CLS 0), no `autoplay` attribute, an H.264 `<source>` as the default. The poster is the LCP element;
+  with a fixed `aspect-ratio` to reserve space, no `autoplay` attribute, an H.264 `<source>` as the default. The poster is intended to be LCP; measured CLS and production LCP remain unverified;
   the hero poster is also preloaded (`preload(..., { as: "image", fetchPriority: "high" })`).
 - **JS starts it** only after `window.load` and once the tile is visible (IntersectionObserver, threshold 0.25, root margin 200 px);
   it pauses when out of view or when the tab is hidden. `video.muted = true` is set in the ref callback before any `play()`.
@@ -55,9 +55,9 @@ was reported playable, but only if `canPlayType` accepts it; otherwise only the 
 
 ### Delivery
 
-`next.config.ts` `headers()` serves `/media/demo/:path*` with `Cache-Control: public, max-age=31536000, immutable` (file names are
-content-hashed; Next's default for `public/` is `max-age=0`). `Range` requests are answered with `206` by Next's static server
-(`e2e/landing-demo.spec.ts`, "served media", runs once the real media is in the tree).
+`next.config.ts` `headers()` configures `/media/demo/:path*` with `Cache-Control: public, max-age=31536000, immutable` (file names are
+content-hashed; Next's default for `public/` is `max-age=0`). `Range` delivery with `206` is expected from Next's static server but remains unverified: the "served media" test in
+`e2e/landing-demo.spec.ts` is skipped until #99 supplies a real manifest. Header configuration is unit-tested; it is not HTTP delivery evidence.
 
 ### Honest copy
 
@@ -66,7 +66,7 @@ Every string is in `src/i18n/messages/{ar,en}.json` under `landing.demo.*` (iden
 
 ### Tests and fixtures
 
-- `e2e/fixtures/demo/` (about 20 KB): a schema-1 manifest plus one tiny video, poster and two caption files.
+- `e2e/fixtures/demo/` (14,772 bytes total file contents, below the 150 KB cap): a schema-1 manifest plus one tiny video, poster and two caption files.
 - On the test stack (`FLOWLINE_ENV=test`, ignored everywhere else) the cookie `fl_test_demo=fixture` makes the server read the fixture
   manifest and `fl_test_demo=off` ignores a real manifest. `playwright.config.ts` sets `off` for every spec, so the legacy hero keeps
   being tested after the real media lands; `e2e/landing-demo.spec.ts` sets `fixture` and answers `/media/demo/*` with `page.route`.

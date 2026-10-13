@@ -21,6 +21,10 @@ for all four below-fold tiles must be absent. No product code changed.
   `pnpm typecheck` was stopped because its machine-wide wrapper could not remove
   a lock under `agents/locks/`; this direct command runs the repo's underlying check.
 
+Post-commit confirmation on `ff1933d`: the same army command passed **4/4** again
+(run `01a1355b-b435-7cbd-9405-2f1f5d03987b`); lint and direct typecheck exited 0.
+Subsequent changes only correct documentation claims.
+
 ## Root cause of missing browser evidence
 
 The original stack failed before running tests because `.env.test` was absent.
