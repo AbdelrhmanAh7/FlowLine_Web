@@ -135,9 +135,13 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
 
-  // Cheap input check first; the expensive hash waits until the token is confirmed live under its locks, so a burst of
-  // requests presenting one valid link cannot all hash at once.
+  // Cheap input check first; the password length is validated before any lock.
   if (purpose === "reset" && (!value || value.length < 8 || value.length > 128)) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
+
+  // Compute the password hash before taking any locks. The token is re-validated under locks inside the
+  // transaction; if it has been consumed or expired in the meantime, the hash is simply discarded.
+  let hashed: string | undefined;
+  if (purpose === "reset") hashed = await hashPassword(value!);
 
   // Lock order is user row, then token row (also in the delete and verify flows). The user is found through an unlocked
   // read, which may be stale: the token is re-read and re-validated under both locks below.
@@ -208,7 +212,7 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       // row are already held above; the user's sessions come next, then their account rows, the same order the
       // federated transactions take (issue #41). The reverse could deadlock against a link confirmation, challenge
       // completion or SSO callback. Reset mutates no retained file, so it takes no retained-file accounting lock.
-      const hashed = await hashPassword(value!);
+      // Password hash was computed before the transaction to avoid holding locks during the slow hash operation.
       await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));

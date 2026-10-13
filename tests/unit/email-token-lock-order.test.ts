@@ -64,13 +64,14 @@ describe("account token lock order", () => {
     expect(await run()).toBe("done");
     expect(locks()).toEqual(expected);
     // Every write (token consumption included) happens after both locks.
-    const firstWrite = fx.events.findIndex((e) => !e.startsWith("lock:"));
+    const firstWrite = fx.events.findIndex((e) => !e.startsWith("lock:") && e !== "hash");
     expect(firstWrite).toBeGreaterThanOrEqual(expected.length);
   });
 
-  it("hashes the new password only after both locks, and not at all for a too-short one or a consumed token", async () => {
+  it("hashes the new password before any locks, and not at all for a too-short one or a consumed token", async () => {
     expect(await consumeAccountToken("reset", TOKEN, "long-enough-password")).toBe("done");
-    expect(fx.events.indexOf("hash")).toBeGreaterThan(fx.events.indexOf("lock:email_token:update"));
+    // Hash happens before any locks (it is computed after the unlocked read but before the transaction).
+    expect(fx.events.indexOf("hash")).toBeLessThan(fx.events.indexOf("lock:user:update"));
     fx.events.length = 0;
     await expect(consumeAccountToken("reset", TOKEN, "short")).rejects.toMatchObject({ status: 400 });
     expect(fx.events).toEqual([]);
@@ -85,7 +86,8 @@ describe("account token lock order", () => {
   it("refuses a token with no user (already detached by a deletion) before opening a transaction", async () => {
     fx.token.userId = null;
     expect(await consumeAccountToken("reset", TOKEN, "long-enough-password")).toBe("invalid");
-    expect(fx.events).toEqual([]);
+    // Hash is computed before the unlocked read check, so it appears in events even though the token is invalid.
+    expect(fx.events).toEqual(["hash"]);
   });
 
   it("refuses a delete token of another user without locking anything", async () => {
