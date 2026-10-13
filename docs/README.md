@@ -75,6 +75,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md) | Landing demo media: how the landing page consumes it (manifest, loops, walkthrough, tests); generation arrives with #99 | no | draft |
 | [security/codeql-triage-fakes.md](security/codeql-triage-fakes.md) | CodeQL triage of the e2e fake servers | yes | draft |
 | [security/CREDENTIALS_DESIGN.md](security/CREDENTIALS_DESIGN.md) | Credentials design | yes | approved |
+| [security/DEPENDENCIES.md](security/DEPENDENCIES.md) | Dependency advisories and pnpm overrides | yes | draft |
 | [security/FEDERATED_MFA.md](security/FEDERATED_MFA.md) | Federated MFA | yes | approved |
 | [security/RELEASE_INPUT_UPDATE.md](security/RELEASE_INPUT_UPDATE.md) | Release input update | yes | approved |
 | [security/REQUEST_BODY_LIMITS.md](security/REQUEST_BODY_LIMITS.md) | Request body limits | yes | approved |
