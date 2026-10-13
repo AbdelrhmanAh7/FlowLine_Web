@@ -146,6 +146,9 @@ const provider: ProviderDef = {
         phone: z.string(),
         taxId: z.string().optional(),
       }),
+      // "idempotent" per SideEffect (types.ts): the POST carries the engine's per-(run, node) Idempotency-Key, so a repeat
+      // or lost-response retry replays the first record (same contract as stripe.create_refund). If Mizano MZ G5 turns out
+      // not to honour the key, switch this to "non_idempotent" so the engine stops retrying blindly.
       sideEffect: "idempotent",
       requiredScopes: ["customers:create"],
       async run(ctx, input) {
@@ -199,6 +202,7 @@ const provider: ProviderDef = {
           }),
         ),
       }),
+      // "idempotent" for the same reason as mizano.create_customer.
       sideEffect: "idempotent",
       requiredScopes: ["quotes:create"],
       async run(ctx, input) {
