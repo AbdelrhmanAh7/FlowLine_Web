@@ -48,10 +48,17 @@ function protocol(tools: Any[], toolChoice: Any): string {
     `Use tool_calls: [] only when no tool is needed or the task is finished.`;
 }
 
+// agy gets its own limit (--print-timeout) a little below ours, so it stops and reports before the adapter has to SIGKILL it.
+const DEFAULT_TIMEOUT_MS = 150_000, AGY_GRACE_MS = 10_000;
+
 function runCli(o: CliModelOpts, text: string, dir: string, signal?: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {
+    // An already-aborted signal never fires "abort" again: refuse before spawning, or the CLI would run until the timeout.
+    if (signal?.aborted) return reject(new Error("aborted"));
+    const timeoutMs = o.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const agyTimeout = `${Math.max(1, Math.floor((timeoutMs - AGY_GRACE_MS) / 1000))}s`;
     const args = o.cli === "agy"
-      ? ["-p", text, "--model", o.model ?? "gemini-3.8-flash-low", "--print-timeout", "3m"]
+      ? ["-p", text, "--model", o.model ?? "gemini-3.8-flash-low", "--print-timeout", agyTimeout]
       : ["-p", "--model", o.model ?? "haiku", "--effort", "low", "--output-format", "json", "--allowedTools", "Read", "--add-dir", dir];
     const child = spawn(o.cli === "agy" ? AGY : CLAUDE, args, { cwd: dir, stdio: [o.cli === "agy" ? "ignore" : "pipe", "pipe", "pipe"], env: { ...process.env, DO_NOT_TRACK: "1" } });
     // The runner runs under taskpolicy -b (hub governor); a model CLI at background QoS answers 5x slower and the whole suite misses
@@ -59,14 +66,17 @@ function runCli(o: CliModelOpts, text: string, dir: string, signal?: AbortSignal
     if (child.pid && process.platform === "darwin") execFile("/usr/sbin/taskpolicy", ["-B", "-p", String(child.pid)], () => undefined);
     if (o.cli === "claude") { child.stdin!.end(text); }
     let out = "", err = "";
-    const t = setTimeout(() => { child.kill("SIGKILL"); reject(new Error(`${o.cli} timed out`)); }, o.timeoutMs ?? 150_000);
-    signal?.addEventListener("abort", () => { child.kill("SIGKILL"); reject(new Error("aborted")); });
+    const onAbort = () => { child.kill("SIGKILL"); reject(new Error("aborted")); };
+    // One listener per call, removed when the call settles: the retry in doGenerate reuses the same signal.
+    const done = () => { clearTimeout(t); signal?.removeEventListener("abort", onAbort); };
+    const t = setTimeout(() => { done(); child.kill("SIGKILL"); reject(new Error(`${o.cli} timed out`)); }, timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
     child.stdout!.on("data", (d) => (out += d));
     child.stderr!.on("data", (d) => (err += d));
-    child.on("error", (e) => { clearTimeout(t); reject(e); });
+    child.on("error", (e) => { done(); reject(e); });
     // "close", not "exit": exit can fire while stdout still holds buffered data, which would parse a truncated JSON answer.
     child.on("close", (code) => {
-      clearTimeout(t);
+      done();
       if (code !== 0) return reject(new Error(`${o.cli} exit ${code}: ${(err || out).slice(0, 300)}`));
       if (o.cli === "claude") { try { const j = JSON.parse(out); if (j.is_error) return reject(new Error(String(j.result).slice(0, 300))); return resolve(String(j.result ?? "")); } catch { /* raw */ } }
       resolve(out);

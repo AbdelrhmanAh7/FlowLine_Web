@@ -1,6 +1,7 @@
 // Guards for the e2e-army tooling (#85): the CLI model adapter, the documented commands and the shard tags of the feature suite.
 import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { getEventListeners } from "node:events";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cliModel } from "../../e2e-army/cli-model.ts";
@@ -50,6 +51,42 @@ describe("cli-model adapter", () => {
     expect(calls.map((c: { toolName: string }) => c.toolName)).toEqual(["click"]);
     expect(res.finishReason.unified).toBe("tool-calls");
   });
+
+  const fakeAgy = (body: string) => {
+    dir = mkdtempSync(join(tmpdir(), "fake-agy-"));
+    writeFileSync(join(dir, "agy"), `#!/bin/sh\nprintf '%s\\n' "$@" > "${join(dir, "args")}"\n${body}\n`);
+    chmodSync(join(dir, "agy"), 0o755);
+    vi.stubEnv("PATH", `${dir}:${process.env.PATH}`);
+  };
+  const call = (signal?: AbortSignal, timeoutMs = 20_000) => cliModel({ cli: "agy", timeoutMs }).doGenerate({
+    prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+    tools: [{ type: "function", name: "click", description: "click", inputSchema: { type: "object" } }],
+    toolChoice: { type: "required" },
+    abortSignal: signal,
+  });
+
+  it("refuses an already-aborted signal without starting the CLI", async () => {
+    fakeAgy(`echo '{"text":"","tool_calls":[{"name":"click","arguments":{}}]}'`);
+    const ac = new AbortController();
+    ac.abort();
+    await expect(call(ac.signal)).rejects.toThrow("aborted");
+    expect(readdirSync(dir)).not.toContain("args");
+  });
+
+  it("leaves no abort listener behind, also after the retry that reuses the signal", async () => {
+    fakeAgy(`echo x >> "$(dirname "$0")/calls"\nif [ "$(wc -l < "$(dirname "$0")/calls")" -le 1 ]; then echo '{"text":"","tool_calls":[]}'; else echo '{"text":"","tool_calls":[{"name":"click","arguments":{}}]}'; fi`);
+    const ac = new AbortController();
+    await call(ac.signal);
+    expect(readFileSync(join(dir, "calls"), "utf8").trim().split("\n")).toHaveLength(2);
+    expect(getEventListeners(ac.signal, "abort")).toHaveLength(0);
+  });
+
+  it("gives agy a --print-timeout below the adapter's own kill timeout, so agy reports first", async () => {
+    fakeAgy(`echo '{"text":"","tool_calls":[{"name":"click","arguments":{}}]}'`);
+    await call(undefined, 20_000);
+    const args = readFileSync(join(dir, "args"), "utf8").split("\n");
+    expect(args[args.indexOf("--print-timeout") + 1]).toBe("10s");
+  });
 });
 
 describe("e2e-army hosts", () => {
@@ -79,6 +116,17 @@ describe("e2e-army docs and suite", () => {
       const bad = readFileSync(join(root, file), "utf8").split("\n").filter((l) => /e2e:army[^`\n]*--shard-id\s+<|--shard-id\s+<[^>]*>/.test(l));
       expect(bad, file).toEqual([]);
     }
+  });
+
+  it("README and DEVELOPER_GUIDE state the hub's real cap (up to 8 top-level e2e-army/*.e2e.ts files), and the repo stays within it", () => {
+    // The hub's verify job copies readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8) (nql-agents src/lib/e2earmy.ts).
+    for (const file of ["README.md", "docs/DEVELOPER_GUIDE.md"]) {
+      const text = readFileSync(join(root, file), "utf8").replace(/\s+/g, " ");
+      expect(text, file).toMatch(/up to 8 top-level `e2e-army\/\*\.e2e\.ts` files/);
+      expect(text, file).not.toMatch(/every `e2e-army\/\*\.e2e\.ts`/);
+    }
+    const top = readdirSync(join(root, "e2e-army")).filter((n) => /^[\w.-]+\.e2e\.ts$/.test(n));
+    expect(top.length).toBeLessThanOrEqual(8);
   });
 
   it("every feature test carries feat:/shard:/lvl: tags and its shard tag matches its file", () => {
