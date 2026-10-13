@@ -156,3 +156,274 @@ describe("mizano.list_overdue_invoices", () => {
     await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow();
   });
 });
+
+const customerResponse = {
+  id: "cust_123",
+  name: "Test Customer",
+  company: "Test Company Ltd",
+  email: "test@example.com",
+  phone: "+1-555-0123",
+  taxId: "123-4567890",
+};
+
+describe("mizano.create_customer", () => {
+  it("is registered as a write action", () => {
+    const found = getAction("mizano.create_customer");
+    expect(found?.action.sideEffect).toBe("idempotent");
+    expect(found?.provider.id).toBe("mizano");
+  });
+
+  it("creates a customer via POST /api/customers with the run id as idempotency key", async () => {
+    const { ctx, request } = ctxReturning(customerResponse);
+    await runAction("mizano.create_customer", ctx, {
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+      taxId: "123-4567890",
+    });
+    const req = request.mock.calls[0][0];
+    expect(req.method).toBe("POST");
+    expect(req.path).toBe("/api/customers");
+    expect(req.baseUrl).toBe("https://mizano.test");
+    expect(req.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req.json).toEqual({
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+      taxId: "123-4567890",
+    });
+  });
+
+  it("returns the created customer shape", async () => {
+    const { ctx } = ctxReturning(customerResponse);
+    const out = await runAction<{ id: string; name: string; company: string; email: string; phone: string; taxId?: string }>(
+      "mizano.create_customer",
+      ctx,
+      {
+        name: "Test Customer",
+        company: "Test Company Ltd",
+        email: "test@example.com",
+        phone: "+1-555-0123",
+        taxId: "123-4567890",
+      },
+    );
+    expect(out).toEqual(customerResponse);
+  });
+
+  it("rejects invalid input (empty name)", async () => {
+    const { ctx } = ctxReturning(customerResponse);
+    await expect(
+      runAction("mizano.create_customer", ctx, {
+        name: "",
+        company: "Test Company Ltd",
+        email: "test@example.com",
+        phone: "+1-555-0123",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid input (invalid email)", async () => {
+    const { ctx } = ctxReturning(customerResponse);
+    await expect(
+      runAction("mizano.create_customer", ctx, {
+        name: "Test Customer",
+        company: "Test Company Ltd",
+        email: "invalid-email",
+        phone: "+1-555-0123",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid input (phone too long)", async () => {
+    const { ctx } = ctxReturning(customerResponse);
+    await expect(
+      runAction("mizano.create_customer", ctx, {
+        name: "Test Customer",
+        company: "Test Company Ltd",
+        email: "test@example.com",
+        phone: "+1-555-0123456789012345678901234567890123456789012345678901234567890",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("sends the same Idempotency-Key when run twice with the same ctx", async () => {
+    const { ctx, request } = ctxReturning(customerResponse);
+    await runAction("mizano.create_customer", ctx, {
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+      taxId: "123-4567890",
+    });
+    await runAction("mizano.create_customer", ctx, {
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+      taxId: "123-4567890",
+    });
+    const req1 = request.mock.calls[0][0];
+    const req2 = request.mock.calls[1][0];
+    expect(req1.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req2.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req1.headers?.["Idempotency-Key"]).toBe(req2.headers?.["Idempotency-Key"]);
+  });
+});
+
+const quoteResponse = {
+  id: "quote_456",
+  customerId: "cust_123",
+  currency: "EGP",
+  lines: [
+    { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+    { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+  ],
+};
+
+describe("mizano.create_draft_quote", () => {
+  it("is registered as a write action", () => {
+    const found = getAction("mizano.create_draft_quote");
+    expect(found?.action.sideEffect).toBe("idempotent");
+    expect(found?.provider.id).toBe("mizano");
+  });
+
+  it("creates a draft quote via POST /api/quotes with the run id as idempotency key", async () => {
+    const { ctx, request } = ctxReturning(quoteResponse);
+    await runAction("mizano.create_draft_quote", ctx, {
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+      ],
+    });
+    const req = request.mock.calls[0][0];
+    expect(req.method).toBe("POST");
+    expect(req.path).toBe("/api/quotes");
+    expect(req.baseUrl).toBe("https://mizano.test");
+    expect(req.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req.json).toEqual({
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+      ],
+    });
+  });
+
+  it("returns the created quote shape", async () => {
+    const { ctx } = ctxReturning(quoteResponse);
+    const out = await runAction("mizano.create_draft_quote", ctx, {
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+      ],
+    });
+    expect(out).toEqual(quoteResponse);
+  });
+
+  it("rejects invalid input (invalid currency)", async () => {
+    const { ctx } = ctxReturning(quoteResponse);
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "xyz",
+        lines: [
+          { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        ],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid input (invalid qty - negative)", async () => {
+    const { ctx } = ctxReturning(quoteResponse);
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [
+          { item: "Consulting", qty: "-5", unitPrice: "500.00", taxRate: "15.00" },
+        ],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid input (invalid unitPrice - negative)", async () => {
+    const { ctx } = ctxReturning(quoteResponse);
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [
+          { item: "Consulting", qty: "10", unitPrice: "-100.00", taxRate: "15.00" },
+        ],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid input (invalid taxRate - negative)", async () => {
+    const { ctx } = ctxReturning(quoteResponse);
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [
+          { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "-5.00" },
+        ],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("accepts decimal strings for qty, unitPrice, and taxRate", async () => {
+    const decimalQuote = {
+      id: "quote_456",
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10.5", unitPrice: "500.50", taxRate: "15.75" },
+      ],
+    };
+    const { ctx } = ctxReturning(decimalQuote);
+    const out = await runAction("mizano.create_draft_quote", ctx, {
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10.5", unitPrice: "500.50", taxRate: "15.75" },
+      ],
+    });
+    const q = out as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+    expect(q.lines[0].qty).toBe("10.5");
+    expect(q.lines[0].unitPrice).toBe("500.50");
+    expect(q.lines[0].taxRate).toBe("15.75");
+  });
+
+  it("sends the same Idempotency-Key when run twice with the same ctx", async () => {
+    const { ctx, request } = ctxReturning(quoteResponse);
+    await runAction("mizano.create_draft_quote", ctx, {
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+      ],
+    });
+    await runAction("mizano.create_draft_quote", ctx, {
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+      ],
+    });
+    const req1 = request.mock.calls[0][0];
+    const req2 = request.mock.calls[1][0];
+    expect(req1.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req2.headers?.["Idempotency-Key"]).toBe("idem-mizano");
+    expect(req1.headers?.["Idempotency-Key"]).toBe(req2.headers?.["Idempotency-Key"]);
+  });
+});
