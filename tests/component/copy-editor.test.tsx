@@ -184,7 +184,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows stepUp message when me query fails (state query succeeds)", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("en", { meError: true });
+      const { stateRefetch: _stateRefetch, meRefetch: _meRefetch } = setupMocks("en", { meError: true });
 
       renderWithProviders(<CopyEditor />);
 
@@ -198,7 +198,7 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: REVISION_CONFLICT", () => {
     it("shows conflict error and refetches state on save", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("en");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en");
 
       mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
@@ -219,7 +219,7 @@ describe("CopyEditor error handling (#181)", () => {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
-      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
 
       mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
@@ -236,7 +236,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows conflict error in Arabic", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("ar");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("ar");
 
       mockApi.mockRejectedValueOnce(new ApiError(409, "REVISION_CONFLICT", "Revision mismatch (server text)"));
 
@@ -247,6 +247,7 @@ describe("CopyEditor error handling (#181)", () => {
       await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تغيّر هذا منذ أن حمّلته. أعد التحميل وحاول مجددًا."));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
@@ -259,7 +260,7 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: STEP_UP_REQUIRED", () => {
     it("refetches me and shows stepUp error on save", async () => {
-      const { stateRefetch, meRefetch, meData } = setupMocks("en");
+      const { stateRefetch: _stateRefetch, meRefetch, meData: _meData } = setupMocks("en");
       // meRefetch returns stepUpUntil: null to simulate step-up expired
       meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
@@ -282,7 +283,7 @@ describe("CopyEditor error handling (#181)", () => {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
-      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+      const { stateRefetch: _stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
       // meRefetch returns stepUpUntil: null to simulate step-up expired
       meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
@@ -301,7 +302,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows stepUp error in Arabic", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("ar");
+      const { stateRefetch: _stateRefetch, meRefetch } = setupMocks("ar");
       // meRefetch returns stepUpUntil: null to simulate step-up expired
       meRefetch.mockResolvedValue({ data: { csrfToken: "csrf-token", stepUpUntil: null } });
 
@@ -326,7 +327,7 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: 5xx server error", () => {
     it("shows serverError and refetches state on save", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("en");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en");
 
       mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
@@ -347,7 +348,7 @@ describe("CopyEditor error handling (#181)", () => {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
-      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
 
       mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
@@ -364,7 +365,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows serverError in Arabic", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("ar");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("ar");
 
       mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side"));
 
@@ -375,6 +376,7 @@ describe("CopyEditor error handling (#181)", () => {
       await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تعذّر حفظ المسودة. راجع النصوص وحدّث الصفحة إذا تغيّرت."));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
@@ -387,7 +389,7 @@ describe("CopyEditor error handling (#181)", () => {
 
   describe("Write error: network error", () => {
     it("shows networkError and refetches state on save", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("en");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en");
 
       mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
@@ -408,7 +410,7 @@ describe("CopyEditor error handling (#181)", () => {
         ...createMockData("en").stateData,
         published: { value: { ar: { "meta.title": "منشور قديم" }, en: { "meta.title": "Old Published" } }, revision: 1, setAt: "2024-01-01T00:00:00Z" },
       };
-      const { stateRefetch, meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("en", { stateData: publishedDifferentData });
 
       mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
@@ -425,7 +427,7 @@ describe("CopyEditor error handling (#181)", () => {
     });
 
     it("shows networkError in Arabic", async () => {
-      const { stateRefetch, meRefetch } = setupMocks("ar");
+      const { stateRefetch, meRefetch: _meRefetch } = setupMocks("ar");
 
       mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch (client text)", true));
 
@@ -436,6 +438,7 @@ describe("CopyEditor error handling (#181)", () => {
       await makeEditAndSave("ar", /حفظ في المسودة/i);
 
       await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا."));
+      await waitFor(() => expect(stateRefetch).toHaveBeenCalled());
       // Verify Arabic locale by checking the alert contains Arabic characters
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toMatch(/[\u0600-\u06FF]/);
