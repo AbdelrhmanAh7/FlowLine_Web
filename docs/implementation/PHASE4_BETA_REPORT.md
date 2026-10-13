@@ -13,10 +13,10 @@ backed-up numbers back. Numbers cleared by 0025 cannot be restored. The script s
 `\set ON_ERROR_STOP on`, and is run by hand with
 `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. If a later save or
 publication has taken a freed number, the unique index refuses and nothing changes.
-Base: `ai/204` (PR #207, #204), which is still open; 0026 needs 0025's nullable `version`, so #205 cannot sit on main
-alone. PR #211 targets `ai/204`, and its diff holds only the #205 files: 0026 and its snapshot and journal entry, the
-backup table in `src/db/schema.ts`, the reverse script, the test and these docs. When #207 merges, retarget PR #211 to main.
-Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge of `ai/204` `e4ba1bc`. Results:
+Depends on #204: 0026 follows 0025 in the journal and needs its nullable `version`. #205 adds only 0026 with its snapshot
+and journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test and these docs. Branch base and
+merge order live on PR #211 and PR #207, not in this ledger.
+Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at `e4ba1bc`. Results:
 - `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (save v1, run snapshots
   v2 and v3, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up the run numbers, and the
   next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The reverse restores
