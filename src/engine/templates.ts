@@ -4,6 +4,11 @@ import type { FlowGraph } from "./types";
 
 export type TemplateGoal = "sales" | "support" | "data" | "engineering";
 
+export type TemplateCategory = "Sales" | "Support" | "Data ops" | "Finance" | "Marketing" | "Engineering" | "Operations" | "Personal";
+
+/** The allowed categories, shared by the type and the parser to avoid drift. */
+export const TEMPLATE_CATEGORIES: readonly TemplateCategory[] = ["Sales", "Support", "Data ops", "Finance", "Marketing", "Engineering", "Operations", "Personal"] as const;
+
 export interface LocalTemplate {
   id: string;
   name: string;
@@ -12,7 +17,7 @@ export interface LocalTemplate {
   sample: string;
   /** What a run saves as its result (shown in the gallery). */
   result: string;
-  category: "Sales" | "Support" | "Data ops" | "Finance" | "Marketing" | "Engineering" | "Operations" | "Personal";
+  category: TemplateCategory;
   goal: TemplateGoal;
   graph: FlowGraph;
 }
@@ -35,18 +40,50 @@ function parseTemplateExport(json: unknown): LocalTemplate {
     graph: FlowGraph;
   };
 
-  if (typeof parsed.id !== "string" || typeof parsed.name !== "string") {
-    throw new Error(`Invalid template export: missing or non-string id or name`);
+  // Validate required fields
+  if (typeof parsed.id !== "string" || parsed.id.length === 0) {
+    throw new Error(`Invalid template export: missing or empty id`);
+  }
+  if (typeof parsed.name !== "string" || parsed.name.length === 0) {
+    throw new Error(`Invalid template export: missing or empty name`);
+  }
+  if (typeof parsed.description !== "string" || parsed.description.length === 0) {
+    throw new Error(`Invalid template export: missing or empty description`);
+  }
+  if (typeof parsed.sample !== "string" || parsed.sample.length === 0) {
+    throw new Error(`Invalid template export: missing or empty sample`);
+  }
+  if (typeof parsed.result !== "string" || parsed.result.length === 0) {
+    throw new Error(`Invalid template export: missing or empty result`);
   }
 
-  if (parsed.category !== "Sales" && parsed.category !== "Support" && parsed.category !== "Data ops" &&
-      parsed.category !== "Finance" && parsed.category !== "Marketing" && parsed.category !== "Engineering" &&
-      parsed.category !== "Operations" && parsed.category !== "Personal") {
-    throw new Error(`Invalid template category: ${parsed.category}`);
+  // Validate format and version (versioned export contract)
+  if (parsed.format !== "flowline-template") {
+    throw new Error(`Invalid template format: expected "flowline-template", got "${parsed.format}"`);
+  }
+  if (typeof parsed.version !== "number" || parsed.version < 1) {
+    throw new Error(`Invalid template version: expected >= 1, got ${parsed.version}`);
   }
 
+  // Validate category using the shared constant
+  if (!TEMPLATE_CATEGORIES.includes(parsed.category as TemplateCategory)) {
+    throw new Error(`Invalid template category: "${parsed.category}"`);
+  }
+
+  // Validate goal
   if (parsed.goal !== "sales" && parsed.goal !== "support" && parsed.goal !== "data" && parsed.goal !== "engineering") {
-    throw new Error(`Invalid template goal: ${parsed.goal}`);
+    throw new Error(`Invalid template goal: "${parsed.goal}"`);
+  }
+
+  // Validate graph structure
+  if (!parsed.graph || typeof parsed.graph !== "object") {
+    throw new Error(`Invalid template graph: missing or not an object`);
+  }
+  if (!Array.isArray(parsed.graph.nodes)) {
+    throw new Error(`Invalid template graph: nodes must be an array`);
+  }
+  if (!Array.isArray(parsed.graph.edges)) {
+    throw new Error(`Invalid template graph: edges must be an array`);
   }
 
   return {
@@ -55,8 +92,8 @@ function parseTemplateExport(json: unknown): LocalTemplate {
     description: parsed.description,
     sample: parsed.sample,
     result: parsed.result,
-    category: parsed.category as LocalTemplate["category"],
-    goal: parsed.goal as LocalTemplate["goal"],
+    category: parsed.category as TemplateCategory,
+    goal: parsed.goal as TemplateGoal,
     graph: parsed.graph,
   };
 }
