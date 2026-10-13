@@ -49,6 +49,11 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const verify = async () => {
     const code = (codeRef.current?.value ?? "").trim();
     if (codeRef.current) codeRef.current.value = "";
+    // Never send an empty/partial verify request: a code is exactly 6 digits.
+    if (!/^\d{6}$/.test(code)) {
+      toast(t("auth.twoFactorInvalid"), "danger");
+      return;
+    }
     setPending("verify");
     try {
       await api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code } });
@@ -65,15 +70,27 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
-        <StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
+        <span data-testid="two-factor-status">
+          <StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
+        </span>
       </div>
       {enabled ? null : enrolment ? (
         <div className="flex flex-col gap-3">
-          <Field label={t("account.security.twoFactor.secret")} htmlFor="two-factor-secret">
-            <code id="two-factor-secret" dir="ltr" className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm" data-testid="totp-secret">
+          <div className="flex flex-col gap-1.5">
+            {/* <code> is not labelable, so the secret is named with aria-labelledby instead of a <label for>. */}
+            <p id="two-factor-secret-label" className="text-xs font-medium uppercase tracking-[0.4px] text-med">
+              {t("account.security.twoFactor.secret")}
+            </p>
+            <code
+              id="two-factor-secret"
+              aria-labelledby="two-factor-secret-label"
+              dir="ltr"
+              className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm"
+              data-testid="totp-secret"
+            >
               {enrolment.secret}
             </code>
-          </Field>
+          </div>
           <div>
             <p className="text-sm text-warning">{t("account.security.twoFactor.backupCodes")}</p>
             <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
@@ -95,7 +112,9 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>
+              {t("account.security.twoFactor.cancel")}
+            </Button>
           </form>
         </div>
       ) : askPassword ? (
@@ -113,12 +132,14 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>
+              {t("account.security.twoFactor.cancel")}
+            </Button>
           </div>
         </form>
       ) : (
         <div>
-          <Button variant="primary" onClick={() => setAskPassword(true)}>
+          <Button type="button" variant="primary" onClick={() => setAskPassword(true)}>
             {t("account.security.twoFactor.enable")}
           </Button>
         </div>

@@ -11,7 +11,7 @@ test(
     await agent.act("open the user menu at the bottom of the sidebar");
     await agent.act("click Security in the Account group");
     await expect(screen.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
-    await expect(screen.getByText("Off", { exact: true })).toBeVisible();
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
   },
 );
 
