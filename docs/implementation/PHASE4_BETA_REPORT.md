@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
+
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
