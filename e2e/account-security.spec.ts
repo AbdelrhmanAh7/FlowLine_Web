@@ -30,3 +30,49 @@ test("a signed-out visit to the security page redirects to sign-in", async ({ br
   await expect(page).toHaveURL(/\/sign-in/);
   await context.close();
 });
+
+test("enable two-step verification from the account page", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+
+  // Cancel leaves it Off; a wrong password shows an error and no secret.
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill("not-the-password-1");
+  await page.getByRole("button", { name: "Enable" }).click();
+  await expect(page.getByText("That password isn't correct.")).toBeVisible();
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+
+  // The right password shows the secret and backup codes (left-to-right) with the one-time warning.
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+  const secret = page.getByTestId("totp-secret");
+  await expect(secret).toBeVisible();
+  await expect(secret).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByText(/shown only once/)).toBeVisible();
+  const raw = base32Decode((await secret.textContent())!.trim());
+
+  // A wrong code is rejected and the status is still Off after a reload.
+  await page.getByLabel("Authentication code").fill("000000");
+  await page.getByRole("button", { name: "Confirm and turn on" }).click();
+  await expect(page.getByText("That code isn't valid. Try the current one.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+
+  // Enabling again replaces the unconfirmed secret; the current code turns it On and hides the secret.
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+  const second = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
+  expect(second.equals(raw)).toBeFalsy();
+  await page.getByLabel("Authentication code").fill(totpCodeFor(second));
+  await page.getByRole("button", { name: "Confirm and turn on" }).click();
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+});
