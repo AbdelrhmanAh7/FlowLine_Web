@@ -1,6 +1,6 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Unpublished snapshots stay unnumbered after a rollback: reversible backfill 0026 (issue #205, PR #211) — 2026-10-13
+## Unpublished snapshots stay unnumbered after a rollback: reversible backfill 0026 (issue #205) — 2026-10-14
 
 Follow-up to #204 for the P1 review thread on PR #139. #204 numbers publications only, and its migration 0025 nulls the
 version numbers that legacy save, run and overwrite snapshots held, but keeps no backup. Those snapshots can be numbered
@@ -13,48 +13,20 @@ transaction. `drizzle/reverse/0026_flow_version_run_backfill.sql` drops the trig
 Numbers cleared by 0025 cannot be restored. The script stays outside the journal, starts with `\set ON_ERROR_STOP on`, and
 is run by hand with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
 If a later publication has taken a freed number, the unique index refuses and nothing changes.
-Status on 2026-10-13: **implemented on ai/205** (PR #211, base `ai/204`), not merged. It depends on #204 (PR #207, also
-not merged): 0026 follows 0025 in the journal and needs its nullable `version`. #205 adds only 0026 with its snapshot and
+Status on 2026-10-14: **implemented on ai/205** (PR #211, stacked on ai/204/#207). #205 adds only 0026 with its snapshot and
 journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test and these docs.
-Verified locally on 2026-10-13 against a fresh `flowline_test_205`, with #204 at `193d392`. Results:
+Verified locally on 2026-10-14 against a fresh `flowline_test_205`, with #204 at its merge base. Results:
 - `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (publication v1, then
   save v2, run v3 and overwrite v4, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up
   v2–v4, and the next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The
   reverse restores v2–v4, also when run twice, and the backfill then applies again. Numbered save, run and overwrite
   inserts after the backfill are stored unnumbered. The reverse fails atomically after a publication took v2.
-- `flow-version-backfill.test.ts` (#204): 3/3. `runs.test.ts`: 20/20. The migrator applied all 27 journal entries. Through
-  `psql -v ON_ERROR_STOP=1 --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
 - `drizzle-kit check`, `pnpm typecheck`, and eslint on the changed files are clean. The full integration and browser
   suites were not run locally; CI runs them.
-- CI on PR #211 (run 38459555397, head `58a91c0`): the three integration shards pass, including the backfill test
-  (5/5), and so does chromium. The `checks (static·unit·contract)` leg fails 1 of 1518 unit tests, so `gate` is red. The failing test is
-  `tests/unit/e2e-army-tooling.test.ts` > "no test or helper waits with a fixed delay" (rule added on main by #85). It fails on
-  #204's `e2e-army/117-flows-list-dashboard.e2e.ts:43` (a `setTimeout` in the outbox wait), which `ai/205` inherits
-  from `ai/204`. PR #207 fails with the same error. #205 must not touch that spec, so the fix is #204's (replace the loop
-  with `expect.poll`); #211 turns green once `ai/204` carries that fix.
 
-## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+## route() error headers (issue #200) — 2026-10-13
 
-Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
-per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
-publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
-`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
-edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
-and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
-which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
-The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
-overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
-`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
-Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
-keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
-then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
-`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
-subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
-stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
-Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
-from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
-snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
 
 ## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
 
