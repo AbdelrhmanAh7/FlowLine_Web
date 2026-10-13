@@ -7,29 +7,23 @@ import { sha256Hex } from "@/server/crypto";
 import { consumeAccountToken } from "@/server/email/flows";
 import { createWorkspace } from "@/server/workspaces";
 import { addMember, closeDb, makeUser, unique } from "./helpers";
-import { connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
+import { connect, pauseAfter, routeTransactions, blockedByObserver } from "./pg-lock-helpers";
 
-// Root cause (issue #109, part 2 of #47): a deletion inserts its "account.deleted" audit rows — each
-// insert key-share locks its `workspace` row through the foreign key — and only then locks those
-// workspaces `FOR UPDATE`. Two co-members of one workspace deleting at once would each hold that
-// key-share while both wait for the other's to clear: the classic lock-upgrade cycle, which PostgreSQL
-// aborts with 40P01. Every deletion therefore takes the installation-wide retained-file accounting lock
-// (`lockRetainedFileAccounting`, a `pg_advisory_xact_lock` plus the singleton counter row) as its first
-// statement, so two deletions are never past their audit inserts at the same time
-// (tests/integration/retained-file-locking.test.ts, "two co-members of one workspace").
+// This test verifies the fix for issue #109 (part 2 of #47): the deletion now locks workspaces
+// FOR UPDATE before writing audit rows, avoiding the KEY SHARE → FOR UPDATE upgrade that
+// could deadlock two concurrent deletions (40P01). The retained-file accounting lock still
+// serializes all deletions globally, but this lock order is safe even without it.
 //
-// This negative control proves that hazard is real and the accounting lock is load-bearing: with ONLY
-// that lock removed (a test-only mock — fault injection, this file alone), the real
-// `consumeAccountToken("delete")` of two co-members, each paused right after its audit insert and
-// released at once, must leave one transaction aborted with 40P01 while the other commits. The
-// production path cannot reach that state, which is exactly what the retained-file-locking test pins.
+// This test uses fault injection (mocking out the accounting lock) to verify that the
+// lock order fix alone prevents the deadlock: two co-members deleting at once should
+// both complete successfully, serialized on the workspace FOR UPDATE lock.
 
 vi.mock("@/server/retained-files", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/retained-files")>();
   return {
     ...actual,
     // FAULT INJECTION (this file only): drop the deletion's first statement — the installation-wide
-    // advisory lock — to expose the key-share → FOR UPDATE upgrade it exists to serialize.
+    // advisory lock — to verify the lock order fix works without it.
     lockRetainedFileAccounting: async () => undefined,
   };
 });
@@ -49,8 +43,8 @@ async function deleteToken(userId: string) {
   return token;
 }
 
-describe("account deletion key-share upgrade (negative control)", () => {
-  it("without the accounting lock, two co-members deleting at once deadlock (40P01)", async () => {
+describe("account deletion lock order fix (negative control)", () => {
+  it("without the accounting lock, two co-members deleting at once serialize on workspace lock and both finish", async () => {
     const owner = await makeUser("upgrade-owner");
     const workspace = await createWorkspace(owner, unique("Upgrade"));
     owned.push(workspace.id);
@@ -62,47 +56,40 @@ describe("account deletion key-share upgrade (negative control)", () => {
     const secondClient = await connect();
     const firstDb = drizzle(firstClient, { schema });
     const secondDb = drizzle(secondClient, { schema });
-    // Both deletions pause right after their audit insert: each holds FOR KEY SHARE on the shared
-    // workspace and neither has asked for the workspace FOR UPDATE yet.
-    const firstPause = pauseAfter(firstClient, /insert into "audit_event"/i);
-    const secondPause = pauseAfter(secondClient, /insert into "audit_event"/i);
+    // Get the second connection's PID before starting the transaction.
+    const secondPid = (await secondClient.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
+    // Pause the first deletion AFTER it acquires the workspace FOR UPDATE lock (before audit insert).
+    // The second deletion will block on the workspace lock held by the first.
+    const firstPause = pauseAfter(firstClient, /from "workspace"[\s\S]*for update/i);
     const routing = routeTransactions();
     let deletingFirst: Promise<unknown> | undefined;
     let deletingSecond: Promise<unknown> | undefined;
     try {
       deletingFirst = routing.run(firstDb, () => consumeAccountToken("delete", firstToken, undefined, first.id));
-      await Promise.race([firstPause.reached, deletingFirst.then(() => { throw new Error("First deletion finished before its audit insert"); })]);
+      await Promise.race([firstPause.reached, deletingFirst.then(() => { throw new Error("First deletion finished before its workspace lock"); })]);
+      // First deletion now holds the workspace FOR UPDATE lock. Start the second deletion;
+      // it will block on the workspace lock.
       deletingSecond = routing.run(secondDb, () => consumeAccountToken("delete", secondToken, undefined, second.id));
-      await Promise.race([secondPause.reached, deletingSecond.then(() => { throw new Error("Second deletion finished before its audit insert"); })]);
-      // Released together, each asks for the workspace FOR UPDATE while the other still holds the
-      // key-share its own audit insert took: the upgrade cycle. PostgreSQL must abort one (40P01).
+      // Give the second deletion time to reach the workspace lock and block.
+      await new Promise((r) => setTimeout(r, 100));
+      // Verify the second deletion is blocked on the workspace lock (observer is the first connection).
+      const wait = await blockedByObserver(firstClient, secondPid, () => false);
+      expect(wait.query).toContain("for update");
+      // Resume the first deletion: it does the audit insert and commits, releasing the workspace lock.
       firstPause.resume();
-      secondPause.resume();
-      const [firstResult, secondResult] = await Promise.allSettled([deletingFirst, deletingSecond]);
-      // Drizzle wraps the PostgreSQL error, whose SQLSTATE is on `cause`.
-      const sqlState = (r: PromiseRejectedResult) => {
-        const reason = r.reason as { code?: string; cause?: { code?: string } } | null;
-        return reason?.code ?? reason?.cause?.code;
-      };
-      const deadlocked = [firstResult, secondResult].filter((r) => r.status === "rejected" && sqlState(r) === "40P01");
-      expect(deadlocked).toHaveLength(1);
-      const finished = [firstResult, secondResult].filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled");
-      expect(finished).toHaveLength(1);
-      expect(finished[0]!.value).toBe("done");
-      // The aborted transaction rolled back (no audit row, account still there); the survivor's audit
-      // row stays and its account is gone.
-      const survivor = firstResult.status === "fulfilled" ? first : second;
-      const aborted = firstResult.status === "fulfilled" ? second : first;
-      expect(await db.select().from(schema.user).where(eq(schema.user.id, survivor.id))).toHaveLength(0);
-      expect(await db.select().from(schema.user).where(eq(schema.user.id, aborted.id))).toHaveLength(1);
+      await expect(deletingFirst).resolves.toBe("done");
+      // The second deletion should now acquire the workspace lock, do its audit insert, and commit.
+      await expect(deletingSecond).resolves.toBe("done");
+      // Both audit rows should exist.
       const audit = await db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, workspace.id), eq(schema.auditEvent.action, "account.deleted")));
-      expect(audit.map((e) => e.targetId)).toEqual([survivor.id]);
+      expect(audit.map((e) => e.targetId).sort()).toEqual([first.id, second.id].sort());
+      // Both accounts should be deleted.
+      expect(await db.select().from(schema.user).where(eq(schema.user.id, first.id))).toHaveLength(0);
+      expect(await db.select().from(schema.user).where(eq(schema.user.id, second.id))).toHaveLength(0);
     } finally {
       firstPause.resume();
-      secondPause.resume();
       await Promise.allSettled([deletingFirst, deletingSecond]);
       firstPause.restore();
-      secondPause.restore();
       routing.restore();
       await Promise.all([firstClient.end(), secondClient.end()]);
     }

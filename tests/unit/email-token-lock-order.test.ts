@@ -104,13 +104,14 @@ describe("account token lock order", () => {
     expect(fx.events).toEqual([]);
   });
 
-  // Issue #109 (part 2 of #47): the deletion's audit insert key-share locks the workspace, as completeSso's audit()
-  // does after its user lock, so it is written before the workspace FOR UPDATE and never while holding it.
-  it("delete writes the shared workspace's account.deleted audit row before it locks the workspaces", async () => {
+  // Issue #109 (part 2 of #47): the deletion now locks workspaces FOR UPDATE before writing audit rows,
+  // avoiding the KEY SHARE → FOR UPDATE upgrade. completeSso's audit() still takes its key-share after
+  // its user lock, so the deletion's user-first order prevents a cycle with SSO.
+  it("delete locks the shared workspaces before writing the account.deleted audit rows", async () => {
     fx.token.purpose = "delete";
     fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }]];
     expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
-    expect(fx.events.slice(0, 5)).toEqual(["lock:retained-accounting", "lock:user:update", "lock:email_token:update", "insert:audit_event", "lock:workspace:update"]);
+    expect(fx.events.slice(0, 5)).toEqual(["lock:retained-accounting", "lock:user:update", "lock:email_token:update", "lock:workspace:update", "insert:audit_event"]);
     expect(fx.events.filter((e) => e.endsWith(":audit_event"))).toEqual(["insert:audit_event"]);
     expect(fx.events.slice(-2)).toEqual(["update:email_token", "delete:user"]);
   });
@@ -121,6 +122,8 @@ describe("account token lock order", () => {
     fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }], [{ workspaceId: "ws-shared", role: "viewer", userId: "user-2" }]];
     expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
     const lock = fx.events.indexOf("lock:workspace:update");
-    expect(fx.events.slice(lock + 1).filter((e) => e.endsWith(":audit_event"))).toEqual(["delete:audit_event", "insert:audit_event"]);
+    // After the workspace lock: initial audit insert for `seen` (editor), then reconciliation deletes the stale
+    // editor row and inserts the current viewer row.
+    expect(fx.events.slice(lock + 1).filter((e) => e.endsWith(":audit_event"))).toEqual(["insert:audit_event", "delete:audit_event", "insert:audit_event"]);
   });
 });

@@ -172,16 +172,18 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     if (purpose === "delete") {
       const userId = row.userId;
       const sameMembership = (a: Membership) => (b: Membership) => a.workspaceId === b.workspaceId && a.role === b.role;
-      // Lock order (#47, #109): user row (above), then the audit rows, then the workspaces FOR UPDATE. Each audit_event
-      // insert key-share locks its workspace, the lock completeSso's audit() takes right after its user lock, so it is
-      // taken here before the workspace FOR UPDATE, never while holding it. No membership of this user can be added
-      // meanwhile (a workspace_member insert key-shares the user row held above); changes are reconciled below.
+      // Lock order (#47, #109): user row (above), then the workspaces FOR UPDATE, then the audit rows.
+      // The audit_event insert would key-share its workspace via FK; taking the workspace FOR UPDATE first
+      // avoids the KEY SHARE → FOR UPDATE upgrade that could deadlock two concurrent deletions (40P01).
+      // The retained-file accounting lock serializes all deletions globally, but this order is safe even without it.
+      // No membership of this user can be added meanwhile (a workspace_member insert key-shares the user row held above);
+      // changes are reconciled below.
       const seen: Membership[] = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, userId));
-      if (seen.length) await tx.insert(schema.auditEvent).values(seen.map((m) => deletionAudit(userId, m)));
       // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
-      // before reading ownership: two co-owners deleting their accounts at once must not both pass the
+      // before writing audit rows: two co-owners deleting their accounts at once must not both pass the
       // last-owner check and leave the remaining members in an ownerless workspace.
       if (seen.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, seen.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
+      if (seen.length) await tx.insert(schema.auditEvent).values(seen.map((m) => deletionAudit(userId, m)));
       const memberships = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
       const owned = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.userId, row.userId), eq(schema.workspaceMember.role, "owner")));
       for (const membership of owned) {
