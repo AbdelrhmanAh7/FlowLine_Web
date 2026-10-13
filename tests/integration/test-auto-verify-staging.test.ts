@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db, schema } from "@/db";
 import { dispatchAuth } from "@/server/auth-dispatch";
-import { TEST_AUTO_VERIFY_ENV } from "@/server/test-auto-verify";
+import { resetAutoVerifyWarningForTests, TEST_AUTO_VERIFY_ENV } from "@/server/test-auto-verify";
 import { closeDb } from "./helpers";
 
 /**
@@ -22,6 +22,9 @@ process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
 const prevEnv = process.env.FLOWLINE_ENV;
 const prevMode = process.env.FLOWLINE_BETA_MODE;
 const prevAuto = process.env[TEST_AUTO_VERIFY_ENV];
+// The once-per-process warning flag is module state; forget it before every test so a shared module graph (should the
+// integration project ever reuse one across files) cannot hide the "exactly one warning" assertions.
+beforeEach(() => resetAutoVerifyWarningForTests());
 afterEach(() => {
   process.env.FLOWLINE_ENV = prevEnv;
   process.env.FLOWLINE_BETA_MODE = prevMode;

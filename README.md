@@ -131,16 +131,17 @@ Sign-up still needs the emailed verification link on the test stack (read it fro
 automated tester that cannot read the outbox (TestSprite cloud, milestone runs), start a `FLOWLINE_ENV=test` stack with
 `FLOWLINE_TEST_AUTO_VERIFY=1`: new e-mail sign-ups are then created verified, get no verification e-mail, and the
 sign-up form signs them in straight away (issue #124). A single browser context can opt in with the cookie
-`fl_test_auto_verify=1` instead (the e2e-army test and `e2e/test-auto-verify.spec.ts` do); a tester that can only
-navigate pages (no cookie API) opens `/api/test/auto-verify` first, which sets that cookie and continues to `/sign-up`
-(404 unless `FLOWLINE_ENV=test`). Both opt-ins are honoured only when `FLOWLINE_ENV` is exactly
+`fl_test_auto_verify=1` instead (the e2e-army test and `e2e/test-auto-verify.spec.ts` set it with their own cookie
+API); there is no route that sets it, so a tester that can only navigate pages uses the server-wide
+`FLOWLINE_TEST_AUTO_VERIFY=1`. Both opt-ins are honoured only when `FLOWLINE_ENV` is exactly
 `test`; anywhere else they are ignored, so they cannot be enabled on staging, beta or production — a stray
 `FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one warning when the auth module first loads (the first request that
 uses auth, before any sign-up is handled, whether it is admitted, refused or social); the cookie is ignored silently.
 The private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
 The UI is Arabic by default; a tester that drives the forms by their English labels sets the cookie `fl_locale=en`
 first. The labels are then **Create account** on `/sign-up`, **Sign in** on `/sign-in` and **Resend** on
-`/resend-verification` (there is no "Sign Up" button). After **Resend** the page answers only
+`/resend-verification` (there is no "Sign Up" button). The `/sign-up` form has exactly three fields — Name, Email and
+Password — and no password-confirmation field (design-reference slide 6). After **Resend** the page answers only
 "If the account is eligible, an email will arrive shortly.": it never says "Verification resent" or anything else
 that would reveal whether the address has an account.
 

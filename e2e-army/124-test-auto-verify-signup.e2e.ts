@@ -2,8 +2,9 @@
 // create test runs end to end without reading the mail outbox. The switch is FLOWLINE_TEST_AUTO_VERIFY=1 (server env,
 // for an external tester) or, per browser context, the fl_test_auto_verify=1 cookie (like fl_test_beta_mode); BOTH are
 // ignored unless FLOWLINE_ENV=test. The verify stack runs FLOWLINE_ENV=test without the env switch, so these tests opt in
-// with the cookie (set directly, or by opening /api/test/auto-verify as a navigate-only tester does) and also prove that, without any opt-in, sign-up still requires e-mail verification. That the switch
-// cannot be turned on outside FLOWLINE_ENV=test (env or cookie) is proven in tests/unit/test-auto-verify.test.ts.
+// with the cookie (set with the browser's cookie API) and also prove that, without any opt-in, sign-up still requires
+// e-mail verification. That the switch cannot be turned on outside FLOWLINE_ENV=test (env or cookie) is proven in
+// tests/unit/test-auto-verify.test.ts.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
@@ -102,37 +103,23 @@ test(
 );
 
 test(
-  "@issue-124 AC1: a browser that can only navigate opts in by opening /api/test/auto-verify, then Create account on /sign-up opens Name your workspace with no Check your inbox",
+  "@issue-124 AC1: the /sign-up form has exactly Name, Email and Password fields and a Create account button - no password-confirmation field",
   { tags: ["feat:fl-sign-up", "lvl:ui"] },
   async ({ app, screen, browser }) => {
     const base = app.baseUrl!;
-    // Only the beta and locale cookies: the auto-verify opt-in comes from the page visit, as for a tester that cannot set cookies.
     await browser.setCookies([
       { url: base, name: "fl_locale", value: "en" },
       { url: base, name: "fl_test_beta_mode", value: "open" },
     ]);
-    const email = await freshEmail(base, "ui-auto-verify-by-url");
-    await app.open("/api/test/auto-verify");
-    await expect(screen.getByRole("button", "Create account")).toBeVisible();
-    await untilAuthFormHydrated(browser);
-    await screen.getByLabel("Name").fill("Army 124");
-    await screen.getByLabel("Email").fill(email);
-    await screen.getByLabel("Password").fill(PASSWORD);
-    await screen.getByRole("button", "Create account").tap();
-    await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
-    await expect(screen.getByText("Check your inbox")).not.toBeVisible();
-  },
-);
-
-test(
-  "@issue-124 AC1: GET /api/test/auto-verify sets the fl_test_auto_verify=1 cookie and sends the browser to /sign-up",
-  { tags: ["feat:fl-auth-api", "lvl:api"] },
-  async ({ app }) => {
-    const base = app.baseUrl!;
-    const res = await fetch(`${base}/api/test/auto-verify`, { redirect: "manual", headers: headers(base, BASE_COOKIES) });
-    expect(res.status).toBe(303);
-    expect(new URL(res.headers.get("location")!, base).pathname).toBe("/sign-up");
-    expect(res.headers.getSetCookie().some((c) => c.startsWith("fl_test_auto_verify=1;"))).toBe(true);
+    await app.open("/sign-up");
+    await screen.getByLabel("Name").waitFor();
+    await screen.getByLabel("Email").waitFor();
+    await screen.getByLabel("Password").waitFor();
+    await screen.getByRole("button", "Create account").waitFor();
+    // The form is Name + Email + Password only (design-reference slide 6); a generated tester must not expect a
+    // password-confirmation field.
+    const count = await browser.evaluate(() => document.querySelectorAll('form[method="post"] input').length);
+    expect(count).toBe(3);
   },
 );
 

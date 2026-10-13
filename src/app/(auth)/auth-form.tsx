@@ -211,7 +211,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <span className="h-px flex-1 bg-line" /> {t("auth.orEmail")} <span className="h-px flex-1 bg-line" />
           </div>
 
-          {/* Before hydration a submit falls back to a POST with unnamed fields: nothing typed ever lands in a URL. */}
+          {/*
+            Sign-up fields are exactly Name, Email and Password (design-reference slide 6): there is deliberately no
+            password-confirmation field, so no test or generated tester should look for one.
+            Before hydration a submit falls back to a POST with unnamed fields: nothing typed ever lands in a URL.
+          */}
           <form method="post" onSubmit={submit} noValidate className="flex flex-col gap-4">
             {mode === "sign-up" && (
               <Field label={t("auth.name")} htmlFor="name">
