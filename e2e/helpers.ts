@@ -44,6 +44,22 @@ export async function verificationLink(req: APIRequestContext, email: string) {
 }
 
 /**
+ * Waits until React has attached its handlers to the page's account form. Both the auth form (/sign-up, /sign-in) and
+ * the account EmailFlow's DynamicForm (/resend-verification, /forgot-password) render `<form method="post">`; before
+ * hydration a submit is a plain form POST that signs nobody up or in, so a fast fill+click can wait out its timeout for
+ * a screen that never comes (issue #124). Polls React's `__reactProps$` key on the form — DOM state, not a clock — like
+ * the e2e-army test's untilAuthFormHydrated.
+ */
+export async function waitForAccountFormHydrated(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(document.querySelector('form[method="post"]') ?? {}).some((k) => k.startsWith("__reactProps$"))), {
+      timeout: 15_000,
+      message: 'the account form never hydrated (form[method="post"] has no __reactProps$)',
+    })
+    .toBe(true);
+}
+
+/**
  * Creates an account the way a person does — sign up, open the emailed verification link, confirm, sign in — but
  * through the HTTP API. Sign-up alone gives no session (email verification is required). The session cookie lands
  * in the request context (for `page.request`, the page's browser context).

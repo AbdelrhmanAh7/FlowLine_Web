@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { BASE_URL } from "../playwright.config";
-import { PASSWORD, uniqueEmail, verificationLink } from "./helpers";
+import { PASSWORD, uniqueEmail, verificationLink, waitForAccountFormHydrated } from "./helpers";
 
 /**
  * Issue #124: the test-only sign-up auto-verify switch (src/server/test-auto-verify.ts) through the real sign-up form.
@@ -12,6 +12,9 @@ import { PASSWORD, uniqueEmail, verificationLink } from "./helpers";
  * The first test is also the machine-readable description of the form's fields for the hub verifier, whose planner
  * reads these titles: the sign-up form is exactly Name, Email and Password with a **Create account** button, and it has
  * no password-confirmation field (design-reference slide 6 — a generated tester must not look for one).
+ *
+ * Every submit waits for React to hydrate the account form first (`waitForAccountFormHydrated`, e2e/helpers.ts): an
+ * early click is a plain form POST that signs nobody up or in, which on a slow runner timed out the Chromium gate.
  */
 async function inbox(req: APIRequestContext, email: string) {
   return ((await (await req.get(`/api/test/outbox?email=${encodeURIComponent(email)}`)).json()) as { messages: unknown[] }).messages;
@@ -19,6 +22,7 @@ async function inbox(req: APIRequestContext, email: string) {
 
 async function signUp(page: Page, email: string) {
   await page.goto("/sign-up");
+  await waitForAccountFormHydrated(page);
   await page.getByLabel("Name").fill("Auto Verify");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
@@ -51,6 +55,7 @@ test("#124 without an opt-in, Create account on /sign-up shows Check your inbox 
   await verificationLink(page.request, email);
 
   await page.goto("/resend-verification");
+  await waitForAccountFormHydrated(page);
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Resend", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "If the account is eligible, an email will arrive shortly." })).toBeVisible();
