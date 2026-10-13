@@ -102,3 +102,58 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.reload();
   await expect(status).toHaveText("On");
 });
+
+test("cancelling a pending enable keeps the secret hidden", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveText("Off");
+
+  // Hold the enable response so Cancel can be clicked while the request is in flight.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/auth/two-factor/enable", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  const started = page.waitForRequest("**/api/auth/two-factor/enable");
+  const responded = page.waitForResponse((r) => r.url().includes("/api/auth/two-factor/enable") && r.status() === 200);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await started;
+  await page.getByRole("button", { name: "Cancel" }).click();
+  release();
+  await responded;
+
+  // The late response must not reopen the secret: Cancel wins and the status stays Off.
+  await expect(status).toHaveText("Off");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+});
+
+test("a non-password enable failure shows its own message", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
+
+  // A 400 that is not about the password must keep the server's reason, not the "wrong password" line.
+  await page.route("**/api/auth/two-factor/enable", (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "TOTP_ALREADY_ENABLED", message: "Two-factor is already enabled" }),
+    }),
+  );
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+
+  await expect(dangerToast).toContainText("Two-factor is already enabled");
+  await expect(dangerToast).not.toContainText("That password isn't correct.");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+});

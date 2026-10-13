@@ -25,24 +25,32 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const [pending, setPending] = useState<"enable" | "verify" | null>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
+  // Bumped whenever an in-flight enable/verify is cancelled or replaced, so a late response can't reopen the secret.
+  const requestRef = useRef(0);
 
   const cancel = () => {
+    requestRef.current += 1;
     takeSecret(passwordRef.current);
     setAskPassword(false);
     setEnrolment(null);
+    setPending(null);
   };
 
   const enable = async () => {
+    const req = ++requestRef.current;
     const password = takeSecret(passwordRef.current) ?? "";
     setPending("enable");
     try {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } });
+      if (requestRef.current !== req) return;
       setEnrolment({ totpURI: r.totpURI, secret: new URL(r.totpURI).searchParams.get("secret") ?? "", backupCodes: r.backupCodes });
       setAskPassword(false);
     } catch (err) {
-      toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
+      if (requestRef.current !== req) return;
+      // Only a wrong/missing password gets the friendly line; other failures show their own (or a generic) message.
+      toast(err instanceof ApiError && err.code === "INVALID_PASSWORD" ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
     } finally {
-      setPending(null);
+      if (requestRef.current === req) setPending(null);
     }
   };
 
@@ -54,15 +62,18 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       toast(t("auth.twoFactorInvalid"), "danger");
       return;
     }
+    const req = ++requestRef.current;
     setPending("verify");
     try {
       await api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code } });
+      if (requestRef.current !== req) return;
       setEnrolment(null);
       router.refresh();
     } catch (err) {
+      if (requestRef.current !== req) return;
       toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("auth.twoFactorInvalid") : apiErrorMessage(t, err), "danger");
     } finally {
-      setPending(null);
+      if (requestRef.current === req) setPending(null);
     }
   };
 
