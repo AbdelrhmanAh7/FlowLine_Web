@@ -17,7 +17,7 @@ export const GROUPS = {
   },
   auth: {
     description: "sign-up/sign-in journey, private beta, tenancy, SSO (Zitadel)",
-    specs: ["beta", "journey", "tenancy", "zitadel", "zitadel-platform"],
+    specs: ["account-security", "beta", "journey", "tenancy", "zitadel", "zitadel-platform"],
   },
   editor: {
     description: "flow builder canvas, keyboard, forms, library, runs, failures, local scenarios",
