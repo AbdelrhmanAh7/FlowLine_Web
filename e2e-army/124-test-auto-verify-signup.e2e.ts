@@ -2,7 +2,7 @@
 // create test runs end to end without reading the mail outbox. The switch is FLOWLINE_TEST_AUTO_VERIFY=1 (server env,
 // for an external tester) or, per browser context, the fl_test_auto_verify=1 cookie (like fl_test_beta_mode); BOTH are
 // ignored unless FLOWLINE_ENV=test. The verify stack runs FLOWLINE_ENV=test without the env switch, so these tests opt in
-// with the cookie and also prove that, without any opt-in, sign-up still requires e-mail verification. That the switch
+// with the cookie (set directly, or by opening /api/test/auto-verify as a navigate-only tester does) and also prove that, without any opt-in, sign-up still requires e-mail verification. That the switch
 // cannot be turned on outside FLOWLINE_ENV=test (env or cookie) is proven in tests/unit/test-auto-verify.test.ts.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";

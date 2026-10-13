@@ -8,7 +8,8 @@
  * admitted, refused or social; the cookie is ignored silently.
  *   - FLOWLINE_TEST_AUTO_VERIFY=1: server-wide, for an external tester that cannot set cookies (exactly "1", nothing else);
  *   - the `fl_test_auto_verify=1` cookie: for one browser context only, like `fl_test_beta_mode` (src/server/beta.ts), so
- *     the shared E2E stack can exercise the switch without changing every other test's sign-up.
+ *     the shared E2E stack can exercise the switch without changing every other test's sign-up; a tester that cannot
+ *     set cookies opens GET /api/test/auto-verify (src/app/api/test/auto-verify/route.ts), which sets it.
  * The cookie grants nothing new: under FLOWLINE_ENV=test GET /api/test/outbox already hands out every verification link.
  * Only POST /sign-up/email is affected; the private-beta admission check still runs first, and social sign-ups keep the
  * provider's verified flag.
