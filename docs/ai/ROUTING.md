@@ -3,8 +3,7 @@
 - **Code:**
   - `src/ai/hub/routing.ts`: route resolution and the policy plan.
   - `src/ai/hub/execute.ts`: the executor (retries, circuit breaker, metering, streaming).
-  - `src/ai/hub/pricing.ts`: pricing math. Each export's JSDoc states its units (micros per million tokens, plus an
-    optional flat per-call price, in the price's currency) and how costs are rounded.
+  - `src/ai/hub/pricing.ts`: pricing math.
   - `src/ai/hub/policy.ts`: policy validation.
 - **Tests:**
   - `tests/integration/ai-hub-routing.test.ts`

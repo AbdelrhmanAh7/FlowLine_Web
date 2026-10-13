@@ -41,7 +41,7 @@ export function fromPriceEntry(p: PriceEntry | undefined): PriceSnapshot | null 
  * @param provider Provider id, part of the price-table key.
  * @param modelId Model id, part of the price-table key.
  * @param catalogue The catalogue pricing (`ai_model.pricing`) for the model, if any.
- * @param ctx The workspace `currency` and the connection's `region`; a catalogue price with a different currency or region is not used.
+ * @param ctx The workspace `currency` and the connection's `region`; a catalogue price is not used when it names a currency that differs from `ctx.currency` (when set) or a region that differs from `ctx.region`.
  * @returns A snapshot (source `workspace_price_table` or `catalogue`), or null when the price is unknown.
  */
 export function resolvePrice(
@@ -60,9 +60,10 @@ export function resolvePrice(
 }
 
 /**
- * Checks whether a catalogue snapshot has zero input/output prices and no per-call or positive cache-write charge.
+ * A route is FREE only when its price is known, verified (catalogue: official page or documented listing) and zero.
  * @param p The resolved price, or null when unknown.
- * @returns True only for a catalogue price with zero input and output prices, no per-call price and no positive cache-write price.
+ * @returns True only for a catalogue-sourced price (a workspace-table price is never verified) with zero input and
+ *   output prices, no per-call price and no positive cache-write price.
  */
 export function isVerifiedZeroPrice(p: PriceSnapshot | null): boolean {
   return Boolean(
@@ -96,7 +97,8 @@ function tier(p: PriceSnapshot, inputTokens: number): { input: number; output: n
  * micro before the flat per-call price is added.
  * @param p The resolved price (micros per million tokens), or null when unknown.
  * @param u The attempt's normalised token usage.
- * @returns The cost in micros of the price's currency, or null when the price is unknown (including cache writes without a cache-write price).
+ * @returns The cost in micros of the price's currency, or null when the price is unknown, when the usage has cache
+ *   writes but the price has no cache-write price, or when the applicable long-context tier is unpriced.
  */
 export function costMicros(p: PriceSnapshot | null, u: NormalisedUsage): number | null {
   if (!p || p.inputPerMTokMicros == null || p.outputPerMTokMicros == null) return null;
@@ -148,7 +150,8 @@ export function maxInputTokens(chars: number) {
  * @param p The resolved price (micros per million tokens), or null when unknown.
  * @param promptChars Prompt size in characters, converted with `maxInputTokens`.
  * @param maxOutputTokens The most output tokens the attempt may produce.
- * @returns The maximum cost in micros of the price's currency, or null when the price is unknown.
+ * @returns The maximum cost in micros of the price's currency, or null when the price is unknown or the applicable
+ *   long-context tier is unpriced.
  */
 export function maxCostMicros(p: PriceSnapshot | null, promptChars: number, maxOutputTokens: number): number | null {
   if (!p || p.inputPerMTokMicros == null || p.outputPerMTokMicros == null) return null;
