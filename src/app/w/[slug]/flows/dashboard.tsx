@@ -86,7 +86,7 @@ export function useCreateFlow() {
   const toast = useToast();
   const t = useT();
   return useMutation({
-    mutationFn: (body: { name?: string; templateId?: string }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
+    mutationFn: (body: { name?: string; templateId?: string; n8n?: unknown }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
     onSuccess: ({ flow }) => router.push(`/w/${workspace.slug}/flows/${flow.id}`),
     onError: (e) => toast(apiErrorMessage(t, e, t("flows.createError")), "danger"),
   });

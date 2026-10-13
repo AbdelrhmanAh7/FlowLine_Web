@@ -138,6 +138,7 @@
   "common": {
     "version": "الإصدار {version}",
     "cancel": "إلغاء",
+    "close": "إغلاق",
     "retry": "إعادة المحاولة",
     "back": "رجوع",
     "continue": "متابعة",
