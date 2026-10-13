@@ -37,6 +37,10 @@ AC3 Copilot code review ruleset: <enabled|disabled>; Copilot review next to Code
 
 Record only the setting names, their state, the date and the PR link. Never record secret values (whole or partial), tokens or keys, or what a secret-scanning or Dependabot alert contains (secret type, file, line, commit, package or advisory), screenshots included; each open alert gets its own issue. Then copy the date and the comment link into the record above.
 
+## Issue #85: e2e-army GitHub Actions job (owner only)
+
+Not done. Issue #85 step 4 asks for an Actions job that runs `pnpm e2e:army` per shard with `timeout-minutes: 5` and posts the `e2e-army` check. AI PRs may not edit `.github/workflows` (CTO decision on PR #88, 2026-10-09), so PR #88 ships the suite, `pnpm e2e:army` and the docs only; until the owner adds the workflow, the hub's verify job posts the `e2e-army` status and the 5-minute per-shard budget is enforced by `scripts/e2e-army.mjs` but not timed in CI. When the owner adds the job, update the "not yet timed in CI" wording in `README.md` and `docs/DEVELOPER_GUIDE.md`.
+
 ## Issue #162: Owner Actions - Sensitive Components (tracking)
 
 This section tracks the five founder-only actions from GitHub issue #162 that are blocked by hard rules (money, legal, people). Engineers must not perform these actions, and #162 carries no code: it stays open as the owner's tracking issue until each row below is done. PR #185 is the only PR for this issue and it links #162 as `Refs #162`. A PR that touches this section must reference the issue as `Refs #162`, never with a closing keyword (`Closes`, `Fixes`, `Resolves`), so that merging it leaves #162 open; only the owner closes #162. Any engineering scaffolding (disabled UI states with a `disabledReason`, value-free config types, feature flags that default off) belongs to issue #163 in its own PR; none of it is in the repository yet.
