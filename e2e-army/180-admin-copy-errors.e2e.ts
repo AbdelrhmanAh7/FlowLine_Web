@@ -58,7 +58,7 @@ test(
     // Verify no HTML or stack trace leaks in the error response
     const body = JSON.stringify(json);
     expect(body).not.toContain("<html");
-    expect(body).not.toContain("stack trace");
+    expect(body).not.toMatch(/\n\s+at \S+/);
   },
 );
 
