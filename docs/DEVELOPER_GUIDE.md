@@ -24,7 +24,7 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
 
 ## Components and design
 
@@ -60,6 +60,15 @@ Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`;
 
 Natural-language e2e-army tests (`e2e-army/<issue>-<flow>.e2e.ts`, the blocking `e2e-army` status) are copied and run by the hub's verify job, which type-checks them against its own `e2e` and `@e2e-dev/web` packages. Those packages are not dependencies here yet (issue #85, PR #88 adds them), so `tsconfig.json` excludes `e2e-army/` from `pnpm typecheck`; drop that exclusion when they land. `pnpm lint` still covers the folder.
 
+### Field-run and other synthetic sign-up harnesses
+
+A harness that creates its own users through the public `/api/auth/sign-up/email` endpoint and reads the verification link from `/api/test/outbox` (the `signUpFieldUser` helper of the field-validation v2 harness, `scripts/field-validation/v2/signup.ts`, which lives on branch `claude/issue-6` and is not on `main` yet) needs the target server started with **both**:
+
+- `FLOWLINE_ENV=test`: the test outbox and the other `/api/test/*` routes answer only in the test environment; elsewhere they are 404.
+- `FLOWLINE_BETA_MODE=open`: with `invite_only`, a sign-up without an invitation, access code or `FLOWLINE_BETA_ADMINS` entry is refused (`src/server/beta.ts`), and so are a missing or invalid value, which default to `invite_only` and log a configuration error. `FLOWLINE_ENV=test` does not relax this by itself; only the isolated E2E stack's per-context `fl_test_beta_mode` cookie does.
+
+Start the stack with both variables set (the isolated stack from `scripts/test-stack.cjs` and the `flowline_test_<suffix>` database rules in "CI gate" below still apply), for example `FLOWLINE_ENV=test FLOWLINE_BETA_MODE=open` in the server's process environment, never in a shared env file. The v2 harness README on that branch does not list `FLOWLINE_BETA_MODE=open` yet; add it there when the branch is merged.
+
 ### Git hooks and local CI
 
 `pnpm install` runs `prepare: husky || true` (so a production-only install without dev dependencies, where the `husky` executable is absent, still succeeds, as in Husky's documentation), which installs the hooks in `.husky/` (husky sets `core.hooksPath=.husky/_`, a path that only exists in a checkout where `pnpm install` ran). They are deliberately fast; the full CI runs on the owner's Mac mini through the hub's `localci` job, which posts the GitHub commit statuses under the workflows' job names.
@@ -85,7 +94,7 @@ For browser timeouts, distinguish the whole-test deadline from time spent on the
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
-Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (they need the test database, so they run in the integration project, not `pnpm test`).
+Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`.
 
 Local evidence helpers that start Vitest against a disposable database (`artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs`, `.../federated-mfa/run-focused.mjs`, `.../paid-pilot-round1/run-auth-focused.mjs` and `artifacts/phase-4/security-auth/run-focused.mjs`) must not pass `process.env` to the child, because an ambient `FLOWLINE_*`, provider key or `NODE_OPTIONS` would silently change what a run proves. They call `buildFocusedTestEnv` from `scripts/focused-run-env.mjs`: the child gets only OS/runtime names the parent has (`PATH`, temp/home directories, the Windows system variables, `NODE_OPTIONS` when set) plus the synthetic values the helper constructs, and the call refuses anything but `FLOWLINE_ENV=test` and a `flowline_test` or `flowline_test_<suffix>` database. The variable names (never values) go into the result JSON (`childEnv`) or stderr, and `--dry-run` prints them without git, Docker or a database (`run-auth-focused.mjs` and `security-auth/run-focused.mjs` read the target from `DATABASE_URL`, so it must be set even for `--dry-run`). A new helper reuses the module and joins the list in `tests/unit/focused-run-env.test.ts`. CI's unit job runs that test (the helpers' `--dry-run` included) but never a helper's real database run. Other scripts that spread `process.env` (`check-drizzle-prune.mjs`, gate, release, Company Builder and the frozen `artifacts/beta-execution` and `artifacts/design-v2` helpers) are not database-backed focused runs and are unchanged.
 
@@ -120,6 +129,26 @@ Download and open a trace on your own machine: `gh run download <run id> -R Abde
 
 ## Worktrees
 
-Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
+Agent lanes live under `.claude/worktrees/<name>` (git-ignored), with `node_modules` linked to the main install. Run `pnpm wt` from any checkout; the branch defaults to the lane name, and `add` always creates a new branch.
 
-`pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+```bash
+pnpm wt add my-lane                               # new branch my-lane from origin/main; prints the path
+pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch, bare lane name
+pnpm wt add base-lane --base origin/dev           # choose the start point
+pnpm wt list                                        # <path> | <branch> | dirty=<n> | pushed=<true|false>
+pnpm wt remove my-lane                              # alias of rm; refuses dirty or unpushed work
+pnpm wt prune                                       # clear stale registrations; remove clean, pushed lanes
+```
+
+Safety rules:
+
+- Lane names must match this pattern; `add` rejects anything else before git runs:
+
+  ```
+  ^[A-Za-z0-9][A-Za-z0-9._-]*$
+  ```
+
+  Use `--branch feat/x` for a slashed branch name.
+- The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
+- Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
+- `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
