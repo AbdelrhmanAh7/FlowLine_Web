@@ -16,7 +16,7 @@ through `public/media/demo/manifest.json` only. Full research, style references 
 
 Every clip ships in Arabic (default, RTL) and English, light theme, as AV1 and H.264 MP4 (no audio track) with a JPEG
 poster; the walkthrough also ships four chapter stills and a `.vtt` caption file per locale. File names are content
-hashed (`hero.ar.light.av1.5d531cbb.mp4`); `manifest.json` is the stable entry point.
+hashed (`hero.ar.light.av1.e9c86093.mp4`); `manifest.json` is the stable entry point.
 
 ## Setup (once per machine)
 
@@ -129,7 +129,8 @@ about 15-20 MB of binaries to git history).
 | Symptom | Fix |
 |---|---|
 | `Chromium … sandbox` / `listen EPERM` / `setpriority: Operation not permitted` | run outside the agent sandbox |
-| `another demo build is running (pid N)` | wait, or remove a stale `tools/demo-video/.work/build.lock` |
+| `another demo build is running (pid N)` | wait, or remove a stale `tools/demo-video/.work/build.lock`. The lock is released only when its pid is gone (`ESRCH`); a pid owned by another user (`EPERM`) still counts as running |
+| `remotion … not installed` | `tools/demo-video` is missing or unusable: run `pnpm demo:setup` |
 | `another next build is running` | a gate/e2e build owns `.next-test`; wait for it |
 | A recording fails | the error names the locator and time; `failure.png` in the recording's folder under `tools/demo-video/.work/` (for example `hero.ar.light`) shows the page; `DEMO_DEBUG=1` prints the beats |
 | `recorded 9.3 s, storyboard 8 s` | the scenario is too slow: shorten its moves or holds (its `holdUntil` pads only when it is early). Under a CPU governor or background QoS, record with `--record-only` at normal priority first |
@@ -144,8 +145,3 @@ incorporated, you can operate under the Free License, as long as your total head
 `remotion` / `@remotion/*` package is pinned to the identical exact version (4.0.534) in `tools/demo-video`. Re-read
 <https://www.remotion.dev/docs/license/faq> on every upgrade, and never add a paid or telemetry service. The compositor
 only reads `events.json` + `master.mp4`, so Revideo (MIT) remains a drop-in fallback.
-
-
-## Troubleshooting: child processes
-
-A missing `remotion` binary (or an unusable `tools/demo-video`) now fails the build with a "not installed" message pointing at `pnpm demo:setup`. The build lock is only released when its pid is gone (`ESRCH`); a pid owned by another user (`EPERM`) still counts as running.
