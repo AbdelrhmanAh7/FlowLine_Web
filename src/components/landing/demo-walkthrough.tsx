@@ -58,8 +58,8 @@ function DemoWalkthroughDialog({ view }: { view: WalkthroughView }) {
     // Retry after an error from scratch; the stills stay until a play succeeds (a failed file is not declared fixed by reopening).
     if (errored.current) {
       errored.current = false;
-      // Remove all <source> children so v.load() doesn't re-select the fallback source.
-      while (v.firstChild) v.removeChild(v.firstChild);
+      // Drop the <source> children so v.load() doesn't re-select the fallback source; the caption <track>s must stay.
+      v.querySelectorAll("source").forEach((s) => s.remove());
       v.removeAttribute("src");
       v.load();
     }

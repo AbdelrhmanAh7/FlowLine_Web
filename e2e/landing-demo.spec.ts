@@ -293,6 +293,7 @@ test.describe("with a manifest", () => {
     await page.evaluate(() => ((window as unknown as { __rejectPlay: boolean }).__rejectPlay = false));
     await page.getByTestId("demo-watch").click();
     await expect(dialog.getByTestId("demo-chapter-still")).toHaveCount(0); // played again: the stills give way to the video
+    await expect(video.locator("track")).toHaveCount(2); // the retry drops the failed <source>, never the EN + AR captions
     await context.close();
   });
 
