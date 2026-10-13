@@ -131,6 +131,13 @@ export async function tokenState(purpose: Purpose, token: string): Promise<Token
   return "valid";
 }
 
+type Membership = { workspaceId: string; role: string };
+
+/** Ends the deletion transaction (rolling back its audit rows) when an owned workspace would be left without an owner. */
+class TransferRequired extends Error {}
+
+const deletionAudit = (userId: string, m: Membership) => ({ workspaceId: m.workspaceId, actorLabel: "Account deletion", action: "account.deleted", targetType: "user", targetId: userId, data: { role: m.role } });
+
 export async function consumeAccountToken(purpose: Purpose, token: string, value?: string, currentUserId?: string): Promise<TokenState | "done" | "transfer_required"> {
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
@@ -147,7 +154,9 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
 
   return db.transaction(async (tx) => {
     // Deletion cascades into retained files. Accounting must precede even the
-    // token lock, and especially the workspace locks below (including shared W).
+    // token lock, and especially the workspace locks below (including shared W). It is installation-wide, so it also
+    // serializes every deletion: two co-members of W can never both hold the KEY SHARE their audit insert takes on W
+    // while each waits to upgrade it to FOR UPDATE (40P01; tests/integration/retained-file-locking.test.ts).
     if (purpose === "delete") await lockRetainedFileAccounting(tx);
 
     const [lockedUser] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, tokenUserId)).for("update");
@@ -161,17 +170,28 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     if (row.userId !== lockedUser.id) return "invalid";
 
     if (purpose === "delete") {
-      // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
-      // before reading ownership: two co-owners deleting their accounts at once must not both pass the
-      // last-owner check and leave the remaining members in an ownerless workspace.
-      const mine = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
-      if (mine.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, mine.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
+      const userId = row.userId;
+      const sameMembership = (a: Membership) => (b: Membership) => a.workspaceId === b.workspaceId && a.role === b.role;
+      // Lock order (#47, #109): user row (above), then the audit rows, then the workspaces FOR UPDATE: the same order as the
+      // SSO transaction (user row, audit insert, then W), so neither side awaits the user row while holding W.
+      // The audit_event insert key-shares its workspace via FK, so this order takes KEY SHARE on W and then asks for W FOR
+      // UPDATE in the same transaction. The retained-file accounting lock above is what keeps two co-members of W from
+      // both holding that KEY SHARE and each waiting to upgrade it (40P01): it is load-bearing, do not remove or narrow it
+      // (negative control: tests/integration/account-delete-key-share-upgrade.test.ts).
+      // No membership of this user can be added meanwhile (a workspace_member insert key-shares the user row held above);
+      // changes are reconciled below.
+      const seen: Membership[] = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, userId));
+      // Audit rows first, then lock every workspace this user belongs to (deterministic order, same row lock as
+      // changeRole/removeMember).
+      if (seen.length) await tx.insert(schema.auditEvent).values(seen.map((m) => deletionAudit(userId, m)));
+      if (seen.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, seen.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
       const memberships = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
       const owned = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.userId, row.userId), eq(schema.workspaceMember.role, "owner")));
       for (const membership of owned) {
         const [otherOwner] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`, eq(schema.workspaceMember.role, "owner"))).limit(1);
         const [otherMember] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`)).limit(1);
-        if (otherMember && !otherOwner) return "transfer_required";
+        // Thrown, not returned, so the audit rows written above roll back with the transaction.
+        if (otherMember && !otherOwner) throw new TransferRequired();
       }
       // Workspaces where this user is the only member are deleted with the account (their flows, runs, connections,
       // knowledge… cascade) — no orphaned workspace is left behind (PRIVACY_AND_SAFETY.md §4).
@@ -180,11 +200,15 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
         const [other] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`)).limit(1);
         if (!other) soleWorkspaces.push(membership.workspaceId);
       }
-      // Preserve a security audit record (in shared workspaces) after the account row is removed.
-      for (const membership of memberships) {
-        if (soleWorkspaces.includes(membership.workspaceId)) continue;
-        await tx.insert(schema.auditEvent).values({ workspaceId: membership.workspaceId, actorLabel: "Account deletion", action: "account.deleted", targetType: "user", targetId: row.userId, data: { role: membership.role } });
+      // A security audit record survives the account row in each shared workspace. Records in sole workspaces go with
+      // the workspace (audit_event ON DELETE CASCADE). A membership removed or a role changed by another transaction
+      // between the first read and the workspace lock is corrected now, under that lock.
+      for (const m of seen) {
+        if (soleWorkspaces.includes(m.workspaceId) || memberships.some(sameMembership(m))) continue;
+        await tx.delete(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, m.workspaceId), eq(schema.auditEvent.action, "account.deleted"), eq(schema.auditEvent.targetId, userId)));
       }
+      const unrecorded = memberships.filter((m) => !soleWorkspaces.includes(m.workspaceId) && !seen.some(sameMembership(m)));
+      if (unrecorded.length) await tx.insert(schema.auditEvent).values(unrecorded.map((m) => deletionAudit(userId, m)));
       // Their provider subscriptions are cancelled first; if the provider refuses, nothing is deleted and the person
       // can retry — a deleted workspace must never keep billing.
       if (soleWorkspaces.length) {
@@ -204,11 +228,15 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       return "done";
     }
     if (purpose === "reset") {
+      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the user row and the token
+      // row are already held above; the user's sessions come next, then their account rows, the same order the
+      // federated transactions take (issue #41). The reverse could deadlock against a link confirmation, challenge
+      // completion or SSO callback. Reset mutates no retained file, so it takes no retained-file accounting lock.
       const hashed = await hashPassword(value!);
+      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
-      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       // Historical tenant-created identities have no independently proven mailbox
       // ownership. Recovery removes those methods; explicitly mailbox-approved
       // links retain normal recovery behaviour.
@@ -221,5 +249,8 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     }
     await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.id, row.id), isNull(schema.emailToken.consumedAt)));
     return "done";
+  }).catch((error: unknown) => {
+    if (error instanceof TransferRequired) return "transfer_required" as const;
+    throw error;
   });
 }
