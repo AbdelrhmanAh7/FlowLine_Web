@@ -1,5 +1,11 @@
 # Next action — 2026-10-03
 
+## Issue #199 review follow-up — 2026-10-14
+
+PR #262 remains for the harness to push and request review. Cancel buttons explicitly use `type="button"`; the existing better-auth disable endpoint is POST JSON `{ password }`, with no code field. Regression tests assert cancellation discards enrolment/password UI without a mutation and Disable sends only the password. Reuse: the installed MIT better-auth twoFactor plugin; no new dependency or server code.
+
+Runtime verification is blocked: this checkout has no `.env.test`, Docker daemon is unavailable, and localhost:5432 does not respond. Focused Chromium and issue-199 e2e-army commands executed no tests. Restore the isolated test stack, run the account-security journey and Arabic security case with one worker, then the issue-199 army test with its `fl-user` setup; the hosted full tier remains required. Read-only GitHub checks on 2026-10-14 show prerequisite PRs #261 (#196) and #259 (#197) OPEN, despite the earlier branch note saying merged. Their code is present in this branch through previous merges; wait for their reviewed merges and reconcile main before final review. No push, PR reply, merge or release action was performed in this turn.
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.

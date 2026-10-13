@@ -67,6 +67,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     const password = takeSecret(passwordRef.current) ?? "";
     setPending("disable");
     try {
+      // better-auth disableTwoFactor accepts a POST JSON body with only the account password.
       await api("/api/auth/two-factor/disable", { method: "POST", json: { password } });
       setAskDisable(false);
       toast(t("account.security.twoFactor.disabled"), "success");
@@ -101,7 +102,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               <Button type="submit" variant="primary" loading={pending === "disable"}>
                 {t("account.security.twoFactor.disable")}
               </Button>
-              <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+              <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
             </div>
           </form>
         ) : (
@@ -137,7 +138,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
           </form>
         </div>
       ) : askPassword ? (
@@ -155,7 +156,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
           </div>
         </form>
       ) : (
