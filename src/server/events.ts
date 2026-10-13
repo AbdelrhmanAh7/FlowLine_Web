@@ -19,6 +19,7 @@ export type RunEventType =
   | "approval_decided"
   | "budget_blocked"
   | "connection_blocked"
+  | "outbound_capped"
   | "cancel_requested"
   | "cancelled"
   | "lease_lost"

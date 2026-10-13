@@ -25,6 +25,7 @@ A new caller is added here after the same check, as the doc comment on `checkRat
 | `src/server/platform-setup.ts` | `platform-setup-redeem:<client IP>`, `platform-setup-redeem:all`, `platform-setup-complete:<challenge id>` (the setup token is hashed separately and never reaches `checkRate`) |
 | `src/server/public-body.ts` | `public-body:<kind>:<ip>` |
 | `src/ai/hub/connections.ts` | `ai-key:user:<user id>`, `ai-key:conn:<connection id>` |
+| `worker/handlers.ts` (outbound send cap, #165) | `outbound:<connection id>:<action id>` |
 
 ## What CodeQL traced
 
