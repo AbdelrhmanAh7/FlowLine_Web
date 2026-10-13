@@ -141,20 +141,12 @@ describe("lib/format helpers", () => {
     });
 
     describe("scale handling", () => {
-      it("formats '12.5' at scale 0 as '12' (truncation, not rounding up)", () => {
-        expect(toDecimalString("12.5", 0)).toBe("12");
-      });
-
       it("formats '12.51' at scale 2 as '12.51' (no rounding)", () => {
         expect(toDecimalString("12.51", 2)).toBe("12.51");
       });
 
       it("formats '12.599' at scale 2 is rejected (has more than 2 decimals)", () => {
         expect(() => toDecimalString("12.599", 2)).toThrow(/more than 2 decimal places/);
-      });
-
-      it("formats '12.50' at scale 2 as '12.50' (keeps trailing zero)", () => {
-        expect(toDecimalString("12.50", 2)).toBe("12.50");
       });
 
       it("formats '12.5' at scale 3 as '12.500'", () => {
@@ -250,39 +242,39 @@ describe("lib/format helpers", () => {
       it("formats '١٢.٥٠٠' (Arabic-Indic) at scale 2 as '12.50' (trailing zeros trimmed)", () => {
         expect(toDecimalString("١٢.٥٠٠", 2)).toBe("12.50");
       });
+
+      it("rejects Persian (Extended Arabic-Indic) digits '۱۲.۵' (not normalised)", () => {
+        expect(() => toDecimalString("۱۲.۵", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects the Arabic decimal separator '٫' in '١٢٫٥٠' (not normalised)", () => {
+        expect(() => toDecimalString("١٢٫٥٠", 2)).toThrow(/invalid decimal value/);
+      });
     });
 
     describe("no float rounding verification", () => {
-      it("0.1 + 0.2 as string is rejected at scale 2 (float rounding would give 0.3)", () => {
-        expect(() => toDecimalString("0.1 + 0.2", 2)).toThrow(/invalid decimal value/);
+      it("rejects the float artifact number 0.1 + 0.2 at scale 2 instead of rounding it to '0.30'", () => {
+        expect(() => toDecimalString(0.1 + 0.2, 2)).toThrow(/more than 2 decimal places/);
       });
 
-      it("0.30000000000000004 as string is rejected at scale 2 (float rounding artifact, has more than 2 decimals)", () => {
-        expect(() => toDecimalString("0.30000000000000004", 2)).toThrow(/more than 2 decimal places/);
+      it("formats the number 1e21 exactly, never in exponent notation", () => {
+        expect(toDecimalString(1e21, 2)).toBe("1000000000000000000000.00");
       });
 
-      it("12.5 at scale 0 is '12' (truncation, not rounding)", () => {
-        expect(toDecimalString("12.5", 0)).toBe("12");
+      it("formats the number 12.5 at scale 2 as '12.50' (padded, not rounded)", () => {
+        expect(toDecimalString(12.5, 2)).toBe("12.50");
       });
 
-      it("12.51 at scale 2 is '12.51' (exact, not rounded)", () => {
-        expect(toDecimalString("12.51", 2)).toBe("12.51");
+      it("formats 12.51 at scale 2 as '12.51' (exact, not rounded to '12.5')", () => {
+        expect(toDecimalString(12.51, 2)).toBe("12.51");
       });
 
-      it("12.599 at scale 2 is rejected (has more than 2 decimals)", () => {
-        expect(() => toDecimalString("12.599", 2)).toThrow(/more than 2 decimal places/);
+      it("rejects 12.599 at scale 2 instead of rounding it to '12.60'", () => {
+        expect(() => toDecimalString(12.599, 2)).toThrow(/more than 2 decimal places/);
       });
 
-      it("12.500 at scale 2 is '12.50' (exact, trailing zero preserved)", () => {
-        expect(toDecimalString("12.500", 2)).toBe("12.50");
-      });
-
-      it("12.50 at scale 2 is '12.50' (exact)", () => {
-        expect(toDecimalString("12.50", 2)).toBe("12.50");
-      });
-
-      it("12.5 at scale 3 is '12.500' (padded to scale)", () => {
-        expect(toDecimalString("12.5", 3)).toBe("12.500");
+      it("formats 12.500 at scale 2 as '12.50' (the trailing zero beyond the scale is trimmed)", () => {
+        expect(toDecimalString(12.500, 2)).toBe("12.50");
       });
     });
 
@@ -373,15 +365,15 @@ describe("lib/format helpers", () => {
     });
 
     describe("scale 0 (integer) cases", () => {
-      it("formats '12.5' at scale 0 as '12' (truncation, not rounding)", () => {
-        expect(toDecimalString("12.5", 0)).toBe("12");
+      it("rejects '12.5' at scale 0 (has more than 0 decimal places, no truncation)", () => {
+        expect(() => toDecimalString("12.5", 0)).toThrow(/more than 0 decimal places/);
       });
 
-      it("formats '12.51' at scale 0 as '12' (truncation)", () => {
-        expect(toDecimalString("12.51", 0)).toBe("12");
+      it("rejects '12.51' at scale 0 (no truncation)", () => {
+        expect(() => toDecimalString("12.51", 0)).toThrow(/more than 0 decimal places/);
       });
 
-      it("formats '12.0' at scale 0 as '12' (no decimal point)", () => {
+      it("formats '12.0' at scale 0 as '12' (a trailing zero is not extra precision)", () => {
         expect(toDecimalString("12.0", 0)).toBe("12");
       });
 
@@ -389,20 +381,20 @@ describe("lib/format helpers", () => {
         expect(toDecimalString("12.00", 0)).toBe("12");
       });
 
-      it("formats '0.5' at scale 0 as '0' (truncation)", () => {
-        expect(toDecimalString("0.5", 0)).toBe("0");
+      it("rejects '0.5' at scale 0 (no truncation)", () => {
+        expect(() => toDecimalString("0.5", 0)).toThrow(/more than 0 decimal places/);
       });
 
       it("formats '0.0' at scale 0 as '0' (no decimal point)", () => {
         expect(toDecimalString("0.0", 0)).toBe("0");
       });
 
-      it("formats '-12.5' at scale 0 as '-12' (truncation, sign preserved)", () => {
-        expect(toDecimalString("-12.5", 0)).toBe("-12");
+      it("rejects '-12.5' at scale 0 (no truncation, sign not silently dropped)", () => {
+        expect(() => toDecimalString("-12.5", 0)).toThrow(/more than 0 decimal places/);
       });
 
-      it("formats '-0.5' at scale 0 as '0' (truncation, sign is lost for zero)", () => {
-        expect(toDecimalString("-0.5", 0)).toBe("0");
+      it("rejects '-0.5' at scale 0 (no truncation to a lossy zero)", () => {
+        expect(() => toDecimalString("-0.5", 0)).toThrow(/more than 0 decimal places/);
       });
     });
   });

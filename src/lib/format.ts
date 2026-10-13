@@ -82,12 +82,9 @@ export function toDecimalString(value: number | string, scale = 2): string {
   let fraction = digits.slice(point);
   while (fraction.length > scale && fraction.endsWith("0")) fraction = fraction.slice(0, -1);
   if (fraction.length > scale) {
-    // For scale 0, truncate instead of reject (no rounding)
-    if (scale === 0) {
-      fraction = "";
-    } else {
-      throw new Error(`toDecimalString: value has more than ${scale} decimal places`);
-    }
+    // More decimals than the scale is a precision error for every scale, scale 0 included: truncating
+    // would silently change the amount (12.5 → 12), which is not this helper's job.
+    throw new Error(`toDecimalString: value has more than ${scale} decimal places`);
   }
   fraction = fraction.padEnd(scale, "0");
 
