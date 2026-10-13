@@ -60,7 +60,7 @@ export function resolvePrice(
 }
 
 /**
- * A route is FREE only when its price is known, verified (catalogue: official page or documented listing) and zero.
+ * Checks whether a catalogue snapshot has zero input/output prices and no per-call or positive cache-write charge.
  * @param p The resolved price, or null when unknown.
  * @returns True only for a catalogue price with zero input and output prices, no per-call price and no positive cache-write price.
  */
