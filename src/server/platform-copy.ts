@@ -42,9 +42,21 @@ export const getPublishedCopy = cache(async (): Promise<CopyOverrides> => {
   return publishedCopyOrBase(async () => (await read(PUBLISHED)).value, () => console.error("Published copy unavailable; using built-in catalogue"));
 });
 
+function baseMap(locale: Locale) {
+  return Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy(locale, key) ?? ""]));
+}
+
+/** A store failure becomes a bounded 503 (the editor shows its load error); only the error type name is logged. */
 export async function getCopyEditorState() {
-  const [draft, published] = await Promise.all([read(DRAFT), read(PUBLISHED)]);
-  return { base: { ar: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("ar", key)!])), en: Object.fromEntries([...EDITABLE_COPY_KEYS].map((key) => [key, baseCopy("en", key)!])) }, draft, published };
+  let draft, published;
+  try {
+    [draft, published] = await Promise.all([read(DRAFT), read(PUBLISHED)]);
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    console.error("Copy editor state unavailable", err instanceof Error ? err.name : typeof err);
+    throw new HttpError(503, "COPY_STATE_UNAVAILABLE", "Copy editor state is unavailable. Try again shortly.");
+  }
+  return { base: { ar: baseMap("ar"), en: baseMap("en") }, draft, published };
 }
 
 function actorOf(ctx: PlatformAdminContext) {
