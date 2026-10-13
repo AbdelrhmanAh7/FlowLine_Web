@@ -13,18 +13,16 @@ backed-up numbers back. Numbers cleared by 0025 cannot be restored. The script s
 `\set ON_ERROR_STOP on`, and is run by hand with
 `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. If a later save or
 publication has taken a freed number, the unique index refuses and nothing changes.
-Base: PR #207 (#204) is still open. `ai/205` merges the current `ai/204` (`f1f9d33`) and main. Its #205 files are 0026 and
-its snapshot and journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test and these docs. Against
-main, PR #211 also shows #204's commits until #207 merges; after that, only the #205 files remain. These include
-`e2e-army/117-flows-list-dashboard.e2e.ts`, which is #204's test and is not deleted here, because deleting it would remove it
-from main. Merge #207 first.
-Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge of `ai/204` `f1f9d33`. Results:
+Base: `ai/204` (PR #207, #204), which is still open; 0026 needs 0025's nullable `version`, so #205 cannot sit on main
+alone. PR #211 targets `ai/204`, and its diff holds only the #205 files: 0026 and its snapshot and journal entry, the
+backup table in `src/db/schema.ts`, the reverse script, the test and these docs. When #207 merges, retarget PR #211 to main.
+Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge of `ai/204` `e4ba1bc`. Results:
 - `tests/integration/flow-version-run-backfill.test.ts`: 5/5. The fixture holds legacy-shaped rows (save v1, run snapshots
   v2 and v3, inserted as a pre-#204 image writes them). The backfill keeps v1, clears and backs up the run numbers, and the
   next publication and `publishedVersion` in the flows list are v2. A second run changes nothing. The reverse restores
   v2/v3, also when run twice, and the backfill then applies again. A numbered run insert after the backfill is stored
   unnumbered. The reverse fails atomically after a publication took v2.
-- `flow-version-backfill.test.ts` (#204): 2/2. `runs.test.ts`: 16/16. Through `psql -v ON_ERROR_STOP=1
+- `flow-version-backfill.test.ts` (#204): 2/2. `runs.test.ts`: 18/18. Through `psql -v ON_ERROR_STOP=1
   --single-transaction -f`, the reverse, then 0026 twice, all exit 0.
 - `drizzle-kit check` and `drizzle-kit generate` (no changes), `pnpm typecheck`, and eslint on the changed files are clean.
   The full integration and browser suites were not run locally; CI runs them.
@@ -33,19 +31,19 @@ Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Run snapshots are now stored with
-`version = NULL` (migration 0025 drops `NOT NULL`); only `save`, `overwrite` and `publish` snapshots are numbered.
-Migration 0025 also adds `flow_version.seq` (bigserial): the history panel orders by it, because `created_at` is the
-transaction start time and can tie or run backwards between transactions. The history panel and the run inspector
-label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`, `runs.rerun.originalSnapshot`, ar + en) through one
-helper pair, `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts` (unit test
-`tests/unit/flow-version-label.test.ts`: no "Version —" or "(v)" label in either language); the API returns `version: null`
-for such runs.
-Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version` on
-`reason = 'run'` rows, and recreates the trigger, so pre-existing runs no longer consume publication numbers.
-Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publish after two runs is v1 and the flow list
-reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
-builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
-`e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
+`version = NULL` (`insertVersion` in `src/server/flows.ts`; migration 0025 drops `NOT NULL`); only `save`, `overwrite`
+and `publish` snapshots are numbered. Draft edits (autosave, which bumps `flow.revision`) never wrote a snapshot and
+still don't. Migration 0025 also backfills legacy run snapshots: it drops the 0002 immutability trigger, nulls `version`
+on `reason = 'run'` rows and recreates the trigger. History now orders by `created_at` (version can be NULL). The history
+panel and the run inspector label an unnumbered snapshot "Run snapshot" (`common.runSnapshot`,
+`runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` / `rerunOriginalLabel` in `src/i18n/engine-text.ts`;
+the run detail API (`/api/runs/:id`, `/api/v1/runs/:id`) returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; draft edits and a run before the first publish give v1; two runs then publish give v1; the three
+fail without the fix with 4≠2, 2≠1 and 3≠1), `tests/integration/flow-version-backfill.test.ts`,
+`tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`, `pnpm typecheck`, eslint on the changed
+files and `drizzle-kit check`. Open for the CTO, in `AI_QUESTIONS.md`: whether Ctrl/⌘+S saves keep taking numbers from the
+publication sequence, and a follow-up for strict insertion order in history (removed from this PR to keep it minimal).
 
 ## GitHub security settings (issue #160) — 2026-10-13
 

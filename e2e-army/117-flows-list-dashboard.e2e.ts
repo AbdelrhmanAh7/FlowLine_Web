@@ -125,7 +125,8 @@ test(
     expect(row(bad.id)).toMatchObject({ runCount: 1, lastRunStatus: "failed", successRate: 0, publishedVersion: null });
     expect(row(draft.id)).toMatchObject({ runCount: 0, lastRunStatus: null, successRate: null, nodeCount: 0, hasTrigger: false });
 
-    // The dashboard counts the same flows; the two runs of `good` did not use up its publication numbers.
+    // The flows dashboard renders the rows above (same endpoint), so publishedVersion 1 is what it shows. The workspace
+    // overview has no version field: it only counts the same flows and the active runs.
     const overview = (await http.get(`${w}/overview`)).json;
     expect(overview).toMatchObject({ flows: 3, activeRuns: 0 });
   },

@@ -1,9 +1,9 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireFlow } from "@/server/access";
 import { resetFaults, setFault } from "@/server/faults";
-import { createFlow, insertVersion, listFlows, listVersions, saveFlow, softDeleteFlow } from "@/server/flows";
+import { createFlow, listFlows, listVersions, saveFlow, softDeleteFlow } from "@/server/flows";
 import { createWorkspace } from "@/server/workspaces";
 import type { CurrentUser } from "@/server/access";
 import type { FlowGraph } from "@/engine/types";
@@ -123,22 +123,6 @@ describe("saveFlow", () => {
     const versions = await listVersions(flow.id);
     expect(versions).toHaveLength(1);
     expect(versions[0]).toMatchObject({ version: 1, revision: 3, reason: "save" });
-  });
-
-  it("history lists snapshots newest-inserted first, also when an older transaction inserts last (regression: #204)", async () => {
-    const { user, ws } = await setup();
-    const flow = await createFlow(user, ws.id, {});
-    // The outer transaction starts first, so its created_at (now() = transaction start) is the earlier one,
-    // but its snapshot is inserted after the inner transaction's run snapshot has committed.
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`select now(), pg_sleep(0.01)`); // fixes now() and keeps the two timestamps apart
-      await db.transaction((inner) => insertVersion(inner, user, flow, "run"));
-      await insertVersion(tx, user, flow, "save");
-    });
-
-    const versions = await listVersions(flow.id);
-    expect(versions.map((v) => v.reason)).toEqual(["save", "run"]);
-    expect(versions[0].createdAt.getTime()).toBeLessThan(versions[1].createdAt.getTime());
   });
 
   it("404s when saving a deleted flow", async () => {

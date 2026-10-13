@@ -58,8 +58,9 @@ local Ollama models (visual/copy review).
   Its UPDATE is idempotent and safe to run again by hand. `drizzle/reverse/0026_flow_version_run_backfill.sql` restores
   the backed-up numbers and drops the trigger. That script is manual, idempotent and outside the drizzle journal and
   `src/db/migrate.ts`; the project has no down migrations (a rollback runs the previous image on the newer schema). Run it
-  with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. History lists snapshots by `seq` (insertion order), not `created_at`
-  (the transaction start time). `run` and `run_step`
+  with `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+  History lists snapshots newest first by `created_at`.
+  `run` and `run_step`
   store per-step status, input, output, error, skip reason, and timings.
 - **Tenancy**: every query is scoped by a workspace the user belongs to. Non-members get
   **404, not 403**, so the existence of other workspaces is not revealed. Roles: owner > editor > viewer.
