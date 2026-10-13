@@ -58,9 +58,9 @@ The outbound send cap is implemented per-connection and per-action (not per-dest
 
 ### Current Validations
 
-1. **Workspace validation:** The rate limit check validates that the connection belongs to the current workspace before applying limits (see `worker/handlers.ts:336-344`)
+1. **Workspace validation:** The connection is validated to belong to the current workspace by `getRuntimeCredentials` before rate limiting is applied (see `src/server/connections.ts:241`)
 2. **Policy check:** The integration action validates that the connectionId matches the run's permission policy (see `worker/handlers.ts:291-293`)
-3. **Connection existence check:** The rate limit check validates that the connection exists (see `worker/handlers.ts:337-338`)
+3. **Connection existence check:** Validated by `getRuntimeCredentials` which throws `CONNECTION_MISSING` if the connection doesn't exist (see `src/server/connections.ts:240`)
 
 ### Future Considerations
 
