@@ -9,6 +9,11 @@ const fx = vi.hoisted(() => ({
   events: [] as string[],
   token: { id: "token-1", userId: "user-1" as string | null, purpose: "reset", consumedAt: null as Date | null, expiresAt: new Date("2099-01-01") },
   userExists: true,
+  // Same-link race (#65): both calls pass every unlocked check before either transaction starts, the transactions then
+  // run one after the other (as the user-row lock makes them), and consuming the token is visible to the second one.
+  racing: false,
+  arrived: [] as Array<() => void>,
+  txChain: Promise.resolve() as Promise<unknown>,
 }));
 
 vi.mock("@/db", async () => {
@@ -33,9 +38,19 @@ vi.mock("@/db", async () => {
   } }) });
   const write = (kind: string) => (table: Table) => {
     const done = async () => { fx.events.push(`${kind}:${getTableName(table)}`); };
-    return { set: () => ({ where: done }), values: done, where: done };
+    const consume = (values: { consumedAt?: Date }) => async () => {
+      await done();
+      if (fx.racing && getTableName(table) === "email_token" && values.consumedAt) fx.token.consumedAt = values.consumedAt;
+    };
+    return { set: (values: { consumedAt?: Date }) => ({ where: consume(values) }), values: done, where: done };
   };
-  const db = { select, update: write("update"), insert: write("insert"), delete: write("delete"), transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => callback(db) };
+  const db = { select, update: write("update"), insert: write("insert"), delete: write("delete"), transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => {
+    if (!fx.racing) return callback(db);
+    await new Promise<void>((arrive) => { fx.arrived.push(arrive); if (fx.arrived.length === 2) fx.arrived.forEach((go) => go()); });
+    const run = fx.txChain.then(() => callback(db));
+    fx.txChain = run.catch(() => undefined);
+    return run;
+  } };
   return { db, schema: await import("@/db/schema") };
 });
 vi.mock("better-auth/crypto", () => ({ hashPassword: async () => { fx.events.push("hash"); return "hashed"; } }));
@@ -51,6 +66,9 @@ const locks = () => fx.events.filter((e) => e.startsWith("lock:"));
 beforeEach(() => {
   fx.events.length = 0;
   fx.userExists = true;
+  fx.racing = false;
+  fx.arrived.length = 0;
+  fx.txChain = Promise.resolve();
   fx.token = { id: "token-1", userId: "user-1", purpose: "reset", consumedAt: null, expiresAt: new Date("2099-01-01") };
 });
 
@@ -74,6 +92,17 @@ describe("account token lock order", () => {
     fx.events.length = 0;
     await expect(consumeAccountToken("reset", TOKEN, "short")).rejects.toMatchObject({ status: 400 });
     expect(fx.events).toEqual([]);
+  });
+
+  it("hashes once when two resets present the same link at once: the second finds it used under the locks (#65)", async () => {
+    fx.racing = true;
+    const results = await Promise.all([
+      consumeAccountToken("reset", TOKEN, "first-password-123"),
+      consumeAccountToken("reset", TOKEN, "second-password-123"),
+    ]);
+    expect(results).toEqual(["done", "used"]);
+    expect(fx.events.filter((e) => e === "hash")).toHaveLength(1);
+    expect(locks()).toEqual(["lock:user:update", "lock:email_token:update", "lock:user:update", "lock:email_token:update"]);
   });
 
   it("refuses a token whose user was deleted after the unlocked read, without locking the token", async () => {
