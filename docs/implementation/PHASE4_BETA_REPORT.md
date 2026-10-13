@@ -6,6 +6,10 @@
 
 Review rounds 1–2 resolution — 2026-10-13 (same issue): the #108 deadlock test `tests/integration/account-delete-sso-lock-order.test.ts` is now **part of this change** (copied verbatim from `origin/ai/108` at `2ef1fb8`, together with the `routeTransactions` helper it needs in `tests/integration/pg-lock-helpers.ts`), so the issue's "passes the deadlock test" criterion is verified on the head being merged, not claimed: it passes 2/2 on this branch against a throwaway `flowline_test_109r3` database. The key-share → `FOR UPDATE` upgrade the reorder could introduce is now pinned by a real negative control, `tests/integration/account-delete-key-share-upgrade.test.ts`: with only the accounting lock removed (a test-only mock), the same two co-member deletions, each paused after its audit insert and released together, leave one transaction aborted with `40P01` at the workspace `FOR UPDATE` while holding its key-share — proving the accounting lock is load-bearing (the earlier "the test fails" sentence in lock-order.md was a counterfactual; it is now an executed test). The e2e-army header was corrected to name exactly what each test pins. Local runs on this head: `retained-file-locking.test.ts` 4/4, `account-delete-sso-lock-order.test.ts` 2/2, `account-delete-key-share-upgrade.test.ts` 1/1 (three consecutive runs), `email.test.ts` 9/9, `tests/unit/email-token-lock-order.test.ts` 10/10. The #108 test file is identical to PR #214's, so merging either first keeps the other merge clean.
 
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
+
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
 The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
