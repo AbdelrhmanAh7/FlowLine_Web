@@ -141,10 +141,12 @@ export async function saveFlow(user: CurrentUser, flowId: string, input: SaveFlo
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof schema.flow.$inferSelect, reason: "save" | "run" | "overwrite" | "publish") {
-  const [{ next }] = await tx
-    .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
-    .from(schema.flowVersion)
-    .where(eq(schema.flowVersion.flowId, flow.id));
+  const next = reason === "publish"
+    ? (await tx
+        .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
+        .from(schema.flowVersion)
+        .where(eq(schema.flowVersion.flowId, flow.id)))[0].next
+    : null;
   const [v] = await tx
     .insert(schema.flowVersion)
     .values({ flowId: flow.id, version: next, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
@@ -157,7 +159,7 @@ export async function listVersions(flowId: string) {
     .select({ id: schema.flowVersion.id, version: schema.flowVersion.version, revision: schema.flowVersion.revision, reason: schema.flowVersion.reason, createdAt: schema.flowVersion.createdAt })
     .from(schema.flowVersion)
     .where(eq(schema.flowVersion.flowId, flowId))
-    .orderBy(desc(schema.flowVersion.version))
+    .orderBy(desc(schema.flowVersion.createdAt), desc(schema.flowVersion.id))
     .limit(50);
 }
 

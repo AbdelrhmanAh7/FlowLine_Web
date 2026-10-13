@@ -203,11 +203,12 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    version: integer("version").notNull(),
+    /** NULL for "save", "run", "overwrite" snapshots: only "publish" gets a publication number (#204). */
+    version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
     graph: jsonb("graph").$type<FlowGraph>().notNull(),
-    /** "save" = explicit save, "run" = snapshot pinned for a run, "overwrite" = server copy kept before an offline overwrite */
+    /** "save" = explicit save, "run" = snapshot pinned for a run, "overwrite" = server copy kept before an offline overwrite, "publish" = publication */
     reason: text("reason").notNull(),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
