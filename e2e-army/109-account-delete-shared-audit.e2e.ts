@@ -22,15 +22,16 @@ const plain = (base: string) => ({ "content-type": "application/json", origin: n
 
 /** Polls the test-stack outbox (newest first) for the newest link of one purpose and returns its token. */
 async function outboxToken(base: string, email: string, purpose: string) {
-  for (let i = 0; i < 24; i++) {
+  let token = null as string | null;
+  // the outbox is written after the response: poll until the mail is there (bounded by the poll timeout, no fixed delay)
+  await expect.poll(async () => {
     const r = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: plain(base) });
     const messages: { purpose?: string; link?: string }[] = (await r.json().catch(() => ({ messages: [] }))).messages ?? [];
     const link = messages.find((m) => m.purpose === purpose)?.link;
-    const token = link ? new URL(link).searchParams.get("token") : null;
-    if (token) return token;
-    await new Promise((resolve) => setTimeout(resolve, 500)); // the outbox is written after the response
-  }
-  throw new Error(`no ${purpose} e-mail in the test outbox`);
+    token = link ? new URL(link).searchParams.get("token") : null;
+    return token !== null;
+  }, { timeout: 12_000, interval: 250, message: `no ${purpose} e-mail in the test outbox` }).toBe(true);
+  return token!;
 }
 
 const signIn = (base: string, email: string) =>
