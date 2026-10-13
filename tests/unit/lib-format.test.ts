@@ -276,6 +276,34 @@ describe("lib/format helpers", () => {
       it("formats 12.500 at scale 2 as '12.50' (the trailing zero beyond the scale is trimmed)", () => {
         expect(toDecimalString(12.500, 2)).toBe("12.50");
       });
+
+      it("formats the number 0.3 at scale 2 as '0.30' (the exact float, not a rounded artifact)", () => {
+        expect(toDecimalString(0.3, 2)).toBe("0.30");
+      });
+
+      it("formats the number -12.5 at scale 2 as '-12.50' (number path keeps the sign)", () => {
+        expect(toDecimalString(-12.5, 2)).toBe("-12.50");
+      });
+
+      it("formats the number -0 at scale 2 as '0.00' (negative zero is normalized on the number path too)", () => {
+        expect(toDecimalString(-0, 2)).toBe("0.00");
+      });
+
+      it("uses scale 2 as the default (number path)", () => {
+        expect(() => toDecimalString(0.1 + 0.2)).toThrow(/more than 2 decimal places/);
+        expect(toDecimalString(12.5)).toBe("12.50");
+      });
+    });
+
+    describe("bidi control marks (intentional rejection, see the JSDoc)", () => {
+      it("rejects a leading RLM (U+200F) rather than stripping it", () => {
+        expect(() => toDecimalString("\u200f12.50", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects a leading LRM (U+200E) and ALM (U+061C) too", () => {
+        expect(() => toDecimalString("\u200e12.50", 2)).toThrow(/invalid decimal value/);
+        expect(() => toDecimalString("\u061c12.50", 2)).toThrow(/invalid decimal value/);
+      });
     });
 
     describe("edge cases and error handling", () => {
