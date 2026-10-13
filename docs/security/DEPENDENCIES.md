@@ -7,6 +7,7 @@ Flowline manages dependencies with `pnpm`; CI (`.github/actions/setup-gate`) and
 ## Dependency overrides
 
 Transitive dependencies affected by security advisories are constrained using `overrides` in `pnpm-workspace.yaml`. When overriding a package:
+
 1. Specify the minimum secure version in `pnpm-workspace.yaml` under `overrides:`, bounded below the next major (for example `>=1.2.2 <2`) so a later major is never forced on dependents that declare the current one.
 2. Run `pnpm install --lockfile-only` (never hand-edit `pnpm-lock.yaml`) and check that the lockfile diff touches only the targeted package and that `pnpm why` lists only patched versions (for alert #3: `pnpm why source-map-js`). Commands in these docs are written to be pasted as they are, without `<...>` placeholders, which POSIX shells read as redirection; `tests/unit/dependency-advisories.test.ts` checks this.
 3. Add or update unit tests in `tests/unit/` (e.g. `tests/unit/dependency-advisories.test.ts`) asserting that the lockfile does not resolve vulnerable versions.
@@ -14,6 +15,7 @@ Transitive dependencies affected by security advisories are constrained using `o
 ## Advisory log
 
 ### Dependabot alert #3: source-map-js (GHSA-68fv-2mgg-jv7q)
+
 - **Severity**: High
 - **Vulnerable version**: `< 1.2.2` (lockfile resolved `1.2.1`)
 - **First patched version**: `1.2.2`

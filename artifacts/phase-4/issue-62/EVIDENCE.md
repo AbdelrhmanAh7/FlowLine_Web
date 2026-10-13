@@ -3,8 +3,8 @@
 Not user-facing, so no e2e-army test: `source-map-js` is used only by CSS build and test tooling (`postcss` via `next` and
 `vite`/`vitest`, `@tailwindcss/node`); no Flowline source imports it and no UI flow changes.
 
-Tested code: `5af0c29b2ed7ab985af57b9a902545ccdf6e47fa` on `ai/62`, the last commit that changes code. The only commit after
-it changes this file alone. `5af0c29` builds the ledger-heading regex in the guard test by string concatenation and adds test
+Tested code: `5af0c29b2ed7ab985af57b9a902545ccdf6e47fa` on `ai/62`, the last commit that changes code. The commits after
+it change Markdown only (this file, and blank lines around a heading and a list in `docs/security/DEPENDENCIES.md`). `5af0c29` builds the ledger-heading regex in the guard test by string concatenation and adds test
 (8) for it. Before that, three QA rounds (`d9c9b12`, `58a1acd`, `1d1f35e`) read the valid template literal, which closed right
 after the regex `$` anchor, as unclosed: their diff view drops a dollar sign followed by a backtick. The lockfile and
 `pnpm-workspace.yaml` are the same as on `d9ea108`, which bounded the override to the 1.x line (`>=1.2.2 <2`). The merges of
