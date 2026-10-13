@@ -102,6 +102,41 @@ test(
 );
 
 test(
+  "@issue-124 AC1: a browser that can only navigate opts in by opening /api/test/auto-verify, then Create account on /sign-up opens Name your workspace with no Check your inbox",
+  { tags: ["feat:fl-sign-up", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    const base = app.baseUrl!;
+    // Only the beta and locale cookies: the auto-verify opt-in comes from the page visit, as for a tester that cannot set cookies.
+    await browser.setCookies([
+      { url: base, name: "fl_locale", value: "en" },
+      { url: base, name: "fl_test_beta_mode", value: "open" },
+    ]);
+    const email = await freshEmail(base, "ui-auto-verify-by-url");
+    await app.open("/api/test/auto-verify");
+    await expect(screen.getByRole("button", "Create account")).toBeVisible();
+    await untilAuthFormHydrated(browser);
+    await screen.getByLabel("Name").fill("Army 124");
+    await screen.getByLabel("Email").fill(email);
+    await screen.getByLabel("Password").fill(PASSWORD);
+    await screen.getByRole("button", "Create account").tap();
+    await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
+    await expect(screen.getByText("Check your inbox")).not.toBeVisible();
+  },
+);
+
+test(
+  "@issue-124 AC1: GET /api/test/auto-verify sets the fl_test_auto_verify=1 cookie and sends the browser to /sign-up",
+  { tags: ["feat:fl-auth-api", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const res = await fetch(`${base}/api/test/auto-verify`, { redirect: "manual", headers: headers(base, BASE_COOKIES) });
+    expect(res.status).toBe(303);
+    expect(new URL(res.headers.get("location")!, base).pathname).toBe("/sign-up");
+    expect(res.headers.getSetCookie().some((c) => c.startsWith("fl_test_auto_verify=1;"))).toBe(true);
+  },
+);
+
+test(
   "@issue-124 AC1: in the browser, an auto-verified account signs in on the sign-in form with the credentials it signed up with",
   { tags: ["feat:fl-sign-in", "lvl:ui"] },
   async ({ app, screen, browser }) => {

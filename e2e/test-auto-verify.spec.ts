@@ -30,6 +30,19 @@ test("#124 with the fl_test_auto_verify=1 cookie, Create account on /sign-up sig
   expect(await inbox(page.request, email)).toEqual([]);
 });
 
+test("#124 a browser that can only navigate opts in by opening /api/test/auto-verify (it sets the fl_test_auto_verify=1 cookie and lands on /sign-up); Create account then opens Name your workspace, with no Check your inbox", async ({ page }) => {
+  const email = uniqueEmail("auto-verify-url");
+  await page.goto("/api/test/auto-verify");
+  await expect(page).toHaveURL(/\/sign-up$/);
+  await page.getByLabel("Name").fill("Auto Verify");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Name your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your inbox" })).toHaveCount(0);
+  expect(await inbox(page.request, email)).toEqual([]);
+});
+
 test("#124 without an opt-in, Create account on /sign-up shows Check your inbox and e-mails a link; Resend on /resend-verification answers honestly", async ({ page }) => {
   const email = uniqueEmail("no-auto-verify");
   await signUp(page, email);
