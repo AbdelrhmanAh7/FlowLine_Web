@@ -12,6 +12,15 @@
 - [ ] `SCOPE_MATRIX.md` / `AGENTS.md` if scope or a rule changed
 - [ ] No doc still describes the old behaviour
 
+## Security posture (AGENTS.md "Security posture")
+
+<!-- Settings and states only. Never paste secret values or what an alert contains. -->
+
+- [ ] Dependencies: none added or upgraded, or listed above with the reason
+- [ ] Secrets: none added or read, or the new variable names are listed (no values)
+- [ ] Permissions / workflow tokens: unchanged, or the change is explained above
+- [ ] No claim that an owner-only GitHub security setting is enabled without the owner's recorded evidence
+
 ## Checks
 
 <!-- Focused checks run locally (commands + results). CI: fast tier by default; run the full tier once, just before merging, via Actions → Gate → Run workflow (tier=full). Labels do not start Gate. -->
