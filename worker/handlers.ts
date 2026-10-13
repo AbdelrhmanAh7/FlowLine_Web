@@ -336,6 +336,10 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
   // Counted after approval, so a step waiting for a human uses no send budget.
   if (action.sideEffect !== "none") {
     const limit = typeof cfg.maxSendsPerMinute === "number" ? cfg.maxSendsPerMinute : DEFAULT_SENDS_PER_MINUTE;
+    // Validate connection workspace before rate limiting to prevent rate limit abuse via workspace-switching
+    const [conn] = await ctx.db.select().from(schema.connection).where(eq(schema.connection.id, connectionId));
+    if (!conn) throw new NodeError("CONNECTION_MISSING", "The connection used by this step no longer exists");
+    if (conn.workspaceId !== ctx.run.workspaceId) throw new NodeError("CONNECTION_WORKSPACE", "The connection belongs to a different workspace");
     if (!(await checkRate(`outbound:${connectionId}:${action.id}`, limit))) {
       await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "outbound_capped", nodeId: node.id, data: { action: action.id, limit } });
       throw new NodeError("SEND_RATE_LIMITED", `${action.title} reached its send limit of ${limit} per minute. Try again shortly.`, { retryable: true });

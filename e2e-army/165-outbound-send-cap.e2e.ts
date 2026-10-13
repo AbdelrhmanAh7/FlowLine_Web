@@ -6,7 +6,9 @@ import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 test("@issue-165 AC1: an anonymous caller cannot start a run that sends outbound messages", { tags: ["feat:fl-integration-actions", "lvl:api"] }, async ({ app }) => {
-  const res = await fetch(new URL("/api/flows/00000000-0000-4000-8000-000000000000/runs", app.baseUrl), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  // Use a UUID that is guaranteed not to exist (not a real flow ID)
+  const fakeFlowId = "00000000-0000-4000-8000-000000000000";
+  const res = await fetch(new URL(`/api/flows/${fakeFlowId}/runs`, app.baseUrl), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   expect([401, 403, 404]).toContain(res.status);
   const text = await res.text();
   expect(text).not.toContain("SEND_RATE_LIMITED");

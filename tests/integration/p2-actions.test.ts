@@ -379,6 +379,21 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     expect(events).toHaveLength(2); // 3 attempts total
   });
 
+  it("rate limiting validates connection workspace before applying limits", async () => {
+    const { user, conn, flowOf } = await setup("WorkspaceValidation");
+    const zd = await conn("zendesk");
+    // Create a flow with a connection from a different workspace
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", zd.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 1 })));
+    await fake.reset();
+    const r = await enqueueRun(user, flow.id);
+    await claimAndProcess(r.id);
+    // Should fail with CONNECTION_WORKSPACE, not SEND_RATE_LIMITED (rate limit is skipped for invalid connections)
+    expect((await freshRun(r.id)).error?.code).toBe("CONNECTION_WORKSPACE");
+    // No outbound_capped event should be logged for an invalid connection
+    const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, r.id), eq(schema.runEvent.type, "outbound_capped")));
+    expect(events).toHaveLength(0);
+  });
+
   it("a side-effect action over its per-connection send cap fails with SEND_RATE_LIMITED and logs outbound_capped", async () => {
     const { user, conn, flowOf } = await setup("SendCap");
     const zd = await conn("zendesk");
