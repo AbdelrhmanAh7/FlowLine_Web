@@ -15,70 +15,53 @@ export function duration(ms: number | null | undefined, locale: Locale = "en"): 
   return formatDuration(locale, ms);
 }
 
-/** Convert a number or decimal string to a fixed-point decimal string with the given scale. Never uses float math or toFixed. */
+const MAX_EXPONENT = 1000;
+
+/**
+ * Convert a number or decimal string to an exact fixed-point decimal string with `scale` fractional digits
+ * ("12.5" → "12.50"). Pure string/digit manipulation: no float math, no `toFixed`, no rounding. Throws a
+ * `RangeError` for NaN/Infinity, malformed input, a bad scale, or a value needing more than `scale` decimals
+ * (trailing zeros are not precision: "12.500" is fine at scale 2). Accepts exponent form (`1e21`, `"1.5e-3"`)
+ * and Arabic-Indic / Persian digits with the Arabic decimal separator ("١٢٫٥٠").
+ */
 export function toDecimalString(value: number | string, scale: number = 2): string {
-  // Convert to string and validate
-  let str = String(value);
+  if (!Number.isInteger(scale) || scale < 0) throw new RangeError("Scale must be a non-negative integer");
+  if (typeof value === "number" && !Number.isFinite(value)) throw new RangeError("Value must be finite");
 
-  // Reject NaN and Infinity
-  if (str === "NaN" || str === "Infinity" || str === "-Infinity") {
-    throw new RangeError("Value must be a finite number or decimal string");
+  const ascii = String(value)
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/٫/g, ".");
+  const m = /^([+-]?)(\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(ascii);
+  if (!m || (m[2] === "" && m[3] === undefined)) throw new RangeError("Invalid decimal string");
+  const negative = m[1] === "-";
+  const exp = m[4] === undefined ? 0 : Number(m[4]);
+  if (Math.abs(exp) > MAX_EXPONENT) throw new RangeError("Exponent out of range");
+
+  // Shift the decimal point by the exponent on the digit string.
+  const digits = m[2] + (m[3] ?? "");
+  const point = m[2].length + exp;
+  let intPart: string;
+  let fracPart: string;
+  if (point <= 0) {
+    intPart = "";
+    fracPart = "0".repeat(-point) + digits;
+  } else if (point >= digits.length) {
+    intPart = digits + "0".repeat(point - digits.length);
+    fracPart = "";
+  } else {
+    intPart = digits.slice(0, point);
+    fracPart = digits.slice(point);
   }
+  intPart = intPart.replace(/^0+/, "") || "0";
+  fracPart = fracPart.replace(/0+$/, "");
 
-  // Map Arabic-Indic and Persian digits to ASCII, and '٫' (U+066B) to '.'
-  str = str.replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30))
-           .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 0x30))
-           .replace(/٫/g, ".");
-
-  // Expand exponent form (e.g., "1.23e5" → "123000")
-  const expMatch = str.match(/^([-+]?\d*\.?\d+)[eE]([-+]?\d+)$/);
-  if (expMatch) {
-    const base = expMatch[1];
-    const exp = parseInt(expMatch[2], 10);
-    if (exp >= 0) {
-      // Move decimal point to the right
-      const [integer, fractional] = base.split(".");
-      const zeros = "0".repeat(exp);
-      str = fractional ? integer + fractional.slice(0, exp) + zeros + fractional.slice(exp) : integer + zeros;
-    } else {
-      // Move decimal point to the left
-      const [integer, fractional] = base.split(".");
-      const negExp = -exp;
-      if (fractional) {
-        str = integer + (fractional.slice(0, negExp) || "0") + "." + fractional.slice(negExp);
-      } else {
-        str = integer + "." + "0".repeat(negExp - 1) + "0";
-      }
-    }
+  if (fracPart.length > scale) {
+    throw new RangeError(`Value has ${fracPart.length} decimal places, but scale is ${scale}`);
   }
-
-  // Validate the result against the decimal pattern
-  const decimalMatch = str.match(/^(-?\d*)(\.\d+)?$/);
-  if (!decimalMatch) {
-    throw new RangeError("Invalid decimal string");
-  }
-  const integerPart = decimalMatch[1] || "0";
-  const fractionalPart = decimalMatch[2] || "";
-
-  // Check if there are more fractional digits than scale
-  if (fractionalPart.length > scale) {
-    throw new RangeError(`Value has ${fractionalPart.length} decimal places, but scale is ${scale}`);
-  }
-
-  // Pad with zeros if needed
-  const paddedFractional = fractionalPart.padEnd(scale, "0");
-
-  // Strip leading zeros from integer part, but keep at least one digit
-  let result = integerPart.replace(/^(-?0+)(?=\d)/, "$1") || "0";
-  if (result !== "-" && result !== "0") {
-    result = result.replace(/^0+/, "");
-  }
-
-  // Combine parts
-  if (paddedFractional === "0".repeat(scale)) {
-    return result;
-  }
-  return `${result}.${paddedFractional}`;
+  const isZero = intPart === "0" && fracPart === "";
+  const sign = negative && !isZero ? "-" : "";
+  return scale === 0 ? `${sign}${intPart}` : `${sign}${intPart}.${fracPart.padEnd(scale, "0")}`;
 }
 
 export function percent(v: number | null | undefined): string {

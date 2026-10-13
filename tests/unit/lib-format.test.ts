@@ -94,7 +94,7 @@ describe("lib/format helpers", () => {
   });
 
   describe("toDecimalString", () => {
-    it("rounds to two decimal places", () => {
+    it("pads to two decimal places", () => {
       expect(toDecimalString("12.5")).toBe("12.50");
       expect(toDecimalString(12.5)).toBe("12.50");
       expect(toDecimalString("12.50")).toBe("12.50");
@@ -114,7 +114,9 @@ describe("lib/format helpers", () => {
     });
 
     it("handles different scales", () => {
-      expect(toDecimalString("12.5", 0)).toBe("13");
+      expect(toDecimalString("12", 0)).toBe("12");
+      expect(toDecimalString("12.0", 0)).toBe("12");
+      expect(() => toDecimalString("12.5", 0)).toThrow(RangeError);
       expect(toDecimalString("12.5", 4)).toBe("12.5000");
       expect(toDecimalString("12.5", 1)).toBe("12.5");
     });
@@ -139,8 +141,37 @@ describe("lib/format helpers", () => {
       expect(() => toDecimalString(0.1 + 0.2, 2)).toThrow(RangeError);
     });
 
-    it("rejects empty strings", () => {
+    it("rejects empty strings and bare signs", () => {
       expect(() => toDecimalString("")).toThrow(RangeError);
+      expect(() => toDecimalString("-")).toThrow(RangeError);
+      expect(() => toDecimalString("+")).toThrow(RangeError);
+      expect(() => toDecimalString(".")).toThrow(RangeError);
+    });
+
+    it("never emits a duplicated dot or a negative zero", () => {
+      expect(toDecimalString("12.5")).not.toContain("..");
+      expect(toDecimalString(-3.1)).toBe("-3.10");
+      expect(toDecimalString("-0.00")).toBe("0.00");
+      expect(toDecimalString("00012.5")).toBe("12.50");
+      expect(toDecimalString(".5")).toBe("0.50");
+    });
+
+    it("treats trailing zeros as no extra precision", () => {
+      expect(toDecimalString("12.500")).toBe("12.50");
+      expect(toDecimalString("1.5000", 1)).toBe("1.5");
+    });
+
+    it("expands exponent form exactly", () => {
+      expect(toDecimalString("1.5e-2", 3)).toBe("0.015");
+      expect(toDecimalString(1e-7, 7)).toBe("0.0000001");
+      expect(toDecimalString("1.25e2")).toBe("125.00");
+      expect(() => toDecimalString("1e-3")).toThrow(RangeError);
+      expect(() => toDecimalString("1e99999")).toThrow(RangeError);
+    });
+
+    it("rejects an invalid scale", () => {
+      expect(() => toDecimalString("1", -1)).toThrow(RangeError);
+      expect(() => toDecimalString("1", 1.5)).toThrow(RangeError);
     });
 
     it("rejects invalid strings", () => {
