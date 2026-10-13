@@ -2,7 +2,8 @@
  * #181 Component tests for CopyEditor error handling.
  * Covers: load error with retry, me load error, save/publish REVISION_CONFLICT with refetch,
  * STEP_UP_REQUIRED with me refetch and stepUp error, 5xx server error, network error.
- * Runs in both English and Arabic locales.
+ * The copy-load, revision-conflict, step-up, 5xx and network cases assert the Arabic message as
+ * well; the me-load error and the save/publish pair run in English only.
  */
 
 /// <reference types="@testing-library/jest-dom" />
@@ -13,7 +14,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { CopyEditor } from "@/app/admin/copy/copy-editor";
 import { api, ApiError } from "@/lib/api";
 import { renderWithProviders } from "./setup";
-import React from "react";
 
 // vi.hoisted runs before the hoisted vi.mock factories below, so the mocks are
 // always initialised when the component reads them.
@@ -25,14 +25,12 @@ vi.mock("@/i18n/client", () => ({
   useT: () => mockUseT,
 }));
 
-// useQuery is fully mocked, so api() is only ever called by an actual save/publish
-// write; the tests below assert that call explicitly.
-vi.mock("@tanstack/react-query", () => ({
-  useQuery: mockUseQuery,
-  useMutation: vi.fn(),
-  QueryClient: vi.fn(),
-  QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
+// Only the query hooks are replaced; the real QueryClient/QueryClientProvider stay
+// so the shared renderWithProviders builds a real client instead of a mock instance.
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: mockUseQuery, useMutation: vi.fn() };
+});
 
 let user: UserEvent;
 
