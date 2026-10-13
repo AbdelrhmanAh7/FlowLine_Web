@@ -27,9 +27,10 @@ test(
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
     await agent.act("paste {json} into the n8n workflow box and click Import", { params: { json: N8N_WORKFLOW } });
-    await agent.assert("the flow editor opens and shows a Webhook trigger, a code step and an HTTP request step");
-    await expect(screen.getByText("Webhook trigger").first()).toBeVisible();
-    await expect(screen.getByText("HTTP request").first()).toBeVisible();
+    await agent.assert("the flow editor opens and shows the steps named Webhook, Shape and Notify");
+    await expect(screen.getByText("Webhook", { exact: true }).first()).toBeVisible();
+    await expect(screen.getByText("Shape", { exact: true }).first()).toBeVisible();
+    await expect(screen.getByText("Notify", { exact: true }).first()).toBeVisible();
     await agent.assert("a step labelled Unsupported n8n node: n8n-nodes-base.set is shown and says to replace it");
     await expect(screen.getByText("Unsupported n8n node: n8n-nodes-base.set").first()).toBeVisible();
   },

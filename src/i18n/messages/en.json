@@ -832,7 +832,13 @@
       "queued": "queued",
       "inProgress": "in progress · step {step} of {total}",
       "inspect": "Inspect →"
-    }
+    },
+    "importN8n": "Import from n8n",
+    "importN8nTitle": "Import an n8n workflow",
+    "importN8nHint": "Paste the workflow JSON exported from n8n. Webhook, Code and HTTP request nodes are imported; other nodes become placeholders you replace before the flow can run.",
+    "importN8nLabel": "n8n workflow JSON",
+    "importN8nInvalid": "This isn't valid JSON. Paste the whole workflow file exported from n8n.",
+    "importN8nSubmit": "Import"
   },
   "errorPage": {
     "title": "⚠ Something went wrong",

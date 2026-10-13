@@ -8,7 +8,7 @@ import { CopilotPanel } from "@/components/builder/copilot-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, useKeepMounted, type Tone } from "@/components/ui";
+import { Button, ButtonLink, Card, Dialog, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, Textarea, useKeepMounted, type Tone } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -92,6 +92,48 @@ export function useCreateFlow() {
   });
 }
 
+function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const create = useCreateFlow();
+  const submit = () => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      setError(t("flows.importN8nInvalid"));
+      return;
+    }
+    setError(null);
+    create.mutate({ n8n: parsed });
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>
+      <p className="mt-2 text-sm text-muted">{t("flows.importN8nHint")}</p>
+      <Textarea
+        aria-label={t("flows.importN8nLabel")}
+        mono
+        rows={10}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        invalid={error !== null}
+        className="mt-3 w-full"
+      />
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex justify-end">
+        <Button variant="primary" onClick={submit} loading={create.isPending} disabled={!text.trim()}>
+          {t("flows.importN8nSubmit")}
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
 export function Dashboard() {
   const t = useT();
   const { workspace, canEdit } = useWorkspace();
@@ -105,6 +147,7 @@ export function Dashboard() {
   const router = useRouter();
   // "Create with Copilot" makes no flow until a proposal is approved (no empty drafts left behind).
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const copilotButton = useRef<HTMLButtonElement>(null); // the panel gives focus back here when it closes (Escape or ×)
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
@@ -125,10 +168,14 @@ export function Dashboard() {
         <Button ref={copilotButton} onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
           {t("flows.createWithCopilot")}
         </Button>
+        <Button onClick={() => setImportOpen(true)} disabledReason={newReason}>
+          {t("flows.importN8n")}
+        </Button>
         <Button variant="primary" onClick={() => create.mutate({ name: untitled })} loading={create.isPending} disabledReason={newReason}>
           {t("flows.newFlow")}
         </Button>
       </PageHeader>
+      <ImportN8nDialog open={importOpen} onOpenChange={setImportOpen} />
       {copilotMounted && (
         <div hidden={!copilotVisible} className="fixed inset-y-0 end-0 z-40 w-full max-w-md">
           <CopilotPanel open={copilotVisible} target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} returnFocusTo={() => copilotButton.current} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
