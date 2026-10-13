@@ -5,7 +5,7 @@ import { expect } from "e2e";
 
 test(
   "@issue-196 AC1: the user menu opens the security page showing two-step verification Off",
-  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  { tags: ["feat:fl-workspace-nav", "feat:fl-email-flows"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("open the user menu at the bottom of the sidebar");
@@ -15,7 +15,7 @@ test(
   },
 );
 
-test("@issue-196 AC3: a signed-out visit to the security page redirects to sign-in", { tags: ["feat:fl-accounts-sessions"] }, async ({ app }) => {
+test("@issue-196 AC3: a signed-out visit to the security page redirects to sign-in", { tags: ["feat:fl-email-flows"] }, async ({ app }) => {
   const res = await fetch(new URL("/account/security", app.baseUrl), { redirect: "manual" });
   expect(res.status).toBeGreaterThanOrEqual(300);
   expect(res.status).toBeLessThan(400);

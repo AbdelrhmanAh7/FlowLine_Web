@@ -6,7 +6,7 @@ import { expect } from "e2e";
 
 test(
   "@issue-197 AC1: Enable asks for the account password and a wrong password shows an error and no secret",
-  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  { tags: ["feat:fl-email-flows", "feat:fl-i18n-rtl"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
     await agent.act("click the Enable button");
