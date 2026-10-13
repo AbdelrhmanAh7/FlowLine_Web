@@ -1,89 +1,87 @@
-// Issue #222: Add a mizano handler for GET /api/health in the fake provider server
-// This test verifies the mizano provider's health endpoint in the fake server
+// Issue #222: mizano handler for GET /api/health in the fake provider server (part of #145).
+// Request-level (no model): the fake server plays the Mizano host for the test stack, so the auth
+// contract, the health response and the rate limit are proven through the app's own fetch.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
+const HEALTH = "/mizano/api/health";
+
 test(
-  "@issue-222 AC1: the fake provider server returns 200 with { status: 'ok' } for GET /api/health with valid token",
+  "@issue-222 AC1: GET /api/health with the seeded token returns 200 { status: 'ok', version: 'fake' }",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
-  async ({ app, _agent, _screen }) => {
-    // Test GET /api/health endpoint with valid token
-    const healthResponse = await app.fetch("/mizano/api/health", {
+  async ({ app }) => {
+    const res = await app.fetch(HEALTH, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer test-token",
+        Authorization: "Bearer test-token",
       },
     });
 
-    expect(healthResponse.status).toBe(200);
-    const healthData = await healthResponse.json();
-    expect(healthData).toEqual({ status: "ok" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "ok", version: "fake" });
   },
 );
 
 test(
-  "@issue-222 AC2: the fake provider server returns 401 { message: 'Unauthorized' } for GET /api/health without valid token",
+  "@issue-222 AC2: GET /api/health without a valid token returns 401 { message: 'Unauthorized' }",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
-  async ({ app, _agent, _screen }) => {
-    // Test that GET /api/health rejects requests without valid token
-    const unauthorizedResponse = await app.fetch("/mizano/api/health", {
+  async ({ app }) => {
+    // No token at all.
+    const missing = await app.fetch(HEALTH, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(missing.status).toBe(401);
+    expect(await missing.json()).toEqual({ message: "Unauthorized" });
+
+    // An unknown token takes the same path through authFail — the handler re-checks the Bearer token
+    // itself, so the health endpoint is never reachable without a valid one.
+    const unknown = await app.fetch(HEALTH, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: "Bearer not-a-real-token",
       },
     });
-
-    expect(unauthorizedResponse.status).toBe(401);
-    const unauthorizedData = await unauthorizedResponse.json();
-    expect(unauthorizedData).toEqual({ message: "Unauthorized" });
+    expect(unknown.status).toBe(401);
+    expect(await unknown.json()).toEqual({ message: "Unauthorized" });
   },
 );
 
 test(
-  "@issue-222 AC3: the fake provider server returns 429 { error: 'rate limited' } for GET /api/health when rate limited",
+  "@issue-222 AC3: GET /api/health rate-limits a runaway client: 10 requests per 60 s per account, then 429",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
-  async ({ app, _agent, _screen }) => {
-    // Test rate limiting: make 10 requests in quick succession (all succeed), then 11th should be rate limited
-    const validToken = "test-token";
-    for (let i = 0; i < 11; i++) {
-      const response = await app.fetch("/mizano/api/health", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${validToken}`,
-        },
-      });
-      // First 10 requests should succeed
-      if (i < 10) {
-        expect(response.status).toBe(200);
-        const data = await response.json();
-        expect(data).toEqual({ status: "ok" });
-      } else {
-        // 11th request should be rate limited
-        expect(response.status).toBe(429);
-        const rateLimitedData = await response.json();
-        expect(rateLimitedData).toEqual({ error: "rate limited" });
-      }
+  async ({ app }) => {
+    // second-account-token (account b) keeps this window independent of the other tests' account-a traffic.
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: "Bearer second-account-token",
+    };
+    for (let i = 0; i < 10; i++) {
+      const res = await app.fetch(HEALTH, { method: "GET", headers });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: "ok", version: "fake" });
     }
+    const limited = await app.fetch(HEALTH, { method: "GET", headers });
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: "rate limited" });
   },
 );
 
 test(
-  "@issue-222 AC4: the fake provider server returns 404 { message: 'Not found' } for any other path",
+  "@issue-222 AC4: any other mizano path returns 404 { message: 'Not found' }",
   { tags: ["feat:fl-provider-server"], session: "fl-user" },
-  async ({ app, _agent, _screen }) => {
-    // Test that any other path returns 404
-    const notFoundResponse = await app.fetch("/mizano/api/health/other", {
+  async ({ app }) => {
+    const res = await app.fetch("/mizano/api/health/other", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer test-token",
+        Authorization: "Bearer test-token",
       },
     });
 
-    expect(notFoundResponse.status).toBe(404);
-    const notFoundData = await notFoundResponse.json();
-    expect(notFoundData).toEqual({ message: "Not found" });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ message: "Not found" });
   },
 );
