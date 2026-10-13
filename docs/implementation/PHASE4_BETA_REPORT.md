@@ -13,9 +13,9 @@ backed-up numbers back. Numbers cleared by 0025 cannot be restored. The script s
 `\set ON_ERROR_STOP on`, and is run by hand with
 `psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`. If a later save or
 publication has taken a freed number, the unique index refuses and nothing changes.
-Base: PR #207 (#204) is still open. `ai/205` merges `ai/204` at `f1f9d33`, so `git diff origin/ai/204...ai/205` holds only
-the #205 files: 0026 and its snapshot and journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test
-and these docs. Against main, the PR also shows #204's commits until #207 merges. These include
+Base: PR #207 (#204) is still open. `ai/205` merges the current `ai/204` (`f1f9d33`) and main. Its #205 files are 0026 and
+its snapshot and journal entry, the backup table in `src/db/schema.ts`, the reverse script, the test and these docs. Against
+main, PR #211 also shows #204's commits until #207 merges; after that, only the #205 files remain. These include
 `e2e-army/117-flows-list-dashboard.e2e.ts`, which is #204's test and is not deleted here, because deleting it would remove it
 from main. Merge #207 first.
 Verified locally on 2026-10-13 against a fresh `flowline_test_205`, on the merge of `ai/204` `f1f9d33`. Results:
@@ -46,6 +46,10 @@ Verified locally on `flowline_test_204`: `tests/integration/runs.test.ts` (publi
 reports it) and `tests/integration/flows.test.ts` (history order; fails on `created_at` order), the i18n and
 builder-keyboard unit tests, `pnpm typecheck`, eslint on the changed files and `drizzle-kit check`. The e2e-army test
 `e2e-army/117-flows-list-dashboard.e2e.ts` runs in the hub's verify job; no local e2e-army or full-gate run is claimed.
+
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
 
 ## Field-harness scoring review (#141 / PR #193) — 2026-10-12
 
