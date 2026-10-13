@@ -149,11 +149,15 @@ describe("email account flows", () => {
     await issueAccountToken("delete", owner);
     const token = await lastToken(owner.email, "/account/delete");
     expect(await consumeAccountToken("delete", token, undefined, owner.id)).toBe("transfer_required");
+    // #109: the audit row is written before the workspace lock, so a refused deletion must roll it back.
+    const deletionAudit = () => db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, ws.id), eq(schema.auditEvent.action, "account.deleted")));
+    expect(await deletionAudit()).toHaveLength(0);
     await db.update(schema.workspaceMember).set({ role: "owner" }).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, member.id)));
     expect(await consumeAccountToken("delete", token, undefined, owner.id)).toBe("done");
     expect(await tokenState("delete", token)).toBe("used");
     const [deleted] = await db.select().from(schema.user).where(eq(schema.user.id, owner.id));
     expect(deleted).toBeUndefined();
+    expect(await deletionAudit()).toMatchObject([{ targetId: owner.id, data: { role: "owner" } }]);
   });
 
   it("returns the same API result for unknown and known reset addresses and enforces a shared limit", async () => {
