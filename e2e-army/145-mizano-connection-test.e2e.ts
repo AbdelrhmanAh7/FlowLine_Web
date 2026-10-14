@@ -122,6 +122,29 @@ test(
   },
 );
 
+// The Integrations page lives at /w/[slug]/integrations; the workspace layout resolves the slug against the caller's
+// membership and 404s a slug they are not a member of (src/app/w/[slug]/layout.tsx:16, requireWorkspaceBySlug). A
+// verification run that guessed the slug (e.g. /w/test-workspace/integrations) therefore saw a 404 for a page that is
+// reachable. This pins both halves: the owner gets the page, a non-member slug is not found.
+test(
+  "@issue-145 AC2: the Integrations page is reachable for the workspace owner (and a foreign slug 404s)",
+  { tags: ["feat:fl-integrations", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const owner = await signedIn(base, `army-145-reach-${seeded(base, "reach")}@flowline-e2e.test`);
+    const created = await fetch(`${base}/api/workspaces`, { method: "POST", headers: owner, body: JSON.stringify({ name: "Army 145 Reach" }) });
+    expect(created.status).toBe(201);
+    const { workspace } = (await created.json()) as { workspace: { slug: string } };
+    const page = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: owner });
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toContain("text/html");
+    // A workspace the account is not a member of is never confirmed to it: notFound() -> 404.
+    const stranger = await signedIn(base, `army-145-reach-out-${seeded(base, "reach-out")}@flowline-e2e.test`);
+    const foreign = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: stranger });
+    expect(foreign.status).toBe(404);
+  },
+);
+
 test(
   "@issue-145 AC2: the saved Mizano connection's card offers a Test connection control that reports the account",
   { tags: ["feat:fl-integrations", "lvl:ui"] },
