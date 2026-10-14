@@ -3,6 +3,7 @@ import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
 import { createProviderHttp } from "@/integrations/http";
 import { getAction, getProvider } from "@/integrations/registry";
 import type { ActionContext, Credentials, HttpRequest, HttpResponse } from "@/integrations/types";
+import { ProviderError } from "@/integrations/types";
 import { runAction } from "./helpers";
 
 vi.mock("node:dns", async (importOriginal) => {
@@ -489,5 +490,86 @@ describe("mizano create steps against a stateful fake that dedupes on Idempotenc
     await runAction("mizano.create_draft_quote", ctxFor("fl_run2_node2"), quote);
     expect(created.customers).toHaveLength(2);
     expect(created.quotes).toHaveLength(2);
+  });
+});
+
+// AC3: error-path tests - mock returns 4xx/5xx, step fails with clear message, never logs credentials
+describe("mizano create steps error handling", () => {
+  function errorCtx(status: number, message: string) {
+    const request = vi.fn(async (): Promise<HttpResponse<unknown>> => {
+      throw new ProviderError(
+        status >= 500 ? "server" : "client",
+        `Mizano${status >= 500 ? ` error ${status}` : ""}: ${message}`,
+        status
+      );
+    });
+    const log = vi.fn<(message: string) => void>();
+    const ctx: ActionContext = {
+      http: { request: request as ActionContext["http"]["request"] },
+      credentials: creds,
+      idempotencyKey: "fl_run1_node1",
+      signal: new AbortController().signal,
+      log,
+    };
+    return { ctx, request, log };
+  }
+
+  it("mizano.create_customer fails with clear message on 4xx from Mizano", async () => {
+    const { ctx, log } = errorCtx(400, "Bad Request: invalid input");
+    await expect(
+      runAction("mizano.create_customer", ctx, {
+        name: "Test Customer",
+        company: "Test Company Ltd",
+        email: "test@example.com",
+        phone: "+1-555-0123",
+      }),
+    ).rejects.toThrow(/Mizano: Bad Request: invalid input/);
+    // Verify credentials are not logged
+    const logCalls = log.mock.calls.flat().join(" ");
+    expect(logCalls).not.toContain("mz_test_scoped");
+    expect(logCalls).not.toContain("mizano.test");
+  });
+
+  it("mizano.create_customer fails with clear message on 5xx from Mizano", async () => {
+    const { ctx, log } = errorCtx(500, "Internal Server Error");
+    await expect(
+      runAction("mizano.create_customer", ctx, {
+        name: "Test Customer",
+        company: "Test Company Ltd",
+        email: "test@example.com",
+        phone: "+1-555-0123",
+      }),
+    ).rejects.toThrow(/Mizano error 500: Internal Server Error/);
+    const logCalls = log.mock.calls.flat().join(" ");
+    expect(logCalls).not.toContain("mz_test_scoped");
+    expect(logCalls).not.toContain("mizano.test");
+  });
+
+  it("mizano.create_draft_quote fails with clear message on 4xx from Mizano", async () => {
+    const { ctx, log } = errorCtx(400, "Bad Request: invalid quote data");
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }],
+      }),
+    ).rejects.toThrow(/Mizano: Bad Request: invalid quote data/);
+    const logCalls = log.mock.calls.flat().join(" ");
+    expect(logCalls).not.toContain("mz_test_scoped");
+    expect(logCalls).not.toContain("mizano.test");
+  });
+
+  it("mizano.create_draft_quote fails with clear message on 5xx from Mizano", async () => {
+    const { ctx, log } = errorCtx(503, "Service Unavailable");
+    await expect(
+      runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }],
+      }),
+    ).rejects.toThrow(/Mizano error 503: Service Unavailable/);
+    const logCalls = log.mock.calls.flat().join(" ");
+    expect(logCalls).not.toContain("mz_test_scoped");
+    expect(logCalls).not.toContain("mizano.test");
   });
 });
