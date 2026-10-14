@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #161 — PR #245 linkage review (2026-10-13)
+
+Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
+
 ## Issue #205 handoff — 2026-10-14
 
 Local lock/rollback regression fixes are ready; harness pushes. Backfill/runs integration: 26/26; E2E tooling hygiene: 12/12; typecheck, lint and drizzle metadata check pass. GitHub rejected retargeting PR #253 to ai/204 because PR #211 already uses ai/205 → ai/204. Reconcile duplicate PRs under the recorded-exception rules; #207 remains open, so keep #205 stacked until it merges, then rebase only #205 onto main and rerun CI/review. The inherited #204 E2E spec was removed as explicitly requested; add no E2E spec for this internal migration. [Details](docs/implementation/PHASE4_BETA_REPORT.md#legacy-backfill-0026-issue-205--2026-10-14).
