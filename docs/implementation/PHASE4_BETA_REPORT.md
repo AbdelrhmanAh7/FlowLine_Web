@@ -1,5 +1,50 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Legacy backfill 0026 (issue #205) — 2026-10-14
+
+Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
+publication numbers remain unchanged. Its insert trigger keeps old application images from numbering new snapshots.
+Forward and manual reverse acquire `SHARE ROW EXCLUSIVE` on `flow_version` before accessing the backup, retain it through
+commit, and use transaction-local lock/statement timeouts of 5/30 seconds. Readers continue; writers wait. The immutability
+trigger is disabled only inside the transaction. Reverse stays outside the journal; run it with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+It restores backed-up numbers, fails atomically if a later publication reused one, and leaves the backup for reruns.
+Numbers already cleared without backup by prerequisite #204's 0025 are outside this reverse's coverage.
+
+Verified locally on a disposable `flowline_test_205r6` database with Node 24: backfill integration 6/6 and runs 20/20.
+The fixture also removes the backup table to exercise a real pre-0026 schema. Cases cover legacy save/run/overwrite data,
+forward twice, reverse twice, forward after reverse, old-image inserts and collision refusal. The concurrent-insert
+regression failed before the fix (writer completed between backup and update), then passed with the early lock.
+`pnpm typecheck`, `pnpm lint`, `drizzle-kit check`, and E2E tooling hygiene 12/12 pass; full suites/build run only in CI.
+The inherited #204 E2E spec was removed per the CTO scope instruction; no new E2E spec was added.
+
+Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected retargeting it to ai/204 because PR #211
+already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
+then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
+
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
+stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
 ## Outbound guardrails: send caps, audit view, node-config UI — 2026-10-13 (issue #165)
 
 Implemented per-connection send rate limiting with audit view and UI configuration:
@@ -7,26 +52,28 @@ Implemented per-connection send rate limiting with audit view and UI configurati
 **Features:**
 - Per-connection send caps (`maxSendsPerMinute` configuration on integration action nodes)
 - Per-action rate limiting (different actions on the same connection have separate limits)
-- Workspace validation before rate limiting (prevents cross-workspace rate limit abuse)
+- Workspace validation before rate limiting (prevents cross-workspace rate limit abuse via getRuntimeCredentials)
+- Server-side validation and clamping of `maxSendsPerMinute` (integer 1..1000)
 - `outbound_capped` event logged when sends are refused, with `action` and `limit` fields
 - Audit view displays `outbound_capped` events with i18n support (en/ar)
 
 **Files changed:**
-- `worker/handlers.ts`: Rate limiting check with workspace validation (lines 336-344)
-- `src/components/builder/node-config.tsx`: UI field for `maxSendsPerMinute` (lines 577-580)
+- `worker/handlers.ts`: Rate limiting check with workspace validation and clamping
+- `src/components/builder/node-config.tsx`: UI field for `maxSendsPerMinute` with integer clamping and undefined-on-clear
 - `src/i18n/messages/en.json` / `ar.json`: i18n keys for field and event type
 - `docs/security/OUTBOUND_GUARDRAILS.md`: Technical debt documentation (per-destination caps, approval gate, future enhancements)
 
 **Tests:**
 - `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
 - `tests/integration/p2-actions.test.ts`:
-  - Test for workspace validation before rate limiting (lines 382-395)
-  - Test for per-connection send cap (lines 382-395)
-  - Test for outbound_capped event logging (lines 382-395)
+  - Test for workspace validation before rate limiting (lines 382-398)
+  - Test for per-connection send cap (lines 400-412)
+  - Test for clamping non-integer and zero maxSendsPerMinute to at least 1 (lines 414-426)
+  - Test for outbound_capped event logging
 
 **Security fixes:**
-- Fixed hardcoded flow ID in e2e test (use fakeFlowId constant)
-- Fixed rate limiting to validate connection workspace before applying limits (prevents cross-workspace rate limit abuse)
+- Fixed flow ID in e2e test to use Nil UUID (RFC 4122)
+- Rate limiting validates connection workspace via getRuntimeCredentials before applying limits (prevents cross-workspace rate limit abuse)
 
 **Technical debt documented:**
 - Per-destination caps: Future enhancement, not in MVP (see `OUTBOUND_GUARDRAILS.md`)
@@ -40,10 +87,10 @@ Implemented per-connection send rate limiting with audit view and UI configurati
 - Approval for high-volume broadcasts: Not in scope for this MVP, create issue #166 (✓ documented)
 
 **Verification:**
-- Typecheck passes: ✓ (verified locally)
-- ESLint passes: ✓ (verified locally)
-- Integration tests: added (test file updated with cross-workspace validation test), CI will verify
-- e2e-army test: added (request-level guard test), CI will verify
+- Typecheck: verified locally with `pnpm typecheck`
+- ESLint: verified locally with `pnpm lint`
+- Integration tests: added in `tests/integration/p2-actions.test.ts`; CI will run against PostgreSQL
+- e2e-army test: added `e2e-army/165-outbound-send-cap.e2e.ts`; CI will run
 
 **Next steps:**
 - Issue #166: Implement threshold-based approval rules beyond sensitive flag
@@ -269,3 +316,11 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
+## Test coverage note: hub route selection (#174)
+
+`tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
