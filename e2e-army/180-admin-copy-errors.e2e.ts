@@ -1,7 +1,9 @@
 // Issue #180: Improve client-side error display for /admin/copy.
 // Acceptance: When server errors occur, the UI displays appropriate error messages without breaking.
-// Request-level test verifying that /admin/copy loads (status 200) in Arabic (RTL) and English (LTR)
-// displaying the copy editor shell, and that unauthorized mutations receive a clean JSON NOT_FOUND error without stack traces.
+// Request-level test verifying that:
+// 1. /admin/copy loads (status 200) with a platform-admin session, displaying Arabic RTL and English LTR
+// 2. /admin/copy returns 404 for non-admins (page gate enforced)
+// 3. Unauthorized mutations receive a clean JSON NOT_FOUND error without stack traces
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -38,14 +40,14 @@ async function signedIn(base: string, email: string) {
 }
 
 test(
-  "@issue-180 AC: /admin/copy loads and displays user-friendly error messages when the server encounters issues, in Arabic RTL and English LTR without breaking",
+  "@issue-180 AC: /admin/copy loads with platform-admin session and displays user-friendly error messages when the server encounters issues, in Arabic RTL and English LTR without breaking",
   { tags: ["feat:fl-platform-admin", "feat:fl-i18n-rtl", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
     // Deterministic per stack: derived from the stack URL, never from the clock.
     const session = await signedIn(base, `army-180-${createHash("sha256").update(base).digest("hex").slice(0, 12)}@flowline-e2e.test`);
 
-    // 1. The /admin/copy page is loadable (status 200) and displays Arabic RTL by default and English LTR when selected.
+    // 1. The /admin/copy page loads (status 200) with a platform-admin session, and displays Arabic RTL by default and English LTR when selected.
     const open = async (...cookies: string[]) => {
       const page = await fetch(`${base}/admin/copy`, { headers: headers(base, ...cookies, session) });
       const html = await page.text();
@@ -69,7 +71,12 @@ test(
     expect(en.dir).toBe("ltr");
     expect(en.containsTitle).toBe(true);
 
-    // 2. 404 on API mutation is intentional (hides the panel): requirePlatformAdmin throws notFound()
+    // 2. /admin/copy returns 404 for non-admins (page gate enforced by platformAdminOrNull)
+    const nonAdminSession = await signedIn(base, `army-180-nonadmin-${createHash("sha256").update(base).digest("hex").slice(0, 12)}@flowline-e2e.test`);
+    const nonAdminRes = await fetch(`${base}/admin/copy`, { headers: headers(base, "fl_locale=en", nonAdminSession) });
+    expect(nonAdminRes.status).toBe(404);
+
+    // 3. 404 on API mutation is intentional (hides the panel): requirePlatformAdmin throws notFound()
     // for non-admins before the body is validated or a step-up is checked;
     // route() serialises it as { error: { code: "NOT_FOUND", message } } without a stack trace.
     const res = await fetch(`${base}/api/platform/copy`, {
@@ -87,4 +94,3 @@ test(
     expect(json.error.message).not.toMatch(/\n\s+at \S+/);
   },
 );
-

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/i18n/server", () => ({ getT: async () => (key: string) => key }));
+vi.mock("@/server/platform-access", () => ({
+  platformAdminOrNull: async () => ({ user: { id: "test", email: "test@test.com", name: "Test" }, session: { id: "test", tokenHash: "hash", createdAt: new Date() } }),
+}));
 
 const CopyPage = (await import("@/app/admin/copy/page")).default;
 const { CopyEditor } = await import("@/app/admin/copy/copy-editor");
