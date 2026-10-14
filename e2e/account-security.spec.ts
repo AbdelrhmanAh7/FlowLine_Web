@@ -161,6 +161,6 @@ test("enable, sign in with the code, disable", async ({ page }) => {
   // Signing in again needs no code.
   await signOut();
   await signIn();
-  await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/sign-in/);
+  await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
 });
