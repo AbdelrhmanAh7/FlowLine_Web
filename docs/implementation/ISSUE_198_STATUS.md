@@ -20,10 +20,11 @@ Against `origin/ai/197`, the diff is QR-only:
   draws no QR code, tagged `feat:fl-accounts-sessions`.
 - `docs/implementation/BETA_USER_GUIDE.md`: mention of QR code in English summary.
 
-Per CTO decision and CodeRabbit/Claude review, #198 stays parked until #259 and #261
-are merged into main. Once both prerequisites merge, `ai/198` will be rebased onto
-`origin/main` (dropping the prerequisite merge commits), leaving strictly the 5 QR
-files plus the e2e-army test and docs update in the diff against main.
+PR #260 base has been retargeted to `ai/197`, so the PR diff on GitHub is now
+strictly QR-only (stacked on PR #259 and PR #261). Per CTO decision, #198 stays
+parked for merge until #259 and #261 land. Once both prerequisites merge, `ai/198`
+will be rebased onto `origin/main` (dropping prerequisite merge commits), preserving
+the exact 5 QR files plus the e2e-army test and docs update in the diff against main.
 
 ## Evidence (isolated stack: throwaway PostgreSQL 16 cluster, database `flowline_test_q198`, app :3198, fakes :4198/:4199, `.env.test` from `.github/ci/env.test.template` with generated keys)
 
