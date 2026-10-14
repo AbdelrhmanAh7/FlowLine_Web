@@ -69,7 +69,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await expect(secret).toBeVisible();
   await expect(secret).toHaveAttribute("dir", "ltr");
   await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByText(/shown only once/)).toBeVisible();
+  await expect(page.getByTestId("backup-codes-warning")).toHaveText("Backup codes — shown only once, store them offline.");
   const raw = base32Decode((await secret.textContent())!.trim());
 
   // Cancel in the code form leaves it Off: no verify request, secret hidden.
