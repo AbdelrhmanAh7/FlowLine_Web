@@ -14,7 +14,7 @@ import { assuredSessionFor, enrolTotp, makeVerifiedUser } from "./platform-helpe
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt, oidcSignIn, proveSsoMailbox } from "./federation-fixture";
 import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
 
-// Two real PostgreSQL connections. Run locally on 2026-10-14 (2/2 passed) against the throwaway flowline_test_i108 PostgreSQL 16 database (PHASE4_BETA_REPORT.md); CI is the gate.
+// Two real PostgreSQL connections. Run locally on 2026-10-12 against a throwaway database (PHASE4_BETA_REPORT.md); CI is the gate.
 //
 // Issue #37: `confirmSsoLink` locked the initiating session before the user row while `completeFederatedChallenge`
 // locked the user row before that session, so the two could deadlock for one user sharing a session. Both now lock the
