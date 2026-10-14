@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "Version {version}",
+    "runSnapshot": "Run snapshot",
+    "savedSnapshot": "Saved snapshot",
+    "overwriteSnapshot": "Copy kept before overwrite",
     "cancel": "Cancel",
     "retry": "Retry",
     "back": "Back",
@@ -275,8 +278,8 @@
       "chapters": "Walkthrough chapters",
       "next": "Next",
       "back": "Back",
+      "walkthroughAria": "The full Flowline walkthrough under a minute",
       "heroAria": "Recording from inside Flowline: a flow running step by step",
-      "walkthroughAria": "The full Flowline walkthrough in under a minute",
       "captionLang": {
         "ar": "العربية",
         "en": "English"
@@ -2092,6 +2095,7 @@
       "title": "Re-run #{number} from “{label}”",
       "revision": "Revision",
       "original": "The run's original version (v{version})",
+      "originalSnapshot": "The run's original snapshot",
       "latest": "The current saved flow (includes your fixes)",
       "willRerun": "Will run again · {count}",
       "needsApproval": "needs approval",

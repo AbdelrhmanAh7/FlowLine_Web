@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "الإصدار {version}",
+    "runSnapshot": "لقطة التشغيل",
+    "savedSnapshot": "لقطة محفوظة",
+    "overwriteSnapshot": "نسخة محفوظة قبل الاستبدال",
     "cancel": "إلغاء",
     "retry": "إعادة المحاولة",
     "back": "رجوع",
@@ -275,8 +278,8 @@
       "chapters": "فصول العرض",
       "next": "التالي",
       "back": "السابق",
-      "heroAria": "تسجيل من داخل Flowline: مسار عمل يعمل خطوة بخطوة",
       "walkthroughAria": "العرض الكامل لـ Flowline في أقل من دقيقة",
+      "heroAria": "تسجيل من داخل Flowline: مسار عمل يعمل خطوة بخطوة",
       "captionLang": {
         "ar": "العربية",
         "en": "English"
@@ -2165,6 +2168,7 @@
       "title": "إعادة تشغيل #{number} من «{label}»",
       "revision": "المراجعة",
       "original": "الإصدار الأصلي للتشغيل (v{version})",
+      "originalSnapshot": "اللقطة الأصلية للتشغيل",
       "latest": "المسار المحفوظ حاليًا (يتضمن إصلاحاتك)",
       "willRerun": "سيُعاد تشغيلها · {count}",
       "needsApproval": "تحتاج إلى موافقة",
