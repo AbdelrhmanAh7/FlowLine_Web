@@ -1256,11 +1256,19 @@
       }
     },
     "mizano": {
-      "description": "Read overdue invoices from Mizano for follow-up.",
+      "description": "Mizano accounting connector.",
       "actions": {
         "list_overdue_invoices": {
           "title": "List overdue invoices",
           "description": "List unpaid invoices past their due date on the date you choose, in the workspace currency."
+        },
+        "create_customer": {
+          "title": "Create customer",
+          "description": "Create a new customer in Mizano with name, company, email, phone, and optional taxId."
+        },
+        "create_draft_quote": {
+          "title": "Create draft quote",
+          "description": "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate)."
         }
       },
       "fields": {
