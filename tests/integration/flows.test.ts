@@ -106,6 +106,7 @@ describe("saveFlow", () => {
     expect(versions).toHaveLength(1);
     expect(versions[0].reason).toBe("overwrite");
     expect(versions[0].revision).toBe(2); // the overwritten server copy
+    expect(versions[0].version).toBeNull(); // only publications are numbered (#204)
   });
 
   it("createVersion:true records a 'save' version; autosave does not", async () => {
@@ -122,7 +123,8 @@ describe("saveFlow", () => {
 
     const versions = await listVersions(flow.id);
     expect(versions).toHaveLength(1);
-    expect(versions[0]).toMatchObject({ version: 1, revision: 3, reason: "save" });
+    // Unnumbered since #204: only a publication takes a version number.
+    expect(versions[0]).toMatchObject({ version: null, revision: 3, reason: "save" });
   });
 
   it("404s when saving a deleted flow", async () => {
