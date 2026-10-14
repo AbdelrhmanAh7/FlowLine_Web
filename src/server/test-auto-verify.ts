@@ -9,9 +9,10 @@
  *   - FLOWLINE_TEST_AUTO_VERIFY=1: server-wide, for an external tester that cannot set cookies (exactly "1", nothing else);
  *   - the `fl_test_auto_verify=1` cookie: for one browser context only, like `fl_test_beta_mode` (src/server/beta.ts), so
  *     the shared E2E stack can exercise the switch without changing every other test's sign-up. A tester sets it with the
- *     browser's own cookie API; there is no route that sets it for a navigate-only tester, so an external cloud tester
- *     (TestSprite) uses the server-wide FLOWLINE_TEST_AUTO_VERIFY=1 instead.
- * The cookie grants nothing new: under FLOWLINE_ENV=test GET /api/test/outbox already hands out every verification link.
+ *     browser's own cookie API or, if it can only navigate (the hub verifier), by opening GET /api/test/auto-verify
+ *     (src/app/api/test/auto-verify/route.ts, also test-only), which sets it and continues to /sign-up.
+ * The cookie grants nothing new while the test stack's mail goes to the DB outbox (its default when no provider is set
+ * in the platform panel, src/server/email/index.ts): GET /api/test/outbox already hands out every verification link.
  * Only POST /sign-up/email is affected; the private-beta admission check still runs first, and social sign-ups keep the
  * provider's verified flag.
  */

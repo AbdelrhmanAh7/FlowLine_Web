@@ -5,8 +5,10 @@ import { PASSWORD, uniqueEmail, verificationLink, waitForAccountFormHydrated } f
 /**
  * Issue #124: the test-only sign-up auto-verify switch (src/server/test-auto-verify.ts) through the real sign-up form.
  * The test stack runs FLOWLINE_ENV=test without FLOWLINE_TEST_AUTO_VERIFY, so the cookie test opts in for its own browser
- * context with the fl_test_auto_verify=1 cookie and the last test proves that, without it, sign-up still needs the e-mail.
- * Outside FLOWLINE_ENV=test both opt-ins are ignored: tests/unit/test-auto-verify.test.ts and
+ * context with the fl_test_auto_verify=1 cookie, the next one by opening GET /api/test/auto-verify (which sets that cookie
+ * for a browser that can only navigate, like the hub verifier's), and the last test proves that, without either, sign-up
+ * still needs the e-mail. Outside FLOWLINE_ENV=test both opt-ins are ignored and the route is a 404:
+ * tests/unit/test-auto-verify.test.ts, tests/unit/test-auto-verify-route.test.ts and
  * tests/integration/test-auto-verify-staging.test.ts.
  *
  * The first test is also the machine-readable description of the form's fields for the hub verifier, whose planner
