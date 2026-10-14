@@ -1,85 +1,110 @@
-// Regression test for issue #221: Accounts, sessions and request safety failing on main
-// The hub's fl-auth-api tests fail when the same account/credentials are reused across shard runs.
-// This test ensures that each test runs with isolated credentials and that auth endpoints
-// properly reject invalid credentials with 401 (not 200/403 mismatches).
+// Regression test for issue #221: Accounts, sessions and request safety
+// Documents and verifies expected auth isolation behaviour:
+// 1. Sign-in with wrong password or unknown user returns 401 (enumeration protection).
+// 2. Sign-in with unverified account returns 403 (requireEmailVerification).
 //
-// Tags: feat:fl-auth-api, lvl:api (no model needed for API-level tests)
+// Tags: feat:fl-auth-api, shard:core-api, lvl:api
+// Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins.
+import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
-import { apiBase, seededEmail } from "../ops/verify/e2e-army/tests/lib";
 
 const PASSWORD = "Army-Passw0rd!";
 const SEED_DOMAIN = "flowline-e2e.test";
+const FIXED_COOKIE = "fl_test_beta_mode=open; fl_locale=en";
 
-test("[issue-221.1] sign-in with wrong password returns 401, not 200 or 403", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async () => {
-  const h = { "content-type": "application/json", origin: apiBase() };
-  const email = seededEmail("auth-221-wrong-pw", SEED_DOMAIN);
+function getBase(appUrl?: string): string {
+  return (process.env.E2E_ARMY_URL || appUrl || "http://localhost:3100").replace(/\/+$/, "");
+}
 
-  // Sign up a verified account first
-  const up = await fetch(`${apiBase()}/api/auth/sign-up/email`, {
+function seededEmail(base: string, name: string): string {
+  const hash = createHash("sha256").update(`${base}|${name}`).digest("hex").slice(0, 10);
+  return `auth-221-${hash}@${SEED_DOMAIN}`;
+}
+
+test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
+  const base = getBase(app?.baseUrl);
+  const headers = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED_COOKIE };
+  const email = seededEmail(base, "wrong-pw");
+
+  // Sign up a verified account
+  const up = await fetch(`${base}/api/auth/sign-up/email`, {
     method: "POST",
-    headers: h,
+    headers,
     body: JSON.stringify({ email, password: PASSWORD, name: "Test User" }),
   });
   expect(up.status).toBe(200);
-  expect(up.json.token).toBeNull();
+  const upData = (await up.json()) as { token: string | null };
+  expect(upData.token).toBeNull();
+
+  // Poll outbox for verification email
+  let token: string | null = null;
+  await expect.poll(async () => {
+    const mailRes = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers });
+    const body = (await mailRes.json().catch(() => ({ messages: [] }))) as { messages?: { purpose?: string; link?: string }[] };
+    const messages = body.messages ?? [];
+    const link = messages.find((m) => m.purpose === "verify")?.link;
+    token = link ? new URL(link).searchParams.get("token") : null;
+    return token;
+  }, { timeout: 20_000, message: `no verify email for ${email}` }).toBeTruthy();
 
   // Verify the account
-  const mail = await fetch(`${apiBase()}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: h });
-  const messages: { purpose?: string; link?: string }[] = (await mail.json().catch(() => ({ messages: [] }))).messages ?? [];
-  const link = messages.find((m) => m.purpose === "verify")?.link;
-  expect(link, "verification email should exist").toBeTruthy();
-  const token = new URL(link!).searchParams.get("token");
-  expect(token, "verification token should exist").toBeTruthy();
-  await fetch(`${apiBase()}/api/email`, {
+  const verifyRes = await fetch(`${base}/api/email`, {
     method: "POST",
-    headers: h,
+    headers,
     body: JSON.stringify({ action: "verify", token }),
   });
+  const verifyData = (await verifyRes.json()) as { status: string };
+  expect(verifyData.status).toBe("done");
 
   // Sign in with wrong password - should return 401
-  const wrongPw = await fetch(`${apiBase()}/api/auth/sign-in/email`, {
+  const wrongPw = await fetch(`${base}/api/auth/sign-in/email`, {
     method: "POST",
-    headers: h,
+    headers,
     body: JSON.stringify({ email, password: "definitely-wrong-1" }),
   });
   expect(wrongPw.status).toBe(401);
-  expect(wrongPw.json.message).toBeTruthy();
-  expect(wrongPw.json.message.toLowerCase()).toMatch(/wrong/i);
+  const wrongPwData = (await wrongPw.json()) as { message?: string };
+  expect(wrongPwData.message).toBeTruthy();
+  expect(wrongPwData.message?.toLowerCase()).toMatch(/wrong/i);
 
   // Sign in with non-existent user - should also return 401 (not 403)
-  const noUser = await fetch(`${apiBase()}/api/auth/sign-in/email`, {
+  const noUser = await fetch(`${base}/api/auth/sign-in/email`, {
     method: "POST",
-    headers: h,
-    body: JSON.stringify({ email: seededEmail("no-such-user-221", SEED_DOMAIN), password: "definitely-wrong-2" }),
+    headers,
+    body: JSON.stringify({ email: seededEmail(base, "no-such-user"), password: "definitely-wrong-2" }),
   });
   expect(noUser.status).toBe(401);
-  expect(noUser.json.message).toBeTruthy();
-  expect(noUser.json.message.toLowerCase()).toMatch(/wrong/i);
+  const noUserData = (await noUser.json()) as { message?: string };
+  expect(noUserData.message).toBeTruthy();
+  expect(noUserData.message?.toLowerCase()).toMatch(/wrong/i);
 
   // Both should have the same error message (account enumeration protection)
-  expect(wrongPw.json.message.toLowerCase()).toBe(noUser.json.message.toLowerCase());
+  expect(wrongPwData.message?.toLowerCase()).toBe(noUserData.message?.toLowerCase());
 });
 
-test("[issue-221.2] sign-in with unverified account returns 403, not 200", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async () => {
-  const h = { "content-type": "application/json", origin: apiBase() };
-  const email = seededEmail("auth-221-unverified", SEED_DOMAIN);
+test("@issue-221 AC2: sign-in with unverified account returns 403, not 200", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
+  const base = getBase(app?.baseUrl);
+  const headers = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED_COOKIE };
+  const email = seededEmail(base, "unverified");
 
   // Sign up but don't verify
-  const up = await fetch(`${apiBase()}/api/auth/sign-up/email`, {
+  const up = await fetch(`${base}/api/auth/sign-up/email`, {
     method: "POST",
-    headers: h,
+    headers,
     body: JSON.stringify({ email, password: PASSWORD, name: "Unverified User" }),
   });
   expect(up.status).toBe(200);
-  expect(up.json.token).toBeNull();
+  const upData = (await up.json()) as { token: string | null };
+  expect(upData.token).toBeNull();
 
   // Try to sign in - should return 403 (not 200)
-  const signed = await fetch(`${apiBase()}/api/auth/sign-in/email`, {
+  const signed = await fetch(`${base}/api/auth/sign-in/email`, {
     method: "POST",
-    headers: h,
+    headers,
     body: JSON.stringify({ email, password: PASSWORD }),
   });
   expect(signed.status).toBe(403);
-  expect(signed.json.message.toLowerCase()).toMatch(/not verified/i);
+  const signedData = (await signed.json()) as { message?: string };
+  expect(signedData.message?.toLowerCase()).toMatch(/not verified/i);
 });

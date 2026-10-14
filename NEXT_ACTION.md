@@ -8,53 +8,54 @@ Local lock/rollback regression fixes are ready; harness pushes. Backfill/runs in
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
 
-## Issue #221 — `fl-auth-api` failure is in the hub, not the product (2026-10-13, updated 2026-10-14)
+## Issue #221 — `fl-auth-api` release gate triage (2026-10-13, updated 2026-10-14)
 
-**Status: #221 stays open.** Its acceptance is that `fl-auth-api` passes on `main`; this branch records a diagnosis and a regression test, but no product or hub fix (hub write authorization remains explicitly denied by the CTO comment). #221 closes only after the hub fix below lands and the reproduce command passes on a fresh stack. Until then the release gate is not resolved.
+**Status: #221 stays open.** Its acceptance is that `fl-auth-api` passes on `main`; this branch records a triage diagnosis and a regression test, but no product or hub fix (hub write authorization remains explicitly denied by the CTO comment on the issue). #221 closes only after any necessary hub-side fix lands and the reproduce command passes on a fresh stack. Until then the release gate is not resolved. PR #227 references `Refs #221`.
 
-The saved log shows the `core-api` shard running twice, with failures consistent with reused verified accounts and consumed tokens. The runtime `E2E_ARMY_SEED` value was not logged, so identical seeds are not independently established. Product behaviour is correct: an unverified account is refused at sign-in (`requireEmailVerification`, FlowLine `src/lib/auth.ts:45`), but a verified account signs in with 200.
+### Revision reconciliation & seed evidence
 
-Evidence (hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`, FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc` @ hub `1544080dba6e5c8c593531e92f4abc8511c96a43`):
+- **Failing FlowLine revision on `main`**: `2ca60e5` (the 2026-10-12 stable release gate candidate where `fl-auth-api` failed with `expected 200 to be 403`, logged in `~/agents/logs/stable/FlowLine_Web/2026-10-12/app.log`).
+- **Inspected FlowLine branch revision**: `ceea864` was the merge commit on `ai/221` (incorporating `2ca60e5` and main ancestors) where the failure was first inspected. Successive merges updated the branch through `27cbeda`, `5037003`, `c9269af`, up to `143383f` (and base `main` @ `83a8011`).
+- **Hub revisions**: The failing stable run executed on hub commit `e06a85e` (2026-10-12). Subsequent hub inspection on 2026-10-14 examined deployed hub `1544080` / `e9479fbb` and source checkout `02b81bfd`.
+- **Seed evidence & suspected causes**: The runtime `E2E_ARMY_SEED` was not logged in `e2e-army.log` or `app.log`. While `hub-live/ops/verify/e2e-army/tests/lib.ts:19` defaults `E2E_ARMY_SEED` to `"nql-e2e-army-1"`, direct evidence that the seed was unchanged between runs is unavailable from logs. Because seed invariance cannot be established from the artifacts alone, **account reuse and the `confirmFailures` stage explanation are described as suspected causes rather than confirmed facts**, until fresh-stack reproduction passes.
 
-- Run 1 (fresh DB): `fl-auth-api.1`–`.5` pass (lines 57-61).
-- Run 2 (same stack, same seed; the quota fallback in `nql-agents/src/jobs/stable.ts` re-ran the whole shard): `fl-auth-api.1` gets 200 instead of 403, and `fl-email-flows`, `fl-onboarding`, `fl-workspaces`, `fl-members` fail on reused data (lines 476-560, 689-703).
-- The confirm run (`confirmFailures`, `nql-agents/src/jobs/e2eregress.ts:56`) lacks `E2E_ARMY_STAGE: "next"`, finds no tests (`NO_TESTS`), and so keeps the failure.
-- Hub test library defaults `E2E_ARMY_SEED` to `nql-e2e-army-1` (`hub-live/ops/verify/e2e-army/tests/lib.ts:19`); the log does not record the actual seed value, so identical seeds are not independently verified.
+### Suspected causes & log analysis
+
+Evidence from hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log` (FlowLine `2ca60e5` @ hub `e06a85e`):
+
+- **Run 1 (fresh DB)**: `fl-auth-api.1`–`.5` passed (lines 57-61).
+- **Run 2 (suspected stack rerun)**: A whole-shard rerun by the quota fallback in `nql-agents/src/jobs/stable.ts` observed `fl-auth-api.1` returning 200 instead of 403, and `fl-email-flows`, `fl-onboarding`, `fl-workspaces`, `fl-members` failing (lines 476-560, 689-703), which is consistent with suspected account reuse and already-consumed email tokens. Product behavior is verified: unverified accounts are refused at sign-in (403 `not verified`, FlowLine `src/lib/auth.ts:45`), whereas verified accounts sign in with 200.
+- **Confirmation run**: `confirmFailures` (`nql-agents/src/jobs/e2eregress.ts:56`) reported `NO_TESTS` (suspected missing `E2E_ARMY_STAGE: "next"`), keeping the recorded failure.
 
 ### FlowLine changes (2026-10-14)
 
-Added regression test `e2e-army/221-auth-isolation.e2e.ts` to document the expected auth behaviour:
+Added regression test `e2e-army/221-auth-isolation.e2e.ts` to document and lock the expected auth behavior:
 
-1. **Test 1**: Sign-in with wrong password returns 401, not 200 or 403
-   - Tests that both wrong-password and non-existent-user cases return 401
-   - Verifies that error messages are the same (account enumeration protection)
+1. **Test 1 (`@issue-221 AC1`)**: Sign-in with wrong password returns 401, not 200 or 403.
+   - Tests that both wrong-password and non-existent-user cases return 401.
+   - Verifies identical error messages (account enumeration protection).
 
-2. **Test 2**: Sign-in with unverified account returns 403, not 200
-   - Verifies that the product's `requireEmailVerification` setting is enforced correctly
+2. **Test 2 (`@issue-221 AC2`)**: Sign-in with unverified account returns 403, not 200.
+   - Verifies that the product's `requireEmailVerification` setting is enforced correctly.
 
 Both tests are API-level (no model needed) and tagged with `feat:fl-auth-api`, `shard:core-api`, `lvl:api`.
 
-### Hub-side fix (repo `nql-agents`, separate task)
+### Hub-side triage (repo `nql-agents`, separate task)
 
-To resolve the duplicate shard execution issue, the hub needs to:
+If fresh-stack reproduction confirms the suspected causes, the hub changes identified during triage include:
 
-1. **Isolate shard runs**: Add `freshStack: true` and a test filter for quota-related tests in `nql-agents/src/jobs/stable.ts` (see handoff notes in the issue comments). This prevents the same stack from being reused across shard reruns.
+1. **Isolate shard runs**: Add `freshStack: true` and a test filter for quota-related tests in `nql-agents/src/jobs/stable.ts` to prevent stack reuse across shard reruns.
+2. **Use test-only credentials**: Set `TEST_HUB_USER`/`TEST_HUB_SECRET` environment variables for the hub's test stack.
+3. **Improve error messages**: Replace the `NO_TESTS` error in `nql-agents/src/jobs/e2eregress.ts` with actionable diagnostics.
+4. **Pass E2E_ARMY_STAGE**: Ensure `confirmFailures` in `nql-agents/src/jobs/e2eregress.ts` passes `E2E_ARMY_STAGE: "next"` when running tests.
 
-2. **Use test-only credentials**: Set `TEST_HUB_USER`/`TEST_HUB_SECRET` environment variables for the hub's test stack and remove any FlowLine secrets from test setup.
-
-3. **Improve error messages**: Replace the confusing "NO_TESTS" error in `nql-agents/src/jobs/e2eregress.ts` with a clearer message: "No tests found for quota fallback. Check test names or filters."
-
-4. **Add regression test**: Add `e2e-army/221-quota-fresh-stack.e2e.ts` to the hub repo to assert the fresh stack behavior (see handoff notes).
-
-5. **Pass E2E_ARMY_STAGE**: Ensure `confirmFailures` in `nql-agents/src/jobs/e2eregress.ts` passes `E2E_ARMY_STAGE: "next"` when running tests.
-
-Then verify on a fresh stack (the hub repo's script, with a concrete ref):
+Verification command on a fresh stack once hub fixes land:
 
 ```sh
 REF=2ca60e5; ops/verify/e2e-army/run-local.sh FlowLine_Web "$REF" -- --tag feat:fl-auth-api
 ```
 
-Rechecked 2026-10-14 at FlowLine `075734389d781fc1aeba8c5ab9d0abc8edb5b17f` (branch `ai/221`, PR #227): deployed hub `1544080dba6e5c8c593531e92f4abc8511c96a43`, separate hub source checkout `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`. Hub test library defaults `E2E_ARMY_SEED` to `nql-e2e-army-1` (`hub-live/ops/verify/e2e-army/tests/lib.ts:19`); the saved log does not record the actual seed value, so identical seeds are not independently verified. Hub write authorization remains explicitly denied by the CTO comment. See `AI_QUESTIONS.md` for dispatch requirements; no fresh-stack pass is claimed.
+Note: Hub write authorization remains explicitly denied by the CTO on issue #221 (`AI_QUESTIONS.md` was retired after CTO answers were recorded on the issue). Acceptance remains unmet; PR #227 references `Refs #221` and #221 remains open until fresh-stack reproduction passes.
 
 ## Issue #141 handoff — 2026-10-12
 
