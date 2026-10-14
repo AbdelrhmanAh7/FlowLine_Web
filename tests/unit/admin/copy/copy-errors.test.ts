@@ -92,6 +92,13 @@ describe("handleWriteError (what the editor does after a failed save or publish)
     expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(false);
   });
 
+  it("on STEP_UP_REQUIRED keeps writes disabled when refetchMe fails even if cached data retains a future expiry", async () => {
+    const fx = editor("2026-10-13T12:01:00.000Z");
+    fx.refetchMe.mockResolvedValueOnce({ data: { stepUpUntil: "2026-10-13T12:01:00.000Z" }, isError: true, error: new Error("network failure") });
+    await handleWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step-up required"), "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
   it("shows the message first and does not wait for the copy reload, which TanStack may retry or pause while offline", async () => {
     const never = () => new Promise<never>(() => {}); // like a TanStack refetch paused while the browser is offline
     const network = editor();

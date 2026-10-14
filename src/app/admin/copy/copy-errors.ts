@@ -31,7 +31,7 @@ export interface WriteErrorEffects {
   t: (key: CopyErrorKey) => string;
   setError: (message: string) => void;
   setStepUpActive: (active: boolean) => void;
-  refetchMe: () => Promise<{ data?: { stepUpUntil: string | null } }>;
+  refetchMe: () => Promise<{ data?: { stepUpUntil: string | null }; isError?: boolean; error?: unknown }>;
   refetchCopy: () => Promise<unknown>; // TanStack's refetch: it never rejects, so it may run unawaited
 }
 
@@ -48,7 +48,8 @@ export async function handleWriteError(cause: unknown, fallbackKey: CopyWriteFal
   fx.setError(fx.t(copyErrorKey(cause, fallbackKey)));
   if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
     const refreshed = await fx.refetchMe();
-    const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
+    const isSuccess = !refreshed.isError && !refreshed.error;
+    const expiresAt = isSuccess && refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
     fx.setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
   } else if (isSessionRefusal(cause)) {
     fx.setStepUpActive(false);
