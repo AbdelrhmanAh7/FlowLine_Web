@@ -3,6 +3,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { setupUser } from "../../../../../e2e/helpers";
 import { scoreClosedDay, scoreOwnerDecision } from "../../../../../tests/helpers/fieldScoring";
 import { noPromiseHolds } from "../../../../../src/company-builder/packs/customer-follow-up";
+import { sanitizePacketFileName } from "../../../../../tests/helpers/file-path-sanitizer";
 
 /**
  * Flowline field run of the FROZEN validation packet (sha256 in ../packet/SHA256SUMS). Agent-driven through the real
@@ -12,7 +13,8 @@ import { noPromiseHolds } from "../../../../../src/company-builder/packs/custome
 const DIR = "artifacts/company-builder/validation/20261001-d224cfb";
 // The frozen v1 packet (default) or a newer version, e.g. PACKET=packet.v2.json (scoring gaps #142). Old runs stay
 // reproducible against v1 by default; a new run names the packet it scored.
-const PACKET_FILE = process.env.PACKET ?? "packet.json";
+// PACKET_FILE is sanitized to prevent directory traversal and path injection attacks.
+const PACKET_FILE = sanitizePacketFileName(process.env.PACKET ?? "packet.json");
 const packet = JSON.parse(readFileSync(`${DIR}/packet/${PACKET_FILE}`, "utf8"));
 const checksumLine = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split("\n").find((l) => l.trim().endsWith(` ${PACKET_FILE}`));
 if (!checksumLine) throw new Error(`${PACKET_FILE} has no entry in packet/SHA256SUMS: refusing a run not bound to frozen packet contents`);
