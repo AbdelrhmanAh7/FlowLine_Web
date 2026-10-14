@@ -14,6 +14,8 @@ const fx = vi.hoisted(() => ({
   racing: false,
   arrived: [] as Array<() => void>,
   txChain: Promise.resolve() as Promise<unknown>,
+  /** workspace_member rows: each read takes the next entry; the last one repeats. */
+  members: [] as { workspaceId: string; role: string; userId: string }[][],
 }));
 
 vi.mock("@/db", async () => {
@@ -22,6 +24,7 @@ vi.mock("@/db", async () => {
     switch (name) {
       case "email_token": return [fx.token];
       case "user": return fx.userExists ? [{ id: "user-1" }] : [];
+      case "workspace_member": return (fx.members.length > 1 ? fx.members.shift() : fx.members[0]) ?? [];
       default: return [];
     }
   };
@@ -69,6 +72,7 @@ beforeEach(() => {
   fx.racing = false;
   fx.arrived.length = 0;
   fx.txChain = Promise.resolve();
+  fx.members = [];
   fx.token = { id: "token-1", userId: "user-1", purpose: "reset", consumedAt: null, expiresAt: new Date("2099-01-01") };
 });
 
@@ -127,5 +131,28 @@ describe("account token lock order", () => {
     fx.token.consumedAt = new Date();
     expect(await consumeAccountToken("reset", TOKEN, "long-enough-password")).toBe("used");
     expect(fx.events).toEqual([]);
+  });
+
+  // Issue #109 (part 2 of #47): the deletion now writes its audit rows before locking the workspaces FOR UPDATE,
+  // avoiding the KEY SHARE → FOR UPDATE upgrade. completeSso's audit() still takes its key-share after
+  // its user lock, so the deletion's user-first order prevents a cycle with SSO.
+  it("delete writes the account.deleted audit rows before locking the shared workspaces FOR UPDATE", async () => {
+    fx.token.purpose = "delete";
+    fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }]];
+    expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
+    expect(fx.events.slice(0, 5)).toEqual(["lock:retained-accounting", "lock:user:update", "lock:email_token:update", "insert:audit_event", "lock:workspace:update"]);
+    expect(fx.events.filter((e) => e.endsWith(":audit_event"))).toEqual(["insert:audit_event"]);
+    expect(fx.events.slice(-2)).toEqual(["update:email_token", "delete:user"]);
+  });
+
+  it("delete corrects its audit row under the workspace lock when the membership changed before that lock", async () => {
+    fx.token.purpose = "delete";
+    // First read (before the lock): editor. Every read under the lock: viewer (a concurrent role change).
+    fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }], [{ workspaceId: "ws-shared", role: "viewer", userId: "user-2" }]];
+    expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
+    const lock = fx.events.indexOf("lock:workspace:update");
+    // Before the workspace lock: initial audit insert for `seen` (editor). After the workspace lock: reconciliation
+    // deletes the stale editor row and inserts the current viewer row.
+    expect(fx.events.slice(lock + 1).filter((e) => e.endsWith(":audit_event"))).toEqual(["delete:audit_event", "insert:audit_event"]);
   });
 });
