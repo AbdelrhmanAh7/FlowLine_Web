@@ -62,6 +62,10 @@ describe("mizano identity", () => {
 });
 
 describe("runConnectionTest (what POST …/connections/{cid}/test returns)", () => {
+  it("gives the connection test its 8 s default deadline", () => {
+    expect(TEST_TIMEOUT_MS).toBe(8_000);
+  });
+
   it("returns the account label for a good key", async () => {
     await expect(runConnectionTest(p, creds())).resolves.toBe("Alice A Mizano");
   });
