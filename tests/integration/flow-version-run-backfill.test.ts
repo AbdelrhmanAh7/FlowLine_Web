@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { db, schema } from "@/db";
 import { createFlow, listFlows } from "@/server/flows";
 import { publishFlow } from "@/server/publish";
 import { createWorkspace } from "@/server/workspaces";
 import { closeDb, makeUser, unique } from "./helpers";
+import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
 
 afterAll(closeDb);
 
@@ -82,9 +84,54 @@ async function expectImmutable(id: string) {
 }
 
 describe("migration 0026: legacy save, run and overwrite snapshots lose their number (#205)", () => {
+  it("blocks legacy inserts between backup and update, so no number is cleared without a backup", async () => {
+    const { flow, publication, rows } = await legacyFlow();
+    await apply(REVERSE); // A previous image has no insert trigger yet.
+    const migration = await connect();
+    const writer = await connect();
+    const route = routeTransactions();
+    const pause = pauseAfter(migration, /INSERT INTO "flow_version_number_backup"/i);
+    let running: Promise<void> | undefined;
+    let inserting: Promise<unknown> | undefined;
+    try {
+      running = route.run(drizzle(migration, { schema }), () => apply(UP));
+      void running.catch(() => {});
+      await pause.reached;
+      const { rows: [{ pid }] } = await writer.query<{ pid: number }>("select pg_backend_pid() as pid");
+      let finished = false;
+      inserting = writer.query(`insert into flow_version (id, flow_id, version, revision, name, graph, reason, created_by)
+        select gen_random_uuid(), flow_id, 8, revision, name, graph, 'run', created_by
+        from flow_version where id = $1 returning id, version`, [publication]).then((result) => {
+        finished = true;
+        return result;
+      }, (error) => { finished = true; throw error; });
+      void inserting.catch(() => {});
+      expect((await blockedByObserver(migration, pid, () => finished)).query).toMatch(/insert into flow_version/i);
+      pause.resume();
+      await Promise.all([running, inserting]);
+      const after = await numbers(flow.id);
+      expect(after.size).toBe(rows.length + 2); // Publication, three legacy rows and the concurrent insert.
+      expect(after.get(publication)).toBe(1);
+      expect([...after.entries()].filter(([id]) => id !== publication).every(([, number]) => number === null)).toBe(true);
+      expect(await backup(flow.id)).toEqual(rows.map((row) => [row.id, row.version]));
+      await apply(REVERSE);
+      const restored = await numbers(flow.id);
+      expect(rows.map((row) => restored.get(row.id))).toEqual([2, 3, 4]);
+    } finally {
+      pause.resume();
+      await Promise.allSettled([running, inserting]);
+      pause.restore();
+      route.restore();
+      await migration.end();
+      await writer.end();
+      await apply(UP); // Leave the database's insert guard enabled for the next test.
+    }
+  });
+
   it("nulls numbered save, run and overwrite snapshots, keeps the publication, backs up the old numbers", async () => {
     const { user, ws, flow, publication, rows } = await legacyFlow();
-
+    await apply(REVERSE);
+    await db.execute(sql`drop table flow_version_number_backup`); // Actual pre-0026 schema: no backup table yet.
     await apply(UP);
 
     const after = await numbers(flow.id);

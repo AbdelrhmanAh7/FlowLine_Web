@@ -5,6 +5,14 @@
 -- Reversible: the old numbers are kept in flow_version_number_backup, and drizzle/reverse/0026_flow_version_run_backfill.sql
 -- puts them back. drizzle's migrator runs this file in one transaction, so the immutability trigger (0002) is off only for
 -- the UPDATE and a failure rolls everything back.
+SET LOCAL lock_timeout = '5s';
+--> statement-breakpoint
+SET LOCAL statement_timeout = '30s';
+--> statement-breakpoint
+-- Block writers before reading numbers; held until commit so every cleared number has a backup.
+-- Readers can continue. Take the same self-exclusive lock needed by the trigger DDL up front.
+LOCK TABLE "flow_version" IN SHARE ROW EXCLUSIVE MODE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "flow_version_number_backup" (
 	"flow_version_id" uuid PRIMARY KEY NOT NULL,
 	"version" integer NOT NULL,
