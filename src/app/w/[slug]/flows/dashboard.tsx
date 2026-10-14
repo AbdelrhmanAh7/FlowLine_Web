@@ -109,10 +109,32 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
     setError(null);
     create.mutate({ n8n: parsed });
   };
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    file.text().then((content) => setText(content));
+    try {
+      const content = await file.text();
+      // Validate it's valid JSON
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        setError(t("flows.importN8nInvalid"));
+        return;
+      }
+      // Validate it's an n8n workflow (has nodes array)
+      if (!parsed || typeof parsed !== "object" || !("nodes" in parsed) || !Array.isArray((parsed as Record<string, unknown>).nodes)) {
+        setError(t("flows.importN8nInvalid"));
+        return;
+      }
+      setError(null);
+      setText(content);
+    } catch {
+      setError(t("flows.importN8nInvalid"));
+    } finally {
+      // Reset file input so same file can be selected again
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>

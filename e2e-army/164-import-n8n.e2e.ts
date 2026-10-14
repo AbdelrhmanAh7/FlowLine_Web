@@ -68,10 +68,50 @@ test(
   "@issue-164 AC4: the import dialog has a file upload button for .json files",
   { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
   async ({ app, agent, screen }) => {
-    await app.open("/");
+    await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
     await agent.assert("the dialog shows an Upload .json file button");
     await expect(screen.getByRole("button", { name: "Upload .json file" })).toBeVisible();
+  },
+);
+
+test(
+  "@issue-164 AC5: uploading a valid .json file parses and populates the workflow box",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/en");
+    await agent.act("open the Flows page from the navigation");
+    await agent.act("click Import from n8n");
+    await agent.act("upload {file} as the n8n workflow", { params: { file: N8N_WORKFLOW } });
+    await agent.assert("the workflow JSON appears in the text area");
+    await expect(screen.getByText("Webhook", { exact: true })).toBeVisible();
+    await expect(screen.getByText("Shape", { exact: true })).toBeVisible();
+  },
+);
+
+test(
+  "@issue-164 AC6: uploading an invalid .json file shows an error",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/en");
+    await agent.act("open the Flows page from the navigation");
+    await agent.act("click Import from n8n");
+    await agent.act("upload {file} as the n8n workflow", { params: { file: "{ not json" } });
+    await agent.assert("an error says the file is not valid JSON");
+    await expect(screen.getByRole("alert").first()).toBeVisible();
+  },
+);
+
+test(
+  "@issue-164 AC7: uploading a valid JSON that is not an n8n workflow shows an error",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/en");
+    await agent.act("open the Flows page from the navigation");
+    await agent.act("click Import from n8n");
+    await agent.act("upload {file} as the n8n workflow", { params: { file: '{"foo": "bar"}' } });
+    await agent.assert("an error says the file is not a valid n8n workflow");
+    await expect(screen.getByRole("alert").first()).toBeVisible();
   },
 );
