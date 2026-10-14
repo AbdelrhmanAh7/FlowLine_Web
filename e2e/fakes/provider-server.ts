@@ -1926,12 +1926,12 @@ const linear: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 400, { errors: [{ message: "Unknown query" }] });
 };
 
+// Mizano (#222 health probe, #145 connection check): dispatch has already checked the Bearer token
+// (401 { message: "Unauthorized" } for a missing/unknown one). /api/health proves the instance is up, /api/me
+// proves the scoped key and names the workspace, /api/invoices answers the list action.
 const mizano: Handler = (ctx, req, res, path, _url, _body, account) => {
   const acct = ACCOUNTS[account];
-  // The connection check (MZ G5): the scoped API key arrives as `Authorization: Bearer`, so a wrong key is
-  // rejected before the handler runs (the shared authenticate/authFail path). /api/health is what the flow calls;
-  // /api/me is the identity the connect flow stores.
-  if (req.method === "GET" && path === "/api/health") return json(ctx, req, res, 200, { status: "healthy", version: "test" });
+  if (req.method === "GET" && path === "/api/health") return json(ctx, req, res, 200, { status: "ok", version: "fake" });
   if (req.method === "GET" && path === "/api/me") return json(ctx, req, res, 200, { id: `mizano-ws-${account}`, workspaceName: `${acct.name} Mizano` });
   if (req.method === "GET" && path === "/api/invoices") {
     return json(ctx, req, res, 200, {
@@ -1950,12 +1950,12 @@ const HANDLERS: Record<string, Handler> = {
   zendesk,
   airtable,
   snowflake,
+  mizano,
   github,
   stripe,
   paddle,
   notion,
   linear,
-  mizano,
 };
 
 // ---------------------------------------------------------------- control API

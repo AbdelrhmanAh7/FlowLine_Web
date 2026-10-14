@@ -95,6 +95,33 @@ test(
   },
 );
 
+// The same shared adapter file also defines Mizano's scoped action, so this PR carries the fl-integration-actions
+// coverage: the catalog must expose the new connection type and its action with the scope it needs.
+test(
+  "@issue-145 catalog: the new Mizano connection type exposes its scoped action with the key it needs",
+  { tags: ["feat:fl-integration-actions", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const owner = await signedIn(base, `army-145-catalog-${seeded(base, "catalog")}@flowline-e2e.test`);
+    const res = await fetch(`${base}/api/integrations/catalog`, { headers: owner });
+    expect(res.status).toBe(200);
+    const { providers } = (await res.json()) as {
+      providers: { id: string; authType: string; connectFields: { key: string; secret: boolean }[]; actions: { id: string; requiredScopes?: string[] }[] }[];
+    };
+    const mizano = providers.find((p) => p.id === "mizano");
+    expect(mizano).toBeDefined();
+    expect(mizano!.authType).toBe("api_key");
+    // The scoped key is a secret connect field; the host is a plain setting.
+    expect(mizano!.connectFields.map((f) => [f.key, f.secret])).toEqual([
+      ["token", true],
+      ["baseUrl", false],
+    ]);
+    const action = mizano!.actions.find((a) => a.id === "mizano.list_overdue_invoices");
+    expect(action).toBeDefined();
+    expect(action!.requiredScopes).toContain("invoices:read");
+  },
+);
+
 test(
   "@issue-145 AC2: the saved Mizano connection's card offers a Test connection control that reports the account",
   { tags: ["feat:fl-integrations", "lvl:ui"] },
