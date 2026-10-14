@@ -1,41 +1,126 @@
-# Evidence — Issue #109: Fix lock order in consumeAccountToken to resolve deadlock
+# Evidence for Issue #180 - Round 20 QA Fix
 
-Part 2/2 of #47. Code under test: `src/server/email/flows.ts` (`consumeAccountToken`, the `delete`
-branch). Every result below was observed on `6323281` (the test head of this branch) against a
-throwaway `flowline_test` database (PostgreSQL 16, `FLOWLINE_ENV=test`, sandbox off) — the
-same code the PR merges.
+## Summary
+Fixed all three QA findings from round 20 (head d95b8c9) by restoring the platform-admin gate, updating the e2e test, and correcting documentation.
 
-## Requirements and Verification
+## Changes Made
 
-| Req ID | Description | Verification Method | Result | Commit |
-|--------|-------------|---------------------|--------|--------|
-| #109:1 | Change the lock order in `consumeAccountToken`: the audit row insert comes before the workspace `FOR UPDATE` lock | Source: `src/server/email/flows.ts:175-184` — membership read under the user lock, `audit_event` insert(s), then `SELECT … FROM workspace … FOR UPDATE` ordered by id; statement order pinned by `tests/unit/email-token-lock-order.test.ts` (`insert:audit_event` before `lock:workspace:update`) | 10/10 pass (mocked database) | `6323281` |
-| #109:2 | The fix passes the deadlock test | `tests/integration/account-delete-sso-lock-order.test.ts` (the #108 test, copied verbatim from `origin/ai/108` at `2ef1fb8` so it is part of this PR): deletion vs the user's own SSO sign-in in flight, both orders, two real connections, waits observed through `pg_blocking_pids` | 2/2 pass on this head; without the fix (pre-#65 order) the SSO-first case is seen waiting at `delete from "user"` holding W and deadlocks on release (negative control recorded on `2ef1fb8`) | `6323281` |
-| #109:3 | The fix passes `tests/integration/retained-file-locking.test.ts:122` | `tests/integration/retained-file-locking.test.ts` ("account deletion locks W, admission waits at accounting, then both commit without a deadlock") plus its three sibling tests on the same file | 4/4 pass | `6323281` |
-| #109:4 | Two co-members of one shared workspace deleting at once cannot deadlock (the reorder's key-share → `FOR UPDATE` upgrade) | Positive: `retained-file-locking.test.ts` "two co-members of one workspace confirm deletion at once" — the second deletion is observed waiting at `pg_advisory_xact_lock` (via `pg_blocking_pids`) while the first holds the key-share, then both finish. Negative control: `tests/integration/account-delete-key-share-upgrade.test.ts` — with only the accounting lock removed (test-only mock), the same two deletions each pause after their audit insert and, released together, one aborts with `40P01` at the workspace `FOR UPDATE` while holding its key-share | Positive 1/1 (both finish, both audit rows survive); negative control 1/1, stable across three consecutive runs — proves the accounting lock is load-bearing | `6323281` |
-| #109:5 | Person-visible behaviour of account deletion is unchanged | `tests/integration/email.test.ts` (rollback on `transfer_required`, exactly one `account.deleted` record after the deletion) and the e2e-army request test `e2e-army/109-account-delete-shared-audit.e2e.ts` (runs in the hub verify job, not locally) | 9/9 pass locally; e2e-army runs in CI | `6323281` |
+### 1. Restore Platform-Admin Gate in `src/app/admin/copy/page.tsx`
+**File:** `src/app/admin/copy/page.tsx`
+**Lines:** 1-16
 
-## Test Execution Evidence
+**Before:**
+```tsx
+import type { Metadata } from "next";
+import { getT } from "@/i18n/server";
+import { CopyEditor } from "./copy-editor";
 
-```
-$ node scripts/with-env.mjs .env.test npx vitest run --project integration \
-    tests/integration/retained-file-locking.test.ts \
-    tests/integration/account-delete-sso-lock-order.test.ts \
-    tests/integration/email.test.ts
-  Test Files  3 passed (3)
-        Tests  15 passed (15)
+export const dynamic = "force-dynamic";
 
-$ node scripts/with-env.mjs .env.test npx vitest run --project integration \
-    tests/integration/account-delete-key-share-upgrade.test.ts
-  Test Files  1 passed (1)          # also passed on two further consecutive runs
-        Tests  1 passed (1)
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("platformAdmin.copyEditor.title"), robots: { index: false, follow: false } };
+}
 
-$ npx vitest run --project unit tests/unit/email-token-lock-order.test.ts
-  Test Files  1 passed (1)
-        Tests  10 passed (10)
+export default async function CopyPage() {
+  return <CopyEditor />;
+}
 ```
 
-- Typecheck: `npx tsc --noEmit` exit 0. Lint: `npx eslint src/server/email/flows.ts` plus every touched test, helper and e2e-army file — no findings (re-run on the final head).
-- The final commit changes only comments in `flows.ts` and the header of `account-delete-key-share-upgrade.test.ts` plus docs; after it, eslint (all eight touched files), `tsc --noEmit` and `email-token-lock-order.test.ts` (10/10) were re-run. The database-backed results above were observed on `6323281` and are not re-claimed for the later head.
-- Full suite, build and browser runs are delegated to hosted CI (per the task brief); no full gate or Playwright run is claimed here.
-- The `#108` test file and the `pg-lock-helpers.ts` `routeTransactions` helper are byte-identical to `origin/ai/108` (`2ef1fb8`), so PR #214 and this PR merge cleanly in either order.
+**After:**
+```tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getT } from "@/i18n/server";
+import { CopyEditor } from "./copy-editor";
+import { platformAdminOrNull } from "@/server/platform-access";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("platformAdmin.copyEditor.title"), robots: { index: false, follow: false } };
+}
+
+export default async function CopyPage() {
+  // Platform-admin gate (MUST 1–2): hide the panel from non-admins via notFound()
+  if (!(await platformAdminOrNull())) {
+    return notFound();
+  }
+  return <CopyEditor />;
+}
+```
+
+**Impact:** Non-admin visitors now receive a 404 page instead of seeing the editor shell, restoring the platform-admin trust boundary (MUST 1–2).
+
+### 2. Update E2E Test
+**File:** `e2e-army/180-admin-copy-errors.e2e.ts`
+**Lines:** 40-89
+
+**Changes:**
+- Added check for non-admin account receiving 404 on page load (lines 72-75)
+- Kept platform-admin session check for page loading (lines 60-70)
+- Retained existing API mutation checks (lines 77-87)
+
+**New Test Flow:**
+1. Sign in as platform admin → assert `/admin/copy` returns 200 with RTL/LTR title
+2. Sign in as non-admin → assert `/admin/copy` returns 404 (page gate enforced)
+3. Sign in as platform admin → assert API mutation returns 404 with clean JSON error
+
+### 3. Update Documentation
+**Files:**
+- `docs/DEVELOPER_GUIDE.md` (line 27)
+- `docs/implementation/PROGRESS.md` (line 72)
+
+**Changes:**
+- Clarified page gate enforcement: "The page (`src/app/admin/copy/page.tsx`) enforces a platform-admin gate (`platformAdminOrNull()` returning `null` → `notFound()`), so non-admins receive a 404 page rather than seeing the editor shell"
+- Updated PROGRESS.md to reflect restored gate
+- Removed stray blank line before "## Components and design"
+
+### 4. Update Unit Test
+**File:** `tests/unit/admin/copy/copy-page.test.ts`
+**Lines:** 1-14
+
+**Changes:**
+- Mocked `platformAdminOrNull()` to return a test admin context
+- Ensures the test passes with the restored gate
+
+## Verification
+
+### Typecheck
+```bash
+pnpm typecheck
+# ✓ No errors
+```
+
+### Lint
+```bash
+pnpm lint
+# ✓ No errors
+```
+
+### Unit Tests
+```bash
+pnpm vitest run tests/unit/admin/copy/ --maxWorkers=2
+# Test Files  3 passed (3)
+# Tests  40 passed (40)
+```
+
+### Changed Files
+```
+docs/DEVELOPER_GUIDE.md                 |  3 +--
+docs/implementation/PROGRESS.md         |  2 +-
+e2e-army/180-admin-copy-errors.e2e.ts   | 18 ++++++++++++------
+src/app/admin/copy/page.tsx             |  6 ++++++
+tests/unit/admin/copy/copy-page.test.ts |  3 +++
+5 files changed, 23 insertions(+), 9 deletions(-)
+```
+
+## QA Findings Resolved
+
+1. ✅ **platformAdminOrNull() check was deleted** - Restored with proper imports and call
+2. ✅ **E2E test expected 200 for non-admin** - Now expects 404 for non-admins and uses admin session for page checks
+3. ✅ **Documentation incorrect** - Updated both DEVELOPER_GUIDE.md and PROGRESS.md to reflect restored gate
+
+## Commit
+- **SHA:** 5d1a2b85235bfcb7f34becf546386ecd9aa2e75e
+- **Message:** "fix(admin/copy): restore platform-admin gate and fix e2e test (round 20 QA)"
+- **Branch:** ai/180
