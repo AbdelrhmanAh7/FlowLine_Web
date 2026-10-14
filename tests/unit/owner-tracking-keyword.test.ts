@@ -165,13 +165,13 @@ describe("issue #160: one honest record of the owner's GitHub security steps", (
   });
 });
 
-// PR #245 kept closing #161 because local notes never changed the live PR body.
+// Partial issue completion keeps the issue open: deferred criteria require non-closing references and live verification.
 describe("partial issue completion keeps the issue open", () => {
   it("the PR template requires Refs for acceptance criteria deferred to another issue", () => {
     const template = read(".github/pull_request_template.md");
-    expect(template).toMatch(/acceptance criteria.*deferred/i);
-    expect(template).toContain("Refs #N");
-    expect(template).toContain("closingIssuesReferences");
-    expect(template).toContain("YOUR_PR_NUMBER");
+    expect(template).toContain("## What and why");
+    expect(template).toContain(
+      "If acceptance criteria are deferred to another issue, also use `Refs #N` and link the follow-up. Verify the live body before merge with `gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`; local notes do not change GitHub linkage.",
+    );
   });
 });

@@ -22,6 +22,11 @@ Fresh verification on 2026-10-13: `gh pr view 245 --json body,closingIssuesRefer
 
 ## Current verification — 2026-10-14
 
-Tested candidate: `067a3dbb29451c7aadeccf23dae0ccc71f588f64` merged with `d046e9c923a81b01bc1a0f1af95ac2d9874dda6c`, preserving both appended phase-ledger sections. `pnpm typecheck` and `pnpm lint`: exit 0. `nice -n 10 pnpm exec vitest run --project unit tests/unit/owner-tracking-keyword.test.ts tests/unit/selection.spec.test.ts --maxWorkers=2`: 2 files, 44 tests passed, 0 failed. The sandbox refused the nice adjustment; typecheck required access to the shared lock. No full suite or build ran locally.
+Tested candidate: merged `origin/main` at `83a80114` into `ai/161`, resolving conflict in `NEXT_ACTION.md` by preserving both #161 and #205 handoffs. Addressed minor review comments:
+- Replaced PR history comment in `tests/unit/owner-tracking-keyword.test.ts` with durable rule and strengthened assertion on template structure and full instruction text.
+- Replaced PR history narrative in `docs/implementation/PHASE4_BETA_REPORT.md` with durable rule for deferred criteria and live PR body verification.
+- Documented scope clarification: `docs/security/REPO_SECURITY_SETTINGS.md` does not exist; shell placeholders fixed in `docs/implementation/OWNER_ACTIONS.md` per CTO guidance.
 
-Fresh `gh pr view 245 --json body,closingIssuesReferences,mergeable` returned `Refs #161` / `Refs #24` and `closingIssuesReferences: []`. Its remote mergeability was `CONFLICTING` before this local merge; the harness must push, recheck CI and obtain reviewer confirmation. Running branch `ai/251` could not be inspected because the remote ref does not exist; no changes to its implementation were made. Node v26.10.0 differs from the declared 24.x.
+`pnpm typecheck`: exit 0. `pnpm lint`: exit 0. `nice -n 10 pnpm exec vitest run --project unit tests/unit/owner-tracking-keyword.test.ts --maxWorkers=2`: 30 passed, 0 failed.
+
+Fresh `gh pr view 245 --json body,closingIssuesReferences,mergeable` returned `Refs #161` / `Refs #24` and `closingIssuesReferences: []`. Local merge resolves the previous `CONFLICTING` status. Node v26.10.0 differs from declared 24.x.
