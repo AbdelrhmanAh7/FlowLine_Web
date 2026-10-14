@@ -20,8 +20,9 @@ async function inbox(req: APIRequestContext, email: string) {
   return ((await (await req.get(`/api/test/outbox?email=${encodeURIComponent(email)}`)).json()) as { messages: unknown[] }).messages;
 }
 
-async function signUp(page: Page, email: string) {
-  await page.goto("/sign-up");
+async function signUp(page: Page, email: string, start = "/sign-up") {
+  await page.goto(start);
+  await expect(page).toHaveURL(/\/sign-up$/);
   await waitForAccountFormHydrated(page);
   await page.getByLabel("Name").fill("Auto Verify");
   await page.getByLabel("Email").fill(email);
@@ -48,7 +49,15 @@ test("#124 with the fl_test_auto_verify=1 cookie, Create account on /sign-up sig
   expect(await inbox(page.request, email)).toEqual([]);
 });
 
-test("#124 without an opt-in, Create account on /sign-up shows Check your inbox and e-mails a link; Resend on /resend-verification answers honestly", async ({ page }) => {
+test("#124 on this FLOWLINE_ENV=test stack, open /api/test/auto-verify (lands on /sign-up), then Create account opens Name your workspace, not Check your inbox", async ({ page }) => {
+  const email = uniqueEmail("auto-verify-url");
+  await signUp(page, email, "/api/test/auto-verify");
+  await expect(page.getByRole("heading", { name: "Name your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your inbox" })).toHaveCount(0);
+  expect(await inbox(page.request, email)).toEqual([]);
+});
+
+test("#124 no opt-in: sign-up shows Check your inbox; Resend with that email on /resend-verification shows If the account is eligible, an email will arrive shortly.", async ({ page }) => {
   const email = uniqueEmail("no-auto-verify");
   await signUp(page, email);
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();

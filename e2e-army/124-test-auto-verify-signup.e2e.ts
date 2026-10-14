@@ -103,6 +103,30 @@ test(
 );
 
 test(
+  "@issue-124 AC1: a browser that can only navigate opts in by opening /api/test/auto-verify on the FLOWLINE_ENV=test stack, and Create account then opens Name your workspace",
+  { tags: ["feat:fl-sign-up", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    const base = app.baseUrl!;
+    // No fl_test_auto_verify cookie from the test itself: opening the route must set it, as for the hub verifier, whose
+    // browser can only navigate, fill and click. The locale and beta-mode cookies stand in for that verifier's own setup.
+    await browser.setCookies([
+      { url: base, name: "fl_locale", value: "en" },
+      { url: base, name: "fl_test_beta_mode", value: "open" },
+    ]);
+    const email = await freshEmail(base, "ui-navigate-opt-in");
+    await app.open("/api/test/auto-verify");
+    await expect(browser).toHaveURL(/\/sign-up$/);
+    await untilAuthFormHydrated(browser);
+    await screen.getByLabel("Name").fill("Army 124");
+    await screen.getByLabel("Email").fill(email);
+    await screen.getByLabel("Password").fill(PASSWORD);
+    await screen.getByRole("button", "Create account").tap();
+    await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
+    await expect(screen.getByText("Check your inbox")).not.toBeVisible();
+  },
+);
+
+test(
   "@issue-124 AC1: the /sign-up form has exactly Name, Email and Password fields and a Create account button - no password-confirmation field",
   { tags: ["feat:fl-sign-up", "lvl:ui"] },
   async ({ app, screen, browser }) => {
@@ -173,6 +197,7 @@ test(
 
     // The page never says whether the address has an account (no "Verification resent"): its one success line is generic.
     await app.open("/resend-verification");
+    await untilAuthFormHydrated(browser);
     await screen.getByLabel("Email").fill(email);
     await screen.getByRole("button", "Resend").tap();
     await expect(screen.getByText("If the account is eligible, an email will arrive shortly.")).toBeVisible();
