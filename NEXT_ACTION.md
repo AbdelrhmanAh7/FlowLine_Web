@@ -8,7 +8,7 @@ Not done. The owner enables the three GitHub security settings and records evide
 
 **Status: #221 stays open.** Its acceptance is that `fl-auth-api` passes on `main`; this branch records a diagnosis only (no product or test change, because this repo cannot fix it). #221 closes only after the hub fix below lands and the reproduce command passes on a fresh stack. Until then the release gate is not resolved.
 
-The hub ran the `core-api` shard twice on one stack with the same `E2E_ARMY_SEED`, so the second run reused accounts the first run had already created and verified. Product behaviour is correct: an unverified account is refused at sign-in (`requireEmailVerification`, FlowLine `src/lib/auth.ts:45`), but a verified account signs in with 200.
+The saved log shows the `core-api` shard running twice, with failures consistent with reused verified accounts and consumed tokens. The runtime `E2E_ARMY_SEED` value was not logged, so identical seeds are not independently established. Product behaviour is correct: an unverified account is refused at sign-in (`requireEmailVerification`, FlowLine `src/lib/auth.ts:45`), but a verified account signs in with 200.
 
 Evidence (hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`, `main` @ `2ca60e5`):
 
@@ -21,6 +21,8 @@ Hub-side fix (repo `nql-agents`, separate task): give each re-run its own seed o
 ```sh
 REF=2ca60e5; ops/verify/e2e-army/run-local.sh FlowLine_Web "$REF" -- --tag feat:fl-auth-api
 ```
+
+Rechecked 2026-10-14 at FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc`: deployed hub `1544080dba6e5c8c593531e92f4abc8511c96a43`, separate hub source checkout `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`. Hub write authorization remains explicitly denied by the CTO comment. See `AI_QUESTIONS.md` for corrected seed evidence and dispatch requirements; no fresh-stack pass is claimed.
 
 ## Issue #141 handoff — 2026-10-12
 

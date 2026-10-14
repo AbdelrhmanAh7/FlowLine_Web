@@ -1,34 +1,31 @@
-# Issue #221 — implementation boundary (2026-10-13)
+# Issue #221 — blocked at the hub boundary (2026-10-14)
 
-Acceptance remains unmet: the release gate has not been reproduced green on a
-fresh stack. This branch is diagnosis only; PR #227 must reference `Refs #221`.
-The harness manages the PR body and push; neither was changed here.
+Acceptance is unmet. PR #227 must use `Refs #221`; the harness owns its body.
+The CTO explicitly denied hub write authorization in the issue comments. No
+product workaround can safely turn a verified account's valid sign-in into 403.
 
-First-hand inspection at FlowLine HEAD `ceea86474177cc28d6522e60f3bd0b8e14dd82a4`:
+Rechecked at FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc`:
+- Deployed hub checkout: `1544080dba6e5c8c593531e92f4abc8511c96a43`.
+- Separate source checkout `nql-agents`: `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`.
+- Stable evidence: `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`
+  lines 57–61 pass all auth tests; lines 481–505 rerun core-api and show
+  200/403, used verification tokens and accumulated rate limits.
+- `hub-live/src/jobs/stable.ts:195–198` reruns selected whole shards on the
+  same stack; line 204 calls confirmation without the staged environment.
+- `confirm/e2e-army.log` reports `NO_TESTS`, not a successful confirmation.
+- `hub-live/ops/verify/e2e-army/tests/lib.ts:19` defaults the seed to
+  `nql-e2e-army-1`. The saved log does NOT record `E2E_ARMY_SEED`; its actual
+  value and equality across invocations are unverified. Prior claims of a
+  proven identical seed were too strong. Capture the non-secret effective seed
+  and invocation identity in the authorized hub regression run.
 
-- The saved stable log passes all five auth tests at lines 57–61, then runs
-  `core-api` again at line 481 and reports the 200/403 mismatch at lines 489–490.
-- The current hub `nql-agents/src/jobs/stable.ts:193–195` selects whole shard
-  invocations for quota fallback and reuses the stack. Its confirmation caller
-  at line 202 does not propagate the staged-suite environment.
-- The hub test `ops/verify/e2e-army/tests-dev/FlowLine_Web/core-api.e2e.ts:11–19`
-  uses a seeded account and expects an unverified sign-in to return 403.
-  FlowLine already configures `requireEmailVerification: true` in
-  `src/lib/auth.ts:45`. No product guard or test assertion was weakened.
+Required follow-up: an authorized hub lane must isolate repeat-run account data,
+select only quota-affected tests, propagate the staged environment through every
+confirmation caller, add regression coverage, then run the original feature on
+an isolated fresh stack and record both tested SHAs. No full local FlowLine build,
+hub modification, secret access, push or PR change was performed here.
 
-**Required dispatch:** assign a focused task in `AbdelrhmanAh7/nql-agents` to
-isolate repeat-run data, select only quota-affected tests, and propagate the
-suite stage through `confirmFailures` and all its callers. Add hub regression
-tests proving these contracts before changing its implementation. Then run the
-auth feature on a fresh stack and record the tested product and hub SHAs.
-
-This workspace cannot implement that fix: the hub is outside its writable roots.
-The reproduction script also invokes a production build through
-`ops/verify/FlowLine_Web.sh` and reads Keychain credentials; this task forbids
-local FlowLine builds and touching secrets. No fresh-stack result is claimed.
-`git fetch -q` also failed because the shared Git metadata is outside the sandbox
-writable roots. Do not close #221 on the strength of the historical first pass.
-
-Question for the dispatcher: can the hub task be assigned with authorization for
-its isolated-stack verification? The prior CTO answer requested the fix but did
-not provide a writable hub checkout in this implementation lane.
+Blocking question for dispatch: provide an authorized writable hub implementation
+lane and its verification scope. This is the previously denied authorization,
+not an unanswered product requirement. Do not redispatch this FlowLine-only lane
+as if documentation could satisfy the release gate.
