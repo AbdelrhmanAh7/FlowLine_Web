@@ -4,10 +4,17 @@ language: en-US
 reviews:
   profile: assertive
   request_changes_workflow: true
-  high_level_summary: false
+  high_level_summary: true
   poem: false
+  high_level_summary_in_walkthrough: true
+  review_details: true
+  sequence_diagrams: true
+  assess_linked_issues: true
+  finishing_touches:
+    docstrings:
+      enabled: true
   auto_review:
-    enabled: true
+    enabled: false
     drafts: false
     auto_incremental_review: false   # off: Flowline uses at most 3 of the 5 reviews/hour (docs/GITHUB_WORKFLOW.md); request @coderabbitai review after each fix push
     base_branches:
@@ -83,4 +90,4 @@ knowledge_base:
       - AGENTS.md
       - CLAUDE.md
 chat:
-  auto_reply: true
+  auto_reply: false
