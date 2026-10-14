@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "Version {version}",
+    "runSnapshot": "Run snapshot",
+    "savedSnapshot": "Saved snapshot",
+    "overwriteSnapshot": "Copy kept before overwrite",
     "cancel": "Cancel",
     "retry": "Retry",
     "back": "Back",
@@ -2051,6 +2054,7 @@
       "title": "Re-run #{number} from “{label}”",
       "revision": "Revision",
       "original": "The run's original version (v{version})",
+      "originalSnapshot": "The run's original snapshot",
       "latest": "The current saved flow (includes your fixes)",
       "willRerun": "Will run again · {count}",
       "needsApproval": "needs approval",
