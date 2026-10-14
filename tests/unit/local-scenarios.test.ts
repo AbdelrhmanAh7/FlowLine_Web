@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
-import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates } from "@/engine/templates";
+import etaInvoiceNotifyExport from "@/engine/templates/mena/eta-invoice-notify.v1.json";
+import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates, parseTemplateExport } from "@/engine/templates";
 import type { FlowGraph } from "@/engine/types";
 import { NONDETERMINISTIC, validateGraph } from "@/engine/validate";
 import { ar as arMessages } from "@/i18n/messages/ar";
@@ -89,9 +90,49 @@ describe("local template catalogue", () => {
         { number: "INV-1043", customer: "Cairo Tech", total: 4200 },
       ],
     });
+    // Exactly one pending invoice: the follow-up list is still a one-element array.
+    // JSONata unwraps a singleton sequence into a single value, so the expression
+    // must force an array (the empty-predicate postfix `[]` keeps singleton arrays).
+    const one = await run("eta-invoice-notify", {
+      invoices: [
+        { number: "INV-1041", customer: "Nile Trading", total: 12500, status: "pending_eta" },
+        { number: "INV-1042", customer: "Delta Foods", total: 830, status: "submitted" },
+      ],
+    });
+    expect(Array.isArray(one.eta_follow_up), "eta_follow_up stays a list with exactly one pending invoice").toBe(true);
+    expect(one.eta_follow_up).toEqual([{ number: "INV-1041", customer: "Nile Trading", total: 12500 }]);
     expect(await run("eta-invoice-notify", { invoices: [{ number: "INV-9", customer: "Delta", total: 1, status: "submitted" }] })).toEqual({
       eta_clear: { note: "No invoices are waiting for ETA submission." },
     });
+  });
+
+  it("parseTemplateExport accepts the shipped MENA export and rejects malformed ones", () => {
+    // The versioned export contract (format, version, category, goal, graph) is enforced
+    // at the JSON boundary, so a bad file never reaches LOCAL_TEMPLATES.
+    expect(parseTemplateExport(etaInvoiceNotifyExport).id).toBe("eta-invoice-notify");
+    // A valid export, with one field broken per case.
+    const base = () => ({
+      format: "flowline-template",
+      version: 1,
+      id: "eta-invoice-notify",
+      name: "ETA Invoice Notify",
+      description: "Pick waiting invoices.",
+      sample: "A batch of invoices.",
+      result: "The invoices waiting for ETA submission.",
+      category: "Finance",
+      goal: "data",
+      graph: { nodes: [], edges: [] },
+    });
+    const wrongFormat = { ...base(), format: "flowline-workflow" };
+    expect(() => parseTemplateExport(wrongFormat)).toThrow(/format/);
+    const oldVersion = { ...base(), version: 0 };
+    expect(() => parseTemplateExport(oldVersion)).toThrow(/version/);
+    const wrongCategory = { ...base(), category: "Legal" };
+    expect(() => parseTemplateExport(wrongCategory)).toThrow(/category/);
+    const wrongGoal = { ...base(), goal: "legal" };
+    expect(() => parseTemplateExport(wrongGoal)).toThrow(/goal/);
+    const missingNodes = { ...base(), graph: { edges: [] } };
+    expect(() => parseTemplateExport(missingNodes)).toThrow(/nodes/);
   });
 
   it("running every template leaves the template and its sample untouched", async () => {

@@ -28,7 +28,7 @@
         "data": {
           "label": "Pick waiting invoices",
           "config": {
-            "expression": "{ \"waiting\": invoices[status = \"pending_eta\"].{ \"number\": number, \"customer\": customer, \"total\": total } }"
+            "expression": "{ \"waiting\": invoices[status = \"pending_eta\"].{ \"number\": number, \"customer\": customer, \"total\": total }[] }"
           }
         }
       },

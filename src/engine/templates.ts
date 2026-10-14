@@ -25,8 +25,10 @@ export interface LocalTemplate {
 /**
  * Parse a FlowLine template export JSON into a LocalTemplate.
  * The JSON has extra fields (format, version) and plain string types for nodes/edges.
+ * Exported so the rejection branches are testable; a malformed export throws instead of
+ * reaching LOCAL_TEMPLATES.
  */
-function parseTemplateExport(json: unknown): LocalTemplate {
+export function parseTemplateExport(json: unknown): LocalTemplate {
   const parsed = json as {
     format: string;
     version: number;
