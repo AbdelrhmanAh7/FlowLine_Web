@@ -41,12 +41,26 @@ const mizanoInvoice = z.object({
   dueDate: z.string().regex(DATE),
 });
 
+const _mizanoCustomerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  company: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  taxId: z.string().optional(),
+});
+type MizanoCustomer = z.infer<typeof _mizanoCustomerSchema>;
+
+const decimalString = z
+  .string()
+  .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
+
 const provider: ProviderDef = {
   id: "mizano",
   name: "Mizano",
   icon: "📒",
   category: "Finance",
-  description: "Read overdue invoices from Mizano for follow-up.",
+  description: "Mizano accounting connector.",
   authType: "api_key",
   apiBase: "",
   connectFields: [
@@ -74,7 +88,7 @@ const provider: ProviderDef = {
       }),
       output: z.object({
         asOf: z.string().regex(DATE),
-        currency: z.string().length(3),
+        currency: z.string().regex(/^[A-Z]{3}$/),
         invoices: z
           .array(
             z.object({
@@ -108,6 +122,109 @@ const provider: ProviderDef = {
             dueDate: i.dueDate,
             paid: i.balanceDue === "0.00",
           })),
+        };
+      },
+    },
+    {
+      id: "mizano.create_customer",
+      version: 1,
+      provider: "mizano",
+      title: "Create customer",
+      description: "Create a new customer in Mizano with name, company, email, phone, and optional taxId.",
+      input: z.object({
+        name: z.string().min(1).max(200),
+        company: z.string().min(1).max(200),
+        email: z.string().email(),
+        phone: z.string().min(1).max(50),
+        taxId: z.string().max(50).optional(),
+      }),
+      output: z.object({
+        id: z.string(),
+        name: z.string(),
+        company: z.string(),
+        email: z.string(),
+        phone: z.string(),
+        taxId: z.string().optional(),
+      }),
+      // "non_idempotent": the POST carries the engine's per-(run, node) Idempotency-Key, but Mizano honouring it is
+      // unverified until MZ G5 ships, so the engine must not retry blindly after an unknown outcome. Switch to
+      // "idempotent" once the key is confirmed.
+      sideEffect: "non_idempotent",
+      requiredScopes: ["customers:create"],
+      async run(ctx, input) {
+        const idempotencyKey = ctx.idempotencyKey;
+        const { data } = await ctx.http.request<MizanoCustomer>({
+          method: "POST",
+          path: "/api/customers",
+          baseUrl: base(ctx.credentials),
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+          json: {
+            name: input.name,
+            company: input.company,
+            email: input.email,
+            phone: input.phone,
+            ...(input.taxId !== undefined && { taxId: input.taxId }),
+          },
+        });
+        return data as MizanoCustomer;
+      },
+    },
+    {
+      id: "mizano.create_draft_quote",
+      version: 1,
+      provider: "mizano",
+      title: "Create draft quote",
+      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
+      input: z.object({
+        customerId: z.string().min(1).max(200),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        lines: z.array(
+          z.object({
+            item: z.string().min(1).max(200),
+            qty: decimalString,
+            unitPrice: decimalString,
+            taxRate: decimalString,
+          }),
+        ).min(1).max(200),
+      }),
+      output: z.object({
+        id: z.string(),
+        customerId: z.string(),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        lines: z.array(
+          z.object({
+            item: z.string(),
+            qty: decimalString,
+            unitPrice: decimalString,
+            taxRate: decimalString,
+          }),
+        ),
+      }),
+      // "non_idempotent" for the same reason as mizano.create_customer.
+      sideEffect: "non_idempotent",
+      requiredScopes: ["quotes:create"],
+      async run(ctx, input) {
+        const idempotencyKey = ctx.idempotencyKey;
+        const { data } = await ctx.http.request({
+          method: "POST",
+          path: "/api/quotes",
+          baseUrl: base(ctx.credentials),
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+          json: {
+            customerId: input.customerId,
+            currency: input.currency,
+            lines: input.lines,
+          },
+        });
+        return data as {
+          id: string;
+          customerId: string;
+          currency: string;
+          lines: Array<{ item: string; qty: string; unitPrice: string; taxRate: string }>;
         };
       },
     },
