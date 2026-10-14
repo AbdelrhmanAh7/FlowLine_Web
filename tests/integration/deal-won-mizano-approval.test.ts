@@ -127,6 +127,17 @@ describe("Deal won → Mizano quote: availability", () => {
     expect(flow.templateId).toBe("deal-won-mizano-quote");
     while (restore.length) restore.pop()!(); // later tests register their own recorders
   });
+
+  it("registers exactly one recorder per action id — replacing the real action, never duplicating it — and restores it", () => {
+    const count = () => mizano.actions.filter((a) => a.id === "mizano.create_customer").length;
+    const before = count();
+    record("mizano.create_customer", { id: "c1" });
+    expect(count()).toBe(1); // present from #147: replaced; absent: a single stand-in inserted
+    record("mizano.create_customer", { id: "c2" }); // a second recorder for the same id replaces, never appends
+    expect(count()).toBe(1);
+    while (restore.length) restore.pop()!();
+    expect(count()).toBe(before); // fully restored: #147's action (or nothing) is back
+  });
 });
 
 describe("Deal won → Mizano quote: real worker approval path", () => {
@@ -140,6 +151,9 @@ describe("Deal won → Mizano quote: real worker approval path", () => {
     expect((await freshRun(run.id)).status).toBe("waiting_approval");
     expect(calls).toEqual([]);
     expect(approval.argsPreview).toMatchObject({ name: "Mona Hassan", company: "Nile Bakery" });
+    // The approval is bound to the customer only (CTO decision on #149, 2026-10-12): the quote lines are not part of
+    // the preview. They live in the Prepare step output and are sent to Mizano with the draft quote below.
+    expect(JSON.stringify(approval.argsPreview)).not.toContain("Oven service plan");
 
     await decide(db, { workspaceId: ws.id, approvalId: approval.id, userId: user.id, decision: "approve" });
     await claimAndProcess(run.id);

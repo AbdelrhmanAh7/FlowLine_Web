@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #149 — merge after #147 (2026-10-14)
+
+PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which land with **#147**, so the PR must merge **after** #147. Until then the template is withheld, not offered: it is not a gallery card (a plain "Not available yet" notice in EN + AR), `createFlow` answers `409 TEMPLATE_UNAVAILABLE` and publishing the graph reports `UNKNOWN_ACTION`. It becomes a usable gallery entry the moment #147 merges, with no change in this PR. The browser happy-path e2e (AC3) waits for the same merge, per the CTO decision on #149 (2026-10-12). The approval shows the customer only (same CTO decision); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.

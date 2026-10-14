@@ -15,13 +15,13 @@ test(
   async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("open the workspace's Templates page from the navigation");
-    await agent.assert("a template named Deal won → Mizano quote is listed and says it needs a Mizano connection");
+    await agent.assert("a template named Deal won → Mizano quote is listed under Not available yet and cannot be used");
     await expect(screen.getByText("Deal won → Mizano quote").first()).toBeVisible();
-    await agent.assert("the Deal won → Mizano quote card is marked as not available yet, lists Mizano and Slack as requirements, and offers no Use template button");
-    const card = screen.getByTestId("template-held-back-deal-won-mizano-quote");
-    await expect(card).toBeVisible();
-    await expect(card.getByRole("button", { name: "Use template" })).toHaveCount(0);
-    await expect(card).toContainText("Not available yet");
+    // The entry is a notice, not a gallery card: no "Use template" button anywhere in it, and the reason names it.
+    const entry = screen.getByTestId("template-held-back-deal-won-mizano-quote");
+    await expect(entry).toBeVisible();
+    await expect(entry.getByRole("button", { name: "Use template" })).toHaveCount(0);
+    await expect(screen.getByTestId("templates-held-back")).toContainText("Not available yet");
   },
 );
 

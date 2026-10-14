@@ -19,10 +19,15 @@ export interface DesignTemplate {
   graph: FlowGraph;
 }
 
+/** Every action id the graph's integration steps call, deduped, in node order. */
+export function templateActionIds(graph: FlowGraph): string[] {
+  const ids = graph.nodes.flatMap((node) => (node.type === "integration.action" ? [String((node.data.config as { actionId?: unknown }).actionId ?? "")] : []));
+  return [...new Set(ids.filter(Boolean))];
+}
+
 /** Action ids the template's steps call that are not in `available` (the provider registry / catalog). A template with any can't run yet. */
 export function missingTemplateActions(graph: FlowGraph, available: { has(actionId: string): boolean }): string[] {
-  const ids = graph.nodes.flatMap((node) => (node.type === "integration.action" ? [String((node.data.config as { actionId?: unknown }).actionId ?? "")] : []));
-  return [...new Set(ids.filter((id) => id && !available.has(id)))];
+  return templateActionIds(graph).filter((id) => !available.has(id));
 }
 
 /**
@@ -272,6 +277,12 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
           expression:
             '(\n  $money := function($v) { $formatNumber($number($v), "0.00") };\n  {\n    "customer": {\n      "name": deal.customer.name,\n      "company": deal.customer.company,\n      "email": deal.customer.email,\n      "phone": deal.customer.phone,\n      "taxId": deal.customer.taxId\n    },\n    "currency": deal.currency,\n    "lines": [deal.lines.{ "item": item, "qty": $money(qty), "unitPrice": $money(unitPrice), "taxRate": $money(taxRate) }]\n  }\n)',
         }),
+        // Availability (#147): mizano.create_customer and mizano.create_draft_quote land with #147, so until that
+        // merges this template is held back instead of offered: availableDesignTemplates() drops it from the gallery
+        // grid, "Use template" is not rendered for it, createFlow() answers 409 TEMPLATE_UNAVAILABLE
+        // (src/server/flows.ts) and publishing the graph reports UNKNOWN_ACTION (serverIssues, src/server/publish.ts).
+        // It becomes usable automatically the moment the two ids resolve — no change here.
+        //
         // CTO decision on #149 (2026-10-12): one approval gate on "Create customer". The approver reviews the customer
         // details; the quote lines are visible in the "Prepare customer and quote" step output. Binding customer + lines
         // into one approval needs a preview-capable approval step (a follow-up), so this stays customer-only.

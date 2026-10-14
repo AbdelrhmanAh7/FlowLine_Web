@@ -151,7 +151,7 @@ export default function TemplatesPage() {
                 </ul>
               </section>
             )}
-            {planned.length > 0 && (
+            {usable.length > 0 && (
               <section>
                 <SectionLabel className="mb-3">{t("templates.connected")}</SectionLabel>
                 <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -178,21 +178,28 @@ export default function TemplatesPage() {
                       </Card>
                     </li>
                   ))}
-                  {heldBack.map(({ template: tpl }) => (
-                    <li key={tpl.id} className="motion-list-in">
-                      <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-held-back-${tpl.id}`}>
-                        {designCardBody(tpl)}
-                        <p className="rounded-md bg-app p-2 text-sm text-med">
-                          <span className="font-medium text-hi">{t("templates.notAvailableYet")}</span> — {t("templates.actionsMissing")}
-                        </p>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="data text-xs text-muted uppercase">
-                            {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
-                          </span>
-                        </div>
-                      </Card>
-                    </li>
-                  ))}
+                </ul>
+              </section>
+            )}
+            {heldBack.length > 0 && (
+              // A template whose actions don't exist yet is not a gallery entry: no card, no "Use" button, no setup
+              // checklist — just its name and why it can't be used. It moves into the grid above the moment every
+              // action id resolves (availableDesignTemplates), with no code change here.
+              <section data-testid="templates-held-back">
+                <SectionLabel className="mb-1">{t("templates.notAvailableYet")}</SectionLabel>
+                <p className="mb-3 max-w-3xl text-sm text-med">{t("templates.actionsMissing")}</p>
+                <ul className="flex flex-col gap-2">
+                  {heldBack.map(({ template: tpl }) => {
+                    const shown = templateText(t, "designTemplates", tpl);
+                    return (
+                      <li key={tpl.id} data-testid={`template-held-back-${tpl.id}`} className="flex flex-wrap items-baseline gap-x-2 rounded-lg border border-line bg-app px-3 py-2">
+                        <span className="font-medium text-hi">{shown.name}</span>
+                        <span className="data text-xs text-muted uppercase">
+                          {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             )}

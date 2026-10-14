@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DESIGN_TEMPLATES, availableDesignTemplates, heldBackDesignTemplates, missingTemplateActions } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, availableDesignTemplates, heldBackDesignTemplates, missingTemplateActions, templateActionIds } from "@/engine/design-templates";
 import { getAction } from "@/integrations/registry";
 import { executeGraph, NodeError, sampleInputFor, type HostHandler } from "@/engine/execute";
 import type { FlowGraph } from "@/engine/types";
@@ -43,15 +43,19 @@ function mockMizano(decision: "pending" | "approved" | "rejected") {
 }
 
 describe("Deal won → Mizano quote template", () => {
-  it("lists the actions it calls that no adapter provides, so the gallery and createFlow can hold it back", () => {
-    const registry = { has: (id: string) => getAction(id) !== undefined };
-    const calledIds = ["mizano.create_customer", "mizano.create_draft_quote", "slack.post_message"];
+  it("calls only action ids that resolve in the real provider registry once #147 lands, and no others", () => {
+    // The exact ids the template calls, in node order.
+    const calledIds = templateActionIds(tpl.graph);
+    expect(calledIds).toEqual(["mizano.create_customer", "mizano.create_draft_quote", "slack.post_message"]);
     expect(missingTemplateActions(tpl.graph, new Set())).toEqual(calledIds);
     expect(missingTemplateActions(tpl.graph, new Set(calledIds))).toEqual([]);
-    // Against the real registry: exactly the Mizano actions that are not registered yet (none once #147 is merged); Slack always resolves.
-    expect(missingTemplateActions(tpl.graph, registry)).toEqual(calledIds.filter((id) => !registry.has(id)));
-    expect(registry.has("slack.post_message")).toBe(true);
-    // The check does not hold back any other template.
+    // Against the REAL provider registry (no stand-ins): the two Mizano create actions resolve exactly when #147 is
+    // merged, Slack always does, and every other template resolves in full. A renamed or dropped id fails here.
+    const registry = { has: (id: string) => getAction(id) !== undefined };
+    const unresolved = calledIds.filter((id) => !registry.has(id));
+    expect(unresolved).toEqual(["mizano.create_customer", "mizano.create_draft_quote"].filter((id) => !registry.has(id)));
+    expect(missingTemplateActions(tpl.graph, registry)).toEqual(unresolved);
+    expect(getAction("slack.post_message")).toBeDefined();
     for (const other of DESIGN_TEMPLATES.filter((t) => t.id !== tpl.id)) expect(missingTemplateActions(other.graph, registry), other.id).toEqual([]);
   });
 
