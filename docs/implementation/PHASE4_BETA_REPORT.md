@@ -1,5 +1,50 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Legacy backfill 0026 (issue #205) — 2026-10-14
+
+Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
+publication numbers remain unchanged. Its insert trigger keeps old application images from numbering new snapshots.
+Forward and manual reverse acquire `SHARE ROW EXCLUSIVE` on `flow_version` before accessing the backup, retain it through
+commit, and use transaction-local lock/statement timeouts of 5/30 seconds. Readers continue; writers wait. The immutability
+trigger is disabled only inside the transaction. Reverse stays outside the journal; run it with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+It restores backed-up numbers, fails atomically if a later publication reused one, and leaves the backup for reruns.
+Numbers already cleared without backup by prerequisite #204's 0025 are outside this reverse's coverage.
+
+Verified locally on a disposable `flowline_test_205r6` database with Node 24: backfill integration 6/6 and runs 20/20.
+The fixture also removes the backup table to exercise a real pre-0026 schema. Cases cover legacy save/run/overwrite data,
+forward twice, reverse twice, forward after reverse, old-image inserts and collision refusal. The concurrent-insert
+regression failed before the fix (writer completed between backup and update), then passed with the early lock.
+`pnpm typecheck`, `pnpm lint`, `drizzle-kit check`, and E2E tooling hygiene 12/12 pass; full suites/build run only in CI.
+The inherited #204 E2E spec was removed per the CTO scope instruction; no new E2E spec was added.
+
+Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected retargeting it to ai/204 because PR #211
+already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
+then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
+
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
+stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
 ## route() error headers (issue #200) — 2026-10-13
 
 `route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
