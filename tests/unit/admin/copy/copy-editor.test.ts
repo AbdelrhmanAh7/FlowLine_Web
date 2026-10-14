@@ -142,6 +142,26 @@ describe("CopyEditor failures (interaction, en)", () => {
     expect(refetch).not.toHaveBeenCalled(); // a step-up refusal never touched the draft, so no reload
   });
 
+  it("shows the translated server error after a failed save, then clears it when Save is retried and succeeds", async () => {
+    const refetch = vi.fn(async () => undefined);
+    writable(refetch);
+    vi.mocked(api).mockRejectedValueOnce(new ApiError(500, "INTERNAL", "boom")).mockResolvedValueOnce(undefined);
+    await mount();
+    await type("#copy-en", "New title");
+    const save = () => button(t("platformAdmin.copyEditor.save"))!;
+    expect(save().disabled).toBe(false);
+    await click(save());
+    expect(alert()).toBe(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
+    expect(refetch).toHaveBeenCalledTimes(1); // the write may have committed, so the state reloads
+    expect(save().disabled).toBe(false); // pending cleared and the draft is still dirty: the admin can retry
+    await click(save()); // the admin retries the same write
+    expect(api).toHaveBeenCalledTimes(2);
+    expect(alert()).toBe(""); // the earlier error is cleared
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(t("platformAdmin.copyEditor.saved"));
+    expect(refetch).toHaveBeenCalledTimes(2);
+    expect(save().disabled).toBe(true); // the draft is clean again after the successful save
+  });
+
   it("shows the translated server error after a failed publish, then clears it when Apply is retried and succeeds", async () => {
     const refetch = vi.fn(async () => undefined);
     writable(refetch);
