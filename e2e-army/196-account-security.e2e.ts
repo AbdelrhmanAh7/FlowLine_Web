@@ -7,7 +7,7 @@ test(
   "@issue-196 AC1: the user menu opens the security page showing two-step verification Off",
   { tags: ["feat:fl-workspace-nav", "feat:fl-email-flows"], session: "fl-user" },
   async ({ app, agent, screen }) => {
-    await app.open("/");
+    await app.open("/app");
     await agent.act("open the user menu at the bottom of the sidebar");
     await agent.act("click Security in the Account group");
     await expect(screen.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
