@@ -14,11 +14,12 @@ Not done. The owner enables the three GitHub security settings and records evide
 
 The saved log shows the `core-api` shard running twice, with failures consistent with reused verified accounts and consumed tokens. The runtime `E2E_ARMY_SEED` value was not logged, so identical seeds are not independently established. Product behaviour is correct: an unverified account is refused at sign-in (`requireEmailVerification`, FlowLine `src/lib/auth.ts:45`), but a verified account signs in with 200.
 
-Evidence (hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`, `main` @ `2ca60e5`):
+Evidence (hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`, FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc` @ hub `1544080dba6e5c8c593531e92f4abc8511c96a43`):
 
 - Run 1 (fresh DB): `fl-auth-api.1`–`.5` pass (lines 57-61).
 - Run 2 (same stack, same seed; the quota fallback in `nql-agents/src/jobs/stable.ts` re-ran the whole shard): `fl-auth-api.1` gets 200 instead of 403, and `fl-email-flows`, `fl-onboarding`, `fl-workspaces`, `fl-members` fail on reused data (lines 476-560, 689-703).
 - The confirm run (`confirmFailures`, `nql-agents/src/jobs/e2eregress.ts:56`) lacks `E2E_ARMY_STAGE: "next"`, finds no tests (`NO_TESTS`), and so keeps the failure.
+- Hub test library defaults `E2E_ARMY_SEED` to `nql-e2e-army-1` (`hub-live/ops/verify/e2e-army/tests/lib.ts:19`); the log does not record the actual seed value, so identical seeds are not independently verified.
 
 ### FlowLine changes (2026-10-14)
 
@@ -53,7 +54,7 @@ Then verify on a fresh stack (the hub repo's script, with a concrete ref):
 REF=2ca60e5; ops/verify/e2e-army/run-local.sh FlowLine_Web "$REF" -- --tag feat:fl-auth-api
 ```
 
-Rechecked 2026-10-14 at FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc`: deployed hub `1544080dba6e5c8c593531e92f4abc8511c96a43`, separate hub source checkout `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`. Hub write authorization remains explicitly denied by the CTO comment. See `AI_QUESTIONS.md` for corrected seed evidence and dispatch requirements; no fresh-stack pass is claimed.
+Rechecked 2026-10-14 at FlowLine `075734389d781fc1aeba8c5ab9d0abc8edb5b17f` (branch `ai/221`, PR #227): deployed hub `1544080dba6e5c8c593531e92f4abc8511c96a43`, separate hub source checkout `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`. Hub test library defaults `E2E_ARMY_SEED` to `nql-e2e-army-1` (`hub-live/ops/verify/e2e-army/tests/lib.ts:19`); the saved log does not record the actual seed value, so identical seeds are not independently verified. Hub write authorization remains explicitly denied by the CTO comment. See `AI_QUESTIONS.md` for dispatch requirements; no fresh-stack pass is claimed.
 
 ## Issue #141 handoff — 2026-10-12
 

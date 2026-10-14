@@ -4,7 +4,7 @@ Acceptance is unmet. PR #227 must use `Refs #221`; the harness owns its body.
 The CTO explicitly denied hub write authorization in the issue comments. No
 product workaround can safely turn a verified account's valid sign-in into 403.
 
-Rechecked at FlowLine `50370039cc2e87a02f04ea3dc20c686d98236edc`:
+Rechecked at FlowLine `075734389d781fc1aeba8c5ab9d0abc8edb5b17f` (branch `ai/221`, PR #227):
 - Deployed hub checkout: `1544080dba6e5c8c593531e92f4abc8511c96a43`.
 - Separate source checkout `nql-agents`: `02b81bfd52b7383e85f1e73de36e4aaf4046d61c`.
 - Stable evidence: `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log`
