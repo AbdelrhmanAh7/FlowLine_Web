@@ -18,9 +18,10 @@ function getBase(appUrl?: string): string {
   return (process.env.E2E_ARMY_URL || appUrl || "http://localhost:3100").replace(/\/+$/, "");
 }
 
-// Deterministic email generation using the same pattern as the hub's lib.ts
+// Deterministic email generation with per-run uniqueness using timestamp
 function seededEmail(name: string): string {
-  const hash = createHash("sha1").update(`${SEED}:${name}`).digest("hex").slice(0, 6);
+  const timestamp = Date.now().toString(36);
+  const hash = createHash("sha1").update(`${SEED}:${name}:${timestamp}`).digest("hex").slice(0, 6);
   return `auth-221-${hash}@${SEED_DOMAIN}`;
 }
 
