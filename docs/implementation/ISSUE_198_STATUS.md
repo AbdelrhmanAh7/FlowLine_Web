@@ -27,6 +27,15 @@ code). The round's own findings are fixed: the army test is tagged only
 it uses the API, and the guide's two-step bullet moved from Privacy to
 Getting in with user wording ("isn't available yet").
 
+Rechecked for review round 6 (head `6ede258`, 2026-10-14): #259 and #261
+are still OPEN with `mergedAt: null`; `origin/main` is merged into the
+branch (`6ede258`) but still has no `src/app/account/security/`, so the
+diff against main is still not QR-only. The scope finding stays open by
+design: the rebase onto main waits for both PRs to merge (CTO: park, do
+not merge unreviewed code to speed this up). The `src/ai/hub/pricing.ts`
+hunk seen against `origin/ai/197` is #238's JSDoc commit (`dd86153`,
+already on main) and drops out of the rebase.
+
 ## Evidence (2026-10-14, isolated stack: throwaway PostgreSQL 16 cluster,
 database `flowline_test_q198`, app :3198, fakes :4198/:4199, `.env.test` from
 `.github/ci/env.test.template` with generated keys)
