@@ -35,14 +35,25 @@ Evidence from hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log
 
 Added regression test `e2e-army/221-auth-isolation.e2e.ts` to document and lock the expected auth behavior:
 
-1. **Test 1 (`@issue-221 AC1`)**: Sign-in with wrong password returns 401, not 200 or 403.
+1. **Test 1 (`@issue-221.1`)**: Sign-in with wrong password returns 401, not 200 or 403.
    - Tests that both wrong-password and non-existent-user cases return 401.
    - Verifies identical error messages (account enumeration protection).
 
-2. **Test 2 (`@issue-221 AC2`)**: Sign-in with unverified account returns 403, not 200.
+2. **Test 2 (`@issue-221.2`)**: Sign-in with unverified account returns 403, not 200.
    - Verifies that the product's `requireEmailVerification` setting is enforced correctly.
 
 Both tests are API-level (no model needed) and tagged with `feat:fl-auth-api`, `shard:core-api`, `lvl:api`.
+
+### QA fixes (2026-10-14)
+
+Fixed all remaining QA findings from review rounds 9-11:
+
+1. **Added missing import** for `createHash` from `node:crypto` (line 10)
+2. **Fixed per-run uniqueness** - emails now include timestamp to avoid account reuse on reruns
+3. **Fixed misleading comment** - updated to accurately describe that code selects first element after descending sort by timestamp, not "fallback to last element"
+4. **Added status assertion** before JSON parsing (line 61)
+
+All changes committed in `e61dd5f2` with typecheck and lint passing.
 
 ### Hub-side triage (repo `nql-agents`, separate task)
 
