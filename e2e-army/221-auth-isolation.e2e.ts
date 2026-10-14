@@ -7,6 +7,7 @@
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
+import { createHash } from "node:crypto";
 
 const PASSWORD = "Army-Passw0rd!";
 const SEED_DOMAIN = "flowline-e2e.test";
@@ -46,7 +47,7 @@ test("@issue-221.1: sign-in with wrong password returns 401, not 200 or 403", { 
     const mailRes = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers });
     const body = (await mailRes.json().catch(() => ({ messages: [] }))) as { messages?: { purpose?: string; link?: string; timestamp?: number }[] };
     const messages = body.messages ?? [];
-    // Select the newest "verify" message (highest timestamp, or fallback to last element)
+    // Select the newest "verify" message (highest timestamp, first after descending sort)
     const verifyMsg = messages.filter((m) => m.purpose === "verify").sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))[0];
     token = verifyMsg?.link ? new URL(verifyMsg.link).searchParams.get("token") : null;
     return token;
