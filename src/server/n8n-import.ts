@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import type { FlowGraph, FlowNode, HttpConfig } from "@/engine/types";
-import { MAX_NODES } from "@/engine/validate";
+import { MAX_EDGES, MAX_NODES } from "@/engine/validate";
 import { HttpError } from "./http";
 
 const connection = z.object({ node: z.string(), type: z.string().optional(), index: z.number().optional() });
@@ -24,21 +24,50 @@ const workflowSchema = z.object({
 const HTTP_METHODS: HttpConfig["method"][] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const CODE_PARAMETERS = ["functionCode", "jsCode"] as const;
 const CODE_WARNING = "// Code uses n8n items API - review before running\n";
+// The code.js config validator caps code at 20,000 characters (src/engine/validate.ts); longer code is not stored.
+const MAX_CODE_LENGTH = 20000;
+// The same serialized-size ceiling graphSchema enforces on other save paths (src/server/flows.ts).
+const MAX_GRAPH_BYTES = 512 * 1024;
 
 function invalid(message: string): never {
   throw new HttpError(400, "INVALID_N8N_JSON", message);
 }
 
-function unsupported(id: string, n8nType: string, position: { x: number; y: number }, branchNote?: string): FlowNode<"transform.json"> {
+/**
+ * A replacement placeholder for an n8n node FlowLine cannot map. The config keeps a `REPLACE_WITH_…`
+ * marker, which `validateGraph` reports as SETUP_REQUIRED, so a flow holding one cannot run until replaced.
+ */
+function unsupported(id: string, n8nType: string, position: { x: number; y: number }, note?: string): FlowNode<"transform.json"> {
   const shortType = n8nType.slice(0, 50);
   const token = n8nType.replace(/[^A-Za-z0-9]/g, "_").toUpperCase();
-  const expression = branchNote ? `"REPLACE_WITH_${token} — ${branchNote}"` : `"REPLACE_WITH_${token}"`;
+  const expression = note ? `"REPLACE_WITH_${token} — ${note}"` : `"REPLACE_WITH_${token}"`;
   return {
     id,
     type: "transform.json",
     position,
     data: { label: `Unsupported n8n node: ${shortType} — replace`, config: { expression } },
   };
+}
+
+/** True when an n8n HTTP node carries body, header, query or auth config this importer cannot preserve faithfully. */
+function hasUnpreservedHttpConfig(params: Record<string, unknown>): boolean {
+  if (params.sendBody === true || params.sendHeaders === true || params.sendQuery === true) return true;
+  if (typeof params.authentication === "string" && params.authentication && params.authentication !== "none") return true;
+  const set = (v: unknown): boolean => {
+    if (Array.isArray(v)) return v.length > 0;
+    if (v && typeof v === "object") {
+      const inner = (v as { parameters?: unknown }).parameters;
+      return Array.isArray(inner) && inner.length > 0;
+    }
+    return v !== undefined && v !== null && v !== "";
+  };
+  for (const key of ["bodyParameters", "headerParameters", "queryParameters", "jsonBody", "body", "requestBody"]) if (set(params[key])) return true;
+  const options = params.options;
+  if (options && typeof options === "object") {
+    const o = options as Record<string, unknown>;
+    for (const key of ["bodyParameters", "headerParameters", "queryParameters"]) if (set(o[key])) return true;
+  }
+  return false;
 }
 
 function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string, position: { x: number; y: number }, branchNote?: string): FlowNode {
@@ -51,15 +80,22 @@ function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string,
 
   if (["n8n-nodes-base.function", "n8n-nodes-base.functionItem", "n8n-nodes-base.code"].includes(n.type)) {
     const code = CODE_PARAMETERS.map((key) => params[key]).find((v): v is string => typeof v === "string");
-    if (code !== undefined) return { id, type: "code.js", position, data: { label, config: { code: CODE_WARNING + code, timeoutMs: 5000 } } };
+    if (code !== undefined) {
+      if (code.length + CODE_WARNING.length > MAX_CODE_LENGTH) return unsupported(id, n.type, position, `code is longer than ${MAX_CODE_LENGTH} characters - replace the node`);
+      return { id, type: "code.js", position, data: { label, config: { code: CODE_WARNING + code, timeoutMs: 5000 } } };
+    }
   }
 
   if (n.type === "n8n-nodes-base.httpRequest") {
-    const method = String(params.requestMethod ?? "GET").toUpperCase() as HttpConfig["method"];
+    // Current n8n HTTP Request (V3) stores the verb in `method`; older exports use `requestMethod`.
+    const method = String(params.method ?? params.requestMethod ?? "GET").toUpperCase() as HttpConfig["method"];
     const url = params.url;
     if (typeof url === "string" && HTTP_METHODS.includes(method)) {
+      // Body, header, query or auth config is not preserved, so a runnable empty request would call the
+      // destination without its required payload: import a placeholder the user replaces instead.
+      if (hasUnpreservedHttpConfig(params)) return unsupported(id, n.type, position, "HTTP body, headers or auth not imported - replace and re-enter the request");
       const safe = method === "GET";
-      // Replace n8n expressions {{...}} and credential refs with placeholders that block runs.
+      // Replace n8n expressions {{...}} and credential refs with placeholders that need manual translation.
       const safeUrl = url.replace(/\{\{[^}]*\}\}/g, "[EXPRESSION:={{...}}]").replace(/\[CREDENTIAL:[^\]]*\]/g, "[CREDENTIAL:name]");
       const config: HttpConfig = {
         method,
@@ -93,6 +129,7 @@ export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
   });
 
   const edges: FlowGraph["edges"] = [];
+  const seenEdges = new Set<string>();
   for (const [source, outputs] of Object.entries(workflow.connections ?? {})) {
     const sourceId = ids.get(source);
     if (!sourceId) invalid(`Connection starts at "${source}", which is not a node`);
@@ -101,20 +138,26 @@ export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
       if (!conn) continue;
       const targetId = ids.get(conn.node);
       if (!targetId) invalid(`Connection goes to "${conn.node}", which is not a node`);
+      if (sourceId === targetId) invalid(`Node "${source}" is connected to itself`);
+      const key = `${sourceId}->${targetId}`;
+      if (seenEdges.has(key)) continue; // the same connection twice is one edge
+      seenEdges.add(key);
       edges.push({ id: `e${edges.length}`, source: sourceId, target: targetId, sourceHandle: "out", targetHandle: null });
     }
   }
+  if (edges.length > MAX_EDGES) invalid(`Too many connections (max ${MAX_EDGES})`);
 
-  return {
-    name: workflow.name?.trim().slice(0, 80) || "Imported n8n workflow",
-    graph: {
-      nodes: nodes.map(({ n, id, position }) => {
-        const branches = workflow.connections?.[n.name]?.main?.length ?? 0;
-        const isBranchNode = ["n8n-nodes-base.if", "n8n-nodes-base.switch"].includes(n.type);
-        const note = isBranchNode && branches > 1 ? "Additional branches not imported in MVP - manual replacement needed" : undefined;
-        return mapNode(n, id, position, note);
-      }),
-      edges,
-    },
+  const graph: FlowGraph = {
+    nodes: nodes.map(({ n, id, position }) => {
+      const branches = workflow.connections?.[n.name]?.main?.length ?? 0;
+      const isBranchNode = ["n8n-nodes-base.if", "n8n-nodes-base.switch"].includes(n.type);
+      const note = isBranchNode && branches > 1 ? "Additional branches not imported in MVP - manual replacement needed" : undefined;
+      return mapNode(n, id, position, note);
+    }),
+    edges,
   };
+  // Same size ceiling other save paths enforce (graphSchema): refuse a graph too large to store.
+  if (JSON.stringify(graph).length >= MAX_GRAPH_BYTES) invalid("This workflow is too large to import (512 KB max)");
+
+  return { name: workflow.name?.trim().slice(0, 80) || "Imported n8n workflow", graph };
 }

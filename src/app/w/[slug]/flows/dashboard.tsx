@@ -139,7 +139,9 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>
       <p className="mt-2 text-sm text-muted">{t("flows.importN8nHint")}</p>
-      <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label={t("flows.importN8nFile")} onChange={onFile} />
+      {/* The input's name must differ from the button's: an unnamed/duplicate-name file input and the button both
+          expose role "button", so a shared label makes the visible control ambiguous to assistive tech and tests. */}
+      <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label={t("flows.importN8nFileInput")} tabIndex={-1} onChange={onFile} />
       <Button variant="ghost" className="mt-2" onClick={() => fileRef.current?.click()}>
         {t("flows.importN8nFile")}
       </Button>

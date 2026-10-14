@@ -840,7 +840,8 @@
     "importN8nLabel": "n8n workflow JSON",
     "importN8nInvalid": "This isn't valid JSON. Paste the whole workflow file exported from n8n.",
     "importN8nSubmit": "Import",
-    "importN8nFile": "Upload .json file"
+    "importN8nFile": "Upload .json file",
+    "importN8nFileInput": "n8n workflow file"
   },
   "errorPage": {
     "title": "⚠ Something went wrong",

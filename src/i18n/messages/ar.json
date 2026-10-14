@@ -888,7 +888,8 @@
     "importN8nLabel": "JSON مسار عمل n8n",
     "importN8nInvalid": "هذا ليس JSON صالحًا. الصق ملف مسار العمل كاملًا المُصدَّر من n8n.",
     "importN8nSubmit": "استيراد",
-    "importN8nFile": "رفع ملف .json"
+    "importN8nFile": "رفع ملف .json",
+    "importN8nFileInput": "ملف مسار عمل n8n"
   },
   "errorPage": {
     "title": "⚠ حدث خطأ ما",
