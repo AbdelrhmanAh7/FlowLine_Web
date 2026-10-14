@@ -266,6 +266,10 @@ See `BETA_LIMITATIONS.md`:
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
 
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
 ## Test coverage note: hub route selection (#174)
 
 `tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
