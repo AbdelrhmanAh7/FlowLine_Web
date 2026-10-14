@@ -129,7 +129,8 @@ about 15-20 MB of binaries to git history).
 | Symptom | Fix |
 |---|---|
 | `Chromium … sandbox` / `listen EPERM` / `setpriority: Operation not permitted` | run outside the agent sandbox |
-| `another demo build is running (pid N)` | wait, or remove a stale `tools/demo-video/.work/build.lock`. The lock is released only when its pid is gone (`ESRCH`); a pid owned by another user (`EPERM`) still counts as running |
+| `another demo build is running (pid N)` | wait for it to finish (lock `tools/demo-video/.work/build.lock`); a pid owned by another user (`EPERM`) still counts as running |
+| `stale demo build lock …` | the build that wrote `tools/demo-video/.work/build.lock` died without releasing it (its pid is gone). Acquisition is exclusive (`O_CREAT\|O_EXCL`) and fails closed — the lock is never taken over automatically: remove the file and re-run |
 | `remotion … not installed` | `tools/demo-video` is missing or unusable: run `pnpm demo:setup` |
 | `another next build is running` | a gate/e2e build owns `.next-test`; wait for it |
 | A recording fails | the error names the locator and time; `failure.png` in the recording's folder under `tools/demo-video/.work/` (for example `hero.ar.light`) shows the page; `DEMO_DEBUG=1` prints the beats |

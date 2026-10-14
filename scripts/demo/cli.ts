@@ -1,7 +1,6 @@
 // `pnpm demo:doctor | demo:build | demo:verify` — the landing demo media pipeline (docs/landing/DEMO_MEDIA.md).
 // build: isolated stack → seed → record (real UI, real DPR) → master (CFR 60, BT.709) → compose (Remotion) →
 // deliver (AV1 + H.264 + poster [+ chapter stills, WebVTT]) → public/media/demo/ + manifest.json. Local only, never CI.
-import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Browser } from "@playwright/test";
@@ -11,7 +10,7 @@ import { BUDGET, CLIP_IDS, CLIPS, DISSOLVE_S, LOCALES, THEMES, VIEWPORT, workKey
 import { deliverClip } from "./deliver";
 import { doctor } from "./doctor";
 import { parseEvents } from "./events";
-import { readProvenance, writeProvenance } from "./provenance";
+import { gitHead, readProvenance, writeProvenance } from "./provenance";
 import { probe } from "./ffmpeg";
 import { mergeManifest, readManifest, staleFiles, writeManifest, type ClipEntry, type Manifest, type ManifestFile, type Slice } from "./manifest";
 import { buildMaster } from "./master";
@@ -19,7 +18,7 @@ import { msg, type Scenario } from "./scenarios/common";
 import { loadStoryboard, missingBeats, resolveStoryboard, type ResolvedStoryboard } from "./storyboard";
 import { run as runProc } from "./run";
 import { writeVtt } from "./vtt";
-import { LOCK, OUT, ROOT, TOOL, WORK, lockHeld, themeTokens } from "./paths";
+import { acquireLock, OUT, ROOT, TOOL, WORK, releaseLock, themeTokens } from "./paths";
 import { checkAccent, verify } from "./verify";
 
 const REMOTION = join(TOOL, "node_modules/.bin/remotion");
@@ -153,7 +152,7 @@ async function buildOne(clip: ClipId, locale: Locale, theme: Theme, flags: Flags
         log(`${key}: recording attempt ${attempt} failed (${(e as Error).message.split("\n")[0]}); retrying`);
       }
     }
-    uiCommit = gitHead();
+    uiCommit = gitHead(ROOT);
     writeProvenance(dir, uiCommit);
     log(`${key}: recorded ${ev.duration.toFixed(2)} s`);
     if (flags.recordOnly) return null;
@@ -226,20 +225,14 @@ async function fitJpeg(file: string, max: number) {
   throw new Error(`${file}: still over ${max / 1000} KB at JPEG quality 50`);
 }
 
-function gitHead(): string {
-  return spawnSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).stdout.trim();
-}
-
 function toolVersion(pkg: string, base: string): string {
   return JSON.parse(readFileSync(join(base, "node_modules", pkg, "package.json"), "utf8")).version;
 }
 
 async function build(argv: string[]) {
   const flags = parseFlags(argv);
-  const held = lockHeld();
-  if (held) throw new Error(`another demo build is running (pid ${held}); wait for it (lock ${LOCK})`);
   mkdirSync(WORK, { recursive: true });
-  writeFileSync(LOCK, String(process.pid));
+  acquireLock();
   let stack: { stop: () => Promise<void> } | null = null;
   let browser: Browser | null = null;
   try {
@@ -276,7 +269,7 @@ async function build(argv: string[]) {
     await browser?.close();
     await stack?.stop();
     rmSync(join(TOOL, "public"), { recursive: true, force: true });
-    rmSync(LOCK, { force: true });
+    releaseLock();
   }
 }
 

@@ -6,6 +6,7 @@ import { BUDGET } from "../../scripts/demo/clips";
 import { av1Args, encodeWithBudget, h264Args } from "../../scripts/demo/deliver";
 import { codecString, parseProbe, psnrRgb, type Probe } from "../../scripts/demo/ffmpeg";
 import { budgetReport, hashName, mergeManifest, recordedCommits, staleFiles, validateManifest, writeManifest, readManifest, type Manifest, type ManifestFile } from "../../scripts/demo/manifest";
+import { ROOT } from "../../scripts/demo/paths";
 
 const fixture = (): Manifest => JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/demo-manifest.json"), "utf8"));
 // Mutable, untyped view of the fixture so tests can break it in arbitrary ways.
@@ -146,6 +147,33 @@ describe("manifest files on disk", () => {
     fs.writeFileSync(path.join(dir, "old.ar.light.poster.deadbeef.jpg"), "x");
     fs.writeFileSync(path.join(dir, ".DS_Store"), "x");
     expect(await staleFiles(dir, m)).toEqual(["old.ar.light.poster.deadbeef.jpg"]);
+  });
+});
+
+// The committed manifest must ship every clip in both locales — a review round reported the English walkthrough
+// missing while it was present at HEAD; this test is the regression guard (manifest.json is committed, so it is
+// always there when this suite runs from a checkout).
+describe("the committed public/media/demo manifest", () => {
+  it("lists both locales and the full asset set for every clip, walkthrough EN included", async () => {
+    const m = validateManifest(await readManifest(path.join(ROOT, "public/media/demo")));
+    const byClip = new Map<string, Set<string>>();
+    for (const f of m.files) {
+      const set = byClip.get(f.clip) ?? new Set<string>();
+      set.add(f.locale);
+      byClip.set(f.clip, set);
+    }
+    for (const clip of ["hero", "templates", "build", "run", "history", "walkthrough"] as const)
+      expect([...(byClip.get(clip) ?? [])].sort(), `clip ${clip} locales`).toEqual(["ar", "en"]);
+    const en = m.files.filter((f) => f.clip === "walkthrough" && f.locale === "en").map((f) => f.path);
+    expect(en).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^walkthrough\.en\.[0-9a-f]+\.vtt$/),
+        expect.stringMatching(/^walkthrough\.en\.light\.av1\.[0-9a-f]+\.mp4$/),
+        expect.stringMatching(/^walkthrough\.en\.light\.h264\.[0-9a-f]+\.mp4$/),
+        expect.stringMatching(/^walkthrough\.en\.light\.poster\.[0-9a-f]+\.jpg$/),
+      ]),
+    );
+    expect(en.filter((p) => /\.ch\d\.[0-9a-f]+\.jpg$/.test(p))).toHaveLength(4); // chapter stills
   });
 });
 
