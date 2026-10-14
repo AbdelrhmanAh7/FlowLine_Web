@@ -42,6 +42,10 @@ export function initials(name: string) {
  * decimals than a scale of 2 and is rejected; callers must pass exact values. Trailing zeros past the
  * scale ("12.500") carry no information and are accepted.
  *
+ * The value is trimmed, but bidi control marks (U+200E LRM, U+200F RLM, U+061C ALM) are deliberately not
+ * stripped: a value carrying one is rejected as invalid rather than silently cleaned, so callers pass the
+ * parsed amount rather than text copied straight out of an RTL view.
+ *
  * @param value - Finite number or numeric string (plain or exponent notation).
  * @param scale - Decimal places in the result (default 2, integer 0-20).
  * @throws If value is not a number/string, is NaN/Infinity, is not a plain decimal, or has more decimals than the scale.
@@ -82,6 +86,8 @@ export function toDecimalString(value: number | string, scale = 2): string {
   let fraction = digits.slice(point);
   while (fraction.length > scale && fraction.endsWith("0")) fraction = fraction.slice(0, -1);
   if (fraction.length > scale) {
+    // More decimals than the scale is a precision error for every scale, scale 0 included: truncating
+    // would silently change the amount (12.5 → 12), which is not this helper's job.
     throw new Error(`toDecimalString: value has more than ${scale} decimal places`);
   }
   fraction = fraction.padEnd(scale, "0");

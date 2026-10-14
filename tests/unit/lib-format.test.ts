@@ -94,6 +94,337 @@ describe("lib/format helpers", () => {
   });
 
   describe("toDecimalString", () => {
+    describe("basic decimal strings", () => {
+      it("formats '12.50' at scale 2 as '12.50'", () => {
+        expect(toDecimalString("12.50", 2)).toBe("12.50");
+      });
+
+      it("formats '12.5' at scale 2 as '12.50'", () => {
+        expect(toDecimalString("12.5", 2)).toBe("12.50");
+      });
+
+      it("formats '12' at scale 2 as '12.00'", () => {
+        expect(toDecimalString("12", 2)).toBe("12.00");
+      });
+
+      it("formats '0.1' at scale 2 as '0.10'", () => {
+        expect(toDecimalString("0.1", 2)).toBe("0.10");
+      });
+
+      it("formats '0.01' at scale 2 as '0.01'", () => {
+        expect(toDecimalString("0.01", 2)).toBe("0.01");
+      });
+
+      it("formats '1e21' at scale 2 as '1000000000000000000000.00'", () => {
+        expect(toDecimalString("1e21", 2)).toBe("1000000000000000000000.00");
+      });
+
+      it("formats '1.5e3' at scale 2 as '1500.00'", () => {
+        expect(toDecimalString("1.5e3", 2)).toBe("1500.00");
+      });
+
+      it("formats '-12.50' at scale 2 as '-12.50'", () => {
+        expect(toDecimalString("-12.50", 2)).toBe("-12.50");
+      });
+
+      it("formats '0' at scale 2 as '0.00'", () => {
+        expect(toDecimalString("0", 2)).toBe("0.00");
+      });
+
+      it("formats '0.0' at scale 2 as '0.00'", () => {
+        expect(toDecimalString("0.0", 2)).toBe("0.00");
+      });
+
+      it("formats '0.00' at scale 2 as '0.00'", () => {
+        expect(toDecimalString("0.00", 2)).toBe("0.00");
+      });
+    });
+
+    describe("scale handling", () => {
+      it("formats '12.51' at scale 2 as '12.51' (no rounding)", () => {
+        expect(toDecimalString("12.51", 2)).toBe("12.51");
+      });
+
+      it("formats '12.599' at scale 2 is rejected (has more than 2 decimals)", () => {
+        expect(() => toDecimalString("12.599", 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("formats '12.5' at scale 3 as '12.500'", () => {
+        expect(toDecimalString("12.5", 3)).toBe("12.500");
+      });
+
+      it("formats '12' at scale 3 as '12.000'", () => {
+        expect(toDecimalString("12", 3)).toBe("12.000");
+      });
+
+      it("formats '0' at scale 3 as '0.000'", () => {
+        expect(toDecimalString("0", 3)).toBe("0.000");
+      });
+
+      it("formats '0.1' at scale 3 as '0.100'", () => {
+        expect(toDecimalString("0.1", 3)).toBe("0.100");
+      });
+    });
+
+    describe("exponent handling", () => {
+      it("formats '1e2' at scale 2 as '100.00'", () => {
+        expect(toDecimalString("1e2", 2)).toBe("100.00");
+      });
+
+      it("formats '1e-2' at scale 2 as '0.01'", () => {
+        expect(toDecimalString("1e-2", 2)).toBe("0.01");
+      });
+
+      it("formats '1e-5' at scale 2 is rejected (has more than 2 decimals)", () => {
+        expect(() => toDecimalString("1e-5", 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("formats '1.23e-4' at scale 2 is rejected (has more than 2 decimals)", () => {
+        expect(() => toDecimalString("1.23e-4", 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("formats '1.23e5' at scale 2 as '123000.00'", () => {
+        expect(toDecimalString("1.23e5", 2)).toBe("123000.00");
+      });
+
+      it("formats '1.23e-6' at scale 2 is rejected (has more than 2 decimals)", () => {
+        expect(() => toDecimalString("1.23e-6", 2)).toThrow(/more than 2 decimal places/);
+      });
+    });
+
+    describe("negative numbers", () => {
+      it("formats '-12.5' at scale 2 as '-12.50'", () => {
+        expect(toDecimalString("-12.5", 2)).toBe("-12.50");
+      });
+
+      it("formats '-0.1' at scale 2 as '-0.10'", () => {
+        expect(toDecimalString("-0.1", 2)).toBe("-0.10");
+      });
+
+      it("formats '-0' at scale 2 as '0.00' (negative zero normalized to zero)", () => {
+        expect(toDecimalString("-0", 2)).toBe("0.00");
+      });
+
+      it("formats '-0.0' at scale 2 as '0.00' (negative zero normalized to zero)", () => {
+        expect(toDecimalString("-0.0", 2)).toBe("0.00");
+      });
+
+      it("formats '-0.00' at scale 2 as '0.00' (negative zero normalized to zero)", () => {
+        expect(toDecimalString("-0.00", 2)).toBe("0.00");
+      });
+
+      it("formats '-1e2' at scale 2 as '-100.00'", () => {
+        expect(toDecimalString("-1e2", 2)).toBe("-100.00");
+      });
+
+      it("formats '-1e-2' at scale 2 as '-0.01'", () => {
+        expect(toDecimalString("-1e-2", 2)).toBe("-0.01");
+      });
+    });
+
+    describe("Arabic-Indic digits normalization", () => {
+      it("formats '١٢.٥٠' (Arabic-Indic) at scale 2 as '12.50' (normalized to Western digits)", () => {
+        expect(toDecimalString("١٢.٥٠", 2)).toBe("12.50");
+      });
+
+      it("formats '٠.١' (Arabic-Indic) at scale 2 as '0.10' (normalized to Western digits)", () => {
+        expect(toDecimalString("٠.١", 2)).toBe("0.10");
+      });
+
+      it("formats '١٢٥٠' (Arabic-Indic) at scale 2 as '1250.00' (normalized to Western digits)", () => {
+        expect(toDecimalString("١٢٥٠", 2)).toBe("1250.00");
+      });
+
+      it("formats '-١٢.٥' (Arabic-Indic) at scale 2 as '-12.50' (normalized to Western digits)", () => {
+        expect(toDecimalString("-١٢.٥", 2)).toBe("-12.50");
+      });
+
+      it("formats '١٢.٥٠٠' (Arabic-Indic) at scale 2 as '12.50' (trailing zeros trimmed)", () => {
+        expect(toDecimalString("١٢.٥٠٠", 2)).toBe("12.50");
+      });
+
+      it("rejects Persian (Extended Arabic-Indic) digits '۱۲.۵' (not normalised)", () => {
+        expect(() => toDecimalString("۱۲.۵", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects the Arabic decimal separator '٫' in '١٢٫٥٠' (not normalised)", () => {
+        expect(() => toDecimalString("١٢٫٥٠", 2)).toThrow(/invalid decimal value/);
+      });
+    });
+
+    describe("no float rounding verification", () => {
+      it("rejects the float artifact number 0.1 + 0.2 at scale 2 instead of rounding it to '0.30'", () => {
+        expect(() => toDecimalString(0.1 + 0.2, 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("formats the number 1e21 exactly, never in exponent notation", () => {
+        expect(toDecimalString(1e21, 2)).toBe("1000000000000000000000.00");
+      });
+
+      it("formats the number 12.5 at scale 2 as '12.50' (padded, not rounded)", () => {
+        expect(toDecimalString(12.5, 2)).toBe("12.50");
+      });
+
+      it("formats 12.51 at scale 2 as '12.51' (exact, not rounded to '12.5')", () => {
+        expect(toDecimalString(12.51, 2)).toBe("12.51");
+      });
+
+      it("rejects 12.599 at scale 2 instead of rounding it to '12.60'", () => {
+        expect(() => toDecimalString(12.599, 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("formats 12.500 at scale 2 as '12.50' (the trailing zero beyond the scale is trimmed)", () => {
+        expect(toDecimalString(12.500, 2)).toBe("12.50");
+      });
+
+      it("formats the number 0.3 at scale 2 as '0.30' (the exact float, not a rounded artifact)", () => {
+        expect(toDecimalString(0.3, 2)).toBe("0.30");
+      });
+
+      it("formats the number -12.5 at scale 2 as '-12.50' (number path keeps the sign)", () => {
+        expect(toDecimalString(-12.5, 2)).toBe("-12.50");
+      });
+
+      it("formats the number -0 at scale 2 as '0.00' (negative zero is normalized on the number path too)", () => {
+        expect(toDecimalString(-0, 2)).toBe("0.00");
+      });
+
+      it("uses scale 2 as the default (number path)", () => {
+        expect(() => toDecimalString(0.1 + 0.2)).toThrow(/more than 2 decimal places/);
+        expect(toDecimalString(12.5)).toBe("12.50");
+      });
+    });
+
+    describe("bidi control marks (intentional rejection, see the JSDoc)", () => {
+      it("rejects a leading RLM (U+200F) rather than stripping it", () => {
+        expect(() => toDecimalString("\u200f12.50", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects a leading LRM (U+200E) and ALM (U+061C) too", () => {
+        expect(() => toDecimalString("\u200e12.50", 2)).toThrow(/invalid decimal value/);
+        expect(() => toDecimalString("\u061c12.50", 2)).toThrow(/invalid decimal value/);
+      });
+    });
+
+    describe("edge cases and error handling", () => {
+      it("rejects NaN as number", () => {
+        expect(() => toDecimalString(NaN, 2)).toThrow(/NaN or Infinity/);
+      });
+
+      it("rejects Infinity as number", () => {
+        expect(() => toDecimalString(Infinity, 2)).toThrow(/NaN or Infinity/);
+      });
+
+      it("rejects negative infinity as number", () => {
+        expect(() => toDecimalString(-Infinity, 2)).toThrow(/NaN or Infinity/);
+      });
+
+      it("rejects non-numeric strings", () => {
+        expect(() => toDecimalString("abc", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects empty strings", () => {
+        expect(() => toDecimalString("", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects strings with only a sign", () => {
+        expect(() => toDecimalString("-", 2)).toThrow(/invalid decimal value/);
+      });
+
+      it("rejects scale < 0", () => {
+        expect(() => toDecimalString("12.5", -1)).toThrow(/scale must be an integer/);
+      });
+
+      it("rejects scale > 20", () => {
+        expect(() => toDecimalString("12.5", 21)).toThrow(/scale must be an integer/);
+      });
+
+      it("rejects non-integer scale", () => {
+        expect(() => toDecimalString("12.5", 2.5)).toThrow(/scale must be an integer/);
+      });
+
+      it("rejects scale as a string", () => {
+        expect(() => toDecimalString("12.5", "2" as unknown as number)).toThrow(/scale must be an integer/);
+      });
+
+      it("rejects scale as null", () => {
+        expect(() => toDecimalString("12.5", null as unknown as number)).toThrow(/scale must be an integer/);
+      });
+
+      it("rejects value as null", () => {
+        expect(() => toDecimalString(null as unknown as number, 2)).toThrow(/value must be a number/);
+      });
+
+      it("rejects value as undefined", () => {
+        expect(() => toDecimalString(undefined as unknown as number, 2)).toThrow(/value must be a number/);
+      });
+
+      it("rejects value as object", () => {
+        expect(() => toDecimalString({} as unknown as number, 2)).toThrow(/value must be a number/);
+      });
+
+      it("rejects value as array", () => {
+        expect(() => toDecimalString([] as unknown as number, 2)).toThrow(/value must be a number/);
+      });
+
+      it("rejects exponent > 1000", () => {
+        expect(() => toDecimalString("1e1001", 2)).toThrow(/exponent out of range/);
+      });
+
+      it("rejects exponent < -1000", () => {
+        expect(() => toDecimalString("1e-1001", 2)).toThrow(/exponent out of range/);
+      });
+
+      it("rejects value with more decimals than scale", () => {
+        expect(() => toDecimalString("12.345", 2)).toThrow(/more than 2 decimal places/);
+      });
+
+      it("accepts value with exactly scale decimals", () => {
+        expect(toDecimalString("12.34", 2)).toBe("12.34");
+      });
+
+      it("accepts value with fewer decimals than scale", () => {
+        expect(toDecimalString("12.3", 2)).toBe("12.30");
+      });
+
+      it("accepts value with more decimals than scale but trailing zeros", () => {
+        expect(toDecimalString("12.350", 2)).toBe("12.35");
+      });
+    });
+
+    describe("scale 0 (integer) cases", () => {
+      it("rejects '12.5' at scale 0 (has more than 0 decimal places, no truncation)", () => {
+        expect(() => toDecimalString("12.5", 0)).toThrow(/more than 0 decimal places/);
+      });
+
+      it("rejects '12.51' at scale 0 (no truncation)", () => {
+        expect(() => toDecimalString("12.51", 0)).toThrow(/more than 0 decimal places/);
+      });
+
+      it("formats '12.0' at scale 0 as '12' (a trailing zero is not extra precision)", () => {
+        expect(toDecimalString("12.0", 0)).toBe("12");
+      });
+
+      it("formats '12.00' at scale 0 as '12' (no decimal point)", () => {
+        expect(toDecimalString("12.00", 0)).toBe("12");
+      });
+
+      it("rejects '0.5' at scale 0 (no truncation)", () => {
+        expect(() => toDecimalString("0.5", 0)).toThrow(/more than 0 decimal places/);
+      });
+
+      it("formats '0.0' at scale 0 as '0' (no decimal point)", () => {
+        expect(toDecimalString("0.0", 0)).toBe("0");
+      });
+
+      it("rejects '-12.5' at scale 0 (no truncation, sign not silently dropped)", () => {
+        expect(() => toDecimalString("-12.5", 0)).toThrow(/more than 0 decimal places/);
+      });
+
+      it("rejects '-0.5' at scale 0 (no truncation to a lossy zero)", () => {
+        expect(() => toDecimalString("-0.5", 0)).toThrow(/more than 0 decimal places/);
+      });
+    });
     it("pads numbers and strings to the default scale of 2", () => {
       expect(toDecimalString(12.5)).toBe("12.50");
       expect(toDecimalString("12.50")).toBe("12.50");
