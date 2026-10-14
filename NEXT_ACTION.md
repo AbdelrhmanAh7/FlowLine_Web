@@ -2,7 +2,7 @@
 
 ## Issue #124 — harness handoff (2026-10-14)
 
-The latest CTO duplicate-test finding is fixed: six unique army tests remain, each passed twice on the same isolated database. Typecheck, lint, 16 unit tests, 5 integration tests and 3 Chromium regression tests passed locally; the complete request-level signup → sign-in → flow journey passed too. [Evidence and the initial cold-dev timeout](artifacts/phase-4/issue-124/EVIDENCE.md). Next: the harness pushes this branch to existing PR #135, obtains fresh `e2e-army`, CI and CodeRabbit results on the final head, and leaves merge handling to automerge. No push or full local suite/build was performed by this implementer.
+origin/main (`bc60ed21`) is merged; the two conflicts were Markdown only. The hub verify round on `16976e7` failed because its browser, which can only navigate, had no way to opt in once `31a2ccd4` removed `GET /api/test/auto-verify`. The route is restored (test-only, 404 elsewhere), with a navigate-only e2e case that is red without it and green with it. Local results at `c400b699`: typecheck and lint clean; unit 8 + 16; integration 5; army 7/7 twice; Chromium spec 4/4 ([evidence](artifacts/phase-4/issue-124/EVIDENCE.md)). Next, the harness: push to PR #135 and get fresh CI, `e2e-army`, verify and CodeRabbit results on the new head. Fix the PR body, which still says "Docs not needed" and lacks the template's `## Security posture` section: no dependency added, no secret, one test-only variable `FLOWLINE_TEST_AUTO_VERIFY`, permissions unchanged. For the hub owner: on `16976e7` the e2e-army runner did not collect the PR's `e2e-army/*.e2e.ts` copies, and its own suite failed on model rate limits.
 
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
