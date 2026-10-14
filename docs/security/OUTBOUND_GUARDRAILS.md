@@ -14,10 +14,11 @@ The outbound send cap is implemented per-connection and per-action (not per-dest
 
 ### Files Changed
 
-- `worker/handlers.ts`: Rate limiting check with workspace validation before applying limits
+- `worker/handlers.ts`: Rate limiting check with workspace validation and clamping before applying limits
 - `src/server/rate-limit.ts`: `checkRate` function (unchanged, uses Redis with sliding window)
 - `src/engine/types.ts`: `maxSendsPerMinute` field in node config schema
-- `src/components/builder/node-config.tsx`: UI for configuring maxSendsPerMinute
+- `src/engine/validate.ts`: Graph validation for `maxSendsPerMinute` (integer 1..1000)
+- `src/components/builder/node-config.tsx`: UI for configuring maxSendsPerMinute (integer clamp 1..1000, undefined on clear)
 - `src/i18n/messages/en.json` / `ar.json`: i18n keys for the new field and event type
 
 ### Events Logged
@@ -61,6 +62,7 @@ The outbound send cap is implemented per-connection and per-action (not per-dest
 1. **Workspace validation:** The connection is validated to belong to the current workspace by `getRuntimeCredentials` before rate limiting is applied (see `src/server/connections.ts:241`)
 2. **Policy check:** The integration action validates that the connectionId matches the run's permission policy (see `worker/handlers.ts:291-293`)
 3. **Connection existence check:** Validated by `getRuntimeCredentials` which throws `CONNECTION_MISSING` if the connection doesn't exist (see `src/server/connections.ts:240`)
+4. **Server-side validation & clamping:** `maxSendsPerMinute` is validated by `validateGraph` (integer 1..1000) and clamped in `worker/handlers.ts` to `1..1000` (defaults to 60 if omitted, negative, or invalid)
 
 ### Future Considerations
 
@@ -74,8 +76,11 @@ The outbound send cap is implemented per-connection and per-action (not per-dest
 
 - `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
 - `tests/integration/p2-actions.test.ts`:
-  - Test for workspace validation before rate limiting (line 382-395)
-  - Test for per-connection send cap (line 382-395)
+  - Test for workspace validation before rate limiting (lines 382-398)
+  - Test for per-connection send cap (lines 400-412)
+  - Test for clamping non-integer and zero maxSendsPerMinute to at least 1 (lines 414-426)
+- `tests/unit/engine.test.ts`:
+  - Test for `validateGraph` checking `INVALID_SEND_LIMIT` for `maxSendsPerMinute` (integer 1..1000)
 
 ### Future Tests
 

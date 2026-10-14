@@ -577,7 +577,26 @@ function ActionForm({ node, cfg, set }: FormProps) {
             <Input id={`ra-${node.id}`} type="number" className="data w-24" min={1} max={5} value={String(retry)} onChange={(e) => set({ retry: { maxAttempts: Number(e.target.value) } })} />
           </Field>
           <Field label={t("config.action.maxSendsPerMinute")} htmlFor={`ms-${node.id}`} hint={t("config.action.maxSendsPerMinuteHint")}>
-            <Input id={`ms-${node.id}`} type="number" className="data w-24" min={1} max={1000} value={String(cfg.maxSendsPerMinute ?? 60)} onChange={(e) => set({ maxSendsPerMinute: Number(e.target.value) })} />
+            <Input
+              id={`ms-${node.id}`}
+              type="number"
+              className="data w-24"
+              min={1}
+              max={1000}
+              placeholder="60"
+              value={typeof cfg.maxSendsPerMinute === "number" ? String(cfg.maxSendsPerMinute) : ""}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (!val) {
+                  set({ maxSendsPerMinute: undefined });
+                  return;
+                }
+                const parsed = parseInt(val, 10);
+                if (Number.isFinite(parsed)) {
+                  set({ maxSendsPerMinute: Math.max(1, Math.min(1000, parsed)) });
+                }
+              }}
+            />
           </Field>
         </>
       )}

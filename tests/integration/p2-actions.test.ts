@@ -410,4 +410,21 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, second.id), eq(schema.runEvent.type, "outbound_capped")));
     expect(events).toHaveLength(1);
   });
+
+  it("side-effect action clamps non-integer and zero maxSendsPerMinute to at least 1", async () => {
+    const { user, conn, flowOf } = await setup("SendCapClamp");
+    const zd = await conn("zendesk");
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", zd.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 0 })));
+    await fake.reset();
+    const first = await enqueueRun(user, flow.id);
+    await claimAndProcess(first.id);
+    expect((await freshRun(first.id)).status).toBe("succeeded");
+    const second = await enqueueRun(user, flow.id);
+    await claimAndProcess(second.id);
+    expect((await freshRun(second.id)).error?.code).toBe("SEND_RATE_LIMITED");
+    const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, second.id), eq(schema.runEvent.type, "outbound_capped")));
+    expect(events).toHaveLength(1);
+    expect((events[0]?.data as { limit?: number })?.limit).toBe(1);
+  });
 });
+

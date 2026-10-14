@@ -59,12 +59,15 @@ Implemented per-connection send rate limiting with audit view and UI configurati
 
 **Files changed:**
 - `worker/handlers.ts`: Rate limiting check with workspace validation and clamping
+- `src/engine/validate.ts`: Graph validation for `maxSendsPerMinute` (integer 1..1000)
 - `src/components/builder/node-config.tsx`: UI field for `maxSendsPerMinute` with integer clamping and undefined-on-clear
 - `src/i18n/messages/en.json` / `ar.json`: i18n keys for field and event type
 - `docs/security/OUTBOUND_GUARDRAILS.md`: Technical debt documentation (per-destination caps, approval gate, future enhancements)
 
 **Tests:**
 - `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
+- `tests/unit/engine.test.ts`:
+  - Test for `validateGraph` checking `INVALID_SEND_LIMIT` for `maxSendsPerMinute`
 - `tests/integration/p2-actions.test.ts`:
   - Test for workspace validation before rate limiting (lines 382-398)
   - Test for per-connection send cap (lines 400-412)

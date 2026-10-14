@@ -220,6 +220,12 @@ function validateConfig(node: FlowNode): ValidationIssue[] {
       if (!str(cfg.connectionId)) push("MISSING_CONNECTION", "choose a connection");
       checkExpr(push, "input mapping", str(cfg.inputMapping));
       if (cfg.requireApproval === true && NONDETERMINISTIC.test(str(cfg.inputMapping))) push("APPROVAL_UNSTABLE_INPUT", UNSTABLE_INPUT_MESSAGE);
+      if (cfg.maxSendsPerMinute !== undefined) {
+        const m = cfg.maxSendsPerMinute;
+        if (typeof m !== "number" || !Number.isInteger(m) || m < 1 || m > 1000) {
+          push("INVALID_SEND_LIMIT", "max sends per minute must be an integer between 1 and 1000");
+        }
+      }
       break;
   }
   return issues;
