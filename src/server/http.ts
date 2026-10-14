@@ -148,6 +148,14 @@ export function route<C>(handler: Handler<C>): Handler<C> {
     });
 }
 
+/** Error bodies are never cacheable and must not leak the URL as a referrer (same headers as the platform success path). */
+function errorJson(body: unknown, status: number) {
+  const res = NextResponse.json(body, { status });
+  res.headers.set("cache-control", "no-store");
+  res.headers.set("referrer-policy", "no-referrer");
+  return res;
+}
+
 async function handleRoute<C>(handler: Handler<C>, req: Request, ctx: C): Promise<Response> {
   try {
     assertSameOrigin(req);
@@ -155,13 +163,13 @@ async function handleRoute<C>(handler: Handler<C>, req: Request, ctx: C): Promis
   } catch (err) {
     if (err instanceof HttpError) {
       if (err.status >= 500) track("api_error", {}, { code: err.code, httpStatus: err.status });
-      return NextResponse.json({ error: { code: err.code, message: err.message, details: err.details } }, { status: err.status });
+      return errorJson({ error: { code: err.code, message: err.message, details: err.details } }, err.status);
     }
     if (err instanceof ZodError) {
-      return NextResponse.json({ error: { code: "VALIDATION", message: "Invalid request", details: err.issues } }, { status: 400 });
+      return errorJson({ error: { code: "VALIDATION", message: "Invalid request", details: err.issues } }, 400);
     }
     console.error("[api] unhandled", `request=${correlationId()}`, safeErrorText(err));
     track("api_error", {}, { code: "INTERNAL", httpStatus: 500 });
-    return NextResponse.json({ error: { code: "INTERNAL", message: "Something went wrong on our side", requestId: correlationId() } }, { status: 500 });
+    return errorJson({ error: { code: "INTERNAL", message: "Something went wrong on our side", requestId: correlationId() } }, 500);
   }
 }

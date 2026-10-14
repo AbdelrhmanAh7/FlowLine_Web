@@ -1,5 +1,27 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Legacy backfill 0026 (issue #205) — 2026-10-14
+
+Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
+publication numbers remain unchanged. Its insert trigger keeps old application images from numbering new snapshots.
+Forward and manual reverse acquire `SHARE ROW EXCLUSIVE` on `flow_version` before accessing the backup, retain it through
+commit, and use transaction-local lock/statement timeouts of 5/30 seconds. Readers continue; writers wait. The immutability
+trigger is disabled only inside the transaction. Reverse stays outside the journal; run it with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+It restores backed-up numbers, fails atomically if a later publication reused one, and leaves the backup for reruns.
+Numbers already cleared without backup by prerequisite #204's 0025 are outside this reverse's coverage.
+
+Verified locally on a disposable `flowline_test_205r6` database with Node 24: backfill integration 6/6 and runs 20/20.
+The fixture also removes the backup table to exercise a real pre-0026 schema. Cases cover legacy save/run/overwrite data,
+forward twice, reverse twice, forward after reverse, old-image inserts and collision refusal. The concurrent-insert
+regression failed before the fix (writer completed between backup and update), then passed with the early lock.
+`pnpm typecheck`, `pnpm lint`, `drizzle-kit check`, and E2E tooling hygiene 12/12 pass; full suites/build run only in CI.
+The inherited #204 E2E spec was removed per the CTO scope instruction; no new E2E spec was added.
+
+Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected retargeting it to ai/204 because PR #211
+already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
+then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
+
 ## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
@@ -22,6 +44,10 @@ stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub 
 Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
+## route() error headers (issue #200) — 2026-10-13
+
+`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
 
 ## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
 
@@ -239,3 +265,11 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
+## Test coverage note: hub route selection (#174)
+
+`tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
