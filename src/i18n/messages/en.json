@@ -2085,6 +2085,7 @@
     "viewer": "Viewers can't create flows",
     "offline": "You're offline — reconnect to create flows",
     "actionsMissing": "This template needs app actions that aren't available yet",
+    "notAvailableYet": "Not available yet",
     "requirements": "Requirements",
     "req": {
       "builtIn": "Built in",
@@ -2240,7 +2241,7 @@
     },
     "deal-won-mizano-quote": {
       "name": "Deal won → Mizano quote",
-      "description": "When a deal is won, ask for approval, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+      "description": "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
       "nodes": {
         "deal": "Deal",
         "won": "Deal won?",

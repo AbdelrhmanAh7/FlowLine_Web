@@ -11,6 +11,7 @@ import { decide } from "@/server/approvals";
 import { createConnection } from "@/server/connections";
 import { getAction } from "@/integrations/registry";
 import { createFlow, saveFlow } from "@/server/flows";
+import { serverIssues } from "@/server/publish";
 import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import { startFake, type Fake } from "../contract/helpers";
@@ -24,23 +25,35 @@ import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers"
 let fake: Fake;
 const calls: { action: string; args: unknown }[] = [];
 const realIdentity = mizano.identity;
-/** Undo for each action we touched: remove the stand-in we pushed, or put back the real `run` we replaced. */
+/** Undo for each action we touched: restore the original action object we replaced. */
 const restore: (() => void)[] = [];
 
-/** Record calls to `id`. If #147's real action is registered its `run` is replaced (and restored); otherwise a stand-in is registered. */
+/**
+ * Register a recording action for `id`. If a real action exists (from #147), it is replaced entirely and restored
+ * afterwards. If not, a stand-in is inserted and removed afterwards. This avoids duplicates and lookup-order issues
+ * when #147 lands.
+ */
 function record(id: string, response: Record<string, unknown>) {
   const rec = async (_ctx: unknown, args: Record<string, unknown>) => {
     calls.push({ action: id, args });
     return response; // realistic: an id, not an echo of the request
   };
-  const existing = mizano.actions.find((a) => a.id === id);
-  if (existing) {
-    const real = existing.run;
-    existing.run = rec as unknown as ActionDef["run"];
-    restore.push(() => void (existing.run = real));
+  const idx = mizano.actions.findIndex((a) => a.id === id);
+  if (idx !== -1) {
+    // Real action exists (from #147): replace the whole object and restore it later.
+    const original = mizano.actions[idx];
+    const recordingAction: ActionDef = {
+      ...original,
+      run: rec as unknown as ActionDef["run"],
+    };
+    mizano.actions[idx] = recordingAction;
+    restore.push(() => {
+      mizano.actions[idx] = original;
+    });
     return;
   }
-  const stand = {
+  // No real action yet: insert a stand-in and remove it later.
+  const stand: ActionDef = {
     id,
     version: 1,
     provider: "mizano",
@@ -51,10 +64,10 @@ function record(id: string, response: Record<string, unknown>) {
     sideEffect: "non_idempotent",
     requiredScopes: [],
     run: rec,
-  } as unknown as ActionDef;
+  };
   mizano.actions.push(stand);
   restore.push(() => {
-    const i = mizano.actions.indexOf(stand);
+    const i = mizano.actions.findIndex((a) => a.id === id);
     if (i !== -1) mizano.actions.splice(i, 1);
   });
 }
@@ -97,12 +110,19 @@ describe("Deal won → Mizano quote: availability", () => {
   it("is refused with TEMPLATE_UNAVAILABLE while an action it calls is not registered, and allowed once it is", async () => {
     const user = await makeUser("dwm-avail");
     const ws = await createWorkspace(user, unique("DealWonAvail"));
+    const tpl = DESIGN_TEMPLATES.find((t) => t.id === "deal-won-mizano-quote")!;
+    const graph = structuredClone(tpl.graph) as FlowGraph;
+    const unknownNodes = async () => (await serverIssues(db, ws.id, graph)).filter((i) => i.code === "UNKNOWN_ACTION").map((i) => i.nodeId).sort();
     const missing = ["mizano.create_customer", "mizano.create_draft_quote"].filter((id) => !getAction(id));
     if (missing.length > 0) {
       await expect(createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" })).rejects.toMatchObject({ status: 409, code: "TEMPLATE_UNAVAILABLE" });
+      // The publish check (serverIssues) also refuses the graph while the actions are unregistered: both Mizano steps.
+      expect(await unknownNodes()).toEqual(["customer", "quote"]);
     }
     record("mizano.create_customer", { id: "cust-1" });
     record("mizano.create_draft_quote", { id: "Q-1" });
+    // With the actions registered (as #147 will register them) nothing is unknown to the publisher any more.
+    expect(await unknownNodes()).toEqual([]);
     const flow = await createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" });
     expect(flow.templateId).toBe("deal-won-mizano-quote");
     while (restore.length) restore.pop()!(); // later tests register their own recorders

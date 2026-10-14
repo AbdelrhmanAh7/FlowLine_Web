@@ -25,6 +25,22 @@ export function missingTemplateActions(graph: FlowGraph, available: { has(action
   return [...new Set(ids.filter((id) => id && !available.has(id)))];
 }
 
+/**
+ * The templates whose every action `available` provides, in gallery order. A template is offered only once the actions
+ * it calls exist, so the gallery and "Use template" can never hand a user a flow that cannot run (the server refuses
+ * one that slips through with 409 TEMPLATE_UNAVAILABLE, src/server/flows.ts, and publish refuses an unknown action with
+ * UNKNOWN_ACTION, src/server/publish.ts). This makes the dependency self-healing: adding the actions reveals the
+ * template with no change here.
+ */
+export function availableDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): DesignTemplate[] {
+  return templates.filter((t) => missingTemplateActions(t.graph, available).length === 0);
+}
+
+/** The templates held back because an action they call is not in `available` yet, with the missing ids (same order). */
+export function heldBackDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): { template: DesignTemplate; missing: string[] }[] {
+  return templates.map((template) => ({ template, missing: missingTemplateActions(template.graph, available) })).filter((x) => x.missing.length > 0);
+}
+
 const J = (v: unknown) => JSON.stringify(v, null, 2);
 let e = 0;
 const edge = (source: string, target: string, sourceHandle: string | null = null): FlowEdge => ({ id: `te${++e}-${source}-${target}`, source, target, sourceHandle });
@@ -227,7 +243,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "deal-won-mizano-quote",
     name: "Deal won → Mizano quote",
-    description: "When a deal is won, ask for approval, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+    description: "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
     category: "Sales",
     goal: "sales",
     requires: [
@@ -256,6 +272,9 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
           expression:
             '(\n  $money := function($v) { $formatNumber($number($v), "0.00") };\n  {\n    "customer": {\n      "name": deal.customer.name,\n      "company": deal.customer.company,\n      "email": deal.customer.email,\n      "phone": deal.customer.phone,\n      "taxId": deal.customer.taxId\n    },\n    "currency": deal.currency,\n    "lines": [deal.lines.{ "item": item, "qty": $money(qty), "unitPrice": $money(unitPrice), "taxRate": $money(taxRate) }]\n  }\n)',
         }),
+        // CTO decision on #149 (2026-10-12): one approval gate on "Create customer". The approver reviews the customer
+        // details; the quote lines are visible in the "Prepare customer and quote" step output. Binding customer + lines
+        // into one approval needs a preview-capable approval step (a follow-up), so this stays customer-only.
         act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", "customer", { requireApproval: true }),
         act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", '{\n  "customerId": id,\n  "currency": $steps.prepare.currency,\n  "lines": $steps.prepare.lines\n}'),
         act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.prepare.customer.company & " (" & $count($steps.prepare.lines) & " lines)"\n}'),

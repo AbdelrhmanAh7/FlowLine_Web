@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DESIGN_TEMPLATES, missingTemplateActions } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, availableDesignTemplates, heldBackDesignTemplates, missingTemplateActions } from "@/engine/design-templates";
 import { getAction } from "@/integrations/registry";
 import { executeGraph, NodeError, sampleInputFor, type HostHandler } from "@/engine/execute";
 import type { FlowGraph } from "@/engine/types";
@@ -55,8 +55,31 @@ describe("Deal won → Mizano quote template", () => {
     for (const other of DESIGN_TEMPLATES.filter((t) => t.id !== tpl.id)) expect(missingTemplateActions(other.graph, registry), other.id).toEqual([]);
   });
 
+  it("is offered only once every action it calls is registered, and held back until then", () => {
+    const called = ["mizano.create_customer", "mizano.create_draft_quote", "slack.post_message"];
+    // No action registered: the template is held back with exactly the ids it needs, and not offered.
+    const none = { has: () => false };
+    expect(availableDesignTemplates(none, [tpl])).toEqual([]);
+    expect(heldBackDesignTemplates(none, [tpl])).toEqual([{ template: tpl, missing: called }]);
+
+    // A registry that provides the two Mizano actions (#147 merged, or any registry doing so): offered, nothing held back.
+    const ids = new Set(called);
+    const all = { has: (id: string) => ids.has(id) };
+    expect(availableDesignTemplates(all, [tpl])).toEqual([tpl]);
+    expect(heldBackDesignTemplates(all, [tpl])).toEqual([]);
+    expect(missingTemplateActions(tpl.graph, all)).toEqual([]); // every actionId resolves once #147's actions land
+
+    // Against the real registry this mirrors the gallery and createFlow exactly: offered iff every id resolves.
+    const registry = { has: (id: string) => getAction(id) !== undefined };
+    const missing = missingTemplateActions(tpl.graph, registry);
+    expect(availableDesignTemplates(registry, [tpl]).length).toBe(missing.length === 0 ? 1 : 0);
+    expect(heldBackDesignTemplates(registry, [tpl]).length).toBe(missing.length === 0 ? 0 : 1);
+  });
+
   it("needs only the Mizano and Slack connections, and nothing else, before it can run", () => {
     expect(validateGraph(setUp())).toEqual([]);
+    // validateGraph judges wiring, not action ids (no UNKNOWN_ACTION here): the gallery's held-back list and
+    // createFlow's 409 are what keep an unregistered action out.
     expect(validateGraph(tpl.graph).map((i) => i.code)).toEqual(["MISSING_CONNECTION", "MISSING_CONNECTION", "MISSING_CONNECTION", "SETUP_REQUIRED"]);
     expect(tpl.requires.map((r) => r.provider)).toEqual(["mizano", "slack"]);
   });

@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
-import { DESIGN_TEMPLATES, missingTemplateActions, type DesignTemplate } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, availableDesignTemplates, heldBackDesignTemplates, type DesignTemplate } from "@/engine/design-templates";
 import { useAiOverview, type AiStatusDto } from "@/lib/ai";
 import { useCatalog, useConnections } from "@/lib/catalog";
-import type { FlowGraph } from "@/engine/types";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
@@ -47,10 +46,28 @@ export default function TemplatesPage() {
   const planned = useMemo(() => DESIGN_TEMPLATES.filter(match("designTemplates")), [cat, q, t]); // eslint-disable-line react-hooks/exhaustive-deps
   const catalog = useCatalog(workspace.id);
   const available = useMemo(() => new Set(catalog.data?.providers.flatMap((p) => p.actions.map((a) => a.id))), [catalog.data]);
-  // Until the catalog loads nothing is blocked; the server refuses a template with missing actions anyway.
-  const blockedReason = (tpl: { graph: FlowGraph }) => (catalog.data && missingTemplateActions(tpl.graph, available).length > 0 ? t("templates.actionsMissing") : null);
+  // A template is offered only once every action it calls exists in the catalog. Until the catalog loads we render
+  // optimistically; the server still refuses a template with missing actions (409 TEMPLATE_UNAVAILABLE, src/server/flows.ts).
+  const { usable, heldBack } = useMemo(() => {
+    if (!catalog.data) return { usable: planned, heldBack: [] as ReturnType<typeof heldBackDesignTemplates> };
+    return { usable: availableDesignTemplates(available, planned), heldBack: heldBackDesignTemplates(available, planned) };
+  }, [planned, catalog.data, available]);
   const useReason = !canEdit ? t("templates.viewer") : !online ? t("templates.offline") : null;
   const categoryLabel = (c: string) => (c === "All" ? t("templates.all") : tr(t, `templateCategory.${c}`, c));
+  // Shared by the offered and held-back design cards.
+  const designCardBody = (tpl: DesignTemplate) => {
+    const shown = templateText(t, "designTemplates", tpl);
+    return (
+      <>
+        <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
+        <div className="flex-1">
+          <p className="text-lg font-semibold">{shown.name}</p>
+          <p className="mt-1 text-base text-med">{shown.description}</p>
+        </div>
+        <Requirements tpl={tpl} status={(p) => reqStatus(t, p, ai.data?.status, connections.data)} />
+      </>
+    );
+  };
 
   return (
     <div className="flex flex-col">
@@ -138,37 +155,44 @@ export default function TemplatesPage() {
               <section>
                 <SectionLabel className="mb-3">{t("templates.connected")}</SectionLabel>
                 <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {planned.map((tpl) => {
-                    const shown = templateText(t, "designTemplates", tpl);
-                    return (
-                      <li key={tpl.id} className="motion-list-in">
-                        <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
-                          <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
-                          <div className="flex-1">
-                            <p className="text-lg font-semibold">{shown.name}</p>
-                            <p className="mt-1 text-base text-med">{shown.description}</p>
-                          </div>
-                          <Requirements tpl={tpl} status={(p) => reqStatus(t, p, ai.data?.status, connections.data)} />
-                          <details className="text-sm text-med">
-                            <summary className="cursor-pointer text-hi">{t.plural("templates.setup", tpl.setup.length)}</summary>
-                            <ol className="mt-2 list-decimal space-y-1 ps-5">
-                              {tpl.setup.map((s, i) => (
-                                <li key={s}>{tr(t, `designTemplates.${tpl.id}.setup.s${i + 1}`, s)}</li>
-                              ))}
-                            </ol>
-                          </details>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="data text-xs text-muted uppercase">
-                              {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
-                            </span>
-                            <Button size="sm" variant="primary" disabledReason={useReason ?? blockedReason(tpl)} loading={create.isPending && create.variables?.templateId === tpl.id} onClick={() => create.mutate({ templateId: tpl.id })}>
-                              {t("templates.use")}
-                            </Button>
-                          </div>
-                        </Card>
-                      </li>
-                    );
-                  })}
+                  {usable.map((tpl) => (
+                    <li key={tpl.id} className="motion-list-in">
+                      <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
+                        {designCardBody(tpl)}
+                        <details className="text-sm text-med">
+                          <summary className="cursor-pointer text-hi">{t.plural("templates.setup", tpl.setup.length)}</summary>
+                          <ol className="mt-2 list-decimal space-y-1 ps-5">
+                            {tpl.setup.map((s, i) => (
+                              <li key={s}>{tr(t, `designTemplates.${tpl.id}.setup.s${i + 1}`, s)}</li>
+                            ))}
+                          </ol>
+                        </details>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="data text-xs text-muted uppercase">
+                            {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
+                          </span>
+                          <Button size="sm" variant="primary" disabledReason={useReason} loading={create.isPending && create.variables?.templateId === tpl.id} onClick={() => create.mutate({ templateId: tpl.id })}>
+                            {t("templates.use")}
+                          </Button>
+                        </div>
+                      </Card>
+                    </li>
+                  ))}
+                  {heldBack.map(({ template: tpl }) => (
+                    <li key={tpl.id} className="motion-list-in">
+                      <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-held-back-${tpl.id}`}>
+                        {designCardBody(tpl)}
+                        <p className="rounded-md bg-app p-2 text-sm text-med">
+                          <span className="font-medium text-hi">{t("templates.notAvailableYet")}</span> — {t("templates.actionsMissing")}
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="data text-xs text-muted uppercase">
+                            {categoryLabel(tpl.category)} · {t.plural("flows.nodes", tpl.graph.nodes.length)}
+                          </span>
+                        </div>
+                      </Card>
+                    </li>
+                  ))}
                 </ul>
               </section>
             )}

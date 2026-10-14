@@ -1,19 +1,27 @@
-// Issue #149 (Mizano connector v1): the gallery offers the "Deal won → Mizano quote" template. Its Use button is disabled with a
-// reason until the Mizano create actions (#147) exist, so this checks the listing only. The throwaway stack has no Mizano workspace,
-// so using the template and the run itself (approve creates the draft quote, reject creates nothing) are covered by the template's
-// integration test with a mocked Mizano, not here.
+// Issue #149 (Mizano connector v1): the "Deal won → Mizano quote" template is listed in the gallery. Its Mizano create
+// actions come from #147, so until those exist in the provider registry the template is held back: listed with its name
+// and a reason, but with no "Use template" button, so it can't create a flow that cannot run.
+//
+// AC1 (gallery listing EN + AR) is covered here. AC2 (approval blocks; reject ends run) and AC3 (happy-path e2e with
+// mocked Mizano) are verified at the worker/engine level in tests/integration/deal-won-mizano-approval.test.ts and
+// tests/unit/deal-won-mizano-template.test.ts. The browser-level happy-path e2e (approve in UI, draft quote at fake
+// Mizano server) is deferred until #147 (real actions) and #225 (fake mizano handler) merge, per CTO decision on #149.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 test(
-  "@issue-149 AC1: the templates gallery lists 'Deal won → Mizano quote', with its requirements",
+  "@issue-149 AC1: the gallery lists 'Deal won → Mizano quote', held back until its actions exist",
   { tags: ["feat:fl-templates", "feat:fl-flows-api"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("open the workspace's Templates page from the navigation");
-    await agent.assert("a template card named Deal won → Mizano quote is listed and says it needs a Mizano connection");
+    await agent.assert("a template named Deal won → Mizano quote is listed and says it needs a Mizano connection");
     await expect(screen.getByText("Deal won → Mizano quote").first()).toBeVisible();
-    await agent.assert("the Deal won → Mizano quote card lists Mizano and Slack as requirements and has a Use template button that is enabled or disabled with a reason");
+    await agent.assert("the Deal won → Mizano quote card is marked as not available yet, lists Mizano and Slack as requirements, and offers no Use template button");
+    const card = screen.getByTestId("template-held-back-deal-won-mizano-quote");
+    await expect(card).toBeVisible();
+    await expect(card.getByRole("button", { name: "Use template" })).toHaveCount(0);
+    await expect(card).toContainText("Not available yet");
   },
 );
 
@@ -25,7 +33,7 @@ test(
     await agent.act("switch the interface language to Arabic");
     await agent.act("open the workspace's Templates page from the navigation");
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
-    await agent.assert("a template card named صفقة مكسوبة ← عرض سعر Mizano is listed");
+    await agent.assert("a template named صفقة مكسوبة ← عرض سعر Mizano is listed and marked as not available yet");
     await expect(screen.getByText("صفقة مكسوبة ← عرض سعر Mizano").first()).toBeVisible();
   },
 );
