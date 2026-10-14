@@ -2,7 +2,7 @@
 
 Outcome: **Implemented on branch `ai/239` by merging `ai/147` (which provides the Mizano create actions) and applying the two assertion replacements plus double-call tests per the acceptance criteria.**
 
-Checked on 2026-10-14: macOS, Node 26.10.0, Vitest 5.0.2. Commit `139154d9` on `ai/239`.
+Checked on 2026-10-14: macOS, Node 26.10.0, Vitest 5.0.2. Commit `ba532163` on `ai/239`. All acceptance criteria verified by running the test suite.
 
 ## Changes made
 
