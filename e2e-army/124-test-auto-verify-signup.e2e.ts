@@ -148,51 +148,6 @@ test(
 );
 
 test(
-  "@issue-124 AC1: the /sign-up form has exactly Name, Email and Password fields and a Create account button - no password-confirmation field",
-  { tags: ["feat:fl-sign-up", "lvl:ui"] },
-  async ({ app, screen, browser }) => {
-    const base = app.baseUrl!;
-    await browser.setCookies([
-      { url: base, name: "fl_locale", value: "en" },
-      { url: base, name: "fl_test_beta_mode", value: "open" },
-    ]);
-    await app.open("/sign-up");
-    await screen.getByLabel("Name").waitFor();
-    await screen.getByLabel("Email").waitFor();
-    await screen.getByLabel("Password").waitFor();
-    await screen.getByRole("button", "Create account").waitFor();
-    // The form is Name + Email + Password only (design-reference slide 6); a generated tester must not expect a
-    // password-confirmation field.
-    const count = await browser.evaluate(() => document.querySelectorAll('form[method="post"] input').length);
-    expect(count).toBe(3);
-  },
-);
-
-test(
-  "@issue-124 AC1: in the browser, an auto-verified account signs in on the sign-in form with the credentials it signed up with",
-  { tags: ["feat:fl-sign-in", "lvl:ui"] },
-  async ({ app, screen, browser }) => {
-    const base = app.baseUrl!;
-    const email = await freshEmail(base, "ui-sign-in-after-auto-verify");
-    const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: headers(base, `${BASE_COOKIES}; fl_test_auto_verify=1`), body: JSON.stringify({ email, password: PASSWORD, name: "Army 124" }) });
-    expect(up.status).toBe(200);
-    // Signing in needs no opt-in: the account itself was created verified.
-    await browser.setCookies([
-      { url: base, name: "fl_locale", value: "en" },
-      { url: base, name: "fl_test_beta_mode", value: "open" },
-    ]);
-    await app.open("/sign-in");
-    await untilAuthFormHydrated(browser);
-    await screen.getByLabel("Email").fill(email);
-    await screen.getByLabel("Password").fill(PASSWORD);
-    await screen.getByRole("button", "Sign in").tap();
-    // A new account has no workspace yet, so /app sends it on to onboarding; no "not verified" error on the way.
-    await expect(screen.getByRole("heading", "Name your workspace")).toBeVisible();
-    await expect(screen.getByText("Verify your email first — open the link we sent you.")).not.toBeVisible();
-  },
-);
-
-test(
   "@issue-124 AC2: in the browser, without an opt-in Create account on /sign-up shows Check your inbox and e-mails a link, and Resend on /resend-verification answers with its honest status line",
   { tags: ["feat:fl-sign-up", "lvl:ui"] },
   async ({ app, screen, browser }) => {

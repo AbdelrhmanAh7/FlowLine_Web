@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #124 — harness handoff (2026-10-14)
+
+The latest CTO duplicate-test finding is fixed: six unique army tests remain, each passed twice on the same isolated database. Typecheck, lint, 16 unit tests, 5 integration tests and 3 Chromium regression tests passed locally; the complete request-level signup → sign-in → flow journey passed too. [Evidence and the initial cold-dev timeout](artifacts/phase-4/issue-124/EVIDENCE.md). Next: the harness pushes this branch to existing PR #135, obtains fresh `e2e-army`, CI and CodeRabbit results on the final head, and leaves merge handling to automerge. No push or full local suite/build was performed by this implementer.
+
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
