@@ -32,6 +32,10 @@ export async function testConnection(user: CurrentUser, workspaceId: string, con
   const provider = getProvider(conn.provider);
   if (!provider) throw new HttpError(404, "UNKNOWN_PROVIDER", "Provider not found");
 
+  // OAuth access tokens expire within about an hour and only the runtime's refresh path renews them, so a test here
+  // would report a false failure. Test connection is for non-refreshing credentials (API key, basic, connection string).
+  if (provider.authType === "oauth2") throw new HttpError(400, "TEST_NOT_SUPPORTED", "Test connection is not available for OAuth connections");
+
   const context: SecretContext = { table: "connection", rowId: conn.id, workspaceId: workspace.id, provider: conn.provider, purpose: "credentials" };
   const credentials = openSecret<Credentials>({ ciphertext: conn.secretEnc, keyId: conn.keyId, legacy: conn.legacyCrypto }, context);
 

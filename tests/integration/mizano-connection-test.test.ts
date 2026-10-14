@@ -67,6 +67,12 @@ describe("testConnection (saved Mizano connection)", () => {
     expect(conn.id).not.toBe(other.conn.id);
   });
 
+  it("an OAuth connection is refused (its token needs the runtime refresh path), before any secret is opened", async () => {
+    const { owner, ws, conn } = await setup();
+    await db.update(schema.connection).set({ provider: "slack" }).where(eq(schema.connection.id, conn.id));
+    await expectHttpError(testConnection(owner, ws.id, conn.id), 400, "TEST_NOT_SUPPORTED");
+  });
+
   it("a private connection can only be tested by its creator, even by another editor", async () => {
     const { owner, ws, conn } = await setup("private");
     const editor = await makeUser("mz-editor");

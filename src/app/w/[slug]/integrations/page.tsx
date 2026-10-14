@@ -246,9 +246,11 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
           <Button size="sm" onClick={onReconnect} disabledReason={viewerReason}>
             {t("integrations.card.reconnect")}
           </Button>
-          <Button size="sm" onClick={() => test.mutate()} loading={test.isPending} disabledReason={viewerReason}>
-            {t("integrations.card.test")}
-          </Button>
+          {provider?.authType !== "oauth2" && (
+            <Button size="sm" onClick={() => test.mutate()} loading={test.isPending} disabledReason={viewerReason}>
+              {t("integrations.card.test")}
+            </Button>
+          )}
           <Button size="sm" variant="danger-ghost" aria-expanded={confirm} onClick={() => setConfirm(true)} disabledReason={viewerReason}>
             {t("integrations.card.remove")}
           </Button>
