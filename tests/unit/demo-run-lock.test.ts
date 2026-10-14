@@ -27,16 +27,16 @@ describe("lockHeld()", () => {
     rmSync(lock, { force: true });
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  const setPid = () => writeFileSync(lock, "4242");
+  const setPid = (pid: number) => writeFileSync(lock, String(pid));
   it("keeps the lock when the pid exists but kill is not permitted (EPERM)", () => {
-    setPid();
+    setPid(4242);
     vi.spyOn(process, "kill").mockImplementation(() => {
       throw Object.assign(new Error("eperm"), { code: "EPERM" });
     });
     expect(lockHeld(lock)).toBe(4242);
   });
   it("frees the lock when the process is gone (ESRCH)", () => {
-    setPid();
+    setPid(4242);
     vi.spyOn(process, "kill").mockImplementation(() => {
       throw Object.assign(new Error("esrch"), { code: "ESRCH" });
     });
@@ -44,6 +44,26 @@ describe("lockHeld()", () => {
   });
   it("reports no holder when the lock file does not exist", () => {
     expect(lockHeld(join(dir, "missing.lock"))).toBeNull();
+  });
+  it("reports no holder when the lock file is empty", () => {
+    writeFileSync(lock, "");
+    expect(lockHeld(lock)).toBeNull();
+  });
+  it("reports no holder when the lock file contains a non-integer value", () => {
+    writeFileSync(lock, "abc");
+    expect(lockHeld(lock)).toBeNull();
+  });
+  it("reports no holder when the lock file contains NaN", () => {
+    writeFileSync(lock, "NaN");
+    expect(lockHeld(lock)).toBeNull();
+  });
+  it("reports no holder when the lock file contains PID 0", () => {
+    setPid(0);
+    expect(lockHeld(lock)).toBeNull();
+  });
+  it("reports no holder when the lock file contains a negative PID", () => {
+    setPid(-42);
+    expect(lockHeld(lock)).toBeNull();
   });
 });
 

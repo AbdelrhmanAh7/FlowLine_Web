@@ -12,8 +12,9 @@ export const LOCK = join(WORK, "build.lock");
 /** The pid in `file`, when it names an integer process that is alive (EPERM counts as alive; a dead or corrupt lock frees it). */
 export function lockHeld(file = LOCK): number | null {
   if (!existsSync(file)) return null;
-  const pid = Number(readFileSync(file, "utf8"));
-  if (!Number.isInteger(pid)) return null;
+  const content = readFileSync(file, "utf8");
+  const pid = Number(content);
+  if (!Number.isInteger(pid) || pid <= 0) return null;
   try {
     process.kill(pid, 0);
     return pid;

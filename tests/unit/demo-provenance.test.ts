@@ -52,6 +52,10 @@ describe("gitHead()", () => {
     spawn({ status: 0, stdout: "  \n" });
     expect(() => gitHead(ROOT)).toThrow(/printed nothing/);
   });
+  it("throws when git stdout is null", () => {
+    spawn({ status: 0, stdout: null, stderr: "" });
+    expect(() => gitHead(ROOT)).toThrow(/printed nothing/);
+  });
   it("returns the real HEAD SHA of this checkout", () => {
     h.mock.mockImplementation(h.real!);
     expect(gitHead(ROOT)).toMatch(/^[0-9a-f]{40}$/);

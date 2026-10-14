@@ -24,10 +24,10 @@ export function readProvenance(dir: string): string {
  * nonzero exit (no HEAD, not a checkout) and empty output — so an empty SHA can never reach a recording's provenance.
  */
 export function gitHead(root: string): string {
-  const r = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+  const r = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: null });
   if (r.error) throw new Error(`git rev-parse HEAD could not run: ${(r.error as Error).message}`);
   if (r.status !== 0) throw new Error(`git rev-parse HEAD failed (exit ${r.status}): ${String(r.stderr).trim()}`);
-  const sha = String(r.stdout ?? "").trim();
+  const sha = r.stdout ? r.stdout.toString("utf8").trim() : "";
   if (!sha) throw new Error("git rev-parse HEAD printed nothing (no HEAD in this checkout)");
   return sha;
 }
