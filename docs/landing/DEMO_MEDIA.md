@@ -57,8 +57,11 @@ was reported playable, but only if `canPlayType` accepts it; otherwise only the 
 ### Delivery
 
 `next.config.ts` `headers()` configures `/media/demo/:path*` with `Cache-Control: public, max-age=31536000, immutable` (file names are
-content-hashed; Next's default for `public/` is `max-age=0`). `Range` delivery with `206` is expected from Next's static server but remains unverified: the "served media" test in
-`e2e/landing-demo.spec.ts` is skipped until #99 supplies a real manifest. Header configuration is unit-tested; it is not HTTP delivery evidence.
+content-hashed; Next's default for `public/` is `max-age=0`). The "served media" test in
+`e2e/landing-demo.spec.ts` temporarily copies the tiny MP4 fixture into `public/media/demo/`, requests bytes 0–1023 through Next's real static server,
+and checks status 206, immutable caching, Content-Range and the 1024-byte body. It cleans up the file afterwards and needs no #99 manifest.
+`scripts/dev-test.mjs` prepares the fixture before Next starts (test environment only), so production-mode test stacks
+index it too; the launcher removes its own fixture on exit. This verifies local static delivery; production delivery still requires hosted validation.
 
 ### Honest copy
 
@@ -73,7 +76,7 @@ Every string is in `src/i18n/messages/{ar,en}.json` under `landing.demo.*` (iden
   being tested after the real media lands; `e2e/landing-demo.spec.ts` sets `fixture` and answers `/media/demo/*` with `page.route`.
   Playwright builds lack H.264, so playback is stubbed: those specs assert **when** video is requested, **which** file and what the
   visitor can operate, not decoding.
-- `e2e-army/100-landing-demo.e2e.ts` is the blocking `e2e-army` flow (hero, Pause/Play, walkthrough in Arabic, bento).
+- `e2e-army/100-landing-demo.e2e.ts` is the blocking `e2e-army` flow (hero, Pause/Play, walkthrough in Arabic, bento, reduced motion and missing manifest).
 - `tests/unit/demo-media.test.ts` (manifest parsing, `fileFor`, `chooseSource`, the `play()` handler, the cache header, i18n keys) and
   `tests/unit/demo-markup.test.ts` (server markup).
 
@@ -87,3 +90,11 @@ second player.
 
 Run the #99 pipeline and commit `public/media/demo/`; nothing else changes. If a locale has no files, the page falls back to the
 Arabic ones; a clip without a poster or video is left out of the bento.
+
+### Verification setup (issue #100)
+
+With no `public/media/demo/manifest.json`, the correct result is the legacy `HeroPin`, with no demo button or bento.
+Do not add placeholder production media to make those controls appear. A browser route for `manifest.json` cannot
+change the server filesystem reader. Fixture verification must start the app with `FLOWLINE_ENV=test`, set
+`fl_test_demo=fixture` before navigation, and intercept the media requests. The army test does this for EN and AR;
+its missing-manifest case uses `fl_test_demo=off`. Production ignores both cookie overrides.

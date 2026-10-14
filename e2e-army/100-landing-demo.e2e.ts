@@ -11,7 +11,7 @@ const base = (app: { baseUrl?: string }) => process.env.E2E_ARMY_URL ?? app.base
 const VTT = "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nfixture\n";
 
 /** Serves the fixture media and records every request; a stub player makes play/pause/seek deterministic. */
-async function arm(browser: Browser, locale: "en" | "ar", url: string) {
+async function arm(browser: Browser, locale: "en" | "ar", url: string, reduced = false) {
   const hits: string[] = [];
   await browser.route("**/media/demo/**", async (route) => {
     const path = new URL(route.request.url).pathname;
@@ -30,6 +30,14 @@ async function arm(browser: Browser, locale: "en" | "ar", url: string) {
     // Deterministic codec choice: AV1 is supported, smooth and power efficient.
     Object.defineProperty(navigator, "mediaCapabilities", { configurable: true, value: { decodingInfo: async () => ({ supported: true, smooth: true, powerEfficient: true }) } });
   });
+  if (reduced) await browser.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const result = original(query);
+      if (query === "(prefers-reduced-motion: reduce)") Object.defineProperty(result, "matches", { value: true });
+      return result;
+    };
+  });
   await browser.setCookies([{ url, name: "fl_locale", value: locale }, { url, name: "fl_test_demo", value: "fixture" }]);
   return hits;
 }
@@ -44,7 +52,8 @@ test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after 
   });
   expect(hero, "DemoVideo inside .hero-scrub").not.toBeNull();
   expect(hero?.autoplay).toBe(false);
-  expect(hero?.preload).toBe("none");
+  const html = await browser.evaluate(async () => (await fetch("/")).text());
+  expect(html.match(/<video\b[^>]*data-demo-clip="hero"[^>]*>/)?.[0]).toContain('preload="none"');
   expect(hero?.poster).toContain("/media/demo/hero.en.light.poster.");
   expect(hero?.preloaded).toBe(hero?.poster); // the poster is the LCP element and is preloaded
   expect(hero?.w && hero?.h && hero?.label).toBeTruthy();
@@ -56,7 +65,7 @@ test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after 
 });
 
 test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play button of at least 44x44 px that sticks", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
-  await arm(browser, "en", base(app));
+  const hits = await arm(browser, "en", base(app));
   await app.open("/");
   const pause = screen.getByRole("button", "Pause").first();
   await expect(pause).toBeVisible({ timeout: 15_000 });
@@ -69,6 +78,9 @@ test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play 
   await expect.poll(() => browser.evaluate(() => (document.querySelector("video[data-demo-clip='hero']") as HTMLVideoElement).paused)).toBe(true);
   await expect(screen.getByRole("button", "Play demo").first()).toBeVisible();
   expect(await browser.evaluate(() => document.querySelector(".hero-scrub [data-demo-toggle]")!.getAttribute("aria-pressed"))).toBe("true");
+  await screen.getByRole("button", "Play demo").first().tap();
+  await expect(pause).toBeVisible();
+  expect([...new Set(hits.filter((path) => /\/hero\..*\.mp4$/.test(path)))]).toHaveLength(1);
 });
 
 test("@issue-100 AC4: the walkthrough dialog opens from the button, steps through four chapters, flips its arrow keys in Arabic and closes with Esc", { tags: ["feat:fl-landing", "feat:fl-i18n-rtl", "feat:fl-design-system"] }, async ({ app, screen, browser }) => {
@@ -123,4 +135,30 @@ test("@issue-100 AC5: the See it in action bento shows four tiles with one hones
   expect(hits.filter((p) => /\/(templates|build|run|history)\..*\.mp4$/.test(p))).toEqual([]); // below the fold: nothing fetched yet
   await browser.evaluate(() => document.getElementById("demo")!.scrollIntoView());
   await expect.poll(() => hits.some((p) => /\/templates\..*\.mp4$/.test(p))).toBe(true);
+});
+
+
+test("@issue-100 AC2: with the fixture manifest reduced motion shows the hero, Play demo, walkthrough and four bento tiles without video requests", { tags: ["feat:fl-landing"] }, async ({ app, browser, screen }) => {
+  const hits = await arm(browser, "en", base(app), true);
+  await app.open("/");
+  await expect(screen.getByRole("button", "Play demo").first()).toBeVisible();
+  await expect(screen.getByTestId("demo-watch")).toBeVisible();
+  await expect(screen.getByRole("heading", "See it in action")).toBeVisible();
+  expect(await browser.evaluate(() => ({
+    hero: Boolean(document.querySelector(".hero-scrub video[data-demo-clip='hero']")),
+    tiles: document.querySelectorAll("#demo [data-demo-tile]").length,
+  }))).toEqual({ hero: true, tiles: 4 });
+  expect(hits.filter((path) => path.endsWith(".mp4"))).toEqual([]);
+});
+
+test("@issue-100 AC8: without a manifest the legacy hero remains and no demo controls or bento appear", { tags: ["feat:fl-landing"] }, async ({ app, browser, screen }) => {
+  const hits = await arm(browser, "en", base(app));
+  await browser.setCookies([{ url: base(app), name: "fl_test_demo", value: "off" }]);
+  await app.open("/");
+  await expect(screen.getByRole("heading", /Less repetitive work/)).toBeVisible();
+  expect(await browser.evaluate(() => ({
+    hero: Boolean(document.querySelector(".hero-scrub")),
+    demo: Boolean(document.querySelector("[data-demo-clip], #demo, [data-testid='demo-watch']")),
+  }))).toEqual({ hero: true, demo: false });
+  expect(hits).toEqual([]);
 });

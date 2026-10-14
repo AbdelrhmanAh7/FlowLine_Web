@@ -87,6 +87,15 @@ Production Lighthouse, measured CLS, actual client gzip and real-media HTTP
 headers/Range remain unverified; #100 is **not verified complete**.
 The inherited large diff still requires reviewable layers before merge.
 
+Rework validation (2026-10-14, unchanged product SHA `2c88acbe254f0bfa13bc86f569c951f57e86b900`):
+6/6 issue army cases, 22/22 Chromium demo cases and 26/26 focused unit cases passed;
+all 25 existing landing cases passed in the combined run. Final typecheck and lint exited 0.
+The preload assertion now inspects server HTML rather than racing client playback.
+The static Range test no longer skips for missing #99 media: a temporary fixture verified immutable caching,
+206 and the exact 1024-byte response from Next. Fixture-present and manifest-absent army cases prove the
+conditional rendering contract. Hosted performance/bundle measurements remain pending; no production claim is made.
+
+
 - Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
 - Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
 - Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md). Lighthouse before/after is not measured locally (needs a production build; CI).

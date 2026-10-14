@@ -6,11 +6,20 @@
 // every URL from them (DATABASE_URL, BETTER_AUTH_URL, FLOWLINE_PUBLIC_URL, the fake overrides and webhooks, the egress
 // allowlist). The database is created when missing and migrated before seeding. Unset: the single default stack.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import pg from "pg";
 import testStackEnv from "./test-stack.cjs";
 
 process.loadEnvFile(".env.test");
+// Next production indexes public files at startup: register the Range fixture before build/start, never in a production launcher.
+const demoRangeFixture = "public/media/demo/range-fixture.fx000001.mp4";
+const createdDemoRangeFixture = process.env.FLOWLINE_ENV === "test" && !existsSync(demoRangeFixture);
+if (createdDemoRangeFixture) {
+  mkdirSync("public/media/demo", { recursive: true });
+  copyFileSync("e2e/fixtures/demo/sample.mp4", demoRangeFixture);
+  process.on("exit", () => { if (existsSync(demoRangeFixture)) unlinkSync(demoRangeFixture); });
+}
+
 // Also sets FLOWLINE_AI_TEST_OVERRIDE (AI hub test double: honoured only with FLOWLINE_ENV=test; the owner still enters
 // a key in the UI). Fake ports default to the URLs in .env.test (4010 / 4011).
 const stack = testStackEnv.applyTestStackEnv(process.env);

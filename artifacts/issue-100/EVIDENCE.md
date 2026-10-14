@@ -66,3 +66,26 @@ media. Only after those and required hosted checks pass can #100 be complete.
 The inherited implementation predates layer planning and exceeds the small-PR
 limit. This session does not rewrite pushed history or claim to have split it;
 the harness/owner must arrange reviewable layers before merge.
+
+## Rework validation — 2026-10-14
+
+Product under test: `2c88acbe254f0bfa13bc86f569c951f57e86b900` (landing application code unchanged in this rework).
+Test blobs: `e2e/landing-demo.spec.ts` = `cb9a143782b3788bcdb8ed40fb0f61e94ec05037`;
+`e2e-army/100-landing-demo.e2e.ts` = `ffa3972242ac95af7f530dc9ba4413964a64c9c3`.
+Test launcher blob: `b07ced1f6ef90921da7a27ebb511afcef66f76aa`.
+The disposable PostgreSQL cluster on 55432 and test app on 3100 were used again; the stack was restarted after the launcher change, and the 22-case demo run and six-case army run passed again.
+
+- AC1–6, AC8: `E2E_ARMY_URL=http://localhost:3100 E2E_ARMY_NOAGENT=1 nice -n 10 pnpm e2e:army e2e-army/100-landing-demo.e2e.ts` — **6 passed, 0 skipped**, final run `01a139b1-4729-7e2b-9d39-467b23214cbd`.
+- AC1–6, AC8–9: `nice -n 10 pnpm exec playwright test e2e/landing-demo.spec.ts --project=chromium --workers=1` — **22 passed, 0 skipped**.
+- Existing landing regression: first combined demo/landing run executed 47 tests, with **all 25 existing landing tests passing** and one demo preload assertion failing. The corrected demo spec was rerun in full and passed all 22.
+- AC7 static delivery: the browser spec now creates a temporary MP4 fixture in `public/media/demo/` and checks real Next HTTP delivery (no `page.route`): **206**, `public, max-age=31536000, immutable`, `Content-Range: bytes 0-1023/<fixture size>`, 1024-byte body. The test cleans up files it creates; the test launcher pre-registers its fixture before Next starts and removes it on exit (Next production indexes public files once). No production fixture is committed.
+- AC9 units: `nice -n 10 pnpm exec vitest run --project unit tests/unit/demo-media.test.ts tests/unit/demo-markup.test.ts --maxWorkers=2` — **26 passed**. The sandbox rejected changing process priority; the tests themselves executed and exited 0.
+- Final `pnpm typecheck` and `pnpm lint` — **exit 0**, run with access to the shared compiler lock.
+
+Root cause of the reproduced preload failure: the test inspected enhanced markup after playback began, when `DemoVideo` intentionally changes preload to `auto`. It now checks `preload="none"` in server HTML, preserving the no-JS assertion and all playback timing assertions.
+The reported missing-demo scenario passes with the fixture manifest; without a manifest, absence of the demo is explicitly required by AC8. New army cases verify both states, including reduced-motion Play, walkthrough and four tiles. Browser interception of a manifest cannot affect the filesystem reader; the consumption guide documents the required server/test-cookie setup.
+
+AC7 production Lighthouse before/after, measured CLS and actual Next client gzip remain **unverified**.
+Firefox/WebKit and hosted CI were not run in this session. This is not a completion claim.
+Reuse: existing native dialog/media APIs and helpers; no dependencies added. PR context: **Part of #96**;
+the harness must check which sibling merges second before adding `Closes #96`.

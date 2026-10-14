@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { BASE_URL } from "./stack";
 
@@ -88,7 +88,10 @@ test.describe("with a manifest", () => {
     const v = hero(page);
     await expect(v).toHaveCount(1);
     await expect(v).not.toHaveAttribute("autoplay", /.*/);
-    await expect(v).toHaveAttribute("preload", "none");
+    // Assert the no-JS contract on server HTML: the visible enhanced player legitimately changes to preload=auto.
+    const html = await (await page.request.get("/")).text();
+    const markup = html.match(/<video\b[^>]*data-demo-clip="hero"[^>]*>/)?.[0];
+    expect(markup).toContain('preload="none"');
     await expect(v).toHaveAttribute("playsinline", "");
     for (const a of ["width", "height", "aria-label", "poster"]) await expect(v).toHaveAttribute(a, /.+/);
     const poster = (await v.getAttribute("poster"))!;
@@ -362,14 +365,22 @@ test.describe("without a manifest", () => {
 });
 
 test.describe("served media", () => {
-  // Real files exist once #99's media is in the tree; without them there is nothing to request, so this asserts nothing.
-  const manifest = "public/media/demo/manifest.json";
+  // Exercise Next's real static-file delivery without depending on #99 or route interception.
+  const path = "public/media/demo/range-fixture.fx000001.mp4";
+  let created = false;
+  test.beforeAll(() => {
+    if (!existsSync(path)) {
+      mkdirSync("public/media/demo", { recursive: true });
+      copyFileSync(`${FIX}/sample.mp4`, path);
+      created = true;
+    }
+  });
+  test.afterAll(() => { if (created) unlinkSync(path); });
   test("/media/demo/* is immutable and answers Range with 206", async ({ request }) => {
-    test.skip(!existsSync(manifest), "public/media/demo/manifest.json is not in this tree yet (#99); headers are unit-tested in tests/unit/demo-media.test.ts");
-    const m = JSON.parse(readFileSync(manifest, "utf8")) as { files: { kind: string; path: string }[] };
-    const file = m.files.find((f) => f.kind === "video")!.path;
-    const res = await request.get(`/media/demo/${file}`, { headers: { range: "bytes=0-1023" } });
+    const res = await request.get("/media/demo/range-fixture.fx000001.mp4", { headers: { range: "bytes=0-1023" } });
     expect(res.status()).toBe(206);
     expect(res.headers()["cache-control"]).toBe("public, max-age=31536000, immutable");
+    expect(res.headers()["content-range"]).toBe(`bytes 0-1023/${MP4.length}`);
+    expect((await res.body()).length).toBe(1024);
   });
 });

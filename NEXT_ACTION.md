@@ -1,16 +1,15 @@
 # Next action — 2026-10-03
 
-## Issue #100 validation handoff — 2026-10-13
+## Issue #100 validation handoff — 2026-10-14
 
-Continue from `ai/100`, product SHA `daa1a0d0b7f100bc11e847a012211644dfce664b`.
-Fresh focused checks: 46 Chromium tests passed, 1 real-media test skipped;
-4/4 issue e2e-army tests and 35/35 unit tests passed; lint and direct TypeScript
-check passed. A disposable PostgreSQL cluster on port 55432 removed the startup
-blocker. See [evidence](artifacts/issue-100/EVIDENCE.md).
-Hosted production Lighthouse, actual added gzip, measured CLS and real-media
-immutable/Range checks remain pending. Do not mark #100 complete. The inherited
-large diff still needs reviewable layers arranged by the harness/owner; no pushed
-history was rewritten, and no push/PR/merge action was taken.
+Product SHA `2c88acbe254f0bfa13bc86f569c951f57e86b900`; continuation changes tests/docs only.
+Fresh results: 6 issue army tests, 22 Chromium demo tests, 26 focused units passed;
+all 25 existing landing cases passed. Typecheck and lint exited 0.
+Real static HTTP Range/immutable checks now pass with a temporary fixture, without #99.
+For verification without real media, use FLOWLINE_ENV=test and fl_test_demo=fixture before navigation;
+without a manifest the demo's absence is required behavior. See [evidence](artifacts/issue-100/EVIDENCE.md).
+Hosted before/after Lighthouse, CLS, Next client gzip and CI/browser matrix remain pending.
+The harness handles the inherited stack and push/PR/review actions. No local full build/suite ran.
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
