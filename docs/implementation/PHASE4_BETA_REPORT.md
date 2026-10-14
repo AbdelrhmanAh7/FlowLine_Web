@@ -38,9 +38,11 @@ Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/r
 keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
 then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
 `tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
-subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
-stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`.
+e2e-army tooling and hygiene (`tests/unit/e2e-army-tooling.test.ts`, 12/12 passed): `e2e-army/117-flows-list-dashboard.e2e.ts`
+uses `expect.poll` (no fixed `setTimeout` delay) and passes 1/1 against a stack built from `c95f8b5`; top-level e2e-army files
+stay within the 8-file cap by consolidating the Mizano integration actions spec (`148` into `147`).
+`pnpm typecheck` and eslint on the changed files are clean.
 Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).

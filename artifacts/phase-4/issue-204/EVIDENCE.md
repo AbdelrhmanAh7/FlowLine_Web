@@ -24,5 +24,6 @@ and doc-only edits). Run on 2026-10-13 on the owner's Mac mini.
 | `tests/integration/flow-version-backfill.test.ts` | 3/3 | migration 0025 nulls legacy save/overwrite/run numbers, keeps the published number and its subflow lookup, trigger back on |
 | `tests/integration/flows.test.ts` | 11/11 | flow list and history unchanged otherwise |
 | `tests/unit/flow-version-label.test.ts` | 3/3 | history and inspector labels for unnumbered snapshots |
+| `tests/unit/e2e-army-tooling.test.ts` | 12/12 | no fixed delay in e2e-army specs, top-level e2e-army files within 8-file cap |
 
 `pnpm typecheck` clean; eslint on every changed file clean. No full gate or browser-suite run is claimed (CI runs it).
