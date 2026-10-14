@@ -10,7 +10,8 @@ test("user menu opens the security page and shows the two-step status", async ({
   await page.getByRole("menuitem", { name: "Security" }).click();
   await expect(page).toHaveURL(/\/account\/security$/);
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
-  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveText("Off");
 
   // Turn MFA on through the API so this status test does not depend on the UI enrolment flow, then the page reads On.
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
@@ -20,7 +21,7 @@ test("user menu opens the security page and shows the two-step status", async ({
   const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret)) } });
   expect(verify.ok()).toBeTruthy();
   await page.reload();
-  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(status).toHaveText("On");
 });
 
 test("a signed-out visit to the security page redirects to sign-in", async ({ browser }) => {
@@ -42,15 +43,31 @@ test("enable two-step verification from the account page", async ({ page }) => {
     if (r.method() === "POST" && new URL(r.url()).pathname === "/api/auth/two-factor/enable") enableCalls++;
   });
   await page.goto("/account/security");
-  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  const status = page.getByTestId("two-factor-status");
+  const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
+  await expect(status).toHaveText("Off");
 
-  // Cancel leaves it Off; a wrong password shows an error and no secret.
+  // Watch the two-factor endpoints: Cancel must never submit them.
+  let enableRequests = 0;
+  let verifyRequests = 0;
+  page.on("request", (req) => {
+    if (req.url().includes("/api/auth/two-factor/enable")) enableRequests += 1;
+    if (req.url().includes("/api/auth/two-factor/verify-totp")) verifyRequests += 1;
+  });
+
+  // Cancel in the password form leaves it Off: no enable request, no error toast.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(status).toHaveText("Off");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(dangerToast).toHaveCount(0);
+  expect(enableRequests).toBe(0);
+
+  // A wrong password shows an error and no secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill("not-the-password-1");
   await page.getByRole("button", { name: "Enable" }).click();
-  await expect(page.getByText("That password isn't correct.")).toBeVisible();
+  await expect(dangerToast).toHaveText("That password isn't correct.");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 
   // The right password shows the QR, the secret below it and backup codes (left-to-right) with the one-time warning.
@@ -69,15 +86,25 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // White square so the code scans on the dark theme.
   await expect(qr).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByText(/shown only once/)).toBeVisible();
+  await expect(page.getByTestId("backup-codes-warning")).toHaveText("Backup codes — shown only once, store them offline.");
+  expect(foreign).toEqual([]);
   const raw = base32Decode((await secret.textContent())!.trim());
 
+  // Cancel in the code form leaves it Off: no verify request, secret hidden.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(status).toHaveText("Off");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  expect(verifyRequests).toBe(0);
+
   // A wrong code is rejected and the status is still Off after a reload.
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Authentication code").fill("000000");
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
-  await expect(page.getByText("That code isn't valid. Try the current one.")).toBeVisible();
+  await expect(dangerToast.last()).toHaveText("That code isn't valid. Try the current one.");
   await page.reload();
-  await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  await expect(status).toHaveText("Off");
 
   // Cancel hides the QR too.
   await page.getByRole("button", { name: "Enable" }).click();
@@ -95,13 +122,68 @@ test("enable two-step verification from the account page", async ({ page }) => {
   expect(second.equals(raw)).toBeFalsy();
   await page.getByLabel("Authentication code").fill(totpCodeFor(second));
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
-  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(status).toHaveText("On");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
   await expect(page.getByTestId("totp-qr")).toHaveCount(0);
   await expect(page.getByTestId("backup-codes")).toHaveCount(0);
   expect(foreign).toEqual([]);
   await page.reload();
-  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(status).toHaveText("On");
+});
+
+test("cancelling a pending enable keeps the secret hidden", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveText("Off");
+
+  // Hold the enable response so Cancel can be clicked while the request is in flight.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/auth/two-factor/enable", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  const started = page.waitForRequest("**/api/auth/two-factor/enable");
+  const responded = page.waitForResponse((r) => r.url().includes("/api/auth/two-factor/enable") && r.status() === 200);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await started;
+  await page.getByRole("button", { name: "Cancel" }).click();
+  release();
+  await responded;
+
+  // The late response must not reopen the secret: Cancel wins and the status stays Off.
+  await expect(status).toHaveText("Off");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+});
+
+test("a non-password enable failure shows its own message", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
+
+  // A 400 that is not about the password must keep the server's reason, not the "wrong password" line.
+  await page.route("**/api/auth/two-factor/enable", (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "TOTP_ALREADY_ENABLED", message: "Two-factor is already enabled" }),
+    }),
+  );
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+
+  await expect(dangerToast).toContainText("Two-factor is already enabled");
+  await expect(dangerToast).not.toContainText("That password isn't correct.");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 });
 
 test("the enrolment QR stays inside the page in Arabic (RTL)", async ({ browser }) => {
