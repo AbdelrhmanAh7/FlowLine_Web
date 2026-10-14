@@ -5,27 +5,29 @@
 //
 // Tags: feat:fl-auth-api, shard:core-api, lvl:api
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins.
-import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 const PASSWORD = "Army-Passw0rd!";
 const SEED_DOMAIN = "flowline-e2e.test";
 const FIXED_COOKIE = "fl_test_beta_mode=open; fl_locale=en";
+// Use the same seed pattern as the hub to ensure deterministic emails across runs
+const SEED = process.env.E2E_ARMY_SEED ?? "nql-e2e-army-1";
 
 function getBase(appUrl?: string): string {
   return (process.env.E2E_ARMY_URL || appUrl || "http://localhost:3100").replace(/\/+$/, "");
 }
 
-function seededEmail(base: string, name: string): string {
-  const hash = createHash("sha256").update(`${base}|${name}`).digest("hex").slice(0, 10);
+// Deterministic email generation using the same pattern as the hub's lib.ts
+function seededEmail(name: string): string {
+  const hash = createHash("sha1").update(`${SEED}:${name}`).digest("hex").slice(0, 6);
   return `auth-221-${hash}@${SEED_DOMAIN}`;
 }
 
-test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
+test("@issue-221.1: sign-in with wrong password returns 401, not 200 or 403", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
   const base = getBase(app?.baseUrl);
   const headers = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED_COOKIE };
-  const email = seededEmail(base, "wrong-pw");
+  const email = seededEmail("wrong-pw");
 
   // Sign up a verified account
   const up = await fetch(`${base}/api/auth/sign-up/email`, {
@@ -37,14 +39,15 @@ test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", 
   const upData = (await up.json()) as { token: string | null };
   expect(upData.token).toBeNull();
 
-  // Poll outbox for verification email
+  // Poll outbox for verification email - select the newest message to avoid reusing consumed tokens
   let token: string | null = null;
   await expect.poll(async () => {
     const mailRes = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers });
-    const body = (await mailRes.json().catch(() => ({ messages: [] }))) as { messages?: { purpose?: string; link?: string }[] };
+    const body = (await mailRes.json().catch(() => ({ messages: [] }))) as { messages?: { purpose?: string; link?: string; timestamp?: number }[] };
     const messages = body.messages ?? [];
-    const link = messages.find((m) => m.purpose === "verify")?.link;
-    token = link ? new URL(link).searchParams.get("token") : null;
+    // Select the newest "verify" message (highest timestamp, or fallback to last element)
+    const verifyMsg = messages.filter((m) => m.purpose === "verify").sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))[0];
+    token = verifyMsg?.link ? new URL(verifyMsg.link).searchParams.get("token") : null;
     return token;
   }, { timeout: 20_000, message: `no verify email for ${email}` }).toBeTruthy();
 
@@ -54,6 +57,7 @@ test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", 
     headers,
     body: JSON.stringify({ action: "verify", token }),
   });
+  expect(verifyRes.status).toBe(200); // Assert status before parsing JSON
   const verifyData = (await verifyRes.json()) as { status: string };
   expect(verifyData.status).toBe("done");
 
@@ -72,7 +76,7 @@ test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", 
   const noUser = await fetch(`${base}/api/auth/sign-in/email`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ email: seededEmail(base, "no-such-user"), password: "definitely-wrong-2" }),
+    body: JSON.stringify({ email: seededEmail("no-such-user"), password: "definitely-wrong-2" }),
   });
   expect(noUser.status).toBe(401);
   const noUserData = (await noUser.json()) as { message?: string };
@@ -83,10 +87,10 @@ test("@issue-221 AC1: sign-in with wrong password returns 401, not 200 or 403", 
   expect(wrongPwData.message?.toLowerCase()).toBe(noUserData.message?.toLowerCase());
 });
 
-test("@issue-221 AC2: sign-in with unverified account returns 403, not 200", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
+test("@issue-221.2: sign-in with unverified account returns 403, not 200", { tags: ["feat:fl-auth-api", "shard:core-api", "lvl:api"] }, async ({ app }) => {
   const base = getBase(app?.baseUrl);
   const headers = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED_COOKIE };
-  const email = seededEmail(base, "unverified");
+  const email = seededEmail("unverified");
 
   // Sign up but don't verify
   const up = await fetch(`${base}/api/auth/sign-up/email`, {
