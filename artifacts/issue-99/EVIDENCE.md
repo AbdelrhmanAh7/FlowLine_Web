@@ -27,7 +27,7 @@ manifest valid; every video 1920x1080 or its tile shape at the clip fps, BT.709,
 (hero, tiles) 36.4-50.2 dB (>= 35); walkthrough EN delivered PSNR 47.3 dB (AV1) / 45.8 dB (H.264) vs the composed master;
 the hero Run-button accent check ran on the hero builds. Contact sheets for all 12 clips are written to
 `artifacts/demo-media/` (git-ignored); three are attached to PR #101 rather than committed (AGENTS.md "Evidence": screenshots stay out of git): `hero.ar`, `run.ar`, `walkthrough.en`.
-Re-checked after the last change: `pnpm typecheck` and `pnpm lint` clean, `vitest --project unit tests/unit/demo-` 11 files, 80 passed + 1 skipped by design (81 tests, run on 79f5930 plus this docs-only edit) (a `runIf` for the DEMO_MEDIA-only check),
+Re-checked after the last change: `pnpm typecheck` and `pnpm lint` clean, `vitest --project unit tests/unit/demo-` 11 files, 89 passed + 1 skipped by design (90 tests, re-run on this head after the review-round-4 fixes),
 `node --test src/camera.test.ts` 12/12. Recorded walkthrough length 53.00 s (ar, en).
 
 ## Notes and limitations
