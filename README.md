@@ -14,7 +14,7 @@ Arabic is the default language (RTL), with English as a secondary language throu
 - **Triggers:** manual, webhook (signed, deduplicated, replay-safe), schedule, and an authenticated API (`/api/v1`,
   scoped API keys).
 - **Integrations:** Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion,
-  PostgreSQL, Linear and Mizano (read-only overdue invoices; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections, and
+  PostgreSQL, Linear and Mizano (overdue invoices, customer and draft quote creation; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections, and
   repair and revocation handling. Per-workspace owners can also override the OAuth app used for a provider
   (Settings → OAuth apps).
 - **AI hub:** cloud-only, multi-provider. Each workspace brings its own keys in **Settings → AI Providers** — never
