@@ -3,7 +3,11 @@ import { afterAll, describe, expect, it } from "vitest";
 import { asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
+<<<<<<< HEAD
 import { createFlow, listFlows, listVersions, saveFlow, softDeleteFlow } from "@/server/flows";
+=======
+import { createFlow, listFlows, saveFlow, softDeleteFlow } from "@/server/flows";
+>>>>>>> origin/main
 import { publishFlow } from "@/server/publish";
 import { enqueueRun, getRunDetail, listRuns, rerunFromStep } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
@@ -138,9 +142,13 @@ describe("processRun (worker)", () => {
     const detail = await getRunDetail(run.id);
     expect(detail.status).toBe("succeeded");
     expect(detail.flowName).toBe(flow.name);
+<<<<<<< HEAD
     // A run pins its graph in a snapshot, but the snapshot has no public version number (#117).
     expect(detail.version).toBeNull();
     expect(detail.versionReason).toBe("run");
+=======
+    expect(detail.version).toBeNull();
+>>>>>>> origin/main
     expect(detail.steps).toHaveLength(5);
     expect((detail.graph as FlowGraph).nodes).toHaveLength(5);
   });
@@ -312,7 +320,60 @@ describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
   });
 });
 
+<<<<<<< HEAD
 describe("run snapshots do not use up version numbers (regression: #117)", () => {
+=======
+describe("runs do not use up publication numbers (regression: #204, #117)", () => {
+  const publishedVersion = async (wsId: string, flowId: string) => (await listFlows(wsId)).find((r) => r.id === flowId)!.publishedVersion;
+
+  it("publish once, run twice: the flow list keeps publishedVersion 1", async () => {
+    const { user, ws, flow } = await setup();
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    const r1 = await enqueueRun(user, flow.id);
+    const r2 = await enqueueRun(user, flow.id);
+    await claimAndProcess(r1.id);
+    await claimAndProcess(r2.id);
+
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+    // The next publication is v2: the two runs in between took no number.
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(2);
+  });
+
+  it("draft revisions (edits without Ctrl/⌘+S) and runs leave the first publication at v1", async () => {
+    const { user, ws, flow } = await setup();
+    const edited = await saveFlow(user, flow.id, { baseRevision: flow.revision, name: unique("Renamed") });
+    await saveFlow(user, flow.id, { baseRevision: edited.flow.revision, graph: flow.graph as FlowGraph });
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+  });
+
+  it("Ctrl/⌘+S saves and an offline overwrite before the first publication leave it at v1", async () => {
+    const { user, ws, flow } = await setup();
+    const saved = await saveFlow(user, flow.id, { baseRevision: flow.revision, createVersion: true });
+    expect(saved.version).toMatchObject({ reason: "save", version: null });
+    await saveFlow(user, flow.id, { baseRevision: flow.revision, name: unique("Offline"), force: true });
+
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+  });
+
+  it("publish, save, overwrite, two runs, then publish gives v2", async () => {
+    const { user, ws, flow } = await setup();
+    expect((await publishFlow(user, flow.id)).version).toBe(1);
+    const saved = await saveFlow(user, flow.id, { baseRevision: flow.revision, createVersion: true });
+    await saveFlow(user, flow.id, { baseRevision: saved.flow.revision - 1, name: unique("Offline"), force: true });
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+    await claimAndProcess((await enqueueRun(user, flow.id)).id);
+
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+    expect((await publishFlow(user, flow.id)).version).toBe(2);
+    expect(await publishedVersion(ws.id, flow.id)).toBe(2);
+  });
+
+>>>>>>> origin/main
   it("the first publication after two runs is v1 and the flow list reports it", async () => {
     const { user, ws, flow } = await setup();
     const r1 = await enqueueRun(user, flow.id);
@@ -322,6 +383,7 @@ describe("run snapshots do not use up version numbers (regression: #117)", () =>
 
     const published = await publishFlow(user, flow.id);
     expect(published.version).toBe(1);
+<<<<<<< HEAD
     expect((await listFlows(ws.id)).find((r) => r.id === flow.id)!.publishedVersion).toBe(1);
 
     // Each run still pins its own immutable snapshot; the history lists them without a number, newest first.
@@ -357,6 +419,9 @@ describe("legacy run snapshots are unnumbered by migration 0025 (#117)", () => {
     // The immutability trigger is back on: a later update is still refused.
     await expect(db.update(schema.flowVersion).set({ name: "x" }).where(eq(schema.flowVersion.id, old.id))).rejects.toThrow();
     expect((await publishFlow(user, flow.id)).version).toBe(2);
+=======
+    expect(await publishedVersion(ws.id, flow.id)).toBe(1);
+>>>>>>> origin/main
   });
 });
 

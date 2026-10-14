@@ -203,7 +203,11 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
+<<<<<<< HEAD
     /** Public version number (save / overwrite / publish share one sequence per flow). NULL for "run" snapshots: a run pins its graph but does not use up a number. */
+=======
+    /** Publication number; NULL for save, overwrite and run snapshots, so only publishing moves it (#204). */
+>>>>>>> origin/main
     version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
@@ -217,6 +221,15 @@ export const flowVersion = pgTable(
     uniqueIndex("flow_version_unique").on(t.flowId, t.version).where(sql`${t.version} is not null`),
   ],
 );
+
+/** Numbers that save, run and overwrite snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
+export const flowVersionNumberBackup = pgTable("flow_version_number_backup", {
+  flowVersionId: uuid("flow_version_id")
+    .primaryKey()
+    .references(() => flowVersion.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  backedUpAt: timestamp("backed_up_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const runStatusEnum = pgEnum("run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);
 /** `uncertain` = an external action was sent but its outcome is unknown (lost response) and could not be verified. */

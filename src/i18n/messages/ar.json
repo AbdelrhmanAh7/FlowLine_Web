@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "الإصدار {version}",
+    "runSnapshot": "لقطة التشغيل",
+    "savedSnapshot": "لقطة محفوظة",
+    "overwriteSnapshot": "نسخة محفوظة قبل الاستبدال",
     "cancel": "إلغاء",
     "retry": "إعادة المحاولة",
     "back": "رجوع",
@@ -2124,7 +2127,11 @@
       "title": "إعادة تشغيل #{number} من «{label}»",
       "revision": "المراجعة",
       "original": "الإصدار الأصلي للتشغيل (v{version})",
+<<<<<<< HEAD
       "originalSnapshot": "اللقطة الأصلية للتشغيل (بلا رقم إصدار)",
+=======
+      "originalSnapshot": "اللقطة الأصلية للتشغيل",
+>>>>>>> origin/main
       "latest": "المسار المحفوظ حاليًا (يتضمن إصلاحاتك)",
       "willRerun": "سيُعاد تشغيلها · {count}",
       "needsApproval": "تحتاج إلى موافقة",
