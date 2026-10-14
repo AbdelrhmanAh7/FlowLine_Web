@@ -67,9 +67,11 @@ describe("runConcurrentPg (mocked pg, review findings of PR #125)", () => {
       "runConcurrent timed out after 50ms (opening connections)",
     );
     expect(txA).not.toHaveBeenCalled();
-    const [late, early] = fx.clients;
-    late.finishConnect!();
-    await expect.poll(() => late.ended && early.ended).toBe(true);
+    expect(fx.clients).toHaveLength(2);
+    const late = fx.clients.find((c) => typeof c.finishConnect === "function");
+    expect(late).toBeDefined();
+    late!.finishConnect!();
+    await expect.poll(() => fx.clients.every((c) => c.ended)).toBe(true);
   });
 
   it("reports a 40P01 at once, without waiting for the other callback, and terminates both backends", async () => {
@@ -78,10 +80,10 @@ describe("runConcurrentPg (mocked pg, review findings of PR #125)", () => {
     const failure = await runConcurrentPg(
       async ({ arrive }) => { await arrive(); throw deadlock; },
       async ({ arrive }) => { await arrive(); return never(); },
-      { connectionString: url, timeoutMs: 60_000 },
+      { connectionString: url, timeoutMs: 3_000 },
     ).then(() => null, (e: unknown) => e as Error);
     expect(failure?.message).toMatch(/^deadlock detected \(40P01\)/);
-    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(Date.now() - started).toBeLessThan(2_000);
     const killer = fx.clients[2];
     expect(killer.queries).toEqual([{ sql: expect.stringContaining("pg_terminate_backend"), params: [[1000, 1001]] }]);
     expect(fx.clients.every((c) => c.ended)).toBe(true);
