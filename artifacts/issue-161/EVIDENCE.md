@@ -1,6 +1,6 @@
 # Evidence — issue #161 (docs for security posture)
 
-Verified by reading the diff against main at head 3d940e6 (the PR head is authoritative; later commits only touch this note). Docs-only; no e2e-army test.
+Historical documentation verification at head 3d940e6; current verification is recorded below. Docs-only; no e2e-army test.
 
 | AC | Verification |
 |----|--------------|
@@ -8,7 +8,7 @@ Verified by reading the diff against main at head 3d940e6 (the PR head is author
 | Shell placeholder fixed | `docs/implementation/OWNER_ACTIONS.md` uses `"$OWNER_EMAIL"` in the bootstrap command; the path `docs/security/REPO_SECURITY_SETTINGS.md` does not exist, the #160 security settings doc is `OWNER_ACTIONS.md` |
 | PR template section | `.github/pull_request_template.md` has `## Security posture` |
 | Docs reflect the security settings state | `docs/implementation/OWNER_ACTIONS.md` rows AC1-AC3 (lines 12-16) state each #160 setting as `unverified` until the owner records evidence; AGENTS.md line 32 states the same rule. This PR adds no new claim beyond that: none of the settings is enabled by this PR. |
-| Dependabot bump (brief item 5) | Not done here: engineers may not inspect alerts; the open Dependabot alert is tracked in #62. |
+| Dependabot bump (brief item 5) | Not changed by this task, per the CTO direction to keep #62 separate; current main already includes the reviewed #62 PR #77. Alert state was not inspected. |
 
 ## Round 3: closing-link root cause
 
@@ -19,3 +19,9 @@ The template now requires non-closing references for deferred criteria and a liv
 Fresh verification on 2026-10-13: `gh pr view 245 --json body,closingIssuesReferences` returned first lines `Refs #161` / `Refs #24` and `closingIssuesReferences: []` after correcting the existing body. `nice -n 10 pnpm exec vitest run --project unit tests/unit/owner-tracking-keyword.test.ts --maxWorkers=2`: 30 passed, 0 failed. `pnpm lint`: exit 0. The sandbox refused the nice priority adjustment; the single focused run still completed with the worker cap. No full suite or build was run locally.
 
 `pnpm typecheck`: exit 0 after allowing access to the shared compiler lock (the sandboxed attempts could not acquire it). Local Node is v26.10.0 rather than the declared 24.x; pnpm warned about that mismatch. CI on the final candidate remains unverified.
+
+## Current verification — 2026-10-14
+
+Tested candidate: `067a3dbb29451c7aadeccf23dae0ccc71f588f64` merged with `d046e9c923a81b01bc1a0f1af95ac2d9874dda6c`, preserving both appended phase-ledger sections. `pnpm typecheck` and `pnpm lint`: exit 0. `nice -n 10 pnpm exec vitest run --project unit tests/unit/owner-tracking-keyword.test.ts tests/unit/selection.spec.test.ts --maxWorkers=2`: 2 files, 44 tests passed, 0 failed. The sandbox refused the nice adjustment; typecheck required access to the shared lock. No full suite or build ran locally.
+
+Fresh `gh pr view 245 --json body,closingIssuesReferences,mergeable` returned `Refs #161` / `Refs #24` and `closingIssuesReferences: []`. Its remote mergeability was `CONFLICTING` before this local merge; the harness must push, recheck CI and obtain reviewer confirmation. Running branch `ai/251` could not be inspected because the remote ref does not exist; no changes to its implementation were made. Node v26.10.0 differs from the declared 24.x.
