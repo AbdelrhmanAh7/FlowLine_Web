@@ -1,5 +1,9 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## route() error-header unit coverage (issue #234) — 2026-10-15
+
+PR #200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.
+
 ## Legacy backfill 0026 (issue #205) — 2026-10-14
 
 Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
