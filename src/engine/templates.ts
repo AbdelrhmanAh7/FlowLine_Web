@@ -22,6 +22,18 @@ export interface LocalTemplate {
   graph: FlowGraph;
 }
 
+export class TemplateValidationError extends Error {
+  readonly templateId?: string;
+  readonly nodeId?: string;
+
+  constructor(message: string, options?: { templateId?: string; nodeId?: string }) {
+    super(message);
+    this.name = "TemplateValidationError";
+    this.templateId = options?.templateId;
+    this.nodeId = options?.nodeId;
+  }
+}
+
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 const finiteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -31,28 +43,51 @@ const finiteNumber = (v: unknown): v is number => typeof v === "number" && Numbe
  * Nodes are read by `localizeTemplate` (`data.label`) and the engine (`position`, `data.config`);
  * edges are resolved by id (`source`/`target` must name nodes in the same graph).
  */
-function assertNodeEntry(node: unknown, index: number, nodeIds: Set<string>): void {
-  if (!isRecord(node)) throw new Error(`Invalid template graph: node ${index} must be an object`);
-  if (!nonEmptyString(node.id)) throw new Error(`Invalid template graph: node ${index} needs a non-empty string id`);
-  if (nodeIds.has(node.id)) throw new Error(`Invalid template graph: duplicate node id "${node.id}"`);
-  nodeIds.add(node.id);
-  if (!nonEmptyString(node.type)) throw new Error(`Invalid template graph: node "${node.id}" needs a non-empty string type`);
-  if (!isRecord(node.position) || !finiteNumber(node.position.x) || !finiteNumber(node.position.y)) {
-    throw new Error(`Invalid template graph: node "${node.id}" needs a numeric position.x and position.y`);
+function assertNodeEntry(node: unknown, index: number, nodeIds: Set<string>, templateId: string): void {
+  if (!isRecord(node)) {
+    throw new TemplateValidationError(`Invalid template graph: node ${index} must be an object`, { templateId });
   }
-  if (!isRecord(node.data) || typeof node.data.label !== "string") {
-    throw new Error(`Invalid template graph: node "${node.id}" needs a data object with a string label`);
+  if (!nonEmptyString(node.id)) {
+    throw new TemplateValidationError(`Invalid template graph: node ${index} needs a non-empty string id`, { templateId });
+  }
+  const nodeId = node.id;
+  if (nodeIds.has(nodeId)) {
+    throw new TemplateValidationError(`Invalid template graph: duplicate node id "${nodeId}"`, { templateId, nodeId });
+  }
+  nodeIds.add(nodeId);
+  if (!isRecord(node.data)) {
+    throw new TemplateValidationError(
+      `Invalid template export "${templateId}": node "${nodeId}" missing required data object`,
+      { templateId, nodeId },
+    );
+  }
+  if (typeof node.data.label !== "string") {
+    throw new TemplateValidationError(
+      `Invalid template export "${templateId}": node "${nodeId}" needs a data object with a string label`,
+      { templateId, nodeId },
+    );
+  }
+  if (!nonEmptyString(node.type)) {
+    throw new TemplateValidationError(`Invalid template graph: node "${nodeId}" needs a non-empty string type`, { templateId, nodeId });
+  }
+  if (!isRecord(node.position) || !finiteNumber(node.position.x) || !finiteNumber(node.position.y)) {
+    throw new TemplateValidationError(`Invalid template graph: node "${nodeId}" needs a numeric position.x and position.y`, { templateId, nodeId });
   }
 }
 
-function assertEdgeEntry(edge: unknown, index: number, nodeIds: Set<string>): void {
-  if (!isRecord(edge)) throw new Error(`Invalid template graph: edge ${index} must be an object`);
-  if (!nonEmptyString(edge.id)) throw new Error(`Invalid template graph: edge ${index} needs a non-empty string id`);
+function assertEdgeEntry(edge: unknown, index: number, nodeIds: Set<string>, templateId: string): void {
+  if (!isRecord(edge)) {
+    throw new TemplateValidationError(`Invalid template graph: edge ${index} must be an object`, { templateId });
+  }
+  if (!nonEmptyString(edge.id)) {
+    throw new TemplateValidationError(`Invalid template graph: edge ${index} needs a non-empty string id`, { templateId });
+  }
+  const edgeId = edge.id;
   if (!nonEmptyString(edge.source) || !nonEmptyString(edge.target)) {
-    throw new Error(`Invalid template graph: edge "${edge.id}" needs non-empty string source and target`);
+    throw new TemplateValidationError(`Invalid template graph: edge "${edgeId}" needs non-empty string source and target`, { templateId });
   }
   if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
-    throw new Error(`Invalid template graph: edge "${edge.id}" must connect nodes in the same graph`);
+    throw new TemplateValidationError(`Invalid template graph: edge "${edgeId}" must connect nodes in the same graph`, { templateId });
   }
 }
 
@@ -78,54 +113,55 @@ export function parseTemplateExport(json: unknown): LocalTemplate {
 
   // Validate required fields
   if (typeof parsed.id !== "string" || parsed.id.length === 0) {
-    throw new Error(`Invalid template export: missing or empty id`);
+    throw new TemplateValidationError(`Invalid template export: missing or empty id`);
   }
+  const templateId = parsed.id;
   if (typeof parsed.name !== "string" || parsed.name.length === 0) {
-    throw new Error(`Invalid template export: missing or empty name`);
+    throw new TemplateValidationError(`Invalid template export "${templateId}": missing or empty name`, { templateId });
   }
   if (typeof parsed.description !== "string" || parsed.description.length === 0) {
-    throw new Error(`Invalid template export: missing or empty description`);
+    throw new TemplateValidationError(`Invalid template export "${templateId}": missing or empty description`, { templateId });
   }
   if (typeof parsed.sample !== "string" || parsed.sample.length === 0) {
-    throw new Error(`Invalid template export: missing or empty sample`);
+    throw new TemplateValidationError(`Invalid template export "${templateId}": missing or empty sample`, { templateId });
   }
   if (typeof parsed.result !== "string" || parsed.result.length === 0) {
-    throw new Error(`Invalid template export: missing or empty result`);
+    throw new TemplateValidationError(`Invalid template export "${templateId}": missing or empty result`, { templateId });
   }
 
   // Validate format and version (versioned export contract)
   if (parsed.format !== "flowline-template") {
-    throw new Error(`Invalid template format: expected "flowline-template", got "${parsed.format}"`);
+    throw new TemplateValidationError(`Invalid template format: expected "flowline-template", got "${parsed.format}"`, { templateId });
   }
   if (typeof parsed.version !== "number" || parsed.version < 1) {
-    throw new Error(`Invalid template version: expected >= 1, got ${parsed.version}`);
+    throw new TemplateValidationError(`Invalid template version: expected >= 1, got ${parsed.version}`, { templateId });
   }
 
   // Validate category using the shared constant
   if (!TEMPLATE_CATEGORIES.includes(parsed.category as TemplateCategory)) {
-    throw new Error(`Invalid template category: "${parsed.category}"`);
+    throw new TemplateValidationError(`Invalid template category: "${parsed.category}"`, { templateId });
   }
 
   // Validate goal
   if (parsed.goal !== "sales" && parsed.goal !== "support" && parsed.goal !== "data" && parsed.goal !== "engineering") {
-    throw new Error(`Invalid template goal: "${parsed.goal}"`);
+    throw new TemplateValidationError(`Invalid template goal: "${parsed.goal}"`, { templateId });
   }
 
   // Validate graph structure
   if (!parsed.graph || typeof parsed.graph !== "object") {
-    throw new Error(`Invalid template graph: missing or not an object`);
+    throw new TemplateValidationError(`Invalid template graph: missing or not an object`, { templateId });
   }
   if (!Array.isArray(parsed.graph.nodes)) {
-    throw new Error(`Invalid template graph: nodes must be an array`);
+    throw new TemplateValidationError(`Invalid template graph: nodes must be an array`, { templateId });
   }
   if (!Array.isArray(parsed.graph.edges)) {
-    throw new Error(`Invalid template graph: edges must be an array`);
+    throw new TemplateValidationError(`Invalid template graph: edges must be an array`, { templateId });
   }
   // Each entry must have the structure downstream code reads, so a malformed export fails
   // here (at the JSON boundary) rather than later in localizeTemplate or a run.
   const nodeIds = new Set<string>();
-  parsed.graph.nodes.forEach((node, i) => assertNodeEntry(node, i, nodeIds));
-  parsed.graph.edges.forEach((edge, i) => assertEdgeEntry(edge, i, nodeIds));
+  parsed.graph.nodes.forEach((node, i) => assertNodeEntry(node, i, nodeIds, templateId));
+  parsed.graph.edges.forEach((edge, i) => assertEdgeEntry(edge, i, nodeIds, templateId));
 
   return {
     id: parsed.id,

@@ -69,6 +69,7 @@ All times are 2026-09-27, local. Branch `phase-2`.
 | Owner decision 2026-09-28: 11 SaaS live checks out of scope for the Phase 2 gate only; baseline re-verified (no code change since `bee4390`) | **PASS — revised Phase 2 scope; 11 external live checks deferred** (still BLOCKED; release rows R-01…R-11) | decision commit follows |
 
 - #179 (Refs #119 part 1/3): `getCopyEditorState` (`src/server/platform-copy.ts`) now maps a settings-store failure to `HttpError(503, COPY_STATE_UNAVAILABLE)` (log carries only the error type name) and never emits `undefined` base entries. Covered by `tests/unit/platform-copy-state.test.ts` and the `@issue-179` test in `e2e-army/200-route-error-headers.e2e.ts` (merged there to stay within the hub's 8-file e2e-army cap; see that file's header).
+- #166: MENA template gallery starter "ETA Invoice Notify" (`src/engine/templates/mena/eta-invoice-notify.v1.json`) with bilingual metadata (`messages/ar.json`, `messages/en.json`). `parseTemplateExport` in `src/engine/templates.ts` validates exported graph nodes and edges, throwing typed `TemplateValidationError` naming templateId and nodeId on malformed entries or missing node `data` objects. Covered by `tests/unit/local-scenarios.test.ts` and `e2e-army/166-mena-template.e2e.ts`.
 
 # G5 · Mizano connector v1 (#144) progress log
 

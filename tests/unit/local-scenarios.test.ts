@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
 import etaInvoiceNotifyExport from "@/engine/templates/mena/eta-invoice-notify.v1.json";
-import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates, parseTemplateExport } from "@/engine/templates";
+import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates, parseTemplateExport, TemplateValidationError } from "@/engine/templates";
 import type { FlowGraph } from "@/engine/types";
 import { NONDETERMINISTIC, validateGraph } from "@/engine/validate";
 import { ar as arMessages } from "@/i18n/messages/ar";
@@ -153,6 +153,20 @@ describe("local template catalogue", () => {
     expect(() => parseTemplateExport(withGraph([node({ data: { label: 7 } })]))).toThrow(/data object with a string label/);
     // A node with no `data` at all is the exact shape the reviewer cited: { id: "pick" }.
     expect(() => parseTemplateExport(withGraph([{ id: "pick" }]))).toThrow(/node "pick"/);
+    const missingDataNode = withGraph([{ id: "pick", type: "transform.json", position: { x: 300, y: 120 } }]);
+    expect(() => parseTemplateExport(missingDataNode)).toThrowError(TemplateValidationError);
+    try {
+      parseTemplateExport(missingDataNode);
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(TemplateValidationError);
+      const valErr = err as TemplateValidationError;
+      expect(valErr.templateId).toBe("eta-invoice-notify");
+      expect(valErr.nodeId).toBe("pick");
+      expect(valErr.message).toContain("eta-invoice-notify");
+      expect(valErr.message).toContain("pick");
+      expect(valErr.message).toContain("missing required data object");
+    }
     expect(() => parseTemplateExport(withGraph([node(), node()]))).toThrow(/duplicate node id/);
     expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger" }]))).toThrow(/source and target/);
     expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger", target: "missing" }]))).toThrow(/same graph/);
