@@ -206,7 +206,6 @@ function UserMenu({ user, support, compact }: { user: { name: string; email: str
       <MenuTrigger
         className={cn("flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-start text-base text-med outline-none hover:bg-card hover:text-hi", compact && "justify-center xl:justify-start")}
         title={compact ? user.name : undefined}
-        aria-label={`${user.name} — User menu`}
       >
         <span aria-hidden className="bg-brand flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-on-accent">
           {initials(user.name) || "?"}

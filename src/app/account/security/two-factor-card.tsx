@@ -141,12 +141,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <SecretInput ref={passwordRef} id="two-factor-password" maxLength={128} />
           </Field>
           <div className="flex gap-2">
-            <Button
-              type="submit"
-              variant="primary"
-              loading={pending === "enable"}
-              aria-label={`${t("account.security.twoFactor.enable")} — Continue`}
-            >
+            <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
             <Button type="button" onClick={cancel}>
