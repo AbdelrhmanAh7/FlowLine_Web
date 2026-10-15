@@ -30,3 +30,12 @@ artifacts/**/codex-stdout*
 artifacts/**/helper-logs/
 # Local gate runs (scripts/gate.mjs); summarise a run in a Markdown report under artifacts/<area>/ to keep it as evidence
 artifacts/gates/
+
+# Landing demo compositor (tools/demo-video, isolated package: docs/landing/DEMO_MEDIA.md): installed deps, per-clip work dirs, renders
+tools/demo-video/node_modules/
+tools/demo-video/.work/
+tools/demo-video/out/
+tools/demo-video/public/
+
+# demo:verify contact sheets (regenerated each run; curated copies live in artifacts/issue-<N>/)
+artifacts/demo-media/
