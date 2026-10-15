@@ -332,7 +332,11 @@ async function runBuiltin(node: FlowNode, input: unknown, env: NodeEnv, handler?
         return { kind: "ok", output: { rows: parsed.data, rowCount: parsed.data.length, fields: parsed.meta.fields ?? [] }, meta: parsed.errors.length ? { parseErrors: parsed.errors.slice(0, 5).map((e) => e.message) } : undefined };
       }
       if (!Array.isArray(value)) throw new NodeError("INVALID_INPUT", "CSV build needs an array of rows");
-      return ok({ csv: normalizeValue(Papa.unparse(value as object[], { delimiter })) });
+      const unparseOpts: { delimiter: string; columns?: string[] } = { delimiter };
+      if (cfg.mode === "build" && Array.isArray(cfg.columns) && cfg.columns.length > 0) {
+        unparseOpts.columns = cfg.columns as string[];
+      }
+      return ok({ csv: normalizeValue(Papa.unparse(value as object[], unparseOpts)) });
     }
     default: {
       const def = getNodeDefinition(node.type);

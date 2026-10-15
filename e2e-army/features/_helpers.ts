@@ -195,7 +195,7 @@ export const N = {
   filter: (id: string, predicate: string, source = "$", x = 300) => node(id, "data.filter", id, { predicate, source }, x),
   map: (id: string, fields: { key: string; expression: string }[], x = 300) => node(id, "data.map", id, { fields }, x),
   merge: (id: string, mode: "object" | "array" | "first", x = 600) => node(id, "data.merge", id, { mode }, x),
-  csv: (id: string, mode: "parse" | "build", source = "$", delimiter = ",", x = 300) => node(id, "data.csv", id, { mode, source, delimiter }, x),
+  csv: (id: string, mode: "parse" | "build", source = "$", delimiter = ",", columns: string[] | undefined = undefined, x = 300) => node(id, "data.csv", id, { mode, source, delimiter, ...(columns ? { columns } : {}) }, x),
   store: (id: string, op: "get" | "set", namespace: string, key: string, value = "", x = 300) => node(id, "data.store", id, { op, namespace, key, value }, x),
   code: (id: string, code: string, timeoutMs = 5000, x = 300) => node(id, "code.js", id, { code, timeoutMs }, x),
   http: (id: string, method: string, url: string, body = "", x = 300) => node(id, "http.request", id, { method, url, headers: "", body, timeoutMs: 10000, sideEffect: method === "GET" ? "none" : "non_idempotent" }, x),

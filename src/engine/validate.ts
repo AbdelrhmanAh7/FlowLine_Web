@@ -148,6 +148,11 @@ function validateConfig(node: FlowNode): ValidationIssue[] {
       if (!["parse", "build"].includes(str(cfg.mode))) push("INVALID_CONFIG", "choose parse or build");
       checkExpr(push, "source", str(cfg.source), { optional: true });
       if (str(cfg.delimiter).length !== 1) push("INVALID_CONFIG", "delimiter must be one character");
+      if (cfg.mode === "build" && cfg.columns !== undefined) {
+        if (!Array.isArray(cfg.columns) || !cfg.columns.every((c) => typeof c === "string")) {
+          push("INVALID_CONFIG", "columns must be an array of strings");
+        }
+      }
       break;
     case "data.file":
       if (!["upload", "input", "url"].includes(str(cfg.from))) push("INVALID_CONFIG", "choose where the file comes from");
