@@ -3,6 +3,8 @@
 // it is replaced. Invalid JSON is refused and creates no flow.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
+import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const N8N_WORKFLOW = JSON.stringify({
   name: "Army lead intake",
@@ -18,6 +20,17 @@ const N8N_WORKFLOW = JSON.stringify({
     Notify: { main: [[{ node: "Filter", type: "main", index: 0 }]] },
   },
 });
+
+/**
+ * The hub copies only `*.e2e.ts` into its runner, so an upload test writes its file into the project root at run time
+ * (the runner resolves `setInputFiles` paths from the project root) instead of shipping a fixture. Non-hidden name,
+ * removed when the test finishes.
+ */
+function writeWorkflowFile(name: string, content: string): string {
+  const rel = `army-164-${name}.json`;
+  writeFileSync(join(process.cwd(), rel), content);
+  return rel;
+}
 
 test(
   "@issue-164 AC1: importing an n8n workflow creates an editable flow with a placeholder for the unsupported node",
@@ -51,7 +64,7 @@ test(
 
 test(
   "@issue-164 AC3: the import dialog renders correctly in Arabic (RTL)",
-  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api", "feat:fl-i18n-rtl"], session: "fl-user" },
   async ({ app, agent, screen, browser }) => {
     await app.open("/ar");
     await agent.act("افتح صفحة مسارات العمل من التنقل");
@@ -83,11 +96,16 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    await agent.act("upload {file} as the n8n workflow", { params: { file: N8N_WORKFLOW } });
-    await agent.assert("the workflow JSON appears in the text area");
-    const textarea = screen.getByRole("textbox", { name: "n8n workflow JSON" });
-    await expect(textarea).toHaveValue(/Webhook/);
-    await expect(textarea).toHaveValue(/Shape/);
+    const file = writeWorkflowFile("valid", N8N_WORKFLOW);
+    try {
+      // A real path (not the JSON text): the runner attaches the file to the dialog's file input.
+      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      const textarea = screen.getByRole("textbox", { name: "n8n workflow JSON" });
+      await expect(textarea).toHaveValue(/Webhook/);
+      await expect(textarea).toHaveValue(/Shape/);
+    } finally {
+      rmSync(join(process.cwd(), file), { force: true });
+    }
   },
 );
 
@@ -98,9 +116,13 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    await agent.act("upload {file} as the n8n workflow", { params: { file: "{ not json" } });
-    await agent.assert("an error says the file is not valid JSON");
-    await expect(screen.getByRole("alert").first()).toBeVisible();
+    const file = writeWorkflowFile("invalid", "{ not json");
+    try {
+      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      await expect(screen.getByRole("alert").first()).toBeVisible();
+    } finally {
+      rmSync(join(process.cwd(), file), { force: true });
+    }
   },
 );
 
@@ -111,8 +133,43 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    await agent.act("upload {file} as the n8n workflow", { params: { file: '{"foo": "bar"}' } });
-    await agent.assert("an error says the file is not a valid n8n workflow");
-    await expect(screen.getByRole("alert").first()).toBeVisible();
+    const file = writeWorkflowFile("notworkflow", '{"foo": "bar"}');
+    try {
+      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      await expect(screen.getByRole("alert").first()).toBeVisible();
+    } finally {
+      rmSync(join(process.cwd(), file), { force: true });
+    }
+  },
+);
+
+test(
+  "@issue-164 AC8: an imported workflow with a placeholder cannot run until the placeholder is replaced",
+  { tags: ["feat:fl-flow-validation", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, browser }) => {
+    await app.open("/");
+    const cookie = (await browser.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
+    const origin = new URL(app.baseUrl).origin;
+    // Same-origin markers for the app's CSRF check (a browser sends both); the request acts as the signed-in user.
+    const headers = { "content-type": "application/json", origin, cookie, "sec-fetch-site": "same-origin" };
+    // Create the flow from a workflow whose `set` node FlowLine cannot map: it becomes a placeholder.
+    const list = await fetch(new URL("/api/workspaces", app.baseUrl), { headers });
+    const { workspaces } = (await list.json()) as { workspaces: { id: string }[] };
+    const created = await fetch(new URL(`/api/workspaces/${workspaces[0]!.id}/flows`, app.baseUrl), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ n8n: JSON.parse(N8N_WORKFLOW) }),
+    });
+    expect(created.status).toBe(201);
+    const { flow } = (await created.json()) as { flow: { id: string } };
+    // A placeholder still holds `placeholder: true`, so validateGraph refuses every run: 422, never a silent run.
+    const run = await fetch(new URL(`/api/flows/${flow.id}/runs`, app.baseUrl), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ input: {} }),
+    });
+    expect(run.status).toBe(422);
+    const body = (await run.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe("INVALID_FLOW");
   },
 );

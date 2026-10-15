@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { n8nToFlow } from "@/server/n8n-import";
+import { validateGraph } from "@/engine/validate";
 import { HttpError } from "@/server/http";
 
 const workflow = {
@@ -48,7 +49,45 @@ describe("n8nToFlow", () => {
     const placeholder = graph.nodes[1];
     expect(placeholder.type).toBe("transform.json");
     expect(placeholder.data.label).toBe("Unsupported n8n node: n8n-nodes-base.googleSheets — replace");
-    expect(placeholder.data.config).toEqual({ expression: '"REPLACE_WITH_N8N_NODES_BASE_GOOGLESHEETS"' });
+    // `placeholder: true` is the flag validateGraph rejects, independent of the REPLACE_WITH_ marker text.
+    expect(placeholder.data.config).toEqual({ expression: '"REPLACE_WITH_N8N_NODES_BASE_GOOGLESHEETS"', placeholder: true });
+  });
+
+  it("validateGraph rejects an imported graph that still holds a placeholder, so it cannot run or publish", () => {
+    const { graph } = n8nToFlow({
+      nodes: [
+        { name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} },
+        { name: "Shape", type: "n8n-nodes-base.function", position: [240, 0], parameters: { functionCode: "return items;" } },
+        { name: "Sheet", type: "n8n-nodes-base.googleSheets", position: [480, 0], parameters: {} },
+      ],
+      connections: { Hook: { main: [[{ node: "Shape", type: "main", index: 0 }]] }, Shape: { main: [[{ node: "Sheet", type: "main", index: 0 }]] } },
+    });
+    const issues = validateGraph(graph);
+    // No placeholder may run: the flow is refused (runs.ts and publish.ts both call validateGraph).
+    expect(issues.map((i) => i.code)).toContain("SETUP_REQUIRED");
+    const setup = issues.find((i) => i.code === "SETUP_REQUIRED")!;
+    expect(setup.nodeId).toBe(graph.nodes[2].id);
+    expect(setup.message).toContain("finish setup — replace REPLACE_WITH_N8N_NODES_BASE_GOOGLESHEETS");
+  });
+
+  it("a placeholder flag alone still blocks validation (marker text is not required)", () => {
+    const graph = {
+      nodes: [
+        { id: "t", type: "trigger.manual", position: { x: 0, y: 0 }, data: { label: "Start", config: {} } },
+        { id: "p", type: "transform.json", position: { x: 240, y: 0 }, data: { label: "Unsupported n8n node: n8n-nodes-base.set — replace", config: { placeholder: true } } },
+      ],
+      edges: [{ id: "e0", source: "t", target: "p", sourceHandle: "out", targetHandle: null }],
+    } as unknown as Parameters<typeof validateGraph>[0];
+    const setup = validateGraph(graph).find((i) => i.code === "SETUP_REQUIRED")!;
+    expect(setup.nodeId).toBe("p");
+  });
+
+  it("rejects an unsupported trigger or a lone unsupported node: NO_TRIGGER plus the placeholder block", () => {
+    const unknownTrigger = n8nToFlow({ nodes: [{ name: "Cron", type: "n8n-nodes-base.scheduleTrigger", position: [0, 0], parameters: {} }], connections: {} }).graph;
+    expect(unknownTrigger.nodes[0].type).toBe("transform.json");
+    const codes = validateGraph(unknownTrigger).map((i) => i.code);
+    expect(codes).toContain("SETUP_REQUIRED");
+    expect(codes).toContain("NO_TRIGGER");
   });
 
   it("rejects input that is not an n8n workflow", () => {
@@ -154,6 +193,31 @@ describe("n8nToFlow", () => {
     const get = graph.nodes[1];
     expect(get.type).toBe("http.request");
     expect((get.data.config as { headers: string }).headers).toBe('{"X-API-Key":"secret"}');
+  });
+
+  it("makes an HTTP node a placeholder when its jsonBody holds an expression (never an empty request)", () => {
+    const withExprBody = {
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Post", type: "n8n-nodes-base.httpRequest", position: [240, 0], parameters: { method: "POST", url: "https://example.com/hook", jsonBody: { id: "{{ $json.id }}" } } }],
+      connections: { Hook: { main: [[{ node: "Post", type: "main", index: 0 }]] } },
+    };
+    const post = n8nToFlow(withExprBody).graph.nodes[1];
+    expect(post.type).toBe("transform.json");
+    expect((post.data.config as { placeholder?: boolean }).placeholder).toBe(true);
+    expect((post.data.config as { expression: string }).expression).toContain("HTTP body, headers or auth not imported");
+  });
+
+  it("makes an HTTP node a placeholder when a headers object holds an expression or a non-string value", () => {
+    const withExprHeader = {
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Get", type: "n8n-nodes-base.httpRequest", position: [240, 0], parameters: { method: "GET", url: "https://example.com/hook", headers: { "X-Key": "{{ $json.key }}" } } }],
+      connections: { Hook: { main: [[{ node: "Get", type: "main", index: 0 }]] } },
+    };
+    expect(n8nToFlow(withExprHeader).graph.nodes[1].type).toBe("transform.json");
+
+    const withNonStringHeader = {
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Get", type: "n8n-nodes-base.httpRequest", position: [240, 0], parameters: { method: "GET", url: "https://example.com/hook", headers: { "X-Count": 5 } } }],
+      connections: { Hook: { main: [[{ node: "Get", type: "main", index: 0 }]] } },
+    };
+    expect(n8nToFlow(withNonStringHeader).graph.nodes[1].type).toBe("transform.json");
   });
 
   it("uses V3 method parameter for HTTP node", () => {

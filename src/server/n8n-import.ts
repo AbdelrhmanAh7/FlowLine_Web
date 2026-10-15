@@ -34,18 +34,20 @@ function invalid(message: string): never {
 }
 
 /**
- * A replacement placeholder for an n8n node FlowLine cannot map. The config keeps a `REPLACE_WITH_…`
- * marker, which `validateGraph` reports as SETUP_REQUIRED, so a flow holding one cannot run until replaced.
+ * A replacement placeholder for an n8n node FlowLine cannot map. Its config is explicitly flagged
+ * `placeholder: true`, which `validateGraph` rejects with SETUP_REQUIRED, so a flow holding one can neither run nor
+ * publish until the step is replaced. The label names the n8n node the user has to rebuild.
  */
 function unsupported(id: string, n8nType: string, position: { x: number; y: number }, note?: string): FlowNode<"transform.json"> {
-  const shortType = n8nType.slice(0, 50);
+  // 40 chars keeps `Unsupported n8n node: <type> — replace` within the graphSchema label limit of 80.
+  const shortType = n8nType.slice(0, 40);
   const token = n8nType.replace(/[^A-Za-z0-9]/g, "_").toUpperCase();
   const expression = note ? `"REPLACE_WITH_${token} — ${note}"` : `"REPLACE_WITH_${token}"`;
   return {
     id,
     type: "transform.json",
     position,
-    data: { label: `Unsupported n8n node: ${shortType} — replace`, config: { expression } },
+    data: { label: `Unsupported n8n node: ${shortType} — replace`, config: { expression, placeholder: true } },
   };
 }
 
@@ -53,6 +55,14 @@ function unsupported(id: string, n8nType: string, position: { x: number; y: numb
 function hasUnpreservedHttpConfig(params: Record<string, unknown>): boolean {
   if (params.sendBody === true || params.sendHeaders === true || params.sendQuery === true) return true;
   if (typeof params.authentication === "string" && params.authentication && params.authentication !== "none") return true;
+  const hasExpr = (v: unknown): boolean => /\{\{[^}]*\}\}/.test(JSON.stringify(v ?? ""));
+  // A configured body that carries an expression cannot be mapped: without this the node would import as an empty
+  // request and the payload would be silently dropped.
+  if (params.jsonBody !== undefined && params.jsonBody !== null && hasExpr(params.jsonBody)) return true;
+  // Same for a `headers` object with an expression or a non-string value (n8n also allows both).
+  if (params.headers && typeof params.headers === "object" && !Array.isArray(params.headers)) {
+    for (const v of Object.values(params.headers as Record<string, unknown>)) if (typeof v !== "string" || hasExpr(v)) return true;
+  }
   const set = (v: unknown): boolean => {
     if (Array.isArray(v)) return v.length > 0;
     if (v && typeof v === "object") {
