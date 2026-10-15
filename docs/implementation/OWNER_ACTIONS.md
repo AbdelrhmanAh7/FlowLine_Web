@@ -68,6 +68,19 @@ The start job that wrote the keyword into the PR body lives in the hub (`nql-age
 
 ---
 
+## Paid-pilot owner actions scaffolding (PP-02..PP-09)
+
+Non-sensitive scaffolding for paid-pilot owner actions PP-02..PP-09 is defined in [`src/types/ownerActions.ts`](../../src/types/ownerActions.ts) with unit test coverage in [`tests/unit/ownerActions.test.ts`](../../tests/unit/ownerActions.test.ts).
+
+This scaffolding provides:
+- TypeScript type definitions: `OwnerActionId`, `OwnerActionStatus` (`"pending" | "done" | "blocked"`), `OwnerActionBlockedBy` (`"money" | "legal" | "people"`), `OwnerActionRow`, and `OwnerActionsStatusResponse`.
+- A read-only contract stub (`OWNER_ACTIONS_PP_ROWS`, `getOwnerActionsStatusStub()`) with static checklist rows marked honestly as `blocked` or `pending` (no fake success states, no mutation endpoints, and no provider calls).
+
+**Strict owner-only boundaries:**
+Payments, pricing calculations, legal terms, credentials, and user contact remain strictly owner-only (tracked in #30 and #162, referenced with `Refs #30` and `Refs #162`). Engineers must not implement real payment processing, pricing logic, legal terms, or user contact workflows.
+
+---
+
 ## Pending owner checks — 2026-10-03
 
 These checks remain unverified from the repository. Confirm the running app and account before using the local URLs below; no browser session or listener was checked in this docs pass. Record only non-secret completion state; no passwords, OTPs, recovery codes, seeds or provider secrets belong in chat.
