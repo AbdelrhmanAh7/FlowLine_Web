@@ -1,0 +1,61 @@
+{
+  "format": "flowline-template",
+  "version": 1,
+  "id": "eta-invoice-notify",
+  "name": "ETA Invoice Notify",
+  "description": "Pick the invoices still waiting for Egyptian Tax Authority (ETA) submission and list them for the team to follow up. Nothing is submitted or sent.",
+  "sample": "A batch of invoices, each with a number, a customer, a total and a status.",
+  "result": "The invoices waiting for ETA submission, or a note that none are waiting.",
+  "category": "Finance",
+  "goal": "data",
+  "graph": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "trigger.manual",
+        "position": { "x": 0, "y": 120 },
+        "data": {
+          "label": "Invoice batch",
+          "config": {
+            "samplePayload": "{\n  \"invoices\": [\n    { \"number\": \"INV-1041\", \"customer\": \"Nile Trading\", \"total\": 12500, \"status\": \"pending_eta\" },\n    { \"number\": \"INV-1042\", \"customer\": \"Delta Foods\", \"total\": 830, \"status\": \"submitted\" },\n    { \"number\": \"INV-1043\", \"customer\": \"Cairo Tech\", \"total\": 4200, \"status\": \"pending_eta\" }\n  ]\n}"
+          }
+        }
+      },
+      {
+        "id": "pick",
+        "type": "transform.json",
+        "position": { "x": 300, "y": 120 },
+        "data": {
+          "label": "Pick waiting invoices",
+          "config": {
+            "expression": "{ \"waiting\": invoices[status = \"pending_eta\"].{ \"number\": number, \"customer\": customer, \"total\": total }[] }"
+          }
+        }
+      },
+      {
+        "id": "any",
+        "type": "logic.condition",
+        "position": { "x": 600, "y": 120 },
+        "data": { "label": "Any waiting?", "config": { "expression": "$count(waiting) > 0" } }
+      },
+      {
+        "id": "follow-up",
+        "type": "output",
+        "position": { "x": 900, "y": 36 },
+        "data": { "label": "Follow-up list", "config": { "key": "eta_follow_up", "expression": "waiting" } }
+      },
+      {
+        "id": "clear",
+        "type": "output",
+        "position": { "x": 900, "y": 216 },
+        "data": { "label": "All submitted", "config": { "key": "eta_clear", "expression": "{ \"note\": \"No invoices are waiting for ETA submission.\" }" } }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger", "target": "pick", "sourceHandle": "out" },
+      { "id": "e2", "source": "pick", "target": "any", "sourceHandle": "out" },
+      { "id": "e3", "source": "any", "target": "follow-up", "sourceHandle": "true" },
+      { "id": "e4", "source": "any", "target": "clear", "sourceHandle": "false" }
+    ]
+  }
+}
