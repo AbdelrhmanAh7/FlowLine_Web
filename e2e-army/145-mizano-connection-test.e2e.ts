@@ -144,18 +144,19 @@ test(
     expect(created.status).toBe(201);
     const { workspace } = (await created.json()) as { workspace: { slug: string } };
     await onboard(base, owner);
-    const entry = await fetch(`${base}/app/integrations`, { headers: owner, redirect: "manual" });
+    // new URL(): the runner's baseUrl ends in "/", and a "//app/…" path is answered by Next's own 308 to the clean path.
+    const entry = await fetch(new URL("/app/integrations", base), { headers: owner, redirect: "manual" });
     expect(entry.status).toBe(307);
     expect(new URL(entry.headers.get("location") ?? "", base).pathname).toBe(`/w/${workspace.slug}/integrations`);
-    const page = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: owner });
+    const page = await fetch(new URL(`/w/${workspace.slug}/integrations`, base), { headers: owner, redirect: "manual" });
     expect(page.status).toBe(200);
     expect(page.headers.get("content-type")).toContain("text/html");
-    const anon = await fetch(`${base}/app/integrations`, { headers: plain(base), redirect: "manual" });
+    const anon = await fetch(new URL("/app/integrations", base), { headers: plain(base), redirect: "manual" });
     expect(anon.status).toBe(307);
     expect(new URL(anon.headers.get("location") ?? "", base).pathname).toBe("/sign-in");
     // A workspace the account is not a member of is never confirmed to it: notFound() -> 404.
     const stranger = await signedIn(base, `army-145-reach-out-${seeded(base, "reach-out")}@flowline-e2e.test`);
-    const foreign = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: stranger });
+    const foreign = await fetch(new URL(`/w/${workspace.slug}/integrations`, base), { headers: stranger, redirect: "manual" });
     expect(foreign.status).toBe(404);
   },
 );
