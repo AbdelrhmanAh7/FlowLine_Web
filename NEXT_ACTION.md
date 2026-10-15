@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #181 — e2e-army cap fix (2026-10-15)
+
+The CI `checks (static·unit·contract)` leg failed on `tests/unit/e2e-army-tooling.test.ts`: the branch had 9 top-level `e2e-army/*.e2e.ts` files (hub cap 8) and `181-admin-copy.e2e.ts` used `setTimeout`. The #181 tests now live in `e2e-army/200-route-error-headers.e2e.ts` (same precedent as #179; every test and tag kept) and the outbox wait uses `expect.poll`. The stale "route() error responses lack no-store" known-gap note is removed (fixed by #200). The harness pushes and reruns CI; the integration test `tests/integration/platform-copy-errors.test.ts` was not rerun locally (needs the test DB; unchanged in this step).
+
 ## Issue #234 — review after main integration (2026-10-15)
 
 PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.

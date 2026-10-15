@@ -100,11 +100,9 @@ The two reviews agree on all of these.
     - `NETWORK` and `HTTP_502` are client-only cases with a mocked `fetch`, not route refusals. `NETWORK` gives status 0,
       code `NETWORK`, `isNetwork=true` and a message without the submitted text. `HTTP_502` (a non-JSON gateway page)
       gives the fixed message `Request failed (502)`, never the gateway body.
-    - `e2e-army/181-admin-copy.e2e.ts` checks the non-admin and cross-site refusals and the localized 404 page on a
+    - `e2e-army/200-route-error-headers.e2e.ts` (the #181 tests, merged into that file for the hub's 8-file cap) checks the non-admin and cross-site refusals and the localized 404 page on a
       live stack; the admin-only codes are proven only in the integration test.
-    - Known gap: the platform handlers set `no-store` / `no-referrer` only on successful responses (`secured()` in
-      `src/server/platform-http.ts`). Error responses are built by `route()`, which does not add them. Those bodies
-      hold only the bounded code and message. Tracked in #200.
+    - Error responses built by `route()` carry `no-store` / `no-referrer` since #200 (`errorJson()` in `src/server/http.ts`).
 
 ### OAuth correctness
 11. **Fixed provider endpoints.** Customers supply only a client ID and secret; authorize, token and revoke URLs, scopes,
