@@ -8,8 +8,26 @@ test(
   async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("open the workspace's Integrations page from the navigation");
-    await agent.assert("the integrations catalog lists Mizano, Google Sheets, Gmail, Slack, HubSpot and Linear");
-    await expect(screen.getByText("Mizano").first()).toBeVisible();
-    await expect(screen.getByText("Linear").first()).toBeVisible();
+    await agent.assert(
+      "the integrations catalog lists all 13 providers: Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, PostgreSQL, Linear, and Mizano",
+    );
+    const providers = [
+      "Google Sheets",
+      "Gmail",
+      "Slack",
+      "HubSpot",
+      "Zendesk",
+      "Airtable",
+      "Snowflake",
+      "GitHub",
+      "Stripe",
+      "Notion",
+      "PostgreSQL",
+      "Linear",
+      "Mizano",
+    ];
+    for (const name of providers) {
+      await expect(screen.getByText(name).first()).toBeVisible();
+    }
   },
 );
