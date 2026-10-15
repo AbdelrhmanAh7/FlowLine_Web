@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #196 — Account security page 1/4 (2026-10-15)
+
+Part 1 of #195 is implemented on `ai/196`: `/account/security` (server component, `force-dynamic`, auth redirect to `/sign-in`), user-menu Security link in the Account group, ar/en strings, read-only two-step status (`StatusBadge` On/Off), Playwright spec and e2e-army test. Also added `Cache-Control: no-store` for `/account/:path*` (verification found the page accessible without auth — a cached render could leak one user's data to another). Pre-existing CI failure fixed: removed redundant `e2e-army/85-sign-in-and-core-flow.e2e.ts` (9 > 8 top-level cap; all 5 tests covered by `features/`). Typecheck, lint and 1628 unit tests pass. Next: parts 2–4 (enable flow, QR code, disable flow + Arabic/RTL e2e). Do not close #195 from this PR.
+
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
 Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
