@@ -9,6 +9,10 @@
 // COPY_DUPLICATE_EDIT, REVISION_CONFLICT, INTERNAL) and how the client's api() turns each into an ApiError are proven in
 // tests/integration/platform-copy-errors.test.ts.
 //
+// AC2 (UI-level error handling in the copy editor) is covered by the component tests in tests/component/copy-editor.test.tsx
+// (load error, me load error, save/publish errors, STEP_UP_REQUIRED, 5xx errors, network errors) because the e2e test stack
+// does not have a platform admin, which is required to exercise the copy editor's write error handling.
+//
 // The tests live in one file to stay within the hub's cap of 8 top-level e2e-army/*.e2e.ts files: the hub's verify job
 // copies readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8) (nql-agents src/lib/e2earmy.ts), and
 // tests/unit/e2e-army-tooling.test.ts asserts the repo stays at <= 8. Every test and tag is kept; copied files may import only
