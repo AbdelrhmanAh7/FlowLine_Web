@@ -26,7 +26,7 @@ pnpm demo:setup              # tools/demo-video: Remotion 4.0.534 (own lockfile,
 pnpm demo:doctor             # checks everything below and prints the exact fix for each failure
 ```
 
-`demo:doctor` checks: Node >= 22, Playwright Chromium, the Remotion package and its browser, that Remotion's bundled
+`demo:doctor` checks: Node >= 24 (the root package's `engines` floor is `24.x`), Playwright Chromium, the Remotion package and its browser, that Remotion's bundled
 ffmpeg has `libx264` and `libaom-av1`, that `.env.test` exists (existence only, values are never read or printed; create
 it from `.github/ci/env.test.template` with a Postgres the stack can reach), at least 5 GB free, and that no other demo
 build (lock `tools/demo-video/.work/build.lock`) or `next build` is running.
@@ -130,6 +130,7 @@ about 15-20 MB of binaries to git history).
 |---|---|
 | `Chromium … sandbox` / `listen EPERM` / `setpriority: Operation not permitted` | run outside the agent sandbox |
 | `another demo build is running (pid N)` | wait for it to finish (lock `tools/demo-video/.work/build.lock`); a pid owned by another user (`EPERM`) still counts as running |
+| `another demo build is starting` | the lock file was created a moment ago and its owner is still writing its pid; wait a second and re-run (an empty or corrupt lock counts as held for 5 s) |
 | `stale demo build lock …` | the build that wrote `tools/demo-video/.work/build.lock` died without releasing it (its pid is gone). Acquisition is exclusive (`O_CREAT\|O_EXCL`) and fails closed — the lock is never taken over automatically: remove the file and re-run |
 | `remotion … not installed` | `tools/demo-video` is missing or unusable: run `pnpm demo:setup` |
 | `another next build is running` | a gate/e2e build owns `.next-test`; wait for it |

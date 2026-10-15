@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { Browser } from "@playwright/test";
 import type { DemoProps, EventsFile, Locale, Theme } from "../../tools/demo-video/src/props";
 import { formatNumber } from "../../src/i18n/format";
+import { cleanupBuild } from "./cleanup";
 import { BUDGET, CLIP_IDS, CLIPS, DISSOLVE_S, LOCALES, THEMES, VIEWPORT, workKey, type ClipId } from "./clips";
 import { deliverClip } from "./deliver";
 import { doctor } from "./doctor";
@@ -266,10 +267,9 @@ async function build(argv: string[]) {
     const what = `${flags.only.join(", ")} × ${flags.locales.join(", ")} × ${flags.themes.join(", ")}`;
     log(flags.recordOnly ? `recorded ${what}; render with the same flags and --skip-record` : `built ${what}; run \`pnpm demo:verify\` next`);
   } finally {
-    await browser?.close();
-    await stack?.stop();
-    rmSync(join(TOOL, "public"), { recursive: true, force: true });
-    releaseLock();
+    // Every step runs even if an earlier one throws (Playwright rethrows non-TargetClosed errors from close()),
+    // and releaseLock() runs last so a failed teardown can never leave a stale lock behind.
+    await cleanupBuild({ browser, stack, removePublic: () => rmSync(join(TOOL, "public"), { recursive: true, force: true }), releaseLock: () => releaseLock() });
   }
 }
 

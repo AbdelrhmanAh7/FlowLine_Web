@@ -1,5 +1,5 @@
 // Paths of the demo pipeline, the build lock and the theme tokens (shared by build, doctor and verify).
-import { closeSync, existsSync, openSync, readFileSync, rmSync, writeSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, rmSync, statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Theme, ThemeTokens } from "../../tools/demo-video/src/props";
 
@@ -9,12 +9,25 @@ export const WORK = join(TOOL, ".work");
 export const OUT = join(ROOT, "public/media/demo");
 export const LOCK = join(WORK, "build.lock");
 
-/** The pid in `file`, when it names an integer process that is alive (EPERM counts as alive; a dead or corrupt lock frees it). */
-export function lockHeld(file = LOCK): number | null {
+/** Sentinel for a lock file that exists but whose pid has not been written yet (see lockHeld). */
+export const LOCK_STARTING = -1;
+/** How long an unparsable lock still counts as held, covering the window between `openSync("wx")` and the pid write. */
+export const LOCK_GRACE_MS = 5000;
+
+/**
+ * A live pid, `LOCK_STARTING` while a just-created lock's pid is still being written, or null when the lock is absent
+ * or stale. A lock file is created exclusively (`openSync("wx")`) before its owner writes the pid, so for a few
+ * milliseconds it is empty: treating that as free would let a second build remove a live lock. An empty or corrupt
+ * file therefore counts as held until it is older than `graceMs`; a real pid is alive unless `kill` says ESRCH (EPERM
+ * means another user owns it, so it is alive).
+ */
+export function lockHeld(file = LOCK, graceMs = LOCK_GRACE_MS): number | null {
   if (!existsSync(file)) return null;
   const content = readFileSync(file, "utf8");
   const pid = Number(content);
-  if (!Number.isInteger(pid) || pid <= 0) return null;
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return Date.now() - statSync(file).mtimeMs < graceMs ? LOCK_STARTING : null;
+  }
   try {
     process.kill(pid, 0);
     return pid;
@@ -36,7 +49,8 @@ export function acquireLock(file = LOCK): void {
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
     const held = lockHeld(file);
-    if (held) throw new Error(`another demo build is running (pid ${held}); wait for it (lock ${file})`);
+    if (held === LOCK_STARTING) throw new Error(`another demo build is starting; wait for it (lock ${file} was just created)`);
+    if (held !== null) throw new Error(`another demo build is running (pid ${held}); wait for it (lock ${file})`);
     throw new Error(`stale demo build lock ${file} (its pid is gone): the build that wrote it died without releasing it; remove the file and re-run`);
   }
   writeSync(fd, String(process.pid));

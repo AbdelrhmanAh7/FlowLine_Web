@@ -3,19 +3,28 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, statfsSync } from "node:fs";
 import { join } from "node:path";
-import { LOCK, ROOT, TOOL, lockHeld } from "./paths";
+import { LOCK, LOCK_STARTING, ROOT, TOOL, lockHeld } from "./paths";
 import { otherBuildRunning } from "./stack";
 
 export type Check = { name: string; ok: boolean; detail: string; fix?: string };
 
 const REMOTION = join(TOOL, "node_modules/.bin/remotion");
 
+/**
+ * The Node floor is the root package's `engines` (`24.x`), so 24 and newer pass; only older majors fail. Requires an
+ * exact 24 would wrongly reject the owner's newer Node and CI's image, so the check is a floor, not an equality.
+ */
+export function nodeCheck(version: string): Check {
+  const major = Number(version.split(".")[0]);
+  const ok = major >= 24;
+  return { name: "Node >= 24", ok, detail: `node ${version}`, fix: ok ? undefined : "install Node 24 or newer (the repo's `engines` floor is 24.x: `nvm install 24` or `brew install node@24`)" };
+}
+
 export async function runChecks(): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string, fix?: string) => checks.push({ name, ok, detail, fix: ok ? undefined : fix });
 
-  const major = Number(process.versions.node.split(".")[0]);
-  add("Node >= 22", major >= 22, `node ${process.versions.node}`, "install Node 22 or newer (the repo pins 22.x: `nvm install 22` or `brew install node@22`)");
+  checks.push(nodeCheck(process.versions.node));
 
   let chromiumPath = "";
   try {
@@ -50,9 +59,9 @@ export async function runChecks(): Promise<Check[]> {
   const nextBuild = otherBuildRunning();
   add(
     "no other build running",
-    !held && !nextBuild,
-    held ? `demo build pid ${held} holds ${LOCK.replace(`${ROOT}/`, "")}` : nextBuild ? "a `next build` (gate or e2e) is running" : "none",
-    held ? `wait for pid ${held} to finish (or remove a stale ${LOCK.replace(`${ROOT}/`, "")})` : "wait for the gate/e2e build to finish, then re-run",
+    held === null && !nextBuild,
+    held === LOCK_STARTING ? `a demo build is starting (${LOCK.replace(`${ROOT}/`, "")} was just created)` : held !== null ? `demo build pid ${held} holds ${LOCK.replace(`${ROOT}/`, "")}` : nextBuild ? "a `next build` (gate or e2e) is running" : "none",
+    held === LOCK_STARTING ? "wait a moment for it to finish (a lock file just appeared)" : held !== null ? `wait for pid ${held} to finish (or remove a stale ${LOCK.replace(`${ROOT}/`, "")})` : "wait for the gate/e2e build to finish, then re-run",
   );
   return checks;
 }

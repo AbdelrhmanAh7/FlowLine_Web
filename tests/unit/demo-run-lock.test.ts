@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { acquireLock, lockHeld, releaseLock, ROOT } from "../../scripts/demo/paths";
+import { acquireLock, LOCK_STARTING, lockHeld, releaseLock, ROOT } from "../../scripts/demo/paths";
 import { run } from "../../scripts/demo/run";
 
 describe("run()", () => {
@@ -28,6 +28,11 @@ describe("lockHeld()", () => {
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
   const setPid = (pid: number) => writeFileSync(lock, String(pid));
+  // A lock whose pid was never written and which is older than the grace period: the build that created it is gone.
+  const setStale = (content: string) => {
+    writeFileSync(lock, content);
+    utimesSync(lock, new Date(0), new Date(0));
+  };
   it("keeps the lock when the pid exists but kill is not permitted (EPERM)", () => {
     setPid(4242);
     vi.spyOn(process, "kill").mockImplementation(() => {
@@ -45,25 +50,40 @@ describe("lockHeld()", () => {
   it("reports no holder when the lock file does not exist", () => {
     expect(lockHeld(join(dir, "missing.lock"))).toBeNull();
   });
-  it("reports no holder when the lock file is empty", () => {
+  it("keeps a just-created lock while its owner is still writing the pid (empty file, fresh)", () => {
     writeFileSync(lock, "");
+    expect(lockHeld(lock)).toBe(LOCK_STARTING);
+  });
+  it("keeps a just-created lock whose content is not a pid yet (fresh garbage)", () => {
+    writeFileSync(lock, "ab");
+    expect(lockHeld(lock)).toBe(LOCK_STARTING);
+  });
+  it("frees an empty lock that never got a pid and is older than the grace period", () => {
+    setStale("");
     expect(lockHeld(lock)).toBeNull();
   });
-  it("reports no holder when the lock file contains a non-integer value", () => {
-    writeFileSync(lock, "abc");
+  it("frees a non-integer lock older than the grace period", () => {
+    setStale("abc");
     expect(lockHeld(lock)).toBeNull();
   });
-  it("reports no holder when the lock file contains NaN", () => {
-    writeFileSync(lock, "NaN");
+  it("frees a NaN lock older than the grace period", () => {
+    setStale("NaN");
     expect(lockHeld(lock)).toBeNull();
   });
-  it("reports no holder when the lock file contains PID 0", () => {
-    setPid(0);
+  it("frees a PID 0 lock older than the grace period", () => {
+    setStale("0");
     expect(lockHeld(lock)).toBeNull();
   });
-  it("reports no holder when the lock file contains a negative PID", () => {
-    setPid(-42);
+  it("frees a negative PID lock older than the grace period", () => {
+    setStale("-42");
     expect(lockHeld(lock)).toBeNull();
+  });
+  it("keeps a fresh empty lock inside the 5 s grace window and frees it after", () => {
+    writeFileSync(lock, "");
+    expect(lockHeld(lock)).toBe(LOCK_STARTING); // fresh: still being written
+    const past = new Date(Date.now() - 6000);
+    utimesSync(lock, past, past);
+    expect(lockHeld(lock)).toBeNull(); // older than the grace window
   });
 });
 
@@ -76,6 +96,10 @@ describe("acquireLock()", () => {
     rmSync(lock, { force: true });
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const setStale = (content: string) => {
+    writeFileSync(lock, content);
+    utimesSync(lock, new Date(0), new Date(0));
+  };
 
   // Acquires the lock, prints ACQUIRED, holds it, and releases on SIGTERM (so the test never races a zombie pid).
   const holderScript = `
@@ -96,6 +120,12 @@ describe("acquireLock()", () => {
     releaseLock(lock);
   });
 
+  it("refuses while the first build is still writing its pid (fresh empty lock is not stolen)", () => {
+    writeFileSync(lock, "");
+    expect(() => acquireLock(lock)).toThrow(/another demo build is starting/);
+    expect(existsSync(lock)).toBe(true); // the live lock is left for its owner
+  });
+
   it("fails closed on a stale lock instead of taking it over", () => {
     writeFileSync(lock, "4242");
     vi.spyOn(process, "kill").mockImplementation(() => {
@@ -103,6 +133,12 @@ describe("acquireLock()", () => {
     });
     expect(() => acquireLock(lock)).toThrow(/stale demo build lock/);
     expect(existsSync(lock)).toBe(true); // never silently taken over
+  });
+
+  it("fails closed on an old empty lock (pid write never finished) after the grace period", () => {
+    setStale("");
+    expect(() => acquireLock(lock)).toThrow(/stale demo build lock/);
+    expect(existsSync(lock)).toBe(true);
   });
 
   it("lets only one of two processes hold the lock", async () => {
