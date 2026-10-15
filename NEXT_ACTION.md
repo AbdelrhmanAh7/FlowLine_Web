@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #234 — review after main integration (2026-10-15)
+
+PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
+
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
 Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
