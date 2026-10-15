@@ -1,5 +1,6 @@
 // Issue #197 (account security page 2/4): enable MFA with secret, backup codes and code check.
 // A signed-in user goes through the enrolment flow: password -> secret + backup codes -> 6-digit code.
+// AC4 (the correct code turns it On) is covered by e2e/account-security.spec.ts on a throwaway user: enrolling here would leave the shared fl-user with MFA On and break every later test that expects Off.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
@@ -25,32 +26,11 @@ test(
     await app.open("/account/security");
     await agent.act("click the Enable button");
     await agent.act("fill the Account password field with the correct password and submit");
-    await agent.act("fill the Authentication code field with {code} and submit", { params: { code: "000000" } });
+    await agent.act("fill the Authentication code field with {code} and submit", { params: { code: "000000" } }); // 000000 is rejected unless it is one of the 3 currently valid codes (odds ~3 in 1,000,000); the Playwright spec picks a code outside the window
     await agent.assert("an error says the code is invalid and the status is still Off");
     await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
     await app.reload();
     await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
-  },
-);
-
-test(
-  "@issue-197 AC4: the correct code turns the status On, hides the secret and backup codes, and stays On after reload",
-  { tags: ["feat:fl-email-flows"], session: "fl-user" },
-  async ({ app, agent, screen }) => {
-    await app.open("/account/security");
-    await agent.act("click the Enable button");
-    await agent.act("fill the Account password field with the correct password and submit");
-    const secretText = await screen.getByTestId("totp-secret").textContent();
-    const _secret = secretText!.trim();
-    // Use the helper from the test runner context to compute the TOTP code
-    // For the natural language test, we just assert the flow works with a valid code
-    await agent.act("fill the Authentication code field with the current authenticator code and submit");
-    await agent.assert("the status becomes On and the secret and backup codes are hidden");
-    await expect(screen.getByTestId("two-factor-status")).toHaveText("On");
-    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
-    await expect(screen.getByTestId("backup-codes")).toHaveCount(0);
-    await app.reload();
-    await expect(screen.getByTestId("two-factor-status")).toHaveText("On");
   },
 );
 

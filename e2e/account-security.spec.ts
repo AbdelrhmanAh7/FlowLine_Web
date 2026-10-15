@@ -82,7 +82,10 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
   await page.getByRole("button", { name: "Enable" }).click();
-  await page.getByLabel("Authentication code").fill("000000");
+  // 000000 is only a safe "wrong" code when the accepted window (previous, current, next step) doesn't contain it.
+  const current = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
+  const accepted = [-30_000, 0, 30_000].map((d) => totpCodeFor(current, Date.now() + d));
+  await page.getByLabel("Authentication code").fill(["000000", "000001"].find((c) => !accepted.includes(c))!);
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
   await expect(dangerToast.last()).toHaveText("That code isn't valid. Try the current one.");
   await page.reload();
