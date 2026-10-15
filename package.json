@@ -37,6 +37,11 @@
     "test:live": "node scripts/with-env.mjs .env vitest run --project live",
     "test:live:saas": "node scripts/with-env.mjs .env vitest run --project live tests/live/saas.test.ts tests/live/certification.test.ts",
     "test:live:dryrun": "node scripts/live-dryrun.mjs",
+    "demo:setup": "pnpm --dir tools/demo-video install --ignore-workspace --frozen-lockfile && pnpm --dir tools/demo-video exec remotion browser ensure",
+    "demo:doctor": "tsx scripts/demo/cli.ts doctor",
+    "demo:build": "tsx scripts/demo/cli.ts build",
+    "demo:verify": "tsx scripts/demo/cli.ts verify",
+    "demo:studio": "pnpm --dir tools/demo-video exec remotion studio src/index.ts",
     "prepare": "husky || true"
   },
   "lint-staged": {
@@ -91,6 +96,7 @@
     "eslint-config-next": "16.3.6",
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
+    "sharp": "0.35.4",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
