@@ -46,14 +46,31 @@ export default function TemplatesPage() {
   const planned = useMemo(() => DESIGN_TEMPLATES.filter(match("designTemplates")), [cat, q, t]); // eslint-disable-line react-hooks/exhaustive-deps
   const catalog = useCatalog(workspace.id);
   const available = useMemo(() => new Set(catalog.data?.providers.flatMap((p) => p.actions.map((a) => a.id))), [catalog.data]);
-  // A template is offered only once every action it calls exists in the catalog. Until the catalog loads we render
-  // optimistically; the server still refuses a template with missing actions (409 TEMPLATE_UNAVAILABLE, src/server/flows.ts).
+  // A template is offered only once every action it calls exists in the catalog.
+  // While the catalog is loading we show a loading state. Once loaded, we compute usable/heldBack.
   const { usable, heldBack } = useMemo(() => {
-    if (!catalog.data) return { usable: planned, heldBack: [] as ReturnType<typeof heldBackDesignTemplates> };
+    if (!catalog.data) return { usable: [] as DesignTemplate[], heldBack: [] as ReturnType<typeof heldBackDesignTemplates> };
     return { usable: availableDesignTemplates(available, planned), heldBack: heldBackDesignTemplates(available, planned) };
   }, [planned, catalog.data, available]);
   const useReason = !canEdit ? t("templates.viewer") : !online ? t("templates.offline") : null;
   const categoryLabel = (c: string) => (c === "All" ? t("templates.all") : tr(t, `templateCategory.${c}`, c));
+
+  // While the catalog is loading, show a loading state instead of rendering templates optimistically.
+  // This prevents the race condition where templates appear as "usable" before the catalog resolves.
+  if (catalog.isLoading) {
+    return (
+      <div className="flex flex-col">
+        <PageHeader title={t("templates.title")} sub={t("templates.sub")} />
+        <div className="flex flex-col gap-6 p-4 sm:p-6">
+          <HelpDisclosure label={t("uxPages.templates.helpLabel")}>{t("uxPages.templates.helpBody")}</HelpDisclosure>
+          <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" aria-hidden="true" />
+            <span className="ms-3 text-med">{t("templates.loading")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   // Shared by the offered and held-back design cards.
   const designCardBody = (tpl: DesignTemplate) => {
     const shown = templateText(t, "designTemplates", tpl);

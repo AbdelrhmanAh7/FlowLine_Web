@@ -17,6 +17,11 @@ test(
   async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("open the workspace's Templates page from the navigation");
+
+    // Wait for the catalog to load (loading spinner disappears) before checking template state.
+    // The page shows a loading spinner while catalog.isLoading is true.
+    await expect(screen.getByRole("status", { name: "Loading templates…" })).not.toBeVisible({ timeout: 10000 });
+
     await agent.assert("a template named Deal won → Mizano quote is listed by name");
     await expect(screen.getByText("Deal won → Mizano quote").first()).toBeVisible();
 
@@ -47,6 +52,10 @@ test(
     await app.open("/");
     await agent.act("switch the interface language to Arabic");
     await agent.act("open the workspace's Templates page from the navigation");
+
+    // Wait for the catalog to load (loading spinner disappears) before checking template state.
+    await expect(screen.getByRole("status", { name: "جاري تحميل القوالب…" })).not.toBeVisible({ timeout: 10000 });
+
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     await agent.assert("a template named صفقة مكسوبة ← عرض سعر Mizano is listed (held back or offered)");
     await expect(screen.getByText("صفقة مكسوبة ← عرض سعر Mizano").first()).toBeVisible();

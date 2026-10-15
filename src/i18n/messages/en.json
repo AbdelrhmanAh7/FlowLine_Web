@@ -2094,6 +2094,7 @@
     "offline": "You're offline — reconnect to create flows",
     "actionsMissing": "This template needs app actions that aren't available yet",
     "notAvailableYet": "Not available yet",
+    "loading": "Loading templates…",
     "requirements": "Requirements",
     "req": {
       "builtIn": "Built in",
