@@ -221,7 +221,7 @@ export async function rerunPreview(original: typeof schema.run.$inferSelect, fro
   if (revision === "original") {
     const [v] = await db.select().from(schema.flowVersion).where(eq(schema.flowVersion.id, original.flowVersionId));
     graph = v!.graph as FlowGraph;
-    versionLabel = `v${v!.version} (the run's original revision)`;
+    versionLabel = `${v!.version === null ? "run snapshot" : `v${v!.version}`} (the run's original revision)`;
   } else {
     const [f] = await db.select().from(schema.flow).where(eq(schema.flow.id, original.flowId));
     graph = f!.graph as FlowGraph;

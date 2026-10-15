@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "Version {version}",
+    "runSnapshot": "Run snapshot",
+    "savedSnapshot": "Saved snapshot",
+    "overwriteSnapshot": "Copy kept before overwrite",
     "cancel": "Cancel",
     "retry": "Retry",
     "back": "Back",
@@ -538,6 +541,19 @@
         "low": "Any scores of 2 or less?",
         "review": "Summary with low scores",
         "scores": "Score summary"
+      }
+    },
+    "eta-invoice-notify": {
+      "name": "ETA Invoice Notify",
+      "description": "Pick the invoices still waiting for Egyptian Tax Authority (ETA) submission and list them for the team to follow up. Nothing is submitted or sent.",
+      "sample": "A batch of invoices, each with a number, a customer, a total and a status.",
+      "result": "The invoices waiting for ETA submission, or a note that none are waiting.",
+      "nodes": {
+        "trigger": "Invoice batch",
+        "pick": "Pick waiting invoices",
+        "any": "Any waiting?",
+        "follow-up": "Follow-up list",
+        "clear": "All submitted"
       }
     }
   },
@@ -1255,11 +1271,19 @@
       }
     },
     "mizano": {
-      "description": "Read overdue invoices from Mizano for follow-up.",
+      "description": "Mizano accounting connector.",
       "actions": {
         "list_overdue_invoices": {
           "title": "List overdue invoices",
           "description": "List unpaid invoices past their due date on the date you choose, in the workspace currency."
+        },
+        "create_customer": {
+          "title": "Create customer",
+          "description": "Create a new customer in Mizano with name, company, email, phone, and optional taxId."
+        },
+        "create_draft_quote": {
+          "title": "Create draft quote",
+          "description": "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate)."
         }
       },
       "fields": {
@@ -2043,6 +2067,7 @@
       "title": "Re-run #{number} from “{label}”",
       "revision": "Revision",
       "original": "The run's original version (v{version})",
+      "originalSnapshot": "The run's original snapshot",
       "latest": "The current saved flow (includes your fixes)",
       "willRerun": "Will run again · {count}",
       "needsApproval": "needs approval",
