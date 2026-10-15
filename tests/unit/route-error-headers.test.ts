@@ -8,6 +8,7 @@ const url = "http://localhost/api/x";
 async function expectSecureError(handler: () => Promise<Response> | Response, status: number, code: string, req?: Request) {
   const run = vi.fn(async () => handler());
   const res = await route(run)(req ?? new Request(url, { method: "GET" }), {});
+  if (code !== "CROSS_SITE_REQUEST") expect(run).toHaveBeenCalledTimes(1);
   expect(res.status).toBe(status);
   expect((await res.json()).error.code).toBe(code);
   expect(res.headers.get("cache-control")).toBe("no-store");
@@ -45,6 +46,7 @@ describe("route() error responses carry Cache-Control: no-store and Referrer-Pol
       method: "POST",
       headers: { cookie: "a=b", origin: "https://evil.example" },
     });
+    expect(req.headers.has("sec-fetch-site")).toBe(false);
     const run = await expectSecureError(() => new Response("ok"), 403, "CROSS_SITE_REQUEST", req);
     expect(run).not.toHaveBeenCalled();
   });

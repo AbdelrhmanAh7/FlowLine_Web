@@ -1,8 +1,57 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## route() error-header unit coverage (issue #234) — 2026-10-15
+
+#200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.
+
+## Legacy backfill 0026 (issue #205) — 2026-10-14
+
+Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
+publication numbers remain unchanged. Its insert trigger keeps old application images from numbering new snapshots.
+Forward and manual reverse acquire `SHARE ROW EXCLUSIVE` on `flow_version` before accessing the backup, retain it through
+commit, and use transaction-local lock/statement timeouts of 5/30 seconds. Readers continue; writers wait. The immutability
+trigger is disabled only inside the transaction. Reverse stays outside the journal; run it with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+It restores backed-up numbers, fails atomically if a later publication reused one, and leaves the backup for reruns.
+Numbers already cleared without backup by prerequisite #204's 0025 are outside this reverse's coverage.
+
+Verified locally on a disposable `flowline_test_205r6` database with Node 24: backfill integration 6/6 and runs 20/20.
+The fixture also removes the backup table to exercise a real pre-0026 schema. Cases cover legacy save/run/overwrite data,
+forward twice, reverse twice, forward after reverse, old-image inserts and collision refusal. The concurrent-insert
+regression failed before the fix (writer completed between backup and update), then passed with the early lock.
+`pnpm typecheck`, `pnpm lint`, `drizzle-kit check`, and E2E tooling hygiene 12/12 pass; full suites/build run only in CI.
+The inherited #204 E2E spec was removed per the CTO scope instruction; no new E2E spec was added.
+
+Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected retargeting it to ai/204 because PR #211
+already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
+then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
+
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
+stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
 ## route() error headers (issue #200) — 2026-10-13
 
-`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) the request-level `e2e-army/200-route-error-headers.e2e.ts`, and the handler-level `tests/unit/route-error-headers.test.ts` (issue #234: `HttpError` 403, `ZodError` 400, unhandled 500 and a cookie-bearing cross-site POST refused before the handler runs; 4 tests fail on the old `http.ts` and pass with #200). [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
+`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
 
 ## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
 
@@ -60,6 +109,10 @@ Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, rema
 ## PR #16 request-body follow-up — 2026-10-03
 
 PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
+
+## Issue #41 password-reset lock order — 2026-10-04
+
+`consumeAccountToken("reset")` takes the user row (`FOR UPDATE`, ahead of the token row since #45), then deletes the user's sessions, then writes the accounts, the same user-first order the federated transactions use after prerequisite #43; before #41 it had locked the credential account, then the sessions, then the user. [Order and retained-upload note](../security/FEDERATED_MFA.md#password-reset-recovery-lock-order); the two gaps listed in the original change were closed by #45. `#43` (the federated paths' shared user-first order, `src/server/federated-locks.ts`) is merged into this branch, so both sides now take the same order; `tests/unit/sso-callback-lock-order.test.ts` (passes locally, 2 of 2) pins the user-then-session order of the two `completeSso` callback transactions in `src/server/sso.ts`, which the other lock-order tests do not execute. The mocked-order unit test `tests/unit/password-reset-lock-order.test.ts` passes locally (6 of 6) and is the check that guards the #41 change: 3 of its 6 tests fail on the previous `flows.ts` (the two exact-sequence tests and the rank test). The two-connection PostgreSQL test `tests/integration/password-reset-lock-order.test.ts` pins the end-to-end protocol (no `40P01`, correct final state) in both directions but, because #45 had already put the user row first, it would also pass on the previous code, so it does not by itself catch a regression of the session-before-account move; it is **not executed** locally and needs CI. No migration, no UI change, no change to private-beta or production acceptance.
 
 ## CodeQL triage D: e2e fake servers — 2026-10-11 (Issue #114, part 4/4 of #63)
 
@@ -216,3 +269,11 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
+## Test coverage note: hub route selection (#174)
+
+`tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
