@@ -22,11 +22,45 @@ export interface LocalTemplate {
   graph: FlowGraph;
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+const finiteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/**
+ * Reject a graph entry that would pass the JSON boundary but break downstream code.
+ * Nodes are read by `localizeTemplate` (`data.label`) and the engine (`position`, `data.config`);
+ * edges are resolved by id (`source`/`target` must name nodes in the same graph).
+ */
+function assertNodeEntry(node: unknown, index: number, nodeIds: Set<string>): void {
+  if (!isRecord(node)) throw new Error(`Invalid template graph: node ${index} must be an object`);
+  if (!nonEmptyString(node.id)) throw new Error(`Invalid template graph: node ${index} needs a non-empty string id`);
+  if (nodeIds.has(node.id)) throw new Error(`Invalid template graph: duplicate node id "${node.id}"`);
+  nodeIds.add(node.id);
+  if (!nonEmptyString(node.type)) throw new Error(`Invalid template graph: node "${node.id}" needs a non-empty string type`);
+  if (!isRecord(node.position) || !finiteNumber(node.position.x) || !finiteNumber(node.position.y)) {
+    throw new Error(`Invalid template graph: node "${node.id}" needs a numeric position.x and position.y`);
+  }
+  if (!isRecord(node.data) || typeof node.data.label !== "string") {
+    throw new Error(`Invalid template graph: node "${node.id}" needs a data object with a string label`);
+  }
+}
+
+function assertEdgeEntry(edge: unknown, index: number, nodeIds: Set<string>): void {
+  if (!isRecord(edge)) throw new Error(`Invalid template graph: edge ${index} must be an object`);
+  if (!nonEmptyString(edge.id)) throw new Error(`Invalid template graph: edge ${index} needs a non-empty string id`);
+  if (!nonEmptyString(edge.source) || !nonEmptyString(edge.target)) {
+    throw new Error(`Invalid template graph: edge "${edge.id}" needs non-empty string source and target`);
+  }
+  if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
+    throw new Error(`Invalid template graph: edge "${edge.id}" must connect nodes in the same graph`);
+  }
+}
+
 /**
  * Parse a FlowLine template export JSON into a LocalTemplate.
  * The JSON has extra fields (format, version) and plain string types for nodes/edges.
- * Exported so the rejection branches are testable; a malformed export throws instead of
- * reaching LOCAL_TEMPLATES.
+ * Exported so the rejection branches are testable; a malformed export — a bad field or a
+ * malformed node/edge entry — throws instead of reaching LOCAL_TEMPLATES.
  */
 export function parseTemplateExport(json: unknown): LocalTemplate {
   const parsed = json as {
@@ -87,6 +121,11 @@ export function parseTemplateExport(json: unknown): LocalTemplate {
   if (!Array.isArray(parsed.graph.edges)) {
     throw new Error(`Invalid template graph: edges must be an array`);
   }
+  // Each entry must have the structure downstream code reads, so a malformed export fails
+  // here (at the JSON boundary) rather than later in localizeTemplate or a run.
+  const nodeIds = new Set<string>();
+  parsed.graph.nodes.forEach((node, i) => assertNodeEntry(node, i, nodeIds));
+  parsed.graph.edges.forEach((edge, i) => assertEdgeEntry(edge, i, nodeIds));
 
   return {
     id: parsed.id,

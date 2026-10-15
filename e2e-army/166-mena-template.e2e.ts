@@ -9,14 +9,15 @@ test("@issue-166 AC1: the templates gallery shows 'ETA Invoice Notify' and Use t
   // /app continues in the session owner's workspace; the gallery is that workspace's /templates route.
   await app.open("/app");
   await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
-  const slug = (await browser.url()).split("/")[2]!;
+  // Parse the pathname, not the whole URL: browser.url() is absolute, so split("/")[2] would be the host.
+  const slug = new URL(await browser.url()).pathname.split("/")[2]!;
   await app.open(`/w/${slug}/templates`);
   await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/templates$/);
   // The gallery card shows the template's name and its sample and result text.
   const card = screen.getByTestId("template-eta-invoice-notify");
   await expect(card).toBeVisible();
   await expect(card).toContainText("ETA Invoice Notify");
-  await expect(card).toContainText("A batch of invoices, each with a number, a customer and a status.");
+  await expect(card).toContainText("A batch of invoices, each with a number, a customer, a total and a status.");
   await expect(card).toContainText("The invoices waiting for ETA submission, or a note that none are waiting.");
   // Using the template creates a flow named after it, with the template's steps on the canvas.
   await card.getByRole("button", "Use template").click();
