@@ -112,7 +112,7 @@ test(
 
 test(
   "@issue-198 AC3: a wrong account password shows an error and draws no QR code",
-  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  { tags: ["feat:fl-email-flows"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
     await agent.act("click the Enable button");
