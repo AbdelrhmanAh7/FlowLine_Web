@@ -203,7 +203,7 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    /** Public version number (save / overwrite / publish share one sequence per flow). NULL for "run" snapshots: a run pins its graph but does not use up a number. */
+    /** Publication number; NULL for save, overwrite and run snapshots, so only publishing moves it (#204). */
     version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
@@ -213,9 +213,7 @@ export const flowVersion = pgTable(
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    uniqueIndex("flow_version_unique").on(t.flowId, t.version).where(sql`${t.version} is not null`),
-  ],
+  (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );
 
 /** Numbers that save, run and overwrite snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */

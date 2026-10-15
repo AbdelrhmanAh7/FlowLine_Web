@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { track } from "./telemetry";
 import { z } from "zod";
 import { db, schema, type Db } from "@/db";
@@ -142,14 +142,17 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** Only a publication takes a public version number (1, 2, 3… per flow); save, overwrite and run snapshots stay unnumbered. */
 export async function insertVersion(tx: Tx, user: CurrentUser, flow: typeof schema.flow.$inferSelect, reason: "save" | "run" | "overwrite" | "publish") {
-  const [{ next }] = await tx
-    .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
-    .from(schema.flowVersion)
-    // Only numbered rows (save / overwrite / publish) form the public sequence; run snapshots are NULL (#117).
-    .where(and(eq(schema.flowVersion.flowId, flow.id), isNotNull(schema.flowVersion.version)));
+  let version: number | null = null;
+  if (reason === "publish") {
+    const [{ next }] = await tx
+      .select({ next: sql<number>`coalesce(max(${schema.flowVersion.version}), 0)::int + 1` })
+      .from(schema.flowVersion)
+      .where(and(eq(schema.flowVersion.flowId, flow.id), eq(schema.flowVersion.reason, "publish")));
+    version = next;
+  }
   const [v] = await tx
     .insert(schema.flowVersion)
-    .values({ flowId: flow.id, version: reason === "run" ? null : next, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
+    .values({ flowId: flow.id, version, revision: flow.revision, name: flow.name, graph: flow.graph, reason, createdBy: user.id })
     .returning();
   return v;
 }
@@ -159,7 +162,7 @@ export async function listVersions(flowId: string) {
     .select({ id: schema.flowVersion.id, version: schema.flowVersion.version, revision: schema.flowVersion.revision, reason: schema.flowVersion.reason, createdAt: schema.flowVersion.createdAt })
     .from(schema.flowVersion)
     .where(eq(schema.flowVersion.flowId, flowId))
-    .orderBy(desc(schema.flowVersion.createdAt), sql`${schema.flowVersion.version} desc nulls last`)
+    .orderBy(desc(schema.flowVersion.createdAt))
     .limit(50);
 }
 

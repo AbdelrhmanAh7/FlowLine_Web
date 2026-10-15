@@ -37,8 +37,3 @@ export function runningDetail(step: RunStepDto, events: RunDetailDto["events"], 
   if (t) return { text: elapsed >= 1000 ? t("runningDetail.runningFor", { secs }) : t("runningDetail.running"), degraded: false };
   return { text: elapsed >= 1000 ? `Running… ${secs}` : "Running…", degraded: false };
 }
-
-/** Label key for the re-run dialog's "original" option: run snapshots carry no public version number (#117). */
-export function rerunOriginalKey(version: number | null): "runs.rerun.original" | "runs.rerun.originalSnapshot" {
-  return version === null ? "runs.rerun.originalSnapshot" : "runs.rerun.original";
-}
