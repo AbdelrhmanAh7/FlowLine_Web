@@ -1,5 +1,31 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Flows list & dashboard e2e guard (issue #117) — 2026-10-15
+
+`ai/117` was rebuilt from `origin/main`: #204/#205 already fixed the root cause (only a publication snapshot takes a
+version number; migrations `0025_flow_version_run_unnumbered` and `0026_flow_version_run_backfill`), so this branch keeps
+main's product code and the earlier parallel implementation — its own `insertVersion` numbering, a rewritten migration
+`0025` and reworded design notes — is dropped. Nothing but the regression guard is new:
+`e2e-army/117-flows-list-dashboard.e2e.ts` (request-level, no model), tagged `feat:fl-flows-list` plus the four other
+features it exercises (`fl-flows-api`, `fl-flow-versions`, `fl-run-execution`, `fl-run-history`).
+
+It reproduces the stable-gate check on the API the flows list and dashboard read: after two manual runs and one publish
+the row reports `publishedVersion 1` (not 3), `lastRunStatus "succeeded"`, `successRate 1`, `runCount 2`, `nodeCount 3`,
+`trigger "trigger.manual"`; the failed (`bad`) and untouched draft rows report their own state; the dashboard counts the
+same three flows; and `/w/<slug>/flows` and `/w/<slug>/runs` load (200) while the literal route placeholder `[slug]` is an
+ordinary 404. The throwaway account uses `E2E_ARMY_PASSWORD` or a stack-derived value, never a hard-coded password.
+
+The review round that prompted the rebuild flagged merge-conflict markers left in six files by the old branch's hand
+resolution of `origin/main`. Rebuilding from `origin/main` removes them; `tests/unit/no-conflict-markers.test.ts` now
+fails if any tracked text file still holds a `<<<<<<<` / `>>>>>>>` / `|||||||` marker, so a broken resolution reaches a
+test run instead of a reviewer.
+
+Verified locally at `8ce913ba` (the branch's test-only commit) against a disposable `flowline_test_117b` database: `pnpm e2e:army
+e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 (10.6 s, isolated stack on :3100 with a worker).
+`tests/unit/no-conflict-markers.test.ts` passes on the clean tree and fails on a tracked file with a marker
+(checked by hand); eslint on both files and `pnpm typecheck` are clean. The #204/#205 unit and integration suites that
+cover the product fix are unchanged and run in CI.
+
 ## Legacy backfill 0026 (issue #205) — 2026-10-14
 
 Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
