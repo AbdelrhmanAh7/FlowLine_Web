@@ -1,5 +1,14 @@
 # Next action — 2026-10-03
 
+## Pilot E2E corrections — 2026-10-15
+
+Local work on `fix/pilot-e2e-failures` is recorded in
+[the evidence report](artifacts/pilot-e2e/EVIDENCE.md). Owner requested no push, PR or writes outside
+this worktree. Harness next: link the tracking issue, arrange CI/review, and update the hub's outdated
+`fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
+Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
+
+
 ## Issue #234 — review after main integration (2026-10-15)
 
 PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
