@@ -73,6 +73,45 @@ describe("data nodes", () => {
     expect(res.output.r).toEqual({ count: 2, names: ["B", "C"] });
   });
 
+  it("CSV build keeps row object column order by default and respects explicit columns", async () => {
+    const gDefault: FlowGraph = {
+      nodes: [
+        trigger({ rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] }),
+        n("c", "data.csv", { mode: "build", source: "rows", delimiter: "," }),
+        n("o", "output", { key: "csv", expression: "" }),
+      ],
+      edges: [e("t", "c"), e("c", "o")],
+    };
+    const resDefault = await executeGraph(gDefault, { rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] });
+    expect(resDefault.status).toBe("succeeded");
+    expect(((resDefault.output.csv as { csv: string }).csv).replace(/\r\n/g, "\n")).toBe("name,qty\nA,1\nB,2");
+
+    // Later row with extra column is preserved in first-seen order
+    const gExtraCol: FlowGraph = {
+      nodes: [
+        trigger({ rows: [{ name: "A" }, { name: "B", qty: 2 }] }),
+        n("c", "data.csv", { mode: "build", source: "rows", delimiter: "," }),
+        n("o", "output", { key: "csv", expression: "" }),
+      ],
+      edges: [e("t", "c"), e("c", "o")],
+    };
+    const resExtraCol = await executeGraph(gExtraCol, { rows: [{ name: "A" }, { name: "B", qty: 2 }] });
+    expect(resExtraCol.status).toBe("succeeded");
+    expect(((resExtraCol.output.csv as { csv: string }).csv).replace(/\r\n/g, "\n")).toBe("name,qty\nA,\nB,2");
+
+    const gExplicit: FlowGraph = {
+      nodes: [
+        trigger({ rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] }),
+        n("c", "data.csv", { mode: "build", source: "rows", delimiter: ",", columns: ["qty", "name"] }),
+        n("o", "output", { key: "csv", expression: "" }),
+      ],
+      edges: [e("t", "c"), e("c", "o")],
+    };
+    const resExplicit = await executeGraph(gExplicit, { rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] });
+    expect(resExplicit.status).toBe("succeeded");
+    expect(((resExplicit.output.csv as { csv: string }).csv).replace(/\r\n/g, "\n")).toBe("qty,name\n1,A\n2,B");
+  });
+
   it("$steps references read upstream outputs and must point upstream", async () => {
     const g: FlowGraph = {
       nodes: [trigger({ a: 1 }), n("x", "transform.json", { expression: "{ 'twice': a * 2 }" }), n("y", "transform.json", { expression: "{ 'orig': $steps.t.a, 'twice': $steps.x.twice }" }), n("o", "output", { key: "r", expression: "" })],

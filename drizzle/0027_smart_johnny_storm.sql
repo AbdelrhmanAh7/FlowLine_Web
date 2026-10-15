@@ -1,0 +1,1 @@
+ALTER TABLE "run" ALTER COLUMN "input" SET DATA TYPE json;

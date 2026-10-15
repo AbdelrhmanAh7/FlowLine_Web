@@ -1,5 +1,14 @@
 # Next action — 2026-10-03
 
+## Issue #251 — PR #280 CSV node column order fix (2026-10-15)
+
+Stable release gate failure for `fl-csv-data-node` (PR #280 on branch `ai/251`) is resolved:
+- **Root cause 1 (DB schema)**: `schema.run.input` in `src/db/schema.ts:249` was stored as `jsonb`, which sorts keys by length (putting `qty` before `name`). Changed to `json("input")` in `src/db/schema.ts` and migration `drizzle/0027_smart_johnny_storm.sql`.
+- **Root cause 2 (Engine CSV build)**: In `src/engine/execute.ts:335-349`, when `columns` is omitted, the engine now extracts all unique column keys in order of first appearance across rows and passes them to `Papa.unparse`.
+- **E2E test**: `e2e-army/features/runs.e2e.ts:186` is restored to `N.csv("text", "build", "rows")` without `columns`, adhering strictly to "Fix the product, never weaken the test".
+- **Verification**: `tests/unit/engine-v2.test.ts:76-113` unit tests cover default column ordering, multi-row key collection, and explicit columns. All 116 unit test files (1634 tests) and 25 contract test files (527 tests) pass; `pnpm typecheck` and `pnpm lint` pass.
+- Harness can push branch `ai/251` to update PR #280.
+
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
 Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.

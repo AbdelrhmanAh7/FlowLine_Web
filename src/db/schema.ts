@@ -8,6 +8,7 @@ import {
   foreignKey,
   index,
   integer,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -246,7 +247,7 @@ export const run = pgTable(
     /** Per-workspace sequence shown as #n in the UI. */
     number: integer("number").notNull(),
     status: runStatusEnum("status").notNull().default("queued"),
-    input: jsonb("input"),
+    input: json("input"),
     output: jsonb("output"),
     error: jsonb("error").$type<{ code: string; message: string; nodeId?: string } | null>(),
     rerunOfRunId: uuid("rerun_of_run_id"),
