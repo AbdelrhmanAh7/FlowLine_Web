@@ -39,7 +39,7 @@ The following findings were fixed in the canonical implementation on `origin/mai
    - **Fix on `origin/main`**: `const isZero = /^0*$/.test(integer + fraction); const sign = m[1] === "-" && !isZero ? "-" : "";` (`src/lib/format.ts:95-96`).
    - **Test evidence on `origin/main`**: `tests/unit/lib-format.test.ts:210-215, 489-494`.
 
-## Local Verification Commands & Output (on this PR head `0f33aade`)
+## Local Verification Commands & Output (on this PR head `1b0acdb0`)
 
 ```
 $ nice -n 10 pnpm exec vitest run --project unit tests/unit/lib-format.test.ts tests/unit/latin-digits.test.ts
