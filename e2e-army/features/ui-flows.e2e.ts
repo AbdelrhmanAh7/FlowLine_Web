@@ -111,3 +111,18 @@ test("[fl-workspace-nav.2] the workspace shell is Arabic and right-to-left: tran
   await expect(screen.getByRole("heading", { level: 1 })).toHaveText("سجل التشغيل");
   await agent.assert("the Run history page is shown in Arabic inside the workspace");
 });
+
+test("[fl-workspace-nav.3] the Security item of the user menu opens the account security page, which shows two-step verification Off", { session: "fl-user", tags: ["feat:fl-workspace-nav", "shard:ui-flows", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+  needsModel();
+  const { http, ws } = await fresh("nav-3");
+  // The page shows the account's own flag, and this owner never turned two-step verification on.
+  expect((await http.get("/api/auth/get-session")).json.user.twoFactorEnabled ?? false).toBe(false);
+  await app.open(`/w/${ws.slug}/flows`);
+  await agent.act("open the user menu at the bottom of the workspace navigation");
+  await screen.getByRole("menuitem", "Security").tap();
+  await expect(browser).toHaveURL("/account/security");
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText("Security");
+  await expect(screen.getByRole("heading", "Two-step verification")).toBeVisible();
+  await expect(screen.getByText("Off")).toBeVisible();
+  await agent.assert("the account security page says that two-step verification is off");
+});
