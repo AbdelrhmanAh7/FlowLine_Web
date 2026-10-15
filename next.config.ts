@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/admin", headers: secure },
       { source: "/admin/:path*", headers: secure },
+      // Account pages are per-user (security status, delete flow) — a cached render could leak one user's data to another.
+      { source: "/account/:path*", headers: secure },
       { source: "/api/platform/:path*", headers: secure },
       { source: "/api/oauth/callback", headers: secure },
       { source: "/api/auth/callback/:path*", headers: secure },
