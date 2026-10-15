@@ -5,10 +5,20 @@ import { HttpError, route } from "@/server/http";
 const url = "http://localhost/api/x";
 
 // Handler-level check of #200: handleRoute sets no-store and no-referrer on every error response it builds.
-async function expectSecureError(handler: () => Promise<Response> | Response, status: number, code: string, req?: Request) {
+async function expectSecureError(
+  handler: () => Promise<Response> | Response,
+  status: number,
+  code: string,
+  req?: Request,
+  expectHandlerRuns = true,
+) {
   const run = vi.fn(async () => handler());
   const res = await route(run)(req ?? new Request(url, { method: "GET" }), {});
-  if (code !== "CROSS_SITE_REQUEST") expect(run).toHaveBeenCalledTimes(1);
+  if (expectHandlerRuns) {
+    expect(run).toHaveBeenCalledTimes(1);
+  } else {
+    expect(run).not.toHaveBeenCalled();
+  }
   expect(res.status).toBe(status);
   expect((await res.json()).error.code).toBe(code);
   expect(res.headers.get("cache-control")).toBe("no-store");
@@ -16,12 +26,7 @@ async function expectSecureError(handler: () => Promise<Response> | Response, st
   return run;
 }
 
-describe.skip("route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer", () => {
-  /**
-   * This suite is skipped because the required headers (Cache-Control: no-store and Referrer-Policy: no-referrer)
-   * are not yet implemented. The implementation is deferred until #200 is merged.
-   * Once #200 lands, this suite will be unskipped and will verify the headers are set correctly.
-   */
+describe("route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -52,7 +57,7 @@ describe.skip("route() error responses carry Cache-Control: no-store and Referre
       headers: { cookie: "a=b", origin: "https://evil.example" },
     });
     expect(req.headers.has("sec-fetch-site")).toBe(false);
-    const run = await expectSecureError(() => new Response("ok"), 403, "CROSS_SITE_REQUEST", req);
+    const run = await expectSecureError(() => new Response("ok"), 403, "CROSS_SITE_REQUEST", req, false);
     expect(run).not.toHaveBeenCalled();
   });
 });

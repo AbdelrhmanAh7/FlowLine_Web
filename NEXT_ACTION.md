@@ -2,7 +2,7 @@
 
 ## Issue #234 — review after main integration (2026-10-15)
 
-#200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
+PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
 
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
