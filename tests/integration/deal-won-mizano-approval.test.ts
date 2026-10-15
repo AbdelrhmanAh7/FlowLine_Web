@@ -19,7 +19,7 @@ import { claimAndProcess, closeDb, freshRun, makeUser, unique } from "./helpers"
 
 /**
  * The "Deal won → Mizano quote" template through the REAL worker (claim, approval gate, decide, resume) with a
- * mocked Mizano. The Mizano create actions land with #147, so recording stand-ins are registered on the provider here;
+ * mocked Mizano. The real Mizano create actions (#147) are swapped for recorders that keep their schemas and return a full response;
  * everything between the run and the action (inputs, approval binding, rejection) is the production path.
  */
 let fake: Fake;
@@ -33,10 +33,11 @@ const restore: (() => void)[] = [];
  * afterwards. If not, a stand-in is inserted and removed afterwards. This avoids duplicates and lookup-order issues
  * when #147 lands.
  */
-function record(id: string, response: Record<string, unknown>) {
+function record(id: string, response: Record<string, unknown> | ((args: Record<string, any>) => Record<string, unknown>)) { // eslint-disable-line @typescript-eslint/no-explicit-any
   const rec = async (_ctx: unknown, args: Record<string, unknown>) => {
     calls.push({ action: id, args });
-    return response; // realistic: an id, not an echo of the request
+    // The real action's output schema still validates what a recorder returns, so give it a full, realistic response.
+    return typeof response === "function" ? response(args) : response;
   };
   const idx = mizano.actions.findIndex((a) => a.id === id);
   if (idx !== -1) {
@@ -119,8 +120,8 @@ describe("Deal won → Mizano quote: availability", () => {
       // The publish check (serverIssues) also refuses the graph while the actions are unregistered: both Mizano steps.
       expect(await unknownNodes()).toEqual(["customer", "quote"]);
     }
-    record("mizano.create_customer", { id: "cust-1" });
-    record("mizano.create_draft_quote", { id: "Q-1" });
+    record("mizano.create_customer", (a) => ({ id: "cust-1", name: a.name, company: a.company, email: a.email, phone: a.phone }));
+    record("mizano.create_draft_quote", (a) => ({ id: "Q-1", customerId: a.customerId, currency: a.currency, lines: a.lines }));
     // With the actions registered (as #147 will register them) nothing is unknown to the publisher any more.
     expect(await unknownNodes()).toEqual([]);
     const flow = await createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" });
@@ -142,8 +143,8 @@ describe("Deal won → Mizano quote: availability", () => {
 
 describe("Deal won → Mizano quote: real worker approval path", () => {
   beforeAll(() => {
-    record("mizano.create_customer", { id: "cust-1" });
-    record("mizano.create_draft_quote", { id: "Q-1" });
+    record("mizano.create_customer", (a) => ({ id: "cust-1", name: a.name, company: a.company, email: a.email, phone: a.phone }));
+    record("mizano.create_draft_quote", (a) => ({ id: "Q-1", customerId: a.customerId, currency: a.currency, lines: a.lines }));
   });
 
   it("waits for approval with nothing sent to Mizano, shows the customer, then runs once approved", async () => {
