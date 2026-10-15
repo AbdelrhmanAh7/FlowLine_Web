@@ -10,7 +10,7 @@ base branch from `main` to `ai/197`).
 
 Against `origin/ai/197` (the stacked base branch, which already contains `main` with #147/#219, so the
 Mizano fake, contract tests and #147 docs are not part of this PR), `git diff origin/ai/197 HEAD --stat`
-lists exactly 9 files (164 insertions, 4 deletions) and the diff is strictly QR-only:
+lists exactly 9 files (166 insertions, 4 deletions) and the diff is strictly QR-only:
 
 - `package.json`, `pnpm-lock.yaml`: `qrcode.react` 4.2.0, exact pin, ISC license,
   peer dependencies include React 19 (`^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0`).
@@ -31,7 +31,7 @@ lists exactly 9 files (164 insertions, 4 deletions) and the diff is strictly QR-
   no secret), tagged `feat:fl-auth-api` (the better-auth two-factor endpoint it exercises), run against `fl-user` session.
 - `docs/implementation/BETA_USER_GUIDE.md`: the privacy bullet under item 7 (Privacy) mentions
   scanning the QR code with the authenticator app (or typing the secret key shown below it).
-- `scripts/gate-groups.mjs`: zero diff against `origin/ai/197`.
+- `scripts/gate-groups.mjs`, `e2e-army/85-*`, `e2e-army/196-*`, `e2e-army/197-*`: zero diff against `origin/ai/197` (the #198 army test is its own file, not appended to #85).
 
 ## Prerequisite Stacking Order
 
@@ -55,4 +55,4 @@ Once PR #261 and PR #259 are merged to `main`, PR #278 will be retargeted to `ma
 | `pnpm lint` | passed (zero warnings/errors) |
 | `vitest run tests/unit/api-error-shape.test.ts` | passed (3/3) |
 | `vitest related src/components/totp-qr.tsx` | passed |
-| `e2e/account-security.spec.ts` | all assertions pass (same-origin, 1 enable POST, QR placement, dark mode bg, Cancel cleanup, RTL) |
+| `pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` (isolated stack, own DB, 2026-10-15 after merging `origin/ai/197`) | 6 passed (1.2m): all assertions pass (same-origin, 1 enable POST, QR placement, dark mode bg, Cancel cleanup, RTL) |

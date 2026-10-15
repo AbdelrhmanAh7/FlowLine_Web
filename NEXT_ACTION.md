@@ -4,6 +4,10 @@
 
 The QR enrolment is implemented and passes `e2e/account-security.spec.ts` on an isolated stack ([status](docs/implementation/ISSUE_198_STATUS.md)). PR #278 (branch `ai/198`) is stacked on `ai/197` (PR #259, #197), which is stacked on `ai/196` (PR #261, #196). PR #278 is parked as a draft with label `ai-hold` awaiting PRs #259 and #261 to merge to `main`. After both merge, retarget PR #278 to `main`, merge `origin/main` into `ai/198` so the diff against `main` is QR-only, re-run `pnpm install --frozen-lockfile` and `pnpm test:e2e e2e/account-security.spec.ts`, and request final re-review. Issues #198 and #195 stay open until then.
 
+## Issue #234 — review after main integration (2026-10-15)
+
+PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
+
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
 Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
