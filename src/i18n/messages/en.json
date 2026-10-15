@@ -543,6 +543,19 @@
         "review": "Summary with low scores",
         "scores": "Score summary"
       }
+    },
+    "eta-invoice-notify": {
+      "name": "ETA Invoice Notify",
+      "description": "Pick the invoices still waiting for Egyptian Tax Authority (ETA) submission and list them for the team to follow up. Nothing is submitted or sent.",
+      "sample": "A batch of invoices, each with a number, a customer, a total and a status.",
+      "result": "The invoices waiting for ETA submission, or a note that none are waiting.",
+      "nodes": {
+        "trigger": "Invoice batch",
+        "pick": "Pick waiting invoices",
+        "any": "Any waiting?",
+        "follow-up": "Follow-up list",
+        "clear": "All submitted"
+      }
     }
   },
   "templateCategory": {
