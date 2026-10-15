@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
-import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates } from "@/engine/templates";
+import etaInvoiceNotifyExport from "@/engine/templates/mena/eta-invoice-notify.v1.json";
+import { LANDING_TEMPLATE_IDS, LANDING_TEMPLATES, LOCAL_TEMPLATES, onboardingTemplates, parseTemplateExport } from "@/engine/templates";
 import type { FlowGraph } from "@/engine/types";
 import { NONDETERMINISTIC, validateGraph } from "@/engine/validate";
 import { ar as arMessages } from "@/i18n/messages/ar";
@@ -44,8 +47,8 @@ async function run(id: string, input?: unknown) {
 }
 
 describe("local template catalogue", () => {
-  it("keeps the original three first, then appends the twelve scenarios", () => {
-    expect(LOCAL_TEMPLATES.map((t) => t.id)).toEqual(["lead-qualifier", "ticket-priority", "order-totals", ...NEW_IDS]);
+  it("keeps the original three first, then appends the twelve scenarios and the MENA ETA template", () => {
+    expect(LOCAL_TEMPLATES.map((t) => t.id)).toEqual(["lead-qualifier", "ticket-priority", "order-totals", ...NEW_IDS, "eta-invoice-notify"]);
     expect(LOCAL_SCENARIOS.map((t) => t.id)).toEqual(NEW_IDS);
     expect(new Set(LOCAL_TEMPLATES.map((t) => t.id)).size).toBe(LOCAL_TEMPLATES.length);
   });
@@ -80,6 +83,79 @@ describe("local template catalogue", () => {
     expect(ok.data.config).toEqual({ key: "approved", expression: "" });
     expect(await run("order-totals")).toEqual({ review: { total: 298.5, lines: 2 } });
     expect(await run("order-totals", { items: [{ sku: "A-1", qty: 2, price: 10 }] })).toEqual({ approved: { total: 20, lines: 1 } });
+  });
+
+  it("eta-invoice-notify lists only the invoices still pending ETA submission", async () => {
+    expect(await run("eta-invoice-notify")).toEqual({
+      eta_follow_up: [
+        { number: "INV-1041", customer: "Nile Trading", total: 12500 },
+        { number: "INV-1043", customer: "Cairo Tech", total: 4200 },
+      ],
+    });
+    // Exactly one pending invoice: the follow-up list is still a one-element array.
+    // JSONata unwraps a singleton sequence into a single value, so the expression
+    // must force an array (the empty-predicate postfix `[]` keeps singleton arrays).
+    const one = await run("eta-invoice-notify", {
+      invoices: [
+        { number: "INV-1041", customer: "Nile Trading", total: 12500, status: "pending_eta" },
+        { number: "INV-1042", customer: "Delta Foods", total: 830, status: "submitted" },
+      ],
+    });
+    expect(Array.isArray(one.eta_follow_up), "eta_follow_up stays a list with exactly one pending invoice").toBe(true);
+    expect(one.eta_follow_up).toEqual([{ number: "INV-1041", customer: "Nile Trading", total: 12500 }]);
+    expect(await run("eta-invoice-notify", { invoices: [{ number: "INV-9", customer: "Delta", total: 1, status: "submitted" }] })).toEqual({
+      eta_clear: { note: "No invoices are waiting for ETA submission." },
+    });
+  });
+
+  it("parseTemplateExport accepts the shipped MENA export and rejects malformed ones", () => {
+    // The versioned export contract (format, version, category, goal, graph) is enforced
+    // at the JSON boundary, so a bad file never reaches LOCAL_TEMPLATES.
+    expect(parseTemplateExport(etaInvoiceNotifyExport).id).toBe("eta-invoice-notify");
+    // A valid export, with one field broken per case.
+    const base = () => ({
+      format: "flowline-template",
+      version: 1,
+      id: "eta-invoice-notify",
+      name: "ETA Invoice Notify",
+      description: "Pick waiting invoices.",
+      sample: "A batch of invoices.",
+      result: "The invoices waiting for ETA submission.",
+      category: "Finance",
+      goal: "data",
+      graph: { nodes: [], edges: [] },
+    });
+    const wrongFormat = { ...base(), format: "flowline-workflow" };
+    expect(() => parseTemplateExport(wrongFormat)).toThrow(/format/);
+    const oldVersion = { ...base(), version: 0 };
+    expect(() => parseTemplateExport(oldVersion)).toThrow(/version/);
+    const wrongCategory = { ...base(), category: "Legal" };
+    expect(() => parseTemplateExport(wrongCategory)).toThrow(/category/);
+    const wrongGoal = { ...base(), goal: "legal" };
+    expect(() => parseTemplateExport(wrongGoal)).toThrow(/goal/);
+    const missingNodes = { ...base(), graph: { edges: [] } };
+    expect(() => parseTemplateExport(missingNodes)).toThrow(/nodes/);
+    // Graph entries are validated, not just the arrays: a node without `data` would throw later in
+    // localizeTemplate, so it must be rejected at the JSON boundary.
+    const graph = base().graph;
+    const node = (over: Record<string, unknown> = {}) => ({
+      id: "trigger",
+      type: "trigger.manual",
+      position: { x: 0, y: 120 },
+      data: { label: "Invoices", config: { samplePayload: "{}" } },
+      ...over,
+    });
+    const withGraph = (nodes: unknown[], edges: unknown[] = []) => ({ ...base(), graph: { ...graph, nodes, edges } });
+    expect(() => parseTemplateExport(withGraph([null]))).toThrow(/node 0 must be an object/);
+    expect(() => parseTemplateExport(withGraph([node({ id: "" })]))).toThrow(/non-empty string id/);
+    expect(() => parseTemplateExport(withGraph([node({ type: 42 })]))).toThrow(/non-empty string type/);
+    expect(() => parseTemplateExport(withGraph([node({ position: { x: "0", y: 1 } })]))).toThrow(/numeric position/);
+    expect(() => parseTemplateExport(withGraph([node({ data: { label: 7 } })]))).toThrow(/data object with a string label/);
+    // A node with no `data` at all is the exact shape the reviewer cited: { id: "pick" }.
+    expect(() => parseTemplateExport(withGraph([{ id: "pick" }]))).toThrow(/node "pick"/);
+    expect(() => parseTemplateExport(withGraph([node(), node()]))).toThrow(/duplicate node id/);
+    expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger" }]))).toThrow(/source and target/);
+    expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger", target: "missing" }]))).toThrow(/same graph/);
   });
 
   it("running every template leaves the template and its sample untouched", async () => {
@@ -126,6 +202,18 @@ describe("EN/AR text for every local template", () => {
     const ids = LOCAL_TEMPLATES.map((t) => t.id).sort();
     expect(Object.keys(enCat).sort()).toEqual(ids);
     expect(Object.keys(arCat).sort()).toEqual(ids);
+  });
+
+  it("#166: the e2e-army gallery test asserts the shipped name/sample/result, so its literals cannot drift", () => {
+    // The e2e-army test runs in the hub runner and may import only `e2e` / `@e2e-dev/web`, so its
+    // expected card text is a literal. This guard fails the moment the shipped copy changes and the
+    // literal is not updated — the root cause of the recurring "sample text mismatch" finding.
+    const src = readFileSync(join(__dirname, "..", "..", "e2e-army", "166-mena-template.e2e.ts"), "utf8");
+    const asserted = [...src.matchAll(/toContainText\("([^"]+)"\)/g)].map((m) => m[1]);
+    const entry = enCat["eta-invoice-notify"]!;
+    expect(asserted).toContain(entry.name);
+    expect(asserted).toContain(entry.sample);
+    expect(asserted).toContain(entry.result);
   });
 
   it("every category used has both translations", () => {
