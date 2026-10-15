@@ -7,7 +7,7 @@ import { expect } from "e2e";
 
 test(
   "@issue-198 AC1: a wrong account password shows an error and draws no QR code",
-  { tags: ["feat:fl-email-flows"], session: "fl-user" },
+  { tags: ["feat:fl-auth-api"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
     await agent.act("click the Enable button");

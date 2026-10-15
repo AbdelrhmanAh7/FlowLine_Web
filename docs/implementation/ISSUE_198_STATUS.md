@@ -8,7 +8,9 @@ the hub's `closepr-cli` tool (`node src/closepr-cli.ts close`) with recorded rea
 Constitution articles 1 & 2 (superseded by active PR #278, enabling PR #278 to retarget its
 base branch from `main` to `ai/197`).
 
-Against `origin/ai/197` (the stacked base branch), the diff is strictly QR-only:
+Against `origin/ai/197` (the stacked base branch, which already contains `main` with #147/#219, so the
+Mizano fake, contract tests and #147 docs are not part of this PR), `git diff origin/ai/197 HEAD --stat`
+lists exactly 9 files (164 insertions, 4 deletions) and the diff is strictly QR-only:
 
 - `package.json`, `pnpm-lock.yaml`: `qrcode.react` 4.2.0, exact pin, ISC license,
   peer dependencies include React 19 (`^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0`).
@@ -26,7 +28,7 @@ Against `origin/ai/197` (the stacked base branch), the diff is strictly QR-only:
   visible with an `<svg>`, positioned above the secret, on a white background; verifies QR disappears
   on Cancel and on successful confirmation; verifies RTL layout bounds in Arabic (`dir="rtl"`).
 - `e2e-army/198-totp-qr.e2e.ts`: natural-language test for `@issue-198 AC1` (wrong password: no QR,
-  no secret), tagged `feat:fl-email-flows`, run against `fl-user` session.
+  no secret), tagged `feat:fl-auth-api` (the better-auth two-factor endpoint it exercises), run against `fl-user` session.
 - `docs/implementation/BETA_USER_GUIDE.md`: the privacy bullet under item 7 (Privacy) mentions
   scanning the QR code with the authenticator app (or typing the secret key shown below it).
 - `scripts/gate-groups.mjs`: zero diff against `origin/ai/197`.
