@@ -187,7 +187,7 @@ describe("mizano.create_customer", () => {
     expect(req.method).toBe("POST");
     expect(req.path).toBe("/api/customers");
     expect(req.baseUrl).toBe("https://mizano.test");
-expect(req.headers?.["Idempotency-Key"]).toBe(ctx.idempotencyKey);
+    expect(req.headers?.["Idempotency-Key"]).toBe("idem-mizano");
     expect(req.json).toEqual({
       name: "Test Customer",
       company: "Test Company Ltd",
@@ -197,6 +197,17 @@ expect(req.headers?.["Idempotency-Key"]).toBe(ctx.idempotencyKey);
     });
   });
 
+  it("sends the same Idempotency-Key when called twice with the same ctx and input", async () => {
+    const input = { name: "Test Customer", company: "Test Company Ltd", email: "test@example.com", phone: "+1-555-0123" };
+    const { ctx, request } = ctxReturning(customerResponse);
+    await runAction("mizano.create_customer", ctx, input);
+    await runAction("mizano.create_customer", ctx, input);
+    const key1 = request.mock.calls[0][0].headers?.["Idempotency-Key"];
+    const key2 = request.mock.calls[1][0].headers?.["Idempotency-Key"];
+    expect(key1).toBe("idem-mizano");
+    expect(key2).toBe("idem-mizano");
+    expect(key1).toBe(key2);
+  });
 
   it("omits taxId from the request body when it is not provided", async () => {
     const { ctx, request } = ctxReturning({ ...customerResponse, taxId: undefined });
@@ -314,7 +325,7 @@ describe("mizano.create_draft_quote", () => {
     expect(req.method).toBe("POST");
     expect(req.path).toBe("/api/quotes");
     expect(req.baseUrl).toBe("https://mizano.test");
-expect(req.headers?.["Idempotency-Key"]).toBe(ctx.idempotencyKey);
+    expect(req.headers?.["Idempotency-Key"]).toBe("idem-mizano");
     expect(req.json).toEqual({
       customerId: "cust_123",
       currency: "EGP",
@@ -325,6 +336,17 @@ expect(req.headers?.["Idempotency-Key"]).toBe(ctx.idempotencyKey);
     });
   });
 
+  it("sends the same Idempotency-Key when called twice with the same ctx and input", async () => {
+    const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
+    const { ctx, request } = ctxReturning(quoteResponse);
+    await runAction("mizano.create_draft_quote", ctx, input);
+    await runAction("mizano.create_draft_quote", ctx, input);
+    const key1 = request.mock.calls[0][0].headers?.["Idempotency-Key"];
+    const key2 = request.mock.calls[1][0].headers?.["Idempotency-Key"];
+    expect(key1).toBe("idem-mizano");
+    expect(key2).toBe("idem-mizano");
+    expect(key1).toBe(key2);
+  });
 
   it("sends the same Idempotency-Key when the same run repeats, and a different one for another run", async () => {
     const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
