@@ -37,14 +37,14 @@ describe("i18n catalogues", () => {
     expect(en.integrationCatalog.mizano.description).toBe("Connect FlowLine to your Mizano accounting workspace with a scoped API key.");
     expect(en.integrationCatalog.mizano.fields.baseUrl.label).toBe("Base URL");
     expect(en.integrationCatalog.mizano.fields.token.label).toBe("API key");
-    expect(ar.integrationCatalog.mizano.fields.baseUrl.label).toBe("رابط الأساس");
+    expect(ar.integrationCatalog.mizano.fields.baseUrl.label).toBe("الرابط الأساسي");
     expect(ar.integrationCatalog.mizano.fields.token.label).toBe("مفتاح API");
     expect(ar.integrationCatalog.mizano.description).toContain("بمفتاح API ذي نطاق محدد");
     for (const catalog of [ar, en]) {
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.title).toBeTruthy();
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.description).toBeTruthy();
     }
-    expect(ar.integrationCatalog.mizano.actions.create_customer.description).toContain("باسم العميل واسم الشركة");
+    expect(ar.integrationCatalog.mizano.actions).toEqual({ list_overdue_invoices: { title: "عرض الفواتير المتأخرة", description: "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل" } });
   });
 
   it("a catalogue with a missing key does not type-check", () => {

@@ -13,7 +13,7 @@ test("@issue-224 AC: Mizano connection text and required fields are localized in
       ? "Connect FlowLine to your Mizano accounting workspace with a scoped API key."
       : "اربط FlowLine بمساحة عملك المحاسبية في Mizano بمفتاح API ذي نطاق محدد.", { exact: true })).toBeVisible();
     await agent.act("open the connection form for the Mizano integration");
-    await expect(screen.getByLabel(locale === "en" ? "Base URL" : "رابط الأساس", { exact: true })).toBeVisible();
+    await expect(screen.getByLabel(locale === "en" ? "Base URL" : "الرابط الأساسي", { exact: true })).toBeVisible();
     await expect(screen.getByLabel(locale === "en" ? "API key" : "مفتاح API", { exact: true })).toBeVisible();
     await agent.act("leave the connection fields empty and try to submit the connection form");
     await agent.assert("the Mizano connection form remains open with required empty fields and no successful connection");
