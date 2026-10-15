@@ -1,5 +1,11 @@
 # Next action — 2026-10-03
 
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
 Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.

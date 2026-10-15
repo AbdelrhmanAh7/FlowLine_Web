@@ -51,6 +51,8 @@ local Ollama models (visual/copy review).
   `flow_version` holds immutable snapshots (`save` = Ctrl/⌘+S, `run` = pinned for each run,
   `overwrite` = the server copy kept before an explicit offline overwrite). Only `publish` snapshots take a public
   version number (1, 2, 3… per flow, derived from earlier publications only); `save`, `overwrite` and `run` snapshots
+  remain outside that sequence. Publications lock the flow row before allocation; `flow_version_unique` rejects duplicate
+  non-NULL numbers while permitting multiple unnumbered snapshots (verified by the #204 two-connection regression). They
   have `version = NULL` and the history panel names them by reason ("Saved snapshot", "Copy kept before overwrite",
   "Run snapshot"), so saving or running a flow never changes the number its next publication gets (#204). History
   lists snapshots newest first by `created_at` (`now()`, the transaction start), so two snapshots written by

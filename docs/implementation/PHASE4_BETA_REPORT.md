@@ -22,7 +22,13 @@ Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected
 already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
 then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
 
-## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-15
+
+The fix and migration below are already on main via `83a80114` (#253). Revalidation adds isolated numbering coverage,
+a deterministic two-connection publish/unique-index regression, and fixes the legacy fixture so 0025 actually clears numbers.
+The issue and feature API E2E tests pass 2/2 on the isolated dev stack; authenticated EN/AR routes return 200.
+Exact hub production-stack validation, hosted CI and review confirmation remain pending. [Current evidence](../../artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15).
+The following results are historical (2026-10-13):
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
