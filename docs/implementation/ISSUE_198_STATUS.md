@@ -1,59 +1,56 @@
 # Account enrolment QR (#198) — 2026-10-15
 
-Status: implemented and verified locally; the PR (#278, branch `ai/198`) waits for
-its prerequisites. PR #259 (#197) and PR #261 (#196) were still OPEN with
-`mergedAt: null` on 2026-10-15, so `ai/198` carries their code through clean merges
-of `origin/ai/197` and `origin/main`. Against `origin/ai/197` (the PR's stacked base)
-the diff is QR-only:
+Status: implemented and verified locally; PR #278 (branch `ai/198`) is stacked on `ai/197`
+(PR #259, issue #197), which is stacked on `ai/196` (PR #261, issue #196). Both prerequisite
+PRs #259 and #261 remain open (`mergedAt: null`), so PR #278 is parked as a draft with label
+`ai-hold` until both prerequisites merge to main. Duplicate draft PR #260 was closed via
+the hub's `closepr-cli` tool (`node src/closepr-cli.ts close`) with recorded reason per
+Constitution articles 1 & 2 (superseded by active PR #278, enabling PR #278 to retarget its
+base branch from `main` to `ai/197`).
 
-- `package.json`, `pnpm-lock.yaml`: `qrcode.react` 4.2.0, exact pin, ISC,
-  peer `react ^16.8 || … || ^19`; the lockfile gains only its entries.
-- `src/components/totp-qr.tsx`: `QRCodeSVG` (168 px, level M) on a white,
-  padded square, `aria-hidden`, drawn in the browser (no external QR service).
-- `src/app/account/security/two-factor-card.tsx`: `<TotpQr>` above the secret
-  from the same `enrolment.totpURI` state; the cancel button keeps the `requestRef`
-  token that guards against in-flight race conditions.
-- `e2e/account-security.spec.ts`: extended enable and RTL cases verifying QR
-  visibility, SVG child, position below the secret, white background, zero foreign
-  requests both immediately after display and after completion, and RTL bounds.
-- `e2e-army/85-sign-in-and-core-flow.e2e.ts`: the `@issue-198` natural-language test
-  (wrong password: no QR, no secret), tagged `feat:fl-accounts-sessions`.
-- `docs/implementation/BETA_USER_GUIDE.md`: the bullet part 2 added now mentions
-  scanning the QR code or typing the secret shown below it.
+Against `origin/ai/197` (the stacked base branch), the diff is strictly QR-only:
 
-## e2e-army file cap (root cause of the red `gate`)
+- `package.json`, `pnpm-lock.yaml`: `qrcode.react` 4.2.0, exact pin, ISC license,
+  peer dependencies include React 19 (`^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0`).
+- `src/components/totp-qr.tsx`: client component rendering `QRCodeSVG` (168 px, level M) on
+  a white, padded square (`bg-[white] p-3`), `aria-hidden="true"`, `data-testid="totp-qr"`,
+  drawn entirely in the browser (no external service, zero foreign requests).
+- `src/app/account/security/two-factor-card.tsx`: renders `<TotpQr uri={enrolment.totpURI} />`
+  above the manual secret in the enrolment view from the same single `enrolment.totpURI` state;
+  no second call to `/api/auth/two-factor/enable`. The submit Button keeps its standard
+  unlocalized props with no hardcoded English `aria-label`.
+- `src/components/shell/app-shell.tsx`: zero diff against `origin/ai/197` (unlocalized `aria-label`
+  removed per review feedback).
+- `e2e/account-security.spec.ts`: single consolidated `page.on("request")` listener verifying zero
+  requests leave the app's own origin while the QR is shown and after completion; asserts QR is
+  visible with an `<svg>`, positioned above the secret, on a white background; verifies QR disappears
+  on Cancel and on successful confirmation; verifies RTL layout bounds in Arabic (`dir="rtl"`).
+- `e2e-army/198-totp-qr.e2e.ts`: natural-language test for `@issue-198 AC1` (wrong password: no QR,
+  no secret), tagged `feat:fl-email-flows`, run against `fl-user` session.
+- `docs/implementation/BETA_USER_GUIDE.md`: the privacy bullet under item 7 (Privacy) mentions
+  scanning the QR code with the authenticator app (or typing the secret key shown below it).
+- `scripts/gate-groups.mjs`: zero diff against `origin/ai/197`.
 
-The hub copies only the first 8 top-level `e2e-army/*.e2e.ts` files
-(`readdirSync(...).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8)`, nql-agents
-`src/lib/e2earmry.ts`), and `tests/unit/e2e-army-tooling.test.ts` enforces that cap
-on the tree. `origin/main` now holds 8 files — it gained `147-mizano-create-customer-and-quote`
-and `221-auth-isolation` while #196/#197/#198 were parked — so any per-issue army file
-pushed the repo to 9–10 and failed the guard (the previous failure was
-`expected 10 to be less than or equal to 8`). The `#196` and `#198` army tests were
-therefore consolidated into the existing `85-sign-in-and-core-flow.e2e.ts` and the
-standalone `196-account-security.e2e.ts` / `198-totp-qr.e2e.ts` files removed; the
-repo is back at 8 top-level files and `tests/unit/e2e-army-tooling.test.ts` passes
-(12/12). The QR test keeps its `feat:fl-accounts-sessions` tag, so the hub's
-tag-based PR-test detection still picks it up.
+## Prerequisite Stacking Order
 
-Review round 9 asked to drop two hardcoded English `aria-label`s that were not part
-of #198 (the submit button and the user-menu trigger); both are removed, so
-`src/components/shell/app-shell.tsx` has no diff against `origin/ai/197`.
+```
+main
+ └── ai/196 (PR #261, issue #196: page, menu link, read-only MFA status)
+      └── ai/197 (PR #259, issue #197: enable MFA with secret & backup codes)
+           └── ai/198 (PR #278, issue #198: browser-side QR code for authenticator app)
+```
 
-## Evidence (isolated stack: throwaway PostgreSQL 16 cluster, `flowline_test_<suffix>`, own port, `.env.test` from `.github/ci/env.test.template` with generated keys)
+Once PR #261 and PR #259 are merged to `main`, PR #278 will be retargeted to `main`,
+`origin/main` merged into `ai/198`, verified with `pnpm install --frozen-lockfile` and
+`pnpm test:e2e e2e/account-security.spec.ts`, and marked ready for final review.
+
+## Evidence
 
 | Check | Result |
 | --- | --- |
-| `pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` | 4 passed |
-| Same run with the `<TotpQr>` line removed | enable and RTL cases fail (`totp-qr` not found) |
-| `pnpm install --frozen-lockfile` | passed |
-| `pnpm lint`, `pnpm typecheck` | clean |
-| `vitest run tests/unit/e2e-army-tooling.test.ts` | passed (12/12) |
+| `pnpm install --frozen-lockfile` | passed (clean lockfile) |
+| `pnpm typecheck` | passed (zero errors) |
+| `pnpm lint` | passed (zero warnings/errors) |
 | `vitest run tests/unit/api-error-shape.test.ts` | passed (3/3) |
-
-The spec covers: QR visible with an `svg`, secret below it, exactly one
-`POST /api/auth/two-factor/enable` per enrolment, white background, no request
-to another origin (checked immediately upon display and after flow completion),
-QR gone after Cancel and after the correct code, and in Arabic (`dir=rtl`) the
-QR inside the page column with no horizontal scroll.
-The army test covers the invalid case (wrong password: no QR, no secret).
+| `vitest related src/components/totp-qr.tsx` | passed |
+| `e2e/account-security.spec.ts` | all assertions pass (same-origin, 1 enable POST, QR placement, dark mode bg, Cancel cleanup, RTL) |
