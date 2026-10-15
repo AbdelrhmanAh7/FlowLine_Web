@@ -336,6 +336,7 @@ async function runBuiltin(node: FlowNode, input: unknown, env: NodeEnv, handler?
       if (cfg.mode === "build" && Array.isArray(cfg.columns) && cfg.columns.length > 0) {
         unparseOpts.columns = cfg.columns as string[];
       } else if (value.length > 0) {
+        // Preserve column order as they first appear across all rows
         const seen = new Set<string>();
         const cols: string[] = [];
         for (const row of value) {
