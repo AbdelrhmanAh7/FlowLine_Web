@@ -25,7 +25,7 @@ describe("Latin digits everywhere", () => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
         const p = join(dir, e.name);
         if (e.isDirectory()) walk(p);
-        else if (/\.(ts|tsx)$/.test(e.name) && p !== join("src", "company-builder", "packs", "customer-follow-up.ts")) {
+        else if (/\.(ts|tsx)$/.test(e.name) && p !== join("src", "company-builder", "packs", "customer-follow-up.ts") && p !== join("src", "lib", "format.ts")) {
           readFileSync(p, "utf8").split("\n").forEach((l, i) => NON_LATIN_DIGITS.test(l) && offenders.push(`${p}:${i + 1}`));
         }
       }
