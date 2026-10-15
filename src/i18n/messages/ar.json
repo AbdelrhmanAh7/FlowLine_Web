@@ -890,6 +890,7 @@
     "importN8nHint": "الصق JSON لمسار العمل المُصدَّر من n8n. تُستورد عقد الويب هوك والكود وطلب HTTP، وتصبح العقد الأخرى عناصر نائبة تستبدلها قبل تشغيل المسار.",
     "importN8nLabel": "JSON مسار عمل n8n",
     "importN8nInvalid": "هذا ليس JSON صالحًا. الصق ملف مسار العمل كاملًا المُصدَّر من n8n.",
+    "importN8nNotWorkflow": "هذا JSON صالح لكنه ليس مسار عمل n8n. الصق ملف مسار العمل كاملًا المُصدَّر من n8n.",
     "importN8nSubmit": "استيراد",
     "importN8nFile": "رفع ملف .json",
     "importN8nFileInput": "ملف مسار عمل n8n"

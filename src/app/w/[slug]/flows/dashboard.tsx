@@ -124,7 +124,7 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
       }
       // Validate it's an n8n workflow (has nodes array)
       if (!parsed || typeof parsed !== "object" || !("nodes" in parsed) || !Array.isArray((parsed as Record<string, unknown>).nodes)) {
-        setError(t("flows.importN8nInvalid"));
+        setError(t("flows.importN8nNotWorkflow"));
         return;
       }
       setError(null);

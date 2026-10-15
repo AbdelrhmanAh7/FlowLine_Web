@@ -70,6 +70,58 @@ function hasUnpreservedHttpConfig(params: Record<string, unknown>): boolean {
   return false;
 }
 
+/** Extracts HTTP body from n8n parameters when it's a plain JSON value (no expressions). */
+function extractBody(params: Record<string, unknown>): string {
+  // n8n V3: jsonBody (object) or body (string). Also check bodyParameters array for single raw value.
+  if (params.jsonBody !== undefined && params.jsonBody !== null && typeof params.jsonBody === "object") {
+    const v = params.jsonBody;
+    // Ensure no expressions in the object
+    const str = JSON.stringify(v);
+    if (!/\{\{[^}]*\}\}/.test(str)) return str;
+  }
+  if (typeof params.body === "string" && params.body && !/\{\{[^}]*\}\}/.test(params.body)) return params.body;
+  // Fallback: bodyParameters with a single raw value
+  if (Array.isArray(params.bodyParameters) && params.bodyParameters.length === 1) {
+    const bp = params.bodyParameters[0];
+    if (bp && typeof bp === "object" && "value" in bp && bp.value !== undefined && bp.value !== null && typeof bp.value !== "object") {
+      const str = String(bp.value);
+      if (!/\{\{[^}]*\}\}/.test(str)) return str;
+    }
+  }
+  return "";
+}
+
+/** Extracts HTTP headers from n8n parameters when they're plain key-value pairs (no expressions). */
+function extractHeaders(params: Record<string, unknown>): string {
+  // n8n V3: headerParameters array of {name, value} or headers object
+  if (Array.isArray(params.headerParameters) && params.headerParameters.length > 0) {
+    const headers: Record<string, string> = {};
+    let ok = true;
+    for (const hp of params.headerParameters) {
+      if (hp && typeof hp === "object" && "name" in hp && "value" in hp) {
+        const name = String(hp.name);
+        const value = String(hp.value);
+        if (/\{\{[^}]*\}\}/.test(value)) { ok = false; break; }
+        headers[name] = value;
+      } else { ok = false; break; }
+    }
+    if (ok) return JSON.stringify(headers);
+  }
+  if (params.headers && typeof params.headers === "object" && !Array.isArray(params.headers)) {
+    const headers = params.headers as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    let ok = true;
+    for (const [k, v] of Object.entries(headers)) {
+      if (typeof v === "string") {
+        if (/\{\{[^}]*\}\}/.test(v)) { ok = false; break; }
+        out[k] = v;
+      } else { ok = false; break; }
+    }
+    if (ok) return JSON.stringify(out);
+  }
+  return "";
+}
+
 function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string, position: { x: number; y: number }, branchNote?: string): FlowNode {
   const label = n.name.slice(0, 80);
   const params = n.parameters ?? {};
@@ -91,17 +143,23 @@ function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string,
     const method = String(params.method ?? params.requestMethod ?? "GET").toUpperCase() as HttpConfig["method"];
     const url = params.url;
     if (typeof url === "string" && HTTP_METHODS.includes(method)) {
-      // Body, header, query or auth config is not preserved, so a runnable empty request would call the
-      // destination without its required payload: import a placeholder the user replaces instead.
-      if (hasUnpreservedHttpConfig(params)) return unsupported(id, n.type, position, "HTTP body, headers or auth not imported - replace and re-enter the request");
+      // URL with n8n expressions or credential refs must become a placeholder — the run would call a bogus URL.
+      const urlHasExpr = /\{\{[^}]*\}\}/.test(url) || /\[CREDENTIAL:[^\]]*\]/.test(url);
+      // Body, header, query or auth config that cannot be preserved faithfully → placeholder.
+      if (urlHasExpr || hasUnpreservedHttpConfig(params)) {
+        return unsupported(id, n.type, position, urlHasExpr
+          ? "HTTP URL contains n8n expressions or credentials - replace and re-enter the request"
+          : "HTTP body, headers or auth not imported - replace and re-enter the request");
+      }
       const safe = method === "GET";
-      // Replace n8n expressions {{...}} and credential refs with placeholders that need manual translation.
-      const safeUrl = url.replace(/\{\{[^}]*\}\}/g, "[EXPRESSION:={{...}}]").replace(/\[CREDENTIAL:[^\]]*\]/g, "[CREDENTIAL:name]");
+      // Map supported plain values for body and headers when present.
+      const body = extractBody(params);
+      const headers = extractHeaders(params);
       const config: HttpConfig = {
         method,
-        url: JSON.stringify(safeUrl),
-        headers: "",
-        body: "",
+        url: JSON.stringify(url),
+        headers,
+        body,
         timeoutMs: 15000,
         sideEffect: safe ? "none" : "non_idempotent",
         ...(safe ? { retry: { maxAttempts: 3 } } : {}),

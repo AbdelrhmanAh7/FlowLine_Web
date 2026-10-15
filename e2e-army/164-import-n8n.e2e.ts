@@ -85,8 +85,9 @@ test(
     await agent.act("click Import from n8n");
     await agent.act("upload {file} as the n8n workflow", { params: { file: N8N_WORKFLOW } });
     await agent.assert("the workflow JSON appears in the text area");
-    await expect(screen.getByText("Webhook", { exact: true })).toBeVisible();
-    await expect(screen.getByText("Shape", { exact: true })).toBeVisible();
+    const textarea = screen.getByRole("textbox", { name: "n8n workflow JSON" });
+    await expect(textarea).toHaveValue(/Webhook/);
+    await expect(textarea).toHaveValue(/Shape/);
   },
 );
 
