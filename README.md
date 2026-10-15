@@ -203,6 +203,9 @@ e2e/               Playwright specs; e2e/fakes = provider-boundary test doubles;
 e2e-army/          Natural-language tester-army/e2e suite (pnpm e2e:army, config e2e.config.ts); features/ = per-feature suite and the local fl-user session setup
 tests/             Vitest unit, contract, integration, live
 scripts/           Test stack, release (rollback, backup/restore, DB outage), load, admin bootstrap/rewrap, diagnostics
+                   and scripts/demo (landing demo media pipeline: record, master, deliver, manifest, verify)
+tools/demo-video/  Isolated Remotion compositor for the demo media (own lockfile, not a workspace member)
+public/media/demo/ Generated landing demo videos, posters, captions and manifest.json
 docs/              Implementation plans, test plan, AI hub report/providers/routing/migration, security design, releases
 artifacts/         Evidence per phase as Markdown reports (raw output is not committed; older raw evidence: tag archive/pre-slimdown-2026-10-10)
 design-reference/  Design slide renders and extracted tokens
@@ -218,3 +221,4 @@ design-reference/  Design slide renders and extracted tokens
 - [`NEXT_ACTION.md`](NEXT_ACTION.md) — current resume state and outstanding owner actions
 - [`AGENTS.md`](AGENTS.md) — project rules for contributors and agents
 - [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) — feature workflow, localization, checks and mandatory docs updates
+- [`docs/landing/DEMO_MEDIA.md`](docs/landing/DEMO_MEDIA.md) — regenerating the landing demo videos (`pnpm demo:*`), budgets, manifest contract
