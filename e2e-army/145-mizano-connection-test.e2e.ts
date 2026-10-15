@@ -2,8 +2,9 @@
 // "Test connection" action that verifies a SAVED connection by calling the provider's identity() (for Mizano GET /api/health, then GET /api/me).
 //
 // Request-level test (AC1: the key is encrypted and never returned; AC2: Test connection checks the saved credentials
-// and takes no body, so a caller cannot point the stored key at another host). The UI test then drives the saved
-// connection's card: it offers a Test connection control that reports the account. The throwaway stack redirects the
+// and takes no body, so a caller cannot point the stored key at another host). The UI tests then open Integrations through
+// the slug-free /app/integrations and drive the saved connection's card, in English and in Arabic (RTL): it offers a Test
+// connection control that reports the account. The throwaway stack redirects the
 // provider to the fake provider server, so no real Mizano host is contacted; the stored key only ever goes to the
 // connection's own saved https origin. Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the
 // helpers live here.
@@ -48,6 +49,12 @@ async function signedIn(base: string, email: string) {
   expect(res.status).toBe(200);
   const session = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   return { ...plain(base), cookie: `${FIXED}; ${session}` };
+}
+
+/** Finishes onboarding as the wizard does, so /app and /app/integrations route into the workspace, not to /onboarding. */
+async function onboard(base: string, headers: Record<string, string>) {
+  const res = await fetch(`${base}/api/onboarding`, { method: "POST", headers, body: JSON.stringify({ goal: "sales", skipped: false }) });
+  expect(res.status).toBe(200);
 }
 
 /** A workspace and a saved Mizano connection, created through the product's own endpoints. */
@@ -122,22 +129,30 @@ test(
   },
 );
 
-// The Integrations page lives at /w/[slug]/integrations; the workspace layout resolves the slug against the caller's
-// membership and 404s a slug they are not a member of (src/app/w/[slug]/layout.tsx:16, requireWorkspaceBySlug). A
-// verification run that guessed the slug (e.g. /w/test-workspace/integrations) therefore saw a 404 for a page that is
-// reachable. This pins both halves: the owner gets the page, a non-member slug is not found.
+// The verify runs opened the route template /w/[slug]/integrations as a literal URL (an earlier one guessed
+// /w/test-workspace/integrations). Pages under /w/<slug> resolve the slug against the caller's membership and 404 any other
+// (src/app/w/[slug]/layout.tsx, requireWorkspaceBySlug), so Integrations could not be reached without the member's real slug.
+// /app/integrations is the slug-free entry, as /app is for Flows: it sends a signed-in, onboarded member to their
+// workspace's Integrations page, and a signed-out caller to sign-in.
 test(
-  "@issue-145 AC2: the Integrations page is reachable for the workspace owner (and a foreign slug 404s)",
-  { tags: ["feat:fl-integrations", "lvl:api"] },
+  "@issue-145 AC2: /app/integrations opens the member's Integrations page without the workspace slug (a foreign slug 404s)",
+  { tags: ["feat:fl-integrations", "feat:fl-sign-in", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
     const owner = await signedIn(base, `army-145-reach-${seeded(base, "reach")}@flowline-e2e.test`);
     const created = await fetch(`${base}/api/workspaces`, { method: "POST", headers: owner, body: JSON.stringify({ name: "Army 145 Reach" }) });
     expect(created.status).toBe(201);
     const { workspace } = (await created.json()) as { workspace: { slug: string } };
+    await onboard(base, owner);
+    const entry = await fetch(`${base}/app/integrations`, { headers: owner, redirect: "manual" });
+    expect(entry.status).toBe(307);
+    expect(new URL(entry.headers.get("location") ?? "", base).pathname).toBe(`/w/${workspace.slug}/integrations`);
     const page = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: owner });
     expect(page.status).toBe(200);
     expect(page.headers.get("content-type")).toContain("text/html");
+    const anon = await fetch(`${base}/app/integrations`, { headers: plain(base), redirect: "manual" });
+    expect(anon.status).toBe(307);
+    expect(new URL(anon.headers.get("location") ?? "", base).pathname).toBe("/sign-in");
     // A workspace the account is not a member of is never confirmed to it: notFound() -> 404.
     const stranger = await signedIn(base, `army-145-reach-out-${seeded(base, "reach-out")}@flowline-e2e.test`);
     const foreign = await fetch(`${base}/w/${workspace.slug}/integrations`, { headers: stranger });
@@ -145,21 +160,44 @@ test(
   },
 );
 
+/** The browser's cookies for a session's `cookie` header in one UI language, so no agent step has to sign in. */
+const browserCookies = (base: string, cookie: string, locale: "en" | "ar") =>
+  cookie.split("; ").map((pair) => {
+    const name = pair.slice(0, pair.indexOf("="));
+    return { name, value: name === "fl_locale" ? locale : pair.slice(pair.indexOf("=") + 1), url: base };
+  });
+
 test(
   "@issue-145 AC2: the saved Mizano connection's card offers a Test connection control that reports the account",
-  { tags: ["feat:fl-integrations", "lvl:ui"] },
+  { tags: ["feat:fl-integrations", "feat:fl-sign-in", "lvl:ui"] },
   async ({ app, screen, browser }) => {
     const base = app.baseUrl!;
     const owner = await signedIn(base, `army-145-integrations-${seeded(base, "integrations")}@flowline-e2e.test`);
-    const { workspace } = await savedMizano(base, owner);
-    // Sign the browser in as the same user so the workspace page resolves; no agent step is needed.
-    await browser.setCookies(
-      owner.cookie.split("; ").map((pair) => ({ name: pair.slice(0, pair.indexOf("=")), value: pair.slice(pair.indexOf("=") + 1), url: base })),
-    );
-    await app.open(`/w/${workspace.slug}/integrations`);
+    await savedMizano(base, owner);
+    await onboard(base, owner);
+    await browser.setCookies(browserCookies(base, owner.cookie, "en"));
+    await app.open("/app/integrations");
     const card = screen.getByTestId("connection-mizano");
     await expect(card).toBeVisible({ timeout: 30_000 });
     await card.getByRole("button", "Test connection").tap();
     await expect(screen.getByText(/Connection OK — Alice A Mizano/)).toBeVisible({ timeout: 30_000 });
+  },
+);
+
+test(
+  "@issue-145 AC2 Arabic: the Test connection control and its OK result are translated and the page is right-to-left",
+  { tags: ["feat:fl-i18n-rtl", "feat:fl-integrations", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    const base = app.baseUrl!;
+    const owner = await signedIn(base, `army-145-integrations-ar-${seeded(base, "integrations-ar")}@flowline-e2e.test`);
+    await savedMizano(base, owner);
+    await onboard(base, owner);
+    await browser.setCookies(browserCookies(base, owner.cookie, "ar"));
+    await app.open("/app/integrations");
+    const card = screen.getByTestId("connection-mizano");
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+    await card.getByRole("button", "اختبار الاتصال").tap();
+    await expect(screen.getByText(/الاتصال سليم — Alice A Mizano/)).toBeVisible({ timeout: 30_000 });
   },
 );
