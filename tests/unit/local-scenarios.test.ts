@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { LOCAL_SCENARIOS } from "@/engine/local-scenarios";
@@ -133,6 +135,27 @@ describe("local template catalogue", () => {
     expect(() => parseTemplateExport(wrongGoal)).toThrow(/goal/);
     const missingNodes = { ...base(), graph: { edges: [] } };
     expect(() => parseTemplateExport(missingNodes)).toThrow(/nodes/);
+    // Graph entries are validated, not just the arrays: a node without `data` would throw later in
+    // localizeTemplate, so it must be rejected at the JSON boundary.
+    const graph = base().graph;
+    const node = (over: Record<string, unknown> = {}) => ({
+      id: "trigger",
+      type: "trigger.manual",
+      position: { x: 0, y: 120 },
+      data: { label: "Invoices", config: { samplePayload: "{}" } },
+      ...over,
+    });
+    const withGraph = (nodes: unknown[], edges: unknown[] = []) => ({ ...base(), graph: { ...graph, nodes, edges } });
+    expect(() => parseTemplateExport(withGraph([null]))).toThrow(/node 0 must be an object/);
+    expect(() => parseTemplateExport(withGraph([node({ id: "" })]))).toThrow(/non-empty string id/);
+    expect(() => parseTemplateExport(withGraph([node({ type: 42 })]))).toThrow(/non-empty string type/);
+    expect(() => parseTemplateExport(withGraph([node({ position: { x: "0", y: 1 } })]))).toThrow(/numeric position/);
+    expect(() => parseTemplateExport(withGraph([node({ data: { label: 7 } })]))).toThrow(/data object with a string label/);
+    // A node with no `data` at all is the exact shape the reviewer cited: { id: "pick" }.
+    expect(() => parseTemplateExport(withGraph([{ id: "pick" }]))).toThrow(/node "pick"/);
+    expect(() => parseTemplateExport(withGraph([node(), node()]))).toThrow(/duplicate node id/);
+    expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger" }]))).toThrow(/source and target/);
+    expect(() => parseTemplateExport(withGraph([node()], [{ id: "e1", source: "trigger", target: "missing" }]))).toThrow(/same graph/);
   });
 
   it("running every template leaves the template and its sample untouched", async () => {
@@ -179,6 +202,18 @@ describe("EN/AR text for every local template", () => {
     const ids = LOCAL_TEMPLATES.map((t) => t.id).sort();
     expect(Object.keys(enCat).sort()).toEqual(ids);
     expect(Object.keys(arCat).sort()).toEqual(ids);
+  });
+
+  it("#166: the e2e-army gallery test asserts the shipped name/sample/result, so its literals cannot drift", () => {
+    // The e2e-army test runs in the hub runner and may import only `e2e` / `@e2e-dev/web`, so its
+    // expected card text is a literal. This guard fails the moment the shipped copy changes and the
+    // literal is not updated — the root cause of the recurring "sample text mismatch" finding.
+    const src = readFileSync(join(__dirname, "..", "..", "e2e-army", "166-mena-template.e2e.ts"), "utf8");
+    const asserted = [...src.matchAll(/toContainText\("([^"]+)"\)/g)].map((m) => m[1]);
+    const entry = enCat["eta-invoice-notify"]!;
+    expect(asserted).toContain(entry.name);
+    expect(asserted).toContain(entry.sample);
+    expect(asserted).toContain(entry.result);
   });
 
   it("every category used has both translations", () => {
