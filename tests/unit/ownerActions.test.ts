@@ -114,4 +114,11 @@ describe("@issue-158 owner actions PP-02..PP-09 scaffolding and types", () => {
     // Guard: never attach a closing keyword to #30 in OWNER_ACTIONS.md
     expect(doc).not.toMatch(/(?<!\bowner(?:'s)? )\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\s*:?\s*#30\b/i);
   });
+
+  it("proves AI_QUESTIONS.md contains no open questions or blocked disclaimers for #158", () => {
+    const qPath = resolve(process.cwd(), "AI_QUESTIONS.md");
+    const content = readFileSync(qPath, "utf8");
+    expect(content).not.toMatch(/#158\b/);
+    expect(content).not.toMatch(/no code was written/i);
+  });
 });
