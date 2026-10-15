@@ -1,12 +1,80 @@
 # Next action — 2026-10-03
 
-## Issue #149 — merge after #147 (2026-10-14)
+## Issue #149 — unblocked by #147 (2026-10-15)
 
-PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which land with **#147**, so the PR must merge **after** #147. Until then the template is withheld, not offered: it is not a gallery card (a plain "Not available yet" notice in EN + AR), `createFlow` answers `409 TEMPLATE_UNAVAILABLE` and publishing the graph reports `UNKNOWN_ACTION`. It becomes a usable gallery entry the moment #147 merges, with no change in this PR. The browser happy-path e2e (AC3) waits for the same merge, per the CTO decision on #149 (2026-10-12). The approval shows the customer only (same CTO decision); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
+PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which landed with **#147** (now on `main`), so the template is a usable gallery entry (offered card with "Use template"). The gallery still withholds any template whose actions are missing (`availableDesignTemplates`), so the dependency stays self-healing. The approval shows the customer only (CTO decision on #149, 2026-10-12); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
+
+## Issue #161 — PR #245 linkage review (2026-10-13)
+
+Documentation scope follows the CTO answer: no duplicate security doc; dependency work remains in #62. The harness must preserve `Refs #161` and `Refs #24` in PR #245 and its merge message. Check `gh pr view 245 --json body,closingIssuesReferences` before merge; #161 must not appear in closing references. Local evidence cannot certify the live PR body. Review confirmation and CI remain the harness's next steps.
+
+## Issue #205 handoff — 2026-10-14
+
+Local lock/rollback regression fixes are ready; harness pushes. Backfill/runs integration: 26/26; E2E tooling hygiene: 12/12; typecheck, lint and drizzle metadata check pass. GitHub rejected retargeting PR #253 to ai/204 because PR #211 already uses ai/205 → ai/204. Reconcile duplicate PRs under the recorded-exception rules; #207 remains open, so keep #205 stacked until it merges, then rebase only #205 onto main and rerun CI/review. The inherited #204 E2E spec was removed as explicitly requested; add no E2E spec for this internal migration. [Details](docs/implementation/PHASE4_BETA_REPORT.md#legacy-backfill-0026-issue-205--2026-10-14).
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 
 Not done. The owner enables the three GitHub security settings and records evidence by following the steps in [OWNER_ACTIONS.md](docs/implementation/OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). Engineers cannot change these settings (secrets-settings hard rule, AGENTS.md article 7). #160 stays open; PR #213 references it as `Refs #160`. Re-adding the `pilot` label reactivates the issue.
+
+## Issue #221 — `fl-auth-api` release gate triage (2026-10-13, updated 2026-10-14)
+
+**Status: #221 stays open.** Its acceptance is that `fl-auth-api` passes on `main`; this branch records a triage diagnosis and a regression test, but no product or hub fix (hub write authorization remains explicitly denied by the CTO comment on the issue). #221 closes only after any necessary hub-side fix lands and the reproduce command passes on a fresh stack. Until then the release gate is not resolved. PR #227 references `Refs #221`.
+
+### Revision reconciliation & seed evidence
+
+- **Failing FlowLine revision on `main`**: `2ca60e5` (the 2026-10-12 stable release gate candidate where `fl-auth-api` failed with `expected 200 to be 403`, logged in `~/agents/logs/stable/FlowLine_Web/2026-10-12/app.log`).
+- **Inspected FlowLine branch revision**: `ceea864` was the merge commit on `ai/221` (incorporating `2ca60e5` and main ancestors) where the failure was first inspected. Successive merges updated the branch through `27cbeda`, `5037003`, `c9269af`, up to `143383f` (and base `main` @ `83a8011`).
+- **Hub revisions**: The failing stable run executed on hub commit `e06a85e` (2026-10-12). Subsequent hub inspection on 2026-10-14 examined deployed hub `1544080` / `e9479fbb` and source checkout `02b81bfd`.
+- **Seed evidence & suspected causes**: The runtime `E2E_ARMY_SEED` was not logged in `e2e-army.log` or `app.log`. While `hub-live/ops/verify/e2e-army/tests/lib.ts:19` defaults `E2E_ARMY_SEED` to `"nql-e2e-army-1"`, direct evidence that the seed was unchanged between runs is unavailable from logs. Because seed invariance cannot be established from the artifacts alone, **account reuse and the `confirmFailures` stage explanation are described as suspected causes rather than confirmed facts**, until fresh-stack reproduction passes.
+
+### Suspected causes & log analysis
+
+Evidence from hub log `~/agents/logs/stable/FlowLine_Web/2026-10-12/e2e-army.log` (FlowLine `2ca60e5` @ hub `e06a85e`):
+
+- **Run 1 (fresh DB)**: `fl-auth-api.1`–`.5` passed (lines 57-61).
+- **Run 2 (suspected stack rerun)**: A whole-shard rerun by the quota fallback in `nql-agents/src/jobs/stable.ts` observed `fl-auth-api.1` returning 200 instead of 403, and `fl-email-flows`, `fl-onboarding`, `fl-workspaces`, `fl-members` failing (lines 476-560, 689-703), which is consistent with suspected account reuse and already-consumed email tokens. Product behavior is verified: unverified accounts are refused at sign-in (403 `not verified`, FlowLine `src/lib/auth.ts:45`), whereas verified accounts sign in with 200.
+- **Confirmation run**: `confirmFailures` (`nql-agents/src/jobs/e2eregress.ts:56`) reported `NO_TESTS` (suspected missing `E2E_ARMY_STAGE: "next"`), keeping the recorded failure.
+
+### FlowLine changes (2026-10-14)
+
+Added regression test `e2e-army/221-auth-isolation.e2e.ts` to document and lock the expected auth behavior:
+
+1. **Test 1 (`@issue-221.1`)**: Sign-in with wrong password returns 401, not 200 or 403.
+   - Tests that both wrong-password and non-existent-user cases return 401.
+   - Verifies identical error messages (account enumeration protection).
+
+2. **Test 2 (`@issue-221.2`)**: Sign-in with unverified account returns 403, not 200.
+   - Verifies that the product's `requireEmailVerification` setting is enforced correctly.
+
+Both tests are API-level (no model needed) and tagged with `feat:fl-auth-api`, `shard:core-api`, `lvl:api`.
+
+### QA fixes (2026-10-14)
+
+Fixed all remaining QA findings from review rounds 9-11:
+
+1. **Added missing import** for `createHash` from `node:crypto` (line 10)
+2. **Fixed per-run uniqueness** - emails now include timestamp to avoid account reuse on reruns
+3. **Fixed misleading comment** - updated to accurately describe that code selects first element after descending sort by timestamp, not "fallback to last element"
+4. **Added status assertion** before JSON parsing (line 61)
+
+All changes committed in `e61dd5f2` with typecheck and lint passing.
+
+### Hub-side triage (repo `nql-agents`, separate task)
+
+If fresh-stack reproduction confirms the suspected causes, the hub changes identified during triage include:
+
+1. **Isolate shard runs**: Add `freshStack: true` and a test filter for quota-related tests in `nql-agents/src/jobs/stable.ts` to prevent stack reuse across shard reruns.
+2. **Use test-only credentials**: Set `TEST_HUB_USER`/`TEST_HUB_SECRET` environment variables for the hub's test stack.
+3. **Improve error messages**: Replace the `NO_TESTS` error in `nql-agents/src/jobs/e2eregress.ts` with actionable diagnostics.
+4. **Pass E2E_ARMY_STAGE**: Ensure `confirmFailures` in `nql-agents/src/jobs/e2eregress.ts` passes `E2E_ARMY_STAGE: "next"` when running tests.
+
+Verification command on a fresh stack once hub fixes land:
+
+```sh
+REF=2ca60e5; ops/verify/e2e-army/run-local.sh FlowLine_Web "$REF" -- --tag feat:fl-auth-api
+```
+
+Note: Hub write authorization remains explicitly denied by the CTO on issue #221 (`AI_QUESTIONS.md` was retired after CTO answers were recorded on the issue). Acceptance remains unmet; PR #227 references `Refs #221` and #221 remains open until fresh-stack reproduction passes.
 
 ## Issue #141 handoff — 2026-10-12
 
