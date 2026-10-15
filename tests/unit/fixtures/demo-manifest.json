@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-12T09:00:00Z",
+  "uiCommit": "d211653a1b2c3d4e5f60718293a4b5c6d7e8f901",
+  "tooling": { "playwright": "1.63.0", "remotion": "4.0.534" },
+  "clips": {
+    "hero": { "shape": "window", "aspect": "16/9", "width": 1920, "height": 1080, "fps": 60, "durationS": 16, "loop": true },
+    "build": { "shape": "square", "aspect": "1/1", "width": 1080, "height": 1080, "fps": 30, "durationS": 8, "loop": true },
+    "walkthrough": {
+      "shape": "window", "aspect": "16/9", "width": 1920, "height": 1080, "fps": 60, "durationS": 53, "loop": false,
+      "chapters": [{ "id": "templates", "t": 0 }, { "id": "shape", "t": 12 }, { "id": "run", "t": 25 }, { "id": "inspect", "t": 38 }]
+    }
+  },
+  "files": [
+    { "clip": "hero", "locale": "ar", "theme": "light", "kind": "video", "codec": "av1", "type": "video/mp4; codecs=\"av01.0.09M.08\"", "path": "hero.ar.light.av1.3f9a1c2e.mp4", "bytes": 1203311, "sha256": "3f9a1c2e0000000000000000000000000000000000000000000000000000abcd", "bitrate": 601000 },
+    { "clip": "hero", "locale": "ar", "theme": "light", "kind": "video", "codec": "h264", "type": "video/mp4; codecs=\"avc1.64002A\"", "path": "hero.ar.light.h264.7b1d0c44.mp4", "bytes": 2400000, "sha256": "7b1d0c440000000000000000000000000000000000000000000000000000abcd", "bitrate": 1200000 },
+    { "clip": "hero", "locale": "ar", "theme": "light", "kind": "poster", "path": "hero.ar.light.poster.3f9a1c2e.jpg", "bytes": 66012 },
+    { "clip": "build", "locale": "en", "theme": "dark", "kind": "video", "codec": "av1", "type": "video/mp4; codecs=\"av01.0.08M.08\"", "path": "build.en.dark.av1.aa11bb22.mp4", "bytes": 410000, "sha256": "aa11bb220000000000000000000000000000000000000000000000000000abcd", "bitrate": 410000 },
+    { "clip": "walkthrough", "locale": "ar", "kind": "captions", "lang": "ar", "path": "walkthrough.ar.8c01d4aa.vtt", "bytes": 1100 },
+    { "clip": "walkthrough", "locale": "ar", "theme": "light", "kind": "chapter-still", "chapter": "run", "path": "walkthrough.ar.light.ch3.5d2e77b1.jpg", "bytes": 61230 }
+  ]
+}

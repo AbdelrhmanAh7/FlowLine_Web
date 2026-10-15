@@ -123,6 +123,17 @@ For the H3 security regression set without a database or browser, run `pnpm.cmd 
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
 
+## Landing demo media
+
+The landing demo videos in `public/media/demo/` are generated from the real UI by a local-only pipeline (never CI):
+`pnpm demo:setup` once (installs the isolated Remotion package in `tools/demo-video`, which has its own lockfile, is not a
+workspace member and is excluded from the root `tsc`, ESLint and Vitest), `pnpm demo:doctor` to check the machine,
+`pnpm demo:build [--only hero --locale ar]` to record and encode (it starts its own stack on `:3190` with the
+`flowline_test_demo` database), and `pnpm demo:verify` before committing the result. Run them outside agent sandboxes.
+Scenarios use roles, test ids and message keys, so a UI-only change re-records without script edits; regenerate at UI
+freezes. Unit tests: `tests/unit/demo-*.test.ts`; compositor math: `cd tools/demo-video && node --test src/camera.test.ts`.
+Full guide, budgets and troubleshooting: [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md).
+
 ### Playwright traces in CI
 
 Added for [issue #35](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/35) so an intermittent browser failure leaves per-action timings behind. The upload logic is `.github/actions/gate-report/action.yml`; it has been checked by `tests/unit/ci-workflows.test.ts` and a local run of its summary step with fake data, and has not yet uploaded a real trace on GitHub (that happens on the first failing browser test after it merges).
