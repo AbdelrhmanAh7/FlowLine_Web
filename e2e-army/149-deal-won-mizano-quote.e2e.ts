@@ -18,10 +18,6 @@ test(
     await app.open("/");
     await agent.act("open the workspace's Templates page from the navigation");
 
-    // Wait for the catalog to load (loading spinner disappears) before checking template state.
-    // The page shows a loading spinner while catalog.isLoading is true.
-    await expect(screen.getByRole("status", { name: "Loading templates…" })).not.toBeVisible({ timeout: 10000 });
-
     await agent.assert("a template named Deal won → Mizano quote is listed by name");
     await expect(screen.getByText("Deal won → Mizano quote").first()).toBeVisible();
 
@@ -30,17 +26,25 @@ test(
     const heldBackEntry = screen.getByTestId("template-held-back-deal-won-mizano-quote");
     const offeredCard = screen.getByTestId("template-deal-won-mizano-quote");
 
-    if (await heldBackEntry.isVisible().catch(() => false)) {
+    // Wait for the catalog to settle before reading the state (race-free): the page may still be loading initially.
+    let isHeldBack = false;
+    try {
+      await heldBackEntry.waitFor({ state: "visible", timeout: 15000 });
+      isHeldBack = true;
+    } catch {
+      await offeredCard.waitFor({ state: "visible", timeout: 15000 });
+      isHeldBack = false;
+    }
+
+    if (isHeldBack) {
       // Before #147: template is held back
       await agent.assert("the template is held back: no Use template button, reason says Not available yet");
       await expect(heldBackEntry.getByRole("button", { name: "Use template" })).toHaveCount(0);
       await expect(screen.getByTestId("templates-held-back")).toContainText("Not available yet");
-    } else if (await offeredCard.isVisible().catch(() => false)) {
+    } else {
       // After #147: template is offered as a gallery card
       await agent.assert("the template is offered: gallery card with Use template button present");
       await expect(offeredCard.getByRole("button", { name: "Use template" })).toBeVisible();
-    } else {
-      throw new Error("Template 'Deal won → Mizano quote' not found in either held-back or offered state");
     }
   },
 );
@@ -53,17 +57,52 @@ test(
     await agent.act("switch the interface language to Arabic");
     await agent.act("open the workspace's Templates page from the navigation");
 
-    // Wait for the catalog to load (loading spinner disappears) before checking template state.
-    await expect(screen.getByRole("status", { name: "جاري تحميل القوالب…" })).not.toBeVisible({ timeout: 10000 });
-
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     await agent.assert("a template named صفقة مكسوبة ← عرض سعر Mizano is listed (held back or offered)");
     await expect(screen.getByText("صفقة مكسوبة ← عرض سعر Mizano").first()).toBeVisible();
     // Also check it's in the right section (held-back or offered)
     const heldBackAr = screen.getByTestId("template-held-back-deal-won-mizano-quote");
     const offeredAr = screen.getByTestId("template-deal-won-mizano-quote");
-    const isHeldBack = await heldBackAr.isVisible().catch(() => false);
-    const isOffered = await offeredAr.isVisible().catch(() => false);
-    expect(isHeldBack || isOffered).toBe(true);
+    let isHeldBackAr = false;
+    try {
+      await heldBackAr.waitFor({ state: "visible", timeout: 15000 });
+      isHeldBackAr = true;
+    } catch {
+      await offeredAr.waitFor({ state: "visible", timeout: 15000 });
+      isHeldBackAr = false;
+    }
+    const isOfferedAr = isHeldBackAr ? false : (await offeredAr.isVisible().catch(() => false));
+    expect(isHeldBackAr || isOfferedAr).toBe(true);
+  },
+);
+
+test(
+  "@issue-149: catalog error shows an error state with retry instead of silently dropping the Connected section",
+  { tags: ["feat:fl-templates"], session: "fl-user" },
+  async ({ app, agent, screen, browser }) => {
+    // Force the catalog request to fail and assert the explicit error UI with Retry appears.
+    await browser.route("**/api/integrations/catalog*", (route) => route.fulfill({ status: 500, body: JSON.stringify({ error: "Catalog unavailable" }) }));
+
+    await app.open("/");
+    await agent.act("open the workspace's Templates page from the navigation");
+
+    await agent.assert("an error alert appears with a Retry button");
+    const alert = screen.getByRole("alert");
+    await expect(alert).toBeVisible({ timeout: 15000 });
+    await expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
+
+    // Restore routing and retry
+    await browser.unroute("**/api/integrations/catalog*");
+    await agent.act("click Retry");
+    await screen.getByRole("button", { name: "Retry" }).click();
+
+    // After retry, the page settles into the held-back or offered state for the target template.
+    const held = screen.getByTestId("template-held-back-deal-won-mizano-quote");
+    const off = screen.getByTestId("template-deal-won-mizano-quote");
+    try {
+      await held.waitFor({ state: "visible", timeout: 15000 });
+    } catch {
+      await off.waitFor({ state: "visible", timeout: 15000 });
+    }
   },
 );

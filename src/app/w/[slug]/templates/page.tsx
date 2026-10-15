@@ -8,7 +8,7 @@ import { useCatalog, useConnections } from "@/lib/catalog";
 import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { Button, Card, EmptyState, Input, SectionLabel, cx } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Input, SectionLabel, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { templateNodeLabel } from "@/i18n/template-text";
 import type { Translator } from "@/i18n/translate";
@@ -166,6 +166,15 @@ export default function TemplatesPage() {
                     );
                   })}
                 </ul>
+              </section>
+            )}
+            {catalog.isError && (
+              // The catalog failed to load, so which actions exist can't be verified: no design card is offered
+              // (an unverified "Use template" could 409) and the whole "Connected" section must not vanish silently.
+              // Show the failure with a retry instead (same ErrorState pattern as the integrations page).
+              <section>
+                <SectionLabel className="mb-3">{t("templates.connected")}</SectionLabel>
+                <ErrorState title={t("templates.catalogError")} body={(catalog.error as Error).message} onRetry={() => catalog.refetch()} retrying={catalog.isFetching} />
               </section>
             )}
             {usable.length > 0 && (
