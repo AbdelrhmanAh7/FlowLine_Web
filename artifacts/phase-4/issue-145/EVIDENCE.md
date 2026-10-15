@@ -1,6 +1,6 @@
 # Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Branch:** `ai/145`  
+**Branch:** `ai/145` (head `bb02770e`)  
 **Date:** 2026-10-15  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1
 
