@@ -16,6 +16,8 @@ blob-report/
 .DS_Store
 .env.staging
 .claude/worktrees/
+# Command Code engine state (not project content; keeps the PR diff clean) — see AGENTS.md helper agents.
+.commandcode/
 deploy/beta/.env.beta
 deploy/beta/backups/
 
