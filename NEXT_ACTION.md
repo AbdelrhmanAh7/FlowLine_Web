@@ -8,6 +8,14 @@ this worktree. Harness next: link the tracking issue, arrange CI/review, and upd
 `fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
 Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
 
+## Issue #226 — resolve CodeRabbit review backlog (2026-10-16)
+
+Resolved all four deferred CodeRabbit review findings from merged PRs:
+1. `tests/helpers/field-scoring.ts`: `scoreNoPromise` skips empty or whitespace-only entries in `approvedInformation` before splitting or matching; regression test in `tests/unit/flowline-field-scoring.test.ts` fails on base and passes on head.
+2. `src/ai/hub/protocols/shared.ts`: `badToolArgs` uses conditional billing language ("may have been billed"), and all shared protocol exports have complete JSDoc blocks detailing parameters, returns, and thrown/returned `HubError` codes. Unit tests in `tests/unit/ai-hub-shared-protocols.test.ts` verify `parseArgs`, `badToolArgs`, `streamJson`, and `mapInBandError`.
+3. `docs/ai/ADDING_A_PROVIDER.md`: accurately reflects the JSDoc contracts provided by `src/ai/hub/protocols/shared.ts`.
+4. `docs/engineering/lock-order.md`: updated Example #41 to cite #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write, pinned by `password-reset-lock-order.test.ts`).
+E2E: not needed — pure internal docs and test helper chore.
 
 ## Issue #234 — review after main integration (2026-10-15)
 
