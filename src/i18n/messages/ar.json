@@ -1319,7 +1319,7 @@
       }
     },
     "mizano": {
-      "description": "موصل المحاسبة Mizano",
+      "description": "اربط FlowLine بمساحة عملك المحاسبية في Mizano بمفتاح API ذي نطاق محدد.",
       "actions": {
         "list_overdue_invoices": {
           "title": "عرض الفواتير المتأخرة",
@@ -1335,11 +1335,11 @@
         }
       },
       "fields": {
-        "token": {
-          "label": "مفتاح API محدود النطاق"
-        },
         "baseUrl": {
-          "label": "رابط Mizano"
+          "label": "الرابط الأساسي"
+        },
+        "token": {
+          "label": "مفتاح API"
         }
       }
     }
