@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startFake, type Fake } from "./helpers";
 
-// The fake provider server's mizano handler (#147, #222): GET /api/health and GET /api/me behind the server's generic
-// Bearer auth, plus the two create steps (POST /api/customers, POST /api/quotes) that dedupe on Idempotency-Key.
+// The fake provider server's mizano handler (#147, #222, #145): GET /api/health and GET /api/me behind the server's
+// generic Bearer auth, plus the two create steps (POST /api/customers, POST /api/quotes) that dedupe on Idempotency-Key.
 let fake: Fake;
 beforeAll(async () => {
   fake = await startFake();
@@ -53,10 +53,13 @@ describe("fake mizano GET /api/health", () => {
 });
 
 describe("fake mizano GET /api/me", () => {
-  it("returns the workspace identity the adapter parses", async () => {
-    const res = await get("/api/me", "test-token");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ id: "mz-ws-fake", workspaceName: "Fake Mizano Workspace" });
+  it("returns the workspace identity the adapter parses, bound to the scoped key", async () => {
+    const a = await get("/api/me", "test-token");
+    expect(a.status).toBe(200);
+    expect(await a.json()).toEqual({ id: "mizano-ws-a", workspaceName: "Alice A Mizano" });
+    const b = await get("/api/me", "second-account-token");
+    expect(b.status).toBe(200);
+    expect(await b.json()).toEqual({ id: "mizano-ws-b", workspaceName: "Bob B Mizano" });
   });
 });
 

@@ -1,0 +1,144 @@
+ WARN  Unsupported engine: wanted: {"node":"24.x"} (current: {"node":"v26.10.0","pnpm":"10.32.1"})
+
+> flowline@0.1.0 dev:test /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-145
+> node scripts/dev-test.mjs
+
+test stack: app :3145 · fakes :4145/:5145 · db flowline_test_145s · build .next-test-3145
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+migrated postgres://***@127.0.0.1:5432/flowline_test_145s
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+[seed-platform] test platform credentials ready
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown env config "overrides". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+[fake-ai] listening on http://127.0.0.1:5145
+Fake provider server listening on http://127.0.0.1:4145
+Control API: POST http://127.0.0.1:4145/__fake/reset | GET http://127.0.0.1:4145/__fake/requests?provider=slack | GET http://127.0.0.1:4145/__fake/state/slack | POST http://127.0.0.1:4145/__fake/fault
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3145
+- Network:       http://192.168.100.103:3145
+✓ Ready in 1250ms
+✓ Running next.config.ts took 110ms
+2026-10-15T21:43:13.081Z [worker] starting Abdelrahmans-Mac-mini.local-71209-1c910d
+
+ GET /api/health?require=worker 200 in 692ms (next.js: 447ms, application-code: 246ms)
+[config] FLOWLINE_BETA_MODE is missing or invalid; defaulting to invite_only. Set invite_only or open explicitly.
+ POST /api/auth/sign-up/email 200 in 2.3s (next.js: 1882ms, application-code: 445ms)
+ GET /api/test/outbox?email=army-145-owner-96681c0ef55f%40flowline-e2e.test 200 in 109ms (next.js: 95ms, application-code: 14ms)
+ POST /api/email 200 in 202ms (next.js: 152ms, application-code: 50ms)
+ POST /api/auth/sign-in/email 200 in 257ms (next.js: 10ms, application-code: 247ms)
+ POST /api/workspaces 201 in 182ms (next.js: 111ms, application-code: 71ms)
+ POST /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections 201 in 1668ms (next.js: 1523ms, application-code: 145ms)
+ GET /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections 200 in 42ms (next.js: 10ms, application-code: 32ms)
+ POST /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections/31804704-f6e7-4acf-98f6-d05ecfc0ac56/test 200 in 3.2s (next.js: 3.2s, application-code: 62ms)
+ POST /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections/31804704-f6e7-4acf-98f6-d05ecfc0ac56/test 200 in 37ms (next.js: 10ms, application-code: 27ms)
+ GET /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections 200 in 24ms (next.js: 8ms, application-code: 15ms)
+ POST /api/workspaces/14b43986-81d3-4d1d-9c2e-62d86dd52acd/connections/31804704-f6e7-4acf-98f6-d05ecfc0ac56/test 401 in 7ms (next.js: 1.8ms, application-code: 6ms)
+ POST /api/auth/sign-up/email 200 in 274ms (next.js: 7ms, application-code: 267ms)
+ GET /api/test/outbox?email=army-145-catalog-a7761cabe4b4%40flowline-e2e.test 200 in 20ms (next.js: 7ms, application-code: 13ms)
+ POST /api/email 200 in 42ms (next.js: 5ms, application-code: 37ms)
+ POST /api/auth/sign-in/email 200 in 305ms (next.js: 5ms, application-code: 299ms)
+ GET /api/integrations/catalog 200 in 179ms (next.js: 119ms, application-code: 60ms)
+ POST /api/auth/sign-up/email 200 in 282ms (next.js: 5ms, application-code: 277ms)
+ GET /api/test/outbox?email=army-145-reach-703b6097fa41%40flowline-e2e.test 200 in 16ms (next.js: 7ms, application-code: 9ms)
+ POST /api/email 200 in 55ms (next.js: 5ms, application-code: 50ms)
+ POST /api/auth/sign-in/email 200 in 239ms (next.js: 5ms, application-code: 234ms)
+ POST /api/workspaces 201 in 34ms (next.js: 5ms, application-code: 29ms)
+ POST /api/onboarding 200 in 116ms (next.js: 86ms, application-code: 30ms)
+ GET /app/integrations 307 in 1319ms (next.js: 399ms, application-code: 920ms)
+○ Compiling /w/[slug]/integrations ...
+[config] FLOWLINE_BETA_MODE is missing or invalid; defaulting to invite_only. Set invite_only or open explicitly.
+ GET /w/army-145-reach/integrations 200 in 5.0s (next.js: 4.7s, application-code: 359ms)
+ GET /app/integrations 307 in 143ms (next.js: 7ms, application-code: 137ms)
+ POST /api/auth/sign-up/email 200 in 285ms (next.js: 10ms, application-code: 274ms)
+ GET /api/test/outbox?email=army-145-reach-out-223a3ab14e2c%40flowline-e2e.test 200 in 13ms (next.js: 3ms, application-code: 10ms)
+ POST /api/email 200 in 30ms (next.js: 4ms, application-code: 26ms)
+ POST /api/auth/sign-in/email 200 in 250ms (next.js: 5ms, application-code: 245ms)
+ GET /w/army-145-reach/integrations 404 in 235ms (next.js: 12ms, application-code: 223ms)
+ POST /api/auth/sign-up/email 200 in 252ms (next.js: 6ms, application-code: 245ms)
+ GET /api/test/outbox?email=army-145-integrations-28cf42790308%40flowline-e2e.test 200 in 14ms (next.js: 4ms, application-code: 10ms)
+ POST /api/email 200 in 25ms (next.js: 3ms, application-code: 23ms)
+ POST /api/auth/sign-in/email 200 in 216ms (next.js: 6ms, application-code: 210ms)
+ POST /api/workspaces 201 in 31ms (next.js: 6ms, application-code: 24ms)
+ POST /api/workspaces/6036d9f7-5e4b-47ce-9c7c-696bd703d40d/connections 201 in 75ms (next.js: 10ms, application-code: 65ms)
+ POST /api/onboarding 200 in 27ms (next.js: 5ms, application-code: 22ms)
+ GET /app/integrations 307 in 271ms (next.js: 11ms, application-code: 260ms)
+ GET /w/army-145-mizano-2/integrations 200 in 166ms (next.js: 14ms, application-code: 152ms)
+ GET /api/health 200 in 25ms (next.js: 12ms, application-code: 13ms)
+ GET /api/workspaces/6036d9f7-5e4b-47ce-9c7c-696bd703d40d/connections 200 in 70ms (next.js: 4ms, application-code: 67ms)
+ GET /api/integrations/catalog?workspaceId=6036d9f7-5e4b-47ce-9c7c-696bd703d40d 200 in 100ms (next.js: 8ms, application-code: 92ms)
+ POST /api/workspaces/6036d9f7-5e4b-47ce-9c7c-696bd703d40d/connections/dbdbc5cb-9ec1-47b8-b375-2b9fa34b4b9d/test 200 in 51ms (next.js: 7ms, application-code: 44ms)
+ POST /api/auth/sign-up/email 200 in 281ms (next.js: 10ms, application-code: 270ms)
+ GET /api/test/outbox?email=army-145-integrations-ar-4d3f70feb2f9%40flowline-e2e.test 200 in 16ms (next.js: 6ms, application-code: 9ms)
+ POST /api/email 200 in 31ms (next.js: 5ms, application-code: 26ms)
+ POST /api/auth/sign-in/email 200 in 234ms (next.js: 4ms, application-code: 230ms)
+ POST /api/workspaces 201 in 34ms (next.js: 4ms, application-code: 30ms)
+ POST /api/workspaces/f0ecbfe2-9208-40ff-bd72-ff4c09cb23ed/connections 201 in 51ms (next.js: 9ms, application-code: 42ms)
+ POST /api/onboarding 200 in 26ms (next.js: 4ms, application-code: 22ms)
+ GET /app/integrations 307 in 337ms (next.js: 5ms, application-code: 332ms)
+ GET /w/army-145-mizano-3/integrations 200 in 226ms (next.js: 15ms, application-code: 212ms)
+ GET /api/health 200 in 8ms (next.js: 3ms, application-code: 5ms)
+ GET /api/integrations/catalog?workspaceId=f0ecbfe2-9208-40ff-bd72-ff4c09cb23ed 200 in 38ms (next.js: 3ms, application-code: 35ms)
+ GET /api/workspaces/f0ecbfe2-9208-40ff-bd72-ff4c09cb23ed/connections 200 in 26ms (next.js: 3ms, application-code: 23ms)
+ POST /api/workspaces/f0ecbfe2-9208-40ff-bd72-ff4c09cb23ed/connections/56f3480f-5d8a-4cf6-915d-e059d86f6d5f/test 200 in 35ms (next.js: 4ms, application-code: 31ms)
+ GET /app/integrations 404 in 1649ms (next.js: 1105ms, application-code: 544ms)
+ POST /api/auth/sign-up/email 200 in 737ms (next.js: 293ms, application-code: 443ms)
+ GET /api/test/outbox?email=army-145-owner-96681c0ef55f%40flowline-e2e.test 200 in 103ms (next.js: 78ms, application-code: 25ms)
+ POST /api/email 200 in 248ms (next.js: 205ms, application-code: 43ms)
+ POST /api/auth/sign-in/email 200 in 279ms (next.js: 6ms, application-code: 274ms)
+ POST /api/workspaces 201 in 210ms (next.js: 96ms, application-code: 114ms)
+ POST /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections 201 in 212ms (next.js: 67ms, application-code: 145ms)
+ GET /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections 200 in 29ms (next.js: 4ms, application-code: 25ms)
+ POST /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections/dd040ec3-9c3d-412b-97b2-fc8005eb9504/test 200 in 171ms (next.js: 118ms, application-code: 53ms)
+ POST /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections/dd040ec3-9c3d-412b-97b2-fc8005eb9504/test 200 in 36ms (next.js: 4ms, application-code: 31ms)
+ GET /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections 200 in 27ms (next.js: 4ms, application-code: 22ms)
+ POST /api/workspaces/1855b08b-b95a-4e38-bd55-13bda23b89da/connections/dd040ec3-9c3d-412b-97b2-fc8005eb9504/test 401 in 14ms (next.js: 4ms, application-code: 10ms)
+ POST /api/auth/sign-up/email 200 in 231ms (next.js: 9ms, application-code: 222ms)
+ GET /api/test/outbox?email=army-145-catalog-a7761cabe4b4%40flowline-e2e.test 200 in 12ms (next.js: 3ms, application-code: 8ms)
+ POST /api/email 200 in 11ms (next.js: 3ms, application-code: 8ms)
+ POST /api/auth/sign-in/email 200 in 247ms (next.js: 5ms, application-code: 242ms)
+ GET /api/integrations/catalog 200 in 211ms (next.js: 149ms, application-code: 62ms)
+ POST /api/auth/sign-up/email 200 in 237ms (next.js: 4ms, application-code: 232ms)
+ GET /api/test/outbox?email=army-145-reach-703b6097fa41%40flowline-e2e.test 200 in 13ms (next.js: 3ms, application-code: 10ms)
+ POST /api/email 200 in 16ms (next.js: 5ms, application-code: 11ms)
+ POST /api/auth/sign-in/email 200 in 260ms (next.js: 4ms, application-code: 257ms)
+ POST /api/workspaces 201 in 38ms (next.js: 6ms, application-code: 32ms)
+ POST /api/onboarding 200 in 115ms (next.js: 84ms, application-code: 31ms)
+ GET /app/integrations 404 in 126ms (next.js: 13ms, application-code: 114ms)
+ POST /api/auth/sign-up/email 200 in 222ms (next.js: 10ms, application-code: 213ms)
+ GET /api/test/outbox?email=army-145-integrations-28cf42790308%40flowline-e2e.test 200 in 28ms (next.js: 4ms, application-code: 24ms)
+ POST /api/email 200 in 12ms (next.js: 3ms, application-code: 9ms)
+ POST /api/auth/sign-in/email 200 in 214ms (next.js: 3ms, application-code: 211ms)
+ POST /api/workspaces 201 in 34ms (next.js: 4ms, application-code: 30ms)
+ POST /api/workspaces/8c6413bc-8f1c-435d-b790-4756f25da1ac/connections 201 in 54ms (next.js: 9ms, application-code: 45ms)
+ POST /api/onboarding 200 in 24ms (next.js: 4ms, application-code: 21ms)
+ GET /app/integrations 404 in 90ms (next.js: 7ms, application-code: 83ms)
+ POST /api/auth/sign-up/email 200 in 1431ms (next.js: 301ms, application-code: 1130ms)
+ GET /api/test/outbox?email=army-145-integrations-ar-4d3f70feb2f9%40flowline-e2e.test 200 in 115ms (next.js: 56ms, application-code: 59ms)
+ POST /api/email 200 in 284ms (next.js: 226ms, application-code: 58ms)
+ POST /api/auth/sign-in/email 200 in 420ms (next.js: 12ms, application-code: 407ms)
+ POST /api/workspaces 201 in 103ms (next.js: 51ms, application-code: 53ms)
+ POST /api/workspaces/fabd47f0-d979-4b0a-a65c-5c0f678d1ae0/connections 201 in 134ms (next.js: 68ms, application-code: 66ms)
+ POST /api/onboarding 200 in 72ms (next.js: 46ms, application-code: 25ms)
+ GET /app/integrations 404 in 349ms (next.js: 162ms, application-code: 188ms)
+2026-10-15T21:48:38.859Z [worker] stopped
+[?25h

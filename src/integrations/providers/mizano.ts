@@ -29,6 +29,11 @@ function base(creds: Credentials): string {
   return url.origin;
 }
 
+// GET /api/health: the instance is up and answering. Anything else (HTML from a proxy, `{}`, an unhealthy status) is
+// not a Mizano that can be connected, so a 200 alone is not trusted.
+const HEALTHY = new Set(["ok", "healthy", "up"]);
+const mizanoHealth = z.object({ status: z.string() }).refine((h) => HEALTHY.has(h.status.toLowerCase()));
+
 const mizanoIdentity = z.object({
   id: z.string().min(1).max(128),
   workspaceName: z.string().min(1).max(200),
@@ -67,12 +72,13 @@ const provider: ProviderDef = {
     { key: "token", label: "Scoped API key", secret: true },
     { key: "baseUrl", label: "Mizano URL", secret: false, placeholder: "https://mizano.example.com" },
   ],
+  // The connection check: first `GET /api/health` (reachable and healthy), then `GET /api/me` (the scoped key is
+  // accepted and names the workspace). The health probe alone would not prove the key.
   async identity(ctx) {
-    const { data } = await ctx.http.request<unknown>({
-      method: "GET",
-      path: "/api/me",
-      baseUrl: base(ctx.credentials),
-    });
+    const baseUrl = base(ctx.credentials);
+    const health = await ctx.http.request<unknown>({ method: "GET", path: "/api/health", baseUrl });
+    if (!mizanoHealth.safeParse(health.data).success) throw new ProviderError("server", "Mizano reported that it is not healthy");
+    const { data } = await ctx.http.request<unknown>({ method: "GET", path: "/api/me", baseUrl });
     const me = mizanoIdentity.parse(data);
     return { accountId: me.id, label: me.workspaceName };
   },

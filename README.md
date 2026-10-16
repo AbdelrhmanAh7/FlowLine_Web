@@ -14,7 +14,8 @@ Arabic is the default language (RTL), with English as a secondary language throu
 - **Triggers:** manual, webhook (signed, deduplicated, replay-safe), schedule, and an authenticated API (`/api/v1`,
   scoped API keys).
 - **Integrations:** Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion,
-  PostgreSQL, Linear and Mizano (overdue invoices, customer and draft quote creation; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections, and
+  PostgreSQL, Linear and Mizano (overdue invoices, customer and draft quote creation; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections,
+  a **Test connection** action that re-checks a saved connection's credentials against its own saved URL, and
   repair and revocation handling. Per-workspace owners can also override the OAuth app used for a provider
   (Settings → OAuth apps).
 - **AI hub:** cloud-only, multi-provider. Each workspace brings its own keys in **Settings → AI Providers** — never
@@ -146,7 +147,7 @@ copied; the hub keeps its own feature suite). A PR that
 changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit (title `@issue-<N> <criterion>`,
 one goal per `agent.act`, checked with `agent.assert` or an exact `expect`; import only `e2e`, `@e2e-dev/web` and node
 built-ins, because the hub copies the file into its runner). Signed-in tests use the `fl-user` session (a verified user
-with a workspace; `/app` opens it), which the hub suite saves and `e2e-army/features/_setup.e2e.ts` saves locally. The
+with a workspace; `/app` opens it and `/app/integrations` its Integrations page, no slug needed), which the hub suite saves and `e2e-army/features/_setup.e2e.ts` saves locally. The
 existing Playwright specs stay as plain tests.
 
 The feature suite is in `e2e-army/features/`: every feature of the hub's feature map (`ops/verify/features/FlowLine_Web.json`)
@@ -192,7 +193,7 @@ src/engine         Node definitions, validation, JSONata sandbox, executor (shar
 src/server         Data access with permission checks; runs, approvals, agents, knowledge, Copilot, SSO, API keys,
                    usage, audit, beta gating, platform admin access
 src/billing        Payment adapter (Paddle, sandbox only), plans, webhooks, reconciliation
-src/integrations   Provider adapters (12) and their registry
+src/integrations   Provider adapters (13) and their registry
 src/ai             AI provider hub: registry, routing, protocols, connections, pricing (src/ai/hub/)
 src/company-builder Interview, plans, task packs and validation; server persistence in src/server/company-builder/
 src/db             Drizzle schema and migration runner

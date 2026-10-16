@@ -17,8 +17,9 @@ vi.mock("node:dns", async (importOriginal) => {
 
 const creds: Credentials = { type: "api_key", token: "mz_test_scoped", settings: { baseUrl: "https://mizano.test" } };
 
+/** `/api/health` answers healthy (the connection check asks it first); every other path returns `data`. */
 function ctxReturning(data: unknown, idempotencyKey = "idem-mizano") {
-  const request = vi.fn(async (_req: HttpRequest): Promise<HttpResponse<unknown>> => ({ status: 200, headers: new Headers(), data }));
+  const request = vi.fn(async (req: HttpRequest): Promise<HttpResponse<unknown>> => ({ status: 200, headers: new Headers(), data: req.path === "/api/health" ? { status: "healthy" } : data }));
   const ctx: ActionContext = {
     http: { request: request as ActionContext["http"]["request"] },
     credentials: creds,
@@ -149,7 +150,8 @@ describe("mizano.list_overdue_invoices", () => {
   it("returns the workspace identity from a well-formed /api/me response", async () => {
     const { ctx, request } = ctxReturning({ id: "ws_1", workspaceName: "Cedar Studio" });
     await expect(getProvider("mizano")!.identity(ctx)).resolves.toEqual({ accountId: "ws_1", label: "Cedar Studio" });
-    expect(request.mock.calls[0][0].path).toBe("/api/me");
+    expect(request.mock.calls.map((c) => c[0].path)).toEqual(["/api/health", "/api/me"]);
+    expect(request.mock.calls.every((c) => c[0].baseUrl === "https://mizano.test")).toBe(true);
   });
 
   it("rejects an /api/me response that is not the expected identity shape", async () => {
