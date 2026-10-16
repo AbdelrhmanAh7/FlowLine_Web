@@ -27,7 +27,7 @@ lists exactly 9 files (166 insertions, 4 deletions) and the diff is strictly QR-
   requests leave the app's own origin while the QR is shown and after completion; asserts QR is
   visible with an `<svg>`, positioned above the secret, on a white background; verifies QR disappears
   on Cancel and on successful confirmation; verifies RTL layout bounds in Arabic (`dir="rtl"`).
-- `e2e-army/198-totp-qr.e2e.ts`: natural-language test for `@issue-198 AC1` (wrong password: no QR,
+- `e2e-army/72-federated-mfa-failure-audit.e2e.ts`: natural-language test for `@issue-198 AC1` (wrong password: no QR,
   no secret), tagged `feat:fl-auth-api` (the better-auth two-factor endpoint it exercises), run against `fl-user` session.
 - `docs/implementation/BETA_USER_GUIDE.md`: the privacy bullet under item 7 (Privacy) mentions
   scanning the QR code with the authenticator app (or typing the secret key shown below it).
