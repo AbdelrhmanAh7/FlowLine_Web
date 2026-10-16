@@ -1,0 +1,17 @@
+# Resumable executor checkpoint — 2026-09-30
+
+Active dependency: owner Google test-account login. Handoff displayed in chat. Dedicated visible Chrome 154.0.8037.92 at Google sign-in, recording off, automation IDLE. No page access since handoff. Playwright 1.63.0; setup-browser.mjs uses an ignored isolated profile, no public debug port or owner profile.
+
+Live supervised exec session: 29596; node PID 47544, parent 35620 at final read-only process inventory. On explicit owner reply only, send `confirmed\n` through write_stdin to this session; inspect returned page path/title. Do not send passwords, keys or OTPs to the process or chat. To close, send `stop\n`. If process/session has ended, relaunch `node artifacts/beta-execution/20260930T122429Z/setup-browser.mjs` in a supported exec session with tty; reuse only the dedicated profile. Do not assert survival without verification.
+
+Next service step after account confirmation: inspect non-sensitive Cloud-console state, deduplicate existing approved Flowline test project/resources, verify actual callbacks/scopes from current implementation and current official guidance, then stop again at sensitive consent/secret/billing/approval. No resource creation, provider calls or spending approved by login alone.
+
+Repository: design-v2 HEAD `776337cec8ed5ee823017f40020459e28cf0467a`; checkpoint cp21 `5d2a8e1dd765058ccd6b474026e5e5e5452efa89`. Real index empty, original working changes preserved. No branch commits after 776337c, push, PR, merge or worktree deletion. Remote design-v2 absent; main `8622dcf`, ai-hub `d70c2cc`, phase-4 `1a9883f`. Private repository, zero Actions workflows/hooks; installed-app triggers not certified.
+
+Current gates: 388 unit / 465 contract / 460 integration, lint/typecheck/evidence PASS. Final records lint/typecheck/evidence PASS, 884 text files zero current-local-secret hits. Retained cp20 browsers 114/50/50, mapped by identical src/e2e; no fresh current-session E2E claim. Original cp20 unit failure and infrastructure launch interruptions preserved. Test stack down, ports 3100/4010/4011 free. No build/test runner active. Old staging and unrelated containers untouched.
+
+DV2-02: FlowLine/ai-hub test-only configs now fresh independent keys and DBs, no fallback. Old DBs preserved. App persisted decrypt and cross-environment key isolation rechecked after rotation; old-key rejection checked while old material was in process memory. 2,592 reachable text blobs zero affected-key hits, no binary/unreachable transcript certification. Design environment's retained prior 10/10 crypto evidence remains separate. No non-disposable reuse found in named audit.
+
+Pending review: CLAUDE_REVIEW_REQUEST.md. R01–R04 stay open, especially R04 approval-display impact; own gates are not independent review. Local commit/publication waiting for closeout review/findings, not an invented owner permission request. New immutable architecture artifact, approved domain/Pi read-only inspection, exact DNS/exposure/deployment approval, real email/Paddle/SaaS/cloud AI routes/budget/benchmark and actual host recovery/load remain outstanding.
+
+Approvals granted: binding brief's safe inspection, in-scope fixes/test-only remediation and isolated testing, conditional local Git/publication/release preparation. Additional approvals: NONE. MERGED: NO. PUBLIC PRODUCTION APPROVED: NO. REAL INVITATIONS: NONE. No promise of execution outside an active supported session.
