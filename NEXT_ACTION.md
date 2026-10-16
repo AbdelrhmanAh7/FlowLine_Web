@@ -24,6 +24,10 @@ Resolved all four deferred CodeRabbit review findings from merged PRs:
 4. `docs/engineering/lock-order.md`: updated Example #41 to cite #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write, pinned by `password-reset-lock-order.test.ts`).
 E2E: not needed — pure internal docs and test helper chore.
 
+## Issue #165 — outbound send cap, rework (2026-10-16)
+
+Root cause of the repeated QA rejections: commit `8620b5d0` deleted 182 unrelated files; restored in `d0dc8024`, `origin/main` merged. The branch now changes 13 #165 files plus [evidence](artifacts/phase-4/issue-165/EVIDENCE.md). Delivered: per-connection/action send cap. Not delivered: scoped node credentials, volume-threshold approval (follow-up issue), per-destination caps. The harness pushes and obtains fresh CI and CodeRabbit confirmation; no push was done here. E2E: the existing `e2e-army/165-outbound-send-cap.e2e.ts` is a guard only.
+
 ## Issue #234 — review after main integration (2026-10-15)
 
 PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
