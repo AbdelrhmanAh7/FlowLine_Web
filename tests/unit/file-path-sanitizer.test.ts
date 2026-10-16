@@ -51,6 +51,10 @@ describe("file-path-sanitizer", () => {
   it("rejects strings that start or end with a dot", () => {
     expect(sanitizePacketFileName(".packet.json")).toBe("packet.json");
     expect(sanitizePacketFileName("packet.json.")).toBe("packet.json");
+    expect(sanitizePacketFileName("custom.json.")).toBe("packet.json");
+    expect(sanitizePacketFileName("custom.json-")).toBe("packet.json");
+    expect(sanitizePacketFileName("custom.json_")).toBe("packet.json");
+    expect(sanitizePacketFileName("p")).toBe("p");
   });
 
   it("rejects strings with multiple consecutive dots", () => {

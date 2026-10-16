@@ -52,7 +52,8 @@ export function sanitizePacketFileName(filename: string): string {
   }
 
   // If the filename is valid, return it; otherwise return default
-  // Allow only alphanumeric, dots, hyphens, and underscores, but not starting or ending with a dot
-  const validFilename = /^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]*$/;
+  // Allow only alphanumeric, dots, hyphens, and underscores; the first and last character must be alphanumeric
+  // (so a trailing dot, hyphen or underscore, e.g. "packet.json.", is rejected).
+  const validFilename = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
   return validFilename.test(filename) ? filename : "packet.json";
 }
