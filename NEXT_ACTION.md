@@ -14,7 +14,7 @@ Local lock/rollback regression fixes are ready; harness pushes. Backfill/runs in
 
 ## Issue #224 / PR #256 — 2026-10-15
 
-Conflict and translation review fixes are prepared locally. Harness must push this branch to the existing PR and request reviewer confirmation; threads remain unresolved until confirmed. Run `e2e-army/224-mizano-localization.e2e.ts` in the hub throwaway stack (local `.env.test` is absent), plus hosted checks. Preserve existing Mizano actions.
+Conflict and translation review fixes are prepared locally. Harness must push this branch to the existing PR and request reviewer confirmation; threads remain unresolved until confirmed. Run `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` in the hub throwaway stack (local `.env.test` is absent), plus hosted checks. Preserve existing Mizano actions.
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 

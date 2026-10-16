@@ -44,7 +44,8 @@ describe("i18n catalogues", () => {
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.title).toBeTruthy();
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.description).toBeTruthy();
     }
-    expect(ar.integrationCatalog.mizano.actions).toEqual({ list_overdue_invoices: { title: "عرض الفواتير المتأخرة", description: "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل" } });
+    expect(Object.keys(ar.integrationCatalog.mizano.actions).sort()).toEqual(["create_customer", "create_draft_quote", "list_overdue_invoices"]);
+    expect(ar.integrationCatalog.mizano.actions).toMatchObject({ list_overdue_invoices: { title: "عرض الفواتير المتأخرة", description: "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل" } });
   });
 
   it("a catalogue with a missing key does not type-check", () => {
