@@ -109,7 +109,13 @@ describe("integration catalog text", () => {
       expect(providerDescription(en, p)).toBe(p.description);
 
       for (const a of p.actions) {
-        expect(ar.has(`integrationCatalog.${a.id.replace(".", ".actions.")}.title`), a.id).toBe(true);
+        const key = `integrationCatalog.${a.id.replace(".", ".actions.")}`;
+        // Both catalogues must carry the key by id: the actionText()/providerDescription() fallback returns the
+        // provider's English literal, so `actionTitle(en, a)` alone would hide a missing English entry.
+        expect(ar.has(`${key}.title`), `${a.id} ar title`).toBe(true);
+        expect(ar.has(`${key}.description`), `${a.id} ar description`).toBe(true);
+        expect(en.has(`${key}.title`), `${a.id} en title`).toBe(true);
+        expect(en.has(`${key}.description`), `${a.id} en description`).toBe(true);
         expect(actionTitle(ar, a), a.id).toMatch(ARABIC);
         expect(actionDescription(ar, a), a.id).toMatch(ARABIC);
         expect(actionTitleById(ar, a.id)).toBe(actionTitle(ar, a));
