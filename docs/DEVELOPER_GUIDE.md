@@ -167,3 +167,20 @@ Safety rules:
 - The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
 - Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
 - `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+
+
+### Pilot CSV input persistence and admin 404s (2026-10-15)
+
+Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-row key order when the
+worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
+to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
+Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
+expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
+`e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+Admin page metadata is subject to the same platform-admin authorization boundary as page content.
+Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
+text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
+the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
+requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
+numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).

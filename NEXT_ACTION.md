@@ -1,5 +1,20 @@
 # Next action — 2026-10-03
 
+## PR #287 CI repair — 2026-10-16
+
+Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
+fresh CI and review confirmation; this worker performs no GitHub writes. Migration 0027
+applied successfully with all predecessors on a throwaway localhost:5432 database.
+See the phase-4 report for exact local checks and the pre-existing conditional skip.
+
+## Pilot E2E corrections — 2026-10-15
+
+Local work on `fix/pilot-e2e-failures` is recorded in
+[the evidence report](artifacts/pilot-e2e/EVIDENCE.md). Owner requested no push, PR or writes outside
+this worktree. Harness next: link the tracking issue, arrange CI/review, and update the hub's outdated
+`fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
+Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
+
 ## Issue #226 — resolve CodeRabbit review backlog (2026-10-16)
 
 Resolved all four deferred CodeRabbit review findings from merged PRs:
