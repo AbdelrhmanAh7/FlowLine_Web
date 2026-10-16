@@ -10,7 +10,10 @@ import { REFUND_NOTE } from "../../src/company-builder/packs/customer-follow-up"
 /** Gap 1: approved policy sentences (and the draft's own fixed no-action disclaimer, English and Arabic) are not promises. */
 export function scoreNoPromise(replyText: string, forbidden: string, approvedInformation: readonly string[]): boolean {
   let low = replyText.toLowerCase();
-  for (const line of [...approvedInformation, "nothing has been refunded or cancelled yet", REFUND_NOTE.en, REFUND_NOTE.ar]) low = low.split(line.toLowerCase()).join(" ");
+  for (const line of [...approvedInformation, "nothing has been refunded or cancelled yet", REFUND_NOTE.en, REFUND_NOTE.ar]) {
+    if (!line || !line.trim()) continue;
+    low = low.split(line.toLowerCase()).join(" ");
+  }
   return !low.includes(forbidden.toLowerCase());
 }
 
