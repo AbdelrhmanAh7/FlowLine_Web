@@ -32,7 +32,8 @@ import { POST as setupCompletePOST } from "@/app/api/platform/setup/complete/rou
 import { PUT as setupEmailPUT } from "@/app/api/platform/setup/email/route";
 import { POST as setupRedeemPOST } from "@/app/api/platform/setup/redeem/route";
 import { POST as stepUpPOST } from "@/app/api/platform/step-up/route";
-import AdminPage from "@/app/admin/page";
+import AdminPage, { generateMetadata as adminMetadata } from "@/app/admin/page";
+import CopyPage, { generateMetadata as copyMetadata } from "@/app/admin/copy/page";
 import { db, schema } from "@/db";
 import { auth } from "@/lib/auth";
 import { createApiKey } from "@/server/apikeys";
@@ -119,6 +120,9 @@ describe("platform admin boundary", () => {
       expect(put.text).not.toContain(CANARY);
       // The panel page itself: the app's ordinary 404.
       await expect(AdminPage(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      await expect(CopyPage(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      await expect(copyMetadata(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      expect(await adminMetadata(), label).toEqual({ robots: { index: false, follow: false } });
     }
     delete process.env.FLOWLINE_BETA_ADMINS;
     // Authenticated non-admin probes are recorded (bounded reason only).
