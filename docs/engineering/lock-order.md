@@ -18,6 +18,15 @@ Intended rule: take lower ranks first and do not return to a lower rank. The ran
 | 6 | Workspace | `workspace` | `src/server/members.ts` (`changeRole`, `removeMember`, `FOR UPDATE`); `src/server/email/flows.ts` (`delete`: every workspace of the user, ordered by id, after its `account.deleted` audit rows); key-share lock by the `audit_event` insert | The `audit_event.workspace_id` foreign key (`src/db/schema.ts`) makes every `audit()` insert key-share lock this row. Deliberate exception (#109): `delete` inserts its audit rows (rank 7) before it locks the workspaces `FOR UPDATE`, which the retained-file accounting lock serializes ([example](#workspace-for-update-vs-sso-audit-insert-47)). |
 | 7 | SSO audit | `audit_event` | `src/server/audit.ts` (`audit()` insert), called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts` | Follows the order in the SSO paths (member, then workspace key-share, then audit). The deadlock with `changeRole`/`removeMember` is the rank 5 gap. `consumeAccountToken("delete")` in `src/server/email/flows.ts` also inserts it, before its workspace locks (rank 6 note). |
 
+## Known violations
+
+These known violations of the global lock order were identified in the PR #128 review (tracked via #192). Each represents an existing code path that departs from monotonic rank order and risks a `40P01` deadlock against concurrent transactions.
+
+| Violation | Code | Ranks (taken order) | Deadlock pair | Tracking |
+|---|---|---|---|---|
+| V1 | `src/server/audit.ts` (`audit()`, called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts`) | Member (5) → Workspace key-share (6) → SSO audit insert (7) | `changeRole` and `removeMember` in `src/server/members.ts` (lock `workspace` 6 `FOR UPDATE`, then update `workspace_member` 5: taken order 6 → 5) | [#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42) |
+| V2 | `src/server/sso.ts` (`completeSso` callbacks, MFA and non-MFA paths) | Member (5) → Account (4) (share-locks provider link `account` row after `workspace_member`: taken order 5 → 4) | Any concurrent transaction that locks `account` (rank 4, `FOR UPDATE`) before `workspace_member` (rank 5) | [#241](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/241) (part of [#192](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/192)) |
+
 ## Review checklist for a new transaction
 
 - [ ] List every row it locks: explicit `.for("update")`/`.for("share")`, rows changed by `UPDATE`/`DELETE`, and rows an `INSERT` references through a foreign key (`audit_event.workspace_id` → `workspace` in `src/db/schema.ts`).
