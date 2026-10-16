@@ -72,59 +72,23 @@ Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follo
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
-## Outbound guardrails: send caps, audit view, node-config UI — 2026-10-13 (issue #165)
+## Outbound guardrails: per-connection send cap — 2026-10-16 (issue #165, partial)
 
-Implemented per-connection send rate limiting with audit view and UI configuration:
+**Delivered (first version):** a per-connection, per-action send cap for side-effecting integration actions.
 
-**Features:**
-- Per-connection send caps (`maxSendsPerMinute` configuration on integration action nodes)
-- Per-action rate limiting (different actions on the same connection have separate limits)
-- Workspace validation before rate limiting (prevents cross-workspace rate limit abuse via getRuntimeCredentials)
-- Server-side validation and clamping of `maxSendsPerMinute` (integer 1..1000)
-- `outbound_capped` event logged when sends are refused, with `action` and `limit` fields
-- Audit view displays `outbound_capped` events with i18n support (en/ar)
+- `integration.action` nodes accept `maxSendsPerMinute` (integer 1..1000, default 60). `validateGraph` rejects other values with `INVALID_SEND_LIMIT`; the node editor has a number field (empty input removes the override).
+- `worker/handlers.ts` counts a send with `checkRate("outbound:<connection id>:<action id>")` (PostgreSQL sliding window) **after** connection validation and the approval gate, so a step waiting for a human uses no budget and a cross-workspace connection fails with `CONNECTION_WORKSPACE` before any counter is touched. A refused send fails with the retryable `SEND_RATE_LIMITED` and logs an `outbound_capped` run event (`action`, `limit` only). Actions with `sideEffect: "none"` are not capped.
+- The run inspector's event log (`src/app/w/[slug]/runs/inspector.tsx`) renders every run event through `runEvent.<type>`, so `outbound_capped` appears there with an en/ar label.
 
-**Files changed:**
-- `worker/handlers.ts`: Rate limiting check with workspace validation and clamping
-- `src/engine/validate.ts`: Graph validation for `maxSendsPerMinute` (integer 1..1000)
-- `src/components/builder/node-config.tsx`: UI field for `maxSendsPerMinute` with integer clamping and undefined-on-clear
-- `src/i18n/messages/en.json` / `ar.json`: i18n keys for field and event type
-- `docs/security/OUTBOUND_GUARDRAILS.md`: Technical debt documentation (per-destination caps, approval gate, future enhancements)
+**Not delivered (stated plainly, not claimed):**
 
-**Tests:**
-- `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
-- `tests/unit/engine.test.ts`:
-  - Test for `validateGraph` checking `INVALID_SEND_LIMIT` for `maxSendsPerMinute`
-- `tests/integration/p2-actions.test.ts`:
-  - Test for workspace validation before rate limiting (lines 382-398)
-  - Test for per-connection send cap (lines 400-412)
-  - Test for clamping non-integer and zero maxSendsPerMinute to at least 1 (lines 414-426)
-  - Test for outbound_capped event logging
+- *Scoped node credentials*: connections remain workspace-scoped; a connection cannot be limited to specific nodes.
+- *Approval gate for high-volume broadcasts*: only the existing per-action `requireApproval`/`sensitive` approval exists; threshold-based approval was deferred by the CTO to a follow-up issue.
+- *Per-destination caps*: the key is connection + action (CTO decision: sufficient for the first version).
 
-**Security fixes:**
-- Fixed flow ID in e2e test to use Nil UUID (RFC 4122)
-- Rate limiting validates connection workspace via getRuntimeCredentials before applying limits (prevents cross-workspace rate limit abuse)
+Details and open debt: [OUTBOUND_GUARDRAILS.md](../security/OUTBOUND_GUARDRAILS.md).
 
-**Technical debt documented:**
-- Per-destination caps: Future enhancement, not in MVP (see `OUTBOUND_GUARDRAILS.md`)
-- Approval gate for high-volume broadcasts: Deferred to issue #166
-- Destination selection UI: Future enhancement when per-destination caps are implemented
-
-**CTO decisions (from issue comments):**
-- Audit view: show `outbound_capped` run events (✓ implemented)
-- Per-destination caps: Keep current implementation (connection + action) as it's simpler and sufficient for MVP (✓ documented)
-- Node-config UI for `maxSendsPerMinute`: Add to NodeConfig component (✓ implemented)
-- Approval for high-volume broadcasts: Not in scope for this MVP, create issue #166 (✓ documented)
-
-**Verification:**
-- Typecheck: verified locally with `pnpm typecheck`
-- ESLint: verified locally with `pnpm lint`
-- Integration tests: added in `tests/integration/p2-actions.test.ts`; CI will run against PostgreSQL
-- e2e-army test: added `e2e-army/165-outbound-send-cap.e2e.ts`; CI will run
-
-**Next steps:**
-- Issue #166: Implement threshold-based approval rules beyond sensitive flag
-- Future: Per-destination caps (when business requires stricter limits per-destination)
+**Tests:** `tests/unit/engine.test.ts` (`INVALID_SEND_LIMIT`); `tests/integration/p2-actions.test.ts` (cap refuses the second send with `SEND_RATE_LIMITED` and logs one `outbound_capped`; an out-of-range `maxSendsPerMinute` is refused at enqueue with 422 `INVALID_SEND_LIMIT`; cross-workspace connection fails first with no `outbound_capped`); `e2e-army/165-outbound-send-cap.e2e.ts` is only a request-level guard (anonymous run start is refused) and does **not** exercise the cap, because the hub's throwaway stack has no seeded connection to send through.
 
 ## route() error headers (issue #200) — 2026-10-13
 
@@ -134,7 +98,7 @@ Implemented per-connection send rate limiting with audit view and UI configurati
 
 `consumeAccountToken("delete")` (`src/server/email/flows.ts`) now inserts its `account.deleted` audit rows before it locks the user's workspaces `FOR UPDATE`, so the key-share lock each insert takes on its workspace comes in the same order as in the SSO transactions (user row, then the audit insert) and is never awaited while holding a workspace. Rows are corrected under the workspace lock if a membership changed in between; `transfer_required` now rolls back. The person-visible result is unchanged. Two co-members deleting at once cannot deadlock on the shared workspace: every deletion first takes the installation-wide retained-file accounting lock, so deletions are serialized; a new two-connection test in `tests/integration/retained-file-locking.test.ts` pins this. Verified locally at `6323281` (the last code and test change on this branch; later commits only touch docs and comments) against a throwaway `flowline_test_109` database (PostgreSQL): `tests/integration/retained-file-locking.test.ts` (4/4), `email.test.ts` (9/9), `email-token-lock-order.test.ts` (3/3); `tests/unit/email-token-lock-order.test.ts` (10/10, mocked database); eslint and `pnpm typecheck`. The e2e-army test `e2e-army/109-account-delete-shared-audit.e2e.ts` runs in the hub verify job, not locally. No full gate or browser run is claimed. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
 
-Review rounds 1–2 resolution — 2026-10-13 (same issue): the #108 deadlock test `tests/integration/account-delete-sso-lock-order.test.ts` is now **part of this change** (copied verbatim from `origin/ai/108` at `2ef1fb8`, together with the `routeTransactions` helper it needs in `tests/integration/pg-lock-helpers.ts`), so the issue's "passes the deadlock test" criterion is verified on the head being merged, not claimed: it passes 2/2 on this branch against a throwaway `flowline_test_109r3` database. The key-share → `FOR UPDATE` upgrade the reorder could introduce is now pinned by a real negative control, `tests/integration/account-delete-key-share-upgrade.test.ts`: with only the accounting lock removed (a test-only mock), the same two co-member deletions, each paused after their audit insert and released together, leave one transaction aborted with `40P01` at the workspace `FOR UPDATE` while holding its key-share — proving the accounting lock is load-bearing (the earlier "the test fails" sentence in lock-order.md was a counterfactual; it is now an executed test). The e2e-army header was corrected to name exactly what each test pins. Local runs on this head: `retained-file-locking.test.ts` 4/4, `account-delete-sso-lock-order.test.ts` 2/2, `account-delete-key-share-upgrade.test.ts` 1/1 (three consecutive runs), `email.test.ts` 9/9, `tests/unit/email-token-lock-order.test.ts` 10/10. The #108 test file is identical to PR #214's, so merging either first keeps the other merge clean.
+Review rounds 1–2 resolution — 2026-10-13 (same issue): the #108 deadlock test `tests/integration/account-delete-sso-lock-order.test.ts` is now **part of this change** (copied verbatim from `origin/ai/108` at `2ef1fb8`, together with the `routeTransactions` helper it needs in `tests/integration/pg-lock-helpers.ts`), so the issue's "passes the deadlock test" criterion is verified on the head being merged, not claimed: it passes 2/2 on this branch against a throwaway `flowline_test_109r3` database. The key-share → `FOR UPDATE` upgrade the reorder could introduce is now pinned by a real negative control, `tests/integration/account-delete-key-share-upgrade.test.ts`: with only the accounting lock removed (a test-only mock), the same two co-member deletions, each paused after its audit insert and released together, leave one transaction aborted with `40P01` at the workspace `FOR UPDATE` while holding its key-share — proving the accounting lock is load-bearing (the earlier "the test fails" sentence in lock-order.md was a counterfactual; it is now an executed test). The e2e-army header was corrected to name exactly what each test pins. Local runs on this head: `retained-file-locking.test.ts` 4/4, `account-delete-sso-lock-order.test.ts` 2/2, `account-delete-key-share-upgrade.test.ts` 1/1 (three consecutive runs), `email.test.ts` 9/9, `tests/unit/email-token-lock-order.test.ts` 10/10. The #108 test file is identical to PR #214's, so merging either first keeps the other merge clean.
 
 ## GitHub security settings (issue #160) — 2026-10-13
 
@@ -181,7 +145,7 @@ Issue #72 adds a bounded failure audit for failed and abandoned federated MFA st
 
 ## PR #14 diagnostic checkpoint — 2026-10-03
 
-Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, remains **FAIL**: WebKit 77 passed / 1 failed; Chromium and Firefox jobs succeeded. The journey found the Output tab and then hit its whole-test deadline during click actionability. Offline inspection of PR head `dd840db` found no loader import path linking the Drizzle prune to this failure. Pre-existing WebKit/test timing is suspected, not proven; the missing trace/JSON prevents root-cause confirmation. [Diagnosis and next experiment](WEBKIT_14_DIAGNOSTIC.md). Follow-up (CI history, 27 full-tier WebKit runs): not attributable to #14; head `ec672d7` passed WebKit 78/78 in run `37132314447`, and the intermittent journey timeout is tracked in issue #35 ([follow-up](WEBKIT_14_DIAGNOSTIC.md)). This docs-only investigation makes no readiness claim and does not close the earlier WebKit incidents recorded below or elsewhere. Issue #35 follow-up: the gate-report action now uploads the Playwright JSON reports and, for failed browser tests, `trace.zip` files (7 days), so the next occurrence can be diagnosed; no test, timeout or retry changed and the flake stays undiagnosed ([where to find them](../DEVELOPER_GUIDE.md#playwright-traces-in-ci)).
+Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, remains **FAIL**: WebKit 77 passed / 1 failed; Chromium and Firefox jobs succeeded. The journey found the Output tab and then hit its whole-test deadline during click actionability. Offline inspection of PR head `dd840db` found no loader import path linking the Drizzle prune to this failure. Pre-existing WebKit/test timing is suspected, not proven; the missing trace/JSON prevents root-cause confirmation. [Diagnosis and next experiment](WEBKIT_14_DIAGNOSIS.md). Follow-up (CI history, 27 full-tier WebKit runs): not attributable to #14; head `ec672d7` passed WebKit 78/78 in run `37132314447`, and the intermittent journey timeout is tracked in issue #35 ([follow-up](WEBKIT_14_DIAGNOSIS.md)). This docs-only investigation makes no readiness claim and does not close the earlier WebKit incidents recorded below or elsewhere. Issue #35 follow-up: the gate-report action now uploads the Playwright JSON reports and, for failed browser tests, `trace.zip` files (7 days), so the next occurrence can be diagnosed; no test, timeout or retry changed and the flake stays undiagnosed ([where to find them](../DEVELOPER_GUIDE.md#playwright-traces-in-ci)).
 
 ## PR #16 request-body follow-up — 2026-10-03
 

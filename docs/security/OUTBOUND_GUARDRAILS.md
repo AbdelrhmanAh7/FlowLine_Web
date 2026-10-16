@@ -1,94 +1,44 @@
-# Outbound Guardrails — Technical Debt
+# Outbound guardrails
 
-**Issue:** #165
-**Status:** MVP complete (2026-10-13)
-**Next:** Future enhancement
+**Issue:** #165 (Trend: Outbound guardrails: scoped node credentials, volume caps, approval gate)
+**Status:** partial. Only the per-connection send cap is delivered; scoped node credentials and a volume-based approval gate are not.
 
-## Current Implementation
+| Part of the brief | State |
+|---|---|
+| Volume caps | Delivered as a per-connection, per-action cap (below) |
+| Audit view | Delivered: `outbound_capped` appears in the run inspector's event log |
+| Approval before high-volume broadcasts | Not delivered. Only the existing per-action `requireApproval` / `sensitive` approval exists. Threshold-based approval is a follow-up issue (CTO decision on #165) |
+| Scoped node credentials | Not delivered. Connections stay workspace-scoped and cannot be limited to specific nodes |
+| Per-destination caps | Not delivered (CTO decision: connection + action is enough for the first version) |
 
-The outbound send cap is implemented per-connection and per-action (not per-destination). This is simpler and sufficient for MVP:
+## How the send cap works
 
-- **Per-connection cap:** `maxSendsPerMinute` configuration on the integration action node
-- **Per-action cap:** Rate limit key includes `actionId`, so different actions on the same connection have separate limits
-- **Counting:** Sends are counted after the approval gate, so steps waiting for human approval don't consume the budget
+- `integration.action` nodes take an optional `maxSendsPerMinute` (`IntegrationActionConfig`, `src/engine/types.ts`).
+- `validateGraph` (`src/engine/validate.ts`) rejects a value that is not an integer from 1 to 1000 with `INVALID_SEND_LIMIT`. The node editor (`src/components/builder/node-config.tsx`) clamps typed values to 1..1000 and removes the override when the field is emptied.
+- The worker (`worker/handlers.ts`, `integrationAction`) caps actions whose `sideEffect` is not `none`. It calls `checkRate("outbound:<connection id>:<action id>", limit)`, a PostgreSQL sliding window (`src/server/rate-limit.ts`), so the limit is shared across worker instances.
+- Limit used: an omitted or non-number `maxSendsPerMinute` falls back to 60; a number is floored and clamped into 1..1000 (so `0` or a negative number becomes 1, and `NaN`/`Infinity` fall back to 60).
+- The key has no flow or node id on purpose: the cap protects the connection and action, so several nodes using the same connection and action share one budget and cannot multiply the allowed volume.
+- The check runs after connection validation (`getRuntimeCredentials` returns `CONNECTION_WORKSPACE` for a connection of another workspace, `CONNECTION_MISSING` if absent) and after the approval gate. A step waiting for a human therefore uses no budget and a rejected connection never touches a counter.
+- A refused send throws the retryable `SEND_RATE_LIMITED` and logs one `outbound_capped` run event with `action` and `limit` only (no payload, no destination).
+- The run inspector (`src/app/w/[slug]/runs/inspector.tsx`) renders run events through `runEvent.<type>`; `outbound_capped` has labels in `src/i18n/messages/en.json` and `ar.json`.
+- The key is listed in the caller audit of [codeql-triage-hashing.md](codeql-triage-hashing.md).
 
-### Files Changed
+## Open debt
 
-- `worker/handlers.ts`: Rate limiting check with workspace validation and clamping before applying limits
-- `src/server/rate-limit.ts`: `checkRate` function (unchanged, uses Redis with sliding window)
-- `src/engine/types.ts`: `maxSendsPerMinute` field in node config schema
-- `src/engine/validate.ts`: Graph validation for `maxSendsPerMinute` (integer 1..1000)
-- `src/components/builder/node-config.tsx`: UI for configuring maxSendsPerMinute (integer clamp 1..1000, undefined on clear)
-- `src/i18n/messages/en.json` / `ar.json`: i18n keys for the new field and event type
+1. **Per-destination caps.** Would need the destination (email address, Slack channel, …) in the key, e.g. `outbound:<connection id>:<action id>:<destination>`, plus a UI to choose destinations. Do it only if a customer needs limits such as "10 emails per contact per minute".
+2. **Threshold-based approval.** "More than N sends per minute requires approval" is separate from the per-action approval flag; tracked as the follow-up to #165 the CTO asked for.
+3. **Scoped node credentials.** Not started; needs a schema change (connection to node mapping) and a migration plan for existing connections.
 
-### Events Logged
+## Tests
 
-- `outbound_capped`: Logged when a send is refused due to rate limit, with `action` and `limit` fields
-
-## Technical Debt
-
-### 1. Per-Destination Caps (Future Enhancement)
-
-**Why it's not in MVP:** The current implementation (connection + action) is simpler and sufficient for MVP. Destination-based caps would require:
-
-- Tracking per-destination send counts (e.g., per-email address, per-slack channel, per-slack channel)
-- Maintaining a per-connection destination map in the rate limit key (e.g., `outbound:{connectionId}:{actionId}:{destination}`)
-- Updating the rate limit check to validate against the destination-specific counter
-
-**When to implement:** If the business requires stricter limits per-destination (e.g., "no more than 10 emails per contact per minute" or "no more than 5 messages per Slack channel per minute"), this enhancement should be added.
-
-**Impact:** Medium complexity (additional destination tracking, UI for destination selection, rate limit key structure change)
-
-### 2. Approval Gate for High-Volume Broadcasts (Issue #166)
-
-**Why it's not in MVP:** The approval gate is tied to `requireApproval` and `sensitive` flags, which are per-action. A threshold-based approval gate (e.g., "more than 50 sends per minute requires approval") is a separate concern.
-
-**When to implement:** If the business wants to automate approval for high-volume broadcasts (e.g., "any send that would exceed 50 sends per minute requires human approval"), this should be implemented in a separate issue (#166).
-
-**Impact:** Low complexity (add threshold config, update approval check to include volume check)
-
-### 3. Destination Selection UI (Future Enhancement)
-
-**Why it's not in MVP:** The current UI allows configuring maxSendsPerMinute globally for the connection. If per-destination caps are implemented later, the UI will need to support selecting destinations and setting per-destination limits.
-
-**When to implement:** When per-destination caps are implemented (see #1).
-
-**Impact:** Medium complexity (UI changes, destination validation, config schema update)
-
-## Security Considerations
-
-### Current Validations
-
-1. **Workspace validation:** The connection is validated to belong to the current workspace by `getRuntimeCredentials` before rate limiting is applied (see `src/server/connections.ts:241`)
-2. **Policy check:** The integration action validates that the connectionId matches the run's permission policy (see `worker/handlers.ts:291-293`)
-3. **Connection existence check:** Validated by `getRuntimeCredentials` which throws `CONNECTION_MISSING` if the connection doesn't exist (see `src/server/connections.ts:240`)
-4. **Server-side validation & clamping:** `maxSendsPerMinute` is validated by `validateGraph` (integer 1..1000) and clamped in `worker/handlers.ts` to `1..1000` (defaults to 60 if omitted, negative, or invalid)
-
-### Future Considerations
-
-1. **Destination validation:** If per-destination caps are implemented, destinations should be validated against the connection's allowed destinations
-2. **Rate limit key isolation:** Destination-based caps should use a unique rate limit key per destination to prevent cross-destination bypasses
-3. **Audit trail:** Ensure that destination-specific caps are logged in the audit view with destination information
-
-## Testing
-
-### Current Tests
-
-- `e2e-army/165-outbound-send-cap.e2e.ts`: Request-level guard test (anonymous callers can't start a run that would send outbound messages)
-- `tests/integration/p2-actions.test.ts`:
-  - Test for workspace validation before rate limiting (lines 382-398)
-  - Test for per-connection send cap (lines 400-412)
-  - Test for clamping non-integer and zero maxSendsPerMinute to at least 1 (lines 414-426)
-- `tests/unit/engine.test.ts`:
-  - Test for `validateGraph` checking `INVALID_SEND_LIMIT` for `maxSendsPerMinute` (integer 1..1000)
-
-### Future Tests
-
-- Per-destination cap tests (when implemented)
-- Threshold-based approval gate tests (when implemented in #166)
+- `tests/unit/engine.test.ts`: `validateGraph` returns `INVALID_SEND_LIMIT` for 0, 1.5 and 1001, and not for 60 or undefined.
+- `tests/integration/p2-actions.test.ts` (needs PostgreSQL; CI runs it):
+  - a second send over a cap of 1 fails with `SEND_RATE_LIMITED` and logs exactly one `outbound_capped`;
+  - a flow whose `maxSendsPerMinute` is out of range (0) is refused at enqueue with 422 `INVALID_FLOW` / `INVALID_SEND_LIMIT` (the worker clamp to 1..1000 is defence in depth for stored versions, and has no direct test);
+  - a connection from another workspace fails with `CONNECTION_WORKSPACE` and logs no `outbound_capped`.
+- `e2e-army/165-outbound-send-cap.e2e.ts`: request-level guard only (an anonymous run start is refused). It does not exercise the cap, because the hub's throwaway stack has no seeded connection to send through; the cap is proven by the integration tests above.
 
 ## References
 
-- **Issue:** #165 (Trend: Outbound guardrails: scoped node credentials, volume caps, approval gate)
-- **CTO decisions:** See issue comments for CTO's answers on audit view, per-destination caps, node-config UI, and approval gate
-- **Related docs:** `docs/implementation/PHASE4_BETA_REPORT.md` (if updated)
+- Issue #165 and its CTO answers: [issue comments](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/165)
+- Status ledger: [PHASE4_BETA_REPORT.md](../implementation/PHASE4_BETA_REPORT.md)
