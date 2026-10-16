@@ -124,7 +124,8 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button type="button" onClick={cancel}>
+            {/* Once the code is submitted the server may already have turned MFA on, so Cancel would only hide that. */}
+            <Button type="button" onClick={cancel} disabled={pending === "verify"}>
               {t("account.security.twoFactor.cancel")}
             </Button>
           </form>
