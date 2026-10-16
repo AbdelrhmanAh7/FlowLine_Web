@@ -300,3 +300,16 @@ AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remain
 ## Test coverage note: hub route selection (#174)
 
 `tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
+
+## PR #287 local CI repair — 2026-10-16
+
+Merged main `131235b9` into the pilot branch (merge `b5765988`), preserving both NEXT_ACTION entries.
+Main ends at migration 0026; 0027 needs no renumbering. `pnpm db:generate` reports no drift;
+all 28 migrations applied to fresh `flowline_test_pr287_migrations` on localhost:5432,
+and `run.input` is `json`. CI run 38792754200 attempt 2 failed the demo cross-process lock test:
+readiness preceded SIGTERM handler registration. The test now registers cleanup first and
+always terminates/awaits the child in finally. No production lock semantics changed.
+Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 total),
+131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
+for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
+No push, GitHub writes, dependency changes, secrets or permission changes.

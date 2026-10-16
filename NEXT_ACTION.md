@@ -1,5 +1,12 @@
 # Next action — 2026-10-03
 
+## PR #287 CI repair — 2026-10-16
+
+Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
+fresh CI and review confirmation; this worker performs no GitHub writes. Migration 0027
+applied successfully with all predecessors on a throwaway localhost:5432 database.
+See the phase-4 report for exact local checks and the pre-existing conditional skip.
+
 ## Pilot E2E corrections — 2026-10-15
 
 Local work on `fix/pilot-e2e-failures` is recorded in
