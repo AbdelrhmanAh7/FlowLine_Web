@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { SecretInput, takeSecret } from "@/components/secret-input";
 import { useToast } from "@/components/toast";
+import { TotpQr } from "@/components/totp-qr";
 import { Button, Field, Input, StatusBadge } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -87,6 +88,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       </div>
       {enabled ? null : enrolment ? (
         <div className="flex flex-col gap-3">
+          <TotpQr uri={enrolment.totpURI} />
           <div className="flex flex-col gap-1.5" role="group" aria-labelledby="two-factor-secret-label">
             {/* <code> is not labelable, so the secret is named with aria-labelledby on the group container instead of a <label for>. */}
             <p id="two-factor-secret-label" className="text-xs font-medium uppercase tracking-[0.4px] text-med">

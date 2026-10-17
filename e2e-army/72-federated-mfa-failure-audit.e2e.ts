@@ -6,7 +6,7 @@
 // replayed_code, expired, rate_limited) and the retention sweep of abandoned challenges are proven against PostgreSQL in
 // tests/integration/sec-federated-mfa-regression.test.ts; no endpoint triggers the retention job.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
-// The account security page tests (#196/#197, below) were moved here from their own files to stay within the hub's cap of 8
+// The account security page tests (#196/#197/#198, below) were moved here from their own files to stay within the hub's cap of 8
 // top-level e2e-army/*.e2e.ts files; unlike the #72 tests they are UI tests with agent steps (a model).
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
@@ -165,5 +165,24 @@ test(
     await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
     await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
     await expect(screen.getByTestId("backup-codes")).toHaveCount(0);
+  },
+);
+
+// ── moved from e2e-army/198-totp-qr.e2e.ts (the hub runs at most 8 top-level e2e-army/*.e2e.ts files; see tests/unit/e2e-army-tooling.test.ts) ──
+// Issue #198 (account security page 3/4): the enrolment view shows a QR code for the authenticator app, drawn in the browser.
+// The hub's fl-user session has no password this test knows, so it covers the invalid case: no QR without the right password.
+// The happy path (QR above the secret, one enable call, no foreign request, gone after confirm/Cancel, RTL bounds) needs the
+// password and a TOTP code computed from the secret, so it lives in e2e/account-security.spec.ts.
+
+test(
+  "@issue-198 AC1: a wrong account password shows an error and draws no QR code",
+  { tags: ["feat:fl-auth-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "not-the-real-password-1" } });
+    await agent.assert("an error message is shown and no QR code is displayed");
+    await expect(screen.getByTestId("totp-qr")).toHaveCount(0);
+    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
   },
 );
