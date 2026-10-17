@@ -127,6 +127,27 @@ routes providers to local test doubles (fake SaaS APIs, OAuth and OIDC on `:4010
 double and a fake Paddle, used only when `FLOWLINE_ENV=test` — tests still add the AI key through the app, like a
 customer). Start from `.env.example` for the shape of `.env.test`.
 
+Sign-up still needs the emailed verification link on the test stack (read it from `/api/test/outbox`). For an external
+automated tester that cannot read the outbox (TestSprite cloud, milestone runs), start a `FLOWLINE_ENV=test` stack with
+`FLOWLINE_TEST_AUTO_VERIFY=1`: new e-mail sign-ups are then created verified, get no verification e-mail, and the
+sign-up form signs them in straight away (issue #124). That stack also stops requiring e-mail verification at all
+(better-auth's `requireEmailVerification` is off), so the sign-up response itself already carries a session. A single
+browser context can opt in with the cookie `fl_test_auto_verify=1` instead (the e2e-army test and
+`e2e/test-auto-verify.spec.ts` set it with their own cookie API); a tester that can only navigate pages (the hub
+verifier) opens `/api/test/auto-verify`, which sets that cookie for its browser and continues to `/sign-up`. Both
+opt-ins and that route work only when `FLOWLINE_ENV` is exactly `test`; anywhere else the opt-ins are ignored and the
+route is a 404, so they cannot be enabled on staging, beta or production. There, a server refuses to start while
+`FLOWLINE_TEST_AUTO_VERIFY` has any value (`src/instrumentation.ts`: `next start` prints the error and exits);
+code that builds auth without that server (scripts, tests) logs exactly one warning instead, before any sign-up is
+handled, and still ignores it. The cookie is ignored silently.
+The private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
+The UI is Arabic by default; a tester that drives the forms by their English labels sets the cookie `fl_locale=en`
+first. The labels are then **Create account** on `/sign-up`, **Sign in** on `/sign-in` and **Resend** on
+`/resend-verification` (there is no "Sign Up" button). The `/sign-up` form has exactly three fields — Name, Email and
+Password — and no password-confirmation field (design-reference slide 6). After **Resend** the page answers only
+"If the account is eligible, an email will arrive shortly.": it never says "Verification resent" or anything else
+that would reveal whether the address has an account.
+
 | Check | Command |
 |---|---|
 | Lint / typecheck | `pnpm lint` / `pnpm typecheck` |

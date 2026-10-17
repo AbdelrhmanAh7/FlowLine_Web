@@ -1,10 +1,15 @@
 # Next action — 2026-10-03
 
+## Issue #124 — harness handoff (2026-10-18)
+
+The branch meets the planner spec's AC1 to AC5 and the CTO orders on PR #135. origin/main `cef5dd89` is merged (`6307c3fb`), `AI_QUESTIONS.md` matches main, and the #124 army cases now live in `e2e-army/85-sign-in-and-core-flow.e2e.ts`, which brings the suite back to the hub's cap of 8 top-level files (the only CI failure). With `FLOWLINE_TEST_AUTO_VERIFY=1` under `FLOWLINE_ENV=test`, `requireEmailVerification` is off; with the variable set anywhere else, the server refuses to start (`src/instrumentation.ts`). A `/simplify` pass (`028644d0`) stopped the sign-up form from signing in a second time when the server-wide switch has already returned a session, and made the integration test build auth under that switch. Local results at `028644d0`: lint and typecheck clean; 11 related unit files green (44 auto-verify cases); integration 5; Chromium spec 4/4 and 8/8 repeated; the seven #124 army cases passed twice on one database; both opt-in paths and the start-up refusal checked on live servers ([verification report](artifacts/phase-4/issue-124/EVIDENCE.md)). Next, the harness: push to PR #135, then get fresh CI, `e2e-army`, verify and CodeRabbit results on the new head. For the hub owner: the stop hook runs `vitest related` without a test `DATABASE_URL`, so the integration global setup always refuses; and agent steps in a local `e2e` run need the `ai` peer dependency, which this checkout does not resolve.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
