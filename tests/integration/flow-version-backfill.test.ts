@@ -39,13 +39,24 @@ async function applyBackfill() {
   });
 }
 
+// Simulate pre-0026 rows; its insert guard would otherwise clear the numbers before 0025 is tested.
+async function insertLegacy(rows: typeof schema.flowVersion.$inferInsert[]) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`alter table flow_version disable trigger flow_version_unpublished_unnumbered`);
+    const inserted = await tx.insert(schema.flowVersion).values(rows).returning();
+    await tx.execute(sql`alter table flow_version enable trigger flow_version_unpublished_unnumbered`);
+    return inserted;
+  });
+}
+
 /** A flow as a pre-#204 database holds it: two manual runs whose snapshots took v1 and v2, never published. */
 async function legacyFlow() {
   const user = await makeUser("backfill");
   const ws = await createWorkspace(user, unique("Backfill"));
   const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("Legacy") });
   const legacy = { flowId: flow.id, revision: flow.revision, name: flow.name, graph: flow.graph, reason: "run", createdBy: user.id };
-  const runs = await db.insert(schema.flowVersion).values([{ ...legacy, version: 1 }, { ...legacy, version: 2 }]).returning();
+  const runs = await insertLegacy([{ ...legacy, version: 1 }, { ...legacy, version: 2 }]);
+  expect(runs.map((r) => r.version)).toEqual([1, 2]);
   return { user, ws, flow, runs };
 }
 
@@ -82,19 +93,19 @@ describe("migration 0025 backfill: only publications keep their number (#204)", 
   it("nulls legacy save and overwrite numbers, keeps the published number and its subflow reference", async () => {
     const { user, ws, flow } = await legacyFlow();
     const base = { flowId: flow.id, revision: flow.revision, name: flow.name, graph: flow.graph, createdBy: user.id };
-    const rows = await db
-      .insert(schema.flowVersion)
-      .values([
-        { ...base, version: 3, reason: "save" },
-        { ...base, version: 4, reason: "publish" },
-        { ...base, version: 5, reason: "overwrite" },
-      ])
-      .returning();
+    const rows = await insertLegacy([
+      { ...base, version: 3, reason: "save" },
+      { ...base, version: 4, reason: "publish" },
+      { ...base, version: 5, reason: "overwrite" },
+    ]);
+    expect(rows.map((r) => r.version)).toEqual([3, 4, 5]);
+    await db.update(schema.flow).set({ publishedVersionId: rows[1].id }).where(eq(schema.flow.id, flow.id));
 
     await applyBackfill();
 
     const after = await numbers(flow.id);
     expect(rows.map((r) => after.get(r.id))).toEqual([null, 4, null]);
+    expect((await listFlows(ws.id)).find((r) => r.id === flow.id)!.publishedVersion).toBe(4);
     // A subflow step pins the published number; it still resolves to the same publication.
     const [pinned] = await db.select({ id: schema.flowVersion.id }).from(schema.flowVersion).where(and(eq(schema.flowVersion.flowId, flow.id), eq(schema.flowVersion.version, 4)));
     expect(pinned.id).toBe(rows[1].id);

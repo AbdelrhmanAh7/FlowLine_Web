@@ -55,22 +55,6 @@ export default function TemplatesPage() {
   const useReason = !canEdit ? t("templates.viewer") : !online ? t("templates.offline") : null;
   const categoryLabel = (c: string) => (c === "All" ? t("templates.all") : tr(t, `templateCategory.${c}`, c));
 
-  // While the catalog is loading, show a loading state instead of rendering templates optimistically.
-  // This prevents the race condition where templates appear as "usable" before the catalog resolves.
-  if (catalog.isLoading) {
-    return (
-      <div className="flex flex-col">
-        <PageHeader title={t("templates.title")} sub={t("templates.sub")} />
-        <div className="flex flex-col gap-6 p-4 sm:p-6">
-          <HelpDisclosure label={t("uxPages.templates.helpLabel")}>{t("uxPages.templates.helpBody")}</HelpDisclosure>
-          <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" aria-hidden="true" />
-            <span className="ms-3 text-med">{t("templates.loading")}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
   // Shared by the offered and held-back design cards.
   const designCardBody = (tpl: DesignTemplate) => {
     const shown = templateText(t, "designTemplates", tpl);
@@ -166,6 +150,17 @@ export default function TemplatesPage() {
                     );
                   })}
                 </ul>
+              </section>
+            )}
+            {catalog.isLoading && planned.length > 0 && (
+              // Only the "Connected" section waits for the catalog (the local templates above never depend on it);
+              // no design card is offered until the registry is known, so a fast click can't hit a 409.
+              <section data-testid="templates-connected-loading">
+                <SectionLabel className="mb-3">{t("templates.connected")}</SectionLabel>
+                <div className="flex items-center py-6" role="status" aria-live="polite">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true" />
+                  <span className="ms-3 text-med">{t("templates.loading")}</span>
+                </div>
               </section>
             )}
             {catalog.isError && (
