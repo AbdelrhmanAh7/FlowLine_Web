@@ -19,6 +19,33 @@ export interface DesignTemplate {
   graph: FlowGraph;
 }
 
+/** Every action id the graph's integration steps call, deduped, in node order. */
+export function templateActionIds(graph: FlowGraph): string[] {
+  const ids = graph.nodes.flatMap((node) => (node.type === "integration.action" ? [String((node.data.config as { actionId?: unknown }).actionId ?? "")] : []));
+  return [...new Set(ids.filter(Boolean))];
+}
+
+/** Action ids the template's steps call that are not in `available` (the provider registry / catalog). A template with any can't run yet. */
+export function missingTemplateActions(graph: FlowGraph, available: { has(actionId: string): boolean }): string[] {
+  return templateActionIds(graph).filter((id) => !available.has(id));
+}
+
+/**
+ * The templates whose every action `available` provides, in gallery order. A template is offered only once the actions
+ * it calls exist, so the gallery and "Use template" can never hand a user a flow that cannot run (the server refuses
+ * one that slips through with 409 TEMPLATE_UNAVAILABLE, src/server/flows.ts, and publish refuses an unknown action with
+ * UNKNOWN_ACTION, src/server/publish.ts). This makes the dependency self-healing: adding the actions reveals the
+ * template with no change here.
+ */
+export function availableDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): DesignTemplate[] {
+  return templates.filter((t) => missingTemplateActions(t.graph, available).length === 0);
+}
+
+/** The templates held back because an action they call is not in `available` yet, with the missing ids (same order). */
+export function heldBackDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): { template: DesignTemplate; missing: string[] }[] {
+  return templates.map((template) => ({ template, missing: missingTemplateActions(template.graph, available) })).filter((x) => x.missing.length > 0);
+}
+
 const J = (v: unknown) => JSON.stringify(v, null, 2);
 let e = 0;
 const edge = (source: string, target: string, sourceHandle: string | null = null): FlowEdge => ({ id: `te${++e}-${source}-${target}`, source, target, sourceHandle });
@@ -216,6 +243,55 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
         n("ignored", "output", "Not an opened PR", 440, 280, { key: "ignored", expression: "true" }),
       ],
       edges: [edge("hook", "opened"), edge("opened", "pr", "true"), edge("pr", "files"), edge("files", "review"), edge("review", "isRisky"), edge("isRisky", "issue", "true"), edge("isRisky", "fine", "false"), edge("opened", "ignored", "false")],
+    },
+  },
+  {
+    id: "deal-won-mizano-quote",
+    name: "Deal won → Mizano quote",
+    description: "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+    category: "Sales",
+    goal: "sales",
+    requires: [
+      { provider: "mizano", purpose: "Create the customer and the draft quote" },
+      { provider: "slack", purpose: "Tell your team the quote is ready" },
+    ],
+    setup: ["Choose the Mizano and Slack connections", "Set your sales channel ID", "Each run waits for approval before anything is created in Mizano"],
+    graph: {
+      nodes: [
+        n("deal", "trigger.manual", "Deal", 0, 160, {
+          samplePayload: J({
+            deal: {
+              stage: "won",
+              currency: "EGP",
+              customer: { name: "Mona Hassan", company: "Nile Bakery", email: "mona@nilebakery.example", phone: "+20 100 555 0142", taxId: "EG-100-200-300" },
+              lines: [
+                { item: "Oven service plan", qty: 1, unitPrice: 4800, taxRate: 14 },
+                { item: "Spare gasket kit", qty: 3, unitPrice: 125.5, taxRate: 14 },
+              ],
+            },
+          }),
+        }),
+        n("won", "logic.condition", "Deal won?", 260, 160, { expression: 'deal.stage = "won"' }),
+        n("prepare", "transform.json", "Prepare customer and quote", 520, 60, {
+          // Mizano takes amounts as decimal strings with two places, so numbers are formatted here, once.
+          expression:
+            '(\n  $money := function($v) { $formatNumber($number($v), "0.00") };\n  {\n    "customer": {\n      "name": deal.customer.name,\n      "company": deal.customer.company,\n      "email": deal.customer.email,\n      "phone": deal.customer.phone,\n      "taxId": deal.customer.taxId\n    },\n    "currency": deal.currency,\n    "lines": [deal.lines.{ "item": item, "qty": $money(qty), "unitPrice": $money(unitPrice), "taxRate": $money(taxRate) }]\n  }\n)',
+        }),
+        // Availability (#147): mizano.create_customer and mizano.create_draft_quote land with #147, so until that
+        // merges this template is held back instead of offered: availableDesignTemplates() drops it from the gallery
+        // grid, "Use template" is not rendered for it, createFlow() answers 409 TEMPLATE_UNAVAILABLE
+        // (src/server/flows.ts) and publishing the graph reports UNKNOWN_ACTION (serverIssues, src/server/publish.ts).
+        // It becomes usable automatically the moment the two ids resolve — no change here.
+        //
+        // CTO decision on #149 (2026-10-12): one approval gate on "Create customer". The approver reviews the customer
+        // details; the quote lines are visible in the "Prepare customer and quote" step output. Binding customer + lines
+        // into one approval needs a preview-capable approval step (a follow-up), so this stays customer-only.
+        act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", "customer", { requireApproval: true }),
+        act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", '{\n  "customerId": id,\n  "currency": $steps.prepare.currency,\n  "lines": $steps.prepare.lines\n}'),
+        act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.prepare.customer.company & " (" & $count($steps.prepare.lines) & " lines)"\n}'),
+        n("skipped", "output", "Deal not won", 520, 280, { key: "status", expression: '"deal not won: nothing sent to Mizano"' }),
+      ],
+      edges: [edge("deal", "won"), edge("won", "prepare", "true"), edge("prepare", "customer"), edge("customer", "quote"), edge("quote", "notify"), edge("won", "skipped", "false")],
     },
   },
 ];

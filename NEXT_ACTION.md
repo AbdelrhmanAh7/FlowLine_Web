@@ -1,10 +1,15 @@
 # Next action — 2026-10-03
 
+## Issue #149 — unblocked by #147 (2026-10-15)
+
+PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which landed with **#147** (now on `main`), so the template is a usable gallery entry (offered card with "Use template"). The gallery still withholds any template whose actions are missing (`availableDesignTemplates`), so the dependency stays self-healing. The approval shows the customer only (CTO decision on #149, 2026-10-12); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
