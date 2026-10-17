@@ -1,6 +1,6 @@
 # Issue #143: pilot metrics script (verification report)
 
-Tested code SHA: `9ad9ec71` (branch `ai/143`). Local run, 2026-10-18, Node 26 / pnpm 10.32.1, test DB `flowline_test_143`
+Tested code SHA: `9ad9ec71`, re-run unchanged on `d3807fa5` (merge of origin/main; script and tests identical) (branch `ai/143`). Local run, 2026-10-18, Node 26 / pnpm 10.32.1, test DB `flowline_test_143`
 (migrated with `src/db/migrate.ts`). CI (`gate`) runs the full suite after push; it was not run locally.
 
 E2E: not needed. The script is a read-only internal ops tool; it has no user-facing flow, so no `e2e-army` test is added.
@@ -36,7 +36,7 @@ Regression check: with the previous `scripts/pilot-metrics.ts` (`git show eab985
 
 - `pnpm typecheck` (`tsc --noEmit`): exit 0, no errors.
 - `pnpm exec eslint scripts/pilot-metrics.ts tests/unit/pilot-metrics.test.ts tests/integration/pilot-metrics.test.ts`: exit 0.
-- `pnpm exec vitest run --project unit tests/unit/pilot-metrics.test.ts`: 11 passed (run with the Bash sandbox off; the CLI test spawns `tsx`, which needs a unix socket).
+- `pnpm exec vitest run --project unit tests/unit/pilot-metrics.test.ts`: 11 passed (re-run on `d3807fa5`: 11 passed, exit 0) (run with the Bash sandbox off; the CLI test spawns `tsx`, which needs a unix socket).
 - Integration: `node scripts/with-env.mjs <env.test copy> vitest run --project integration tests/integration/pilot-metrics.test.ts` with `DATABASE_URL` set to `flowline_test_143`: 8 passed.
 
 ## Known gaps (stated, not hidden)
