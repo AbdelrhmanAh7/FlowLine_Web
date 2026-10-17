@@ -58,9 +58,9 @@ Anything you can't confirm is **UNKNOWN** and stays unknown in code.
 
 Most providers need no new code. Add quirks where they belong:
 
-- **Shared helpers:** every export in `shared.ts` (request validation, SSE parsing, error mapping and scrubbing,
-  body parsing) has a JSDoc block stating its inputs, return value and the `HubError` codes it throws. Read those
-  before reusing a helper in a new adapter.
+- **Shared helpers:** exports in `shared.ts` (request validation, SSE parsing, error mapping and scrubbing,
+  body parsing) have JSDoc blocks documenting their parameters, return values, and thrown or returned `HubError` codes.
+  Read those before reusing a helper in a new adapter.
 
 - **Error mapping:** `shared.ts` `mapProviderError` holds the per-provider codes (`QUOTA_CODES`, `PLAN_CODES`,
   `AUTH_CODES`, …).
