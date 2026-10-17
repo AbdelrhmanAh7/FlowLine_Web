@@ -133,6 +133,12 @@ test("[fl-email-flows.4] deleting the account needs an e-mailed confirmation and
   expect((await h.get("/api/me")).status).toBe(401);
 });
 
+test("[fl-email-flows.7] a signed-out request for the account security page is redirected to sign-in", { tags: ["feat:fl-email-flows", "shard:core-api", "lvl:api"] }, async () => {
+  const res = await anonymous().get("/account/security");
+  expect(res.status).toBe(307);
+  expect(new URL(res.headers.get("location") ?? "", apiBase()).pathname).toBe("/sign-in");
+});
+
 // ── fl-beta-access ───────────────────────────────────────────────────────────────────────────────────────────────────
 test("[fl-beta-access.1] the sign-up pre-check follows the beta mode and admits a valid beta code", { tags: ["feat:fl-beta-access", "shard:core-api", "lvl:api"] }, async () => {
   const email = mailOf("beta-check");
