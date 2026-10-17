@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -209,5 +209,25 @@ describe("attachSource", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("docs/landing/DEMO_MEDIA.md", () => {
+  const root = join(__dirname, "..", "..");
+  const doc = readFileSync(join(root, "docs", "landing", "DEMO_MEDIA.md"), "utf8");
+  const h2 = doc.split("\n").filter((l) => l.startsWith("## "));
+
+  it("keeps the generation content under its own heading, with the consumption section after it as a separate H2", () => {
+    expect(h2[0]).toBe("## Recorded clips");
+    const recorded = doc.indexOf("## Recorded clips");
+    expect(doc.indexOf("The landing page's demo videos are recorded")).toBeGreaterThan(recorded);
+    expect(doc.indexOf("The landing page's demo videos are recorded")).toBeLessThan(doc.indexOf("## Setup"));
+    expect(h2.indexOf("## Consumption on the landing page")).toBeGreaterThan(h2.indexOf("## Manifest contract"));
+  });
+
+  it("does not describe #99 as pending, here or in the docs index", () => {
+    const index = readFileSync(join(root, "docs", "README.md"), "utf8").split("\n").find((l) => l.includes("(landing/DEMO_MEDIA.md)"));
+    for (const text of [doc, index ?? ""]) expect(text).not.toMatch(/arrives with #99|#99 has not landed/);
+    expect(index).toMatch(/#99, merged/);
   });
 });

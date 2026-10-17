@@ -18,7 +18,7 @@ Part of #96. Sibling #99 is merged into `main` (`e646a041`) and supplies the rea
 | AC4 | Walkthrough: `showModal()`, Esc returns focus, `controls`, EN + AR caption tracks (page locale default, `::cue`), 4-step stepper with RTL-flipped arrows, chapter stills fallback | `e2e/landing-demo.spec.ts` walkthrough tests (6); e2e-army AC4 | Pass |
 | AC5 | Bento: four tiles (wide/square/square/wide on lg, one column on phones), lazy start, i18n copy, "Recorded in the app on sample data" | `e2e/landing-demo.spec.ts` "bento: …", "bento on a phone: …"; e2e-army AC5; screenshots | Pass |
 | AC6 | No horizontal overflow at 360/768/1024/1440 in EN and AR, controls at the inline end, identical i18n keys | `e2e/landing-demo.spec.ts` overflow tests (EN, AR) and "Arabic: …"; `tests/unit/landing-demo-media.test.ts` (key parity); screenshots | Pass. Toggle at the right edge in EN (x = 981) and the left edge in AR (x = 367) |
-| AC7 | Lighthouse performance not lower than before; CLS 0; added initial JS ≤ 6 KB gz; `/media/demo/*` immutable and `Range` → 206 | Lighthouse before/after, initial JS from both production builds, `curl` against the production build, `e2e/landing-demo.spec.ts` "AC7: …" and "/media/demo/* is immutable …" | Pass, with one pre-existing shift outside the demo (see Performance) |
+| AC7 | Lighthouse performance not lower than before; CLS 0; added initial JS ≤ 6 KB gz; `/media/demo/*` immutable and `Range` → 206 | Lighthouse before/after, initial JS from both production builds, `curl` against the production build, `e2e/landing-demo.spec.ts` "AC7: …" and "/media/demo/* is immutable …" | Pass except CLS. **CLS: accepted deviation, not a pass.** One shift of 0.0039 (Lighthouse 0.00042) comes from the hero copy outside the demo and exists on `main` too (see Performance) |
 | AC8 | No manifest: page as today, no console errors | `e2e/landing-demo.spec.ts` "the page renders today's hero …"; e2e-army AC8 | Pass |
 | AC9 | New e2e in EN and AR, Vitest, existing `e2e/landing.spec.ts` green | commands below | Pass: Playwright 48/48, e2e-army 6/6, unit files below |
 | AC10 | Docs updated; PR body `Part of #96` (and `Closes #96`, since #99 merged first) | `docs/landing/DEMO_MEDIA.md`, `docs/implementation/PHASE4_BETA_REPORT.md`, this file | Docs updated; the PR body is written by the harness |
@@ -45,8 +45,11 @@ lighthouse http://127.0.0.1:3190/ --only-categories=performance --preset=desktop
   The demo adds none. The Chromium test "AC7: the demo surfaces cause no layout shift while the posters load and the hero and bento loops start" collects
   every buffered `layout-shift` entry with its source nodes and fails on any source inside `.hero-scrub`, `#demo` or the walkthrough button. On
   `1fad4fc3` it records one shift (0.0039 at 290 ms, sources: the hero copy "No code required.", its paragraph and a header button, all outside the
-  demo) and passes. The page-level CLS is therefore not literally 0: the remaining shift comes from the hero copy, which this issue did not change, and
-  needs its own issue.
+  demo) and passes. The page-level CLS is therefore not literally 0, so AC7's "CLS 0" is **not met as written**.
+- **Accepted deviation (CLS).** Reason: the remaining shift is sourced in the hero copy, which this issue does not change, and `main` shows the same shift
+  (Lighthouse 0.00055 before vs 0.00042 after). Risk: a 0.0039 shift at 290 ms, far below the 0.1 "good" threshold. How verified: the Chromium AC7 test
+  fails on any shift sourced in a demo surface, and Lighthouse on both builds. Follow-up: recorded in `NEXT_ACTION.md` for its own issue. No issue is
+  opened yet because GitHub issue creation is frozen for agents.
 - **Regression found and fixed in this round:** on `0748984c` the same test failed with two shifts sourced in the demo's own toggle text (0.000101 for
   "Play demo" and 0.000242 for "Pause" across four tiles). Cause: a fixed 44×44 box whose label changes length, so it re-wrapped on every flip. Fixed in
   `1fad4fc3` (`src/components/landing/demo-video.tsx`, labels stacked in one grid cell, `min-h-11 min-w-11`); the test passes there.
@@ -68,8 +71,22 @@ lighthouse http://127.0.0.1:3190/ --only-categories=performance --preset=desktop
 | Lint | `pnpm exec eslint` on every changed file + the pre-commit `eslint --fix` hook | exit 0 |
 | Lighthouse | see Performance | 6 runs, all exit 0 |
 
+Docs-and-evidence round (QA findings on `cdf63420`, run 2026-10-18 on the commit after it): `pnpm exec vitest run --project unit <file>` gives
+`landing-demo-media` 26 passed (the 2 new `DEMO_MEDIA.md` structure tests fail on `cdf63420`'s docs: 2 failed, 24 passed), `e2e-army-tooling` 13 passed
+(new: the #166 titles and tags in `200-route-error-headers.e2e.ts`), `local-scenarios` 85 passed, `demo-docs-commands` 9 passed + 1 skipped;
+`pnpm typecheck` exit 0; `eslint` on the two changed test files exit 0. No product code changed in that round.
+
 Screenshots (EN/LTR and AR/RTL, motion on and reduced, hero and bento) were taken on the production build with the real manifest; they are not
 committed (repo rule) and can be attached to the PR.
+
+## Scope notes for files outside the landing demo
+
+- `e2e-army/166-mena-template.e2e.ts` is deleted because this branch adds `e2e-army/100-landing-demo.e2e.ts` and the hub runs only 8 top-level
+  `e2e-army/*.e2e.ts` files. Its two tests (`@issue-166 AC1: the templates gallery …` with `feat:fl-templates`/`lvl:ui`, and `@issue-166 AC1: an unknown
+  template id …` with `feat:fl-templates`/`lvl:api`) moved verbatim into `e2e-army/200-route-error-headers.e2e.ts`. `tests/unit/e2e-army-tooling.test.ts`
+  checks that both exist there with the same titles and tags, and that the repo stays at 8 files or fewer.
+- `AI_QUESTIONS.md` is deleted on purpose: the CTO answers on #100 asked for it (questions answered there). Its note about the 8-file cap is kept in
+  the header of `e2e-army/200-route-error-headers.e2e.ts` and in the cap rule of `README.md` and `docs/DEVELOPER_GUIDE.md`.
 
 ## Failing on the base, passing on the head
 

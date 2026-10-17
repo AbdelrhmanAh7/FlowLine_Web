@@ -5,7 +5,9 @@
 Head `1fad4fc3`: the three CI unit failures of run 39072383273 are fixed, AC7 is measured on production builds (Lighthouse
 before/after, initial JS, media headers) and a toggle layout shift found by the new test is fixed; see
 `artifacts/issue-100/EVIDENCE.md`. Harness next: push, fresh CI, the full tier once on the final candidate, QA re-review of finding
-e711c3edbd77. Follow-up worth an issue: the hero copy's small layout shift, which also exists on `main`.
+e711c3edbd77. Follow-up worth its own issue (agents cannot open issues while creation is frozen): the hero copy's layout shift
+(0.0039, sourced in "No code required." and its paragraph), which also exists on `main`. It is why AC7's "CLS 0" is recorded as an accepted
+deviation in the evidence rather than a pass.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
