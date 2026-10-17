@@ -197,6 +197,12 @@ describe("lib/format helpers", () => {
         expect(toDecimalString("-12.5", 2)).toBe("-12.50");
       });
 
+      it("formats -3.1 and '-3.1' at scale 2 as '-3.10' (no double dot)", () => {
+        expect(toDecimalString(-3.1, 2)).toBe("-3.10");
+        expect(toDecimalString("-3.1", 2)).toBe("-3.10");
+        expect(toDecimalString("-3.10", 2)).toBe("-3.10");
+      });
+
       it("formats '-0.1' at scale 2 as '-0.10'", () => {
         expect(toDecimalString("-0.1", 2)).toBe("-0.10");
       });
