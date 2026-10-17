@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { BASE_URL } from "./stack";
 
@@ -365,22 +365,11 @@ test.describe("without a manifest", () => {
 });
 
 test.describe("served media", () => {
-  // Exercise Next's real static-file delivery without depending on #99 or route interception.
-  const path = "public/media/demo/range-fixture.fx000001.mp4";
-  let created = false;
-  test.beforeAll(() => {
-    if (!existsSync(path)) {
-      mkdirSync("public/media/demo", { recursive: true });
-      copyFileSync(`${FIX}/sample.mp4`, path);
-      created = true;
-    }
-  });
-  test.afterAll(() => { if (created) unlinkSync(path); });
-  test("/media/demo/* is immutable and answers Range with 206", async ({ request }) => {
-    const res = await request.get("/media/demo/range-fixture.fx000001.mp4", { headers: { range: "bytes=0-1023" } });
+  test("/media/demo/* is immutable and answers Range with 206 against real content-hashed media", async ({ request }) => {
+    const res = await request.get("/media/demo/hero.ar.light.av1.e9c86093.mp4", { headers: { range: "bytes=0-1023" } });
     expect(res.status()).toBe(206);
     expect(res.headers()["cache-control"]).toBe("public, max-age=31536000, immutable");
-    expect(res.headers()["content-range"]).toBe(`bytes 0-1023/${MP4.length}`);
+    expect(res.headers()["content-range"]).toBe("bytes 0-1023/658371");
     expect((await res.body()).length).toBe(1024);
   });
 });

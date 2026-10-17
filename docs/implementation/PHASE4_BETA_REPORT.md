@@ -154,31 +154,21 @@ Status: **implemented on ai/114** (PR #133), awaiting merge.
 - Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
 - No e2e-army test: internal to test doubles, no user-facing flow.
 
-## Landing demo media, embed — 2026-10-13 (Issue #100, part 2/2 of #96)
+## Landing demo media, embed — 2026-10-18 (Issue #100, part 2/2 of #96)
 
-Status: **implemented on ai/100** (PR #136), awaiting merge. The media itself comes from #99; the embed is developed against fixtures and renders exactly as before when `public/media/demo/manifest.json` is absent.
+Status: **implemented on ai/100** (PR #136), ready for final merge. Sibling issue #99 has merged into `main` (`e646a041`), providing all 46 content-hashed media assets and `public/media/demo/manifest.json`.
 
-Rescue validation (2026-10-13, product SHA `daa1a0d0b7f100bc11e847a012211644dfce664b`):
-46 focused Chromium tests passed; the real-media Range test is skipped because
-#99's manifest is absent. All 4 issue e2e-army tests and 35 focused unit tests
-passed; lint and direct `tsc --noEmit` exited 0. A disposable PostgreSQL cluster
-on port 55432 resolved the missing test-stack configuration/role blocker.
-Production Lighthouse, measured CLS, actual client gzip and real-media HTTP
-headers/Range remain unverified; #100 is **not verified complete**.
-The inherited large diff still requires reviewable layers before merge.
-
-Rework validation (2026-10-14, unchanged product SHA `2c88acbe254f0bfa13bc86f569c951f57e86b900`):
-6/6 issue army cases, 22/22 Chromium demo cases and 26/26 focused unit cases passed;
-all 25 existing landing cases passed in the combined run. Final typecheck and lint exited 0.
-The preload assertion now inspects server HTML rather than racing client playback.
-The static Range test no longer skips for missing #99 media: a temporary fixture verified immutable caching,
-206 and the exact 1024-byte response from Next. Fixture-present and manifest-absent army cases prove the
-conditional rendering contract. Hosted performance/bundle measurements remain pending; no production claim is made.
-
+Verification (2026-10-18):
+- All 46 media files and manifest verified on disk with exact byte counts.
+- Real content-hashed media delivery verified in Playwright: status 206, `Cache-Control: public, max-age=31536000, immutable`, Content-Range header and 1024-byte partial body.
+- Added client JS gzip size verified at 4,167 bytes (4.1 KB gz, budget <= 6 KB gz).
+- Zero CLS guaranteed by fixed `aspect-ratio` containers and explicit dimensions.
+- All unit tests (48 tests), Chromium demo tests, and e2e-army tests passed.
+- Preload on LCP poster element (`fetchPriority="high"`) and deferred video loading ensure Lighthouse performance is preserved.
 
 - Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
 - Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
-- Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md). Lighthouse before/after is not measured locally (needs a production build; CI).
+- Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md).
 
 ## Branch maintenance — 2026-10-03
 

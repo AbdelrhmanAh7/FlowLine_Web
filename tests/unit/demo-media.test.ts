@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import nextConfig from "../../next.config";
-import { attachSource, chooseSource, clipView, fileFor, parseManifest, readDemoManifest, shouldSkipVideo, startPlayback, walkthroughView, type VideoSource } from "@/lib/demo-media";
+import { attachSource, chooseSource, clipView, DEMO_DIR, fileFor, parseManifest, readDemoManifest, shouldSkipVideo, startPlayback, walkthroughView, type VideoSource } from "@/lib/demo-media";
 import fixture from "../../e2e/fixtures/demo/manifest.json";
 import ar from "@/i18n/messages/ar.json";
 import en from "@/i18n/messages/en.json";
@@ -100,6 +100,20 @@ describe("manifest parsing", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("validates the real production manifest and verifies all files exist with correct sizes", async () => {
+    const realManifest = await readDemoManifest();
+    expect(realManifest).not.toBeNull();
+    expect(realManifest?.schema).toBe(1);
+    expect(Object.keys(realManifest!.clips)).toEqual(["hero", "templates", "build", "run", "history", "walkthrough"]);
+    expect(realManifest!.files.length).toBeGreaterThan(0);
+    for (const f of realManifest!.files) {
+      const fullPath = join(DEMO_DIR, f.path);
+      expect(existsSync(fullPath), `file exists: ${f.path}`).toBe(true);
+      if (f.bytes) {
+        expect(statSync(fullPath).size, `file size matches for ${f.path}`).toBe(f.bytes);
+      }
+    }
+  });
 });
 
 describe("fileFor / views", () => {
@@ -143,6 +157,22 @@ describe("delivery and copy", () => {
     const a = flat((ar as { landing: { demo: unknown } }).landing.demo).sort();
     expect(a).toEqual(flat((en as { landing: { demo: unknown } }).landing.demo).sort());
     expect(a).toHaveLength(25);
+  });
+  it("added client demo code stays well under the 6 KB gz budget", async () => {
+    const { execSync } = await import("node:child_process");
+    const esbuildBin = "./node_modules/.pnpm/node_modules/.bin/esbuild";
+    const outDir = join(tmpdir(), `fl-demo-size-check-${Date.now()}`);
+    try {
+      execSync(
+        `${esbuildBin} src/components/landing/demo-video.tsx src/components/landing/demo-walkthrough.tsx --bundle --minify --format=esm --splitting --outdir=${outDir} --external:react --external:react-dom --external:'@/i18n/*' --external:'@/lib/demo-media'`,
+        { stdio: "pipe" },
+      );
+      const gzOutput = execSync(`gzip -c9 ${outDir}/*.js | wc -c`, { stdio: "pipe" }).toString().trim();
+      const gzBytes = parseInt(gzOutput, 10);
+      expect(gzBytes).toBeLessThanOrEqual(6144);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
   });
 });
 

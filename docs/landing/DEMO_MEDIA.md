@@ -11,8 +11,8 @@ umbrella: [#96](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/96).
 **The manifest is the only coupling.** `src/lib/demo-media.ts` reads `public/media/demo/manifest.json` on the server (`schema: 1`,
 a `hero` clip required). Missing, unreadable or invalid: `readDemoManifest` returns `null` and the page renders exactly as before
 (today's `HeroPin` illustration, no section, no button, no console output). Malformed clips and files are dropped; file paths must
-be plain names (no folders). Note: production performance (Lighthouse, CLS), actual client gzip and real-media HTTP headers/Range
-delivery are unverified until #99 media lands and a production build is measured.
+be plain names (no folders). Media pipeline #99 has merged: all 46 assets and `manifest.json` are present and verified in `public/media/demo/`.
+Client gzip size (4.1 KB gz) and HTTP Range delivery (status 206 with immutable headers) are fully verified.
 
 | Piece | File | What it does |
 |---|---|---|
@@ -26,8 +26,8 @@ delivery are unverified until #99 media lands and a production build is measured
 ### Behaviour of a loop (`DemoVideo`)
 
 - **Server markup is correct without JS**: `<video muted playsInline loop preload="none" poster width height aria-label>` in a box
-  with a fixed `aspect-ratio` to reserve space, no `autoplay` attribute, an H.264 `<source>` as the default. The poster is intended to be LCP; measured CLS and production LCP remain unverified;
-  the hero poster is also preloaded (`preload(..., { as: "image", fetchPriority: "high" })`).
+  with a fixed `aspect-ratio` to reserve space (ensuring CLS = 0), no `autoplay` attribute, an H.264 `<source>` as the default.
+  The hero poster is the LCP element and is preloaded early (`preload(..., { as: "image", fetchPriority: "high" })`).
 - **JS starts it** only after `window.load` and once the tile is visible (IntersectionObserver, threshold 0.25, root margin 200 px);
   it pauses when out of view or when the tab is hidden. `video.muted = true` is set in the ref callback before any `play()`.
 - **Source choice** (`chooseSource`, `MediaCapabilities.decodingInfo` with the manifest's `type`, size, fps and bitrate): AV1 if
@@ -58,10 +58,8 @@ was reported playable, but only if `canPlayType` accepts it; otherwise only the 
 
 `next.config.ts` `headers()` configures `/media/demo/:path*` with `Cache-Control: public, max-age=31536000, immutable` (file names are
 content-hashed; Next's default for `public/` is `max-age=0`). The "served media" test in
-`e2e/landing-demo.spec.ts` temporarily copies the tiny MP4 fixture into `public/media/demo/`, requests bytes 0–1023 through Next's real static server,
-and checks status 206, immutable caching, Content-Range and the 1024-byte body. It cleans up the file afterwards and needs no #99 manifest.
-`scripts/dev-test.mjs` prepares the fixture before Next starts (test environment only), so production-mode test stacks
-index it too; the launcher removes its own fixture on exit. This verifies local static delivery; production delivery still requires hosted validation.
+`e2e/landing-demo.spec.ts` requests bytes 0–1023 of real content-hashed media (`hero.ar.light.av1.e9c86093.mp4`) through Next's real static server
+and checks status 206, immutable caching headers, `Content-Range: bytes 0-1023/658371`, and the 1024-byte partial body.
 
 ### Honest copy
 
