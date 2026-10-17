@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Select, Button, Card, Input, Textarea } from "@/components/ui";
+import { Select, Button, Card, ErrorState, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
-import { ApiError, api } from "@/lib/api";
+import { api } from "@/lib/api";
+import { handleWriteError } from "./copy-errors";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -48,7 +49,7 @@ function effective(state: State, locale: Locale, key: string) {
 export function CopyEditor() {
   const t = useT();
   const state = useQuery({ queryKey: ["platform-copy"], queryFn: () => api<State>("/api/platform/copy") });
-  const { data: meData, refetch: refetchMe } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
+  const { data: meData, refetch: refetchMe, isLoadingError: meError } = useQuery({ queryKey: ["platform-me"], queryFn: () => api<Me>("/api/platform/me"), refetchInterval: 30_000 });
   const [key, setKey] = useState("meta.title");
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
@@ -81,7 +82,8 @@ export function CopyEditor() {
     return () => window.clearTimeout(timer);
   }, [meData?.stepUpUntil, refetchMe]);
 
-  const canWrite = stepUpActive && !pending;
+  // Save and Apply stay disabled while the copy state is fetching (handleWriteError starts a reload after a failure), so a retry does not race it.
+  const canWrite = stepUpActive && !pending && !state.isFetching;
 
   async function requireCurrentStepUp() {
     const expiresAt = meData?.stepUpUntil ? Date.parse(meData.stepUpUntil) : Number.NaN;
@@ -93,17 +95,7 @@ export function CopyEditor() {
     return false;
   }
 
-  async function handleWriteError(cause: unknown, fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError") {
-    if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
-      const refreshed = await refetchMe();
-      const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
-      setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
-      setError(t("platformAdmin.copyEditor.stepUp"));
-      return;
-    }
-    await state.refetch();
-    setError(t(fallbackKey));
-  }
+  const writeError = { t, setError, setStepUpActive, refetchMe, refetchCopy: state.refetch };
 
   async function save() {
     if (!draft || !meData || !dirty) return;
@@ -122,7 +114,7 @@ export function CopyEditor() {
       setEdits({});
       setMessage(t("platformAdmin.copyEditor.saved"));
     } catch (cause) {
-      await handleWriteError(cause, "platformAdmin.copyEditor.saveError");
+      await handleWriteError(cause, "platformAdmin.copyEditor.saveError", writeError);
     } finally { setPending(false); }
   }
 
@@ -139,7 +131,7 @@ export function CopyEditor() {
       await state.refetch();
       setMessage(t("platformAdmin.copyEditor.applied"));
     } catch (cause) {
-      await handleWriteError(cause, "platformAdmin.copyEditor.publishError");
+      await handleWriteError(cause, "platformAdmin.copyEditor.publishError", writeError);
     } finally { setPending(false); }
   }
 
@@ -154,9 +146,10 @@ export function CopyEditor() {
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <p className="text-med">{t("platformAdmin.copyEditor.subtitle")}</p>
       {!stepUpActive && <p role="note" className="text-warning">{t("platformAdmin.copyEditor.stepUp")}</p>}
+      {meError && <p role="alert" className="text-danger">{t("platformAdmin.copyEditor.meLoadError")}</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {message && <p role="status" className="text-success">{message}</p>}
-      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? <p role="alert">{t("platformAdmin.copyEditor.loadError")}</p> : draft && <>
+      {state.isPending ? <p>{t("common.loading")}</p> : state.isLoadingError ? <ErrorState title={t("platformAdmin.copyEditor.loadError")} onRetry={() => state.refetch()} /> : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <Card className="p-4">
             <label className="block text-sm font-medium" htmlFor="copy-search">{t("platformAdmin.copyEditor.search")}</label>

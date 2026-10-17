@@ -7,7 +7,7 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
-  /** True when the request never reached the server (offline, DNS, server down). */
+  /** True when no complete response arrived (offline, DNS, server down, body cut off): the outcome is unknown. */
   get isNetwork() {
     return this.status === 0;
   }
@@ -16,6 +16,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, headers, ...rest } = init;
   let res: Response;
+  let text: string;
   try {
     res = await fetch(path, {
       ...rest,
@@ -23,10 +24,10 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       body: json !== undefined ? JSON.stringify(json) : rest.body,
       credentials: "same-origin",
     });
+    text = await res.text(); // a body cut off after the headers leaves the outcome as unknown as a failed request
   } catch {
     throw new ApiError(0, "NETWORK", "Can't reach Flowline — check your connection");
   }
-  const text = await res.text();
   let body: unknown = null;
   try {
     body = text ? JSON.parse(text) : null;
