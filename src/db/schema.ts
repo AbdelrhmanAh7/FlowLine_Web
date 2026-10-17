@@ -247,6 +247,7 @@ export const run = pgTable(
     /** Per-workspace sequence shown as #n in the UI. */
     number: integer("number").notNull(),
     status: runStatusEnum("status").notNull().default("queued"),
+    /** JSON preserves caller column order for CSV builds after the queue round trip. */
     input: json("input"),
     output: jsonb("output"),
     error: jsonb("error").$type<{ code: string; message: string; nodeId?: string } | null>(),

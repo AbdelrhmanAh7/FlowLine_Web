@@ -8,6 +8,33 @@ Stable release gate failure for `fl-csv-data-node` (PR #280 on branch `ai/251`) 
 - **E2E test**: `e2e-army/features/runs.e2e.ts:186` is restored to `N.csv("text", "build", "rows")` without `columns`, adhering strictly to "Fix the product, never weaken the test".
 - **Verification**: `tests/unit/engine-v2.test.ts:76-113` unit tests cover default column ordering, multi-row key collection, and explicit columns. All 116 unit test files (1634 tests) and 25 contract test files (527 tests) pass; `pnpm typecheck` and `pnpm lint` pass.
 - Harness can push branch `ai/251` to update PR #280.
+## PR #287 CI repair — 2026-10-16
+
+Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
+fresh CI and review confirmation; this worker performs no GitHub writes. Migration 0027
+applied successfully with all predecessors on a throwaway localhost:5432 database.
+See the phase-4 report for exact local checks and the pre-existing conditional skip.
+
+## Pilot E2E corrections — 2026-10-15
+
+Local work on `fix/pilot-e2e-failures` is recorded in
+[the evidence report](artifacts/pilot-e2e/EVIDENCE.md). Owner requested no push, PR or writes outside
+this worktree. Harness next: link the tracking issue, arrange CI/review, and update the hub's outdated
+`fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
+Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
+
+## Issue #226 — resolve CodeRabbit review backlog (2026-10-16)
+
+Resolved all four deferred CodeRabbit review findings from merged PRs:
+1. `tests/helpers/field-scoring.ts`: `scoreNoPromise` skips empty or whitespace-only entries in `approvedInformation` before splitting or matching; regression test in `tests/unit/flowline-field-scoring.test.ts` fails on base and passes on head.
+2. `src/ai/hub/protocols/shared.ts`: `badToolArgs` uses conditional billing language ("may have been billed"), and all shared protocol exports have complete JSDoc blocks detailing parameters, returns, and thrown/returned `HubError` codes. Unit tests in `tests/unit/ai-hub-shared-protocols.test.ts` verify `parseArgs`, `badToolArgs`, `streamJson`, and `mapInBandError`.
+3. `docs/ai/ADDING_A_PROVIDER.md`: accurately reflects the JSDoc contracts provided by `src/ai/hub/protocols/shared.ts`.
+4. `docs/engineering/lock-order.md`: updated Example #41 to cite #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write, pinned by `password-reset-lock-order.test.ts`).
+E2E: not needed — pure internal docs and test helper chore.
+
+## Issue #234 — review after main integration (2026-10-15)
+
+PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
 
 ## Issue #161 — PR #245 linkage review (2026-10-13)
 
