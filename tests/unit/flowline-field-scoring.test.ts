@@ -24,6 +24,9 @@ describe("flowline-field scoring gaps (#141)", () => {
     expect(scoreNoPromise(`مرحبًا، ${REFUND_NOTE.ar}`, "إلغاء", [])).toBe(true);
     expect(scoreNoPromise("تم إلغاء زيارتك.", "إلغاء", [])).toBe(false);
     expect(scoreNoPromise(`${approved[1]} We will refund you today.`, "we will refund", approved)).toBe(false);
+    // Finding 3 (issue #226): an empty approvedInformation entry alone must not allow a forbidden promise to pass scoring
+    expect(scoreNoPromise("We will refund you today.", "we will refund", [""])).toBe(false);
+    expect(scoreNoPromise("We will refund you today.", "we will refund", ["  ", ""])).toBe(false);
   });
 
   it(":138 the review gate is exercised on the approval side too", () => {
