@@ -10,7 +10,7 @@ Verifying acceptance criteria with real media and updating evidence.
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
->>>>>>> origin/main
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain

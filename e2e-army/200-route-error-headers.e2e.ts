@@ -1,13 +1,11 @@
-// Issues #200 and #179: the error/rejection boundary of route() and of GET /api/platform/copy. Request-level (no model).
+// Issues #200, #179 and #166, merged into one file to stay within the hub's cap of 8 top-level e2e-army/*.e2e.ts files
+// (the hub's verify job copies readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8), nql-agents
+// src/lib/e2earmy.ts; tests/unit/e2e-army-tooling.test.ts asserts the repo stays at <= 8). Merging keeps every test and tag.
 //
-// #200 AC: route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer.
+// #200 AC: route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer (request-level).
 // #179 AC1: GET /api/platform/copy (getCopyEditorState) never leaks state or an internal error to a non-admin caller.
-// Both tests hit /api/platform/copy as an anonymous caller and share the feat:fl-platform-admin tag.
-//
-// The two files were merged into one to stay within the hub's cap of 8 top-level e2e-army/*.e2e.ts files: the hub's
-// verify job copies readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8) (nql-agents src/lib/e2earmy.ts) and
-// the #166 MENA-template test is the ninth file, so tests/unit/e2e-army-tooling.test.ts asserts the repo stays at <= 8.
-// Merging keeps every test and tag, with no extra session setup.
+// #166 AC1: the templates gallery offers the MENA "ETA Invoice Notify" starter, and using it creates an editable flow.
+//   Its card literals are pinned to the shipped catalogue by tests/unit/local-scenarios.test.ts.
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 

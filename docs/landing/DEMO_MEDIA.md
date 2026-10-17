@@ -20,13 +20,13 @@ Client gzip size (4.1 KB gz) and HTTP Range delivery (status 206 with immutable 
 | Pure client helpers | `src/lib/demo-source.ts` | `chooseSource(files, caps)`, `shouldSkipVideo`, `startPlayback`; re-exported by `demo-media.ts` |
 | `DemoVideo` | `src/components/landing/demo-video.tsx` | one loop: poster, lazy start, source choice, Pause/Play |
 | Bento | `src/components/landing/demo-bento.tsx` | four tiles: templates (wide), build (square), history (square), run (wide); one column below `lg`, three columns from `lg` |
-| Walkthrough | `src/components/landing/demo-walkthrough.tsx` | native `<dialog>` + chapter stepper + EN/AR caption tracks |
+| Walkthrough | `src/components/landing/demo-walkthrough.tsx` | native `dialog` element + chapter stepper + EN/AR caption tracks |
 | Wiring | `src/app/page.tsx` | hero visual inside `.hero-scrub` (via `HeroPin`'s `media` prop), the "Watch the walkthrough" button, the bento |
 
 ### Behaviour of a loop (`DemoVideo`)
 
-- **Server markup is correct without JS**: `<video muted playsInline loop preload="none" poster width height aria-label>` in a box
-  with a fixed `aspect-ratio` to reserve space (ensuring CLS = 0), no `autoplay` attribute, an H.264 `<source>` as the default.
+- **Server markup is correct without JS**: a `video` element with `muted playsInline loop preload="none" poster width height aria-label` in a box
+  with a fixed `aspect-ratio` to reserve space (ensuring CLS = 0), no `autoplay` attribute, an H.264 `source` element as the default.
   The hero poster is the LCP element and is preloaded early (`preload(..., { as: "image", fetchPriority: "high" })`).
 - **JS starts it** only after `window.load` and once the tile is visible (IntersectionObserver, threshold 0.25, root margin 200 px);
   it pauses when out of view or when the tab is hidden. `video.muted = true` is set in the ref callback before any `play()`.
@@ -45,7 +45,7 @@ Client gzip size (4.1 KB gz) and HTTP Range delivery (status 206 with immutable 
 ### Walkthrough
 
 The button (`data-testid="demo-watch"`) opens the dialog with `showModal()`; Esc or Close closes it and focus returns to the
-button. The video has `controls`, no loop, `<track kind="captions">` for `ar` and `en` (the page language is the default track,
+button. The video has `controls`, no loop, a `track kind="captions"` element for `ar` and `en` (the page language is the default track,
 styled by `::cue` in `globals.css`). The stepper has one button per manifest chapter plus Back/Next; `aria-current="step"`; Left/Right
 arrows follow the reading direction (flipped in RTL), Home/End jump. Choosing a chapter seeks the video to its start time.
 Under reduced motion nothing plays by itself. Under reduced motion, or when the video cannot play (a media `error`), the active
@@ -75,13 +75,13 @@ Every string is in `src/i18n/messages/{ar,en}.json` under `landing.demo.*` (iden
   Playwright builds lack H.264, so playback is stubbed: those specs assert **when** video is requested, **which** file and what the
   visitor can operate, not decoding.
 - `e2e-army/100-landing-demo.e2e.ts` is the blocking `e2e-army` flow (hero, Pause/Play, walkthrough in Arabic, bento, reduced motion and missing manifest).
-- `tests/unit/demo-media.test.ts` (manifest parsing, `fileFor`, `chooseSource`, the `play()` handler, the cache header, i18n keys) and
-  `tests/unit/demo-markup.test.ts` (server markup).
+- `tests/unit/landing-demo-media.test.ts` (manifest parsing, `fileFor`, `chooseSource`, the `play()` handler, the cache header, i18n keys) and
+  `tests/unit/landing-demo-markup.test.ts` (server markup).
 
 ### Reusing the player for another clip
 
 `DemoVideo` takes any `ClipView`, and `clipView(manifest, id, locale, theme)` builds one for any clip id in the manifest. A further
-clip (for example the story video of #137) needs only its entry in the manifest and one `<DemoVideo view={clipView(...)} />`; no
+clip (for example the story video of #137) needs only its entry in the manifest and one `DemoVideo` element with `view={clipView(manifest, "story", locale, theme)}`; no
 second player.
 
 ### Regenerating or swapping media
