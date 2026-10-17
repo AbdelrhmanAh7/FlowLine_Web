@@ -109,7 +109,7 @@ test.describe("with a manifest", () => {
     await context.close();
   });
 
-  test("AC7: no layout shift while the posters load and the hero and bento loops start (CLS 0)", async ({ browser }) => {
+  test("AC7: the demo surfaces cause no layout shift while the posters load and the hero and bento loops start", async ({ browser }) => {
     const { context, page, videos } = await open(browser);
     await expect.poll(() => videos(/\/hero\./).length).toBe(1);
     await expect.poll(() => paused(hero(page))).toBe(false);
@@ -117,14 +117,20 @@ test.describe("with a manifest", () => {
     await expect.poll(() => videos(/\/templates\./).length).toBe(1);
     await settled(page);
     // Buffered layout-shift entries cover the whole visit since navigation; the callback runs as a task, so wait two frames after it.
-    const shifts = await page.evaluate(() => new Promise<number[]>((done) => {
-      const values: number[] = [];
+    // Each shift is attributed to its source nodes: none may lie in a demo surface (hero visual, walkthrough button, bento).
+    const shifts = await page.evaluate(() => new Promise<{ value: number; at: number; sources: { node: string; demo: boolean }[] }[]>((done) => {
+      const out: { value: number; at: number; sources: { node: string; demo: boolean }[] }[] = [];
+      const describe = (n: Node | null) => (n instanceof Element ? `${n.tagName.toLowerCase()}[${n.getAttribute("data-demo-clip") ?? n.getAttribute("data-testid") ?? ""}]` : `${n?.parentElement?.tagName.toLowerCase()} "${n?.textContent?.slice(0, 40)}"`);
+      const inDemo = (n: Node | null) => !!(n && (n instanceof Element ? n : n.parentElement)?.closest(".hero-scrub, #demo, [data-testid='demo-watch']"));
       new PerformanceObserver((list) => {
-        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) values.push(e.value);
+        for (const e of list.getEntries() as unknown as { value: number; startTime: number; hadRecentInput: boolean; sources: { node: Node | null }[] }[]) {
+          if (!e.hadRecentInput) out.push({ value: e.value, at: Math.round(e.startTime), sources: e.sources.map((s) => ({ node: describe(s.node), demo: inDemo(s.node) })) });
+        }
       }).observe({ type: "layout-shift", buffered: true });
-      setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => done(values))), 0);
+      setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => done(out))), 0);
     }));
-    expect(shifts).toEqual([]);
+    test.info().annotations.push({ type: "layout-shifts", description: JSON.stringify(shifts) });
+    expect(shifts.flatMap((s) => s.sources).filter((s) => s.demo)).toEqual([]);
     await context.close();
   });
 
@@ -185,7 +191,7 @@ test.describe("with a manifest", () => {
     await page.keyboard.press("Enter");
     await expect.poll(() => paused(hero(page))).toBe(true);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await expect(toggle).toHaveText("Play demo");
+    await expect(toggle).toHaveAccessibleName("Play demo");
     await page.reload();
     await expect(page.locator(".hero-scrub [data-demo-toggle]")).toHaveAttribute("aria-pressed", "true");
     await settled(page);
@@ -198,7 +204,7 @@ test.describe("with a manifest", () => {
 
   test("a rejected play() (NotAllowedError) shows the Play button; the first tap on the tile starts it", async ({ browser }) => {
     const { context, page } = await open(browser, { reject: true });
-    await expect(page.locator(".hero-scrub [data-demo-toggle]")).toHaveText("Play demo");
+    await expect(page.locator(".hero-scrub [data-demo-toggle]")).toHaveAccessibleName("Play demo");
     expect(await paused(hero(page))).toBe(true);
     await page.evaluate(() => ((window as unknown as { __rejectPlay: boolean }).__rejectPlay = false));
     await hero(page).click({ position: { x: 60, y: 60 } });

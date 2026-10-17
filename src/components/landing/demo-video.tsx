@@ -174,10 +174,12 @@ function DemoVideoPlayer({ view, label, className }: { view: ClipView; label: st
           data-demo-toggle=""
           aria-pressed={!playing}
           onClick={(e) => { e.stopPropagation(); toggle(); }}
-          className="absolute end-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-lg border border-line-strong bg-surface/95 px-4 text-base text-hi transition-colors duration-[var(--dur-base)] hover:bg-elevated"
+          className="absolute end-3 bottom-3 inline-grid min-h-11 min-w-11 place-items-center rounded-lg border border-line-strong bg-surface/95 px-4 text-base whitespace-nowrap text-hi transition-colors duration-[var(--dur-base)] hover:bg-elevated"
           style={{ minHeight: 44, minWidth: 44 }}
         >
-          {playing ? t("landing.demo.pause") : t("landing.demo.play")}
+          {/* Both labels share one grid cell, so the button keeps its size and its text never moves when Play/Pause flips (no layout shift). */}
+          <span aria-hidden={playing} className={`col-start-1 row-start-1 ${playing ? "invisible" : ""}`}>{t("landing.demo.play")}</span>
+          <span aria-hidden={!playing} className={`col-start-1 row-start-1 ${playing ? "" : "invisible"}`}>{t("landing.demo.pause")}</span>
         </button>
       )}
     </div>
