@@ -56,14 +56,34 @@ const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
 
-// Accepts a number or a decimal string, normalizes to a fixed-scale (2) decimal string.
-// Rejects negative values for qty, unitPrice, taxRate.
-const moneyInput = z.union([z.number(), z.string()]).transform((val) => {
-  const result = toDecimalString(val, 2);
-  if (result.startsWith("-")) {
-    throw new Error("must be a positive decimal string with up to 2 decimal places");
+const MONEY_MESSAGE = "must be a non-negative decimal with up to 2 decimal places";
+const STRING_MONEY = /^\d+(\.\d{1,2})?$/;
+const FIXED_MONEY = /^\d+\.\d{2}$/;
+
+// Accepts a number or a decimal string for qty, unitPrice and taxRate and normalizes it to a fixed-scale (2) decimal
+// string via toDecimalString. Nothing is rounded: values the old string-only schema rejected (more than 2 decimals,
+// signs, exponents, whitespace, NaN/Infinity, negatives) are still rejected, as zod issues rather than raw exceptions.
+const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
+  const valid =
+    typeof val === "string"
+      ? STRING_MONEY.test(val)
+      : Number.isFinite(val) &&
+        val >= 0 &&
+        val <= Number.MAX_SAFE_INTEGER / 100 &&
+        Math.abs(val * 100 - Math.round(val * 100)) < 1e-9;
+  let out = "";
+  if (valid) {
+    try {
+      out = toDecimalString(val, 2);
+    } catch {
+      out = "";
+    }
   }
-  return result;
+  if (!FIXED_MONEY.test(out)) {
+    ctx.addIssue({ code: "custom", message: MONEY_MESSAGE });
+    return z.NEVER;
+  }
+  return out;
 });
 
 const provider: ProviderDef = {
