@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #143 — pilot metrics script rework (2026-10-18)
+
+CTO round on PR #170 applied in `scripts/pilot-metrics.ts`: publish metric reads `flow_version` publish snapshots, day-1 metric uses the sign-up cohort, duplicate metric counts runs, `0.0%` success rate, strict range validation (exit 2), real-path CLI guard, and honest `N/A` rows for access denials and Arabic share (nothing records them). Synthetic 2001-03 window in the integration test. Harness next: push, obtain CI + CodeRabbit confirmation, reply to threads T1-T10. E2E: not needed (internal read-only ops script, no user flow).
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
