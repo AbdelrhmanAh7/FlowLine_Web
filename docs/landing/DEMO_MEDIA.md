@@ -147,3 +147,6 @@ incorporated, you can operate under the Free License, as long as your total head
 `remotion` / `@remotion/*` package is pinned to the identical exact version (4.0.534) in `tools/demo-video`. Re-read
 <https://www.remotion.dev/docs/license/faq> on every upgrade, and never add a paid or telemetry service. The compositor
 only reads `events.json` + `master.mp4`, so Revideo (MIT) remains a drop-in fallback.
+
+The cross-process lock unit test announces readiness only after registering its SIGTERM cleanup.
+The parent always terminates and awaits the child before checking lock reacquisition.
