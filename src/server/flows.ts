@@ -42,8 +42,35 @@ export const flowNameSchema = z.string().trim().min(1, "Name is required").max(8
 // subquery would bind to the subquery's own table. Always qualify the outer flow id explicitly.
 const FLOW_ID = sql.raw(`"flow"."id"`);
 
+/**
+ * The flows of a workspace with a summary of their runs. The summary covers every run of the flow, whichever revision or
+ * version it ran. The last run is the one active most recently: when it finished, or, while it is still queued, running
+ * or waiting for approval, when it started (or was queued). `lastRunAt` is that time. So among finished runs the one
+ * that finished last wins, and a run started after it shows as the last run, which keeps Running and Needs approval
+ * visible on the dashboard.
+ */
 export async function listFlows(workspaceId: string) {
-  const lastRun = sql`(select r.id from ${schema.run} r where r.flow_id = ${FLOW_ID} order by r.created_at desc limit 1)`;
+  const ofThisFlow = sql`${schema.run.flowId} = ${FLOW_ID}`;
+  const stats = db
+    .select({
+      runCount: sql<number>`count(*)::int`.as("run_count"),
+      successRate: sql<number | null>`(count(*) filter (where ${schema.run.status} = 'succeeded'))::float
+        / nullif(count(*) filter (where ${schema.run.status} in ('succeeded', 'failed')), 0)`.as("success_rate"),
+    })
+    .from(schema.run)
+    .where(ofThisFlow)
+    .as("run_stats");
+  const activeAt = sql`coalesce(${schema.run.finishedAt}, ${schema.run.startedAt}, ${schema.run.createdAt})`;
+  const lastRun = db
+    .select({
+      at: sql<Date>`${activeAt}`.mapWith(schema.run.finishedAt).as("last_run_at"),
+      status: sql<string>`${schema.run.status}::text`.as("last_run_status"),
+    })
+    .from(schema.run)
+    .where(ofThisFlow)
+    .orderBy(desc(activeAt), desc(schema.run.createdAt), desc(schema.run.id))
+    .limit(1)
+    .as("last_run");
   return db
     .select({
       id: schema.flow.id,
@@ -55,14 +82,14 @@ export async function listFlows(workspaceId: string) {
       pausedReason: schema.flow.pausedReason,
       trigger: sql<string | null>`(select n ->> 'type' from jsonb_array_elements("flow"."graph" -> 'nodes') n where n ->> 'type' like 'trigger.%' limit 1)`,
       hasTrigger: sql<boolean>`exists (select 1 from jsonb_array_elements("flow"."graph" -> 'nodes') n where n ->> 'type' like 'trigger.%')`,
-      lastRunAt: sql<Date | null>`(select r.created_at from ${schema.run} r where r.id = ${lastRun})`,
-      lastRunStatus: sql<string | null>`(select r.status::text from ${schema.run} r where r.id = ${lastRun})`,
-      runCount: sql<number>`(select count(*)::int from ${schema.run} r where r.flow_id = ${FLOW_ID})`,
-      successRate: sql<number | null>`(select case when count(*) filter (where r.status in ('succeeded','failed')) = 0 then null
-        else (count(*) filter (where r.status = 'succeeded'))::float / count(*) filter (where r.status in ('succeeded','failed')) end
-        from ${schema.run} r where r.flow_id = ${FLOW_ID})`,
+      lastRunAt: lastRun.at,
+      lastRunStatus: lastRun.status,
+      runCount: stats.runCount,
+      successRate: stats.successRate,
     })
     .from(schema.flow)
+    .leftJoinLateral(stats, sql`true`)
+    .leftJoinLateral(lastRun, sql`true`)
     .where(and(eq(schema.flow.workspaceId, workspaceId), isNull(schema.flow.deletedAt)))
     .orderBy(desc(schema.flow.updatedAt));
 }
