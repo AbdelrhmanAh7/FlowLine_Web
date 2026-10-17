@@ -185,6 +185,8 @@ test("[fl-csv-data-node.3] the CSV node keeps the column order of rows that arri
   const { a, http } = await actor("runs-csv-3");
   const f = await newFlow(http, a.workspaceId, `CSV build input ${seeded("csv-build-b", 4)}`, { nodes: [N.manual({ rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] }), N.csv("text", "build", "rows"), N.output("o", "file")], edges: [E("t", "text"), E("text", "o")] });
   expect(((await finish(http, f.id)).output.file.csv as string).replace(/\r\n/g, "\n")).toBe("name,qty\nA,1\nB,2");
+  // An API/webhook caller's explicit row order must survive the same queue boundary.
+  expect(((await finish(http, f.id, { rows: [{ qty: 3, name: "C" }] })).output.file.csv as string).replace(/\r\n/g, "\n")).toBe("qty,name\n3,C");
 });
 
 // ── fl-files ─────────────────────────────────────────────────────────────────────────────────────────────────────────

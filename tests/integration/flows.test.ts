@@ -155,6 +155,12 @@ describe("saveFlow", () => {
     expect(versions).toHaveLength(1);
     // Unnumbered since #204: only a publication takes a version number.
     expect(versions[0]).toMatchObject({ version: null, revision: 3, reason: "save" });
+
+    await save(user, flow.id, { baseRevision: 3, createVersion: true });
+    expect((await listVersions(flow.id)).map(({ version, revision, reason }) => ({ version, revision, reason }))).toEqual([
+      { version: null, revision: 4, reason: "save" },
+      { version: null, revision: 3, reason: "save" },
+    ]);
   });
 
   it("404s when saving a deleted flow", async () => {
