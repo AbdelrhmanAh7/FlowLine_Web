@@ -12,6 +12,11 @@ describe("gate groups: manifest coverage", () => {
     expect(checkManifest()).toEqual([]);
   });
 
+  it("runs the landing demo spec (#100) in the product browser group", () => {
+    expect(groupFiles(GROUPS, "product")).toContain("e2e/landing-demo.spec.ts");
+    expect(onDisk).toContain("e2e/landing-demo.spec.ts");
+  });
+
   it("flags a spec that no group lists", () => {
     const problems = checkManifest(GROUPS, [...onDisk, "e2e/brand-new.spec.ts"]);
     expect(problems).toHaveLength(1);

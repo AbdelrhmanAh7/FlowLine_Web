@@ -11,7 +11,7 @@ export const GROUPS = {
   product: {
     description: "public pages, theming, i18n/RTL, responsive, motion, hydration, company builder, client UX",
     specs: [
-      "ambient-background", "arabic", "client-ux", "company-builder", "hydration", "landing", "landing-interaction",
+      "ambient-background", "arabic", "client-ux", "company-builder", "hydration", "landing", "landing-demo", "landing-interaction",
       "prehydration", "reduced-motion", "responsive", "theme",
     ],
   },

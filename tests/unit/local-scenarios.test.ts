@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
@@ -208,7 +208,15 @@ describe("EN/AR text for every local template", () => {
     // The e2e-army test runs in the hub runner and may import only `e2e` / `@e2e-dev/web`, so its
     // expected card text is a literal. This guard fails the moment the shipped copy changes and the
     // literal is not updated — the root cause of the recurring "sample text mismatch" finding.
-    const src = readFileSync(join(__dirname, "..", "..", "e2e-army", "166-mena-template.e2e.ts"), "utf8");
+    // The #166 tests live in whichever top-level e2e-army file holds them (merged into another file to stay within the
+    // hub's cap of 8 top-level files), so find them by their @issue-166 title rather than by file name.
+    const dir = join(__dirname, "..", "..", "e2e-army");
+    const holders = readdirSync(dir)
+      .filter((f) => f.endsWith(".e2e.ts"))
+      .map((f) => readFileSync(join(dir, f), "utf8"))
+      .filter((text) => text.includes('"@issue-166 AC1: the templates gallery'));
+    expect(holders).toHaveLength(1);
+    const src = holders[0]!;
     const asserted = [...src.matchAll(/toContainText\("([^"]+)"\)/g)].map((m) => m[1]);
     const entry = enCat["eta-invoice-notify"]!;
     expect(asserted).toContain(entry.name);

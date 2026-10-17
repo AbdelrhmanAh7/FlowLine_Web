@@ -1,10 +1,20 @@
 # Next action — 2026-10-03
 
+## Issue #100 validation handoff — 2026-10-18
+
+Head `1fad4fc3`: the three CI unit failures of run 39072383273 are fixed, AC7 is measured on production builds (Lighthouse
+before/after, initial JS, media headers) and a toggle layout shift found by the new test is fixed; see
+`artifacts/issue-100/EVIDENCE.md`. Harness next: push, fresh CI, the full tier once on the final candidate, QA re-review of finding
+e711c3edbd77. Follow-up worth its own issue (agents cannot open issues while creation is frozen): the hero copy's layout shift
+(0.0039, sourced in "No code required." and its paragraph), which also exists on `main`. It is why AC7's "CLS 0" is recorded as an accepted
+deviation in the evidence rather than a pass.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain

@@ -154,6 +154,22 @@ Status: **implemented on ai/114** (PR #133), awaiting merge.
 - Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
 - No e2e-army test: internal to test doubles, no user-facing flow.
 
+## Landing demo media, embed — 2026-10-18 (Issue #100, part 2/2 of #96)
+
+Status: **implemented on ai/100** (PR #136), ready for final merge. Sibling issue #99 has merged into `main` (`e646a041`), providing all 46 content-hashed media assets and `public/media/demo/manifest.json`.
+
+Verification (2026-10-18, head `1fad4fc3`, production build of the test stack):
+- Playwright Chromium `e2e/landing-demo.spec.ts` + `e2e/landing.spec.ts`: 48 passed; e2e-army `100-landing-demo.e2e.ts`: 6 passed.
+- Lighthouse desktop performance, 3 runs each: median 96 on `main` `9b4d76ad`, 97 on the head; LCP element is the hero poster (the `<h1>` on `main`).
+- Added initial JS on `/`: +3,740 B gz (real Next build, budget 6 KB). Real media: immutable `Cache-Control`, `Range: bytes=0-1023` → 206.
+- Layout shift: a new Chromium test attributes every shift to its source; it found and now guards a toggle-label shift (fixed in `1fad4fc3`).
+  A small shift in the hero copy (outside the demo) also exists on `main` and is not part of #100.
+- Firefox/WebKit run only in the CI full tier. Details: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md).
+
+- Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
+- Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
+- Behaviour, files and tests: [`docs/landing/DEMO_MEDIA.md`](../landing/DEMO_MEDIA.md); acceptance evidence: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md).
+
 ## Branch maintenance — 2026-10-03
 
 Status: **merged into main** by [PR #20](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/20) (merge `db4b590`, final head `050407f`), built first on `claude/ci-trim-20261003` and the stacked `claude/ci-gate-always-report` (issues #22, #23).
