@@ -18,6 +18,15 @@ Intended rule: take lower ranks first and do not return to a lower rank. The ran
 | 6 | Workspace | `workspace` | `src/server/members.ts` (`changeRole`, `removeMember`, `FOR UPDATE`); `src/server/email/flows.ts` (`delete`: every workspace of the user, ordered by id, after its `account.deleted` audit rows); key-share lock by the `audit_event` insert | The `audit_event.workspace_id` foreign key (`src/db/schema.ts`) makes every `audit()` insert key-share lock this row. Deliberate exception (#109): `delete` inserts its audit rows (rank 7) before it locks the workspaces `FOR UPDATE`, which the retained-file accounting lock serializes ([example](#workspace-for-update-vs-sso-audit-insert-47)). |
 | 7 | SSO audit | `audit_event` | `src/server/audit.ts` (`audit()` insert), called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts` | Follows the order in the SSO paths (member, then workspace key-share, then audit). The deadlock with `changeRole`/`removeMember` is the rank 5 gap. `consumeAccountToken("delete")` in `src/server/email/flows.ts` also inserts it, before its workspace locks (rank 6 note). |
 
+## Known violations
+
+These known violations of the global lock order were identified in the PR #128 review (tracked via #192). Each represents an existing code path that departs from monotonic rank order and risks a `40P01` deadlock against concurrent transactions.
+
+| Violation | Code | Ranks (taken order) | Deadlock pair | Tracking |
+|---|---|---|---|---|
+| V1 | `src/server/audit.ts` (`audit()`, called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts`) | Member (5) → Workspace key-share (6) → SSO audit insert (7) | `changeRole` and `removeMember` in `src/server/members.ts` (lock `workspace` 6 `FOR UPDATE`, then update `workspace_member` 5: taken order 6 → 5) | [#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42) |
+| V2 | `src/server/sso.ts` (`completeSso` callbacks, MFA and non-MFA paths) | Member (5) → Account (4) (share-locks provider link `account` row after `workspace_member`: taken order 5 → 4) | Any concurrent transaction that locks `account` (rank 4, `FOR UPDATE`) before `workspace_member` (rank 5) | [#241](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/241) (part of [#192](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/192)) |
+
 ## Review checklist for a new transaction
 
 - [ ] List every row it locks: explicit `.for("update")`/`.for("share")`, rows changed by `UPDATE`/`DELETE`, and rows an `INSERT` references through a foreign key (`audit_event.workspace_id` → `workspace` in `src/db/schema.ts`).
@@ -32,9 +41,9 @@ Intended rule: take lower ranks first and do not return to a lower rank. The ran
 
 ### Example #41: password reset vs SSO link confirmation ([#41](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/41))
 
-**Hazard (before #45):** `consumeAccountToken("reset")` in `src/server/email/flows.ts` writes the credential `account` row (rank 4), deletes the user's `session` rows (rank 3), then updates the `user` row (rank 1), while `confirmSsoLink` in `src/server/sso-link.ts` locks user (rank 1), session (rank 3), account (rank 4) in that order. Interleaved, reset held the account row and waited for a session that link confirmation held, which waited for the account row: account → session → user against user → session → account.
+**Hazard (before #45 and #41):** `consumeAccountToken("reset")` in `src/server/email/flows.ts` wrote the credential `account` row (rank 4), deleted the user's `session` rows (rank 3), then updated the `user` row (rank 1), while `confirmSsoLink` in `src/server/sso-link.ts` locks user (rank 1), session (rank 3), account (rank 4) in that order. Interleaved, reset held the account row and waited for a session that link confirmation held, which waited for the account row: account → session → user against user → session → account.
 
-**Ordering rule:** user (1) → session (3) → account (4), the same order as `confirmSsoLink` (`src/server/sso-link.ts`, via `lockUserThenSessions` in `src/server/federated-locks.ts`). Implemented in `consumeAccountToken` in `src/server/email/flows.ts`: it takes the user row `FOR UPDATE` before the token row and before any reset write. A second reset or a link confirmation for the same user queues at the user row and cannot hold a lower-ranked row first. Pinned by `tests/unit/email-token-lock-order.test.ts` and `tests/integration/email-token-lock-order.test.ts` (landed with #45 in PR #65).
+**Ordering rule:** user (1) → token (2) → session (3) → account (4), the same order as `confirmSsoLink` (`src/server/sso-link.ts`, via `lockUserThenSessions` in `src/server/federated-locks.ts`). Implemented in `consumeAccountToken` in `src/server/email/flows.ts`: PR #65 (#45) established taking the user row `FOR UPDATE` before the token row; issue #41 (commit `66cc2799`) moved session deletion before credential account writes, completing the strict rank order. A second reset or a link confirmation for the same user queues at the user row and cannot hold a lower-ranked row first. Pinned by `tests/unit/email-token-lock-order.test.ts`, `tests/integration/email-token-lock-order.test.ts`, `tests/unit/password-reset-lock-order.test.ts`, and `tests/integration/password-reset-lock-order.test.ts`.
 
 ### Example #42: member role change vs SSO audit ([#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42))
 
