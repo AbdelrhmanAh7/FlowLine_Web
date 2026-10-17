@@ -1,12 +1,11 @@
-import { createHash } from "node:crypto";
-import Papa from "papaparse";
 import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { schema } from "@/db";
-import { extractPdfTextIsolated } from "@/engine/sandbox";
+import { extractKnowledge, KnowledgeExtractionError, KNOWLEDGE_MAX_CHUNKS } from "./knowledge-extract";
 import type { CurrentUser } from "./access";
 import { audit, userActor } from "./audit";
 import { HttpError, notFound } from "./http";
+import { insertRetainedFile, lockRetainedFileAccounting } from "./retained-files";
 
 /**
  * Knowledge: workspace documents indexed into chunks and retrieved with PostgreSQL full-text search
@@ -15,9 +14,7 @@ import { HttpError, notFound } from "./http";
  * caller's allowed-source list), so revoking access takes effect immediately — there is no cache.
  */
 export const KNOWLEDGE_MAX_BYTES = 5 * 1024 * 1024;
-export const KNOWLEDGE_MAX_CHUNKS = 2000;
-const CHUNK_CHARS = 900;
-const CHUNK_OVERLAP = 120;
+export { KNOWLEDGE_MAX_CHUNKS } from "./knowledge-extract";
 
 const TYPES: Record<string, "text" | "markdown" | "csv" | "json" | "pdf"> = {
   "text/plain": "text",
@@ -70,10 +67,7 @@ export async function addSource(db: Db, user: CurrentUser, workspaceId: string, 
   if (!mime) throw new HttpError(415, "UNSUPPORTED_TYPE", "Upload text, Markdown, CSV, JSON or PDF");
   const name = input.name.trim().slice(0, 120) || "Untitled";
   return db.transaction(async (tx) => {
-    const [file] = await tx
-      .insert(schema.fileObject)
-      .values({ workspaceId, name, mime, size: input.bytes.length, sha256: createHash("sha256").update(input.bytes).digest("hex"), data: input.bytes, createdBy: user.id })
-      .returning({ id: schema.fileObject.id });
+    const file = await insertRetainedFile(tx, { workspaceId, name, mime, data: input.bytes, createdBy: user.id });
     const [src] = await tx
       .insert(schema.knowledgeSource)
       .values({ workspaceId, name, kind: mime === "text/csv" ? "table" : input.kind, fileId: file!.id, mime, size: input.bytes.length, status: "pending", createdBy: user.id })
@@ -96,6 +90,7 @@ export async function requireSource(db: Db, workspaceId: string, sourceId: strin
 export async function deleteSource(db: Db, user: CurrentUser, workspaceId: string, sourceId: string) {
   const s = await requireSource(db, workspaceId, sourceId);
   await db.transaction(async (tx) => {
+    await lockRetainedFileAccounting(tx);
     await tx.update(schema.knowledgeSource).set({ deletedAt: new Date(), enabled: false }).where(eq(schema.knowledgeSource.id, s.id));
     await tx.delete(schema.knowledgeChunk).where(eq(schema.knowledgeChunk.sourceId, s.id));
     if (s.fileId) await tx.delete(schema.fileObject).where(eq(schema.fileObject.id, s.fileId));
@@ -125,64 +120,6 @@ export async function reindexSource(db: Db, workspaceId: string, sourceId: strin
 
 /* ───────────── indexing (worker) ───────────── */
 
-interface Piece {
-  text: string;
-  locator: Record<string, unknown>;
-}
-
-function chunkText(text: string, locatorBase: Record<string, unknown> = {}): Piece[] {
-  const clean = text.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  const out: Piece[] = [];
-  let i = 0;
-  let part = 0;
-  while (i < clean.length) {
-    let end = Math.min(clean.length, i + CHUNK_CHARS);
-    if (end < clean.length) {
-      // Prefer to break at a paragraph, then a sentence, then a space.
-      const window = clean.slice(i, end);
-      const cut = Math.max(window.lastIndexOf("\n\n"), window.lastIndexOf(". "), window.lastIndexOf("\n"));
-      if (cut > CHUNK_CHARS * 0.5) end = i + cut + 1;
-    }
-    const t = clean.slice(i, end).trim();
-    if (t) out.push({ text: t, locator: { ...locatorBase, part: ++part } });
-    if (end >= clean.length) break;
-    i = Math.max(end - CHUNK_OVERLAP, i + 1);
-  }
-  return out;
-}
-
-async function extract(mime: string, bytes: Buffer): Promise<Piece[]> {
-  switch (mime) {
-    case "text/plain":
-    case "text/markdown":
-      return chunkText(bytes.toString("utf8"));
-    case "application/json": {
-      let v: unknown;
-      try {
-        v = JSON.parse(bytes.toString("utf8"));
-      } catch {
-        throw new Error("The JSON file is not valid JSON");
-      }
-      const items = Array.isArray(v) ? v : [v];
-      return items.flatMap((item, idx) => chunkText(typeof item === "string" ? item : JSON.stringify(item, null, 1), { item: idx + 1 }));
-    }
-    case "text/csv": {
-      const parsed = Papa.parse<Record<string, string>>(bytes.toString("utf8"), { header: true, skipEmptyLines: true });
-      if (parsed.errors.length > 0 && parsed.data.length === 0) throw new Error(`The CSV couldn't be parsed: ${parsed.errors[0]!.message}`);
-      // One chunk per row keeps retrieval precise and citations exact ("row 12").
-      return parsed.data.map((row, idx) => ({ text: Object.entries(row).map(([k, val]) => `${k}: ${val}`).join("; "), locator: { row: idx + 1 } }));
-    }
-    case "application/pdf": {
-      // Parsed in the heap-capped sandbox process, never in the worker itself.
-      const { text } = await extractPdfTextIsolated(bytes.toString("base64"));
-      if (!text.trim()) throw new Error("No text could be extracted from this PDF (scanned PDFs without a text layer aren't supported)");
-      return chunkText(text);
-    }
-    default:
-      throw new Error(`Unsupported type ${mime}`);
-  }
-}
-
 /** Claims one pending source and indexes it. Returns true if a source was processed. */
 export async function indexNextSource(db: Db, workerId: string): Promise<boolean> {
   const claimed = await db.execute<{ id: string }>(sql`
@@ -196,7 +133,7 @@ export async function indexNextSource(db: Db, workerId: string): Promise<boolean
   try {
     const [file] = s!.fileId ? await db.select().from(schema.fileObject).where(eq(schema.fileObject.id, s!.fileId)) : [];
     if (!file) throw new Error("The stored content is missing — upload the source again");
-    const pieces = (await extract(s!.mime ?? file.mime, file.data)).filter((p) => p.text.length > 0);
+    const pieces = (await extractKnowledge(s!.mime ?? file.mime, file.data)).filter((p) => p.text.length > 0);
     if (pieces.length === 0) throw new Error("No indexable text was found");
     if (pieces.length > KNOWLEDGE_MAX_CHUNKS) throw new Error(`This source is too large to index (${pieces.length} chunks; limit ${KNOWLEDGE_MAX_CHUNKS})`);
     const generation = s!.generation + 1;
@@ -217,7 +154,7 @@ export async function indexNextSource(db: Db, workerId: string): Promise<boolean
   } catch (e) {
     await db
       .update(schema.knowledgeSource)
-      .set({ status: "failed", error: (e as Error).message.slice(0, 300), lockedBy: null })
+      .set({ status: "failed", error: e instanceof KnowledgeExtractionError ? e.code : (e as Error).message.slice(0, 300), lockedBy: null })
       .where(mine);
   }
   return true;

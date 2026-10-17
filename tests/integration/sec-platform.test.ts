@@ -32,7 +32,8 @@ import { POST as setupCompletePOST } from "@/app/api/platform/setup/complete/rou
 import { PUT as setupEmailPUT } from "@/app/api/platform/setup/email/route";
 import { POST as setupRedeemPOST } from "@/app/api/platform/setup/redeem/route";
 import { POST as stepUpPOST } from "@/app/api/platform/step-up/route";
-import AdminPage from "@/app/admin/page";
+import AdminPage, { generateMetadata as adminMetadata } from "@/app/admin/page";
+import CopyPage, { generateMetadata as copyMetadata } from "@/app/admin/copy/page";
 import { db, schema } from "@/db";
 import { auth } from "@/lib/auth";
 import { createApiKey } from "@/server/apikeys";
@@ -47,7 +48,7 @@ import { createWorkspace } from "@/server/workspaces";
 import { startFake, type Fake } from "../contract/helpers";
 import { seedPlatformCredential, seedSetting, unseedPlatformCredential, unseedSetting } from "../fixtures/platform-seed";
 import { closeDb, makeUser, unique } from "./helpers";
-import { code, jsonOf, makeAdmin, makeVerifiedUser, platformReq, resetTotpReplay, sessionFor, type TestSession } from "./platform-helpers";
+import { code, jsonOf, makeAdmin, makeVerifiedUser, platformReq, resetTotpReplay, sessionFor, assuredSessionFor, type TestSession } from "./platform-helpers";
 
 type Handler = (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>;
 
@@ -119,6 +120,9 @@ describe("platform admin boundary", () => {
       expect(put.text).not.toContain(CANARY);
       // The panel page itself: the app's ordinary 404.
       await expect(AdminPage(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      await expect(CopyPage(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      await expect(copyMetadata(), label).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+      expect(await adminMetadata(), label).toEqual({ robots: { index: false, follow: false } });
     }
     delete process.env.FLOWLINE_BETA_ADMINS;
     // Authenticated non-admin probes are recorded (bounded reason only).
@@ -161,7 +165,7 @@ describe("platform admin boundary", () => {
     const ok = await stepUp(a.session, a.secret);
     expect(ok.status).toBe(200);
     // The same code again (another session of the same admin) is a replay.
-    const other = await sessionFor(a.user);
+    const other = await assuredSessionFor(a.user, a.secret);
     expect((await stepUp(other, a.secret)).body.error.code).toBe("STEP_UP_INVALID");
     // Elevation is bound to the first session only.
     as(other);
@@ -484,7 +488,7 @@ describe("first-admin bootstrap", () => {
     const enabled = (await auth.api.enableTwoFactor({ body: { password }, headers })) as { totpURI: string };
     const raw = base32Decode(new URL(enabled.totpURI).searchParams.get("secret")!);
     await auth.api.verifyTOTP({ body: { code: totpCodeFor(raw) }, headers });
-    const s2 = await sessionFor({ id: u!.id, email: emailAddr });
+    const s2 = await assuredSessionFor({ id: u!.id, email: emailAddr }, raw.toString("utf8"));
     userCookie = s2.cookie;
     sessionHolder.headers = withSetup();
     const state = await call(setupGET, setupReq("/api/platform/setup"));

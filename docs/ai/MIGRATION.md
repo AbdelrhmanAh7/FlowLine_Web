@@ -1,7 +1,7 @@
 # Migrating to the AI provider hub
 
-**Applies to:** the AI provider hub, Wave A (branch `ai-hub`). It covers what changes for existing workspaces and
-deployments.
+**Applies to:** existing workspaces/deployments upgrading from pre-hub data to the cloud AI hub now in the repository.
+The original Wave A branch was `ai-hub`; follow the deployed migration journal, not that historical branch name.
 
 ## Summary
 
@@ -16,10 +16,12 @@ deployments.
 - **Ignored for tenants and never imported into workspaces:**
   - `FLOWLINE_AI_PROVIDER`, `FLOWLINE_AI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `OPENAI_API_KEY`,
     `OLLAMA_BASE_URL`, `OLLAMA_MODEL`.
-  - They have been removed from `.env.example`, `docker-compose.staging.yml` and `deploy/beta/.env.beta.example`.
-  - If they are still set, nothing reads them. A test proves that a bogus global key is never sent.
+  - Active assignments have been removed from `.env.example`, `docker-compose.staging.yml` and `deploy/beta/.env.beta.example`;
+    comments may still name them as ignored legacy configuration.
+  - Tenant execution does not read them. Historical diagnostic scripts/comments are not a supported runtime path.
 - **Still managed by operators, and never shown in customer settings:** database, auth, `FLOWLINE_ENCRYPTION_KEY`
-  (which also encrypts AI keys), OAuth apps, email and billing.
+  (which also encrypts AI keys), and the separate platform key ring. Service OAuth apps, email and billing are
+  operator-managed in `/admin`. Platform ZITADEL also accepts the server-only environment tuple in `.env.example`.
 - **Test environment only:**
   - `FLOWLINE_AI_TEST_OVERRIDE` sends provider calls to the local test double.
   - It is honoured only with `FLOWLINE_ENV=test`. Staging and beta never set that.
@@ -42,7 +44,8 @@ deployments.
 
 ## For people upgrading a deployment
 
-1. Deploy. The migration runs automatically.
+1. For an authorized deployment, run the migration service before web/worker startup (the staging/beta Compose
+   stacks enforce this order). A bare web container does not run migrations automatically.
 2. Remove the AI variables listed above from your environment files. They are ignored anyway.
 3. Tell workspace owners to open **Settings → AI Providers** and add a connection (see `CONNECTING.md`).
 
@@ -54,17 +57,25 @@ are in the private beta runbook.
 
 1. **Before deploying:** set `FLOWLINE_PLATFORM_ENCRYPTION_KEY`, a key that differs from every workspace key. Take a
    backup.
-2. **Deploy:** migrations `0012`–`0019` run. They are expand-only, plus data steps that mark legacy ciphertext and
+2. **Deploy:** run all pending migrations in `drizzle/meta/_journal.json` (through `0024` in this checkout), not only
+   the hub/security range `0012`–`0019`. That range includes expand-only schema changes and data steps that mark legacy ciphertext and
    invalidate unproven prices and key verifications. They are tested from a Phase 4 database in
    `tests/integration/sec-upgrade.test.ts`.
 3. **Bootstrap the first platform admin:**
-   - `scripts/admin/bootstrap.mts --email <admin>` prints a one-time code; redeem it at `/admin/setup`.
+   - `scripts/with-env.mjs` never overrides a variable that is already set in the shell (even an empty one), so an
+     inherited value beats the env file. Run steps 3 and 5 in a fresh shell, or unset the target variables first
+     (POSIX: prefix with `env -u DATABASE_URL -u FLOWLINE_ENCRYPTION_KEY -u FLOWLINE_ENCRYPTION_KEYS_OLD -u
+     FLOWLINE_PLATFORM_ENCRYPTION_KEY -u FLOWLINE_PLATFORM_ENCRYPTION_KEYS_OLD`). Bootstrap uses `DATABASE_URL` (and
+     `FLOWLINE_ENV` in its test-database guard); rewrap also uses the four key variables.
+   - `node scripts/with-env.mjs .env.staging pnpm exec tsx scripts/admin/bootstrap.mts --email <admin>` prints a
+     one-time code; redeem it at `/admin/setup`. Substitute the intended deployment's protected env file.
    - Configure email first if needed, verify the address, enrol TOTP.
 4. **Import from environment,** once per credential, in `/admin`: Google/Slack/GitHub OAuth apps, sign-in apps,
    email, Paddle. It is explicit and audited, and runtime never falls back to env afterwards.
-5. **Re-encrypt:** run `scripts/admin/rewrap.mts`. Repeat until it reports `remaining=0` and "rotation complete"; it
-   exits non-zero while anything still needs an old key. Only then retire old keys. On a large database this is a
-   long-running maintenance job.
+5. **Re-encrypt:** run `node scripts/with-env.mjs .env.staging pnpm exec tsx scripts/admin/rewrap.mts` with the intended
+   deployment's env file, in a clean environment (step 3). Repeat until every table reports `remaining=0`,
+   `failed=0` and "Rotation complete"; it exits non-zero while anything still needs an old key. Only then retire old
+   keys. On a large database this is a long-running maintenance job.
 6. **Existing Google/Slack/GitHub connections** have no recorded issuing app. They reconnect at their next refresh,
    unless you run the backfill with the client ID that is proven to have issued them (the `--backfill-oauth-app`
    option of the rewrap script). Unproven ones are never guessed.

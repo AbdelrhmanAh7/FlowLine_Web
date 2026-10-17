@@ -137,6 +137,9 @@
   },
   "common": {
     "version": "Version {version}",
+    "runSnapshot": "Run snapshot",
+    "savedSnapshot": "Saved snapshot",
+    "overwriteSnapshot": "Copy kept before overwrite",
     "cancel": "Cancel",
     "retry": "Retry",
     "back": "Back",
@@ -166,6 +169,11 @@
     "RATE_LIMITED": "Too many attempts — wait a minute and try again.",
     "INTERNAL": "We couldn't complete the request. Check the current status before trying again.",
     "BAD_JSON": "The request couldn't be read. Refresh the page and try again.",
+    "BODY_TOO_LARGE": "The request is too large. Reduce its contents and try again.",
+    "BODY_READ_TIMEOUT": "The request took too long to upload. Check your connection and try again.",
+    "UPLOAD_WORKSPACE_STORAGE_LIMIT": "This workspace's retained upload storage is full. Delete an unused knowledge source or ask the administrator for help.",
+    "UPLOAD_INSTALLATION_STORAGE_LIMIT": "Upload storage is full. Ask the administrator to free storage before uploading again.",
+    "UPLOAD_STORAGE_CONFIG": "Uploads are unavailable until the administrator fixes the storage limits.",
     "VALIDATION": "Some values aren't valid. Check them and try again.",
     "CROSS_SITE_REQUEST": "The request was refused because it didn't come from Flowline itself. Refresh the page and try again.",
     "INVITE_USED": "This invitation was already used.",
@@ -198,6 +206,7 @@
     "NOT_CONFIGURED": "This isn't configured.",
     "CSRF_TOKEN_INVALID": "Reload the page and try again.",
     "PLATFORM_REAUTH_REQUIRED": "Sign in again to use the platform panel (sessions older than 24 hours are refused).",
+    "PLATFORM_MFA_REQUIRED": "Sign in again and complete your authenticator challenge.",
     "PLATFORM_TOTP_REQUIRED": "Enrol an authenticator app first.",
     "PLATFORM_EMAIL_UNVERIFIED": "Verify your email address first.",
     "SETUP_CHALLENGE_INVALID": "This setup code is invalid, expired or already used. Ask the operator for a new one.",
@@ -533,6 +542,19 @@
         "review": "Summary with low scores",
         "scores": "Score summary"
       }
+    },
+    "eta-invoice-notify": {
+      "name": "ETA Invoice Notify",
+      "description": "Pick the invoices still waiting for Egyptian Tax Authority (ETA) submission and list them for the team to follow up. Nothing is submitted or sent.",
+      "sample": "A batch of invoices, each with a number, a customer, a total and a status.",
+      "result": "The invoices waiting for ETA submission, or a note that none are waiting.",
+      "nodes": {
+        "trigger": "Invoice batch",
+        "pick": "Pick waiting invoices",
+        "any": "Any waiting?",
+        "follow-up": "Follow-up list",
+        "clear": "All submitted"
+      }
     }
   },
   "templateCategory": {
@@ -555,6 +577,22 @@
     "github": "Continue with GitHub",
     "checkingOptions": "Checking sign-in options…",
     "oauthNotConfigured": "{provider} sign-in isn't configured on this server yet. Use email below.",
+    "ssoLinkTitle": "Confirm SSO account linking",
+    "ssoLinkBody": "The identity provider below will be able to sign in to your account and all its workspaces. Confirm only if you trust this provider.",
+    "ssoLinkConfirm": "Confirm linking my account to this provider",
+    "ssoLinkCancel": "Cancel and return to my account",
+    "ssoLinkError": "The link could not be confirmed. Check your password or authenticator code, or sign in and start again.",
+    "ssoRestart": "This sign-in expired or the configuration changed. Start SSO again.",
+    "ssoAccountExists": "An account with this email already exists. Sign in to your account first, then confirm linking the identity provider from your workspace.",
+    "ssoOwnershipRequired": "Create your Flowline account and verify your email ownership before linking workspace SSO.",
+    "ssoMailboxBody": "Verify ownership using a link Flowline sends to your account email before linking this provider.",
+    "ssoMailboxSent": "We sent a verification link to your account email. Open it in this browser, then return to confirm the link.",
+    "ssoMailboxVerify": "Send email verification link",
+    "ssoMailboxRefresh": "I verified my email — refresh",
+    "ssoMailboxRequired": "Verify email ownership using the Flowline link first.",
+    "federatedFactorBody": "The identity provider was verified. Enter the code from your Flowline authenticator app to finish signing in.",
+    "federatedFactorExpired": "This sign-in expired or your account settings changed. Sign in again.",
+    "federatedFactorRestart": "Start sign-in again",
     "twoFactorTitle": "Two-step verification",
     "twoFactorBody": "Enter the 6-digit code from your authenticator app.",
     "twoFactorCode": "Authentication code",
@@ -1002,7 +1040,8 @@
     "Developer tools": "Developer tools",
     "Payments": "Payments",
     "Docs": "Docs",
-    "Project management": "Project management"
+    "Project management": "Project management",
+    "Finance": "Finance"
   },
   "integrationCatalog": {
     "google_sheets": {
@@ -1228,6 +1267,31 @@
       "fields": {
         "token": {
           "label": "API key"
+        }
+      }
+    },
+    "mizano": {
+      "description": "Mizano accounting connector.",
+      "actions": {
+        "list_overdue_invoices": {
+          "title": "List overdue invoices",
+          "description": "List unpaid invoices past their due date on the date you choose, in the workspace currency."
+        },
+        "create_customer": {
+          "title": "Create customer",
+          "description": "Create a new customer in Mizano with name, company, email, phone, and optional taxId."
+        },
+        "create_draft_quote": {
+          "title": "Create draft quote",
+          "description": "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate)."
+        }
+      },
+      "fields": {
+        "token": {
+          "label": "Scoped API key"
+        },
+        "baseUrl": {
+          "label": "Mizano URL"
         }
       }
     }
@@ -2003,6 +2067,7 @@
       "title": "Re-run #{number} from “{label}”",
       "revision": "Revision",
       "original": "The run's original version (v{version})",
+      "originalSnapshot": "The run's original snapshot",
       "latest": "The current saved flow (includes your fixes)",
       "willRerun": "Will run again · {count}",
       "needsApproval": "needs approval",
@@ -3210,6 +3275,12 @@
       "table": "table"
     },
     "indexingFailed": "Indexing failed: {error}",
+    "errors": {
+      "chunkLimit": "This source contains too much text or too many rows. Split it into smaller sources.",
+      "jsonDepthLimit": "The JSON is nested too deeply. Simplify its structure.",
+      "csvColumnLimit": "This CSV has too many columns. Remove columns you don't need.",
+      "csvRowLimit": "A CSV row contains too much text. Shorten it or split the content."
+    },
     "status": {
       "pending": "pending",
       "indexing": "Indexing…",

@@ -143,7 +143,7 @@ export async function setupConfigureEmail(ch: NonNullable<Awaited<ReturnType<typ
  * present a fresh code. Creates (or re-activates) the admin, consumes the challenge and closes setup — all in one
  * transaction under the setup lock.
  */
-export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, user: { id: string; email: string; emailVerified: boolean }, code: string) {
+export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, user: { id: string; email: string; emailVerified: boolean; sessionToken?: string; sessionExpiresAt?: Date }, code: string) {
   if (!(await checkRate(`platform-setup-complete:${ch.id}`, 5, 300))) throw new HttpError(429, "RATE_LIMITED", "Too many attempts. Wait a few minutes and try again.");
   if (user.email.toLowerCase() !== ch.email) throw new HttpError(403, "SETUP_WRONG_IDENTITY", "Sign in as the email address this setup code was issued for");
   if (!user.emailVerified) throw new HttpError(403, "SETUP_EMAIL_UNVERIFIED", "Verify your email address first");
@@ -167,6 +167,10 @@ export async function completeSetup(ch: NonNullable<Awaited<ReturnType<typeof se
     await tx.update(schema.platformSetupChallenge).set({ consumedAt: new Date(), consumedBy: user.id }).where(eq(schema.platformSetupChallenge.id, fresh.id));
     if (fresh.kind === "bootstrap") {
       await tx.insert(schema.platformSetup).values({ id: 1, completedAt: new Date(), completedBy: user.id }).onConflictDoUpdate({ target: schema.platformSetup.id, set: { completedAt: new Date(), completedBy: user.id } });
+    }
+    if (user.sessionToken && user.sessionExpiresAt) {
+      const { recordMfaAssurance } = await import("./federated-mfa");
+      await recordMfaAssurance(user.sessionToken, user.id, user.sessionExpiresAt, tx);
     }
     await platformAudit(tx, { actor: { userId: user.id, label: user.email }, assurance: "session_totp_stepup", action: "admin.totp_enrolled", result: "ok", targetType: "platform_admin", targetId: user.id });
     await platformAudit(tx, { actor: { userId: user.id, label: user.email }, assurance: "session_totp_stepup", action: "admin.granted", result: "ok", targetType: "platform_admin", targetId: user.id, data: { via: fresh.kind } });

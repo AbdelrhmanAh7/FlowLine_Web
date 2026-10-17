@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, schema } from "@/db";
 import { auth } from "@/lib/auth";
 import { sha256Hex } from "@/server/crypto";
@@ -12,7 +12,16 @@ import { createWorkspace } from "@/server/workspaces";
 import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
 process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
-afterAll(closeDb);
+const previousBetaMode = process.env.FLOWLINE_BETA_MODE;
+beforeAll(() => {
+  // Account verification here exercises explicitly open registration, not beta admission.
+  process.env.FLOWLINE_BETA_MODE = "open";
+});
+afterAll(async () => {
+  if (previousBetaMode === undefined) delete process.env.FLOWLINE_BETA_MODE;
+  else process.env.FLOWLINE_BETA_MODE = previousBetaMode;
+  await closeDb();
+});
 
 async function lastToken(email: string, path: string) {
   const [mail] = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, email)).orderBy(schema.emailOutbox.createdAt).limit(100);
@@ -56,10 +65,67 @@ describe("email account flows", () => {
     await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
     await issueAccountToken("reset", user);
     const token = await lastToken(user.email, "/reset-password");
+    await expect(consumeAccountToken("reset", token, "short")).rejects.toMatchObject({ code: "PASSWORD_LENGTH" });
     expect(await consumeAccountToken("reset", token, "fresh-password-123")).toBe("done");
     expect(await consumeAccountToken("reset", token, "another-password")).toBe("used");
     const [account] = await db.select().from(schema.account).where(eq(schema.account.userId, user.id));
     expect(await verifyPassword({ hash: account!.password!, password: "fresh-password-123" })).toBe(true);
+  });
+
+  it("handles concurrent reset and account deletion without deadlocks (#45)", async () => {
+    const user = await makeUser("emailconcurrentdel");
+    await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
+    await issueAccountToken("reset", user);
+    const resetToken = await lastToken(user.email, "/reset-password");
+    await issueAccountToken("delete", user);
+    const deleteToken = await lastToken(user.email, "/account/delete");
+
+    const [resetRes, deleteRes] = await Promise.all([
+      consumeAccountToken("reset", resetToken, "concurrent-pwd-123"),
+      consumeAccountToken("delete", deleteToken, undefined, user.id),
+    ]);
+
+    // User row lock order ensures both finish without deadlock (40P01):
+    // Either reset wins first and delete deletes after, or delete wins first and reset is safely refused as invalid.
+    if (resetRes === "done") {
+      expect(deleteRes).toBe("done");
+    } else {
+      expect(resetRes).toBe("invalid");
+      expect(deleteRes).toBe("done");
+    }
+    const [deletedUser] = await db.select().from(schema.user).where(eq(schema.user.id, user.id));
+    expect(deletedUser).toBeUndefined();
+  });
+
+  it("handles concurrent resets with two different tokens: winner updates credential, loser is refused as used (#45)", async () => {
+    const user = await makeUser("emailconcurrentresets");
+    await db.insert(schema.account).values({ id: crypto.randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: "old-hash" });
+    await issueAccountToken("reset", user);
+    const allOutbox1 = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, user.email));
+    const tokenA = new RegExp(`/reset-password\\?token=([A-Za-z0-9_-]+)`).exec(allOutbox1.at(-1)!.plainText)![1]!;
+
+    await issueAccountToken("reset", user);
+    const allOutbox2 = await db.select().from(schema.emailOutbox).where(eq(schema.emailOutbox.recipient, user.email));
+    const tokenB = new RegExp(`/reset-password\\?token=([A-Za-z0-9_-]+)`).exec(allOutbox2.at(-1)!.plainText)![1]!;
+    expect(tokenA).not.toBe(tokenB);
+
+    const [resA, resB] = await Promise.all([
+      consumeAccountToken("reset", tokenA, "password-A-12345"),
+      consumeAccountToken("reset", tokenB, "password-B-12345"),
+    ]);
+
+    const results = [resA, resB].sort();
+    expect(results).toEqual(["done", "used"]);
+
+    const [account] = await db.select().from(schema.account).where(eq(schema.account.userId, user.id));
+    const winPassword = resA === "done" ? "password-A-12345" : "password-B-12345";
+    const losePassword = resA === "done" ? "password-B-12345" : "password-A-12345";
+    expect(await verifyPassword({ hash: account!.password!, password: winPassword })).toBe(true);
+    expect(await verifyPassword({ hash: account!.password!, password: losePassword })).toBe(false);
+
+    const tokens = await db.select().from(schema.emailToken).where(eq(schema.emailToken.userId, user.id));
+    expect(tokens).toHaveLength(2);
+    expect(tokens.every((t) => t.consumedAt)).toBe(true);
   });
 
   it("delivers invitations and leaves revoked links unusable", async () => {
@@ -83,11 +149,15 @@ describe("email account flows", () => {
     await issueAccountToken("delete", owner);
     const token = await lastToken(owner.email, "/account/delete");
     expect(await consumeAccountToken("delete", token, undefined, owner.id)).toBe("transfer_required");
+    // #109: the audit row is written before the workspace lock, so a refused deletion must roll it back.
+    const deletionAudit = () => db.select().from(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, ws.id), eq(schema.auditEvent.action, "account.deleted")));
+    expect(await deletionAudit()).toHaveLength(0);
     await db.update(schema.workspaceMember).set({ role: "owner" }).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, member.id)));
     expect(await consumeAccountToken("delete", token, undefined, owner.id)).toBe("done");
     expect(await tokenState("delete", token)).toBe("used");
     const [deleted] = await db.select().from(schema.user).where(eq(schema.user.id, owner.id));
     expect(deleted).toBeUndefined();
+    expect(await deletionAudit()).toMatchObject([{ targetId: owner.id, data: { role: "owner" } }]);
   });
 
   it("returns the same API result for unknown and known reset addresses and enforces a shared limit", async () => {

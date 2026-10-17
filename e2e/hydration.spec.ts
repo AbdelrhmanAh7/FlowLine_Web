@@ -1,5 +1,5 @@
 import { expect, test, type ConsoleMessage } from "@playwright/test";
-import { BASE_URL } from "../playwright.config";
+import { AR_STATE, BASE_URL, EN_STATE } from "../playwright.config";
 import { setupUser, signUpVerified, uniqueEmail } from "./helpers";
 
 /**
@@ -20,7 +20,7 @@ for (const c of CONTEXTS) {
   test(`no hydration warnings: ${c.width}px ${c.locale} ${c.timezoneId}`, { tag: "@cross-browser" }, async ({ browser }) => {
     test.setTimeout(120_000);
     const seen: { route: string; type: string; text: string }[] = [];
-    const ctx = await browser.newContext({ baseURL: BASE_URL, viewport: { width: c.width, height: 900 }, locale: c.locale, timezoneId: c.timezoneId, extraHTTPHeaders: { origin: BASE_URL } });
+    const ctx = await browser.newContext({ baseURL: BASE_URL, viewport: { width: c.width, height: 900 }, locale: c.locale, timezoneId: c.timezoneId, extraHTTPHeaders: { origin: BASE_URL }, storageState: EN_STATE });
     const page = await ctx.newPage();
     const { workspace } = await setupUser(page, { template: "lead-qualifier" });
     let route = "";
@@ -51,6 +51,7 @@ for (const c of CONTEXTS) {
  */
 const PUBLIC_STATE = {
   cookies: [
+    ...AR_STATE.cookies,
     { name: "fl_locale", value: "ar", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const },
     { name: "fl_theme", value: "light", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const },
   ],

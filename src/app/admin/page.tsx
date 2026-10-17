@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { Card, Logo } from "@/components/ui";
 import { getT } from "@/i18n/server";
 import { HttpError } from "@/server/http";
-import { requirePlatformAdmin } from "@/server/platform-access";
+import { platformAdminOrNull, requirePlatformAdmin } from "@/server/platform-access";
 import { PlatformPanel } from "./panel";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (!(await platformAdminOrNull())) return { robots: { index: false, follow: false } };
   return { title: (await getT())("platformAdmin.title"), robots: { index: false, follow: false } };
 }
 
@@ -23,7 +24,7 @@ export default async function AdminPage() {
     await requirePlatformAdmin();
   } catch (e) {
     if (!(e instanceof HttpError) || e.status === 404) notFound();
-    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
+    blocked = e.code === "PLATFORM_REAUTH_REQUIRED" || e.code === "PLATFORM_MFA_REQUIRED" ? "reauth" : e.code === "PLATFORM_TOTP_REQUIRED" ? "totp" : e.code === "PLATFORM_EMAIL_UNVERIFIED" ? "email" : null;
     if (!blocked) notFound();
   }
   if (blocked) {

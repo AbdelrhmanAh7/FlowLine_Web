@@ -36,7 +36,8 @@ The two reviews agree on all of these.
    - Non-admins get **404**; API-key bearers are refused (session cookies only).
    - `emailVerified` is required.
 2. **MFA (TOTP)** is enrolled before the panel unlocks, using the better-auth `two-factor` plugin (installed, 1.7.6).
-   - **Step-up** (TOTP or password) is required before every write: a 10-minute elevation row bound to the session
+   - Every session read for an enrolled account requires proof for that exact session and current verified factor. Federated sign-in requires local TOTP before granting a usable session; pre-enrollment/legacy sessions require sign-in again. See [federated MFA](FEDERATED_MFA.md) for expiry, revocation and validation limits.
+   - **Step-up** (TOTP) is required before every write: a 10-minute elevation row bound to the session
      token hash.
    - The session must be ≤ 24 h old.
    - Workspace SSO never satisfies platform step-up.
@@ -83,7 +84,7 @@ The two reviews agree on all of these.
    - uncontrolled, cleared on success, close and navigation;
    - never in the TanStack cache, mutation retries, offline drafts, URLs or RSC payloads.
 10. **Endpoints:**
-    - `route()` CSRF + strict Origin, body caps, `Cache-Control: no-store`;
+    - `route()` CSRF + strict Origin, body caps and shared read deadline; every `route()` error response (`HttpError`, validation, unhandled 500) and every platform success response (`secured()` in `src/server/platform-http.ts`) carries `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; other `route()` success responses are not covered by this item; `tests/unit/route-error-headers.test.ts` (#234) checks all three error types and the cookie-bearing cross-site POST refusal without `sec-fetch-site`; layered ingress/hosting policy: [REQUEST_BODY_LIMITS.md](REQUEST_BODY_LIMITS.md);
     - distributed `checkRate` limits: test 5/min, writes 20/min, step-up 5/5 min, bootstrap/MFA attempts;
     - fixed error codes.
 

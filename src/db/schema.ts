@@ -8,6 +8,7 @@ import {
   foreignKey,
   index,
   integer,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -203,7 +204,8 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    version: integer("version").notNull(),
+    /** Publication number; NULL for save, overwrite and run snapshots, so only publishing moves it (#204). */
+    version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
     graph: jsonb("graph").$type<FlowGraph>().notNull(),
@@ -214,6 +216,15 @@ export const flowVersion = pgTable(
   },
   (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );
+
+/** Numbers that save, run and overwrite snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
+export const flowVersionNumberBackup = pgTable("flow_version_number_backup", {
+  flowVersionId: uuid("flow_version_id")
+    .primaryKey()
+    .references(() => flowVersion.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  backedUpAt: timestamp("backed_up_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const runStatusEnum = pgEnum("run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);
 /** `uncertain` = an external action was sent but its outcome is unknown (lost response) and could not be verified. */
@@ -236,7 +247,8 @@ export const run = pgTable(
     /** Per-workspace sequence shown as #n in the UI. */
     number: integer("number").notNull(),
     status: runStatusEnum("status").notNull().default("queued"),
-    input: jsonb("input"),
+    /** JSON preserves caller column order for CSV builds after the queue round trip. */
+    input: json("input"),
     output: jsonb("output"),
     error: jsonb("error").$type<{ code: string; message: string; nodeId?: string } | null>(),
     rerunOfRunId: uuid("rerun_of_run_id"),
@@ -606,6 +618,17 @@ export const kvEntry = pgTable(
   },
   (t) => [primaryKey({ columns: [t.workspaceId, t.namespace, t.key] })],
 );
+
+/** Trigger-maintained raw-byte totals: one installation row and one row per workspace with files. */
+export const retainedFileCounter = pgTable("retained_file_counter", {
+  scope: text("scope").primaryKey(), // installation | workspace UUID
+  workspaceId: uuid("workspace_id").references(() => workspace.id, { onDelete: "cascade" }),
+  totalBytes: bigint("total_bytes", { mode: "bigint" }).notNull().default(sql`0`),
+  fileCount: bigint("file_count", { mode: "bigint" }).notNull().default(sql`0`),
+}, (t) => [
+  check("retained_file_counter_scope", sql`${t.scope} = coalesce(${t.workspaceId}::text, 'installation')`),
+  check("retained_file_counter_nonnegative", sql`${t.totalBytes} >= 0 and ${t.fileCount} >= 0`),
+]);
 
 /** Uploaded files for CSV/JSON/PDF processing (size-capped). */
 export const fileObject = pgTable("file_object", {
@@ -1011,7 +1034,7 @@ export const ssoState = pgTable("sso_state", {
   nonce: text("nonce").notNull(),
   codeVerifierEnc: text("code_verifier_enc").notNull(),
   keyId: text("key_id").notNull(),
-  /** The signed-in user who started this sign-in, if any — the only account an email match may link to. */
+  /** Initiator of a possible proposal only. A link is persisted exclusively by POST confirmation. */
   initiatorUserId: text("initiator_user_id"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
@@ -1354,7 +1377,7 @@ export const platformAuditEvent = pgTable(
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
     actorUserId: text("actor_user_id"),
     actorLabel: text("actor_label").notNull(),
-    /** session_totp_stepup | session | setup_session | cli | system */
+    /** session_totp_stepup | session | setup_session | cli | system | federated_pending */
     assurance: text("assurance").notNull(),
     action: text("action").notNull(),
     targetType: text("target_type"),

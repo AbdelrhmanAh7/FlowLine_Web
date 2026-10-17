@@ -1,5 +1,171 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+
+## Pilot E2E failure corrections — 2026-10-15
+
+Local branch `fix/pilot-e2e-failures`; owner requested local changes/commit only, no push/PR or hub edits.
+Two product defects fixed: run input's JSONB storage reordered CSV columns at the queue boundary
+(migration 0027 now stores JSON), and copy-page metadata exposed the restricted page title despite a
+404 content check (metadata now checks platform-admin authorization before translation).
+The admin root also withholds privileged metadata from denied users. Auth/2FA checks are unchanged.
+
+The reported `fl-flow-versions.1` expectation `[2,1]` contradicts the deliberate #204 CTO decision
+below: save snapshots are unnumbered; only publications receive numbers. Product behavior is retained.
+Local regression tests assert two saves yield null numbers, `save` reasons and descending revisions;
+the repository's feature E2E expectation is corrected. Read-only hub reference remains unchanged and
+will still fail this outdated assertion until its owner updates it.
+
+Evidence and commands: [pilot E2E report](../../artifacts/pilot-e2e/EVIDENCE.md). Integration regressions
+cover manual sample input and explicit run input through persistence and the real worker, and denied
+admin content plus metadata for anonymous/non-admin/API-key callers. Existing JSONB row key order
+cannot be reconstructed by migration. No production/provider verification is claimed. GitHub tracking,
+CI and review are deferred to the harness under the owner's worktree-only/no-push/no-PR instruction;
+this local commit is not a merge-ready or CI-gated claim.
+
+
+## route() error-header unit coverage (issue #234) — 2026-10-15
+
+PR #200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.
+
+## Legacy backfill 0026 (issue #205) — 2026-10-14
+
+Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
+publication numbers remain unchanged. Its insert trigger keeps old application images from numbering new snapshots.
+Forward and manual reverse acquire `SHARE ROW EXCLUSIVE` on `flow_version` before accessing the backup, retain it through
+commit, and use transaction-local lock/statement timeouts of 5/30 seconds. Readers continue; writers wait. The immutability
+trigger is disabled only inside the transaction. Reverse stays outside the journal; run it with
+`psql -v ON_ERROR_STOP=1 --single-transaction -f drizzle/reverse/0026_flow_version_run_backfill.sql`.
+It restores backed-up numbers, fails atomically if a later publication reused one, and leaves the backup for reruns.
+Numbers already cleared without backup by prerequisite #204's 0025 are outside this reverse's coverage.
+
+Verified locally on a disposable `flowline_test_205r6` database with Node 24: backfill integration 6/6 and runs 20/20.
+The fixture also removes the backup table to exercise a real pre-0026 schema. Cases cover legacy save/run/overwrite data,
+forward twice, reverse twice, forward after reverse, old-image inserts and collision refusal. The concurrent-insert
+regression failed before the fix (writer completed between backup and update), then passed with the early lock.
+`pnpm typecheck`, `pnpm lint`, `drizzle-kit check`, and E2E tooling hygiene 12/12 pass; full suites/build run only in CI.
+The inherited #204 E2E spec was removed per the CTO scope instruction; no new E2E spec was added.
+
+Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected retargeting it to ai/204 because PR #211
+already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
+then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
+
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+
+Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
+per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
+publications are numbered now: `insertVersion` (`src/server/flows.ts`) gives `save`, `overwrite` and `run` snapshots
+`version = NULL` and derives the next number from `publish` rows only, so the first publication is always v1. Draft
+edits (autosave, which bumps `flow.revision`) never wrote a snapshot and still don't. Migration 0025 drops `NOT NULL`
+and backfills: it drops the 0002 immutability trigger, nulls `version` on every non-`publish` row (published numbers,
+which subflow steps pin, are kept) and recreates the trigger in the same transaction. History orders by `created_at`.
+The history panel and run inspector name an unnumbered snapshot by reason ("Saved snapshot", "Copy kept before
+overwrite", "Run snapshot"; `common.*Snapshot`, `runs.rerun.originalSnapshot`, ar + en) through `flowVersionLabel` /
+`rerunOriginalLabel` in `src/i18n/engine-text.ts`; the run detail API returns `version: null` for such runs.
+Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/runs.test.ts` (publish once then two runs
+keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
+then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
+`tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
+`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
+stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
+from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
+snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
+
+## route() error headers (issue #200) — 2026-10-13
+
+`route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.
+
+## Account deletion: audit rows before the workspace lock — 2026-10-13 (issue #109, part 2 of #47)
+
+`consumeAccountToken("delete")` (`src/server/email/flows.ts`) now inserts its `account.deleted` audit rows before it locks the user's workspaces `FOR UPDATE`, so the key-share lock each insert takes on its workspace comes in the same order as in the SSO transactions (user row, then the audit insert) and is never awaited while holding a workspace. Rows are corrected under the workspace lock if a membership changed in between; `transfer_required` now rolls back. The person-visible result is unchanged. Two co-members deleting at once cannot deadlock on the shared workspace: every deletion first takes the installation-wide retained-file accounting lock, so deletions are serialized; a new two-connection test in `tests/integration/retained-file-locking.test.ts` pins this. Verified locally at `6323281` (the last code and test change on this branch; later commits only touch docs and comments) against a throwaway `flowline_test_109` database (PostgreSQL): `tests/integration/retained-file-locking.test.ts` (4/4), `email.test.ts` (9/9), `email-token-lock-order.test.ts` (3/3); `tests/unit/email-token-lock-order.test.ts` (10/10, mocked database); eslint and `pnpm typecheck`. The e2e-army test `e2e-army/109-account-delete-shared-audit.e2e.ts` runs in the hub verify job, not locally. No full gate or browser run is claimed. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
+
+Review rounds 1–2 resolution — 2026-10-13 (same issue): the #108 deadlock test `tests/integration/account-delete-sso-lock-order.test.ts` is now **part of this change** (copied verbatim from `origin/ai/108` at `2ef1fb8`, together with the `routeTransactions` helper it needs in `tests/integration/pg-lock-helpers.ts`), so the issue's "passes the deadlock test" criterion is verified on the head being merged, not claimed: it passes 2/2 on this branch against a throwaway `flowline_test_109r3` database. The key-share → `FOR UPDATE` upgrade the reorder could introduce is now pinned by a real negative control, `tests/integration/account-delete-key-share-upgrade.test.ts`: with only the accounting lock removed (a test-only mock), the same two co-member deletions, each paused after its audit insert and released together, leave one transaction aborted with `40P01` at the workspace `FOR UPDATE` while holding its key-share — proving the accounting lock is load-bearing (the earlier "the test fails" sentence in lock-order.md was a counterfactual; it is now an executed test). The e2e-army header was corrected to name exactly what each test pins. Local runs on this head: `retained-file-locking.test.ts` 4/4, `account-delete-sso-lock-order.test.ts` 2/2, `account-delete-key-share-upgrade.test.ts` 1/1 (three consecutive runs), `email.test.ts` 9/9, `tests/unit/email-token-lock-order.test.ts` 10/10. The #108 test file is identical to PR #214's, so merging either first keeps the other merge clean.
+
+## GitHub security settings (issue #160) — 2026-10-13
+
+Not done, owner only, deferred until after the pilot: secret scanning with push protection, Dependabot alerts and Copilot code review as a second reviewer are all unverified. The owner's steps and the record of what was done are in [OWNER_ACTIONS.md](OWNER_ACTIONS.md#issue-160-github-security-settings-owner-only). No beta or production readiness verdict changes.
+
+## Field-harness scoring review (#141 / PR #193) — 2026-10-12
+
+The next-round harness compares the approved outbox entry against the reviewed draft and the packet's VP-05
+expectation (quoted policy, no promise, consequential flag, no payment action), and requires one persisted VP-01
+row with the original value before and after reprocessing. **Explicit assertions** in `field.spec.ts` now verify
+all review-gate checks (recipient, text-only `email_reply`, no payment action, quoted policy, no promise,
+consequential) and all persisted-row checks (`sameRowCount`, `sameRows`, `exactlyOneFollowUp`). Eight focused
+scoring tests pass on `4a241db` (including one that runs the real compiled customer-follow-up pack); the code under test is unchanged since `475c293`.
+Earlier `20261001-d224cfb` evidence is unchanged.
+The live Playwright field run is still unverified: this worktree has no `.env.test`, no test server on port
+3100, and no available Docker daemon. Full suite/build remain delegated to hosted CI under the task brief.
+This internal harness change does not change product behavior or beta readiness.
+
+Local verification on `4a241db` (all counts observed there; code under test unchanged since `475c293`): `pnpm test flowline-field --maxWorkers=2` passes 8/8 (the run includes the real-pack
+test). Each original fix in `tests/helpers/field-scoring.ts` was disabled in turn and restored from git after each run:
+`:117` no-promise scoring with legacy matching: 1 failed / 7 passed; `:138` review gate (`scoreReviewGate` checks forced true): 1 failed / 7 passed, and the approval-payload helpers
+(`scoreApprovedOutboxEntry`, `scoreApprovedAgainstPacket` forced true): 3 failed / 5 passed;
+`:143` persisted-row comparison (`comparePersistedRows` always passing): 3 failed / 5 passed (the duplicate-scoring and real-pack tests also depend on it);
+`:160` digest verification (`verifyPacketDigest` always passing): 1 failed / 7 passed. On the later head `e3b6c75` (a merge of origin/main; #141 code unchanged since `475c293`) `pnpm typecheck` exited 0, ESLint on `tests/helpers/field-scoring.ts` and `tests/unit/flowline-field-scoring.test.ts` reported nothing, and the scoring test again passed 8/8 (the `artifacts/` field specs are ignored by ESLint); the hosted `gate` runs the rest. Playwright was not run: it needs `DATABASE_URL` and a live stack, so no live assertions ran. These
+checks used Node 26.10.0; the project's supported Node 24 validation remains for CI.
+
+## Dependabot alert #3, `source-map-js` — 2026-10-12 (issue #62)
+
+`source-map-js` 1.2.1 (GHSA-68fv-2mgg-jv7q, high; CSS build and test tooling only, no Flowline source imports it) is raised by the override `"source-map-js": ">=1.2.2 <2"` in `pnpm-workspace.yaml`; the lockfile was regenerated with `pnpm install --lockfile-only` and resolves only 1.2.2. Guarded by `tests/unit/dependency-advisories.test.ts`; details in [DEPENDENCIES.md](../security/DEPENDENCIES.md), evidence in [artifacts/phase-4/issue-62/EVIDENCE.md](../../artifacts/phase-4/issue-62/EVIDENCE.md). **Pending after PR #77 merges:** alert #3 closed as `fixed` and the open-alert query checked ([NEXT_ACTION.md](../../NEXT_ACTION.md) step 5). Open alerts #4–#17 (`next`, `shell-quote`, `sharp`) are newer and not covered here. This changes no private-beta or production acceptance.
+
+## Company Builder refund note — 2026-10-04 (issue #49)
+
+The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
+
+## Focused-run evidence helpers: explicit child environment — 2026-10-03
+
+Issue #36: the four local focused-run helpers (`upload-admission/run-focused.mjs`, `federated-mfa/run-focused.mjs`, `run-auth-focused.mjs`, `artifacts/phase-4/security-auth/run-focused.mjs`) no longer start Vitest with `...process.env`. They use the allowlist in `scripts/focused-run-env.mjs` (OS/runtime names plus the synthetic values each helper builds), record variable names only (never values) in new result JSON or stderr, and support `--dry-run`. [Allowlist and limits](../../artifacts/phase-4/paid-pilot-round1/upload-admission/README.md#child-environment-issue-36). Verified locally on Windows only: unit test, dry-runs, and a probe launching `npx tsx` and a Vitest unit run under the allowlist. The helpers were **not re-run against a database** (no Docker started), the Linux path is unit-tested by name only, and the earlier recorded runs predate the change and used the ambient shell. `check-drizzle-prune.mjs` and the gate/release/Company Builder scripts still pass `process.env` (not focused database runs); the frozen `artifacts/beta-execution` helpers are historical. This does not change release scope or the unverified items below.
+
+## H3 security readiness review — 2026-10-03
+
+PR #21 (H3, open; its base PR #17 is merged into main) enforces local MFA across all session reads, refuses replayed TOTP codes at both federated gates, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. It is not merged or deployed. This update does not change private-beta or production acceptance. Issue #37 (a possible lock-order inversion between SSO link confirmation and federated challenge completion, which share the initiating session) is fixed in source by one documented lock order and a shared helper ([Lock order](../security/FEDERATED_MFA.md#lock-order)); the mocked-order unit test passes locally, the two-connection PostgreSQL regression `tests/integration/federated-lock-order.test.ts` is **not executed** locally and needs CI. Of two adjacent inversions found while auditing, the member role change/removal one (against the SSO audit insert) is still recorded there as a known gap. The other, password reset against account-deletion confirmation, is fixed by issue #45: verify, reset and delete confirmation now lock the user row before the token row and re-check the token under both locks ([Email-token lock order](../security/FEDERATED_MFA.md#email-token-lock-order)); its mocked-order unit test passes locally, the two-connection PostgreSQL test `tests/integration/email-token-lock-order.test.ts` is **not executed** locally and needs CI. Issue #66 adds a route-level H3 regression lock, `tests/integration/sec-federated-mfa-regression.test.ts` ([what it covers](../security/FEDERATED_MFA.md#validation-limits)), executed locally against a disposable PostgreSQL; it changes no production behaviour and no readiness verdict.
+
+Issue #72 adds a bounded failure audit for failed and abandoned federated MFA steps (workspace `sso.mfa_failed`, platform `signin.mfa_failed`; reasons `invalid_code`, `replayed_code`, `rate_limited`, `expired`, the last also from the retention sweep), see [Failure audit](../security/FEDERATED_MFA.md#failure-audit); its tests extend the #66 file and pass locally against a disposable PostgreSQL 16. The two known lock-order gaps above are unchanged. It changes no readiness verdict and is not deployed.
+
+## PR #14 diagnostic checkpoint — 2026-10-03
+
+Full gate `37093517476`, CI SHA `f10278806a20a80b0bedd683ce446c46e7d0e416`, remains **FAIL**: WebKit 77 passed / 1 failed; Chromium and Firefox jobs succeeded. The journey found the Output tab and then hit its whole-test deadline during click actionability. Offline inspection of PR head `dd840db` found no loader import path linking the Drizzle prune to this failure. Pre-existing WebKit/test timing is suspected, not proven; the missing trace/JSON prevents root-cause confirmation. [Diagnosis and next experiment](WEBKIT_14_DIAGNOSIS.md). Follow-up (CI history, 27 full-tier WebKit runs): not attributable to #14; head `ec672d7` passed WebKit 78/78 in run `37132314447`, and the intermittent journey timeout is tracked in issue #35 ([follow-up](WEBKIT_14_DIAGNOSIS.md)). This docs-only investigation makes no readiness claim and does not close the earlier WebKit incidents recorded below or elsewhere. Issue #35 follow-up: the gate-report action now uploads the Playwright JSON reports and, for failed browser tests, `trace.zip` files (7 days), so the next occurrence can be diagnosed; no test, timeout or retry changed and the flake stays undiagnosed ([where to find them](../DEVELOPER_GUIDE.md#playwright-traces-in-ci)).
+
+## PR #16 request-body follow-up — 2026-10-03
+
+PR #16 (`b63ffed`, on base `a9f7597`) adds Caddy route caps, a 10-second upload-read/5-second header deadline and HTTP/1.1+HTTP/2 ingress, plus the missing shared `capBody` 10-second deadline and Arabic/English timeout messages. No Next.js Proxy body clone was added. [Layered policy](../security/REQUEST_BODY_LIMITS.md); [focused evidence](../../artifacts/phase-4/paid-pilot-round1/proxy-body-limits.md). M4's source deferral is addressed for the owned ingress; Caddy runtime, trusted-proxy/no-direct-web exposure and provider/tunnel deadlines remain unverified. This does not change the deployment/readiness verdicts or the historical evidence below.
+
+## Issue #41 password-reset lock order — 2026-10-04
+
+`consumeAccountToken("reset")` takes the user row (`FOR UPDATE`, ahead of the token row since #45), then deletes the user's sessions, then writes the accounts, the same user-first order the federated transactions use after prerequisite #43; before #41 it had locked the credential account, then the sessions, then the user. [Order and retained-upload note](../security/FEDERATED_MFA.md#password-reset-recovery-lock-order); the two gaps listed in the original change were closed by #45. `#43` (the federated paths' shared user-first order, `src/server/federated-locks.ts`) is merged into this branch, so both sides now take the same order; `tests/unit/sso-callback-lock-order.test.ts` (passes locally, 2 of 2) pins the user-then-session order of the two `completeSso` callback transactions in `src/server/sso.ts`, which the other lock-order tests do not execute. The mocked-order unit test `tests/unit/password-reset-lock-order.test.ts` passes locally (6 of 6) and is the check that guards the #41 change: 3 of its 6 tests fail on the previous `flows.ts` (the two exact-sequence tests and the rank test). The two-connection PostgreSQL test `tests/integration/password-reset-lock-order.test.ts` pins the end-to-end protocol (no `40P01`, correct final state) in both directions but, because #45 had already put the user row first, it would also pass on the previous code, so it does not by itself catch a regression of the session-before-account move; it is **not executed** locally and needs CI. No migration, no UI change, no change to private-beta or production acceptance.
+
+## CodeQL triage D: e2e fake servers — 2026-10-11 (Issue #114, part 4/4 of #63)
+
+Status: **implemented on ai/114** (PR #133), awaiting merge.
+
+- CodeQL alerts #5 (stack-trace exposure), #6 (regex injection), #7 (resource exhaustion) and #9 (unvalidated redirect) fixed in `e2e/fakes/provider-server.ts` and `e2e/fakes/ai-server.ts`, with shared helpers in `e2e/fakes/safety.ts`.
+- The Stripe fake's `success_url`/`cancel_url` redirect (part of #9) is dismissed with a written reason: it redirects to the URL the authenticated API caller registered, which `tests/contract/billing.test.ts` relies on.
+- Tests: `tests/contract/codeql-fakes.test.ts`. Notes and the size exception: [`docs/security/codeql-triage-fakes.md`](../security/codeql-triage-fakes.md).
+- No e2e-army test: internal to test doubles, no user-facing flow.
+
+## Branch maintenance — 2026-10-03
+
+Status: **merged into main** by [PR #20](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/20) (merge `db4b590`, final head `050407f`), built first on `claude/ci-trim-20261003` and the stacked `claude/ci-gate-always-report` (issues #22, #23).
+
+What it changed: bare worktree names select only managed lanes and `pnpm wt add` rejects non-bare names (`feat/x`, `../../sibling`; `--branch` for slashed branches); worktree path comparisons fold case on Windows; root code/config files require documentation; `docs-not-needed` needs a non-empty same-line `Docs not needed because: <reason>` body entry (placeholder rejected; body edits rerun the check); a PR file list of 3000 or more and a push comparison of 300 or more (GitHub's caps) count as code, the latter with a `::warning::`. Gate reports a real `gate` for every non-draft PR event, push and dispatch: no `paths-ignore` or `labeled` trigger, a `changes` job (`scripts/ci/changed-scope.mjs`) lets docs-only changes skip the test jobs, the full tier starts only from `workflow_dispatch tier=full`, actions are pinned by SHA (Node 24) and runners to `ubuntu-24.04`. See the [developer guide](../DEVELOPER_GUIDE.md#ci-gate).
+
+Verification: unit/fixture tests (`worktree-script`, `docs-check-script`, `changed-scope`, `ci-workflows`) and the [pre-merge local validation](../../artifacts/phase-4/ci-trim-defects/VALIDATION.md) (written while the work was uncommitted). Live: the full-tier `workflow_dispatch` run [37137969499](https://github.com/AbdelrhmanAh7/FlowLine_Web/actions/runs/37137969499) on `050407f` passed all jobs, including the upgraded `pnpm/action-setup` v6 and `actions/setup-node` v7. No other live run is recorded here, and real worktree removal is unverified (tests mock Git/filesystem). This does not establish beta readiness.
+
+### Toolchain & CI update — Node 24 (Issue #74)
+
+Status: **implemented on ai/74**, awaiting PR merge.
+
+What it changed:
+- CI composite setup action (`.github/actions/setup-gate/action.yml`) updated to `node-version: 24` and code-sandbox pull updated to `node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`.
+- `package.json` `engines.node` aligned to `24.x`.
+- `Dockerfile` base image aligned to `node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20`.
+- `src/server/code-sandbox.ts` default `SANDBOX_IMAGE` aligned to `node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`.
+- Release input policy unit test (`tests/unit/release-input-policy.test.ts`) updated to enforce Node 24 across package support, CI setup, Dockerfile base and sandbox image.
+- Verification: unit tests (97 files, 1,247 tests), contract tests (23 files, 468 tests), linting, TypeScript typechecking, and Next.js production build all pass cleanly on Node 24. Live CI pipeline verification occurs on PR `gate` run.
+
 ## Current execution — 2026-09-30
 
 The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.
@@ -126,3 +292,24 @@ See `BETA_LIMITATIONS.md`:
 - sandbox billing only;
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
+
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
+## Test coverage note: hub route selection (#174)
+
+`tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
+
+## PR #287 local CI repair — 2026-10-16
+
+Merged main `131235b9` into the pilot branch (merge `b5765988`), preserving both NEXT_ACTION entries.
+Main ends at migration 0026; 0027 needs no renumbering. `pnpm db:generate` reports no drift;
+all 28 migrations applied to fresh `flowline_test_pr287_migrations` on localhost:5432,
+and `run.input` is `json`. CI run 38792754200 attempt 2 failed the demo cross-process lock test:
+readiness preceded SIGTERM handler registration. The test now registers cleanup first and
+always terminates/awaits the child in finally. No production lock semantics changed.
+Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 total),
+131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
+for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
+No push, GitHub writes, dependency changes, secrets or permission changes.

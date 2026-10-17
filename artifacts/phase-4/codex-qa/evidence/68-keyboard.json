@@ -1,7 +1,0 @@
-{
-  "before": 3,
-  "after": 3,
-  "addNodeDialog": 0,
-  "runDrawerVisible": false,
-  "value": "{\"greeting\": \"Hello \" & name} / keyboard"
-}

@@ -81,16 +81,21 @@ function stepDataContext(runId: string, nodeId: string, workspaceId: string): Se
   return { table: "run_step", rowId: `${runId}.${contextId(nodeId)}`, workspaceId, provider: "engine", purpose: "step_data" };
 }
 
-/** A finished step's real {input, output}: the encrypted copy when present, else the (redacted) columns. */
-function stepData(s: typeof schema.runStep.$inferSelect, workspaceId: string): { input: unknown; output: unknown } {
+/** Restore raw execution data only with its encrypted redaction context; old data uses the public copy. */
+function stepData(s: typeof schema.runStep.$inferSelect, workspaceId: string, secrets: string[]): { input: unknown; output: unknown } {
   if (s.dataEnc) {
     try {
-      return openSecret<{ input: unknown; output: unknown }>({ ciphertext: s.dataEnc.ciphertext, keyId: s.dataEnc.keyId, legacy: s.dataLegacy }, stepDataContext(s.runId, s.nodeId, workspaceId));
+      const data = openSecret<{ input: unknown; output: unknown; secrets?: unknown }>({ ciphertext: s.dataEnc.ciphertext, keyId: s.dataEnc.keyId, legacy: s.dataLegacy }, stepDataContext(s.runId, s.nodeId, workspaceId));
+      if (Array.isArray(data.secrets) && data.secrets.every((v): v is string => typeof v === "string")) {
+        for (const secret of data.secrets) if (!secrets.includes(secret)) secrets.push(secret);
+        return { input: data.input, output: data.output };
+      }
     } catch {
       /* key rotated away — fall back to what is visible */
     }
   }
-  return { input: s.input, output: s.output };
+  // Legacy encrypted steps lack the secret list: never resurrect raw credentials from them.
+  return { input: redact(s.input), output: redact(s.output) };
 }
 
 export async function processRun(db: Db, runId: string, workerId: string, log: (...a: unknown[]) => void = () => {}) {
@@ -123,10 +128,11 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
 
   // Resume state: finished steps are kept; steps that were running when a worker died are "interrupted".
   const existing = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, runId));
+  const secrets: string[] = [];
   const prior = new Map<string, PriorStep>();
   const interrupted = new Set<string>();
   for (const s of existing) {
-    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], ...stepData(s, run.workspaceId), error: s.error, skipReason: s.skipReason });
+    if (TERMINAL.has(s.status)) prior.set(s.nodeId, { status: s.status as PriorStep["status"], ...stepData(s, run.workspaceId, secrets), error: s.error, skipReason: s.skipReason });
     else if (s.status === "running") interrupted.add(s.nodeId);
   }
   await logEvent(db, { runId, workspaceId: run.workspaceId, type: prior.size || interrupted.size ? "resumed" : "claimed", data: { worker: workerId.split("-").slice(-1)[0], interrupted: [...interrupted] } });
@@ -134,10 +140,10 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
   let reused: Map<string, ReusedStep> | undefined;
   if (run.rerunOfRunId && run.rerunFromNodeId) {
     const prev = await db.select().from(schema.runStep).where(eq(schema.runStep.runId, run.rerunOfRunId));
-    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, stepData(s, run.workspaceId)]));
+    reused = new Map(prev.filter((s) => s.status === "succeeded" || s.status === "reused").map((s) => [s.nodeId, stepData(s, run.workspaceId, secrets)]));
   }
 
-  const hctx: HandlerContext = { db, run, workspace: workspace!, interrupted, secrets: [], path: "", flowStack: [run.flowId], depth: 0 };
+  const hctx: HandlerContext = { db, run, workspace: workspace!, interrupted, secrets, path: "", flowStack: [run.flowId], depth: 0 };
   const ac = new AbortController();
   let cancelRequested = false;
   let timedOut = false;
@@ -205,7 +211,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
           input: redact(s.input ?? null, secrets) as object,
           output: redact(s.output ?? null, secrets) as object,
           // Real values for resume/re-run, encrypted; the redacted columns above are what users see.
-          dataEnc: s.output !== undefined || s.input !== undefined ? encryptSecretV2({ input: s.input ?? null, output: s.output ?? null }, stepDataContext(runId, s.nodeId, run.workspaceId)) : null,
+          dataEnc: s.output !== undefined || s.input !== undefined ? encryptSecretV2({ input: s.input ?? null, output: s.output ?? null, secrets: [...new Set(secrets)] }, stepDataContext(runId, s.nodeId, run.workspaceId)) : null,
           dataLegacy: false,
           error: s.error ? redact(s.error, secrets) : null,
           skipReason: s.skipReason ?? null,
@@ -235,7 +241,7 @@ export async function processRun(db: Db, runId: string, workerId: string, log: (
     }
     const done = await db
       .update(schema.run)
-      .set({ status, output: result.output, error, finishedAt: new Date(), durationMs: (run.durationMs ?? 0) + (Date.now() - t0), lockedBy: null })
+      .set({ status, output: redact(result.output, hctx.secrets), error, finishedAt: new Date(), durationMs: (run.durationMs ?? 0) + (Date.now() - t0), lockedBy: null })
       .where(leased)
       .returning({ id: schema.run.id });
     if (done.length === 0) throw new LeaseLostError(runId);

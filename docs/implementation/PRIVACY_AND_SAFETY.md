@@ -13,6 +13,7 @@ used for analytics or model training by Flowline.
 |---|---|---|---|
 | Account: name, email, email-verified flag, password hash (scrypt via better-auth), OAuth account links | `user`, `account`, `verification` | sign-in | email = personal data; hash never leaves the server |
 | Sessions (token, IP, user agent, expiry) | `session` | stay signed in | yes (token) |
+| Federated MFA pending state and session assurance (hashed cookie/session token, user id, factor/account hashes, destination, provider/workspace authority fences) and the last accepted TOTP time step per user (`totp-step:<user id>`, a step number only) | `verification` | prevent session use before local MFA, reject stale pending sign-ins and refuse replay of an accepted authenticator code at the federated gates | authentication metadata; pending state expires after 10 minutes, assurance at its recorded session expiry, the step marker within 90 seconds of use; no raw TOTP code or pending cookie stored; see [MFA behavior](../security/FEDERATED_MFA.md) |
 | Settings, onboarding choices, locale | `user_settings` | product behaviour | low |
 | Workspaces, members, roles, invitations (email, hashed token) | `workspace`, `workspace_member`, `workspace_invite` | collaboration | email |
 | Workflows and versions (graphs, node configuration, expressions) | `flow`, `flow_version` | the product | may contain business data typed into steps |
@@ -44,7 +45,7 @@ used for analytics or model training by Flowline.
 | Webhook deliveries | 30 days (`FLOWLINE_RETENTION_WEBHOOK_DAYS`) |
 | Audit log | 1 year (`FLOWLINE_RETENTION_AUDIT_DAYS`) |
 | Product telemetry | 180 days (`FLOWLINE_RETENTION_TELEMETRY_DAYS`) |
-| Sessions, verification tokens, OAuth/SSO states | deleted once expired |
+| Sessions, verification tokens, OAuth/SSO states | deleted once expired (an expired federated MFA challenge is first recorded as an `expired` failure audit, see `docs/security/FEDERATED_MFA.md`) |
 | Database backups | `BACKUP_RETENTION_DAYS` (default 14 days) on the beta host |
 | Container logs | 5 × 20 MB per service (rotated) |
 

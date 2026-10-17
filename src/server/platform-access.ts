@@ -7,6 +7,7 @@ import { HttpError, notFound } from "./http";
 import { platformAudit } from "./platform-audit";
 import { checkRate } from "./rate-limit";
 import { hotp, TOTP_PERIOD } from "./totp";
+import { hasSessionMfa } from "./federated-mfa";
 
 /**
  * The platform-admin trust boundary (docs/security/CREDENTIALS_DESIGN.md MUST 1–2).
@@ -14,7 +15,7 @@ import { hotp, TOTP_PERIOD } from "./totp";
  * - A separate principal (`platform_admin`, keyed by user id), checked against the DB on EVERY request.
  * - Session cookies only: any request carrying an Authorization header (workspace API keys) is refused.
  * - Everyone who isn't an active admin gets 404 — the panel's existence isn't confirmed.
- * - Admins additionally need a verified email, an enrolled TOTP authenticator and a session ≤ 24 h old.
+ * - Admins additionally need a verified email, an enrolled TOTP authenticator, session-bound MFA assurance and a session ≤ 24 h old.
  * - Writes need a step-up: a TOTP code verified in the last 10 minutes, bound to the SHA-256 of THIS session's token.
  *   Workspace SSO never satisfies it (TOTP only).
  */
@@ -54,8 +55,8 @@ async function denied(userId: string | null, label: string, reason: string) {
 }
 
 /**
- * Resolves the current platform admin or throws 404. `allowUnenrolled` is never used by panel routes; it exists for
- * the setup flow, which runs BEFORE the admin row exists.
+ * Resolves the current platform admin or throws. Setup runs through its separate
+ * enrollment flow before the admin row exists; panel routes require MFA assurance.
  */
 export async function requirePlatformAdmin(req?: Request): Promise<PlatformAdminContext> {
   const h = await requestHeaders(req);
@@ -69,6 +70,7 @@ export async function requirePlatformAdmin(req?: Request): Promise<PlatformAdmin
   }
   if (!s.user.emailVerified) throw new HttpError(403, "PLATFORM_EMAIL_UNVERIFIED", "Verify your email address before using the platform panel");
   if (!(await hasVerifiedTotp(s.user.id))) throw new HttpError(403, "PLATFORM_TOTP_REQUIRED", "Enrol an authenticator app before using the platform panel");
+  if (!(await hasSessionMfa(s.session.token, s.user.id))) throw new HttpError(403, "PLATFORM_MFA_REQUIRED", "Sign in again and complete your authenticator challenge");
   if (Date.now() - new Date(s.session.createdAt).getTime() > PANEL_SESSION_MAX_AGE_MS) {
     throw new HttpError(401, "PLATFORM_REAUTH_REQUIRED", "Sign in again to use the platform panel (sessions older than 24 hours are refused)");
   }
@@ -175,4 +177,3 @@ export async function consumeTotpStep(userId: string, step: number): Promise<boo
 export async function dropStepUps(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string) {
   await tx.delete(schema.platformStepup).where(eq(schema.platformStepup.userId, userId));
 }
-

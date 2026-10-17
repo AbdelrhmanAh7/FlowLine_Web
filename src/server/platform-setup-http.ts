@@ -37,12 +37,12 @@ export async function readSetupBody<B>(req: Request, schema: ZodType<B>): Promis
 }
 
 /** A mutation that needs a live setup session (404 without one) and, optionally, the signed-in user. */
-export function setupWrite<B>(schema: ZodType<B>, fn: (ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, body: B, user: { id: string; email: string; emailVerified: boolean } | null) => Promise<unknown>) {
+export function setupWrite<B>(schema: ZodType<B>, fn: (ch: NonNullable<Awaited<ReturnType<typeof setupChallengeFrom>>>, body: B, user: { id: string; email: string; emailVerified: boolean; sessionToken: string; sessionExpiresAt: Date } | null) => Promise<unknown>) {
   return route(async (req: Request) => {
     const ch = await setupChallengeFrom(req);
     if (!ch) throw notFound();
     const body = await readSetupBody(req, schema);
     const s = await auth.api.getSession({ headers: await requestHeaders(req) }).catch(() => null);
-    return setupSecured(jsonNoStore(await fn(ch, body, s ? { id: s.user.id, email: s.user.email, emailVerified: s.user.emailVerified } : null)));
+    return setupSecured(jsonNoStore(await fn(ch, body, s ? { id: s.user.id, email: s.user.email, emailVerified: s.user.emailVerified, sessionToken: s.session.token, sessionExpiresAt: s.session.expiresAt } : null)));
   });
 }

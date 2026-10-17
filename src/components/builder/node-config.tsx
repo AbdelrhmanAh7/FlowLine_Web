@@ -11,6 +11,7 @@ import { checkCron } from "@/engine/validate";
 import { useT } from "@/i18n/client";
 import { intlLocale } from "@/i18n/config";
 import { detailText } from "@/i18n/engine-text";
+import { apiErrorMessage } from "@/i18n/errors";
 import { actionDescription, actionTitle } from "@/i18n/integration-text";
 import type { MessageKey } from "@/i18n/types";
 import { api, ApiError } from "@/lib/api";
@@ -285,7 +286,7 @@ function FileForm({ node, cfg, set, readOnly }: FormProps) {
       await qc.invalidateQueries({ queryKey: ["files", workspace.id] });
       set({ fileId: b.file.id });
     } catch (e) {
-      setUploadError((e as Error).message);
+      setUploadError(apiErrorMessage(t, e, t("config.file.uploadFailed")));
     }
   };
   return (

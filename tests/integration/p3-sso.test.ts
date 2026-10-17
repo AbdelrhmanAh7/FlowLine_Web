@@ -10,15 +10,22 @@ import { completeSso, getSsoConfig, saveSsoConfig, ssoSessionCookie, startSso } 
 import { createWorkspace } from "@/server/workspaces";
 import { startFakeProviders } from "../../e2e/fakes/provider-server";
 import { addMember, closeDb, expectHttpError, makeUser, unique } from "./helpers";
+import { sessionFor } from "./platform-helpers";
+import { confirmSsoLink } from "@/server/sso-link";
+import { consumeMailboxLink, proveSsoMailbox } from "./federation-fixture";
 
 const CLIENT_ID = "flowline-test";
 const CLIENT_SECRET = "sso-test-secret-not-logged";
 const DOMAIN = "flowline.test";
+const PASSWORD = "sso-owner-password-123";
+const previousBetaMode = process.env.FLOWLINE_BETA_MODE;
 
 let fake: Awaited<ReturnType<typeof startFakeProviders>>;
 let issuer: string;
 
 beforeAll(async () => {
+  // These SSO journeys test explicitly open registration; missing config must fail closed.
+  process.env.FLOWLINE_BETA_MODE = "open";
   fake = await startFakeProviders();
   process.env.FLOWLINE_ENV = "test";
   process.env.FLOWLINE_EGRESS_ALLOWLIST = `${process.env.FLOWLINE_EGRESS_ALLOWLIST ?? ""},127.0.0.1:${fake.port},localhost:${fake.port}`;
@@ -26,6 +33,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (previousBetaMode === undefined) delete process.env.FLOWLINE_BETA_MODE;
+  else process.env.FLOWLINE_BETA_MODE = previousBetaMode;
   await fake.close();
   await closeDb();
 });
@@ -55,14 +64,36 @@ async function workspaceWithSso(opts: { defaultRole?: "viewer" | "editor" | "own
 }
 
 /** Drives the whole redirect flow: start → fake authorize → complete. */
-async function runSignIn(slug: string, opts: { user?: CurrentUser | null; email?: string } = {}) {
-  const { url, state } = await startSso({ slug, email: opts.email, user: opts.user === undefined ? null : opts.user });
+async function runSignIn(slug: string, opts: { user?: CurrentUser | null; email?: string; confirmLink?: boolean } = {}) {
+  const session = opts.user ? await sessionFor(opts.user) : undefined;
+  const { url, state } = await startSso({ slug, email: opts.email, user: opts.user === undefined ? null : opts.user, sessionToken: session?.token });
   const res = await fetch(url, { redirect: "manual" });
   expect(res.status).toBe(302);
   const loc = new URL(res.headers.get("location")!);
   const code = loc.searchParams.get("code");
   expect(code).toBeTruthy();
-  return completeSso({ state, code: code! });
+  const result = await completeSso({ state, code: code!, sessionToken: session?.token });
+  if (opts.confirmLink && result.linkRequired && session) {
+    await proveSsoMailbox(result.linkRequired, session);
+    await confirmSsoLink(result.linkRequired, session.token, { password: PASSWORD });
+    return runSignIn(slug);
+  }
+  return result;
+}
+
+/** Legitimate SSO identities start with independent Flowline mailbox ownership. */
+async function registerAndLink(ws: { id: string; slug: string }, email: string, role: "viewer" | "editor" | "owner" = "editor") {
+  const signup = await auth.api.signUpEmail({ body: { email, name: "SSO member", password: PASSWORD } });
+  expect(signup.token).toBeNull();
+  await consumeMailboxLink(email);
+  await addMember(ws.id, signup.user.id, role);
+  await setFakeUser(email);
+  return runSignIn(ws.slug, { user: signup.user, confirmLink: true });
+}
+
+async function enableSso(owner: CurrentUser, ws: { id: string; slug: string }) {
+  await runSignIn(ws.slug, { user: owner });
+  return saveSsoConfig(owner, ws.id, { issuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
 }
 
 /** Proves the issued cookie is accepted by better-auth's own session lookup. */
@@ -89,7 +120,9 @@ describe("sso configuration", () => {
     await setFakeUser(`zitadel-${randomUUID().slice(0, 8)}@${DOMAIN}`);
     const result = await runSignIn(ws.slug, { user: owner });
     expect(result.testSignIn).toBe(true);
-    expect(result.newUser).toBe(true);
+    expect(result.newUser).toBe(false);
+    expect(result.configurationVerified).toBe(true);
+    expect(result.sessionToken).toBe("");
     expect((await getSsoConfig(owner, ws.id))?.verifiedAt).not.toBeNull();
     await saveSsoConfig(owner, ws.id, { issuer: `${fake.url}/zitadel`, provider: "zitadel", clientId: "flowline@tenant", domains: [DOMAIN], defaultRole: "viewer", enabled: true });
   });
@@ -149,17 +182,32 @@ describe("sso configuration", () => {
 });
 
 describe("sso sign-in", () => {
-  it("happy path: test sign-in verifies the config, creates the user with the default role, and the cookie is a real better-auth session", async () => {
+  it("happy path: the owner verifies configuration without provisioning an identity; a mailbox-confirmed member gets the default role and a real session", async () => {
     const { owner, ws } = await workspaceWithSso({ defaultRole: "editor" });
     const email = `ada-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await setFakeUser(email);
 
     // A non-owner can't even start while SSO is disabled; the owner runs the test sign-in.
     await expectHttpError(startSso({ slug: ws.slug, user: null }), 400, "SSO_NOT_CONFIGURED");
-    const result = await runSignIn(ws.slug, { user: owner });
-    expect(result.newUser).toBe(true);
-    expect(result.newMember).toBe(true);
-    expect(result.testSignIn).toBe(true);
+    const tested = await runSignIn(ws.slug, { user: owner });
+    expect(tested.newUser).toBe(false);
+    expect(tested.newMember).toBe(false);
+    expect(tested.testSignIn).toBe(true);
+    expect(tested.configurationVerified).toBe(true);
+    expect(tested.sessionToken).toBe("");
+    expect(await db.select().from(schema.user).where(eq(schema.user.email, email))).toHaveLength(0);
+    await saveSsoConfig(owner, ws.id, { issuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
+    const linked = await registerAndLink(ws, email);
+    // A prior approved binding cannot undo an owner's removal of membership.
+    await db.delete(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, linked.user.id)));
+    await expectHttpError(runSignIn(ws.slug), 403, "SSO_LINK_INVALID");
+    expect(await membership(ws.id, linked.user.id)).toBeNull();
+    // Explicitly re-granting access restores sign-in and preserves that role.
+    await addMember(ws.id, linked.user.id, "editor");
+    const result = await runSignIn(ws.slug);
+    expect(result.newUser).toBe(false);
+    expect(result.newMember).toBe(false);
+    expect(result.testSignIn).toBe(false);
 
     const [cfg] = await db.select().from(schema.ssoConfig).where(eq(schema.ssoConfig.workspaceId, ws.id));
     expect(cfg!.verifiedAt).not.toBeNull();
@@ -182,11 +230,11 @@ describe("sso sign-in", () => {
     expect(enabled.enabled).toBe(true);
     expect(enabled.verifiedAt).not.toBeNull();
 
-    // An SSO-created user signs in again → the same account (linked by IdP subject), keeping a changed role.
+    // A mailbox-confirmed SSO user signs in again → the same account, keeping a changed role.
     const email = `carol-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await setFakeUser(email);
-    const first = await runSignIn(ws.slug, { user: null });
-    expect(first.newUser).toBe(true);
+    const first = await registerAndLink(ws, email);
+    expect(first.newUser).toBe(false);
     await db.update(schema.workspaceMember).set({ role: "viewer" }).where(and(eq(schema.workspaceMember.workspaceId, ws.id), eq(schema.workspaceMember.userId, first.user.id)));
     const again = await runSignIn(ws.slug, { user: null });
     expect(again.user.id).toBe(first.user.id);
@@ -200,6 +248,7 @@ describe("sso sign-in", () => {
     const { owner, ws } = await workspaceWithSso();
     await setFakeUser(`founder-${randomUUID().slice(0, 8)}@${DOMAIN}`);
     await runSignIn(ws.slug, { user: owner });
+    await saveSsoConfig(owner, ws.id, { issuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
 
     // A pre-existing (password) user, even a member of this workspace, with a mixed-case email.
     const email = `Bob-${randomUUID().slice(0, 8)}@${DOMAIN}`;
@@ -211,12 +260,13 @@ describe("sso sign-in", () => {
     await expectHttpError(runSignIn(ws.slug, { user: owner }), 409, "SSO_ACCOUNT_EXISTS");
     expect(await db.select().from(schema.session).where(eq(schema.session.userId, bobId))).toHaveLength(sessionsBefore);
 
-    // A user created by workspace A's IdP can't be claimed by workspace B's IdP asserting the same email.
+    // A user confirmed under workspace A's IdP can't be claimed by workspace B's IdP asserting the same email.
     const userEmail = `dora-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await setFakeUser(userEmail);
-    const a = await runSignIn(ws.slug, { user: owner });
+    const a = await registerAndLink(ws, userEmail);
     const other = await workspaceWithSso();
-    await expectHttpError(runSignIn(other.ws.slug, { user: other.owner }), 409, "SSO_ACCOUNT_EXISTS");
+    await enableSso(other.owner, other.ws);
+    await expectHttpError(runSignIn(other.ws.slug), 409, "SSO_ACCOUNT_EXISTS");
     expect(await membership(other.ws.id, a.user.id)).toBeNull();
   });
 
@@ -224,8 +274,8 @@ describe("sso sign-in", () => {
     const { owner, ws } = await workspaceWithSso();
     const email = `linked-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await setFakeUser(email);
-    const linked = await runSignIn(ws.slug, { user: owner }); // creates + links the user under issuer #1
-    await saveSsoConfig(owner, ws.id, { issuer, clientId: CLIENT_ID, domains: [DOMAIN], defaultRole: "editor", enabled: true });
+    await enableSso(owner, ws);
+    const linked = await registerAndLink(ws, email);
     expect((await runSignIn(ws.slug, { user: null })).user.id).toBe(linked.user.id);
 
     // The owner re-points SSO at another IdP (same fake, different issuer identity) that asserts the same subject.
@@ -241,14 +291,16 @@ describe("sso sign-in", () => {
     expect(await db.select().from(schema.session).where(eq(schema.session.userId, linked.user.id))).toHaveLength(sessionsBefore);
   });
 
-  it("the account holder can link their existing account by starting SSO while signed in", async () => {
+  it("the account holder can link their existing account only after explicit confirmation while signed in", async () => {
     const { owner, ws } = await workspaceWithSso();
-    // The owner's own email is in the SSO domain: their test sign-in links (not forks) their account.
+    // The owner's own email is in the SSO domain: verification tests never link implicitly.
     const [ownerRow] = await db.select().from(schema.user).where(eq(schema.user.id, owner.id));
     const ownerEmail = `owner-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await db.update(schema.user).set({ email: ownerEmail }).where(eq(schema.user.id, ownerRow!.id));
+    owner.email = ownerEmail;
     await setFakeUser(ownerEmail);
-    const linked = await runSignIn(ws.slug, { user: owner });
+    await enableSso(owner, ws);
+    const linked = await runSignIn(ws.slug, { user: owner, confirmLink: true });
     expect(linked.user.id).toBe(owner.id);
     expect(linked.newUser).toBe(false);
     expect((await membership(ws.id, owner.id))!.role).toBe("owner");
@@ -260,10 +312,11 @@ describe("sso sign-in", () => {
   it("refuses a replayed or expired state", async () => {
     const { owner, ws } = await workspaceWithSso();
     await setFakeUser(`ada-${randomUUID().slice(0, 8)}@${DOMAIN}`);
-    const { url, state } = await startSso({ slug: ws.slug, user: owner });
+    const session = await sessionFor(owner);
+    const { url, state } = await startSso({ slug: ws.slug, user: owner, sessionToken: session.token });
     const res = await fetch(url, { redirect: "manual" });
     const code = new URL(res.headers.get("location")!).searchParams.get("code")!;
-    await completeSso({ state, code });
+    await completeSso({ state, code, sessionToken: session.token });
     await expectHttpError(completeSso({ state, code }), 400, "SSO_STATE_INVALID");
 
     const second = await startSso({ slug: ws.slug, user: owner });
@@ -315,7 +368,9 @@ describe("sso sign-in", () => {
     const { owner, ws } = await workspaceWithSso();
     const email = `route-${randomUUID().slice(0, 8)}@${DOMAIN}`;
     await setFakeUser(email);
-    const { url, state } = await startSso({ slug: ws.slug, user: owner });
+    await enableSso(owner, ws);
+    await registerAndLink(ws, email);
+    const { url, state } = await startSso({ slug: ws.slug, user: null });
     const authRes = await fetch(url, { redirect: "manual" });
     const code = new URL(authRes.headers.get("location")!).searchParams.get("code")!;
 

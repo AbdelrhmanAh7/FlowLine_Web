@@ -8,7 +8,8 @@ import { db, schema } from "@/db";
  *   - the email has a pending, unexpired workspace invitation;
  *   - a valid beta access code is supplied with the sign-up (consumed atomically);
  *   - the email is on the FLOWLINE_BETA_ADMINS allowlist.
- * Existing users can always sign in. Any other mode (default "open") keeps sign-up open (dev/test/local staging).
+ * Existing users can always sign in. Only explicit "open" keeps sign-up open (dev/test/local staging).
+ * Missing or malformed configuration defaults to invitation-only and logs a configuration error.
  */
 export type BetaMode = "open" | "invite_only";
 
@@ -18,6 +19,7 @@ export type BetaMode = "open" | "invite_only";
  * Outside FLOWLINE_ENV=test the cookie is ignored.
  */
 export const TEST_BETA_COOKIE = "fl_test_beta_mode";
+let lastInvalidConfig: string | undefined;
 
 /** The beta mode for this request. `headers` only matters on the test stack (see TEST_BETA_COOKIE). */
 export function betaMode(headers?: Headers | null): BetaMode {
@@ -25,7 +27,18 @@ export function betaMode(headers?: Headers | null): BetaMode {
     const m = /(?:^|;\s*)fl_test_beta_mode=(open|invite_only)(?:;|$)/.exec(headers.get("cookie") ?? "");
     if (m) return m[1] as BetaMode;
   }
-  return process.env.FLOWLINE_BETA_MODE === "invite_only" ? "invite_only" : "open";
+  const configured = process.env.FLOWLINE_BETA_MODE;
+  if (configured === "invite_only" || configured === "open") {
+    lastInvalidConfig = undefined;
+    return configured;
+  }
+  const invalidConfig = JSON.stringify([process.env.FLOWLINE_ENV, configured]);
+  if (lastInvalidConfig !== invalidConfig) {
+    // Do not print arbitrary environment values; emit once per changed invalid configuration.
+    console.error("[config] FLOWLINE_BETA_MODE is missing or invalid; defaulting to invite_only. Set invite_only or open explicitly.");
+    lastInvalidConfig = invalidConfig;
+  }
+  return "invite_only";
 }
 
 /** Beta support channels shown in the user menu (P4-14). Unset values render as disabled items with a reason. */

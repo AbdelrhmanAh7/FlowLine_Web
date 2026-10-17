@@ -1,11 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { latestEmail, PASSWORD, setupUser, signUpVerified, uniqueEmail } from "./helpers";
+import { AR_STATE } from "../playwright.config";
 
 /**
  * Arabic-first (Phase 4): with no `fl_locale` cookie the app is Arabic and right-to-left. The rest of the suite
- * runs in English via the config's storageState; these tests start from an empty cookie jar to see the default.
+ * runs in English via the config's storageState; these tests omit the locale cookie to see the default.
  */
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: AR_STATE });
 
 async function expectArabic(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");

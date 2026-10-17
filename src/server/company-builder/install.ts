@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { AgentToolSpec } from "@/db/schema";
@@ -14,6 +13,7 @@ import { audit, userActor } from "@/server/audit";
 import { canonicalJson, sha256Hex } from "@/server/crypto";
 import { testFeaturesEnabled } from "@/server/faults";
 import { HttpError, notFound } from "@/server/http";
+import { insertRetainedFile } from "@/server/retained-files";
 import { requireBlueprint } from "./blueprints";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -151,10 +151,7 @@ export async function install(user: CurrentUser, workspaceId: string, blueprintI
         const knowledge = await step(task, "knowledge", sha256Hex(`knowledge:${info}`), async (tx) => {
           const bytes = Buffer.from(info, "utf8");
           const name = tKey(t, "companyBuilder.knowledgeName", "Approved customer answers").slice(0, 120);
-          const [file] = await tx
-            .insert(schema.fileObject)
-            .values({ workspaceId, name, mime: "text/plain", size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), data: bytes, createdBy: user.id })
-            .returning({ id: schema.fileObject.id });
+          const file = await insertRetainedFile(tx, { workspaceId, name, mime: "text/plain", data: bytes, createdBy: user.id });
           const [src] = await tx.insert(schema.knowledgeSource).values({ workspaceId, name, kind: "text", fileId: file!.id, mime: "text/plain", size: bytes.length, status: "pending", createdBy: user.id }).returning({ id: schema.knowledgeSource.id });
           await tx.execute(sql`select pg_notify('flowline_runs', 'knowledge')`);
           return { refId: src!.id, baseRevision: null };

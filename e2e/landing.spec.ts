@@ -425,3 +425,20 @@ for (const locale of ["en", "ar"] as const) {
     }
   });
 }
+
+test.describe("landing hero and main CTA", () => {
+  test("the hero's secondary button scrolls to the flow demo", async ({ page, context }) => {
+    await context.addCookies([{ name: "fl_locale", value: "en", url: BASE_URL }]);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.locator("#product").getByRole("link", { name: "Explore a workflow ↓", exact: true }).click();
+    await expect(page).toHaveURL(/[?]section=flow-demo$/);
+    await expect(page.locator("#flow-demo")).toBeInViewport();
+  });
+
+  test("the hero's main CTA opens sign-up", async ({ page, context }) => {
+    await context.addCookies([{ name: "fl_locale", value: "en", url: BASE_URL }]);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.locator("#product").getByRole("link", { name: "Start building — free", exact: true }).click();
+    await expect(page).toHaveURL(/\/sign-up$/);
+  });
+});

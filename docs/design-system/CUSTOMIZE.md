@@ -33,7 +33,7 @@ Status and node-category colors are separate semantic roles: `SEMANTIC.dark.succ
 
 ## Regenerate and review
 
-Run focused local checks while developing. GitHub Actions runs the fast gate on PRs and the full gate before changes reach `main`; see the [developer guide](../DEVELOPER_GUIDE.md#verification-and-handoff) for how to read results and rerun a tier.
+Run focused local checks while developing. GitHub Actions runs the fast gate on PRs and pushes to `main`, and the full gate when dispatched on the final candidate; see the [developer guide](../DEVELOPER_GUIDE.md#verification-and-handoff) for how to read results and rerun a tier.
 
 After editing `src/design/tokens.ts`, run `pnpm tokens`. This rewrites both generated files. Then run the targeted token test and the normal source checks:
 

@@ -21,7 +21,7 @@ Read, in this order, before changing anything:
   docs/company-builder/VALIDATION_REPORT.md (§10 = latest round), artifacts/company-builder/BUGS.md.
 
 ## 1. Local setup
-- Node 22, pnpm 10, Docker (browser tests run in mcr.microsoft.com/playwright:v1.63.0-noble).
+- Node 24, pnpm 10, Docker (browser tests run in mcr.microsoft.com/playwright:v1.63.0-noble).
 - Postgres 16 on 127.0.0.1:5433 with databases `flowline` and `flowline_test`; the role needs CREATEDB (the gate
   creates flowline_test_s1..4 and flowline_test_e2.. for its shards and stacks).
 - pnpm install --frozen-lockfile
@@ -31,7 +31,7 @@ Read, in this order, before changing anything:
 
 ## 2. Gates (owner decision 2026-10-01, written in AGENTS.md)
 - Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test` while developing. CI runs the fast
-  tier for PRs not targeting main and pushes to main; PRs targeting main run the full tier. Use `pnpm gate` locally
+  tier for PRs and pushes to main; the full tier runs only from a `tier=full` dispatch. Use `pnpm gate` locally
   only when explicitly needed. CI logs and `summary.json` are uploaded as artifacts; local gate output is written
   under `artifacts/gates/` (git-ignored).
 - Skipped or flaky tests are failures. Never delete an assertion, loosen a timeout, or change a baseline to get green.

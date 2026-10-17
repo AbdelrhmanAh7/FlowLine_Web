@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { HttpError } from "@/server/http";
 import { completeSso, SSO_STATE_COOKIE, ssoSessionCookie } from "@/server/sso";
+import { auth } from "@/lib/auth";
+import { SSO_LINK_COOKIE } from "@/server/sso-link";
+import { FEDERATED_MFA_COOKIE, federatedCookieOptions } from "@/server/federated-mfa";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +25,44 @@ export async function GET(req: Request) {
   const bound = req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(`${SSO_STATE_COOKIE}=`))?.slice(SSO_STATE_COOKIE.length + 1);
   if (!bound || bound !== state) return fail("This sign-in was started in a different browser — start again");
   try {
-    const result = await completeSso({ state, code });
+    const session = await auth.api.getSession({ headers: req.headers });
+    const result = await completeSso({ state, code, sessionToken: session?.session.token });
+    if (result.mfaRequired) {
+      const res = NextResponse.redirect(`${base}/auth/step-up`);
+      res.cookies.set(FEDERATED_MFA_COOKIE, result.mfaRequired, federatedCookieOptions());
+      // An ambient older session must not mask the pending factor in this browser.
+      const cookie = await ssoSessionCookie("");
+      res.cookies.set(cookie.name, "", { ...cookie.options, maxAge: 0 });
+      res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
+      res.headers.set("cache-control", "no-store");
+      res.headers.set("referrer-policy", "no-referrer");
+      return res;
+    }
+    if (result.configurationVerified) {
+      const res = NextResponse.redirect(`${base}/w/${result.slug}/settings?tab=sso`);
+      res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
+      res.headers.set("cache-control", "no-store");
+      res.headers.set("referrer-policy", "no-referrer");
+      return res;
+    }
+    if (result.linkRequired) {
+      const res = NextResponse.redirect(`${base}/sso/link`);
+      res.cookies.set(SSO_LINK_COOKIE, result.linkRequired, { httpOnly: true, sameSite: "lax", secure: base.startsWith("https:"), path: "/", maxAge: 600 });
+      res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
+      res.headers.set("cache-control", "no-store");
+      res.headers.set("referrer-policy", "no-referrer");
+      return res;
+    }
     const res = NextResponse.redirect(`${base}/w/${result.slug}/flows`);
     const cookie = await ssoSessionCookie(result.sessionToken);
     res.cookies.set(cookie.name, cookie.value, cookie.options);
     res.cookies.set(SSO_STATE_COOKIE, "", { path: "/api/sso", maxAge: 0 });
     return res;
   } catch (e) {
+    if (e instanceof HttpError && e.code === "SSO_LINK_INVALID") return fail("auth.ssoLinkError");
+    if (e instanceof HttpError && e.code === "SSO_STATE_INVALID") return fail("auth.ssoRestart");
+    if (e instanceof HttpError && e.code === "SSO_ACCOUNT_EXISTS") return fail("auth.ssoAccountExists");
+    if (e instanceof HttpError && e.code === "SSO_EMAIL_OWNERSHIP_REQUIRED") return fail("auth.ssoOwnershipRequired");
     return fail(e instanceof HttpError ? e.message : "SSO sign-in couldn't be completed");
   }
 }

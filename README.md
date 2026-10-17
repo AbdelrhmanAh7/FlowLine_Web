@@ -14,7 +14,7 @@ Arabic is the default language (RTL), with English as a secondary language throu
 - **Triggers:** manual, webhook (signed, deduplicated, replay-safe), schedule, and an authenticated API (`/api/v1`,
   scoped API keys).
 - **Integrations:** Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion,
-  PostgreSQL and Linear. They come with OAuth or API-key connections, encrypted credentials, private connections, and
+  PostgreSQL, Linear and Mizano (overdue invoices, customer and draft quote creation; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections, and
   repair and revocation handling. Per-workspace owners can also override the OAuth app used for a provider
   (Settings → OAuth apps).
 - **AI hub:** cloud-only, multi-provider. Each workspace brings its own keys in **Settings → AI Providers** — never
@@ -33,16 +33,19 @@ Arabic is the default language (RTL), with English as a secondary language throu
   - **Copilot:** you describe a flow, and it produces a validated proposal and diff, saved as a draft only after you
     approve. It never runs anything. Quality is **experimental** — see Status.
 - **Platform admin (`/admin`):** a separate admin principal (TOTP sign-in, and a fresh authenticator code — step-up, valid 10 minutes — before writes) where
-  operators enter Flowline's own service credentials in the UI — OAuth apps (Google/Slack/GitHub), sign-in apps,
-  email provider, and Paddle billing — instead of environment variables. See `docs/security/CREDENTIALS_DESIGN.md`.
+  operators enter Flowline's own service credentials in the UI — OAuth apps (Google/Slack/GitHub), sign-in apps
+  (platform ZITADEL: see Requirements), email provider, and Paddle billing — instead of environment variables. See `docs/security/CREDENTIALS_DESIGN.md`.
 - **Collaboration:** invites, owner/editor/viewer roles (one permission matrix, enforced server-side), sharing a copy
   without credentials, version history, rollback, and an audit log.
+- **Company Builder:** outcome-first interview, reviewed plan, draft installation and sample trials at
+  `/w/<slug>/company`, enabled only with `FLOWLINE_COMPANY_BUILDER=on` (off by default). The first slice uses
+  sample customer follow-up data; it does not implement live Gmail read/send. See `docs/company-builder/REPORT.md`.
 - **Private beta:** invitation-only sign-up (`FLOWLINE_BETA_MODE=invite_only`), required email verification on every
   sign-up path, and Arabic-first RTL UI with English secondary.
 - **Operations:**
   - A usage ledger (tokens, cost, executions, agent steps) with budgets and plan caps.
   - Billing through Paddle (Merchant of Record), **sandbox only**; live keys and tokens are refused. Stripe remains
-    only as a customer workflow integration.
+    as a customer workflow integration; a legacy Stripe test billing adapter also remains in the code.
   - OIDC SSO per workspace.
   - Health reporting (revision and schema version), a release image, a staging/beta stack, and scripts for
     backup/restore and rollback.
@@ -52,22 +55,27 @@ Arabic is the default language (RTL), with English as a secondary language throu
 | Area | State |
 |---|---|
 | Phases 1–3 | Delivered. Details: [`SCOPE_MATRIX.md`](SCOPE_MATRIX.md) |
-| Phase 4 (private beta) | Core implementation done and gated. Verdicts: CODE COMPLETE **PASS** · BETA INFRA VERIFIED **BLOCKED** · PRIVATE BETA READY **NO** · PUBLIC PRODUCTION APPROVED **NO**. Details: [`docs/implementation/PHASE4_BETA_REPORT.md`](docs/implementation/PHASE4_BETA_REPORT.md) |
-| AI provider hub | Core implementation **DONE** (contract-tested against protocol-accurate test doubles). **LIVE CLOUD VERIFICATION IS BLOCKED**: no owner API keys have been entered through the UI and no spend budget is approved, so every real-provider call, all 5 protocol adapters, routing over priced routes, and key verification are **NOT RUN**. Details: [`docs/ai/AI_HUB_REPORT.md`](docs/ai/AI_HUB_REPORT.md) |
-| Copilot | **EXPERIMENTAL.** Only benchmark to date is the historical local `qwen2.5:7b` run (5/12 vs a target of ≥10/12, predates the AI hub). A hosted-model benchmark (12 frozen cases, EN+AR) is specified but not run, pending an owner-approved budget. |
-| Integrations | Implemented and contract-tested against provider test doubles. PostgreSQL is live-verified (Phase 2). The other 11 (Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, Linear) are **not** live-verified — blocked on dedicated test accounts and OAuth apps. |
+| Phase 4 (private beta) | Historical code gate **PASS** on `e42667d`; not a gate for today's checkout. BETA INFRA VERIFIED **BLOCKED** · PRIVATE BETA READY **NO** · PUBLIC PRODUCTION APPROVED **NO**. Details: [`docs/implementation/PHASE4_BETA_REPORT.md`](docs/implementation/PHASE4_BETA_REPORT.md) |
+| AI provider hub | Core implementation **DONE** (historically contract-tested against protocol-accurate doubles). **LIVE CLOUD VERIFICATION IS BLOCKED**: no live certification evidence is recorded for the 20 connectable providers or 5 protocols; current owner keys/accounts are unverified and the spend cap is `$0`. Details: [`docs/ai/AI_HUB_REPORT.md`](docs/ai/AI_HUB_REPORT.md) |
+| Copilot | **EXPERIMENTAL.** Recorded frozen benchmark: historical local `qwen2.5:7b`, 5/12 vs target ≥10/12. The current hub runner supports the 12 English cases with zero-budget preflight; hosted results and Arabic evaluation remain unverified. See `scripts/diag/copilot-benchmark-hub.mts`. |
+| Integrations | Implemented and contract-tested against provider test doubles. PostgreSQL is live-verified (Phase 2). The other 12 (Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion, Linear, Mizano) are **not** live-verified — blocked on dedicated test accounts and OAuth apps. |
 | Billing | Paddle adapter verified against contract tests and a fake Paddle only. No real Paddle sandbox run yet (needs a sandbox account + client-side token). No live payments. |
-| Private beta readiness | **NOT READY.** Blocked on owner-supplied externals: a domain + VPS for `beta.<domain>`, a real email provider (Resend/Postmark), a Paddle sandbox account, and SaaS test accounts + OAuth apps for live integration certification. |
+| Private beta readiness | **NOT READY.** Host/domain, real email, Paddle sandbox and live integration certification remain unverified. The beta brief prefers the existing owner Pi, subject to exact approval; no paid VPS is authorized and the aggregate spend cap is `$0`. |
 | Public production | **NOT APPROVED.** Owner authorisation only. |
 
-Never presented as live-verified: nothing above claims a real provider, OAuth exchange, or payment has actually run.
+Provider test doubles do not establish live certification. The PostgreSQL result above is historical Phase 2 evidence;
+current owner credentials, live account state and remote CI are unverified in this repository-only pass.
 
 ## Requirements
 
-- Node.js ≥ 22 (developed on 25.6) and pnpm 10 (`npm i -g pnpm@10`; Node 25 no longer ships corepack)
+- Node.js 24.x (`engines` in `package.json`; CI and the release image use Node 24 LTS) and pnpm **10.32.1**
+  (`npm i -g pnpm@10.32.1`), as declared in `package.json`. Next.js **16.3.6**, React **19.3.0**.
 - Docker (PostgreSQL 17, the release image, and the WebKit test runner)
-- No provider credentials in `.env`: AI keys are added per workspace (Settings → AI Providers); OAuth apps, email and
-  Paddle billing are entered through `/admin` after bootstrap (`scripts/admin/bootstrap.mts`).
+- Workspace AI keys go in Settings → AI Providers; service OAuth apps, email and Paddle billing go in `/admin`.
+  Platform ZITADEL sign-in is the exception: it is configured by the complete server-only `ZITADEL_ISSUER`,
+  `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` tuple in `.env`, which takes precedence over the encrypted `/admin`
+  settings. If all three are absent the `/admin` settings apply; a partial or malformed tuple disables ZITADEL with no
+  fallback. See `.env.example` and `docs/DEVELOPER_GUIDE.md`.
 
 ## Quick start (development)
 
@@ -79,14 +87,17 @@ pnpm db:migrate
 pnpm dev                        # web on http://localhost:3000 + worker
 ```
 
-Open http://localhost:3000 and create an account; onboarding creates a workspace and your first flow. The worker
+Open http://localhost:3000, create an account and verify its email before onboarding creates a workspace and your
+first flow. The example selects the local DB outbox; read the verification link from `email_outbox` using
+`docs/implementation/EMAIL_BETA_RUNBOOK.md`. With invitation-only mode, an invitation
+or beta code is also required. The worker
 (`pnpm worker`, started by `pnpm dev`) executes runs. If it isn't running, the app says so and runs wait in the queue.
 
 Use `127.0.0.1` rather than `localhost` in `DATABASE_URL` on Windows + WSL2 + Docker Desktop. The reason is in
 `artifacts/phase-3/p3-15/INVESTIGATION.md`.
 
 To exercise the platform admin panel locally: `node scripts/with-env.mjs .env npx tsx scripts/admin/bootstrap.mts --email <you>`,
-then verify the email and enrol TOTP at `/admin`.
+then redeem the one-time code, verify the email and enrol TOTP at `/admin/setup`.
 
 ## Release image and local staging
 
@@ -98,12 +109,12 @@ FLOWLINE_IMAGE=flowline:<sha> docker compose -f docker-compose.staging.yml --env
 curl http://localhost:3200/api/health      # revision, schemaVersion, db, worker
 ```
 
-One image runs the web app, the worker and migrations (expand-only). Upgrading an existing Phase 4 deployment has a
+Compose uses one image for separate web, worker and one-shot migration services. Upgrading an existing Phase 4 deployment has a
 required order (platform key, admin bootstrap, import, rewrap): `docs/ai/MIGRATION.md`. Release scripts:
 
 | Script | Checks |
 |---|---|
-| `node scripts/release/smoke.mjs` | post-deploy smoke checks |
+| `node scripts/release/smoke.mjs --env .env.staging` | post-deploy smoke checks with verification via the staging DB outbox; alternatively use pre-verified smoke accounts |
 | `node scripts/release/rollback.mjs --from <img> --to <img>` | deploy N+1, roll back to N with no down migrations |
 | `node scripts/release/backup-restore.mjs --image <img>` | pg_dump → a clean PostgreSQL → full verification |
 | `node scripts/release/db-outage.mjs --image <img>` | DB stall and outage behaviour |
@@ -122,23 +133,52 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | Unit | `pnpm test` |
 | Contract (adapters against the provider doubles) | `pnpm test:contract` |
 | Integration (real PostgreSQL, real worker code) | `pnpm test:integration` (refuses to run while a test-stack worker is up: `pnpm stop:test`) |
-| E2E, Chromium + Firefox, dev server (starts the test stack on :3100) | `pnpm test:e2e` (first time: `npx playwright install chromium firefox`) |
+| E2E, Chromium + Firefox + WebKit, dev server (starts the test stack on :3100) | `pnpm test:e2e`; for Chromium + Firefox only: `pnpm test:e2e --project=chromium --project=firefox` (install the selected browsers first with `pnpm exec playwright install chromium firefox`) |
 | E2E against a production build instead of `next dev` | `FLOWLINE_TEST_NEXT=start pnpm test:e2e` (runs `next build` once, then `next start`; recommended for release gates — see `scripts/dev-test.mjs`) |
 | E2E, WebKit (Linux Playwright container; needs `pnpm dev:test` running) | `bash e2e/tools/webkit-docker.sh` |
-| Live (real PostgreSQL; SaaS/AI need real credentials, else BLOCKED) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
+| E2E in natural language (tester-army/e2e, `e2e-army/`; starts the test stack on :3100, or set `E2E_ARMY_URL`; budget 5 min, enforced by `scripts/e2e-army.mjs`, not yet timed in CI) | `pnpm e2e:army` (quick default: smoke shard + top-level `@issue` tests) or `pnpm e2e:army --shard-id core-api`; the model for agent steps is `agy` (Gemini Flash) when it is on `PATH`, or `E2E_ARMY_CLI=agy\|claude`; with none only the locator tests run |
+| Live (real PostgreSQL and SaaS certification; missing SaaS credentials → BLOCKED; no AI suite) | `pnpm test:live`, `pnpm test:live:saas`, `pnpm test:live:dryrun` |
 | Everything except E2E | `pnpm check` |
 
-Gate results and the exact revisions they were run on are recorded in `docs/implementation/PHASE4_BETA_REPORT.md` and
-`docs/ai/AI_HUB_REPORT.md` (no immutable image has been built for the AI hub work yet — gates ran against the local
-test stack and a manually run production build, not a pushed release image).
+The blocking E2E gate for AI pull requests is the `e2e-army` commit status, posted by the hub's verify job: it starts
+the app from the PR branch and runs its FlowLine suite plus up to 8 top-level `e2e-army/*.e2e.ts` files of the branch (`features/` is not
+copied; the hub keeps its own feature suite). A PR that
+changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit (title `@issue-<N> <criterion>`,
+one goal per `agent.act`, checked with `agent.assert` or an exact `expect`; import only `e2e`, `@e2e-dev/web` and node
+built-ins, because the hub copies the file into its runner). Signed-in tests use the `fl-user` session (a verified user
+with a workspace; `/app` opens it), which the hub suite saves and `e2e-army/features/_setup.e2e.ts` saves locally. The
+existing Playwright specs stay as plain tests.
+
+The feature suite is in `e2e-army/features/`: every feature of the hub's feature map (`ops/verify/features/FlowLine_Web.json`)
+has at least one test, titled `[<feature>.<n>]` and tagged `feat:<feature>`, `shard:<shard>`, `lvl:ui|api|job` (`api` and
+`job` tests are request-level, no model). Shards (budget 5 min per shard, enforced by `scripts/e2e-army.mjs`; not yet timed in CI): smoke, core-api, flows-api, runs, triggers, schedule,
+ai-api, platform-api, ui-auth, ui-auth2, ui-flows, ui-builder, ui-settings, ui-ai, ui-admin, ui-misc; run one with
+`pnpm e2e:army --shard-id core-api`. Every PR adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each
+feature its changed files touch, backend-only changes included (they run the feature's api-level shard; waiver: `E2E: not needed — <reason>` in the PR).
+Files no feature claims run the smoke shard and are reported as "feature map gap" until the hub's feature map claims them. The hub's verify job posts the `e2e-army`
+status; the owner adds the GitHub Actions workflow separately (AI PRs do not change `.github/workflows`).
+
+CI in `.github/workflows/gate.yml` runs the fast tier for PRs and pushes to main; the full tier (every Chromium spec,
+Firefox, WebKit) runs only from a manual dispatch with `tier=full` (Actions → Gate → Run workflow). A `changes` job lets
+docs-only changes pass `gate` without the test jobs, and the final `gate` job combines the results (main also requires
+the `docs` check). Every fast-tier job runs on a GitHub-hosted runner with a 5-minute limit; `checks` is split into
+static·unit·contract plus three integration shards on separate runners, and every leg uploads its own gate report (`summary.json` and logs). Use focused checks locally; run `pnpm gate` locally only when explicitly needed. See
+`docs/DEVELOPER_GUIDE.md`.
+Historical gate results and tested revisions are in `docs/implementation/PHASE4_BETA_REPORT.md` and
+`docs/ai/AI_HUB_REPORT.md`; they do not certify the current checkout or a current release image.
 
 ## Security notes
 
+- Request bodies have layered ingress byte/read-time limits and application streaming guards; see
+  [`REQUEST_BODY_LIMITS.md`](docs/security/REQUEST_BODY_LIMITS.md) for route budgets and the unverified hosting boundary.
 - Every server access goes through `src/server/access.ts`: non-members get 404, and missing capabilities get 403.
 - Credentials use a v2 encryption envelope (per-secret data key, AES-256-GCM with AAD, separate key rings for
   platform and workspace secrets); API keys are stored hashed and shown once (`docs/security/CREDENTIALS_DESIGN.md`).
 - Platform admin access requires a dedicated `platform_admin` principal, TOTP, and a session-bound step-up
   (10 minutes) before writes; it is never derived from workspace roles or SSO.
+- Federated sign-in requires an enrolled account's local authenticator before issuing a usable session. All session
+  reads require proof for the current factor; older unassured sessions must sign in again. See
+  [federated MFA and revocation](docs/security/FEDERATED_MFA.md), including the separate API-key contract and pending live validation.
 - Outbound requests go through an SSRF guard (`src/server/egress.ts`), including a per-AI-provider host allowlist.
   AI output is treated as data; tool permissions are enforced by the backend, not by prompts.
 - Independent reviews: `artifacts/phase-3/`, `artifacts/phase-4/`, `artifacts/ai-hub/`.
@@ -154,14 +194,19 @@ src/server         Data access with permission checks; runs, approvals, agents, 
 src/billing        Payment adapter (Paddle, sandbox only), plans, webhooks, reconciliation
 src/integrations   Provider adapters (12) and their registry
 src/ai             AI provider hub: registry, routing, protocols, connections, pricing (src/ai/hub/)
+src/company-builder Interview, plans, task packs and validation; server persistence in src/server/company-builder/
 src/db             Drizzle schema and migration runner
 worker/            Separate execution worker (runs, agents, indexing, schedules)
 drizzle/           SQL migrations (expand-only)
 e2e/               Playwright specs; e2e/fakes = provider-boundary test doubles; e2e/tools = WebKit runner
+e2e-army/          Natural-language tester-army/e2e suite (pnpm e2e:army, config e2e.config.ts); features/ = per-feature suite and the local fl-user session setup
 tests/             Vitest unit, contract, integration, live
 scripts/           Test stack, release (rollback, backup/restore, DB outage), load, admin bootstrap/rewrap, diagnostics
+                   and scripts/demo (landing demo media pipeline: record, master, deliver, manifest, verify)
+tools/demo-video/  Isolated Remotion compositor for the demo media (own lockfile, not a workspace member)
+public/media/demo/ Generated landing demo videos, posters, captions and manifest.json
 docs/              Implementation plans, test plan, AI hub report/providers/routing/migration, security design, releases
-artifacts/         Evidence per phase (test output, screenshots, reviews, release checks)
+artifacts/         Evidence per phase as Markdown reports (raw output is not committed; older raw evidence: tag archive/pre-slimdown-2026-10-10)
 design-reference/  Design slide renders and extracted tokens
 ```
 
@@ -174,3 +219,5 @@ design-reference/  Design slide renders and extracted tokens
 - [`docs/security/CREDENTIALS_DESIGN.md`](docs/security/CREDENTIALS_DESIGN.md) — platform admin panel and credential domains
 - [`NEXT_ACTION.md`](NEXT_ACTION.md) — current resume state and outstanding owner actions
 - [`AGENTS.md`](AGENTS.md) — project rules for contributors and agents
+- [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) — feature workflow, localization, checks and mandatory docs updates
+- [`docs/landing/DEMO_MEDIA.md`](docs/landing/DEMO_MEDIA.md) — regenerating the landing demo videos (`pnpm demo:*`), budgets, manifest contract

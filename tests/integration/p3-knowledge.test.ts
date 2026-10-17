@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { db, schema } from "@/db";
 import { stopSandbox } from "@/engine/sandbox";
+import { createTranslator } from "@/i18n/translate";
+import { knowledgeErrorText } from "@/i18n/knowledge-errors";
 import { addSource, deleteSource, indexNextSource, listSources, reindexSource, searchKnowledge, setEnabled } from "@/server/knowledge";
 import { createWorkspace } from "@/server/workspaces";
 import { makePdf } from "../fixtures/pdf";
@@ -62,6 +64,18 @@ describe("knowledge sources", () => {
     await expectHttpError(addSource(db, user, ws.id, { name: "fake.pdf", kind: "file", mime: "application/pdf", bytes: Buffer.from("not really a pdf") }), 415, "UNSUPPORTED_TYPE");
     await expectHttpError(addSource(db, user, ws.id, { name: "e.txt", kind: "file", mime: "text/plain", bytes: Buffer.alloc(0) }), 400, "EMPTY_SOURCE");
     await expectHttpError(addSource(db, user, ws.id, { name: "big.txt", kind: "file", mime: "text/plain", bytes: Buffer.alloc(5 * 1024 * 1024 + 1, 97) }), 413, "SOURCE_TOO_LARGE");
+  });
+
+  it("persists parser limit codes that the UI translates in both languages", async () => {
+    const { user, ws } = await setup("KnLimit");
+    const source = await addSource(db, user, ws.id, { name: "deep.json", kind: "file", mime: "application/json", bytes: Buffer.from("[".repeat(65) + "0" + "]".repeat(65)) });
+    await indexAll();
+    const failed = await status(source.id);
+    expect(failed).toMatchObject({ status: "failed", error: "KNOWLEDGE_JSON_DEPTH_LIMIT", chunkCount: 0 });
+    expect(knowledgeErrorText(createTranslator("ar"), failed.error!)).toMatch(/[\u0600-\u06ff]/);
+    const english = createTranslator("en");
+    expect(knowledgeErrorText(english, failed.error!)).toBe(english("knowledge.errors.jsonDepthLimit"));
+    expect(await db.select().from(schema.knowledgeChunk).where(eq(schema.knowledgeChunk.sourceId, source.id))).toEqual([]);
   });
 
   it("delete, disable and the agent allow-list take effect immediately; other workspaces never see the content; re-index rebuilds", async () => {

@@ -58,6 +58,10 @@ Anything you can't confirm is **UNKNOWN** and stays unknown in code.
 
 Most providers need no new code. Add quirks where they belong:
 
+- **Shared helpers:** exports in `shared.ts` (request validation, SSE parsing, error mapping and scrubbing,
+  body parsing) have JSDoc blocks documenting their parameters, return values, and thrown or returned `HubError` codes.
+  Read those before reusing a helper in a new adapter.
+
 - **Error mapping:** `shared.ts` `mapProviderError` holds the per-provider codes (`QUOTA_CODES`, `PLAN_CODES`,
   `AUTH_CODES`, …).
   - Out-of-balance is never retryable.
@@ -68,7 +72,7 @@ Most providers need no new code. Add quirks where they belong:
 - **Stream options:** only if documented (`STREAM_USAGE_OPTION` in `openai-chat.ts`).
 
 A genuinely new protocol needs `build`, `parse`, `stream` (SSE accumulator), `endpoint`, and a listing parser. Add it
-to `ADAPTERS` and `IMPLEMENTED_PROTOCOLS` in `protocols/index.ts`, and to the `Protocol` union.
+to `ADAPTERS` and `IMPLEMENTED_PROTOCOLS` in `protocols/index.ts`, and to the `Protocol` union in `registry.ts`.
 
 ## 3. Prices (`src/ai/hub/catalogue.ts`)
 
@@ -107,6 +111,8 @@ The tests exercise the same code as production. Vendor SDKs would bypass all of 
 
 Contract verification is not a live claim.
 
-- `LIVE_VERIFIED` is set per connection only after a real call on an owner-authorised key, with the evidence under
-  `artifacts/ai-hub/live/`.
+- `LIVE_VERIFIED` is a reserved per-connection verification value, not an automatic inference-test result. Current
+  code creates connections as IMPLEMENTED/CONTRACT_VERIFIED and updates key proof after a successful test; it has
+  no automatic promotion to LIVE_VERIFIED. Any future promotion needs an authorized real call and evidence under
+  `artifacts/ai-hub/live/` (an intended output directory, not current live proof).
 - Until then, the UI shows "Contract-tested (not live-verified)".

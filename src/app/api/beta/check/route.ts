@@ -2,6 +2,7 @@ import { z } from "zod";
 import { betaMode, previewSignUp } from "@/server/beta";
 import { checkSharedRate } from "@/server/email/flows";
 import { json, parseBody, route } from "@/server/http";
+import { admitPublicBody, PUBLIC_JSON_MAX_BYTES } from "@/server/public-body";
 
 const body = z.object({ email: z.email().max(254), code: z.string().max(64).nullish() });
 
@@ -12,7 +13,8 @@ const body = z.object({ email: z.email().max(254), code: z.string().max(64).null
  * it can't be used to sweep for invited addresses or guess codes.
  */
 export const POST = route(async (request) => {
-  const input = await parseBody(request, body);
+  await admitPublicBody(request, "beta");
+  const input = await parseBody(request, body, PUBLIC_JSON_MAX_BYTES);
   const mode = betaMode(request.headers);
   if (mode === "open") return json({ allowed: true, mode });
   const email = input.email.trim().toLowerCase();

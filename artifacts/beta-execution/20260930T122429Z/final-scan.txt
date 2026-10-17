@@ -1,4 +1,0 @@
-Final expanded evidence/intended-input scan: 5 current local secret values across 1501 text files, 0 hits.
-Inputs: artifacts plus src, e2e, tests, scripts, worker, drizzle, docs, SCOPE_MATRIX.md, NEXT_ACTION.md.
-git diff --check: exit 0 (line-ending normalization warnings only).
-Limits: actual exposed-key history scan is separately recorded before rotation; binary pixels/compressed/unreachable material not certified. Real index remains empty, no branch commit/publication.

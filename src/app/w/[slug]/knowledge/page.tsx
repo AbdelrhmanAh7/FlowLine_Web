@@ -9,6 +9,7 @@ import { Button, Card, EmptyState, ErrorState, Field, InlineConfirmation, Input,
 import { useT } from "@/i18n/client";
 import { denyReasonText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
+import { knowledgeErrorText } from "@/i18n/knowledge-errors";
 import { dataText } from "@/i18n/workspace-text";
 import { api } from "@/lib/api";
 import { useOnline } from "@/lib/hooks";
@@ -136,7 +137,7 @@ export default function KnowledgePage() {
                       </span>
                       {s.status === "failed" && s.error && (
                         <span role="alert" className="block text-sm text-danger">
-                          {t("knowledge.indexingFailed", { error: s.error })}
+                          {t("knowledge.indexingFailed", { error: knowledgeErrorText(t, s.error) })}
                         </span>
                       )}
                     </span>

@@ -37,6 +37,8 @@ export type AuditAction =
   | "settings.updated"
   | "sso.configured"
   | "sso.signin"
+  | "sso.mfa_failed"
+  | "sso.link_confirmed"
   | "knowledge.deleted"
   | "knowledge.disabled"
   | "agent.version_created"

@@ -312,14 +312,14 @@ export async function importPlatformSecretFromEnv(actor: PlatformActor, purpose:
 }
 
 /** Records a REAL success (a completed Connect / sign-in / delivery / authenticated probe) for exactly that revision. */
-export async function markPlatformSecretVerified(purpose: string, revision: number, via: "connect" | "signin" | "probe" | "send") {
+export async function markPlatformSecretVerified(purpose: string, revision: number, via: "connect" | "signin" | "probe" | "send", secretId?: string) {
   const def = purposeDef(purpose);
   if (!def) return;
   await db.transaction(async (tx) => {
     const changed = await tx
       .update(schema.platformSecret)
       .set({ status: "verified", verifiedRevision: revision, verifiedAt: new Date(), verifiedVia: via, updatedAt: new Date() })
-      .where(and(eq(schema.platformSecret.purpose, def.purpose), eq(schema.platformSecret.revision, revision), sql`${schema.platformSecret.status} <> 'revoked'`, sql`(${schema.platformSecret.status} <> 'verified' or ${schema.platformSecret.verifiedRevision} is distinct from ${revision})`))
+      .where(and(eq(schema.platformSecret.purpose, def.purpose), eq(schema.platformSecret.revision, revision), secretId ? eq(schema.platformSecret.id, secretId) : undefined, sql`${schema.platformSecret.status} <> 'revoked'`, sql`(${schema.platformSecret.status} <> 'verified' or ${schema.platformSecret.verifiedRevision} is distinct from ${revision})`))
       .returning({ id: schema.platformSecret.id });
     if (changed.length) await platformAudit(tx, { actor: { userId: null, label: "system" }, assurance: "system", action: "platform_secret.verified", result: "ok", targetType: "platform_secret", targetId: changed[0]!.id, purpose: def.purpose, newRevision: revision, data: { via } });
   });

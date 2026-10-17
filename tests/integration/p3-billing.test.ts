@@ -279,6 +279,8 @@ describe("billing: same-second webhook ordering", () => {
     await fake.fault({ provider: "stripe", pathPattern: "/v1/subscriptions/", mode: "500" });
     const deleted = await emit({ type: "customer.subscription.deleted", customer: account.customerId, subscription: { id: sub.id }, created: t });
     const res = await postWebhook(deleted.payload, deleted.header);
+    expect(res.status).toBe(503);
+    expect(res.body.received).toBe(false);
     expect(res.body.outcome).toBe("failed");
     const after = (await accountRow(ws.id))!;
     expect(after.status).toBe(pinned.status);
@@ -289,6 +291,7 @@ describe("billing: same-second webhook ordering", () => {
 
     // The fault was one-shot. The redelivery must be reprocessed despite the dedupe row…
     const redelivered = await postWebhook(deleted.payload, deleted.header);
+    expect(redelivered.status).toBe(200);
     expect(redelivered.body.duplicate).toBe(false);
     expect(redelivered.body.outcome).toBe("applied_canonical");
     expect((await accountRow(ws.id))!.status).toBe("canceled");
@@ -297,6 +300,11 @@ describe("billing: same-second webhook ordering", () => {
     const events = await db.select().from(schema.billingEvent).where(eq(schema.billingEvent.id, deleted.id));
     expect(events).toHaveLength(1);
     expect(events[0]!.outcome).toBe("applied_canonical");
+    const auditBeforeDuplicate = await auditRows(ws.id, "billing.subscription_updated");
+    const duplicate = await postWebhook(deleted.payload, deleted.header);
+    expect(duplicate.status).toBe(200);
+    expect(duplicate.body.duplicate).toBe(true);
+    expect(await auditRows(ws.id, "billing.subscription_updated")).toHaveLength(auditBeforeDuplicate.length);
   });
 });
 

@@ -4,6 +4,7 @@ import { getAdapter } from "@/billing/service";
 import { db, schema } from "@/db";
 import { randomToken, sha256Hex } from "@/server/crypto";
 import { HttpError } from "@/server/http";
+import { lockRetainedFileAccounting } from "@/server/retained-files";
 import { sendEmail } from "./index";
 import { safePath } from "./redirect";
 import { renderEmail, requestLocale, type TemplateKind } from "./templates";
@@ -57,18 +58,30 @@ async function sendTemplate(kind: TemplateKind, to: string, link: string, key: s
  * `callbackURL` (verification only): a same-origin path the verify page links to once the email is confirmed — e.g.
  * `/sign-in?next=invite:…` so an invited person lands back on their invitation after signing in.
  */
-export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
+export async function prepareAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
   await checkEmailRate(purpose, user.email, request);
   const token = randomToken(32);
   const [row] = await db.insert(schema.emailToken).values({ tokenHash: sha256Hex(token), userId: user.id, purpose, expiresAt: new Date(Date.now() + lifetime[purpose]) }).returning({ id: schema.emailToken.id });
   const path = purpose === "verify" ? "/verify-email" : purpose === "reset" ? "/reset-password" : "/account/delete";
   const callback = purpose === "verify" ? safePath(opts.callbackURL, "") : "";
   const link = publicUrl(`${path}?token=${encodeURIComponent(token)}${callback && callback !== "/" ? `&callbackURL=${encodeURIComponent(callback)}` : ""}`);
-  try { await sendTemplate(purpose, user.email, link, row!.id, request); }
+  return { id: row!.id, purpose, email: user.email, link };
+}
+
+/** Delivery must occur after any transaction attaching this token has committed. */
+export async function deliverAccountToken(prepared: Awaited<ReturnType<typeof prepareAccountToken>>, request?: Request) {
+  try { await sendTemplate(prepared.purpose, prepared.email, prepared.link, prepared.id, request); }
   catch (error) {
-    await db.delete(schema.emailToken).where(eq(schema.emailToken.id, row!.id));
+    await db.delete(schema.emailToken).where(eq(schema.emailToken.id, prepared.id));
     throw error;
   }
+}
+
+/** Ordinary account flows retain their prepare-and-deliver API. */
+export async function issueAccountToken(purpose: Purpose, user: { id: string; email: string }, request?: Request, opts: { callbackURL?: string | null } = {}) {
+  const prepared = await prepareAccountToken(purpose, user, request, opts);
+  await deliverAccountToken(prepared, request);
+  return { id: prepared.id };
 }
 
 export async function sendNotice(kind: "passwordChanged" | "emailVerified" | "emailChanged", to: string, request?: Request) {
@@ -118,27 +131,67 @@ export async function tokenState(purpose: Purpose, token: string): Promise<Token
   return "valid";
 }
 
+type Membership = { workspaceId: string; role: string };
+
+/** Ends the deletion transaction (rolling back its audit rows) when an owned workspace would be left without an owner. */
+class TransferRequired extends Error {}
+
+const deletionAudit = (userId: string, m: Membership) => ({ workspaceId: m.workspaceId, actorLabel: "Account deletion", action: "account.deleted", targetType: "user", targetId: userId, data: { role: m.role } });
+
 export async function consumeAccountToken(purpose: Purpose, token: string, value?: string, currentUserId?: string): Promise<TokenState | "done" | "transfer_required"> {
   const state = await tokenState(purpose, token);
   if (state !== "valid") return state;
+
+  // Cheap input check first; the expensive hash waits until the token is confirmed live under its locks, so a burst of
+  // requests presenting one valid link cannot all hash at once.
+  if (purpose === "reset" && (!value || value.length < 8 || value.length > 128)) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
+
+  // Lock order is user row, then token row (also in the delete and verify flows). The user is found through an unlocked
+  // read, which may be stale: the token is re-read and re-validated under both locks below.
+  const [unlockedToken] = await db.select({ id: schema.emailToken.id, userId: schema.emailToken.userId }).from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose)));
+  if (!unlockedToken?.userId || (purpose === "delete" && unlockedToken.userId !== currentUserId)) return "invalid";
+  const tokenUserId = unlockedToken.userId;
+
   return db.transaction(async (tx) => {
-    const [row] = await tx.select().from(schema.emailToken).where(and(eq(schema.emailToken.tokenHash, sha256Hex(token)), eq(schema.emailToken.purpose, purpose))).for("update");
+    // Deletion cascades into retained files. Accounting must precede even the
+    // token lock, and especially the workspace locks below (including shared W). It is installation-wide, so it also
+    // serializes every deletion: two co-members of W can never both hold the KEY SHARE their audit insert takes on W
+    // while each waits to upgrade it to FOR UPDATE (40P01; tests/integration/retained-file-locking.test.ts).
+    if (purpose === "delete") await lockRetainedFileAccounting(tx);
+
+    const [lockedUser] = await tx.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, tokenUserId)).for("update");
+    if (!lockedUser) return "invalid";
+
+    const [row] = await tx.select().from(schema.emailToken).where(eq(schema.emailToken.id, unlockedToken.id)).for("update");
     if (!row) return "invalid";
     if (row.consumedAt) return "used";
     if (row.expiresAt <= new Date()) return "expired";
     if (!row.userId || (purpose === "delete" && row.userId !== currentUserId)) return "invalid";
+    if (row.userId !== lockedUser.id) return "invalid";
+
     if (purpose === "delete") {
-      // Lock every workspace this user belongs to (deterministic order, same row lock as changeRole/removeMember)
-      // before reading ownership: two co-owners deleting their accounts at once must not both pass the
-      // last-owner check and leave the remaining members in an ownerless workspace.
-      const mine = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
-      if (mine.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, mine.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
+      const userId = row.userId;
+      const sameMembership = (a: Membership) => (b: Membership) => a.workspaceId === b.workspaceId && a.role === b.role;
+      // Lock order (#47, #109): user row (above), then the audit rows, then the workspaces FOR UPDATE: the same order as the
+      // SSO transaction (user row, audit insert, then W), so neither side awaits the user row while holding W.
+      // The audit_event insert key-shares its workspace via FK, so this order takes KEY SHARE on W and then asks for W FOR
+      // UPDATE in the same transaction. The retained-file accounting lock above is what keeps two co-members of W from
+      // both holding that KEY SHARE and each waiting to upgrade it (40P01): it is load-bearing, do not remove or narrow it
+      // (negative control: tests/integration/account-delete-key-share-upgrade.test.ts).
+      // No membership of this user can be added meanwhile (a workspace_member insert key-shares the user row held above);
+      // changes are reconciled below.
+      const seen: Membership[] = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, userId));
+      // Audit rows first, then lock every workspace this user belongs to (deterministic order, same row lock as
+      // changeRole/removeMember).
+      if (seen.length) await tx.insert(schema.auditEvent).values(seen.map((m) => deletionAudit(userId, m)));
+      if (seen.length) await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(inArray(schema.workspace.id, seen.map((m) => m.workspaceId))).orderBy(schema.workspace.id).for("update");
       const memberships = await tx.select({ workspaceId: schema.workspaceMember.workspaceId, role: schema.workspaceMember.role }).from(schema.workspaceMember).where(eq(schema.workspaceMember.userId, row.userId));
       const owned = await tx.select({ workspaceId: schema.workspaceMember.workspaceId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.userId, row.userId), eq(schema.workspaceMember.role, "owner")));
       for (const membership of owned) {
         const [otherOwner] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`, eq(schema.workspaceMember.role, "owner"))).limit(1);
         const [otherMember] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`)).limit(1);
-        if (otherMember && !otherOwner) return "transfer_required";
+        // Thrown, not returned, so the audit rows written above roll back with the transaction.
+        if (otherMember && !otherOwner) throw new TransferRequired();
       }
       // Workspaces where this user is the only member are deleted with the account (their flows, runs, connections,
       // knowledge… cascade) — no orphaned workspace is left behind (PRIVACY_AND_SAFETY.md §4).
@@ -147,11 +200,15 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
         const [other] = await tx.select({ userId: schema.workspaceMember.userId }).from(schema.workspaceMember).where(and(eq(schema.workspaceMember.workspaceId, membership.workspaceId), sql`${schema.workspaceMember.userId} <> ${row.userId}`)).limit(1);
         if (!other) soleWorkspaces.push(membership.workspaceId);
       }
-      // Preserve a security audit record (in shared workspaces) after the account row is removed.
-      for (const membership of memberships) {
-        if (soleWorkspaces.includes(membership.workspaceId)) continue;
-        await tx.insert(schema.auditEvent).values({ workspaceId: membership.workspaceId, actorLabel: "Account deletion", action: "account.deleted", targetType: "user", targetId: row.userId, data: { role: membership.role } });
+      // A security audit record survives the account row in each shared workspace. Records in sole workspaces go with
+      // the workspace (audit_event ON DELETE CASCADE). A membership removed or a role changed by another transaction
+      // between the first read and the workspace lock is corrected now, under that lock.
+      for (const m of seen) {
+        if (soleWorkspaces.includes(m.workspaceId) || memberships.some(sameMembership(m))) continue;
+        await tx.delete(schema.auditEvent).where(and(eq(schema.auditEvent.workspaceId, m.workspaceId), eq(schema.auditEvent.action, "account.deleted"), eq(schema.auditEvent.targetId, userId)));
       }
+      const unrecorded = memberships.filter((m) => !soleWorkspaces.includes(m.workspaceId) && !seen.some(sameMembership(m)));
+      if (unrecorded.length) await tx.insert(schema.auditEvent).values(unrecorded.map((m) => deletionAudit(userId, m)));
       // Their provider subscriptions are cancelled first; if the provider refuses, nothing is deleted and the person
       // can retry — a deleted workspace must never keep billing.
       if (soleWorkspaces.length) {
@@ -171,12 +228,20 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
       return "done";
     }
     if (purpose === "reset") {
-      if (!value || value.length < 8 || value.length > 128) throw new HttpError(400, "PASSWORD_LENGTH", "Password must be 8–128 characters.");
-      const hashed = await hashPassword(value);
+      // Lock order (docs/security/FEDERATED_MFA.md, "Password-reset recovery lock order"): the user row and the token
+      // row are already held above; the user's sessions come next, then their account rows, the same order the
+      // federated transactions take (issue #41). The reverse could deadlock against a link confirmation, challenge
+      // completion or SSO callback. Reset mutates no retained file, so it takes no retained-file accounting lock.
+      const hashed = await hashPassword(value!);
+      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
       const [credential] = await tx.select({ id: schema.account.id }).from(schema.account).where(and(eq(schema.account.userId, row.userId), eq(schema.account.providerId, "credential")));
       if (credential) await tx.update(schema.account).set({ password: hashed }).where(eq(schema.account.id, credential.id));
       else await tx.insert(schema.account).values({ id: crypto.randomUUID(), accountId: row.userId, providerId: "credential", userId: row.userId, password: hashed });
-      await tx.delete(schema.session).where(eq(schema.session.userId, row.userId));
+      // Historical tenant-created identities have no independently proven mailbox
+      // ownership. Recovery removes those methods; explicitly mailbox-approved
+      // links retain normal recovery behaviour.
+      await tx.delete(schema.account).where(and(eq(schema.account.userId, row.userId), sql`${schema.account.providerId} like 'sso:%'`, sql`${schema.account.providerId} not like 'sso:approved:%'`));
+      await tx.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, row.userId));
       // Any other outstanding reset link for this account stops working too.
       await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.userId, row.userId), eq(schema.emailToken.purpose, "reset"), isNull(schema.emailToken.consumedAt)));
     } else {
@@ -184,5 +249,8 @@ export async function consumeAccountToken(purpose: Purpose, token: string, value
     }
     await tx.update(schema.emailToken).set({ consumedAt: new Date() }).where(and(eq(schema.emailToken.id, row.id), isNull(schema.emailToken.consumedAt)));
     return "done";
+  }).catch((error: unknown) => {
+    if (error instanceof TransferRequired) return "transfer_required" as const;
+    throw error;
   });
 }

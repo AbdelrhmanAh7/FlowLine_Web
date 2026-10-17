@@ -20,9 +20,13 @@ const OUT_SUFFIX = STACK.shard ? `-${STACK.shard}` : "";
  * Flowline is Arabic-first (no `fl_locale` cookie = Arabic, RTL). The existing suites are written against the
  * English UI, so every context starts with `fl_locale=en`; `e2e/arabic.spec.ts` clears it to test the default.
  * Contexts created by hand with `browser.newContext()` don't inherit `use` options — pass `storageState: EN_STATE`.
+ * Registration fixtures use the existing test-only beta cookie instead of global beta mode, which would disable
+ * development-only Company Builder trials. Production ignores this cookie; beta specs override it per context.
  */
+const OPEN_BETA_COOKIE = { name: "fl_test_beta_mode", value: "open", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const };
+export const AR_STATE = { cookies: [OPEN_BETA_COOKIE], origins: [] };
 export const EN_STATE = {
-  cookies: [{ name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
+  cookies: [OPEN_BETA_COOKIE, { name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
   origins: [],
 };
 
