@@ -49,7 +49,13 @@ Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected
 already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
 then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
 
-## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-15
+
+The fix and migration below are already on main via `83a80114` (#253). Revalidation adds isolated numbering coverage,
+a deterministic two-connection publish/unique-index regression, and fixes the legacy fixture so 0025 actually clears numbers.
+The issue and feature API E2E tests pass 2/2 on the isolated dev stack; authenticated EN/AR routes return 200.
+Exact hub production-stack validation, hosted CI and review confirmation remain pending. [Current evidence](../../artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15).
+The following results are historical (2026-10-13):
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
@@ -65,9 +71,11 @@ Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/r
 keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
 then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
 `tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
-subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
-stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`.
+e2e-army tooling and hygiene (`tests/unit/e2e-army-tooling.test.ts`, 12/12 passed): `e2e-army/117-flows-list-dashboard.e2e.ts`
+uses `expect.poll` (no fixed `setTimeout` delay) and passes 1/1 against a stack built from `c95f8b5`; top-level e2e-army files
+stay within the 8-file cap by consolidating the Mizano integration actions spec (`148` into `147`).
+`pnpm typecheck` and eslint on the changed files are clean.
 Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).

@@ -3,6 +3,13 @@
 ## Issue #124 — harness handoff (2026-10-14)
 
 origin/main (`bc60ed21`) is merged; the two conflicts were Markdown only. The hub verify round on `16976e7` failed because its browser, which can only navigate, had no way to opt in once `31a2ccd4` removed `GET /api/test/auto-verify`. The route is restored (test-only, 404 elsewhere), with a navigate-only e2e case that is red without it and green with it. Local results at `c400b699`: typecheck and lint clean; unit 8 + 16; integration 5; army 7/7 twice; Chromium spec 4/4 ([evidence](artifacts/phase-4/issue-124/EVIDENCE.md)). Next, the harness: push to PR #135 and get fresh CI, `e2e-army`, verify and CodeRabbit results on the new head. Fix the PR body, which still says "Docs not needed" and lacks the template's `## Security posture` section: no dependency added, no secret, one test-only variable `FLOWLINE_TEST_AUTO_VERIFY`, permissions unchanged. For the hub owner: on `16976e7` the e2e-army runner did not collect the PR's `e2e-army/*.e2e.ts` copies, and its own suite failed on model rate limits.
+
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
