@@ -13,7 +13,7 @@ import { track } from "@/server/telemetry";
 import { zitadelProvider, type ZitadelApp } from "@/server/zitadel-auth";
 import { federatedMfa } from "@/server/federated-mfa";
 import { assertFederatedLinkSession } from "@/server/federated-link";
-import { autoVerifySignUps, warnIfAutoVerifyIgnored } from "@/server/test-auto-verify";
+import { autoVerifySignUps, isAutoVerifyEnabled, warnIfAutoVerifyIgnored } from "@/server/test-auto-verify";
 
 /**
  * better-auth, built as a REVISION-KEYED FACTORY (docs/security/CREDENTIALS_DESIGN.md MUST 18, owner decision 2).
@@ -26,7 +26,8 @@ import { autoVerifySignUps, warnIfAutoVerifyIgnored } from "@/server/test-auto-v
 export type SocialConfig = Record<string, { clientId: string; clientSecret: string }>;
 
 function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
-  // #124: a stray FLOWLINE_TEST_AUTO_VERIFY outside FLOWLINE_ENV=test is reported when auth is built, not at a sign-up.
+  // #124: a stray FLOWLINE_TEST_AUTO_VERIFY outside FLOWLINE_ENV=test stops the Next.js server at start-up
+  // (src/instrumentation.ts); auth built without that server (scripts, tests) reports it here, not at a sign-up.
   warnIfAutoVerifyIgnored();
   return betterAuth({
     appName: "Flowline",
@@ -45,7 +46,8 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
       minPasswordLength: 8,
       maxPasswordLength: 128,
       autoSignIn: true,
-      requireEmailVerification: true,
+      // Required everywhere except a FLOWLINE_ENV=test stack with FLOWLINE_TEST_AUTO_VERIFY=1 (#124), where sign-ups start verified.
+      requireEmailVerification: !isAutoVerifyEnabled(),
       resetPasswordTokenExpiresIn: 30 * 60,
       sendResetPassword: async ({ user }, request) => { await issueAccountToken("reset", user, request); },
     },

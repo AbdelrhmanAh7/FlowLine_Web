@@ -3,14 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Issue #124: the test-only sign-up auto-verify switch. It must be impossible to turn on unless FLOWLINE_ENV=test
  * (env or cookie), must need an explicit opt-in even there, and must only touch e-mail/password sign-ups after the
- * private-beta admission check.
+ * private-beta admission check. The spec's criteria are named in the describe titles: AC1/AC2 requireEmailVerification
+ * follows the server-wide switch, AC3 the server refuses to start with the switch set outside test, AC4
+ * isAutoVerifyEnabled().
  */
 type Hook = (user: { email: string; emailVerified?: boolean }, ctx: unknown) => Promise<unknown>;
 type SendVerification = (data: { user: { email: string; emailVerified: boolean }; url: string }, request?: Request) => Promise<void>;
 const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   issue: vi.fn(),
-  options: undefined as undefined | { databaseHooks: { user: { create: { before: Hook } } }; emailVerification: { sendVerificationEmail: SendVerification } },
+  options: undefined as undefined | {
+    emailAndPassword: { requireEmailVerification: boolean };
+    databaseHooks: { user: { create: { before: Hook } } };
+    emailVerification: { sendVerificationEmail: SendVerification };
+  },
 }));
 vi.mock("@/db", async () => ({ db: { select: mocks.select }, schema: await import("@/db/schema") }));
 vi.mock("better-auth", () => ({ betterAuth: (options: NonNullable<typeof mocks.options>) => {
@@ -135,5 +141,87 @@ describe("under FLOWLINE_ENV=test it needs an explicit opt-in", () => {
     const { before } = await load();
     await expect(before({ email: "d@example.test" }, { path: "/sign-up/email", headers: new Headers() }))
       .rejects.toMatchObject({ body: { code: "BETA_INVITE_REQUIRED" } });
+  });
+});
+
+describe("spec AC4: isAutoVerifyEnabled() is true only for FLOWLINE_ENV=test with FLOWLINE_TEST_AUTO_VERIFY=1", () => {
+  it.each([
+    ["test", "1", true],
+    ["test", "", false],
+    ["test", "true", false],
+    ["test", "0", false],
+    ["test", " 1", false],
+    ["production", "1", false],
+    ["staging", "1", false],
+    ["beta", "1", false],
+    ["development", "1", false],
+    ["", "1", false],
+    ["Test", "1", false],
+    ["test ", "1", false],
+  ])("FLOWLINE_ENV=%j, FLOWLINE_TEST_AUTO_VERIFY=%j: %s", async (env, flag, enabled) => {
+    vi.stubEnv("FLOWLINE_ENV", env);
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", flag);
+    const { isAutoVerifyEnabled } = await import("@/server/test-auto-verify");
+    expect(isAutoVerifyEnabled()).toBe(enabled);
+  });
+
+  it("is the server-wide switch only: the per-context cookie does not turn it on", async () => {
+    vi.stubEnv("FLOWLINE_ENV", "test");
+    const { isAutoVerifyEnabled, autoVerifySignUps } = await import("@/server/test-auto-verify");
+    expect(autoVerifySignUps(OPT_IN_COOKIE)).toBe(true);
+    expect(isAutoVerifyEnabled()).toBe(false);
+  });
+});
+
+describe("spec AC1/AC2: requireEmailVerification is off only while the server-wide switch is on", () => {
+  it.each([
+    ["test", "1", false],
+    ["test", "", true],
+    ["staging", "1", true],
+    ["production", "1", true],
+    ["production", "", true],
+  ])("FLOWLINE_ENV=%j, FLOWLINE_TEST_AUTO_VERIFY=%j: requireEmailVerification %s", async (env, flag, required) => {
+    vi.stubEnv("FLOWLINE_ENV", env);
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", flag);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await load();
+    expect(mocks.options!.emailAndPassword.requireEmailVerification).toBe(required);
+  });
+
+  it("with the server-wide switch a new e-mail sign-up is created verified, no cookie needed", async () => {
+    vi.stubEnv("FLOWLINE_ENV", "test");
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "1");
+    const { before } = await load();
+    expect(mocks.options!.emailAndPassword.requireEmailVerification).toBe(false);
+    expect(await before({ email: "e@example.test", emailVerified: false }, { path: "/sign-up/email", headers: new Headers() }))
+      .toEqual({ data: { email: "e@example.test", emailVerified: true } });
+  });
+});
+
+describe("spec AC3: the server refuses to start with FLOWLINE_TEST_AUTO_VERIFY set outside FLOWLINE_ENV=test", () => {
+  it.each(["", "production", "staging", "beta", "development", "Test", "test "])("register() throws for FLOWLINE_ENV=%j with FLOWLINE_TEST_AUTO_VERIFY=1", async (env) => {
+    vi.stubEnv("FLOWLINE_ENV", env);
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "1");
+    const { register } = await import("@/instrumentation");
+    expect(() => register()).toThrow("FLOWLINE_TEST_AUTO_VERIFY is test-only");
+  });
+
+  it("any non-empty value refuses (the variable must not be set at all outside test), and the message does not repeat it", async () => {
+    vi.stubEnv("FLOWLINE_ENV", "production");
+    vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", "yes-please");
+    const { register } = await import("@/instrumentation");
+    let message = "";
+    try { register(); } catch (error) { message = String(error); }
+    expect(message).toContain("refusing to start");
+    expect(message).not.toContain("yes-please");
+  });
+
+  it("starts under FLOWLINE_ENV=test with the switch, and in any environment without it", async () => {
+    const { register } = await import("@/instrumentation");
+    for (const [env, flag] of [["test", "1"], ["test", ""], ["production", ""], ["staging", ""]]) {
+      vi.stubEnv("FLOWLINE_ENV", env!);
+      vi.stubEnv("FLOWLINE_TEST_AUTO_VERIFY", flag!);
+      expect(() => register(), `${env}/${flag}`).not.toThrow();
+    }
   });
 });
