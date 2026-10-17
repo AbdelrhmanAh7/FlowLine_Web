@@ -12,6 +12,9 @@ import { HubError, type AiModelCapabilities, type HubChatRequest } from "../type
 /**
  * Rounds a finite, non-negative number to an integer. Takes `v: unknown` and returns null for any non-number,
  * NaN, Infinity or negative value (strings are not coerced).
+ *
+ * @param v - Value of unknown type to check and round.
+ * @returns Non-negative rounded integer, or `null` if invalid or negative.
  */
 export function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
@@ -19,7 +22,10 @@ export function num(v: unknown): number | null {
 
 /**
  * Builds (does not throw) a retryable AI_BAD_RESPONSE HubError for a tool call whose arguments are not a JSON object,
- * marked `possibleCharge` because the corrupt or cut output was still billed. `def.name` appears in the message.
+ * marked `possibleCharge` because the corrupt or cut output may have been billed (uncertain provider billing state). `def.name` appears in the message.
+ *
+ * @param def - Provider definition whose name appears in the error message.
+ * @returns A HubError with code "AI_BAD_RESPONSE", `retryable: true`, and `possibleCharge: true`.
  */
 export function badToolArgs(def: ProviderDefinition) {
   return new HubError("AI_BAD_RESPONSE", `${def.name} returned a tool call whose arguments aren't valid JSON`, { retryable: true, possibleCharge: true });
@@ -29,6 +35,11 @@ export function badToolArgs(def: ProviderDefinition) {
  * Tool-call arguments: an object, or its JSON text. Empty text is a valid call without arguments (Anthropic streams
  * no `partial_json` for an empty input; some compatible servers send ""). Anything else — incomplete or invalid JSON,
  * an array, a number, a missing field — is rejected: it is never turned into `{}`.
+ *
+ * @param def - Provider definition used to construct the error if parsing fails.
+ * @param a - Raw tool-call arguments (JSON string or object).
+ * @returns Parsed tool-call arguments as a key-value record.
+ * @throws {HubError} Throws AI_BAD_RESPONSE (via `badToolArgs`) when JSON is invalid or arguments are not an object.
  */
 export function parseArgs(def: ProviderDefinition, a: unknown): Record<string, unknown> {
   let v = a;
@@ -47,6 +58,10 @@ export function parseArgs(def: ProviderDefinition, a: unknown): Record<string, u
 /**
  * Returns "none" when there is no schema, "native" when the route's `structuredOutput` capability is SUPPORTED, and
  * "prompted" otherwise (the JSON is requested in the prompt and validated afterwards).
+ *
+ * @param caps - Model capabilities indicating whether structured output is supported.
+ * @param schema - Optional JSON schema record.
+ * @returns Mode string: "none" (no schema), "native" (supported), or "prompted" (prompt-directed JSON).
  */
 export function structuredOutputMode(caps: AiModelCapabilities, schema?: Record<string, unknown>): "native" | "prompted" | "none" {
   if (!schema) return "none";
@@ -55,9 +70,16 @@ export function structuredOutputMode(caps: AiModelCapabilities, schema?: Record<
 
 /**
  * Parameter checks shared by all protocols: unsupported parameters are rejected, never silently dropped. Returns
- * nothing when the request passes. Throws HubError AI_CAPABILITY_UNSUPPORTED for tools or streaming the route
- * doesn't support, and AI_BAD_REQUEST for a non-positive or non-integer maxTokens, a temperature outside 0–2, or a
- * tool name not matching /^[A-Za-z0-9_-]{1,64}$/.
+ * nothing when the request passes.
+ *
+ * @param def - Provider definition for error reporting.
+ * @param model - Model identifier string.
+ * @param req - Chat request parameters to validate.
+ * @param caps - Model capabilities.
+ * @param stream - Whether streaming is requested (defaults to false).
+ * @throws {HubError} Throws AI_CAPABILITY_UNSUPPORTED for tools or streaming the route doesn't support.
+ * @throws {HubError} Throws AI_BAD_REQUEST for a non-positive or non-integer maxTokens, a temperature outside 0–2, or a
+ *   tool name not matching `/^[A-Za-z0-9_-]{1,64}$/`.
  */
 export function validateRequest(def: ProviderDefinition, model: string, req: HubChatRequest, caps: AiModelCapabilities, stream = false) {
   if (req.tools?.length && caps.tools === "UNSUPPORTED") throw new HubError("AI_CAPABILITY_UNSUPPORTED", `${model} doesn't support tool calls on ${def.name}`);
@@ -70,6 +92,10 @@ export function validateRequest(def: ProviderDefinition, model: string, req: Hub
 /**
  * Returns a provider error message with the submitted API key and key-like tokens redacted, capped at 300 characters.
  * Returns "" for a non-string input; never throws.
+ *
+ * @param msg - Raw error message to scrub.
+ * @param apiKey - API key credential to redact.
+ * @returns Redacted error message capped at 300 characters, or `""` for non-string input.
  */
 export function scrubProviderMessage(msg: unknown, apiKey: string): string {
   if (typeof msg !== "string") return "";
@@ -89,6 +115,9 @@ export interface SseEvent {
  * Incremental Server-Sent-Events parser (text/event-stream): handles chunk boundaries anywhere, CRLF, comments
  * (keep-alives such as DeepSeek's), multi-line data. `onEvent` may throw (e.g. a mid-stream provider error): the
  * exception propagates out of `push`, which stops the read.
+ *
+ * @param onEvent - Callback dispatched for each complete SSE event.
+ * @returns Parser object exposing `push(chunk: Uint8Array)` and `end()`.
  */
 export function createSseParser(onEvent: (e: SseEvent) => void) {
   const decoder = new TextDecoder();
@@ -135,6 +164,11 @@ export function createSseParser(onEvent: (e: SseEvent) => void) {
  * here (the parser drops them). Anything else that isn't a JSON object is a malformed protocol chunk: the attempt
  * fails rather than returning an answer with a silently missing piece. `[DONE]` is handled by the callers that
  * document it before calling this.
+ *
+ * @param def - Provider definition for error reporting.
+ * @param data - Raw SSE data string.
+ * @returns Parsed JSON object, or null for an empty payload (keep-alive).
+ * @throws {HubError} Throws AI_BAD_RESPONSE (retryable: true, possibleCharge: true) when data is not valid JSON or not an object.
  */
 export function streamJson(def: ProviderDefinition, data: string): Record<string, unknown> | null {
   if (!data.trim()) return null;
@@ -154,7 +188,12 @@ function malformedChunk(def: ProviderDefinition) {
 
 /* ───────────── errors ───────────── */
 
-/** Lower-cased identifiers found in any documented error body shape (OpenAI, Anthropic, Google, Z.ai, MiniMax, Alibaba…). */
+/**
+ * Extracts lower-cased identifiers found in any documented error body shape (OpenAI, Anthropic, Google, Z.ai, MiniMax, Alibaba…).
+ *
+ * @param body - Raw error body (parsed JSON or object).
+ * @returns Object containing `tokens` (Set of normalized lowercase error tokens) and `message` (extracted error message string).
+ */
 export function errorTokens(body: unknown): { tokens: Set<string>; message: string } {
   const tokens = new Set<string>();
   let message = "";
@@ -253,6 +292,16 @@ const SAFETY_REASONS = new Set(["content_filter", "refusal", "safety", "blocklis
  * - Coding-plan keys (Z.ai 1309/1315) → AI_PLAN_NOT_ALLOWED; Cohere trial-key limit → AI_TRIAL_KEY.
  * - Moderation blocks (Kimi content_filter, Alibaba DataInspectionFailed, OpenRouter 403) → AI_SAFETY_REFUSAL (no fallback).
  * - Together 403 = input + max_tokens over the context length (not a permission problem).
+ *
+ * @param def - Provider definition.
+ * @param model - Model identifier string.
+ * @param status - HTTP status code.
+ * @param headers - Response headers (checked for retry-after).
+ * @param body - Raw error body (parsed JSON or object).
+ * @returns HubError with mapped code (e.g. AI_PLAN_NOT_ALLOWED, AI_QUOTA_EXCEEDED, AI_TRIAL_KEY, AI_SAFETY_REFUSAL,
+ *   AI_AUTH_FAILED, AI_CONTEXT_TOO_LONG, AI_ACCOUNT_ACTION_REQUIRED, AI_REGION_UNSUPPORTED, AI_FORBIDDEN,
+ *   AI_MODEL_REMOVED, AI_REQUEST_TOO_LARGE, AI_CANCELLED, AI_OVERLOADED, AI_RATE_LIMITED, AI_TIMEOUT,
+ *   AI_ROUTING_UNAVAILABLE, AI_PROVIDER_ERROR, or AI_BAD_REQUEST).
  */
 export function mapProviderError(def: ProviderDefinition, model: string, status: number, headers: Headers | null, body: unknown): HubError {
   const { tokens, message } = errorTokens(body);
@@ -295,7 +344,17 @@ export function mapProviderError(def: ProviderDefinition, model: string, status:
   return new HubError("AI_BAD_REQUEST", `${def.name} rejected the request (${status})${safeCode}. Check the step settings (model, output schema, max tokens).`, opts);
 }
 
-/** An error delivered inside a 200 response or mid-stream (OpenRouter chunk, Anthropic `error` event, MiniMax base_resp). */
+/**
+ * Maps an in-band error delivered inside a 200 response or mid-stream (OpenRouter chunk, Anthropic `error` event, MiniMax base_resp).
+ * Derives HTTP status from `body.error.code` if between 400 and 599, status 529 if `overloaded_error`, or defaults to 502,
+ * delegates to `mapProviderError`, and marks `possibleCharge: true`.
+ *
+ * @param def - Provider definition.
+ * @param model - Model identifier string.
+ * @param body - Error payload or chunk body containing an in-band error.
+ * @returns HubError with `possibleCharge: true` and mapped code (e.g. AI_PROVIDER_ERROR, AI_OVERLOADED, AI_QUOTA_EXCEEDED,
+ *   AI_RATE_LIMITED, AI_AUTH_FAILED, AI_SAFETY_REFUSAL, or AI_BAD_REQUEST).
+ */
 export function mapInBandError(def: ProviderDefinition, model: string, body: unknown): HubError {
   const e = ((body as { error?: unknown })?.error ?? {}) as { code?: unknown; type?: unknown };
   const status = typeof e.code === "number" && e.code >= 400 && e.code < 600 ? e.code : e.type === "overloaded_error" ? 529 : 502;
@@ -310,6 +369,10 @@ export const SAFETY_FINISH = new Set(["content_filter", "refusal", "safety", "bl
 /**
  * Builds (does not throw) an AI_SAFETY_REFUSAL HubError for the provider. The reason is named only when it is a known
  * safety reason (case-insensitive), otherwise "blocked"; the provider's free text is never copied into the error.
+ *
+ * @param def - Provider definition.
+ * @param reason - Provider block/finish reason string, or null.
+ * @returns HubError with code "AI_SAFETY_REFUSAL".
  */
 export function safetyRefusal(def: ProviderDefinition, reason: string | null) {
   // Only a documented reason is named; free text from the provider is never copied into the error.
@@ -320,6 +383,10 @@ export function safetyRefusal(def: ProviderDefinition, reason: string | null) {
 /**
  * Defence in depth (CXH-16): whatever a provider call raises, the credential that was submitted with it never
  * travels further in the error (returned to the UI, stored as last_error, written to run meta or logs).
+ *
+ * @param e - Error value to scrub.
+ * @param apiKey - API key credential to redact.
+ * @returns The scrubbed error value.
  */
 export function scrubHubError<E>(e: E, apiKey: string): E {
   if (e instanceof HubError && apiKey) {
@@ -332,6 +399,11 @@ export function scrubHubError<E>(e: E, apiKey: string): E {
 /**
  * Parses a successful response body as JSON and returns it unvalidated. Throws AI_BAD_RESPONSE (retryable, possibly
  * charged) when the text isn't JSON.
+ *
+ * @param def - Provider definition for error reporting.
+ * @param text - Raw response body string.
+ * @returns Parsed JSON value of unknown type.
+ * @throws {HubError} Throws AI_BAD_RESPONSE (retryable: true, possibleCharge: true) when text cannot be parsed as JSON.
  */
 export function parseBody(def: ProviderDefinition, text: string): unknown {
   try {
@@ -341,7 +413,12 @@ export function parseBody(def: ProviderDefinition, text: string): unknown {
   }
 }
 
-/** Parses an error response body as JSON for error mapping; returns null instead of throwing when it isn't JSON. */
+/**
+ * Parses an error response body as JSON for error mapping; returns null instead of throwing when it isn't JSON.
+ *
+ * @param text - Raw error response body string.
+ * @returns Parsed JSON value, or `null` if parsing fails.
+ */
 export function errorBody(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -354,6 +431,11 @@ export function errorBody(text: string): unknown {
  * Returns the model id unchanged when it is safe to place in a URL path segment (Gemini puts the model id in the path).
  * Throws AI_BAD_REQUEST when it is empty, longer than 128 characters, doesn't start with a letter or digit, or
  * contains characters outside [A-Za-z0-9._-].
+ *
+ * @param def - Provider definition for error reporting.
+ * @param model - Model identifier string to validate.
+ * @returns The validated model id string unchanged.
+ * @throws {HubError} Throws AI_BAD_REQUEST when the model id fails path validation rules.
  */
 export function pathModel(def: ProviderDefinition, model: string) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(model)) throw new HubError("AI_BAD_REQUEST", `"${model.slice(0, 60)}" isn't a valid ${def.name} model id`);

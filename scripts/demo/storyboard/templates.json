@@ -1,0 +1,5 @@
+{
+  "clip": "templates",
+  "beats": ["establish", "hover", "use", "canvas"],
+  "poster": { "beat": "establish", "at": 0.5 }
+}

@@ -108,6 +108,17 @@ For the H3 security regression set without a database or browser, run `pnpm.cmd 
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
 
+## Landing demo media
+
+The landing demo videos in `public/media/demo/` are generated from the real UI by a local-only pipeline (never CI):
+`pnpm demo:setup` once (installs the isolated Remotion package in `tools/demo-video`, which has its own lockfile, is not a
+workspace member and is excluded from the root `tsc`, ESLint and Vitest), `pnpm demo:doctor` to check the machine,
+`pnpm demo:build [--only hero --locale ar]` to record and encode (it starts its own stack on `:3190` with the
+`flowline_test_demo` database), and `pnpm demo:verify` before committing the result. Run them outside agent sandboxes.
+Scenarios use roles, test ids and message keys, so a UI-only change re-records without script edits; regenerate at UI
+freezes. Unit tests: `tests/unit/demo-*.test.ts`; compositor math: `cd tools/demo-video && node --test src/camera.test.ts`.
+Full guide, budgets and troubleshooting: [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md).
+
 ### Playwright traces in CI
 
 Added for [issue #35](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/35) so an intermittent browser failure leaves per-action timings behind. The upload logic is `.github/actions/gate-report/action.yml`; it has been checked by `tests/unit/ci-workflows.test.ts` and a local run of its summary step with fake data, and has not yet uploaded a real trace on GitHub (that happens on the first failing browser test after it merges).
@@ -158,3 +169,20 @@ Safety rules:
 - The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
 - Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
 - `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+
+
+### Pilot CSV input persistence and admin 404s (2026-10-15)
+
+Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-row key order when the
+worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
+to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
+Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
+expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
+`e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+Admin page metadata is subject to the same platform-admin authorization boundary as page content.
+Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
+text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
+the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
+requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
+numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).
