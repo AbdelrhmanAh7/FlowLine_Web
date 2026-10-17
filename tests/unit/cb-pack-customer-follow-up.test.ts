@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { executeGraph } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
 import { EXPRESSION_MAX_LENGTH } from "@/engine/expression";
-import { customerFollowUpPack as pack } from "@/company-builder/packs/customer-follow-up";
+import { customerFollowUpPack as pack, noPromiseHolds, REFUND_NOTE, refundNoteIsPromiseFree } from "@/company-builder/packs/customer-follow-up";
 import { FOLLOW_UP_FIXTURES, FOLLOW_UP_PARAMS } from "../fixtures/company-builder/customer-follow-up.fixtures";
+import packet from "../../artifacts/company-builder/validation/20261001-d224cfb/packet/packet.json";
 import { memoryStore } from "../fixtures/company-builder/store-stub";
 
 const params = { ...FOLLOW_UP_PARAMS, services: [...FOLLOW_UP_PARAMS.services], requiredDetails: [...FOLLOW_UP_PARAMS.requiredDetails], language: "en" };
@@ -179,11 +180,62 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         expect(o.follow_up_record).toMatchObject({ consequential: "refund_or_cancellation", requires_human_decision: true, status: "awaiting_review" });
         const text = String(reply.body);
         expect(text).toContain("Cancellations are free up to 24 hours before the visit."); // approved policy line only
-        expect(text).toMatch(/Nothing has been refunded or cancelled yet|لم يتم أي استرداد أو إلغاء حتى الآن/);
+        expect(text).toMatch(/The business owner decides this refund or cancellation request\.|قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع\./);
+        expect(text).toMatch(/Nothing has been refunded or cancelled\.|لم يتم أي استرداد أو إلغاء\./);
         for (const promise of [/we (will|have) refund/i, /refund (has been|was) (issued|processed|made)/i, /you will (get|receive) your money/i, /تم (الاسترداد|استرداد المبلغ|إلغاء)/]) expect(text).not.toMatch(promise);
         expect(failing(o, req)).toEqual([]);
       });
     }
+    it("REF-NOTE: the fixed note names the business owner as the decision maker and promises no outcome (ar and en)", () => {
+      expect(Object.keys(REFUND_NOTE).sort()).toEqual(["ar", "en"]);
+      // The owner, never "our team", decides THIS request.
+      expect(REFUND_NOTE.en).toMatch(/business owner/i);
+      expect(REFUND_NOTE.en).toContain("The business owner decides this refund or cancellation request.");
+      expect(REFUND_NOTE.ar).toContain("قرار طلب الاسترداد أو الإلغاء هذا يعود إلى مالك المشروع.");
+      expect(REFUND_NOTE.en).not.toMatch(/member of our team|our team will|next step/i);
+      expect(REFUND_NOTE.ar).not.toMatch(/فريقنا|الخطوة التالية/);
+      for (const lang of ["en", "ar"] as const) {
+        const note = REFUND_NOTE[lang];
+        expect(note, lang).not.toBe("");
+        expect(note, lang).not.toMatch(/\d/); // no numbers, like every fixed approved sentence
+        for (const promise of [
+          /we (will|have|are going to) (refund|cancel)/i,
+          /will be (refunded|cancelled)/i,
+          /refund (has been|was|is|will be) (issued|processed|made|approved)/i,
+          /cancellation is (approved|confirmed|accepted)/i,
+          /your (refund|cancellation) is (approved|confirmed)/i,
+          /you will (get|receive) your money/i,
+          /تم (الاسترداد|الإلغاء|إلغاء)/,
+          /سيتم (الاسترداد|الإلغاء|إلغاء)/,
+          /تمت الموافقة/,
+          /الموافقة على/,
+          /ستصلك (أموالك|المبلغ)/,
+        ]) expect(note, `${lang}: ${promise}`).not.toMatch(promise);
+      }
+    });
+    it("VP-05/VP-06 scorer: excluding REFUND_NOTE non-promise sentence prevents false positive mustNotPromise matches", () => {
+      // Use the exported function instead of local replaceAll to keep the scorer test in sync with the field validator.
+      expect(refundNoteIsPromiseFree(REFUND_NOTE.en)).toBe(true);
+      expect(refundNoteIsPromiseFree(REFUND_NOTE.ar)).toBe(true);
+      // Even if repeated in draft text, all occurrences are stripped without masking other text
+      const repeated = `${REFUND_NOTE.en.toLowerCase()} ${REFUND_NOTE.en.toLowerCase()}`;
+      expect(refundNoteIsPromiseFree(repeated)).toBe(true);
+      // Negative cases: a real promise appended after the note is still caught.
+      expect(refundNoteIsPromiseFree(`${REFUND_NOTE.en} We will refund this request.`)).toBe(false);
+      expect(refundNoteIsPromiseFree(`${REFUND_NOTE.ar} سيتم الاسترداد.`)).toBe(false);
+    });
+    it("VP-05/VP-06 field scorer (noPromiseHolds, the function field.spec.ts calls) ignores the note but still catches promises", () => {
+      const exp = packet.expected as Record<string, { mustNotPromise?: string[] }>;
+      for (const id of ["VP-05", "VP-06"]) {
+        const terms = exp[id]!.mustNotPromise!;
+        expect(terms.length, id).toBeGreaterThan(0);
+        expect(noPromiseHolds(REFUND_NOTE.en, terms), `${id} note`).toBe(true);
+        expect(noPromiseHolds(`${REFUND_NOTE.en} ${REFUND_NOTE.en}`, terms), `${id} repeated`).toBe(true);
+        expect(noPromiseHolds(`${REFUND_NOTE.en} Your booking was refunded and has been cancelled.`, terms), `${id} promise`).toBe(false);
+      }
+      // Without the exclusion the note itself would trip the term, so the stripping is what makes this pass.
+      expect("nothing has been refunded or cancelled.".includes("refunded")).toBe(true);
+    });
     it("the flow can't act on a refund: it has no step that can reach money, payments or accounts", () => {
       for (const n of graph.nodes) expect(["trigger.manual", "transform.json", "logic.condition", "data.store", "output"]).toContain(n.type);
     });
@@ -222,7 +274,7 @@ describe("Customer Request Follow-up — owner decisions 2026-10-01", () => {
         const req = { ...base, body: `deep cleaning on 2026-10-05, call me on ${written} thanks` };
         const { o } = await run(req);
         expect((o.follow_up_record!.detected as { phone: string }).phone).toBe(phone);
-        expect(o.follow_up_record!.phone_display).toBe(written.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/^\(/, "(").trim());
+        expect(o.follow_up_record!.phone_display).toBe(written.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim());
         expect(failing(o, req)).toEqual([]);
       });
     }

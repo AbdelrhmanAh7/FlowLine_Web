@@ -1,0 +1,102 @@
+#!/usr/bin/env sh
+# FlowLine pre-push: typecheck + the unit tests RELATED to the files the push
+# changes (+ the sub-second evidence secret check), hard-capped at 290 s (owner
+# rule: no hook or CI job runs longer than 5 minutes). No database,
+# integration, contract, browser or build.
+#   tsc --noEmit
+#   vitest related --run --project unit <changed files>   (whole unit project
+#     when the base is unknown, a code file is deleted, or test/build config, deps
+#     or tsconfig change)
+#   node scripts/check-evidence-secrets.mjs
+#
+# Full CI (the `gate` fast tier: lint, typecheck, evidence, unit, contract,
+# integration, Chromium) runs on the Mac mini via the hub's `localci` job,
+# which posts the GitHub commit statuses under the workflows' job names.
+# Escape hatches: HUSKY=0 git push ...  (or SKIP_LOCAL_CI=1 git push ...)
+#
+# Linked-worktree safe and non-interactive: a worktree without node_modules
+# skips with a one-line note instead of failing or installing anything.
+if [ "${SKIP_LOCAL_CI:-0}" = "1" ]; then
+  echo "pre-push: local checks skipped via SKIP_LOCAL_CI=1"
+  exit 0
+fi
+
+# Hard wall-clock limit: re-run this hook under a perl watchdog that kills the
+# whole process group after the limit (macOS has no `timeout`); stdin is inherited.
+if [ -z "${FL_HOOK_LIMITED:-}" ] && command -v perl >/dev/null 2>&1; then
+  FL_HOOK_LIMITED=1 exec perl -e '
+    my ($t, $name) = (shift, shift); my $p = fork; die "fork: $!" unless defined $p;
+    if (!$p) { setpgrp(0, 0); exec @ARGV; exit 127 }
+    my $stop = sub { kill "TERM", -$p; sleep 2; kill "KILL", -$p };
+    $SIG{INT} = $SIG{TERM} = sub { $stop->(); exit 130 };
+    $SIG{ALRM} = sub { $stop->(); print STDERR "\n$name exceeded the ${t}s limit: split the check, or push with SKIP_LOCAL_CI=1 - localci runs the full CI\n"; exit 124 };
+    alarm $t; waitpid($p, 0); exit($? & 127 ? 128 + ($? & 127) : $? >> 8);
+  ' "${FL_PREPUSH_LIMIT_SECONDS:-290}" pre-push sh "$0" "$@"
+fi
+set -eu
+
+if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/vitest ]; then
+  echo "pre-push: node_modules missing in this worktree; skipping typecheck + unit tests (localci runs full CI)"
+  exit 0
+fi
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/fl-pre-push.XXXXXX")
+trap 'rm -rf "$tmp"' EXIT INT TERM
+: > "$tmp/changed"
+all=0
+
+# Which files does this push change? git pipes "<local ref> <local sha>
+# <remote ref> <remote sha>" lines; never read an interactive terminal.
+NULL_SHA="0000000000000000000000000000000000000000"
+if [ -t 0 ]; then
+  all=1
+else
+  while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -n "${local_ref:-}" ] || continue
+    [ "$local_sha" = "$NULL_SHA" ] && continue        # deletion: nothing to check
+    base=""
+    if [ "$remote_sha" != "$NULL_SHA" ] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+      base="$remote_sha"
+    else
+      base="$(git merge-base origin/main "$local_sha" 2>/dev/null || true)"
+    fi
+    if [ -n "$base" ]; then
+      git diff --name-only --diff-filter=ACMR "$base" "$local_sha" >> "$tmp/changed" || all=1
+      # A deleted file cannot be passed to `vitest related`, but its importers and
+      # tests can still break at runtime: run the whole unit project.
+      git diff --name-only --diff-filter=D "$base" "$local_sha" > "$tmp/deleted" || all=1
+      if grep -qE '\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$' "$tmp/deleted"; then all=1; fi
+    else
+      all=1
+    fi
+  done
+fi
+if grep -qE '^(package\.json|pnpm-lock\.yaml|vitest\.config\.[cm]?[jt]s|tsconfig[^/]*\.json|tests/setup[^/]*|tests/unit/setup[^/]*)$' "$tmp/changed"; then
+  all=1
+fi
+
+# Tests spawn git (e.g. worktree and changed-scope scripts); a hook's GIT_DIR
+# (set in linked worktrees) would make those calls resolve the wrong tree.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH GIT_PREFIX
+
+echo "pre-push: typecheck..."
+node_modules/.bin/tsc --noEmit </dev/null
+if [ "$all" = "1" ]; then
+  echo "pre-push: unit tests (whole unit project)..."
+  node_modules/.bin/vitest run --project unit </dev/null
+else
+  grep -E '\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$' "$tmp/changed" | sort -u > "$tmp/code" || true
+  : > "$tmp/live"
+  while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f" >> "$tmp/live"; done < "$tmp/code"
+  if [ -s "$tmp/live" ]; then
+    echo "pre-push: unit tests related to $(wc -l < "$tmp/live" | tr -d ' ') changed file(s)..."
+    set --
+    while IFS= read -r f; do set -- "$@" "$f"; done < "$tmp/live"
+    node_modules/.bin/vitest related --run --project unit --passWithNoTests "$@" </dev/null
+  else
+    echo "pre-push: no changed code files; unit tests skipped"
+  fi
+fi
+node scripts/check-evidence-secrets.mjs </dev/null
+echo "pre-push: typecheck + related unit tests passed (full CI runs on localci)"

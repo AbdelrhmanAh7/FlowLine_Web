@@ -83,7 +83,7 @@ and schema foreign keys:
 | Path | Retained-file effect and lock coverage |
 | --- | --- |
 | `knowledge.deleteSource`, called by the knowledge DELETE route | Soft-deletes source, deletes chunks and directly deletes its file. Takes accounting before the source UPDATE. |
-| `email/flows.consumeAccountToken("delete")`, called by the account confirmation route | Takes accounting before token/workspace locks. Sole-member workspaces cascade-delete files; shared workspaces remain. The subsequent user DELETE nulls surviving files' `created_by`. |
+| `email/flows.consumeAccountToken("delete")`, called by the account confirmation route | Takes accounting before the user, token and workspace locks (user row, then token row: [email-token lock order](FEDERATED_MFA.md#email-token-lock-order)). Sole-member workspaces cascade-delete files; shared workspaces remain. The subsequent user DELETE nulls surviving files' `created_by`. |
 | Workspace deletion | The only production workspace DELETE is the account path above. No independent workspace-delete endpoint/job was found. Future workspace deletion must take accounting first. |
 | Direct file SQL DELETE/UPDATE | No other production writer was found. Triggers maintain accounting, but callers must still follow the lock rule. Serial raw-mutation fixtures test trigger accounting separately. |
 | Flow soft-delete, and copilot's failed-flow physical DELETE | Files have no flow ownership FK and remain retained/accounted. Neither path reaches the accounting trigger. |
@@ -92,6 +92,7 @@ and schema foreign keys:
 | Membership removal/role change, connection/OAuth deletion, worker reindexing | Delete or change members, credentials, or chunks, not retained files. They do not acquire accounting later in the same transaction. |
 | `server/retention.ts` and worker/script cleanup | Remove execution/history, telemetry, audit, authentication, rate-limit and heartbeat records. No retained-file or workspace cleanup was found. |
 | Better Auth user deletion | Native `/delete-user` and callback routes are replaced by Flowline's account-token flow in `src/app/api/auth/[...all]/route.ts`. |
+| `email/flows.consumeAccountToken("reset")`, called by the email confirmation route | Rewrites the user's sessions, accounts and user row (user row first, then sessions, then accounts; see [FEDERATED_MFA.md](FEDERATED_MFA.md#password-reset-recovery-lock-order)). None of these cascade into retained files and the user UPDATE leaves `created_by` alone, so it takes no accounting lock. |
 
 The three production insert sites (file-upload API, knowledge source creation,
 and Company Builder knowledge fixtures) all use `insertRetainedFile`.

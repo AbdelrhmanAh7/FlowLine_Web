@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -39,9 +40,11 @@
   ],
   "exclude": [
     "node_modules",
+    "e2e-army",
     ".next-test",
     "artifacts",
     "playwright-report",
-    "test-results"
+    "test-results",
+    "tools/demo-video"
   ]
 }

@@ -1,1 +1,0 @@
-SUPERSEDED: partial gate (lint/typecheck/unit 616/integration 520) on 20e4370; candidate changed before browser gates (VF-03 state contract completed). Not evidence for the final candidate.
