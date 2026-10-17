@@ -44,10 +44,9 @@ const FLOW_ID = sql.raw(`"flow"."id"`);
 
 /**
  * The flows of a workspace with a summary of their runs. The summary covers every run of the flow, whichever revision or
- * version it ran. The last run is the one active most recently: when it finished, or, while it is still queued, running
- * or waiting for approval, when it started (or was queued). `lastRunAt` is that time. So among finished runs the one
- * that finished last wins, and a run started after it shows as the last run, which keeps Running and Needs approval
- * visible on the dashboard.
+ * version it ran. The last run is the newest run still queued, running or waiting for approval (no `finishedAt` yet), so
+ * the dashboard can show Running and Needs approval; when no run is in flight, it is the run that finished last.
+ * `lastRunAt` is when that run finished or, while it is in flight, when it started (or was queued).
  */
 export async function listFlows(workspaceId: string) {
   const ofThisFlow = sql`${schema.run.flowId} = ${FLOW_ID}`;
@@ -60,15 +59,14 @@ export async function listFlows(workspaceId: string) {
     .from(schema.run)
     .where(ofThisFlow)
     .as("run_stats");
-  const activeAt = sql`coalesce(${schema.run.finishedAt}, ${schema.run.startedAt}, ${schema.run.createdAt})`;
   const lastRun = db
     .select({
-      at: sql<Date>`${activeAt}`.mapWith(schema.run.finishedAt).as("last_run_at"),
-      status: sql<string>`${schema.run.status}::text`.as("last_run_status"),
+      at: sql<Date | null>`coalesce(${schema.run.finishedAt}, ${schema.run.startedAt}, ${schema.run.createdAt})`.mapWith(schema.run.finishedAt).as("last_run_at"),
+      status: sql<string | null>`${schema.run.status}::text`.as("last_run_status"),
     })
     .from(schema.run)
     .where(ofThisFlow)
-    .orderBy(desc(activeAt), desc(schema.run.createdAt), desc(schema.run.id))
+    .orderBy(sql`${schema.run.finishedAt} desc nulls first`, desc(schema.run.createdAt), desc(schema.run.id))
     .limit(1)
     .as("last_run");
   return db

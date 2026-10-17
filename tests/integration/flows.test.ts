@@ -199,6 +199,9 @@ describe("flow list run summary (regression: #117)", () => {
     await claimAndProcess(run.id);
     return freshRun(run.id);
   }
+  /** Claims `target` for `worker` without processing it; runs queued before it are processed first. */
+  const claimOnly = (target: string, worker: string) =>
+    claimUntil({ table: "run", targetId: target, claim: (w) => claimNextRun(db, w), process: (id, w) => (id === target ? Promise.resolve() : processRun(db, id, w)), workerId: () => worker });
   const rowOf = async (workspaceId: string, flowId: string) => (await listFlows(workspaceId)).find((f) => f.id === flowId)!;
 
   it("GET /api/v1/flows counts a run from before publishing v3 and a succeeded run after it, with lastRunAt = when that run finished", async () => {
@@ -242,7 +245,7 @@ describe("flow list run summary (regression: #117)", () => {
     const newer = await enqueueRun(user, flow.id);
     // One worker takes the older run and is still busy with it while the newer run is processed and fails.
     const worker = unique("worker");
-    await claimUntil({ table: "run", targetId: older.id, claim: (w) => claimNextRun(db, w), process: (id, w) => (id === older.id ? Promise.resolve() : processRun(db, id, w)), workerId: () => worker });
+    await claimOnly(older.id, worker);
     await claimAndProcess(newer.id);
     await processRun(db, older.id, worker);
     const [o, n] = [await freshRun(older.id), await freshRun(newer.id)];
@@ -254,15 +257,37 @@ describe("flow list run summary (regression: #117)", () => {
     expect(row.lastRunAt).toEqual(o.finishedAt);
   });
 
-  it("a queued run is the last run of its flow, at the time it was queued, so the dashboard shows the flow as running", async () => {
+  it("a run still in flight is the last run, at the time it started or was queued, even when an older run finishes after it started", async () => {
     const { user, ws } = await setup();
-    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("Queued") });
-    await runToEnd(user, flow.id);
-    const queued = await enqueueRun(user, flow.id);
-    const row = await rowOf(ws.id, flow.id);
-    expect(row).toMatchObject({ runCount: 2, lastRunStatus: "queued" });
-    expect(row.lastRunAt).toEqual((await freshRun(queued.id)).createdAt);
-    await claimAndProcess(queued.id); // leave no queued run for later tests
+    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("In flight") });
+    const older = await enqueueRun(user, flow.id);
+    const newer = await enqueueRun(user, flow.id);
+    const worker = unique("worker");
+    let queued: { id: string } | null = null;
+    try {
+      // Both runs are taken; the older one finishes while the newer one is still running.
+      await claimOnly(older.id, worker);
+      await claimOnly(newer.id, worker);
+      await processRun(db, older.id, worker);
+      const running = await freshRun(newer.id);
+      expect([(await freshRun(older.id)).status, running.status]).toEqual(["succeeded", "running"]);
+      let row = await rowOf(ws.id, flow.id);
+      expect(row).toMatchObject({ runCount: 2, lastRunStatus: "running" });
+      expect(row.lastRunAt).toEqual(running.startedAt);
+
+      await processRun(db, newer.id, worker);
+      queued = await enqueueRun(user, flow.id);
+      row = await rowOf(ws.id, flow.id);
+      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "queued" });
+      expect(row.lastRunAt).toEqual((await freshRun(queued.id)).createdAt);
+    } finally {
+      // Leave nothing queued or running for the tests after this one.
+      for (const id of [older.id, newer.id, queued?.id]) {
+        const status = id ? (await freshRun(id)).status : null;
+        if (status === "running") await processRun(db, id!, worker);
+        else if (status === "queued") await claimAndProcess(id!);
+      }
+    }
   });
 
   it("pausing a flow keeps runCount, lastRunStatus and lastRunAt and reports the pause in GET /api/v1/flows and the flow list", async () => {

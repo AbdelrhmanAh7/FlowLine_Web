@@ -18,9 +18,9 @@ export const GET = route(async (req) => {
       trigger: f.trigger,
       paused: Boolean(f.pausedReason),
       updatedAt: f.updatedAt,
-      runCount: f.runCount ?? 0,
-      lastRunStatus: f.lastRunStatus ?? null,
-      lastRunAt: f.lastRunAt ?? null,
+      runCount: f.runCount,
+      lastRunStatus: f.lastRunStatus,
+      lastRunAt: f.lastRunAt,
     })),
   });
 });

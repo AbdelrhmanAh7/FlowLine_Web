@@ -133,7 +133,8 @@ test(
 );
 
 // ── #117 spec AC1–AC5: the run summary in GET /api/v1/flows and the flow list ────────────────────────────────────────
-// The test above stays as it is. This one adds the public API, runs on both sides of a publication, and a paused flow.
+// The test above and its helpers stay as on main (the issue spec's AC6), so this test has its own run helper that
+// returns the finished run. It adds the public API, runs on both sides of a publication, and a paused flow.
 
 /** The run-summary fields of one row of GET /api/v1/flows or GET /api/workspaces/:id/flows. */
 interface SummaryRow { id: string; runCount: number; lastRunStatus: string | null; lastRunAt: string | null }
@@ -149,7 +150,7 @@ async function finishedRun(http: Http, flowId: string) {
 }
 
 test(
-  "@issue-117 AC1-AC5: GET /api/v1/flows and the flow list count the runs before and after publishing v3, show the run that finished last, and keep run-less and paused flows",
+  "@issue-117 AC1-AC5: GET /api/v1/flows and the flow list count runs before and after publishing v3, show the last finished run, keep run-less and paused flows",
   { tags: ["feat:fl-flows-list", "feat:fl-flows-api", "feat:fl-public-api-v1", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
