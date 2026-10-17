@@ -52,9 +52,15 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاح`, date)).toBe(true);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ لا مؤكد، نأسف.`, date)).toBe(true);
   });
+  it("passes inflected Arabic negation forms (feminine متاحة and tanwin/diacritics)", () => {
+    expect(scoreClosedDay(`الخدمة في يوم ٢٠٢٦-١٠-٠٩ غير متاحة.\n\n${HOURS_LINE}`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاحٍ`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالمواعيد ليوم ٢٠٢٦-١٠-٠٩ لا مؤكدة.`, date)).toBe(true);
+  });
   it("fails an Arabic confirmation of the date even with the hours line", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالخدمة في يوم ٢٠٢٦-١٠-٠٩ متاحة.`, date)).toBe(false);
   });
   it("fails confirmations worded outside the basic list, and a confirmation next to an unrelated negation", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit is set for 2026-10-09.`, date)).toBe(false);

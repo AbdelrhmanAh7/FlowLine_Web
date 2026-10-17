@@ -18,9 +18,13 @@ const CONFIRM = /confirm|book|schedul|available|reserved|\bset for\b|see you|exp
 const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
 // Patterns where a confirmation word is directly negated (e.g. "not available", "not confirmed", "cannot book").
 // JS `\b` is ASCII-only (no boundary between an Arabic letter and a space), so the Arabic branch ends with a Unicode-aware
-// lookahead (`u` flag) instead.
-const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?![\p{L}\p{N}])/iu;
+// lookahead (`u` flag) instead, and accommodates feminine inflections (متاحة) and Arabic diacritics/tanwin.
+const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?:ة)?(?:[\u064B-\u0652])?(?![\p{L}\p{N}])/iu;
 const FRIDAY = /friday|الجمعة/i;
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * VP-03: the requested date is a Friday (a closed day). A correct reply quotes the approved working-hours line and
@@ -34,8 +38,8 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   if (!isFriday(requestedDate)) return false;
   if (!text.includes(HOURS_LINE)) return false;
   const t = toWestern(text);
-  const [y, m, d] = requestedDate.split("-");
-  const dateForms = new RegExp(`${requestedDate}|\\b${d}[/.-]${m}[/.-]${y}\\b`);
+  const [y = "", m = "", d = ""] = requestedDate.split("-");
+  const dateForms = new RegExp(`${escapeRegex(requestedDate)}|\\b${escapeRegex(d)}[/.-]${escapeRegex(m)}[/.-]${escapeRegex(y)}\\b`);
   // Clauses (split at commas, semicolons, "while/but/whereas"), so a negation elsewhere in the sentence ("..., while
   // later slots are not available") cannot suppress the confirmation of the requested date.
   return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:while|but|whereas)\b/i).some((sentence) => {
@@ -60,13 +64,8 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
 // the owner". It is the decision/review verb that must be attached to the non-owner party: "a member of our team will
 // contact you with that decision" does not decide anything, "the billing manager will decide" does. The gap between
 // party and verb stops at punctuation, so "the owner will decide; a team member will contact you" is not misread.
-const NON_OWNER = "(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)";
-const DECISION_VERB = "(?:decide|review|approve|reject|refuse|grant|handle|process|assess|determine)";
-const TEAM_DECIDER = new RegExp(
-  `\\b${NON_OWNER}\\b[^.!?\\n;,]{0,40}?\\b(?:will|shall|would|must|can|may)\\s+(?:also\\s+|then\\s+)?${DECISION_VERB}\\b` +
-    `|\\b(?:decided|reviewed|approved|rejected|handled|processed|assessed|determined)\\s+by\\s+(?:our|the|a|an)\\s+${NON_OWNER}\\b`,
-  "i",
-);
+const TEAM_DECIDER =
+  /\b(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b[^.!?\n;,]{0,40}?\b(?:will|shall|would|must|can|may)\s+(?:also\s+|then\s+)?(?:decide|review|approve|reject|refuse|grant|handle|process|assess|determine)\b|\b(?:decided|reviewed|approved|rejected|handled|processed|assessed|determined)\s+by\s+(?:our|the|a|an)\s+(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b/i;
 
 // The owner as the decider in the reply's own words, beyond the packet's two literal phrases: the product says "The
 // business owner decides this refund or cancellation request." (run 6), which the literal list missed.
