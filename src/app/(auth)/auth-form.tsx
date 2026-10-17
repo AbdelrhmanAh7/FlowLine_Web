@@ -34,7 +34,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [pending, setPending] = useState(false);
   const [betaCode, setBetaCode] = useState("");
   const [notVerified, setNotVerified] = useState(false);
-  // Sign-up never signs in: the account is activated from the emailed link. This holds the address we sent it to.
+  // Sign-up does not sign in (except the test-only auto-verify in submit): the account is activated from the emailed
+  // link. This holds the address we sent it to.
   const [sentTo, setSentTo] = useState<string | null>(null);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean; zitadel: boolean; betaMode?: "open" | "invite_only" }>("/api/auth-config") });
   const inviteOnly = mode === "sign-up" && config.data?.betaMode === "invite_only";
@@ -76,12 +77,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
           setPending(false);
           return;
         }
-        // Test-environment-only: the account is already verified and no e-mail was sent,
-        // so sign in now instead of showing "Check your inbox"; if that fails, the sign-in page takes over.
-        if ((res.data as { user?: { emailVerified?: boolean } } | null)?.user?.emailVerified === true) {
-          const signedIn = await authClient.signIn.email({ email, password });
-          const twoFactorNeeded = (signedIn.data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect;
-          router.replace(signedIn.error || twoFactorNeeded ? afterVerify : destination);
+        // Test-environment-only (#124): the account is already verified and no e-mail was sent. With the server-wide switch
+        // the sign-up has signed in too (it returns a session token); with the per-browser cookie it has not, so sign in
+        // now instead of showing "Check your inbox". If that fails, the sign-in page takes over.
+        if (res.data?.user.emailVerified) {
+          const signedIn = res.data.token ? null : await authClient.signIn.email({ email, password });
+          router.replace(signedIn?.error ? afterVerify : destination);
           router.refresh();
           return;
         }

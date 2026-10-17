@@ -48,12 +48,13 @@ export async function verificationLink(req: APIRequestContext, email: string) {
  * the account EmailFlow's DynamicForm (/resend-verification, /forgot-password) render `<form method="post">`; before
  * hydration a submit is a plain form POST that signs nobody up or in, so a fast fill+click can wait out its timeout for
  * a screen that never comes (issue #124). Polls React's `__reactProps$` key on the form — DOM state, not a clock — like
- * the e2e-army test's untilAuthFormHydrated.
+ * the e2e-army test's untilAuthFormHydrated, every 100 ms (the default backoff checks only once a second after ~1 s).
  */
 export async function waitForAccountFormHydrated(page: Page) {
   await expect
     .poll(() => page.evaluate(() => Object.keys(document.querySelector('form[method="post"]') ?? {}).some((k) => k.startsWith("__reactProps$"))), {
       timeout: 15_000,
+      intervals: [100],
       message: 'the account form never hydrated (form[method="post"] has no __reactProps$)',
     })
     .toBe(true);

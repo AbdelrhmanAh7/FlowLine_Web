@@ -91,13 +91,13 @@ function buildAuth(socialProviders: SocialConfig, zitadel?: ZitadelApp) {
       user: {
         create: {
           before: async (user, ctx) => {
-            const c = ctx as { body?: { betaCode?: unknown }; headers?: Headers; request?: Request } | null | undefined;
+            const c = ctx as { body?: { betaCode?: unknown }; headers?: Headers; path?: string; request?: Request } | null | undefined;
             const body = c?.body;
-            const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null, betaMode(c?.headers ?? c?.request?.headers));
+            const headers = c?.headers ?? c?.request?.headers;
+            const decision = await allowSignUp(user.email, typeof body?.betaCode === "string" ? body.betaCode : null, betaMode(headers));
             if (!decision.ok) throw new APIError("FORBIDDEN", { message: BETA_REFUSAL, code: "BETA_INVITE_REQUIRED" });
             // TEST ENVIRONMENT ONLY (#124): e-mail sign-ups start verified when explicitly opted in under FLOWLINE_ENV=test.
-            const path = (ctx as { path?: unknown } | null | undefined)?.path;
-            if (path === "/sign-up/email" && autoVerifySignUps(c?.headers ?? c?.request?.headers)) return { data: { ...user, emailVerified: true } };
+            if (c?.path === "/sign-up/email" && autoVerifySignUps(headers)) return { data: { ...user, emailVerified: true } };
           },
           after: async (user) => {
             track("signup_completed", { userId: user.id }, { via: betaMode() });

@@ -1,10 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db, schema } from "@/db";
 import { dispatchAuth } from "@/server/auth-dispatch";
-import { resetAutoVerifyWarningForTests, TEST_AUTO_VERIFY_ENV } from "@/server/test-auto-verify";
-import { closeDb } from "./helpers";
+import { TEST_AUTO_VERIFY_ENV } from "@/server/test-auto-verify";
+import { closeDb, unique } from "./helpers";
 
 /**
  * Issue #124, CTO follow-up: the test-only sign-up auto-verify switch must be impossible to enable outside
@@ -14,29 +13,22 @@ import { closeDb } from "./helpers";
  * - FLOWLINE_ENV=staging ignores BOTH opt-ins (env var and cookie): the account stays unverified, still gets its
  *   verification e-mail and cannot sign in. A stray `FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one configuration
  *   warning when auth is built, before any sign-up; the cookie is ignored silently.
- * - Under FLOWLINE_ENV=test each opt-in verifies the sign-up and sends no verification e-mail; without an opt-in the
- *   default behaviour is unchanged (unverified + verification e-mail).
+ * - Under FLOWLINE_ENV=test each opt-in verifies the sign-up and sends no verification e-mail; the server-wide switch
+ *   also turns off requireEmailVerification, so that sign-up returns a session itself. Without an opt-in the default
+ *   behaviour is unchanged (unverified + verification e-mail).
  */
 process.env.FLOWLINE_EMAIL_PROVIDER = "outbox";
 
-const prevEnv = process.env.FLOWLINE_ENV;
-const prevMode = process.env.FLOWLINE_BETA_MODE;
-const prevAuto = process.env[TEST_AUTO_VERIFY_ENV];
-// The once-per-process warning flag is module state; forget it before every test so a shared module graph (should the
-// integration project ever reuse one across files) cannot hide the "exactly one warning" assertions.
-beforeEach(() => resetAutoVerifyWarningForTests());
-afterEach(() => {
-  process.env.FLOWLINE_ENV = prevEnv;
-  process.env.FLOWLINE_BETA_MODE = prevMode;
-  if (prevAuto === undefined) delete process.env[TEST_AUTO_VERIFY_ENV];
-  else process.env[TEST_AUTO_VERIFY_ENV] = prevAuto;
-  vi.restoreAllMocks();
+beforeEach(() => {
+  vi.stubEnv("FLOWLINE_BETA_MODE", "open");
+  vi.stubEnv(TEST_AUTO_VERIFY_ENV, "");
 });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 afterAll(closeDb);
 
 const BASE = "http://localhost:3100";
 const PASSWORD = "Auto-Verify-Test-1";
-const email = (p: string) => `${p}-${randomUUID().slice(0, 8)}@flowline-av.test`;
+const email = (p: string) => `${unique(p)}@flowline-av.test`;
 
 async function signUp(e: string, headers: Record<string, string> = {}, dispatch = dispatchAuth) {
   const res = await dispatch(new Request(`${BASE}/api/auth/sign-up/email`, {
@@ -73,9 +65,8 @@ function autoVerifyWarnings() {
 
 describe("sign-up auto-verify switch (#124)", () => {
   it("staging: a stray FLOWLINE_TEST_AUTO_VERIFY=1 logs exactly one warning when auth is built and is ignored (unverified + verification e-mail)", async () => {
-    process.env.FLOWLINE_ENV = "staging";
-    process.env.FLOWLINE_BETA_MODE = "open";
-    process.env[TEST_AUTO_VERIFY_ENV] = "1";
+    vi.stubEnv("FLOWLINE_ENV", "staging");
+    vi.stubEnv(TEST_AUTO_VERIFY_ENV, "1");
     const warnings = autoVerifyWarnings();
     // Start a fresh server module graph under the staging env (the @/db pool is shared through globalThis): its
     // once-per-process flag starts unset whatever ran before, and building auth alone must log the warning.
@@ -100,9 +91,7 @@ describe("sign-up auto-verify switch (#124)", () => {
   });
 
   it("staging: the fl_test_auto_verify=1 cookie is ignored silently (unverified + verification e-mail)", async () => {
-    process.env.FLOWLINE_ENV = "staging";
-    process.env.FLOWLINE_BETA_MODE = "open";
-    delete process.env[TEST_AUTO_VERIFY_ENV];
+    vi.stubEnv("FLOWLINE_ENV", "staging");
     const warnings = autoVerifyWarnings();
     const e = email("staging-cookie");
 
@@ -118,39 +107,42 @@ describe("sign-up auto-verify switch (#124)", () => {
     expect(warnings()).toHaveLength(0);
   });
 
-  it("test: FLOWLINE_TEST_AUTO_VERIFY=1 verifies the sign-up and sends no verification e-mail", async () => {
-    process.env.FLOWLINE_ENV = "test";
-    process.env.FLOWLINE_BETA_MODE = "open";
-    process.env[TEST_AUTO_VERIFY_ENV] = "1";
+  it("test: FLOWLINE_TEST_AUTO_VERIFY=1 verifies the sign-up, signs it in at once and sends no verification e-mail", async () => {
+    vi.stubEnv("FLOWLINE_ENV", "test");
+    vi.stubEnv(TEST_AUTO_VERIFY_ENV, "1");
+    // Build auth under the switch, as a test stack started with it does: requireEmailVerification is then off, so the
+    // sign-up itself returns a session (spec AC1).
+    vi.resetModules();
+    const fresh = (await import("@/server/auth-dispatch")).dispatchAuth;
     const e = email("test-env");
 
-    const up = await signUp(e);
+    const up = await signUp(e, {}, fresh);
     expect(up.status).toBe(200);
     expect(up.body?.user?.emailVerified).toBe(true);
+    expect(up.body?.token).toEqual(expect.any(String));
     expect(await stored(e)).toEqual({ emailVerified: true, tokens: 0, outbox: 0 });
   });
 
   it("test: the fl_test_auto_verify=1 cookie verifies the sign-up and sends no verification e-mail", async () => {
-    process.env.FLOWLINE_ENV = "test";
-    process.env.FLOWLINE_BETA_MODE = "open";
-    delete process.env[TEST_AUTO_VERIFY_ENV];
+    vi.stubEnv("FLOWLINE_ENV", "test");
     const e = email("test-cookie");
 
     const up = await signUp(e, { cookie: "fl_test_auto_verify=1" });
     expect(up.status).toBe(200);
     expect(up.body?.user?.emailVerified).toBe(true);
+    // Verification is still required on this stack (spec AC2), so sign-up gives no session; the form signs in next.
+    expect(up.body?.token).toBeNull();
     expect(await stored(e)).toEqual({ emailVerified: true, tokens: 0, outbox: 0 });
   });
 
   it("test: without any opt-in the sign-up stays unverified and still gets its verification e-mail", async () => {
-    process.env.FLOWLINE_ENV = "test";
-    process.env.FLOWLINE_BETA_MODE = "open";
-    delete process.env[TEST_AUTO_VERIFY_ENV];
+    vi.stubEnv("FLOWLINE_ENV", "test");
     const e = email("test-plain");
 
     const up = await signUp(e);
     expect(up.status).toBe(200);
     expect(up.body?.user?.emailVerified).toBe(false);
+    expect(up.body?.token).toBeNull();
     expect(await stored(e)).toEqual({ emailVerified: false, tokens: 1, outbox: 1 });
   });
 });
