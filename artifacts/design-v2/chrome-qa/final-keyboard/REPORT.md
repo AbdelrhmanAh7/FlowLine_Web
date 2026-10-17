@@ -1,0 +1,52 @@
+# Journey 9 — final exhaustive keyboard sweep
+
+**Journey 9 PASS on final checkpoint 20 `64e825709fb79ef8cffcb19c3f0791b940bf844f`.** Seven application findings (DV2-K01–K07, including a closeout regression and a WebKit focus defect) were fixed and retested. [SURFACES.md](SURFACES.md) records every check individually: 225 PASS and one preserved invalid launcher attempt, subsequently corrected and passed. No unresolved product failure in the requested surface lifecycle sweep. Sessions E/F sweep cp16; G retests builder.tsx on cp18 (identical blob in cp20); H retests integration removal on cp20. All other product source files are byte-identical to cp16, verified by [source delta](source-delta-cp16-cp20.json). This is a mapped final coverage set, not a claim that E/F/G ran on cp20.
+
+Method: **Agent-driven Google Chrome exploratory QA via Playwright**. Installed Google Chrome **154.0.8037.92**, headed, one supervised browser runner at a time, isolated temporary profiles under ignored `.profile/`; no owner profile. This is not desktop computer use or human UAT. BUILD_IDs: E `lFxzDlouBH-FqlhxQatTn`; F `XATU-ZV2XmAkaRf2u9jxG`; G `La5gjNG19LRQab1fjAesZ`; H `jXTCc-nWucPOZo10RwkDx`. Each session used `run-with-stack.sh` and closed Chrome/stopped ports 3100/4010/4011. Identities, timestamps, results and stack records are alongside this report. Synthetic account identifiers in accessible-name evidence are redacted; no password, OTP or token was captured.
+
+## Inventory and method
+
+The inventory was reconciled against all app `page.tsx` routes and callers of Dialog, Drawer, Menu, Popover, useSidePanel and InlineConfirmation, including content-dependent states. Keyboard Enter opens the real launcher; initial focus is inspected; forward/reverse Tab checks modal containment; non-modal traversal can leave the panel; Escape closes the active layer; the remembered launcher receives focus without BODY loss. Native selects use Alt+Down then Escape and retain value/focus. Full-page forms and tabs are identified as such, not counted as dialogs. Document navigation (including self-revocation to 404) starts a new document focus lifecycle.
+
+| App area | Surface inventory covered |
+|---|---|
+| Public/auth | Landing; sign-in/up; forgot/reset password; resend/verify email; invitation invalid state; account deletion; sandbox checkout entry; setup entry. These use inline page forms/preferences, no separate app modal/menu. Invalid-token routes retain their real invalid state. |
+| Onboarding | All three full-page wizard steps; keyboard goal/template selection and completion. |
+| Shell | Account menu, phone modal navigation, Arabic RTL navigation; nested menu behavior also in the dedicated browser regression. |
+| Builder | Add node catalog, node side panel (1440/1024/375), Copilot, History, RunDock, Flow issues popover, Publish and Triggers; manual, webhook and schedule content; armed webhook-rotation cancellation resets on close. |
+| Runs | Desktop non-modal step inspector, nested rerun dialog, phone modal sheet, Arabic phone sheet. |
+| Integrations | All 12 Connect dialogs, all 12 Reconnect variants, all 12 removal confirmation variants; persisted Google Sheets removal and surviving-focus check. |
+| Templates | Inline catalog, no overlay launcher. |
+| Agents | New-agent page/model picker and Chat/Configuration/Runs tabs; native picker controls; no separate overlay. |
+| Knowledge | Inline source form and delete confirmation, including successful deletion focus fallback. |
+| Settings | All nine tabs activated by keyboard; native selects; all 20 AI Connect dialogs; AI Replace key, paid-test confirmation and Disconnect; API-key revoke; member remove; OAuth Remove/Switch for Google, Slack and GitHub. Successful removals retain useful focus. |
+| Admin | Real disposable setup/enrollment/step-up; all 11 credential cards in both Revoke and Clear confirmation states; real write-only GitHub credential revoke/clear; admin access confirmation, cancel and self-revoke; admin settings selects. |
+| Design system | Both displayed theme sets: Dialog, Drawer, Menu, Popover and selects. |
+
+Reusable component/caller inventory: `src/components/ui/{dialog,menu,popover,side-panel,inline-confirmation}.tsx` (side-panel is `.ts`); `shell/app-shell.tsx`; `builder/{builder,node-drawer,run-dock,copilot-panel,history-panel,publish-panel}.tsx`; `src/app/w/[slug]/{runs/inspector,integrations/page,knowledge/page,settings/api-keys,settings/members,settings/oauth-apps,settings/ai-providers}.tsx`; `src/app/admin/panel.tsx`; `src/app/design-system/guide.tsx`. Browser/OS file pickers and external provider consent pages are outside app-owned overlay scope. Existing P3 findings such as disabled-tab reason access remain listed in BUGS.md; this is not a blanket WCAG certification.
+
+## Fixtures, security and cleanup
+
+All integrations are **test doubles only**, not production/live verification. Regular-account/workspace/flow/member fixture creation uses real application APIs and persistence; these setup calls are separate from the keyboard assertions. The onboarding fixture also completed through the UI.
+
+The twelve reconnect/remove variants use a transparently intercepted **connection-list response** with synthetic entries; the real app renders and handles each dialog. No provider submission is made for those entries. A real persisted Sheets connection separately verifies successful removal. Admin's eleven credential cards use intercepted **write-only overview projections** for configured/revoked states, cancelled without mutation; the actual GitHub credential is separately saved, revoked and cleared. These fixture checks make no claim that credentials or providers work.
+
+Admin enrollment uses the approved test bootstrap CLI and real TOTP enrollment/step-up. Passwords, setup codes, seeds, OTPs, cookies and tokens remain in memory/private profiles, never screenshots/traces/reports. The disposable admin is revoked and signed out; its test credential is revoked and cleared. Regular test key revoked, temporary member removed, workspace OAuth apps removed, AI connection disconnected, regular account signed out. Synthetic workflows/agents remain in the isolated test DB. No customer or production data used.
+
+## Historical failures and corrections
+
+- Session A2/B on cp12 found K01–K04; session D on cp14 found K05. Their failed checks and safe screenshots remain unchanged.
+- Earlier harness errors included case-sensitive accessible-name guesses, a semantic region mistaken for `role=dialog`, a changing Publish label, and Escape attempted after non-modal focus had already left the panel. These are not silently promoted to passes; corrected checks use real observed semantics and retain the source records.
+- Session C native `window.confirm` blocked Playwright's keyboard channel; no native keyboard PASS is claimed. Only the identified isolated QA Chrome process was stopped; the stack stopped and disposable admin was cleaned up through authenticated API in D. The final app uses a named in-app admin confirmation, verified in F, with the same server authorization and 404 self-revocation behavior.
+- E's `ar:phone-navigation` raw FAIL selected the run-row `aria-expanded` control, not Open menu. Its recorded accessible name identifies that mistake. The actual Arabic Open menu was subsequently tested as `ar:phone-navigation-corrected-launcher`, PASS.
+- cp13 targeted run: 21/24, failures retained; corrected cp14: 24/24. cp15: 24/25 because the new integration test supplied an invalid fake-provider token before reaching its keyboard check; corrected to the existing test-double token. cp16 targeted: **25/25**, including existing assertions and new successful-removal focus assertions. No assertion was deleted or weakened.
+
+The first cumulative cp16 Chromium gate failed 7/114 (107 passed): two canvas focus/selection regressions (K06), and five downstream failures because the new removal test revoked shared fake-provider test-token. Neither is dismissed as flaky. The product now distinguishes keyboard opening from pointer selection and hides the closed drawer without clearing selection. The test now obtains its own disposable provider token. cp17 was superseded before browser tests because lint rejected a render-time ref read; cp18 uses state. All original assertions remain. Expanded affected retest on cp18: **49/49**; headed G: **12/12**, including reopening the same selected node, exact 12px nudge after Escape, responsive drawers and sibling builder panels. G's identity records its BUILD_ID.
+
+The cp18 cumulative WebKit run completed **47/50**, despite Chromium 114/114 and Firefox 50/50. K07 fixes surviving focus after integration removal by moving focus before query invalidation. The other failures were localized test readiness issues: React Flow nodes start hidden pending measurement (`focus()` does not wait for visibility), and the agent model list can expand above a pointer target. The helper now asserts visibility and focus before Enter; the phase3 test additionally asserts a discovered model is visible before checking its source checkbox. Existing assertions remain. The temporary node activation override was removed after the focus assertion localized the problem before Enter. cp19 focused WebKit: 27/28; cp20: **28/28**. Headed H: **6/6**, including real persisted removal/cancel/return in English and Arabic. All failed outputs remain; no flaky or skipped test is counted as a pass.
+
+The final cumulative sequential gate and exact execution-input mapping are in [GATE.md](../../gate/final-keyboard/GATE.md). Journeys 1–8 and 10 retain their cp12 evidence; this task completes journey 9 with cp16 exhaustive coverage plus cp18/cp20 affected retests and the cumulative regression suite. It does not relabel prior exploratory journeys as freshly replayed on cp20. Generated responsive captures from the failed gate's default phase-3 path were preserved locally under ignored helper logs, and the pre-task tracked capture bytes restored; they are captures, not compared test baselines. Final captures are routed directly to ignored helper logs.
+
+The first cp18 WebKit container stalled during the public pinned-package download and was stopped before tests began; its launcher error and clean stack shutdown are retained in `gate/final-keyboard/webkit-launch-download-delay/`. The explicit same-candidate infrastructure restart is recorded separately from test results.
+
+PUSHED: NO. MERGED: NO. WORKTREES REMOVED: NO. PRODUCTION APPROVED: NO.
