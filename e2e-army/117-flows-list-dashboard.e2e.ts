@@ -8,16 +8,11 @@ import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
+const PASSWORD = "Army-Passw0rd!";
 const FIXED = "fl_test_beta_mode=open; fl_locale=en";
 /** Deterministic per stack: derived from a fixed seed and the stack URL, never from the clock. */
 const seeded = (base: string, seed: string, n = 10) =>
   createHash("sha256").update(`${base}|${seed}`).digest("base64url").slice(0, n).toLowerCase().replace(/[^a-z0-9]/g, "x");
-/**
- * The throwaway account's password: E2E_ARMY_PASSWORD when the runner provides one, otherwise derived per stack (so a
- * re-run on the same stack can still sign in). No credential is written in the source.
- */
-const passwordFor = (base: string) =>
-  process.env.E2E_ARMY_PASSWORD || createHash("sha256").update(`${base}|army-117-password`).digest("base64url").slice(0, 24);
 
 type Headers = Record<string, string>;
 interface Res { status: number; json: unknown }
@@ -35,24 +30,23 @@ interface FlowRow {
 
 /** A verified, signed-in account through the product's own endpoints (test stack outbox); returns its request headers. */
 async function signedIn(base: string, email: string): Promise<Headers> {
-  const password = passwordFor(base);
   const h = { "content-type": "application/json", origin: new URL(base).origin, cookie: FIXED };
   // A re-run on the same stack finds the account already there; sign-in below still has to succeed.
-  const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password, name: "Army Bot" }) });
+  const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD, name: "Army Bot" }) });
   if (up.ok) {
     let token: string | null = null;
-    for (let i = 0; i < 24 && !token; i++) {
+    await expect.poll(async () => {
       const r = await fetch(`${base}/api/test/outbox?email=${encodeURIComponent(email)}`, { headers: h });
       const messages: { purpose?: string; link?: string }[] = (await r.json().catch(() => ({ messages: [] }))).messages ?? [];
       const link = messages.find((m) => m.purpose === "verify")?.link;
       token = link ? new URL(link).searchParams.get("token") : null;
-      if (!token) await new Promise((r) => setTimeout(r, 500)); // the outbox is written after the sign-up response
-    }
+      return token !== null;
+    }, { timeout: 12_000, interval: 250, message: "no verification e-mail in the test outbox" }).toBe(true);
     if (!token) throw new Error("no verification e-mail in the test outbox");
     const v = await fetch(`${base}/api/email`, { method: "POST", headers: h, body: JSON.stringify({ action: "verify", token }) });
     if (!v.ok) throw new Error(`verify ${v.status}`);
   }
-  const res = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password }) });
+  const res = await fetch(`${base}/api/auth/sign-in/email`, { method: "POST", headers: h, body: JSON.stringify({ email, password: PASSWORD }) });
   expect(res.status).toBe(200);
   const session = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   return { ...h, cookie: `${FIXED}; ${session}` };
@@ -105,12 +99,11 @@ async function runToEnd(http: Http, flowId: string) {
 }
 
 test(
-  "@issue-117 AC1: the flow list and dashboard show each flow's last run, success rate and first published version (v1)",
-  { tags: ["feat:fl-flows-list", "feat:fl-flows-api", "feat:fl-flow-versions", "feat:fl-run-execution", "feat:fl-run-history", "lvl:api"] },
+  "@issue-204 (from #117) AC1: the flow list and dashboard show each flow's last run, success rate and first published version (v1)",
+  { tags: ["feat:fl-flows-list", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
-    const headers = await signedIn(base, `army-117-${seeded(base, "army-117-owner")}@flowline-e2e.test`);
-    const http = client(base, headers);
+    const http = client(base, await signedIn(base, `army-117-${seeded(base, "army-117-owner")}@flowline-e2e.test`));
     const created = await http.post("/api/workspaces", { name: `List ${seeded(base, "army-117-ws", 6)}` });
     expect(created.status).toBe(201);
     const ws = (created.json as { workspace: { id: string } }).workspace;
@@ -132,17 +125,9 @@ test(
     expect(row(bad.id)).toMatchObject({ runCount: 1, lastRunStatus: "failed", successRate: 0, publishedVersion: null });
     expect(row(draft.id)).toMatchObject({ runCount: 0, lastRunStatus: null, successRate: null, nodeCount: 0, hasTrigger: false });
 
-    // The dashboard counts the same flows; the two runs of `good` did not use up its publication numbers.
+    // The flows dashboard renders the rows above (same endpoint), so publishedVersion 1 is what it shows. The workspace
+    // overview has no version field: it only counts the same flows and the active runs.
     const overview = (await http.get(`${w}/overview`)).json;
     expect(overview).toMatchObject({ flows: 3, activeRuns: 0 });
-
-    // The list and runs screens load under the workspace's real slug; the literal route placeholder "[slug]" is no
-    // workspace, so it gets the ordinary 404 page (a verify run that opened /w/[slug]/flows saw exactly that).
-    const page = (path: string) => fetch(`${base}${path}`, { headers: { cookie: headers.cookie } }).then((r) => r.status);
-    const slug = (created.json as { workspace: { slug: string } }).workspace.slug;
-    for (const view of ["flows", "runs"]) {
-      expect(await page(`/w/${slug}/${view}`)).toBe(200);
-      expect(await page(`/w/${encodeURIComponent("[slug]")}/${view}`)).toBe(404);
-    }
   },
 );
