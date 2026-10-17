@@ -1,0 +1,92 @@
+{
+  "candidateSha": "7a315f7146784a4ac23b48e1ba06f46a762a21a7",
+  "runId": "1536fd4f52bb8b817a42ab4b475fa746",
+  "scope": "DB-only synthetic fixture + actual candidate crypto; no app/worker/migration/ARM certification",
+  "status": "PASS_DB_ONLY",
+  "checks": [
+    {
+      "name": "candidate crypto matches exact Git SHA",
+      "ok": true
+    },
+    {
+      "name": "candidate journal matches exact Git SHA",
+      "ok": true
+    },
+    {
+      "name": "encrypted logical backup created",
+      "ok": true
+    },
+    {
+      "name": "wrong backup key refused before restore",
+      "ok": true
+    },
+    {
+      "name": "wrong source container refused",
+      "ok": true
+    },
+    {
+      "name": "wrong database refused",
+      "ok": true
+    },
+    {
+      "name": "same source/destination refused",
+      "ok": true
+    },
+    {
+      "name": "inherited container refused",
+      "ok": true
+    },
+    {
+      "name": "nonempty destination refused",
+      "ok": true
+    },
+    {
+      "name": "refusal preserved destination row",
+      "ok": true
+    },
+    {
+      "name": "DB restore completed in empty destination",
+      "ok": true
+    },
+    {
+      "name": "all ciphertext and key-id bytes preserved",
+      "ok": true
+    },
+    {
+      "name": "workspace credential decrypts with recovered key",
+      "ok": true
+    },
+    {
+      "name": "platform credential decrypts with separate recovered key",
+      "ok": true
+    },
+    {
+      "name": "AAD workspace mismatch refused",
+      "ok": true
+    },
+    {
+      "name": "wrong workspace key refused without fallback",
+      "ok": true
+    },
+    {
+      "name": "wrong platform key refused without fallback",
+      "ok": true
+    },
+    {
+      "name": "source remained intact",
+      "ok": true
+    }
+  ],
+  "cleanup": [
+    {
+      "name": "flowline-takeover-beta-1536fd4f52bb8b817a42ab4b475fa746-restore",
+      "removed": true
+    },
+    {
+      "name": "flowline-takeover-beta-1536fd4f52bb8b817a42ab4b475fa746-source",
+      "removed": true
+    }
+  ],
+  "at": "2026-10-03T00:29:54.931Z",
+  "privateFilesRemoved": true
+}

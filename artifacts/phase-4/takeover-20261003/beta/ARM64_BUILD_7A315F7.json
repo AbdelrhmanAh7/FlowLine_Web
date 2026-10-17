@@ -1,0 +1,8 @@
+{
+    "exitCode":  0,
+    "registryPush":  false,
+    "imageTag":  "flowline:takeover-7a315f7-arm64",
+    "finishedAt":  "2026-10-03T00:29:47.9780682Z",
+    "sourceSha":  "7a315f7146784a4ac23b48e1ba06f46a762a21a7",
+    "platform":  "linux/arm64"
+}

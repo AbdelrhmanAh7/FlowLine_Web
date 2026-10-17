@@ -4,7 +4,17 @@ node_modules
 .next-*
 .env
 .env.*
+**/.env
+**/.env.*
 artifacts
+**/.takeover-beta-*
+.takeover-beta-*
+**/*.bundle
+*.bundle
+**/*.dump
+*.dump
+**/*.dump.*
+*.dump.*
 test-results
 playwright-report
 design-reference
