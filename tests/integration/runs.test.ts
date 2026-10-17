@@ -457,3 +457,25 @@ describe("worker lease (regression: Fable F1)", () => {
     await expect(listRuns(ws.id, { limit: Number.NaN })).resolves.toEqual([]);
   });
 });
+
+describe("CSV input column order across the queue", () => {
+  it.each([false, true])("preserves first-row keys with explicit input=%s", async (explicit) => {
+    const { user, flow } = await setup();
+    const input = { rows: [{ name: "A", qty: 1 }, { name: "B", qty: 2 }] };
+    const graph: FlowGraph = {
+      nodes: [
+        { id: "t", type: "trigger.manual", position: { x: 0, y: 0 }, data: { label: "Start", config: { samplePayload: JSON.stringify(input) } } },
+        { id: "csv", type: "data.csv", position: { x: 200, y: 0 }, data: { label: "CSV", config: { mode: "build", source: "rows", delimiter: "," } } },
+        { id: "o", type: "output", position: { x: 400, y: 0 }, data: { label: "Output", config: { key: "file", expression: "" } } },
+      ],
+      edges: [{ id: "a", source: "t", target: "csv" }, { id: "b", source: "csv", target: "o" }],
+    };
+    await saveFlow(user, flow.id, { baseRevision: 1, graph });
+    const run = await enqueueRun(user, flow.id, explicit ? { input } : {});
+    expect(Object.keys(((await freshRun(run.id)).input as typeof input).rows[0])).toEqual(["name", "qty"]);
+    await claimAndProcess(run.id);
+    const done = await freshRun(run.id);
+    expect(done.status).toBe("succeeded");
+    expect((done.output as { file: { csv: string } }).file.csv.replace(/\r\n/g, "\n")).toBe("name,qty\nA,1\nB,2");
+  });
+});

@@ -142,8 +142,10 @@ test("[fl-flow-versions.1] saved versions are immutable history and an old one c
   const f = await newFlow(http, a.workspaceId, `Versions ${seeded("flow-versions", 4)}`, v1, { createVersion: true });
   const second = await http.put(`/api/flows/${f.id}`, { json: { baseRevision: f.revision, graph: chain({ step: "second" }, "$"), createVersion: true } });
   expect(second.status).toBe(200);
-  const list = (await http.get(`/api/flows/${f.id}/versions`)).json.versions as { id: string; version: number; reason: string }[];
-  expect(list.map((v) => v.version)).toEqual([2, 1]);
+  const list = (await http.get(`/api/flows/${f.id}/versions`)).json.versions as { id: string; version: number | null; revision: number; reason: string }[];
+  // CTO decision #204: saves are unnumbered snapshots; only publications take v1, v2…
+  expect(list.map((v) => v.version)).toEqual([null, null]);
+  expect(list.map((v) => v.revision)).toEqual([second.json.flow.revision, f.revision]);
   expect(list.every((v) => v.reason === "save")).toBe(true);
   const oldest = list[list.length - 1]!;
   const detail = (await http.get(`/api/flows/${f.id}/versions/${oldest.id}`)).json.version;

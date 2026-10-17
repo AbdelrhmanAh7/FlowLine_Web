@@ -1,5 +1,32 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+
+## Pilot E2E failure corrections — 2026-10-15
+
+Local branch `fix/pilot-e2e-failures`; owner requested local changes/commit only, no push/PR or hub edits.
+Two product defects fixed: run input's JSONB storage reordered CSV columns at the queue boundary
+(migration 0027 now stores JSON), and copy-page metadata exposed the restricted page title despite a
+404 content check (metadata now checks platform-admin authorization before translation).
+The admin root also withholds privileged metadata from denied users. Auth/2FA checks are unchanged.
+
+The reported `fl-flow-versions.1` expectation `[2,1]` contradicts the deliberate #204 CTO decision
+below: save snapshots are unnumbered; only publications receive numbers. Product behavior is retained.
+Local regression tests assert two saves yield null numbers, `save` reasons and descending revisions;
+the repository's feature E2E expectation is corrected. Read-only hub reference remains unchanged and
+will still fail this outdated assertion until its owner updates it.
+
+Evidence and commands: [pilot E2E report](../../artifacts/pilot-e2e/EVIDENCE.md). Integration regressions
+cover manual sample input and explicit run input through persistence and the real worker, and denied
+admin content plus metadata for anonymous/non-admin/API-key callers. Existing JSONB row key order
+cannot be reconstructed by migration. No production/provider verification is claimed. GitHub tracking,
+CI and review are deferred to the harness under the owner's worktree-only/no-push/no-PR instruction;
+this local commit is not a merge-ready or CI-gated claim.
+
+
+## route() error-header unit coverage (issue #234) — 2026-10-15
+
+PR #200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.
+
 ## Legacy backfill 0026 (issue #205) — 2026-10-14
 
 Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
@@ -281,3 +308,16 @@ AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remain
 ## Test coverage note: hub route selection (#174)
 
 `tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
+
+## PR #287 local CI repair — 2026-10-16
+
+Merged main `131235b9` into the pilot branch (merge `b5765988`), preserving both NEXT_ACTION entries.
+Main ends at migration 0026; 0027 needs no renumbering. `pnpm db:generate` reports no drift;
+all 28 migrations applied to fresh `flowline_test_pr287_migrations` on localhost:5432,
+and `run.input` is `json`. CI run 38792754200 attempt 2 failed the demo cross-process lock test:
+readiness preceded SIGTERM handler registration. The test now registers cleanup first and
+always terminates/awaits the child in finally. No production lock semantics changed.
+Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 total),
+131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
+for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
+No push, GitHub writes, dependency changes, secrets or permission changes.
