@@ -109,6 +109,25 @@ test.describe("with a manifest", () => {
     await context.close();
   });
 
+  test("AC7: no layout shift while the posters load and the hero and bento loops start (CLS 0)", async ({ browser }) => {
+    const { context, page, videos } = await open(browser);
+    await expect.poll(() => videos(/\/hero\./).length).toBe(1);
+    await expect.poll(() => paused(hero(page))).toBe(false);
+    await page.locator("#demo [data-demo-tile]").nth(3).scrollIntoViewIfNeeded();
+    await expect.poll(() => videos(/\/templates\./).length).toBe(1);
+    await settled(page);
+    // Buffered layout-shift entries cover the whole visit since navigation; the callback runs as a task, so wait two frames after it.
+    const shifts = await page.evaluate(() => new Promise<number[]>((done) => {
+      const values: number[] = [];
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) values.push(e.value);
+      }).observe({ type: "layout-shift", buffered: true });
+      setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => done(values))), 0);
+    }));
+    expect(shifts).toEqual([]);
+    await context.close();
+  });
+
   test("source choice: H.264 when AV1 is not supported; still exactly one video file", async ({ browser }) => {
     const { context, page, videos } = await open(browser, { caps: "h264" });
     await expect.poll(() => videos(/\/hero\./).length).toBe(1);
