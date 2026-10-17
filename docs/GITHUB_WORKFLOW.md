@@ -7,7 +7,7 @@ Every piece of work is tracked on GitHub so its state is visible without reading
 - **Board:** [FlowLine — Delivery](https://github.com/users/AbdelrhmanAh7/projects/21) (Projects v2, linked to the repo). Fields: **Status** (Todo, In progress, In review, Blocked, Done), **Priority** (P0–P3), **Area**.
 - **Milestones** group work by delivery goal: *Paid pilot: security hardening*, *CI & repo workflow*, *Paid pilot: owner readiness*, *Field validation v2*. Add a milestone before starting a new goal.
 - **Every task starts as an issue** (or an existing one) with a milestone, a `type:` label, a `priority:` label and area. Work found during a task that is out of scope becomes a new issue, never a silent TODO.
-- **Every PR** links its issue (`Closes #N` in the body), carries the same milestone and labels, and is on the board. Status moves: Todo → In progress (branch exists) → In review (PR open) → Done (merged); Blocked when waiting on something external.
+- **Every PR** links its issue (`Closes #N` in the body; for an owner-tracking issue labelled `owner-only` or `needs-owner`, such as #162, use the non-closing `Refs #N` so merging leaves the issue open for the owner to close), carries the same milestone and labels, and is on the board. Status moves: Todo → In progress (branch exists) → In review (PR open) → Done (merged); Blocked when waiting on something external.
 
 ## Labels
 
@@ -43,3 +43,10 @@ Approved by: <owner; delegated reviewer only where the affected rule permits del
 ```
 
 A missed record is added retroactively on the PR as soon as it is found, labelled as retroactive.
+
+## AI implementers (Mac mini hub)
+
+The AI implementers no longer run from GitHub Actions: `.github/workflows/ai-implementers.yml` (self-hosted `[self-hosted, macmini]` runner) was removed in #157 (`592a07a`), and the hub's launchd jobs on the Mac mini schedule them (see `docs/slimdown-plan.md`). Engine order and scheduling live in the hub (`AbdelrhmanAh7/nql-agents`), not in this repository.
+
+- **Issue #60 (CI red at `f655e51`, PR #54):** the `start` job failed with `git config` exit 5 ("cannot overwrite multiple values with a single value") because the persistent self-hosted runner reused its checkout, so `credential.helper` held several values in `.git/config`. The cleanup is in the hub: `git_as_owner` in `bin/common.sh` runs `git config --local --unset-all` before re-adding the keys (hub commit [`41c658f`](https://github.com/AbdelrhmanAh7/nql-agents/commit/41c658f0720effff140287e4101f6cbd2e951627), 2026-10-06T02:45:20Z). Evidence: `artifacts/phase-4/issue-60/EVIDENCE.md`.
+- **Guard in this repo:** `tests/unit/ci-workflows.test.ts` ("workflow files") requires every `runs-on` to be `ubuntu-24.04` (a fresh workspace per job), forbids `ai-implementers.yml`, and checks that no workflow mentions `self-hosted`, so a persistent runner cannot come back unnoticed.

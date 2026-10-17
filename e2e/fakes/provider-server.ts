@@ -13,6 +13,7 @@ import { createHash, createHmac, generateKeyPairSync, randomBytes, sign as crypt
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { pathToFileURL } from "node:url";
+import { compileFaultPattern, safeRedirectTarget } from "./safety";
 
 // ---------------------------------------------------------------- fixtures
 
@@ -207,6 +208,10 @@ interface State {
   paddleWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
+  /** #147: the two Mizano create steps. A repeated Idempotency-Key replays the stored record instead of inserting a second one. */
+  mizanoCustomers: Record<string, unknown>[];
+  mizanoQuotes: Record<string, unknown>[];
+  mizanoCreateKeys: Map<string, Record<string, unknown>>;
   emailMessages: { provider: "resend" | "postmark"; to: string; subject: string; html: string; text: string }[];
 }
 
@@ -368,6 +373,9 @@ function seed(): State {
         description: "It flakes on CI.",
       },
     ],
+    mizanoCustomers: [],
+    mizanoQuotes: [],
+    mizanoCreateKeys: new Map(),
   };
 }
 
@@ -385,7 +393,7 @@ interface RecordedRequest {
 type FaultMode = "429" | "500" | "timeout" | "drop_after_commit" | "drop_before_commit" | "delay";
 interface Fault {
   provider: string;
-  pattern: RegExp;
+  pattern: { test(path: string): boolean };
   mode: FaultMode;
   times: number;
   retryAfterSec?: number;
@@ -492,14 +500,15 @@ function handleOauth(ctx: Ctx, provider: string, req: IncomingMessage, res: Serv
   if (req.method === "GET" && path === "/oauth/authorize") {
     const redirectUri = url.searchParams.get("redirect_uri") ?? "";
     const account: AccountKey = url.searchParams.get("fake_account") === "second" || url.searchParams.get("login_hint")?.includes("bob") ? "b" : "a";
+    // Allowlisted redirect target (relative path or loopback host); anything else is refused, not followed.
+    if (!safeRedirectTarget(redirectUri)) {
+      json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri must be a relative path or a local host" });
+      return true;
+    }
     const code = `fake-code-${randomBytes(6).toString("hex")}`;
     const challenge = url.searchParams.get("code_challenge") ?? undefined;
     state.oauthCodes.set(code, { provider, challenge, account });
-    const target = new URL(redirectUri);
-    target.searchParams.set("code", code);
-    const st = url.searchParams.get("state");
-    if (st) target.searchParams.set("state", st);
-    res.writeHead(302, { location: target.toString() });
+    res.writeHead(302, { location: safeRedirectTarget(redirectUri, { code, state: url.searchParams.get("state") })! });
     res.end();
     return true;
   }
@@ -643,6 +652,10 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
       json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri and client_id are required" });
       return true;
     }
+    if (!safeRedirectTarget(redirectUri)) {
+      json(ctx, req, res, 400, { error: "invalid_request", error_description: "redirect_uri must be a relative path or a local host" });
+      return true;
+    }
     // Auto-consent: login_hint picks the identity, otherwise the control-set fake user.
     const user = state.oidcUser;
     const code = `oidc-code-${randomBytes(6).toString("hex")}`;
@@ -653,11 +666,7 @@ function handleOidc(ctx: Ctx, req: IncomingMessage, res: ServerResponse, path: s
       email: url.searchParams.get("login_hint") || user.email,
       emailVerified: user.emailVerified,
     });
-    const target = new URL(redirectUri);
-    target.searchParams.set("code", code);
-    const st = url.searchParams.get("state");
-    if (st) target.searchParams.set("state", st);
-    res.writeHead(302, { location: target.toString() });
+    res.writeHead(302, { location: safeRedirectTarget(redirectUri, { code, state: url.searchParams.get("state") })! });
     res.end();
     return true;
   }
@@ -1135,6 +1144,34 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
 };
 
+// Mizano (#147, #222): health probe, workspace identity and the two create steps. Dispatch has already checked the Bearer
+// token (401 { message: "Unauthorized" }). A create without an Idempotency-Key is refused, and a key already seen for that
+// path replays the stored record instead of inserting a second one, so the engine's per-(run, node) key is observable here.
+const mizano: Handler = (ctx, req, res, path, _url, body) => {
+  const s = ctx.state;
+  if (req.method === "GET" && path === "/api/health") {
+    return json(ctx, req, res, 200, { status: "ok", version: "fake" });
+  }
+  if (req.method === "GET" && path === "/api/me") {
+    return json(ctx, req, res, 200, { id: "mz-ws-fake", workspaceName: "Fake Mizano Workspace" });
+  }
+  if (req.method === "POST" && (path === "/api/customers" || path === "/api/quotes")) {
+    const key = String(req.headers["idempotency-key"] ?? "");
+    if (!key) return json(ctx, req, res, 400, { message: "Idempotency-Key header is required" });
+    const slot = `${path}|${key}`;
+    const replayed = s.mizanoCreateKeys.get(slot);
+    if (replayed) return json(ctx, req, res, 200, replayed);
+    const input = j(body);
+    const customers = path === "/api/customers";
+    const list = customers ? s.mizanoCustomers : s.mizanoQuotes;
+    const record = { id: `${customers ? "cust" : "quote"}_fake_${list.length + 1}`, ...input };
+    list.push(record);
+    s.mizanoCreateKeys.set(slot, record);
+    return json(ctx, req, res, 201, record);
+  }
+  return json(ctx, req, res, 404, { message: "Not found" });
+};
+
 const github: Handler = (ctx, req, res, path, url, body, account) => {
   const s = ctx.state;
   const acct = ACCOUNTS[account];
@@ -1435,6 +1472,7 @@ const stripe: Handler = async (ctx, req, res, path, url, body) => {
     if (!session) return json(ctx, req, res, 404, { error: { type: "invalid_request_error", message: "No such checkout session" } });
     if (completeMatch[2] === "fail") {
       session.status = "failed";
+      // Redirects to the URL the API caller registered (authenticated, stored server-side); see docs/security/codeql-triage-fakes.md.
       res.writeHead(303, { location: session.cancel_url || "/" });
       res.end();
       return;
@@ -1779,6 +1817,8 @@ ${failed}
       res.end();
       return;
     }
+    // A success_url outside the allowlist is not followed: the buyer stays on the checkout page instead.
+    const success = safeRedirectTarget(_url.searchParams.get("success_url") || "") ?? `/paddle/checkout/${txn.id}`;
     if (txn.status !== "completed") {
       txn.status = "completed";
       const price = s.paddlePrices.find((p) => p.id === txn.items[0]!.price_id);
@@ -1818,7 +1858,7 @@ ${failed}
       await sendPaddleWebhook(ctx, paddleEvent(s, "subscription.created", paddleSubscriptionPayload(sub)));
     }
     // The redirect Paddle.js performs to settings.successUrl after payment.
-    res.writeHead(303, { location: _url.searchParams.get("success_url") || `/paddle/checkout/${txn.id}` });
+    res.writeHead(303, { location: success });
     res.end();
     return;
   }
@@ -1929,6 +1969,7 @@ const HANDLERS: Record<string, Handler> = {
   zendesk,
   airtable,
   snowflake,
+  mizano,
   github,
   stripe,
   paddle,
@@ -1980,6 +2021,8 @@ function stateDump(state: State, provider: string): unknown {
       return { pages: state.notionPages };
     case "linear":
       return { issues: state.linearIssues };
+    case "mizano":
+      return { customers: state.mizanoCustomers, quotes: state.mizanoQuotes };
     case "snowflake":
       return { note: "stateless" };
     default:
@@ -2048,18 +2091,17 @@ async function handleControl(ctx: Ctx, req: IncomingMessage, res: ServerResponse
   }
   if (req.method === "POST" && path === "/__fake/fault") {
     const payload = j(rawBody) as unknown as { provider: string; pathPattern: string; mode: FaultMode; times?: number; retryAfterSec?: number; delayMs?: number };
-    try {
-      ctx.faults.push({
-        provider: payload.provider,
-        pattern: new RegExp(payload.pathPattern),
-        mode: payload.mode,
-        times: payload.times ?? 1,
-        retryAfterSec: payload.retryAfterSec,
-        delayMs: payload.delayMs,
-      });
-    } catch (e) {
-      return json(ctx, req, res, 400, { error: String(e) }), true;
-    }
+    // The pattern is matched as text (see safety.ts), never compiled to a RegExp.
+    const pattern = compileFaultPattern(payload.pathPattern);
+    if (!pattern) return json(ctx, req, res, 400, { error: "pathPattern must be a non-empty string of at most 200 characters" }), true;
+    ctx.faults.push({
+      provider: payload.provider,
+      pattern,
+      mode: payload.mode,
+      times: payload.times ?? 1,
+      retryAfterSec: payload.retryAfterSec,
+      delayMs: payload.delayMs,
+    });
     return json(ctx, req, res, 200, { ok: true }), true;
   }
   // Builds a signed Stripe-style event WITHOUT sending it, so tests can post it
@@ -2373,10 +2415,12 @@ export async function startFakeProviders(port = 0): Promise<{ url: string; port:
       ctx.requests[ctx.requests.length - 1]!.body = rawBody && (req.headers["content-type"] ?? "").includes("json") ? j(rawBody) : rawBody || undefined;
 
       await handler(ctx, req, res, path, url, rawBody, account);
-    })().catch((e) => {
+    })().catch((e: unknown) => {
+      // The stack stays in the server log; the response body is generic (CodeQL js/stack-trace-exposure).
+      console.error("[fake-providers] request failed:", e instanceof Error ? (e.stack ?? e.message) : e);
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: `fake server error: ${e}` }));
+        res.end(JSON.stringify({ error: "internal fake server error" }));
       } else {
         res.end();
       }
