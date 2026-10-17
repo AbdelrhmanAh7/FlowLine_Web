@@ -81,7 +81,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
-        <span data-testid="two-factor-status">
+        <span data-testid="two-factor-status" data-state={enabled ? "on" : "off"}>
           <StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
         </span>
       </div>
@@ -97,6 +97,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               dir="ltr"
               className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm"
               data-testid="totp-secret"
+              aria-labelledby="two-factor-secret-label"
             >
               {enrolment.secret}
             </code>

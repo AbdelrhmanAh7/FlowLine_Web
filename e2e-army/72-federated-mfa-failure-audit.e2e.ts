@@ -123,7 +123,7 @@ test(
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
     await agent.act("click the Enable button");
-    await agent.act("fill the Account password field with the correct password and submit");
+    await agent.act("fill the Account password field with {pw} and submit", { params: { pw: PASSWORD } });
     await agent.assert("the secret key and backup codes are displayed left-to-right with a 'shown only once' warning");
     await expect(screen.getByTestId("totp-secret")).toBeVisible();
     await expect(screen.getByTestId("totp-secret")).toHaveAttribute("dir", "ltr");
@@ -138,7 +138,7 @@ test(
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
     await agent.act("click the Enable button");
-    await agent.act("fill the Account password field with the correct password and submit");
+    await agent.act("fill the Account password field with {pw} and submit", { params: { pw: PASSWORD } });
     await agent.act("fill the Authentication code field with {code} and submit", { params: { code: "000000" } }); // 000000 is rejected unless it is one of the 3 currently valid codes (odds ~3 in 1,000,000); the Playwright spec picks a code outside the window
     await agent.assert("an error says the code is invalid and the status is still Off");
     await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
@@ -148,7 +148,7 @@ test(
 );
 
 test(
-  "@issue-197 AC5: Cancel leaves the status Off and the secret never appears in URLs, storage or logs",
+  "@issue-197 AC5: Cancel leaves the status Off and the secret hidden",
   { tags: ["feat:fl-email-flows"], session: "fl-user" },
   async ({ app, agent, screen }) => {
     await app.open("/account/security");
@@ -159,7 +159,7 @@ test(
     await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
 
     await agent.act("click the Enable button again");
-    await agent.act("fill the Account password field with the correct password and submit");
+    await agent.act("fill the Account password field with {pw} and submit", { params: { pw: PASSWORD } });
     await agent.act("click Cancel in the code form");
     await agent.assert("the status remains Off and the secret is hidden");
     await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
