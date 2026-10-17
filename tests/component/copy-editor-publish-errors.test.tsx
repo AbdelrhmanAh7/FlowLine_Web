@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CopyEditor } from "@/app/admin/copy/copy-editor";
 import { createTranslator } from "@/i18n/translate";
 import { api, ApiError } from "@/lib/api";
@@ -13,7 +13,8 @@ const mockApi = vi.mocked(api);
 vi.mock("@/i18n/client", () => ({ useT: () => i18n.t }));
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
-  return { ...actual, useQuery: mockUseQuery, useMutation: vi.fn() };
+  // CopyEditor does not call useMutation (writes go through api() directly), so only useQuery is stubbed.
+  return { ...actual, useQuery: mockUseQuery };
 });
 
 const copyState = {
@@ -37,12 +38,16 @@ function setup(stepUpUntil: string | null = new Date(Date.now() + 600_000).toISO
 
 describe("CopyEditor publish error handling (#228)", () => {
   const user = userEvent.setup();
+  let dateNow: ReturnType<typeof vi.spyOn> | undefined;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.restoreAllMocks();
     mockApi.mockReset();
     mockUseQuery.mockReset();
+  });
+
+  afterEach(() => {
+    dateNow?.mockRestore();
+    dateNow = undefined;
   });
 
   it("shows fallback error alert and refetches copy state when publish rejects with 500 INTERNAL", async () => {
@@ -69,20 +74,29 @@ describe("CopyEditor publish error handling (#228)", () => {
 
   it("shows step-up alert, refetches me, and avoids api call when step-up is expired client-side", async () => {
     const baseTime = 1_700_000_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(baseTime);
-    const { t, meRefetch } = setup(new Date(baseTime + 5_000).toISOString());
+    dateNow = vi.spyOn(Date, "now").mockReturnValue(baseTime);
+    // The step-up window ends 5s after baseTime; the stale `me` data never changes during the test.
+    const { t, meRefetch, stateRefetch } = setup(new Date(baseTime + 5_000).toISOString());
 
     renderWithProviders(<CopyEditor />);
     const publish = await screen.findByRole("button", { name: t("platformAdmin.copyEditor.apply") });
     expect(publish).toBeEnabled();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
 
-    vi.spyOn(Date, "now").mockReturnValue(baseTime + 10_000);
+    // Only the clock moves past the step-up expiry: the button was still enabled from the stale state.
+    dateNow.mockReturnValue(baseTime + 10_000);
     await user.click(publish);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(t("platformAdmin.copyEditor.stepUp"));
+    expect(alert).not.toHaveTextContent(t("platformAdmin.copyEditor.publishError"));
     expect(meRefetch).toHaveBeenCalledTimes(1);
+    expect(stateRefetch).not.toHaveBeenCalled();
     expect(mockApi).not.toHaveBeenCalled();
+    // Disabled because the step-up expired (role=note shown), not because a write is pending:
+    // the form fields are only disabled while pending, and they stay enabled here.
     await waitFor(() => expect(publish).toBeDisabled());
+    expect(screen.getByRole("note")).toHaveTextContent(t("platformAdmin.copyEditor.stepUp"));
+    expect(screen.getByLabelText(t("platformAdmin.copyEditor.english"))).toBeEnabled();
   });
 });
