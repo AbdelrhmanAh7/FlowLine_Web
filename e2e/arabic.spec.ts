@@ -364,3 +364,31 @@ test("Arabic settings, agents, knowledge and integrations: every tab and page is
     await noHorizontalScroll(page, `${path} @375`);
   }
 });
+
+test("Arabic account security page: RTL page, LTR secret, backup codes and code input, no horizontal scroll", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  await expectArabic(page);
+  await expect(page.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await noHorizontalScroll(page, `account/security @${width}`);
+  }
+
+  // Enrolment view: password -> secret, backup codes and the code input.
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  await page.getByLabel("كلمة مرور الحساب").fill(PASSWORD);
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  await expect(page.getByTestId("totp-secret")).toBeVisible();
+  expect(await direction(page, '[data-testid="totp-secret"]')).toBe("ltr");
+  expect(await direction(page, '[data-testid="backup-codes"]')).toBe("ltr");
+  expect(await direction(page, "#two-factor-code")).toBe("ltr");
+  await expectArabic(page);
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await noHorizontalScroll(page, `account/security enrolment @${width}`);
+  }
+  await page.getByRole("button", { name: "إلغاء" }).click();
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+});
