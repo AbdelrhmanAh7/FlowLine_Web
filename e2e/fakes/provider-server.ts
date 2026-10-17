@@ -208,6 +208,10 @@ interface State {
   paddleWebhooks: { id: string; type: string; url: string | null; sent: boolean; payload: string; header: string; at: string }[];
   notionPages: Record<string, unknown>[];
   linearIssues: { id: string; identifier: string; title: string; url: string; description: string }[];
+  /** #147: the two Mizano create steps. A repeated Idempotency-Key replays the stored record instead of inserting a second one. */
+  mizanoCustomers: Record<string, unknown>[];
+  mizanoQuotes: Record<string, unknown>[];
+  mizanoCreateKeys: Map<string, Record<string, unknown>>;
   emailMessages: { provider: "resend" | "postmark"; to: string; subject: string; html: string; text: string }[];
 }
 
@@ -369,6 +373,9 @@ function seed(): State {
         description: "It flakes on CI.",
       },
     ],
+    mizanoCustomers: [],
+    mizanoQuotes: [],
+    mizanoCreateKeys: new Map(),
   };
 }
 
@@ -1135,6 +1142,34 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
     });
   }
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
+};
+
+// Mizano (#147, #222): health probe, workspace identity and the two create steps. Dispatch has already checked the Bearer
+// token (401 { message: "Unauthorized" }). A create without an Idempotency-Key is refused, and a key already seen for that
+// path replays the stored record instead of inserting a second one, so the engine's per-(run, node) key is observable here.
+const mizano: Handler = (ctx, req, res, path, _url, body) => {
+  const s = ctx.state;
+  if (req.method === "GET" && path === "/api/health") {
+    return json(ctx, req, res, 200, { status: "ok", version: "fake" });
+  }
+  if (req.method === "GET" && path === "/api/me") {
+    return json(ctx, req, res, 200, { id: "mz-ws-fake", workspaceName: "Fake Mizano Workspace" });
+  }
+  if (req.method === "POST" && (path === "/api/customers" || path === "/api/quotes")) {
+    const key = String(req.headers["idempotency-key"] ?? "");
+    if (!key) return json(ctx, req, res, 400, { message: "Idempotency-Key header is required" });
+    const slot = `${path}|${key}`;
+    const replayed = s.mizanoCreateKeys.get(slot);
+    if (replayed) return json(ctx, req, res, 200, replayed);
+    const input = j(body);
+    const customers = path === "/api/customers";
+    const list = customers ? s.mizanoCustomers : s.mizanoQuotes;
+    const record = { id: `${customers ? "cust" : "quote"}_fake_${list.length + 1}`, ...input };
+    list.push(record);
+    s.mizanoCreateKeys.set(slot, record);
+    return json(ctx, req, res, 201, record);
+  }
+  return json(ctx, req, res, 404, { message: "Not found" });
 };
 
 const github: Handler = (ctx, req, res, path, url, body, account) => {
@@ -1934,6 +1969,7 @@ const HANDLERS: Record<string, Handler> = {
   zendesk,
   airtable,
   snowflake,
+  mizano,
   github,
   stripe,
   paddle,
@@ -1985,6 +2021,8 @@ function stateDump(state: State, provider: string): unknown {
       return { pages: state.notionPages };
     case "linear":
       return { issues: state.linearIssues };
+    case "mizano":
+      return { customers: state.mizanoCustomers, quotes: state.mizanoQuotes };
     case "snowflake":
       return { note: "stateless" };
     default:

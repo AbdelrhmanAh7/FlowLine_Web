@@ -8,6 +8,7 @@ import {
   foreignKey,
   index,
   integer,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -203,7 +204,8 @@ export const flowVersion = pgTable(
     flowId: uuid("flow_id")
       .notNull()
       .references(() => flow.id, { onDelete: "cascade" }),
-    version: integer("version").notNull(),
+    /** Publication number; NULL for save, overwrite and run snapshots, so only publishing moves it (#204). */
+    version: integer("version"),
     revision: integer("revision").notNull(),
     name: text("name").notNull(),
     graph: jsonb("graph").$type<FlowGraph>().notNull(),
@@ -214,6 +216,15 @@ export const flowVersion = pgTable(
   },
   (t) => [uniqueIndex("flow_version_unique").on(t.flowId, t.version)],
 );
+
+/** Numbers that save, run and overwrite snapshots from a pre-#204 image held before migration 0026 cleared them; `drizzle/reverse/0026_*.sql` restores them (#205). */
+export const flowVersionNumberBackup = pgTable("flow_version_number_backup", {
+  flowVersionId: uuid("flow_version_id")
+    .primaryKey()
+    .references(() => flowVersion.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  backedUpAt: timestamp("backed_up_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const runStatusEnum = pgEnum("run_status", ["queued", "running", "waiting_approval", "succeeded", "failed", "cancelled"]);
 /** `uncertain` = an external action was sent but its outcome is unknown (lost response) and could not be verified. */
@@ -236,7 +247,8 @@ export const run = pgTable(
     /** Per-workspace sequence shown as #n in the UI. */
     number: integer("number").notNull(),
     status: runStatusEnum("status").notNull().default("queued"),
-    input: jsonb("input"),
+    /** JSON preserves caller column order for CSV builds after the queue round trip. */
+    input: json("input"),
     output: jsonb("output"),
     error: jsonb("error").$type<{ code: string; message: string; nodeId?: string } | null>(),
     rerunOfRunId: uuid("rerun_of_run_id"),
