@@ -180,6 +180,56 @@ Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the 
 expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
 `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
 
+`pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+
+## Useful scripts
+
+### `scripts/pilot-metrics.ts`
+
+Prints the 8 week-1 pilot success criteria (11 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
+
+**Usage** (the env wrapper loads `DATABASE_URL`; plain `tsx` does not read `.env`):
+```bash
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23
+```
+A missing, malformed, nonexistent (`2026-02-30`) or reversed range exits with code 2 and a usage message on stderr, before the database is touched. Against the test database use `.env.test` (or a `flowline_test_<suffix>` `DATABASE_URL`).
+
+**Metrics.** Sign-up cohort metrics (1-4) filter on the user's `created_at`; run and webhook metrics filter on the event's own time.
+
+| # | Row | Definition |
+|---|-----|------------|
+| 1 | Sign-ups, median time to verified | Distinct users created in range; median hours from sign-up to each user's first consumed `verify` token (users who never verified are left out of the median) |
+| 2 | Onboarding + workspace on day 1 | Cohort users with onboarding completed (not skipped) and a workspace created, both within 24h of sign-up |
+| 3 | Published ≥1 flow within 3 days | Cohort users whose earliest `flow_version` with `reason = 'publish'` is within 3 days of sign-up (later edits, republishing or unpublishing cannot change it) |
+| 4 | Run success rate, p95 queue-to-start | `succeeded / (succeeded + failed)` for runs created in range (shows `0.0%` when all failed, `N/A` when none finished); p95 of `started_at - created_at` |
+| 5 | Webhook runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
+| 6 | Cross-workspace access denials | `N/A`: workspace access checks answer 404 without writing an audit row (`admin.access_denied` is platform-admin probes only, so it is not used as a proxy) |
+| 7 | Share who switched to Arabic | `N/A`: the UI language is a cookie, not stored per user |
+
+Rows 6 and 7 stay `N/A` until the app records those events; the script does not print a made-up `0`.
+
+**Example** (empty range):
+```
+# Pilot Metrics: 1999-01-01 to 1999-01-02
+
+| Metric | Value |
+|--------|-------|
+| Sign-ups | 0 |
+| Median time to verified | N/A |
+| Onboarding completed + workspace created on day 1 | 0 |
+| Published ≥1 flow within 3 days | 0 |
+| Run success rate | N/A |
+| p95 queue-to-start | N/A |
+| Webhook runs | 0 |
+| Approvals (workflow) | 0 |
+| Duplicate webhook runs | 0 |
+| Cross-workspace access denials | N/A (not logged: workspace 404s write no audit row) |
+| Share of users who switched to Arabic | N/A (not tracked, locale is cookie-only) |
+```
+
+**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; removes only the rows it seeded).
+
 Admin page metadata is subject to the same platform-admin authorization boundary as page content.
 Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
 text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
