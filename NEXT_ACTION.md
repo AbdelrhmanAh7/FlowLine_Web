@@ -1,15 +1,16 @@
 # Next action — 2026-10-03
 
-## Issue #100 validation handoff — 2026-10-14
+## Issue #100 validation handoff — 2026-10-18
 
-Product SHA `2c88acbe254f0bfa13bc86f569c951f57e86b900`; continuation changes tests/docs only.
-Fresh results: 6 issue army tests, 22 Chromium demo tests, 26 focused units passed;
-all 25 existing landing cases passed. Typecheck and lint exited 0.
-Real static HTTP Range/immutable checks now pass with a temporary fixture, without #99.
-For verification without real media, use FLOWLINE_ENV=test and fl_test_demo=fixture before navigation;
-without a manifest the demo's absence is required behavior. See [evidence](artifacts/issue-100/EVIDENCE.md).
-Hosted before/after Lighthouse, CLS, Next client gzip and CI/browser matrix remain pending.
-The harness handles the inherited stack and push/PR/review actions. No local full build/suite ran.
+Continuing on #100 with #99 merged into main. Real media and manifest are present in `public/media/demo/`.
+Verifying acceptance criteria with real media and updating evidence.
+
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+>>>>>>> origin/main
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
