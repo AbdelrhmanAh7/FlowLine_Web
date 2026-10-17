@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { Card, Logo } from "@/components/ui";
 import { getT } from "@/i18n/server";
 import { HttpError } from "@/server/http";
-import { requirePlatformAdmin } from "@/server/platform-access";
+import { platformAdminOrNull, requirePlatformAdmin } from "@/server/platform-access";
 import { PlatformPanel } from "./panel";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (!(await platformAdminOrNull())) return { robots: { index: false, follow: false } };
   return { title: (await getT())("platformAdmin.title"), robots: { index: false, follow: false } };
 }
 

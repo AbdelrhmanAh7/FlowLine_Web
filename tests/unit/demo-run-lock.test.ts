@@ -105,8 +105,8 @@ describe("acquireLock()", () => {
   const holderScript = `
     import { acquireLock, releaseLock } from ${JSON.stringify(join(ROOT, "scripts/demo/paths.ts"))};
     acquireLock(${JSON.stringify(lock)});
-    console.log("ACQUIRED");
     process.on("SIGTERM", () => { releaseLock(${JSON.stringify(lock)}); process.exit(0); });
+    console.log("ACQUIRED");
     await new Promise((r) => setTimeout(r, 10000));
   `;
 
@@ -145,10 +145,14 @@ describe("acquireLock()", () => {
     // A child process holds the lock: the parent is refused while it lives, then takes it after the child releases.
     const holder = spawn(process.execPath, ["--import", "tsx", "-e", holderScript], { cwd: ROOT });
     const acquired = new Promise<void>((resolve) => holder.stdout!.on("data", (d) => String(d).includes("ACQUIRED") && resolve()));
-    await acquired; // the child holds the lock now
-    expect(() => acquireLock(lock)).toThrow(/another demo build is running/);
-    holder.kill("SIGTERM");
-    await new Promise<void>((resolve) => holder.on("exit", resolve));
+    try {
+      await acquired; // the child holds the lock and its cleanup handler is ready
+      expect(() => acquireLock(lock)).toThrow(/another demo build is running/);
+    } finally {
+      const exited = new Promise<void>((resolve) => holder.on("exit", resolve));
+      holder.kill("SIGTERM");
+      await exited;
+    }
     acquireLock(lock); // the holder released on SIGTERM: the parent can take it
     releaseLock(lock);
   });
