@@ -1,6 +1,6 @@
 # Issue #143: pilot metrics script (verification report)
 
-Tested code SHA: `9ad9ec71`, re-run unchanged on `d3807fa5` (merge of origin/main; script and tests identical) (branch `ai/143`). Local run, 2026-10-18, Node 26 / pnpm 10.32.1, test DB `flowline_test_143`
+Tested code SHA: `9ad9ec71`, re-run unchanged on `d3807fa5` and on `337aba3f` (merges of origin/main; script and tests identical) (branch `ai/143`). Local run, 2026-10-18, Node 26 / pnpm 10.32.1, test DB `flowline_test_143`
 (migrated with `src/db/migrate.ts`). CI (`gate`) runs the full suite after push; it was not run locally.
 
 E2E: not needed. The script is a read-only internal ops tool; it has no user-facing flow, so no `e2e-army` test is added.
@@ -45,3 +45,4 @@ Regression check: with the previous `scripts/pilot-metrics.ts` (`git show eab985
 - The issue's "0 when no data" is `N/A` for median, p95 and success rate on an empty range: 0% would look like a real total failure.
 - The duplicate metric is an invariant check; `run_trigger_unique` should keep it at 0.
 - Uptime (docs/vision.md) and scheduled-run counts were suggested by a reviewer; they are not among the 8 criteria in the issue and are left for a follow-up.
+- Re-run on `337aba3f` (2026-10-18): `pnpm typecheck` exit 0; eslint on the 3 files exit 0; unit 11 passed; integration 8 passed (`flowline_test_143`, re-migrated); empty-range CLI run (`--from 1999-01-01 --to 1999-01-02`) exit 0 with all 11 rows; reversed range exit 2 with usage on stderr.
