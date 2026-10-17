@@ -7,6 +7,7 @@ import { platformAdminOrNull } from "@/server/platform-access";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (!(await platformAdminOrNull())) notFound();
   return { title: (await getT())("platformAdmin.copyEditor.title"), robots: { index: false, follow: false } };
 }
 
