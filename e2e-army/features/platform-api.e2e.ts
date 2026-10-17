@@ -320,10 +320,12 @@ test("[fl-platform-admin.1] the platform admin API answers 404 to everyone witho
     expect(r.status, `user POST ${path}`).toBeLessThan(500);
   }
   expect((await http.patch("/api/platform/copy", { json: { action: "edit", edits: [], expectedRevision: 0 } })).status).toBe(404);
-  for (const page of ["/admin", "/admin/copy"]) {
-    const r = await http.get(page);
-    expect(r.status, page).toBe(404);
-    expect(r.text, page).not.toMatch(/authenticator|setup code|copy editor/i);
+  for (const client of [http, anonymous()]) {
+    for (const page of ["/admin", "/admin/copy", "/admin/unknown"]) {
+      const r = await client.get(page);
+      expect(r.status, page).toBe(404);
+      expect(r.text, page).not.toMatch(/authenticator|setup code|copy editor/i);
+    }
   }
 });
 
