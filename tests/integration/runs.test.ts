@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { asc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { db, schema } from "@/db";
 import type { FlowGraph } from "@/engine/types";
 import { createFlow, listFlows, saveFlow, softDeleteFlow } from "@/server/flows";
@@ -8,6 +9,7 @@ import { enqueueRun, getRunDetail, listRuns, rerunFromStep } from "@/server/runs
 import { createWorkspace } from "@/server/workspaces";
 import { claimNextRun, recoverStaleRuns, processRun } from "../../worker/runner";
 import { claimAndProcess, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
+import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
 
 afterAll(closeDb);
 
@@ -311,6 +313,38 @@ describe("listFlows per-flow run stats (regression: Codex CR-02)", () => {
 
 describe("runs do not use up publication numbers (regression: #204, #117)", () => {
   const publishedVersion = async (wsId: string, flowId: string) => (await listFlows(wsId)).find((r) => r.id === flowId)!.publishedVersion;
+
+  it("serializes concurrent publications before reading the next number: v1 then v2", async () => {
+    const { user, ws, flow } = await setup();
+    const first = await connect();
+    const second = await connect();
+    const pause = pauseAfter(first, /coalesce\(max\(/i);
+    let publishing: ReturnType<typeof publishFlow> | undefined;
+    let competing: ReturnType<typeof publishFlow> | undefined;
+    try {
+      const { rows: [{ pid }] } = await second.query<{ pid: number }>("select pg_backend_pid() as pid");
+      publishing = drizzle(first, { schema }).transaction((tx) => publishFlow(user, flow.id, tx));
+      void publishing.catch(() => {});
+      await pause.reached;
+      let finished = false;
+      competing = drizzle(second, { schema }).transaction((tx) => publishFlow(user, flow.id, tx));
+      void competing.then(() => { finished = true; }, () => { finished = true; });
+      expect((await blockedByObserver(first, pid, () => finished)).query).toMatch(/from "flow".*for update/i);
+      pause.resume();
+      const versions = await Promise.all([publishing, competing]);
+      expect(versions.map((v) => v.version)).toEqual([1, 2]);
+      expect(new Set(versions.map((v) => v.versionId)).size).toBe(2);
+      expect(await publishedVersion(ws.id, flow.id)).toBe(2);
+      await expect(db.insert(schema.flowVersion).values({ flowId: flow.id, version: 1, revision: flow.revision, name: flow.name, graph: flow.graph, reason: "publish" }))
+        .rejects.toMatchObject({ cause: { code: "23505", constraint: "flow_version_unique" } });
+    } finally {
+      pause.resume();
+      await Promise.allSettled([publishing, competing]);
+      pause.restore();
+      await first.end();
+      await second.end();
+    }
+  });
 
   it("publish once, run twice: the flow list keeps publishedVersion 1", async () => {
     const { user, ws, flow } = await setup();
