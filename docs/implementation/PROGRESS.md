@@ -71,6 +71,7 @@ All times are 2026-09-27, local. Branch `phase-2`.
 | Owner decision 2026-09-28: 11 SaaS live checks out of scope for the Phase 2 gate only; baseline re-verified (no code change since `bee4390`) | **PASS — revised Phase 2 scope; 11 external live checks deferred** (still BLOCKED; release rows R-01…R-11) | decision commit follows |
 
 - #179 (Refs #119 part 1/3): `getCopyEditorState` (`src/server/platform-copy.ts`) now maps a settings-store failure to `HttpError(503, COPY_STATE_UNAVAILABLE)` (log carries only the error type name) and never emits `undefined` base entries. Covered by `tests/unit/platform-copy-state.test.ts` and the `@issue-179` test in `e2e-army/200-route-error-headers.e2e.ts` (merged there to stay within the hub's 8-file e2e-army cap; see that file's header).
+- #158 (Refs #30): Safe non-sensitive scaffolding for Owner Actions PP-02..PP-09 (types and read-only contract stub in `src/types/ownerActions.ts`, unit tests in `tests/unit/ownerActions.test.ts`, documented in `docs/implementation/OWNER_ACTIONS.md`). Real payment processing, pricing, legal terms, credentials, and user contact remain strictly owner-only.
 
 # G5 · Mizano connector v1 (#144) progress log
 

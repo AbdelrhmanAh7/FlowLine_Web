@@ -3,6 +3,13 @@
 ## Issue #181 — e2e-army cap fix (2026-10-15)
 
 The CI `checks (static·unit·contract)` leg failed on `tests/unit/e2e-army-tooling.test.ts`: the branch had 9 top-level `e2e-army/*.e2e.ts` files (hub cap 8) and `181-admin-copy.e2e.ts` used `setTimeout`. The #181 tests now live in `e2e-army/200-route-error-headers.e2e.ts` (same precedent as #179; every test and tag kept) and the outbox wait uses `expect.poll`. The stale "route() error responses lack no-store" known-gap note is removed (fixed by #200). The harness pushes and reruns CI; the integration test `tests/integration/platform-copy-errors.test.ts` was not rerun locally (needs the test DB; unchanged in this step).
+
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
