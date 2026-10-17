@@ -72,3 +72,16 @@ test("@issue-85 core flow: a signed-in user creates a blank flow and its canvas 
   await expect(screen.getByText("Start with a trigger")).toBeVisible();
   await agent.assert("the flow builder canvas is shown and invites the user to start with a trigger");
 });
+
+test("@issue-196 AC1: the user menu opens the security page showing two-step verification Off", { session: "fl-user", tags: ["feat:fl-workspace-nav"] }, async ({ app, screen, agent, browser }) => {
+  needsModel();
+  await app.open("/app");
+  await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
+  await agent.act("open the user menu at the bottom of the workspace navigation");
+  await screen.getByRole("menuitem", "Security").tap();
+  await expect(browser).toHaveURL("/account/security");
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText("Security");
+  await expect(screen.getByRole("heading", "Two-step verification")).toBeVisible();
+  await expect(screen.getByText("Off")).toBeVisible();
+  await agent.assert("the account security page says that two-step verification is off");
+});

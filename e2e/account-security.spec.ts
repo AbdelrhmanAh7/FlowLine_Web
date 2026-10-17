@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, EN_STATE } from "../playwright.config";
+import { BASE_URL } from "../playwright.config";
 import { PASSWORD, setupUser } from "./helpers";
 import { base32Decode, totpCodeFor } from "./tools/totp";
 
@@ -16,15 +16,22 @@ test("user menu opens the security page and shows the two-step status", async ({
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
   expect(enable.ok()).toBeTruthy();
   const { totpURI } = (await enable.json()) as { totpURI: string };
-  const secret = new URL(totpURI).searchParams.get("secret")!;
-  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret)) } });
+  const secret = new URL(totpURI).searchParams.get("secret");
+  expect(secret).toBeTruthy();
+  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret!)) } });
   expect(verify.ok()).toBeTruthy();
   await page.reload();
-  await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText("On", { exact: true })).toBeVisible();
 });
 
 test("a signed-out visit to the security page redirects to sign-in", async ({ browser }) => {
-  const context = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
+  const context = await browser.newContext({
+    baseURL: BASE_URL,
+    storageState: {
+      cookies: [{ name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" }],
+      origins: [],
+    },
+  });
   const page = await context.newPage();
   await page.goto("/account/security");
   await expect(page).toHaveURL(/\/sign-in/);
