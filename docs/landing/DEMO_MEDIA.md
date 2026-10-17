@@ -26,7 +26,7 @@ Client gzip size (4.1 KB gz) and HTTP Range delivery (status 206 with immutable 
 ### Behaviour of a loop (`DemoVideo`)
 
 - **Server markup is correct without JS**: a `video` element with `muted playsInline loop preload="none" poster width height aria-label` in a box
-  with a fixed `aspect-ratio` to reserve space (ensuring CLS = 0), no `autoplay` attribute, an H.264 `source` element as the default.
+  with a fixed `aspect-ratio` to reserve space (no layout shift from the media), no `autoplay` attribute, an H.264 `source` element as the default.
   The hero poster is the LCP element and is preloaded early (`preload(..., { as: "image", fetchPriority: "high" })`).
 - **JS starts it** only after `window.load` and once the tile is visible (IntersectionObserver, threshold 0.25, root margin 200 px);
   it pauses when out of view or when the tab is hidden. `video.muted = true` is set in the ref callback before any `play()`.
@@ -40,7 +40,8 @@ Client gzip size (4.1 KB gz) and HTTP Range delivery (status 206 with immutable 
 - **A rejected `play()`** (iOS Low Power Mode, `NotAllowedError`) shows the Play button; the first tap anywhere on the tile starts it.
 - **Pause/Play button** on every loop longer than 5 s (WCAG 2.2.2): at least 44x44 px, `aria-pressed` (true while paused),
   keyboard operable, at the inline end; the visitor's pause is kept for the session (`sessionStorage`, key
-  `flowline.demo.paused`) and is never undone by scrolling.
+  `flowline.demo.paused`) and is never undone by scrolling. Both labels sit in one grid cell, so the button keeps
+  its size and its text does not move when it flips (no layout shift).
 
 ### Walkthrough
 
@@ -60,6 +61,13 @@ was reported playable, but only if `canPlayType` accepts it; otherwise only the 
 content-hashed; Next's default for `public/` is `max-age=0`). The "served media" test in
 `e2e/landing-demo.spec.ts` requests bytes 0–1023 of real content-hashed media (`hero.ar.light.av1.e9c86093.mp4`) through Next's real static server
 and checks status 206, immutable caching headers, `Content-Range: bytes 0-1023/658371`, and the 1024-byte partial body.
+
+### Measured performance
+
+Lighthouse (desktop, performance only) on production builds, before (`main` `9b4d76ad`) and after (`1fad4fc3`): median 96 → 97, LCP element the
+H1 heading → the hero poster, added initial JS +3,740 B gz. The AC7 Chromium test fails on any layout shift whose source is in a demo surface;
+a small shift in the hero copy outside the demo exists on `main` as well. Numbers, commands and the per-run table:
+[`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md#performance-ac7).
 
 ### Honest copy
 

@@ -2,8 +2,10 @@
 
 ## Issue #100 validation handoff — 2026-10-18
 
-Continuing on #100 with #99 merged into main. Real media and manifest are present in `public/media/demo/`.
-Verifying acceptance criteria with real media and updating evidence.
+Head `1fad4fc3`: the three CI unit failures of run 39072383273 are fixed, AC7 is measured on production builds (Lighthouse
+before/after, initial JS, media headers) and a toggle layout shift found by the new test is fixed; see
+`artifacts/issue-100/EVIDENCE.md`. Harness next: push, fresh CI, the full tier once on the final candidate, QA re-review of finding
+e711c3edbd77. Follow-up worth an issue: the hero copy's small layout shift, which also exists on `main`.
 
 ## Issue #204 — harness handoff (2026-10-15)
 

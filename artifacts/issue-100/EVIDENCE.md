@@ -1,56 +1,86 @@
-# Issue #100 acceptance evidence — 2026-10-18
+# Issue #100 verification report
 
-Part of #96. Sibling issue #99 has merged into `main` (`e646a041`), supplying the real media assets and `manifest.json` under `public/media/demo/`.
+Part of #96. Sibling #99 is merged into `main` (`e646a041`) and supplies the real media and `public/media/demo/manifest.json`.
 
-## Acceptance criteria verification mapping
+- **Tested SHA:** `1fad4fc3` (branch `ai/100`, contains `origin/main` `9b4d76ad`). **Base for before/after:** `9b4d76ad` (`origin/main`).
+- **Run on:** 2026-10-18, Mac mini, shared machine (load average about 5 during the runs). Every result below was run on that date
+  and is not carried over from earlier rounds. Raw output (Lighthouse JSON, Playwright JSON, screenshots, logs) is not committed
+  (repo rule); it can be attached to the PR.
+- **Sentry:** no originating Sentry issue. The work comes from GitHub issue #100 and the QA findings on PR #136.
 
-| REQ / AC | Description | Verification Method & Commands | Exit Code / Result |
+## Acceptance criteria
+
+| AC | Criterion (short) | Verified by | Result on `1fad4fc3` |
 |---|---|---|---|
-| **AC1** | Hero loop inside `.hero-scrub`, poster LCP preloaded (`fetchPriority="high"`), starts muted after `window.load` once visible, AV1 vs H.264 chosen, exactly one video downloaded | `e2e/landing-demo.spec.ts` ("hero: DemoVideo inside .hero-scrub..."), `e2e-army/100-landing-demo.e2e.ts` AC1, `tests/unit/landing-demo-media.test.ts` (`chooseSource`, `fileFor`, `clipView`), `tests/unit/landing-demo-markup.test.ts` | **PASS (0)**: Server HTML carries `preload="none"`, `muted`, `playsinline`, poster link preloads with `fetchPriority="high"`, one AV1 video requested after load. |
-| **AC2** | `prefers-reduced-motion: reduce`, `saveData`, 2g: no video requests, visible "Play demo" button, single play without loop, live toggle | `e2e/landing-demo.spec.ts` (reduced motion, saveData, 2g, slow-2g, live toggle), `e2e-army/100-landing-demo.e2e.ts` AC2, `tests/unit/landing-demo-media.test.ts` (`shouldSkipVideo`) | **PASS (0)**: No `.mp4` requested under reduced motion / saveData / 2g; visible "Play demo" button appears; pressing plays once; live toggle pauses immediately. |
-| **AC3** | Loops > 5s have keyboard-operable Pause/Play (>= 44x44 px, `aria-pressed`), session state preserved in `sessionStorage`, rejected `play()` (iOS Low Power Mode / `NotAllowedError`) falls back to Play button | `e2e/landing-demo.spec.ts` (Pause/Play button size, session persistence, rejected play), `e2e-army/100-landing-demo.e2e.ts` AC3, `tests/unit/landing-demo-media.test.ts` (`startPlayback` with stub) | **PASS (0)**: Toggle button is >= 44x44 px, operable via Enter/Space with `aria-pressed`, state retained in `sessionStorage` (`flowline.demo.paused`); rejected `play()` triggers blocked handler. |
-| **AC4** | Walkthrough: native `<dialog>` + `showModal()`, Esc closes with focus return, `controls`, EN + AR `<track kind="captions">` (default = page locale, styled with `::cue`), 4-step chapter stepper with RTL-flipped arrow keys (`ArrowRight` back, `ArrowLeft` forward), chapter stills fallback for reduced motion / media error | `e2e/landing-demo.spec.ts` (walkthrough open/close, focus return, controls, tracks, stepper, RTL keys, media error fallback), `e2e-army/100-landing-demo.e2e.ts` AC4, `tests/unit/landing-demo-media.test.ts` (`walkthroughView`) | **PASS (0)**: Dialog uses `showModal()`, focus restored to opener on Esc, `::cue` styles present, caption tracks correctly matched to locale, chapter stepper seeks video and flips arrow navigation in RTL, stills fallback displayed on error / reduced motion. |
-| **AC5** | Bento: four tiles (wide, square, square, wide on desktop, 1 column on phone), lazy start when visible, copy from i18n, note "Recorded in the app on sample data" / "تسجيل حقيقي من داخل التطبيق على بيانات تجريبية" | `e2e/landing-demo.spec.ts` (bento desktop layout, phone one column, lazy fetch on scroll), `e2e-army/100-landing-demo.e2e.ts` AC5 | **PASS (0)**: Responsive 4-tile bento grid; below-fold videos deferred until scrolled into view; honest note displayed in active locale. |
-| **AC6** | RTL & LTR layout: no horizontal overflow at 360/768/1024/1440 px, controls at inline end, identical i18n keys between `ar.json` and `en.json` | `e2e/landing-demo.spec.ts` (overflow test at 360/768/1024/1440 in EN and AR), `tests/unit/landing-demo-media.test.ts` (key parity check) | **PASS (0)**: Zero horizontal overflow (`scrollWidth - clientWidth <= 1`), toggle positioned at inline end, all 25 `landing.demo.*` keys present and non-empty in both `ar.json` and `en.json`. |
-| **AC7** | Performance: CLS = 0, added initial client JS <= 6 KB gz; `/media/demo/*` returns `Cache-Control: public, max-age=31536000, immutable` and answers `Range: bytes=0-1023` with status 206 | `tests/unit/landing-demo-media.test.ts` (bundle size budget & cache header check), `e2e/landing-demo.spec.ts` (real media HTTP Range delivery against `hero.ar.light.av1.e9c86093.mp4`) | **PASS (0)**: Fixed `aspect-ratio` containers guarantee CLS = 0; client JS bundle measured at 4,167 bytes (4.1 KB gz <= 6 KB gz budget); Next.js delivers immutable cache headers and status 206 with `Content-Range: bytes 0-1023/658371` and 1024-byte partial body. |
-| **AC8** | Missing manifest (`public/media/demo/manifest.json` absent or invalid): page renders exactly as before (legacy `HeroPin`), no console errors, no demo controls | `e2e/landing-demo.spec.ts` ("without a manifest"), `e2e-army/100-landing-demo.e2e.ts` AC8, `tests/unit/landing-demo-media.test.ts` (`readDemoManifest` null check) | **PASS (0)**: With `fl_test_demo=off` or missing manifest, returns null, rendering standard `HeroPin` illustration with 0 demo controls and 0 console errors. |
-| **AC9** | Tests green: unit, browser, e2e-army | `pnpm exec vitest run --project unit`, `pnpm exec playwright test e2e/landing-demo.spec.ts`, `pnpm e2e:army e2e-army/100-landing-demo.e2e.ts` | **PASS (0)**: All unit tests (48 tests), browser demo spec (22 tests), and e2e-army suite passed with 0 failures. |
-| **AC10** | Documentation updated | `docs/landing/DEMO_MEDIA.md`, `docs/DEVELOPER_GUIDE.md`, `docs/implementation/PHASE4_BETA_REPORT.md`, `NEXT_ACTION.md`, `artifacts/issue-100/EVIDENCE.md` | **PASS (0)**: Full consumption guide, developer guide, beta progress report, and acceptance evidence updated. |
+| AC1 | Hero `DemoVideo` inside `.hero-scrub`; poster is the LCP element, preloaded `fetchPriority="high"`; loop starts muted after `load` once visible; AV1/H.264 choice; one file | `e2e/landing-demo.spec.ts` "hero: …" and "source choice: …"; `e2e-army/100-landing-demo.e2e.ts` AC1; Lighthouse LCP element (below) | Pass. Lighthouse names the hero `<video data-demo-clip="hero" … poster="/media/demo/hero.ar.light.poster…">` as the LCP element in all 3 runs (base: the `<h1>`) |
+| AC2 | Reduced motion, Save-Data, 2g: no video request; poster + Play demo; plays once; live reduce pauses | `e2e/landing-demo.spec.ts` reduced motion / saveData / 2g / slow-2g / live toggle tests; e2e-army AC2 | Pass |
+| AC3 | Pause/Play on loops over 5 s: visible, ≥ 44×44, keyboard, `aria-pressed`, kept for the session; rejected `play()` shows Play | `e2e/landing-demo.spec.ts` "Pause/Play: …", "a rejected play() …"; `tests/unit/landing-demo-media.test.ts` (`startPlayback` with a stub); e2e-army AC3; screenshots | Pass. Toggle measured 92×44 (EN) and 98×44 (AR), one label line |
+| AC4 | Walkthrough: `showModal()`, Esc returns focus, `controls`, EN + AR caption tracks (page locale default, `::cue`), 4-step stepper with RTL-flipped arrows, chapter stills fallback | `e2e/landing-demo.spec.ts` walkthrough tests (6); e2e-army AC4 | Pass |
+| AC5 | Bento: four tiles (wide/square/square/wide on lg, one column on phones), lazy start, i18n copy, "Recorded in the app on sample data" | `e2e/landing-demo.spec.ts` "bento: …", "bento on a phone: …"; e2e-army AC5; screenshots | Pass |
+| AC6 | No horizontal overflow at 360/768/1024/1440 in EN and AR, controls at the inline end, identical i18n keys | `e2e/landing-demo.spec.ts` overflow tests (EN, AR) and "Arabic: …"; `tests/unit/landing-demo-media.test.ts` (key parity); screenshots | Pass. Toggle at the right edge in EN (x = 981) and the left edge in AR (x = 367) |
+| AC7 | Lighthouse performance not lower than before; CLS 0; added initial JS ≤ 6 KB gz; `/media/demo/*` immutable and `Range` → 206 | Lighthouse before/after, initial JS from both production builds, `curl` against the production build, `e2e/landing-demo.spec.ts` "AC7: …" and "/media/demo/* is immutable …" | Pass, with one pre-existing shift outside the demo (see Performance) |
+| AC8 | No manifest: page as today, no console errors | `e2e/landing-demo.spec.ts` "the page renders today's hero …"; e2e-army AC8 | Pass |
+| AC9 | New e2e in EN and AR, Vitest, existing `e2e/landing.spec.ts` green | commands below | Pass: Playwright 48/48, e2e-army 6/6, unit files below |
+| AC10 | Docs updated; PR body `Part of #96` (and `Closes #96`, since #99 merged first) | `docs/landing/DEMO_MEDIA.md`, `docs/implementation/PHASE4_BETA_REPORT.md`, this file | Docs updated; the PR body is written by the harness |
 
-## First-hand runs in this session
+## Performance (AC7)
 
-1. **Unit tests**:
-   ```bash
-   pnpm exec vitest run --project unit tests/unit/landing-demo-media.test.ts tests/unit/landing-demo-markup.test.ts tests/unit/gate-groups.test.ts tests/unit/e2e-army-tooling.test.ts
-   ```
-   - **48 passed, 0 failed**, exit code 0.
-   - Tests verify manifest parsing, real manifest file integrity (all 46 assets on disk with exact byte counts), source selection, playback rejection, client bundle size budget (4,167 bytes <= 6 KB gz), cache headers, i18n parity, and e2e-army file cap (<= 8 top-level files).
+Production builds of both SHAs (`FLOWLINE_TEST_NEXT=start`, test stack on `:3190`, `FLOWLINE_TEST_DB=flowline_test_lh100`), one after the other in the same
+worktree. Command per run, as in #96 "Prior attempt" (Lighthouse 13.5.0, Apache-2.0, installed in a temp directory, not a repo dependency;
+Chrome for Testing from Playwright's cache as `CHROME_PATH`):
 
-2. **Linter**:
-   ```bash
-   pnpm lint
-   ```
-   - **Passed, 0 errors, 0 warnings**, exit code 0.
+```
+lighthouse http://127.0.0.1:3190/ --only-categories=performance --preset=desktop --output=json --chrome-flags="--headless=new"
+```
 
-3. **Typecheck**:
-   ```bash
-   node node_modules/typescript/bin/tsc --noEmit
-   ```
-   - **Passed, 0 errors**, exit code 0.
+| Build | Run 1 | Run 2 | Run 3 | Median | LCP (runs) | CLS | LCP element |
+|---|---|---|---|---|---|---|---|
+| Before `9b4d76ad` | 95 | 98 | 96 | **96** | 1.0 / 1.0 / 0.9 s | 0.00055 | `<h1>` |
+| After `1fad4fc3` | 98 | 97 | 87 | **97** | 1.1 / 1.2 / 1.0 s | 0.00042 | hero `<video>` poster |
 
-4. **Real media delivery**:
-   - `e2e/landing-demo.spec.ts` served media test queries `/media/demo/hero.ar.light.av1.e9c86093.mp4` with `Range: bytes=0-1023`.
-   - Result: HTTP status `206 Partial Content`, `Cache-Control: public, max-age=31536000, immutable`, `Content-Range: bytes 0-1023/658371`, body length 1024 bytes.
+- Median performance did not drop (96 → 97). Run 3 after (87) had TBT 280 ms on the shared, loaded machine; FCP stayed 0.5 s and LCP 1.0 s. An earlier
+  after-run on `0748984c` (before the toggle fix, same demo code otherwise) scored 84 / 97 / 99, and its 84 was a cold first run (Speed Index 5.4 s).
+  Single runs vary by about 10 points here, so read the medians.
+- **CLS:** Lighthouse attributes the page's only layout shift to the H1's `<span class="text-accent-text">` on **both** builds (0.00055 before, 0.00042 after).
+  The demo adds none. The Chromium test "AC7: the demo surfaces cause no layout shift while the posters load and the hero and bento loops start" collects
+  every buffered `layout-shift` entry with its source nodes and fails on any source inside `.hero-scrub`, `#demo` or the walkthrough button. On
+  `1fad4fc3` it records one shift (0.0039 at 290 ms, sources: the hero copy "No code required.", its paragraph and a header button, all outside the
+  demo) and passes. The page-level CLS is therefore not literally 0: the remaining shift comes from the hero copy, which this issue did not change, and
+  needs its own issue.
+- **Regression found and fixed in this round:** on `0748984c` the same test failed with two shifts sourced in the demo's own toggle text (0.000101 for
+  "Play demo" and 0.000242 for "Pause" across four tiles). Cause: a fixed 44×44 box whose label changes length, so it re-wrapped on every flip. Fixed in
+  `1fad4fc3` (`src/components/landing/demo-video.tsx`, labels stacked in one grid cell, `min-h-11 min-w-11`); the test passes there.
+- **Added initial JS on `/`:** sum of `gzip -9` sizes of the 12 `/_next/static/*.js` files referenced by the server HTML of each production build:
+  445,806 B before, 449,546 B after, so **+3,740 B gz** (budget 6 KB). The esbuild figure in `tests/unit/landing-demo-media.test.ts` (4,167 B) is a
+  bundler-independent guard. The figure that counts is the one from the real Next build above.
+- **Media headers on the production build** (`curl`, real file `hero.ar.light.av1.e9c86093.mp4` from the manifest):
+  `GET` → `200`, `Cache-Control: public, max-age=31536000, immutable`, `Accept-Ranges: bytes`, `Content-Length: 658371`;
+  `Range: bytes=0-1023` → `206 Partial Content`, same `Cache-Control`, `Content-Range: bytes 0-1023/658371`, body 1024 bytes.
 
-5. **Client JS size measurement**:
-   - Production bundler (esbuild with ESM code-splitting and -9 gzip):
-     - `demo-walkthrough.js`: 4.2 KB minified
-     - `demo-video.js`: 3.1 KB minified
-     - shared chunk: 1.1 KB minified
-     - **Total minified**: 8,432 bytes
-     - **Total gzipped (-9)**: 4,167 bytes (~4.1 KB gz)
-   - Strict pass against the 6 KB gz budget.
+## Commands run on `1fad4fc3` (exit codes)
 
-6. **E2E-Army file cap enforcement**:
-   - `tests/unit/e2e-army-tooling.test.ts` verifies the top-level `e2e-army/*.e2e.ts` file count remains <= 8.
-   - Following CTO instructions, merged #166 template tests into `e2e-army/200-route-error-headers.e2e.ts`, maintaining full test coverage while keeping total top-level files at exactly 8.
+| Check | Command | Result |
+|---|---|---|
+| Playwright, Chromium, production build | `pnpm exec playwright test e2e/landing-demo.spec.ts e2e/landing.spec.ts --project=chromium --workers=1` (stack env above) | exit 0, **48 passed** (23 landing-demo, 25 landing), 0 failed, 0 skipped, 0 flaky |
+| e2e-army | `E2E_ARMY_URL=http://localhost:3190 node scripts/e2e-army.mjs e2e-army/100-landing-demo.e2e.ts` | exit 0, **6 passed** (AC1, AC2, AC3, AC4, AC5, AC8) |
+| Unit (one file per run) | `pnpm exec vitest run --project unit <file>` | `landing-demo-media` 24 passed; `landing-demo-markup` 4 passed; earlier on `a57b8a71` (same test code): `demo-docs-commands` 9 passed + 1 skipped (`runIf` for the other doc), `local-scenarios` 85 passed, `e2e-army-tooling` 12 passed, `gate-groups` 9 passed |
+| Typecheck | `pnpm typecheck` | exit 0, 0 errors |
+| Lint | `pnpm exec eslint` on every changed file + the pre-commit `eslint --fix` hook | exit 0 |
+| Lighthouse | see Performance | 6 runs, all exit 0 |
+
+Screenshots (EN/LTR and AR/RTL, motion on and reduced, hero and bento) were taken on the production build with the real manifest; they are not
+committed (repo rule) and can be attached to the PR.
+
+## Failing on the base, passing on the head
+
+- **CI unit failures** (run `39072383273`, head `31d2fbaa`: 3 failed, 1796 passed) were caused by this branch against guards from `main`: angle-bracket
+  code spans in `DEMO_MEDIA.md`, two new `tests/unit/demo-*` files that changed #99's counted test-file total, and the #166 guard reading a file this branch
+  folded into `e2e-army/200-route-error-headers.e2e.ts`. Fixed in `a57b8a71`; the three tests pass locally (counts above).
+- **Toggle layout shift:** the AC7 test failed on `0748984c` and passes on `1fad4fc3` (see Performance).
+
+## Not verified here
+
+- Firefox and WebKit: not run locally. The full tier (`gh workflow run gate.yml -f tier=full`) runs them on CI. Codec playback is not asserted in any
+  browser (Playwright builds lack H.264).
+- `tests/integration/sec-platform.test.ts` "a revoked integration app fails closed …" fails locally on both base `9b4d76ad` and head with the same env
+  (11/12 pass on both), so it is not caused by this branch. CI's integration shards passed on run `39072383273`.

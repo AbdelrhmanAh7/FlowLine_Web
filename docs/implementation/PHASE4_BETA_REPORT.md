@@ -158,13 +158,13 @@ Status: **implemented on ai/114** (PR #133), awaiting merge.
 
 Status: **implemented on ai/100** (PR #136), ready for final merge. Sibling issue #99 has merged into `main` (`e646a041`), providing all 46 content-hashed media assets and `public/media/demo/manifest.json`.
 
-Verification (2026-10-18):
-- All 46 media files and manifest verified on disk with exact byte counts.
-- Real content-hashed media delivery verified in Playwright: status 206, `Cache-Control: public, max-age=31536000, immutable`, Content-Range header and 1024-byte partial body.
-- Added client JS gzip size verified at 4,167 bytes (4.1 KB gz, budget <= 6 KB gz).
-- Zero CLS guaranteed by fixed `aspect-ratio` containers and explicit dimensions.
-- All unit tests (48 tests), Chromium demo tests, and e2e-army tests passed.
-- Preload on LCP poster element (`fetchPriority="high"`) and deferred video loading ensure Lighthouse performance is preserved.
+Verification (2026-10-18, head `1fad4fc3`, production build of the test stack):
+- Playwright Chromium `e2e/landing-demo.spec.ts` + `e2e/landing.spec.ts`: 48 passed; e2e-army `100-landing-demo.e2e.ts`: 6 passed.
+- Lighthouse desktop performance, 3 runs each: median 96 on `main` `9b4d76ad`, 97 on the head; LCP element is the hero poster (the `<h1>` on `main`).
+- Added initial JS on `/`: +3,740 B gz (real Next build, budget 6 KB). Real media: immutable `Cache-Control`, `Range: bytes=0-1023` → 206.
+- Layout shift: a new Chromium test attributes every shift to its source; it found and now guards a toggle-label shift (fixed in `1fad4fc3`).
+  A small shift in the hero copy (outside the demo) also exists on `main` and is not part of #100.
+- Firefox/WebKit run only in the CI full tier. Details: [`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md).
 
 - Hero loop inside `.hero-scrub`, "See it in action" bento and the 53 s walkthrough dialog (EN/AR captions, chapter stepper, chapter-still fallback). Reduced motion, Save-Data and 2g fetch no video.
 - Review round 2 (2026-10-13): a pending source choice no longer starts a loop that has since left the screen or hit reduced motion; a locale/theme change remounts the player so the old file cannot keep playing; a tap on Play may use the H.264 fallback (`attachSource` in `src/lib/demo-source.ts`, unit-tested); the walkthrough keeps its stills until a retry actually plays.
