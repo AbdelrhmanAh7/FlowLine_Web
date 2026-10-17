@@ -49,6 +49,11 @@ export interface ScheduleTriggerConfig {
 }
 export interface JsonTransformConfig {
   expression: string;
+  /**
+   * Set (true) by the n8n importer on a node it could not map: the step is a labelled stand-in the user must rebuild.
+   * `validateGraph` rejects it with SETUP_REQUIRED, so a flow that still holds one can neither run nor publish.
+   */
+  placeholder?: boolean;
 }
 export interface ConditionConfig {
   expression: string;
