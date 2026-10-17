@@ -307,4 +307,55 @@ describe("n8nToFlow", () => {
     };
     expect(() => n8nToFlow(huge)).toThrow(/too large to import/);
   });
+
+  describe("HTTP payload config that cannot be preserved becomes a placeholder, never an empty request", () => {
+    const http = (typeVersion: number, parameters: Record<string, unknown>) =>
+      n8nToFlow({
+        nodes: [
+          { name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} },
+          { name: "Call", type: "n8n-nodes-base.httpRequest", typeVersion, position: [240, 0], parameters: { url: "https://example.com/hook", ...parameters } },
+        ],
+        connections: { Hook: { main: [[{ node: "Call", type: "main", index: 0 }]] } },
+      }).graph.nodes[1];
+    const expectPlaceholder = (node: ReturnType<typeof http>) => {
+      expect(node.type).toBe("transform.json");
+      expect((node.data.config as { placeholder?: boolean }).placeholder).toBe(true);
+      const graph = { nodes: [{ id: "t", type: "trigger.manual", position: { x: 0, y: 0 }, data: { label: "Start", config: {} } }, node], edges: [] } as unknown as Parameters<typeof validateGraph>[0];
+      expect(validateGraph(graph).map((i) => i.code)).toContain("SETUP_REQUIRED");
+    };
+
+    it("current HTTP node (parameters.method POST, no requestMethod) maps to POST with a non-idempotent side effect", () => {
+      const node = http(4, { method: "POST" });
+      expect(node.type).toBe("http.request");
+      expect(node.data.config).toMatchObject({ method: "POST", sideEffect: "non_idempotent" });
+      expect(node.data.config).not.toHaveProperty("retry");
+    });
+
+    it.each([
+      ["sendBody", { method: "POST", sendBody: true }],
+      ["sendHeaders", { sendHeaders: true }],
+      ["sendQuery", { sendQuery: true }],
+      ["authentication", { authentication: "genericCredentialType" }],
+    ])("a current HTTP node with %s is a placeholder that fails validateGraph with SETUP_REQUIRED", (_name, parameters) => {
+      expectPlaceholder(http(4, parameters));
+    });
+
+    it.each([
+      ["bodyParametersUi", { bodyParametersUi: { parameter: [{ name: "a", value: "1" }] } }],
+      ["headerParametersUi", { headerParametersUi: { parameter: [{ name: "X-Key", value: "k" }] } }],
+      ["queryParametersUi", { queryParametersUi: { parameter: [{ name: "q", value: "1" }] } }],
+      ["bodyParametersJson (string)", { jsonParameters: true, bodyParametersJson: '{"a":1}' }],
+      ["headerParametersJson (string)", { jsonParameters: true, headerParametersJson: '{"X-Key":"k"}' }],
+      ["queryParametersJson (object)", { jsonParameters: true, queryParametersJson: { q: 1 } }],
+      ["a string jsonBody", { jsonBody: '{"a":1}' }],
+      ["an array jsonBody", { jsonBody: [{ a: 1 }] }],
+    ])("a legacy (v1) POST with %s is a placeholder", (_name, extra) => {
+      expectPlaceholder(http(1, { requestMethod: "POST", ...extra }));
+    });
+
+    it("legacy (v1) empty parameter lists do not turn a plain request into a placeholder", () => {
+      const node = http(1, { requestMethod: "POST", bodyParametersUi: { parameter: [] }, headerParametersUi: {}, queryParametersJson: "", jsonParameters: false });
+      expect(node.type).toBe("http.request");
+    });
+  });
 });

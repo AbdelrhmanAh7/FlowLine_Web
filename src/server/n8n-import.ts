@@ -63,15 +63,29 @@ function hasUnpreservedHttpConfig(params: Record<string, unknown>): boolean {
   if (params.headers && typeof params.headers === "object" && !Array.isArray(params.headers)) {
     for (const v of Object.values(params.headers as Record<string, unknown>)) if (typeof v !== "string" || hasExpr(v)) return true;
   }
+  // "Configured" covers arrays, the `{ parameters: [...] }` (V3) and `{ parameter: [...] }` (V1 *ParametersUi) wrappers,
+  // JSON strings/objects (V1 *ParametersJson) and any other non-empty value.
   const set = (v: unknown): boolean => {
     if (Array.isArray(v)) return v.length > 0;
     if (v && typeof v === "object") {
-      const inner = (v as { parameters?: unknown }).parameters;
-      return Array.isArray(inner) && inner.length > 0;
+      const o = v as { parameters?: unknown; parameter?: unknown };
+      if (o.parameters !== undefined || o.parameter !== undefined) {
+        return (Array.isArray(o.parameters) && o.parameters.length > 0) || (Array.isArray(o.parameter) && o.parameter.length > 0);
+      }
+      return Object.keys(v).length > 0;
     }
     return v !== undefined && v !== null && v !== "";
   };
-  for (const key of ["bodyParameters", "headerParameters", "queryParameters", "jsonBody", "body", "requestBody"]) if (set(params[key])) return true;
+  const keys = [
+    "bodyParameters", "headerParameters", "queryParameters", // V3
+    "bodyParametersUi", "headerParametersUi", "queryParametersUi", // V1 key/value lists
+    "bodyParametersJson", "headerParametersJson", "queryParametersJson", // V1 with jsonParameters: true
+    "body", "requestBody",
+  ];
+  for (const key of keys) if (set(params[key])) return true;
+  // Only a plain object jsonBody maps (see extractBody); raw JSON text, arrays and other values are not supported.
+  const jb = params.jsonBody;
+  if (jb !== undefined && jb !== null && jb !== "" && (typeof jb !== "object" || Array.isArray(jb))) return true;
   const options = params.options;
   if (options && typeof options === "object") {
     const o = options as Record<string, unknown>;
@@ -80,56 +94,16 @@ function hasUnpreservedHttpConfig(params: Record<string, unknown>): boolean {
   return false;
 }
 
-/** Extracts HTTP body from n8n parameters when it's a plain JSON value (no expressions). */
+/** The body of an HTTP node that passed hasUnpreservedHttpConfig: a plain jsonBody object, else none. */
 function extractBody(params: Record<string, unknown>): string {
-  // n8n V3: jsonBody (object) or body (string). Also check bodyParameters array for single raw value.
-  if (params.jsonBody !== undefined && params.jsonBody !== null && typeof params.jsonBody === "object") {
-    const v = params.jsonBody;
-    // Ensure no expressions in the object
-    const str = JSON.stringify(v);
-    if (!/\{\{[^}]*\}\}/.test(str)) return str;
-  }
-  if (typeof params.body === "string" && params.body && !/\{\{[^}]*\}\}/.test(params.body)) return params.body;
-  // Fallback: bodyParameters with a single raw value
-  if (Array.isArray(params.bodyParameters) && params.bodyParameters.length === 1) {
-    const bp = params.bodyParameters[0];
-    if (bp && typeof bp === "object" && "value" in bp && bp.value !== undefined && bp.value !== null && typeof bp.value !== "object") {
-      const str = String(bp.value);
-      if (!/\{\{[^}]*\}\}/.test(str)) return str;
-    }
-  }
-  return "";
+  const v = params.jsonBody;
+  return v !== null && typeof v === "object" && !Array.isArray(v) ? JSON.stringify(v) : "";
 }
 
-/** Extracts HTTP headers from n8n parameters when they're plain key-value pairs (no expressions). */
+/** The headers of an HTTP node that passed hasUnpreservedHttpConfig: a `headers` object of plain strings, else none. */
 function extractHeaders(params: Record<string, unknown>): string {
-  // n8n V3: headerParameters array of {name, value} or headers object
-  if (Array.isArray(params.headerParameters) && params.headerParameters.length > 0) {
-    const headers: Record<string, string> = {};
-    let ok = true;
-    for (const hp of params.headerParameters) {
-      if (hp && typeof hp === "object" && "name" in hp && "value" in hp) {
-        const name = String(hp.name);
-        const value = String(hp.value);
-        if (/\{\{[^}]*\}\}/.test(value)) { ok = false; break; }
-        headers[name] = value;
-      } else { ok = false; break; }
-    }
-    if (ok) return JSON.stringify(headers);
-  }
-  if (params.headers && typeof params.headers === "object" && !Array.isArray(params.headers)) {
-    const headers = params.headers as Record<string, unknown>;
-    const out: Record<string, string> = {};
-    let ok = true;
-    for (const [k, v] of Object.entries(headers)) {
-      if (typeof v === "string") {
-        if (/\{\{[^}]*\}\}/.test(v)) { ok = false; break; }
-        out[k] = v;
-      } else { ok = false; break; }
-    }
-    if (ok) return JSON.stringify(out);
-  }
-  return "";
+  const h = params.headers;
+  return h && typeof h === "object" && !Array.isArray(h) && Object.keys(h).length > 0 ? JSON.stringify(h) : "";
 }
 
 function mapNode(n: z.infer<typeof workflowSchema>["nodes"][number], id: string, position: { x: number; y: number }, branchNote?: string): FlowNode {

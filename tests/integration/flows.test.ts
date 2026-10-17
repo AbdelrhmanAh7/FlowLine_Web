@@ -91,6 +91,8 @@ describe("createFlow", () => {
   it("rejects a create that asks for a template and an n8n import at once with 400 (#164)", async () => {
     const { user, ws } = await setup();
     await expectHttpError(createFlow(user, ws.id, { templateId: "lead-qualifier", n8n: n8nWorkflow }), 400, "MIXED_CREATE_INPUT");
+    // The rejected create inserts nothing.
+    expect(await listFlows(ws.id)).toHaveLength(0);
   });
 
   it("rejects an n8n import that is not a workflow with 400 (#164)", async () => {
