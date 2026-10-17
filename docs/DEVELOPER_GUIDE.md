@@ -40,7 +40,9 @@ Landing demo media (hero loop, "See it in action" bento, walkthrough) is read fr
 
 Use the relevant `src/server/access.ts` helper (`requireWorkspace`, `requireFlow`, `requireRun`, etc.) before accessing workspace resources. Authentication alone is insufficient: enforce the requested role/capability and preserve non-member 404 behavior. Follow existing route wrappers for mutation validation and CSRF; App Router does not automatically protect arbitrary route handlers.
 
-Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. Engine connection rules belong in shared `checkConnection`.
+Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. A data backfill must be safe to run twice; when it overwrites data, it keeps the old values in a backup table and ships a reverse script under `drizzle/reverse/` (outside the journal, run by hand with `psql -v ON_ERROR_STOP=1 --single-transaction -f`), tested in `tests/integration/` (example: `flow-version-run-backfill.test.ts`). Engine connection rules belong in shared `checkConnection`.
+
+Backfill 0026 and its manual reverse hold a `SHARE ROW EXCLUSIVE` lock on `flow_version` through commit, with transaction-local lock/statement timeouts of 5/30 seconds. Writers wait while readers continue; run the focused migration integration spec on an isolated test database before deployment. A timeout aborts the transaction rather than leaving triggers disabled or clearing unbacked numbers.
 
 Provider credentials use uncontrolled `SecretInput` plus `takeSecret`; never store them in controlled form state, drafts, URLs, query caches or evidence. Follow `docs/security/CREDENTIALS_DESIGN.md`. Account login/recovery forms have their existing dedicated handling; do not generalize that exception to provider secrets.
 
@@ -98,13 +100,24 @@ For browser timeouts, distinguish the whole-test deadline from time spent on the
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
-Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`.
+Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated.
 
 Local evidence helpers that start Vitest against a disposable database (`artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs`, `.../federated-mfa/run-focused.mjs`, `.../paid-pilot-round1/run-auth-focused.mjs` and `artifacts/phase-4/security-auth/run-focused.mjs`) must not pass `process.env` to the child, because an ambient `FLOWLINE_*`, provider key or `NODE_OPTIONS` would silently change what a run proves. They call `buildFocusedTestEnv` from `scripts/focused-run-env.mjs`: the child gets only OS/runtime names the parent has (`PATH`, temp/home directories, the Windows system variables, `NODE_OPTIONS` when set) plus the synthetic values the helper constructs, and the call refuses anything but `FLOWLINE_ENV=test` and a `flowline_test` or `flowline_test_<suffix>` database. The variable names (never values) go into the result JSON (`childEnv`) or stderr, and `--dry-run` prints them without git, Docker or a database (`run-auth-focused.mjs` and `security-auth/run-focused.mjs` read the target from `DATABASE_URL`, so it must be set even for `--dry-run`). A new helper reuses the module and joins the list in `tests/unit/focused-run-env.test.ts`. CI's unit job runs that test (the helpers' `--dry-run` included) but never a helper's real database run. Other scripts that spread `process.env` (`check-drizzle-prune.mjs`, gate, release, Company Builder and the frozen `artifacts/beta-execution` and `artifacts/design-v2` helpers) are not database-backed focused runs and are unchanged.
 
 For the H3 security regression set without a database or browser, run `pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/mfa-session-fence.test.ts tests/unit/federated-mfa-lifecycle.test.ts tests/unit/auth-provider-fence.test.ts tests/unit/federated-mfa.test.ts tests/unit/auth-confirmation.test.ts tests/unit/zitadel-issuer-binding.test.ts tests/unit/zitadel-review-fixes.test.ts tests/unit/i18n.test.ts tests/unit/federated-lock-order.test.ts`. Use `pnpm` instead of `pnpm.cmd` off Windows. This focused command does not replace integration tests or the full main-target CI gate.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
+
+## Landing demo media
+
+The landing demo videos in `public/media/demo/` are generated from the real UI by a local-only pipeline (never CI):
+`pnpm demo:setup` once (installs the isolated Remotion package in `tools/demo-video`, which has its own lockfile, is not a
+workspace member and is excluded from the root `tsc`, ESLint and Vitest), `pnpm demo:doctor` to check the machine,
+`pnpm demo:build [--only hero --locale ar]` to record and encode (it starts its own stack on `:3190` with the
+`flowline_test_demo` database), and `pnpm demo:verify` before committing the result. Run them outside agent sandboxes.
+Scenarios use roles, test ids and message keys, so a UI-only change re-records without script edits; regenerate at UI
+freezes. Unit tests: `tests/unit/demo-*.test.ts`; compositor math: `cd tools/demo-video && node --test src/camera.test.ts`.
+Full guide, budgets and troubleshooting: [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md).
 
 ### Playwright traces in CI
 
@@ -156,3 +169,20 @@ Safety rules:
 - The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
 - Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
 - `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+
+
+### Pilot CSV input persistence and admin 404s (2026-10-15)
+
+Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-row key order when the
+worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
+to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
+Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
+expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
+`e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+Admin page metadata is subject to the same platform-admin authorization boundary as page content.
+Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
+text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
+the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
+requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
+numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).
