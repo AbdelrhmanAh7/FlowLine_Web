@@ -1,8 +1,33 @@
 # Next action — 2026-10-03
 
-## Issue #181 — e2e-army cap fix (2026-10-15)
+## Issue #204 — harness handoff (2026-10-15)
 
-The CI `checks (static·unit·contract)` leg failed on `tests/unit/e2e-army-tooling.test.ts`: the branch had 9 top-level `e2e-army/*.e2e.ts` files (hub cap 8) and `181-admin-copy.e2e.ts` used `setTimeout`. The #181 tests now live in `e2e-army/200-route-error-headers.e2e.ts` (same precedent as #179; every test and tag kept) and the outbox wait uses `expect.poll`. The stale "route() error responses lack no-store" known-gap note is removed (fixed by #200). The harness pushes and reruns CI; the integration test `tests/integration/platform-copy-errors.test.ts` was not rerun locally (needs the test DB; unchanged in this step).
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+## PR #287 CI repair — 2026-10-16
+
+Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
+fresh CI and review confirmation; this worker performs no GitHub writes. Migration 0027
+applied successfully with all predecessors on a throwaway localhost:5432 database.
+See the phase-4 report for exact local checks and the pre-existing conditional skip.
+
+## Pilot E2E corrections — 2026-10-15
+
+Local work on `fix/pilot-e2e-failures` is recorded in
+[the evidence report](artifacts/pilot-e2e/EVIDENCE.md). Owner requested no push, PR or writes outside
+this worktree. Harness next: link the tracking issue, arrange CI/review, and update the hub's outdated
+`fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
+Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
+
+## Issue #226 — resolve CodeRabbit review backlog (2026-10-16)
+
+Resolved all four deferred CodeRabbit review findings from merged PRs:
+1. `tests/helpers/field-scoring.ts`: `scoreNoPromise` skips empty or whitespace-only entries in `approvedInformation` before splitting or matching; regression test in `tests/unit/flowline-field-scoring.test.ts` fails on base and passes on head.
+2. `src/ai/hub/protocols/shared.ts`: `badToolArgs` uses conditional billing language ("may have been billed"), and all shared protocol exports have complete JSDoc blocks detailing parameters, returns, and thrown/returned `HubError` codes. Unit tests in `tests/unit/ai-hub-shared-protocols.test.ts` verify `parseArgs`, `badToolArgs`, `streamJson`, and `mapInBandError`.
+3. `docs/ai/ADDING_A_PROVIDER.md`: accurately reflects the JSDoc contracts provided by `src/ai/hub/protocols/shared.ts`.
+4. `docs/engineering/lock-order.md`: updated Example #41 to cite #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write, pinned by `password-reset-lock-order.test.ts`).
+E2E: not needed — pure internal docs and test helper chore.
 
 ## Issue #234 — review after main integration (2026-10-15)
 
