@@ -1,0 +1,125 @@
+{
+  "status": "REVIEW_READY",
+  "goal": "G2",
+  "dv2_02": "PARTIAL",
+  "recordedAtUtc": "2026-10-03T00:10:33Z",
+  "worktreeBaseSha": "49f1cd431635b527acef7a763b15aa39f687fd58",
+  "candidateContextSha": "9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d",
+  "testedCryptoGitBlob": "f344947921d47a6a8cc0804e52df0d84cff41c2d",
+  "scope": "Full worktree candidate49f1cd4 (parent main9fdcb7d) plus uncommitted strict-parser and historical-restoration delta; no concurrent root changes certified.",
+  "testedFiles": [
+    {
+      "path": "scripts/security/dv2-02-verifier.ts",
+      "sha256": "7c9decf0b33371f9bbbcbc2c1433b600b8a49945724718b0a492d707f9c6ee54"
+    },
+    {
+      "path": "tests/unit/dv2-02-verifier.test.ts",
+      "sha256": "c9dfe531b64bb9b5ee1be7c45124b523cfab8160f35de2d156c2456fefd38ff2"
+    },
+    {
+      "path": "scripts/security/vitest.security.config.mts",
+      "sha256": "ac406fbe68906aaf067831be360c2dbfc1121c5fac2fe601d03babda8c66b391"
+    },
+    {
+      "path": "scripts/security/tsconfig.security.json",
+      "sha256": "c34ef4d4ccf0bec9d2ec1b8a8d40b73fab9dd80f0d436905a18edd1245137ff3"
+    }
+  ],
+  "focusedTests": {
+    "files": 1,
+    "passed": 55,
+    "failed": 0,
+    "skipped": 0,
+    "schemaRegressions": 9,
+    "framework": "Vitest 5.0.2",
+    "durationMs": 324,
+    "strictDotenvRegressions": 21
+  },
+  "checks": [
+    {
+      "command": "node node_modules\\vitest\\vitest.mjs run --config scripts/security/vitest.security.config.mts",
+      "exitCode": 0,
+      "output": "1 file; 55 passed; 0 failed; 0 skipped; 324ms"
+    },
+    {
+      "command": "node node_modules\\typescript\\bin\\tsc --noEmit --incremental false -p tsconfig.json",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": "node node_modules\\typescript\\bin\\tsc -p scripts/security/tsconfig.security.json",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": "node node_modules\\eslint\\bin\\eslint.js scripts/security/dv2-02-verifier.ts scripts/security/vitest.security.config.mts tests/unit/dv2-02-verifier.test.ts",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": "Compare all non-DV2-02 BUGS lines with git show 9fdcb7d:artifacts/design-v2/BUGS.md",
+      "exitCode": 0,
+      "output": "All unrelated lines exactly equal baseline; historical Targeted Chromium 25/25 restored"
+    }
+  ],
+  "coordinatorSuppliedMetadata": {
+    "source": "user/coordinator report only; not independently queried by this worker",
+    "oldDatabase": "flowline_test",
+    "oldMatchingRows": 2070,
+    "oldFormat": "v1",
+    "oldLegacyCryptoColumn": false,
+    "newDatabase": "flowline_test_beta20260930main",
+    "newRows": 164,
+    "newLegacyCryptoColumn": true
+  },
+  "schemaHandling": {
+    "detectedFrom": "information_schema.columns for public.connection",
+    "inferredMarkerValue": null,
+    "inferredProvenance": "inferred-old-schema-v1",
+    "fabricatedColumnMarker": false,
+    "requiredChecks": [
+      "raw AES-GCM with original data/AAD",
+      "app decryptLegacyV1"
+    ],
+    "limits": "No persisted marker or migration history is claimed; missing-column inference supports v1 only."
+  },
+  "resources": {
+    "vitestWorkers": 1,
+    "keys": "generated in-memory only",
+    "sql": "stateful doubles only",
+    "databaseConnections": 0,
+    "helpers": 0,
+    "browsers": 0,
+    "packageInstalls": 0,
+    "dependencies": "primary node_modules junction in own worktree; original caches preserved in TEMP/flowline-security-20261003-node-modules-cache"
+  },
+  "execution": {
+    "independentReview": "BLOCK_SECRET_PROCESSING on prior candidate; revised exact diff awaits APPROVE_SECRET_PROCESSING",
+    "realSecretProcessing": "NOT_EXECUTED",
+    "databaseWrites": "NOT_EXECUTED",
+    "environmentFileWrites": "NONE",
+    "rotations": "NONE",
+    "frozenEvidenceWrites": "NONE",
+    "commitsPushesPrActions": "NONE"
+  },
+  "blockers": [
+    "Prior BLOCK_SECRET_PROCESSING remains until revised exact-diff review returns APPROVE_SECRET_PROCESSING.",
+    "Real primary ciphertext/current persistence proof remains unexecuted.",
+    "Ai-hub proof BLOCKED because named test config is absent; no retirement claimed.",
+    "Historical ciphertext validity/migration provenance and non-connection secret tables remain outside proof scope."
+  ],
+  "strictDotenv": {
+    "wholeFilePrevalidation": true,
+    "syntaxErrorsContainContent": false,
+    "parsedAssignmentCompletenessChecked": true,
+    "supported": "UTF8/BOM and UTF16LE; unique ASCII NAME=value; blank/comment lines; empty/unquoted and literal single-line single/double quoted values; horizontal whitespace; inline comments; CRLF",
+    "refused": "export, garbage/nonassignment, invalid/duplicate names, unfinished/multiline/backtick quotes, trailing garbage, truncated UTF16LE",
+    "malformedConfigAllowsPartialAudit": false,
+    "malformedConfigCreatesDbClients": false
+  }
+}
