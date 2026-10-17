@@ -15,7 +15,7 @@ interface Enrolment {
   backupCodes: string[];
 }
 
-/** Two-step verification card: status, and the enrol flow (password -> secret + backup codes -> 6-digit code). The password is an uncontrolled SecretInput cleared on submit; the secret and codes live in state only until confirmed or cancelled. */
+/** Two-step verification card: status, the enrol flow (password -> secret + backup codes -> 6-digit code) and the disable flow (password only). Each password field is an uncontrolled SecretInput read through its own ref and cleared on submit; the secret and codes live in state only until confirmed or cancelled. */
 export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const t = useT();
   const toast = useToast();
@@ -24,18 +24,21 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [askDisable, setAskDisable] = useState(false);
   const [pending, setPending] = useState<"enable" | "verify" | "disable" | null>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
+  const enablePasswordRef = useRef<HTMLInputElement>(null);
+  const disablePasswordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const cancel = () => {
-    takeSecret(passwordRef.current);
+    takeSecret(enablePasswordRef.current);
+    takeSecret(disablePasswordRef.current);
+    if (codeRef.current) codeRef.current.value = "";
     setAskPassword(false);
     setAskDisable(false);
     setEnrolment(null);
   };
 
   const enable = async () => {
-    const password = takeSecret(passwordRef.current) ?? "";
+    const password = takeSecret(enablePasswordRef.current) ?? "";
     setPending("enable");
     try {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } });
@@ -64,9 +67,10 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   };
 
   const disable = async () => {
-    const password = takeSecret(passwordRef.current) ?? "";
+    const password = takeSecret(disablePasswordRef.current) ?? "";
     setPending("disable");
     try {
+      // better-auth disableTwoFactor accepts a POST JSON body with only the account password.
       await api("/api/auth/two-factor/disable", { method: "POST", json: { password } });
       setAskDisable(false);
       toast(t("account.security.twoFactor.disabled"), "success");
@@ -95,13 +99,13 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
           >
             <p className="text-sm text-med">{t("account.security.twoFactor.disableBody")}</p>
             <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-disable-password">
-              <SecretInput ref={passwordRef} id="two-factor-disable-password" maxLength={128} />
+              <SecretInput ref={disablePasswordRef} id="two-factor-disable-password" maxLength={128} />
             </Field>
             <div className="flex gap-2">
               <Button type="submit" variant="primary" loading={pending === "disable"}>
                 {t("account.security.twoFactor.disable")}
               </Button>
-              <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+              <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
             </div>
           </form>
         ) : (
@@ -137,7 +141,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
           </form>
         </div>
       ) : askPassword ? (
@@ -149,13 +153,13 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
           }}
         >
           <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-password">
-            <SecretInput ref={passwordRef} id="two-factor-password" maxLength={128} />
+            <SecretInput ref={enablePasswordRef} id="two-factor-password" maxLength={128} />
           </Field>
           <div className="flex gap-2">
             <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
-            <Button onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
           </div>
         </form>
       ) : (

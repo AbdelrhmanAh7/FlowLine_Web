@@ -93,12 +93,28 @@ test("enable, sign in with the code, disable", async ({ page }) => {
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
   };
 
+  const mutations: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/auth/two-factor/")) mutations.push(request.url());
+  });
+
   // Enable through the UI; Disable is not offered while it is Off.
   await page.goto("/account/security");
   await expect(page.getByRole("button", { name: "Disable" })).toHaveCount(0);
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
   await page.getByRole("button", { name: "Enable" }).click();
+  await expect(page.getByTestId("totp-secret")).toBeVisible();
+  const beforeCancel = mutations.length;
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Enable" })).toBeVisible();
+  expect(mutations).toHaveLength(beforeCancel);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Enable" }).click();
+  await expect(page.getByTestId("totp-secret")).toBeVisible();
   const raw = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
   await page.getByLabel("Authentication code").fill(totpCodeFor(raw));
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
@@ -119,12 +135,24 @@ test("enable, sign in with the code, disable", async ({ page }) => {
   await page.goto("/account/security");
   await expect(page.getByText("On", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Disable" }).click();
-  await page.getByLabel("Account password").fill("not-the-password-1");
+  await page.getByLabel("Account password").fill(PASSWORD);
+  const beforeDisableCancel = mutations.length;
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByLabel("Account password")).toHaveCount(0);
+  expect(mutations).toHaveLength(beforeDisableCancel);
   await page.getByRole("button", { name: "Disable" }).click();
+  await expect(page.getByLabel("Account password")).toHaveValue("");
+  await page.getByLabel("Account password").fill("not-the-password-1");
+  const wrongRequest = page.waitForRequest((r) => r.url().endsWith("/api/auth/two-factor/disable") && r.method() === "POST");
+  await page.getByRole("button", { name: "Disable" }).click();
+  expect((await wrongRequest).postDataJSON()).toEqual({ password: "not-the-password-1" });
   await expect(page.getByText("That password isn't correct.")).toBeVisible();
   await expect(page.getByText("On", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Account password")).toHaveValue("");
   await page.getByLabel("Account password").fill(PASSWORD);
+  const disableRequest = page.waitForRequest((r) => r.url().endsWith("/api/auth/two-factor/disable") && r.method() === "POST");
   await page.getByRole("button", { name: "Disable" }).click();
+  expect((await disableRequest).postDataJSON()).toEqual({ password: PASSWORD });
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Disable" })).toHaveCount(0);
   await page.reload();
@@ -133,6 +161,6 @@ test("enable, sign in with the code, disable", async ({ page }) => {
   // Signing in again needs no code.
   await signOut();
   await signIn();
-  await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/sign-in/);
+  await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
 });
