@@ -124,6 +124,8 @@ the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this inter
 
 ## Next steps
 
+0. **#142 (PR #188):** packet v2 scorer (VP-03 closed day, VP-05/VP-06 owner decision) is unit-tested and its scoring record, run 6 (`run6-v2-a646eaf`, `PACKET=packet.v2.json`, isolated test stack with the fake AI provider), is recorded: 8/10, VP-03 fails `closedDay` (product reply lacks the working-hours line), VP-05/VP-06 pass `ownerDecision`, VP-06 fails only VF-02. Run 6 found and fixed a scorer false negative (the product's "The business owner decides…" sentence). Run 7 (`run7-v2-92868b0`, 2026-10-14, first-hand reproduction on the current head `92868b0` with a fresh empty database, harness and its imports byte-identical to the run-6 candidate) scores the same 8/10 with the same per-VP pattern — both scorer gaps confirmed live on the final head. Next: review and CI on PR #188; product follow-ups VF-02 (VP-06 fixture) and VP-03's missing hours line are separate issues. Runs 1–6 stay untouched.
+
 1. Work the open follow-up issues on the [board](https://github.com/users/AbdelrhmanAh7/projects/21) under the constitution in `AGENTS.md` (every exception needs a recorded reason).
 2. Reconcile G2/G4 with their actual evidence and owner authorization before execution; main does not establish completion, and the only G4 record lives on draft PR #9 until that PR is reviewed and merged.
 3. Obtain a fresh issue #6 field-validation version without modifying frozen evidence; keep issue #6 open until the new run's evidence supports closure.
