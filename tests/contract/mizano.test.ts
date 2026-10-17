@@ -330,14 +330,14 @@ describe("mizano.create_draft_quote", () => {
       customerId: "cust_123",
       currency: "EGP",
       lines: [
-        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
-        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+        { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1.00", unitPrice: "100.00", taxRate: "15.00" },
       ],
     });
   });
 
   it("sends the same Idempotency-Key when called twice with the same ctx and input", async () => {
-    const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
+    const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" }] };
     const { ctx, request } = ctxReturning(quoteResponse);
     await runAction("mizano.create_draft_quote", ctx, input);
     await runAction("mizano.create_draft_quote", ctx, input);
@@ -349,7 +349,7 @@ describe("mizano.create_draft_quote", () => {
   });
 
   it("sends the same Idempotency-Key when the same run repeats, and a different one for another run", async () => {
-    const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
+    const input = { customerId: "cust_123", currency: "EGP", lines: [{ item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" }] };
     const first = ctxReturning(quoteResponse, "fl_run1_node2");
     const again = ctxReturning(quoteResponse, "fl_run1_node2");
     const other = ctxReturning(quoteResponse, "fl_run2_node2");
@@ -370,7 +370,7 @@ describe("mizano.create_draft_quote", () => {
 
   it("rejects a quote with more than 200 lines without calling Mizano", async () => {
     const { ctx, request } = ctxReturning(quoteResponse);
-    const lines = Array.from({ length: 201 }, (_, i) => ({ item: `Item ${i}`, qty: "1", unitPrice: "1.00", taxRate: "0.00" }));
+    const lines = Array.from({ length: 201 }, (_, i) => ({ item: `Item ${i}`, qty: "1.00", unitPrice: "1.00", taxRate: "0.00" }));
     await expect(runAction("mizano.create_draft_quote", ctx, { customerId: "cust_123", currency: "EGP", lines })).rejects.toThrow();
     expect(request).not.toHaveBeenCalled();
   });
@@ -381,8 +381,8 @@ describe("mizano.create_draft_quote", () => {
       customerId: "cust_123",
       currency: "EGP",
       lines: [
-        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
-        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+        { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1.00", unitPrice: "100.00", taxRate: "15.00" },
       ],
     });
     expect(out).toEqual(quoteResponse);
@@ -408,7 +408,7 @@ describe("mizano.create_draft_quote", () => {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "-5", unitPrice: "500.00", taxRate: "15.00" },
+          { item: "Consulting", qty: -5, unitPrice: "500.00", taxRate: "15.00" },
         ],
       }),
     ).rejects.toThrow();
@@ -421,7 +421,7 @@ describe("mizano.create_draft_quote", () => {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "10", unitPrice: "-100.00", taxRate: "15.00" },
+          { item: "Consulting", qty: "10.00", unitPrice: -100, taxRate: "15.00" },
         ],
       }),
     ).rejects.toThrow();
@@ -434,7 +434,7 @@ describe("mizano.create_draft_quote", () => {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "-5.00" },
+          { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: -5 },
         ],
       }),
     ).rejects.toThrow();
@@ -446,7 +446,7 @@ describe("mizano.create_draft_quote", () => {
       customerId: "cust_123",
       currency: "EGP",
       lines: [
-        { item: "Consulting", qty: "10.5", unitPrice: "500.50", taxRate: "15.75" },
+        { item: "Consulting", qty: "10.50", unitPrice: "500.50", taxRate: "15.75" },
       ],
     };
     const { ctx } = ctxReturning(decimalQuote);
@@ -458,7 +458,7 @@ describe("mizano.create_draft_quote", () => {
       ],
     });
     const q = out as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
-    expect(q.lines[0].qty).toBe("10.5");
+    expect(q.lines[0].qty).toBe("10.50");
     expect(q.lines[0].unitPrice).toBe("500.50");
     expect(q.lines[0].taxRate).toBe("15.75");
   });
@@ -496,7 +496,7 @@ describe("mizano create steps against a stateful fake that dedupes on Idempotenc
   }
 
   const customer = { name: "Test Customer", company: "Test Company Ltd", email: "test@example.com", phone: "+1-555-0123" };
-  const quote = { customerId: "cust_1", currency: "EGP", lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }] };
+  const quote = { customerId: "cust_1", currency: "EGP", lines: [{ item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" }] };
 
   it("creates one customer and one quote when the same run executes twice, and a second pair for a new run", async () => {
     const { created, ctxFor } = fakeMizano();
