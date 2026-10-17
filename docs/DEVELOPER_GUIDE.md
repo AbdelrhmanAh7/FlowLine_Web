@@ -24,7 +24,24 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Refusals of `/api/platform/copy` are bounded JSON errors `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; the codes listed in `docs/security/CREDENTIALS_DESIGN.md` item 10 are covered by `tests/integration/platform-copy-errors.test.ts` (including admin-only codes such as `STEP_UP_REQUIRED` and `REVISION_CONFLICT`), `tests/component/copy-editor.test.tsx` (component-level error handling for the load, me-load, save, publish, step-up, 5xx and network states, each in English and Arabic), and `e2e-army/200-route-error-headers.e2e.ts` (the #181 tests: non-admin 404, cross-site 403 and the localized 404 page; one file to stay within the hub's 8-file cap).
+
+**Copy editor error states (UI):** The copy editor surfaces the following user-facing error states, all translated in `src/i18n/messages/ar.json` and `en.json` under `platformAdmin.copyEditor.*` and `errors.*`:
+- **Load error** (`loadError`): shown when `GET /api/platform/copy` fails; includes a Retry button that calls `state.refetch()`.
+- **Me load error** (`platformAdmin.copyEditor.stepUp`): when `GET /api/platform/me` fails, the standing step-up prompt shows and the write controls stay disabled.
+- **Save error** (`saveError`): fallback for `PATCH /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Publish error** (`publishError`): fallback for `POST /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Revision conflict** (`errors.REVISION_CONFLICT`): shown when the server returns `409 REVISION_CONFLICT`; renders the translated `errors.REVISION_CONFLICT` message for the active locale (never the raw server text) and refetches state.
+- **Step-up required** (`platformAdmin.copyEditor.stepUp`): shown when the server returns `403 STEP_UP_REQUIRED`; refetches `me` and shows the step-up prompt.
+- **Server error** (`saveError`/`publishError`): shown for `5xx` responses; refetches state.
+- **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); renders the translated `errors.NETWORK` message (never the raw client text) and refetches state.
+All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
+
+**Component test coverage (as of #181):** `tests/component/copy-editor.test.tsx` mocks the query hooks and `api`, uses the real translator over the real `ar.json`/`en.json`, and runs every case below in both English and Arabic:
+- Catalogue check: every key the error states render exists in both catalogues and resolves to text (Arabic differs from English).
+- Load error with a Retry button that refetches the copy; the write `api()` is not called.
+- Admin session (`me`) load error: the editor still renders, the step-up prompt shows and "Publish draft" is disabled.
+- On save and on publish: `REVISION_CONFLICT` and `NETWORK` render the translated `errors.*` message (never the server or client text) and refetch the copy; a 5xx renders `saveError`/`publishError` and refetches; `STEP_UP_REQUIRED` refetches only the admin session, shows the step-up alert plus the standing prompt and disables the write button. Each write case asserts it sent exactly one `api()` call, compared whole: URL, method, CSRF header and JSON body (the save body carries the typed edit and `expectedRevision`; the publish body carries `expectedDraftRevision` and `expectedPublishedRevision`). The load and admin-session cases assert that `api()` is never called.
 
 ## Components and design
 
