@@ -257,7 +257,7 @@ describe("flow list run summary (regression: #117)", () => {
     expect(row.lastRunAt).toEqual(o.finishedAt);
   });
 
-  it("a run still in flight is the last run, at the time it started or was queued, even when an older run finishes after it started", async () => {
+  it("a run in flight is the last run only until a run of the flow finishes; a running run ranks ahead of a queued one", async () => {
     const { user, ws } = await setup();
     const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("In flight") });
     const older = await enqueueRun(user, flow.id);
@@ -265,21 +265,23 @@ describe("flow list run summary (regression: #117)", () => {
     const worker = unique("worker");
     let queued: { id: string } | null = null;
     try {
-      // Both runs are taken; the older one finishes while the newer one is still running.
+      // Nothing has finished: the newest started run is the last run, and a queued run (no startedAt) ranks after it.
       await claimOnly(older.id, worker);
       await claimOnly(newer.id, worker);
-      await processRun(db, older.id, worker);
+      queued = await enqueueRun(user, flow.id);
       const running = await freshRun(newer.id);
-      expect([(await freshRun(older.id)).status, running.status]).toEqual(["succeeded", "running"]);
+      expect(running.status).toBe("running");
       let row = await rowOf(ws.id, flow.id);
-      expect(row).toMatchObject({ runCount: 2, lastRunStatus: "running" });
+      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "running" });
       expect(row.lastRunAt).toEqual(running.startedAt);
 
-      await processRun(db, newer.id, worker);
-      queued = await enqueueRun(user, flow.id);
+      // Once the older run finishes it is the last run, although the newer run is still running and one is still queued.
+      await processRun(db, older.id, worker);
+      const done = await freshRun(older.id);
+      expect([done.status, (await freshRun(newer.id)).status, (await freshRun(queued.id)).status]).toEqual(["succeeded", "running", "queued"]);
       row = await rowOf(ws.id, flow.id);
-      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "queued" });
-      expect(row.lastRunAt).toEqual((await freshRun(queued.id)).createdAt);
+      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "succeeded" });
+      expect(row.lastRunAt).toEqual(done.finishedAt);
     } finally {
       // Leave nothing queued or running for the tests after this one.
       for (const id of [older.id, newer.id, queued?.id]) {

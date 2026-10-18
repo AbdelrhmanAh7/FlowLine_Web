@@ -1,29 +1,29 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Flows list & dashboard e2e guard (issue #117) — 2026-10-18
+## Flows list run summary (issue #117) — 2026-10-18
 
-`ai/117` fixes the `fl-flows-list` stable-gate failure by correcting the run-stat aggregation in
-`src/server/flows.ts:listFlows` and the response serialization in `src/app/api/v1/flows/route.ts`.
-The root cause was that run statistics were scoped to the flow's current revision instead of the flow id,
-so after a publish the aggregate only saw runs belonging to the newest revision.
+The stable-gate mismatch of `[fl-flows-list.3]` (`publishedVersion: 3` after two runs) was fixed on main by #204/#205
+(run snapshots are unnumbered). This branch adds the run summary the #117 spec asks for. It changes product code:
 
-Changes:
-- `src/server/flows.ts`: `listFlows` now aggregates `runCount`, `successRate`, `lastRunAt`, `lastRunStatus`
-  over ALL runs for the flow id (joined on `flows.id = runs.flowId`). The last run is selected by
-  `finishedAt DESC NULLS FIRST` (so in-flight runs — queued/running/waiting — take precedence),
-  then `startedAt DESC`, then `id DESC`. A single query uses two lateral joins (one grouped stats subquery
-  + one distinct-on lookup for the last run).
-- `src/app/api/v1/flows/route.ts`: every flow row now always emits `runCount` (integer, default 0),
-  `lastRunStatus` (string or null), and `lastRunAt` (timestamp string or null) — keys are never omitted.
-- `tests/integration/flows.test.ts`: added regression coverage for the pre-publish + post-publish run scenario
-  (AC1–AC5: runCount 2 across revisions, lastRunStatus from newest finishedAt, zero-run flow, paused flow).
-- `e2e-army/117-flows-list-dashboard.e2e.ts`: request-level test (no model) tagged `feat:fl-flows-list`,
-  `feat:fl-flows-api`, `feat:fl-public-api-v1`, `lvl:api`. Uses `E2E_ARMY_PASSWORD` env var; no hard-coded
-  password fallback. Verifies the public API, flow list, paused flow, and 404 on literal `[slug]` routes.
-- `tests/unit/no-conflict-markers.test.ts`: guard against merge-conflict markers in tracked files.
-
-Verified locally: `pnpm typecheck` and `pnpm lint` pass; `tests/integration/flows.test.ts` 16/16 pass;
-`pnpm test:unit` 1780 passed. The e2e-army test runs in the hub verify job.
+- `src/server/flows.ts` `listFlows`: `runCount`, `successRate`, `lastRunAt` and `lastRunStatus` cover every run of the
+  flow id, whichever revision it ran. One query: the flow rows plus two `LEFT JOIN LATERAL` subqueries (an ungrouped
+  count over the flow's runs, and an `ORDER BY ... LIMIT 1` lookup for the last run). The last run follows the spec's
+  order: `finished_at desc nulls last, started_at desc nulls last, id desc`. It is the run that finished last. A run
+  still queued, running or waiting for approval is the last run only while no run of the flow has finished, and a
+  running run ranks ahead of a queued one. `lastRunAt` is the run's `finished_at`, or for an in-flight run its
+  `started_at` (or `created_at` while queued).
+- `src/app/api/v1/flows/route.ts`: every row of `GET /api/v1/flows` carries `runCount` (0 when the flow never ran),
+  `lastRunStatus` and `lastRunAt` (null when it never ran).
+- Dashboard consequence: `dashboard.tsx` shows Running or Needs approval only while no earlier run of the flow has
+  finished. After that it shows the status of the last finished run. Before this change it showed the newest run by
+  `created_at`, in flight or not.
+- Tests: `tests/integration/flows.test.ts` (runs on both sides of publishing v3, the overlap case, in-flight runs,
+  run-less and paused flows); `e2e-army/features/flows-api.e2e.ts` `[fl-flows-list.4]` (`@issue-117`, request level,
+  tags `feat:fl-flows-list`, `feat:fl-public-api-v1`) covers AC1–AC5 against a test stack.
+  `e2e-army/117-flows-list-dashboard.e2e.ts` is byte-identical to main (spec AC6). The hub copies only top-level
+  `e2e-army/*.e2e.ts`, so the PR's e2e requirement for `fl-flows-api`/`fl-public-api-v1` is waived with that reason.
+- `tests/unit/no-conflict-markers.test.ts` fails on any tracked file that still contains a merge-conflict marker.
+  Earlier resolutions of this branch shipped such markers (PR #139, review round 8).
 
 ## Pilot E2E failure corrections — 2026-10-15
 
