@@ -390,5 +390,9 @@ human usability. Still open: R4-RV-04 (latent) and VO-01..06 (observations; VO-0
 - **Why:** QA review could not accept a run it could not re-verify; run 7 is the independent, first-hand re-verification of the #142 scoring record on candidate `92868b0`. Both gaps are confirmed live: the Friday confirmation scores as a failure, and owner-decision wording is enforced (replies without it score as failures, pinned by `tests/unit/field-scoring.test.ts` including the committed run-4 replies).
 - **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run7-v2-92868b0/RESULTS.md` (raw `results.json` not committed). Runs 1–6 untouched.
 
-**Harness update note:**
-Runs 6 and 7 predate the path sanitizer helper (`tests/helpers/file-path-sanitizer.ts`) and byte-level SHA256 checksum verification changes introduced during review. They verify the pure scoring logic and live flow on candidates `a646eaf` and `92868b0`, but do not verify the updated harness on the current head. No run on the updated harness is confirmed.
+**Run 8 (packet.v2.json, scoring record on the final harness, candidate `565003ae`):**
+- **Candidate / Run ID:** `565003ae` / `run8-v2-565003ae` (2026-10-18, fresh empty `flowline_test_142` database, isolated stack with the fake AI provider). The harness includes the path sanitizer, the byte-level `verifyPacketChecksum` check and the inflected-Arabic scorer fixes.
+- **Result:** **8/10**, the same per-VP pattern as runs 6 and 7: VP-03 fails `closedDay` (no working-hours line for the Friday request), VP-05 and VP-06 pass `ownerDecision`, VP-06 fails only `noPromise:cancelled` (VF-02).
+- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run8-v2-565003ae/RESULTS.md` (raw `results.json` not committed). Run 8 is the scoring record; runs 1–7 untouched.
+
+**Harness update note:** runs 6 and 7 predate the sanitizer and checksum changes; run 8 is the first run on the updated harness.
