@@ -66,7 +66,7 @@ export async function listFlows(workspaceId: string) {
     })
     .from(schema.run)
     .where(ofThisFlow)
-    .orderBy(sql`${schema.run.finishedAt} desc nulls first`, desc(schema.run.createdAt), desc(schema.run.id))
+    .orderBy(sql`${schema.run.finishedAt} desc nulls first`, desc(schema.run.startedAt), desc(schema.run.id))
     .limit(1)
     .as("last_run");
   return db

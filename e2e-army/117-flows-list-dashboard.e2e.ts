@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
-const PASSWORD = process.env.E2E_ARMY_PASSWORD || "Army-Passw0rd!";
+const PASSWORD = process.env.E2E_ARMY_PASSWORD!;
 const FIXED = "fl_test_beta_mode=open; fl_locale=en";
 /** Deterministic per stack: derived from a fixed seed and the stack URL, never from the clock. */
 const seeded = (base: string, seed: string, n = 10) =>

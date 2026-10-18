@@ -1,30 +1,29 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Flows list & dashboard e2e guard (issue #117) — 2026-10-15
+## Flows list & dashboard e2e guard (issue #117) — 2026-10-18
 
-`ai/117` was rebuilt from `origin/main`: #204/#205 already fixed the root cause (only a publication snapshot takes a
-version number; migrations `0025_flow_version_run_unnumbered` and `0026_flow_version_run_backfill`), so this branch keeps
-main's product code and the earlier parallel implementation — its own `insertVersion` numbering, a rewritten migration
-`0025` and reworded design notes — is dropped. Nothing but the regression guard is new:
-`e2e-army/117-flows-list-dashboard.e2e.ts` (request-level, no model), tagged `feat:fl-flows-list` plus the four other
-features it exercises (`fl-flows-api`, `fl-flow-versions`, `fl-run-execution`, `fl-run-history`).
+`ai/117` fixes the `fl-flows-list` stable-gate failure by correcting the run-stat aggregation in
+`src/server/flows.ts:listFlows` and the response serialization in `src/app/api/v1/flows/route.ts`.
+The root cause was that run statistics were scoped to the flow's current revision instead of the flow id,
+so after a publish the aggregate only saw runs belonging to the newest revision.
 
-It reproduces the stable-gate check on the API the flows list and dashboard read: after two manual runs and one publish
-the row reports `publishedVersion 1` (not 3), `lastRunStatus "succeeded"`, `successRate 1`, `runCount 2`, `nodeCount 3`,
-`trigger "trigger.manual"`; the failed (`bad`) and untouched draft rows report their own state; the dashboard counts the
-same three flows; and `/w/<slug>/flows` and `/w/<slug>/runs` load (200) while the literal route placeholder `[slug]` is an
-ordinary 404. The throwaway account uses `E2E_ARMY_PASSWORD` or a stack-derived value, never a hard-coded password.
+Changes:
+- `src/server/flows.ts`: `listFlows` now aggregates `runCount`, `successRate`, `lastRunAt`, `lastRunStatus`
+  over ALL runs for the flow id (joined on `flows.id = runs.flowId`). The last run is selected by
+  `finishedAt DESC NULLS FIRST` (so in-flight runs — queued/running/waiting — take precedence),
+  then `startedAt DESC`, then `id DESC`. A single query uses two lateral joins (one grouped stats subquery
+  + one distinct-on lookup for the last run).
+- `src/app/api/v1/flows/route.ts`: every flow row now always emits `runCount` (integer, default 0),
+  `lastRunStatus` (string or null), and `lastRunAt` (timestamp string or null) — keys are never omitted.
+- `tests/integration/flows.test.ts`: added regression coverage for the pre-publish + post-publish run scenario
+  (AC1–AC5: runCount 2 across revisions, lastRunStatus from newest finishedAt, zero-run flow, paused flow).
+- `e2e-army/117-flows-list-dashboard.e2e.ts`: request-level test (no model) tagged `feat:fl-flows-list`,
+  `feat:fl-flows-api`, `feat:fl-public-api-v1`, `lvl:api`. Uses `E2E_ARMY_PASSWORD` env var; no hard-coded
+  password fallback. Verifies the public API, flow list, paused flow, and 404 on literal `[slug]` routes.
+- `tests/unit/no-conflict-markers.test.ts`: guard against merge-conflict markers in tracked files.
 
-The review round that prompted the rebuild flagged merge-conflict markers left in six files by the old branch's hand
-resolution of `origin/main`. Rebuilding from `origin/main` removes them; `tests/unit/no-conflict-markers.test.ts` now
-fails if any tracked text file still holds a `<<<<<<<` / `>>>>>>>` / `|||||||` marker, so a broken resolution reaches a
-test run instead of a reviewer.
-
-Verified locally at `8ce913ba` (the branch's test-only commit) against a disposable `flowline_test_117b` database: `pnpm e2e:army
-e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 (10.6 s, isolated stack on :3100 with a worker).
-`tests/unit/no-conflict-markers.test.ts` passes on the clean tree and fails on a tracked file with a marker
-(checked by hand); eslint on both files and `pnpm typecheck` are clean. The #204/#205 unit and integration suites that
-cover the product fix are unchanged and run in CI.
+Verified locally: `pnpm typecheck` and `pnpm lint` pass; `tests/integration/flows.test.ts` 16/16 pass;
+`pnpm test:unit` 1780 passed. The e2e-army test runs in the hub verify job.
 
 ## Pilot E2E failure corrections — 2026-10-15
 
