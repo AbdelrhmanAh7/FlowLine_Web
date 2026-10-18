@@ -37,3 +37,24 @@ I set it to CI's value from `.github/ci/env.test.template` (`127.0.0.1:4010,127.
 
 No UI file changed, so there are no screenshots. Sentry: the issue does not link a Sentry issue, and none is known for
 this failure. It came from the hub's stable gate (`fl-flows-list` on main @ `d211653` and `9c754b2`).
+
+## Stop-hook run (`vitest related` on the changed files)
+
+The hub stop hook runs `vitest related --run --maxWorkers=2 <changed files>` without the test env. It fails at
+`tests/integration/global-setup.ts` ("must run against flowline_test (got )") before any test starts. With the env
+set, `related` picks up the 34 files that import `src/server/flows.ts` and runs them two at a time on one database:
+7 tests failed. Two causes were in the local env: the owner's `.env.test` uses the same key for the platform and the
+workspace encryption rings, and billing is not configured. The third was parallel files claiming each other's queued
+runs. Two of the failures were in `nightly`-project tests.
+
+Rerun one file at a time on `flowline_test_117c`, with a synthetic platform key derived from a fixed seed (exported
+for the run, nothing committed):
+
+| File | Head `5c6f939a` | Base (main's `flows.ts` + `route.ts`) |
+|------|-----------------|---------------------------------------|
+| flows, runs, ai-hub, ai-retest-fx2, cxh14-step-retry, p2-actions, p2-review-fixes, sec-wavec-fixes | all pass (16, 23, 14, 15, 3, 12, 10, 8) | not rerun |
+| ai-hub-routing | 1 failed / 28 passed (`AI_COST_UNKNOWN` expected, null) | same 1 failed / 28 passed |
+| company-builder | 1 failed / 51 passed ("Billing isn't configured for this installation") | same 1 failed / 51 passed |
+
+Neither remaining failure reads the run summary, and both fail the same way without this change. They were not
+fixed here (out of scope for #117).
