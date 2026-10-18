@@ -60,4 +60,10 @@ describe("file-path-sanitizer", () => {
   it("rejects strings with multiple consecutive dots", () => {
     expect(() => sanitizePacketFileName("packet..json")).toThrow(/parent directory references are not allowed/);
   });
+
+  it("throws (never falls back to packet.json) for the review's reference cases", () => {
+    expect(() => sanitizePacketFileName("packet.v2.json.")).toThrow(/cannot start or end with punctuation/);
+    expect(() => sanitizePacketFileName("../packet.v2.json")).toThrow(/parent directory references are not allowed/);
+    expect(() => sanitizePacketFileName("a/b.json")).toThrow(/directory separators are not allowed/);
+  });
 });

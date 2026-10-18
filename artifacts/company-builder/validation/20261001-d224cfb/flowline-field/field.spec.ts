@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { setupUser } from "../../../../../e2e/helpers";
 import { scoreClosedDay, scoreOwnerDecision } from "../../../../../tests/helpers/fieldScoring";
 import { noPromiseHolds } from "../../../../../src/company-builder/packs/customer-follow-up";
 import { sanitizePacketFileName } from "../../../../../tests/helpers/file-path-sanitizer";
+import { verifyPacketChecksum } from "../../../../../tests/helpers/packet-checksum";
 
 /**
  * Flowline field run of the FROZEN validation packet (sha256 in ../packet/SHA256SUMS). Agent-driven through the real
@@ -14,15 +14,12 @@ import { sanitizePacketFileName } from "../../../../../tests/helpers/file-path-s
 const DIR = "artifacts/company-builder/validation/20261001-d224cfb";
 // The frozen v1 packet (default) or a newer version, e.g. PACKET=packet.v2.json (scoring gaps #142). Old runs stay
 // reproducible against v1 by default; a new run names the packet it scored.
-// PACKET_FILE is sanitized to prevent directory traversal and path injection attacks (throws on invalid input).
-const PACKET_FILE = sanitizePacketFileName(process.env.PACKET ?? "packet.json");
+// PACKET_FILE is sanitized to prevent directory traversal and path injection (throws on invalid input; only an unset or
+// empty PACKET uses the default). The packet bytes must match packet/SHA256SUMS (throws on mismatch).
+const PACKET_FILE = sanitizePacketFileName(process.env.PACKET || "packet.json");
 const packetBytes = readFileSync(`${DIR}/packet/${PACKET_FILE}`);
 const packet = JSON.parse(packetBytes.toString("utf8"));
-const computedSha256 = createHash("sha256").update(packetBytes).digest("hex");
-const checksumLine = readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split("\n").find((l) => l.trim().endsWith(` ${PACKET_FILE}`));
-if (!checksumLine) throw new Error(`${PACKET_FILE} has no entry in packet/SHA256SUMS: refusing a run not bound to frozen packet contents`);
-const expectedSha256 = checksumLine.trim().split(/\s+/)[0];
-if (computedSha256 !== expectedSha256) throw new Error(`${PACKET_FILE} SHA256 mismatch (computed ${computedSha256}, expected ${expectedSha256}): refusing a run with modified packet contents`);
+const computedSha256 = verifyPacketChecksum(packetBytes, PACKET_FILE, readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8"));
 const OUT = `${DIR}/flowline-field/${process.env.FIELD_RUN ?? "run"}`;
 // Run 1 typed services comma-separated (the instruction at the time). From run 2 the product instructs "name / other
 // name" for one service, so the answer follows the on-screen instruction.
