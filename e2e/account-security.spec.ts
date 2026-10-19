@@ -199,3 +199,38 @@ test("enable two-step verification in Arabic (RTL)", async ({ page }) => {
   await expect(status).toHaveAttribute("data-state", "on");
   await expect(status).toHaveText("مفعّل");
 });
+
+test("the correct code turns the status On, hides the secret and backup codes, and the status remains On after a reload", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveAttribute("data-state", "off");
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  const secret = page.getByTestId("totp-secret");
+  await expect(secret).toBeVisible();
+  await expect(secret).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+
+  // Verify secret toggle works
+  await page.getByRole("button", { name: "Hide" }).click();
+  await expect(secret).toHaveText("••••••••••••••••");
+  await page.getByRole("button", { name: "Show" }).click();
+  await expect(secret).not.toHaveText("••••••••••••••••");
+
+  const raw = base32Decode((await secret.textContent())!.trim());
+  await page.getByLabel("Authentication code").fill(totpCodeFor(raw));
+  await page.getByRole("button", { name: "Confirm and turn on" }).click();
+
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+
+  await page.reload();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+});

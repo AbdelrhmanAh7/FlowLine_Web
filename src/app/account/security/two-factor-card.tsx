@@ -23,6 +23,8 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const [askPassword, setAskPassword] = useState(false);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [pending, setPending] = useState<"enable" | "verify" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [secretVisible, setSecretVisible] = useState(true);
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   // Bumped whenever an in-flight enable/verify is cancelled or replaced, so a late response can't reopen the secret.
@@ -31,15 +33,18 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const cancel = () => {
     requestRef.current += 1;
     takeSecret(passwordRef.current);
+    setError(null);
     setAskPassword(false);
     setEnrolment(null);
     setPending(null);
+    setSecretVisible(true);
   };
 
   const enable = async () => {
     const req = ++requestRef.current;
     const password = takeSecret(passwordRef.current) ?? "";
     setPending("enable");
+    setError(null);
     try {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } });
       if (requestRef.current !== req) return;
@@ -48,7 +53,9 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     } catch (err) {
       if (requestRef.current !== req) return;
       // Only a wrong/missing password gets the friendly line; other failures show their own (or a generic) message.
-      toast(err instanceof ApiError && err.code === "INVALID_PASSWORD" ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
+      const msg = err instanceof ApiError && err.code === "INVALID_PASSWORD" ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err);
+      setError(msg);
+      toast(msg, "danger");
     } finally {
       if (requestRef.current === req) setPending(null);
     }
@@ -89,9 +96,19 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5 text-start" role="group" aria-labelledby="two-factor-secret-label">
             {/* <code> is not labelable, so the secret is named with aria-labelledby on the group container instead of a <label for>. */}
-            <span id="two-factor-secret-label" className="text-xs font-medium text-med text-start">
-              {t("account.security.twoFactor.secret")}
-            </span>
+            <div className="flex items-center justify-between gap-2">
+              <span id="two-factor-secret-label" className="text-xs font-medium text-med text-start">
+                {t("account.security.twoFactor.secret")}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSecretVisible((v) => !v)}
+              >
+                {secretVisible ? t("account.security.twoFactor.hideSecret") : t("account.security.twoFactor.showSecret")}
+              </Button>
+            </div>
             <code
               id="two-factor-secret"
               dir="ltr"
@@ -99,11 +116,26 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               data-testid="totp-secret"
               aria-labelledby="two-factor-secret-label"
             >
-              {enrolment.secret}
+              {secretVisible ? enrolment.secret : "••••••••••••••••"}
             </code>
           </div>
           <div className="text-start">
-            <p data-testid="backup-codes-warning" className="text-sm text-warning text-start">{t("account.security.twoFactor.backupCodesWarning")}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p data-testid="backup-codes-warning" className="text-sm text-warning text-start">{t("account.security.twoFactor.backupCodesWarning")}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    void navigator.clipboard.writeText(enrolment.backupCodes.join("\n"));
+                  }
+                  toast(t("account.security.twoFactor.backupCodesCopied"), "success");
+                }}
+              >
+                {t("account.security.twoFactor.copyBackupCodes")}
+              </Button>
+            </div>
             <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm text-start" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
                 <li key={c}>{c}</li>
@@ -137,7 +169,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             void enable();
           }}
         >
-          <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-password">
+          <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-password" error={error}>
             <SecretInput ref={passwordRef} id="two-factor-password" maxLength={128} />
           </Field>
           <div className="flex gap-2">
