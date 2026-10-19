@@ -1,5 +1,14 @@
 # Next action — 2026-10-03
 
+## Issue #298 — CI workflow triggers, checkout refs, and fork isolation audit (2026-10-19)
+
+Resolved QA checklist finding from PR #271 / parent issue #250 regarding untrusted code checkout.
+- State triggers and checkout refs for `gate.yml` and `claude.yml`, confirming absence of `pull_request_target`.
+- Confirmed fork PR isolation from `CLAUDE_CODE_OAUTH_TOKEN` in `claude` (collaborator + head repo gate) and `review` (job `if:` pre-filter + GitHub Actions secret withholding) jobs.
+- Added comprehensive unit test suite in `tests/unit/ci-workflows.test.ts` (16 test assertions and 10 negative controls).
+- Documented findings in `docs/security/CI_WORKFLOW_SECURITY.md`, `artifacts/phase-4/issue-298/EVIDENCE.md`, and root `EVIDENCE.md`.
+- Next step: Harness pushes branch `ai/298` for PR review and automerge. E2E: not needed — non-user-facing CI audit and workflow security guard tests.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.

@@ -531,3 +531,155 @@ describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
     }
   });
 });
+
+describe("workflow triggers, checkout refs, and fork isolation invariants (#298)", () => {
+  const gateText = read(".github/workflows/gate.yml");
+  const claudeText = read(".github/workflows/claude.yml");
+  const claudeJobs = jobs(claudeText);
+
+  // Helper verifying that gate.yml and claude.yml never check out untrusted code with elevated privileges,
+  // never use pull_request_target, restrict triggers, isolate secrets from fork PRs, and guard all steps.
+  const checkWorkflowUntrustedCodeSafety = (gText: string, cText: string): string[] => {
+    const problems: string[] = [];
+
+    // 1. pull_request_target check
+    if (/pull_request_target/m.test(stripComments(gText))) problems.push("gate.yml uses pull_request_target");
+    if (/pull_request_target/m.test(stripComments(cText))) problems.push("claude.yml uses pull_request_target");
+
+    // 2. claude.yml triggers
+    const allowedEvents = ["issue_comment", "pull_request_review_comment", "pull_request_review", "issues", "pull_request"];
+    const strippedClaude = stripComments(cText);
+    const onBlock = strippedClaude.slice(strippedClaude.indexOf("\non:\n") + 5).split(/^jobs:\s*$/m)[0];
+    const declaredEvents = [...onBlock.matchAll(/^ {2}([a-z][\w-]*):/gm)].map((m) => m[1]);
+    for (const evt of declaredEvents) {
+      if (!allowedEvents.includes(evt)) problems.push(`claude.yml declares unexpected trigger event: ${evt}`);
+    }
+
+    // 3. claude jobs inspection
+    const cJobs = jobs(cText);
+
+    // claude job:
+    const claudeJob = cJobs.claude;
+    if (!claudeJob) {
+      problems.push("claude.yml missing claude job");
+    } else {
+      if (!claudeJob.includes("repos/$REPO/collaborators/$ACTOR/permission") || !/case "\$perm" in admin\|maintain\|write\)/.test(claudeJob)) {
+        problems.push("claude job does not verify collaborator write permissions");
+      }
+      if (!claudeJob.includes("repos/$REPO/pulls/$PR_NUMBER") || !claudeJob.includes('[ "$head_repo" = "$REPO" ]')) {
+        problems.push("claude job does not reject fork PRs");
+      }
+      const checkoutStep = steps(claudeJob).find((s) => s.uses?.startsWith("actions/checkout"));
+      if (!checkoutStep) {
+        problems.push("claude job missing checkout step");
+      } else if (/\bref:\s*\$\{\{.*(?:head|pull_request)/.test(checkoutStep.raw)) {
+        problems.push("claude job checks out untrusted PR head ref");
+      }
+    }
+
+    // review job:
+    const reviewJob = cJobs.review;
+    if (!reviewJob) {
+      problems.push("claude.yml missing review job");
+    } else {
+      if (!reviewJob.includes("github.event.pull_request.head.repo.full_name == github.repository")) {
+        problems.push("review job does not filter out fork PRs in its job condition");
+      }
+      if (/^ {6}contents:\s*write\b/m.test(reviewJob)) problems.push("review job grants contents: write");
+      if (!/^ {6}contents:\s*read\b/m.test(reviewJob)) problems.push("review job missing contents: read");
+    }
+
+    // token gating on both jobs
+    for (const [name, jobText] of Object.entries(cJobs)) {
+      if (!jobText.includes("HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}")) {
+        problems.push(`${name} job missing HAS_TOKEN env declaration`);
+      }
+      const actionSteps = steps(jobText).filter((s) => s.uses?.includes("claude-code-action") || s.uses?.includes("actions/checkout"));
+      for (const step of actionSteps) {
+        if (step.if !== "steps.gate.outputs.run == 'true'") {
+          problems.push(`${name} job step '${step.name ?? step.uses}' not gated on steps.gate.outputs.run == 'true'`);
+        }
+      }
+    }
+
+    return problems;
+  };
+
+  it("gate.yml and claude.yml satisfy all untrusted code checkout and fork safety rules", () => {
+    expect(checkWorkflowUntrustedCodeSafety(gateText, claudeText)).toEqual([]);
+  });
+
+  it("never uses pull_request_target in gate.yml or claude.yml", () => {
+    expect(stripComments(gateText)).not.toMatch(/pull_request_target/);
+    expect(stripComments(claudeText)).not.toMatch(/pull_request_target/);
+  });
+
+  it("claude.yml restricts triggers to issue_comment, pull_request_review_comment, pull_request_review, issues, and pull_request", () => {
+    expect(triggerTypes(claudeText, "issue_comment")).toEqual(["created"]);
+    expect(triggerTypes(claudeText, "pull_request_review_comment")).toEqual(["created"]);
+    expect(triggerTypes(claudeText, "pull_request_review")).toEqual(["submitted"]);
+    expect(triggerTypes(claudeText, "issues")).toEqual(["opened"]);
+    expect(triggerTypes(claudeText, "pull_request")).toEqual(["opened", "synchronize", "ready_for_review", "reopened"]);
+    expect(stripComments(claudeText)).not.toMatch(/^ {2}pull_request_target:/m);
+  });
+
+  it("claude job checks out default ref (not PR head) and rejects fork PRs and non-writers at the gate", () => {
+    const claudeJob = claudeJobs.claude;
+    expect(claudeJob).toBeDefined();
+
+    // Actor collaborator check
+    expect(claudeJob).toContain("repos/$REPO/collaborators/$ACTOR/permission");
+    expect(claudeJob).toMatch(/case "\$perm" in admin\|maintain\|write\)/);
+
+    // Fork PR check
+    expect(claudeJob).toContain("repos/$REPO/pulls/$PR_NUMBER");
+    expect(claudeJob).toMatch(/\[ "\$head_repo" = "\$REPO" \] \|\| skip "PR #\$PR_NUMBER does not come from a branch of this repo/);
+
+    // Checkout step does not specify an untrusted ref
+    const checkoutStep = steps(claudeJob).find((s) => s.uses?.startsWith("actions/checkout"));
+    expect(checkoutStep).toBeDefined();
+    expect(checkoutStep!.raw).not.toMatch(/\bref:\s*\$\{\{/);
+  });
+
+  it("review job runs only on internal branches, rejecting fork PRs before runner allocation with read-only contents", () => {
+    const reviewJob = claudeJobs.review;
+    expect(reviewJob).toBeDefined();
+
+    // Requires same repository
+    expect(reviewJob).toContain("github.event.pull_request.head.repo.full_name == github.repository");
+
+    // Has contents: read (least privilege, never write)
+    expect(reviewJob).toMatch(/^ {6}contents: read\b/m);
+    expect(reviewJob).not.toMatch(/^ {6}contents: write\b/m);
+  });
+
+  it("both claude.yml jobs gate execution behind HAS_TOKEN and skip action steps when unset", () => {
+    for (const [name, jobText] of Object.entries(claudeJobs)) {
+      expect(jobText, `job ${name}`).toContain("HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}");
+      expect(jobText, `job ${name}`).toMatch(/HAS_TOKEN.*=.*"true"|\[\s*"\$HAS_TOKEN"\s*=\s*"true"\s*\]/);
+      const actionSteps = steps(jobText).filter((s) => s.uses?.includes("claude-code-action") || s.uses?.includes("actions/checkout"));
+      expect(actionSteps.length).toBeGreaterThan(0);
+      for (const step of actionSteps) {
+        expect(step.if).toBe("steps.gate.outputs.run == 'true'");
+      }
+    }
+  });
+
+  describe("negative controls fail on unsafe triggers, ref mutations, or missing fork isolation", () => {
+    it.each([
+      ["gate.yml uses pull_request_target", gateText.replace("pull_request:", "pull_request_target:"), claudeText],
+      ["claude.yml uses pull_request_target", gateText, claudeText.replace("pull_request:", "pull_request_target:")],
+      ["claude.yml adds unauthorized trigger", gateText, claudeText.replace("on:\n", "on:\n  push:\n    branches: [main]\n")],
+      ["claude job removes collaborator write check", gateText, claudeText.replace('case "$perm" in admin|maintain|write)', 'case "$perm" in *)')],
+      ["claude job removes fork PR check", gateText, claudeText.replace('[ "$head_repo" = "$REPO" ]', '[ "true" = "true" ]')],
+      ["claude job checks out untrusted PR head", gateText, claudeText.replace("fetch-depth: 1\n", "fetch-depth: 1\n          ref: ${{ github.event.pull_request.head.sha }}\n")],
+      ["review job removes internal repo condition", gateText, claudeText.replace("github.event.pull_request.head.repo.full_name == github.repository", "true")],
+      ["review job requests contents: write", gateText, claudeText.replace("contents: read", "contents: write")],
+      ["review job removes HAS_TOKEN check", gateText, claudeText.replace("HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}", "HAS_TOKEN: 'true'")],
+      ["claude-code-action unguarded without gate output", gateText, claudeText.replace("if: steps.gate.outputs.run == 'true'\n        uses: anthropics/claude-code-action", "uses: anthropics/claude-code-action")],
+    ])("%s", (_name, brokenGate, brokenClaude) => {
+      expect(checkWorkflowUntrustedCodeSafety(brokenGate, brokenClaude).length).toBeGreaterThan(0);
+    });
+  });
+});
+

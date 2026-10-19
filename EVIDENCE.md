@@ -1,65 +1,66 @@
-# Evidence — Issue #226: chore(code-quality): resolve CodeRabbit review backlog (2026-10-12)
+# Evidence — Issue #298: fix: AI_QUESTIONS.md: major (Claude Sonnet 5.5·medium): The 'no pullrequesttarget checkout … (split from #271)
 
-Tested commit: `0d7c1459fdfc38db8c7090e25840356f25f986ed`
-
-All checks and tests were executed locally against commit `0d7c1459fdfc38db8c7090e25840356f25f986ed` in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226`.
+Parent issue: #250
+Split from: PR #271 ([CodeRabbit discussion r4261434365](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/271#discussion_r4261434365))
+Originating Sentry issue: N/A (CI workflow security audit / QA review finding)
+User-facing UI / Arabic: Exempt (internal CI workflow infrastructure and security audit; no user-facing UI or routes modified)
 
 ## Acceptance Criteria and Verification
 
-| Req / AC | Description | Verification Method | Result | Commit |
+| AC # | Acceptance Criterion | Verification Method | Result | Status |
 |---|---|---|---|---|
-| AC1 | `scoreNoPromise` in `tests/helpers/field-scoring.ts` ignores empty or whitespace-only strings in `approvedInformation` before splitting or matching; blank entries do not cause refund promises to pass scoring. | Regression test in `tests/unit/flowline-field-scoring.test.ts:28-29` (`expect(scoreNoPromise("We will refund you today.", "we will refund", [""])).toBe(false)`). Tested on base (FAILED with `AssertionError: expected true to be false`) and on head (PASSED). | 8/8 unit tests pass (`tests/unit/flowline-field-scoring.test.ts`) | `0d7c1459` |
-| AC2 | In `src/ai/hub/protocols/shared.ts:22`, `badToolArgs` uses conditional language ("may have been billed") rather than asserting unverified billing ("was still billed"). | Inspected source code JSDoc and verified via unit test `tests/unit/ai-hub-shared-protocols.test.ts:9-17` checking `possibleCharge: true`. | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC3 | Complete JSDoc contracts for exports in `src/ai/hub/protocols/shared.ts` (`num`, `badToolArgs`, `parseArgs`, `structuredOutputMode`, `validateRequest`, `scrubProviderMessage`, `createSseParser`, `streamJson`, `errorTokens`, `mapProviderError`, `mapInBandError`, `safetyRefusal`, `scrubHubError`, `parseBody`, `errorBody`, `pathModel`). `parseArgs` documents parameter/return semantics and thrown `HubError` (`AI_BAD_RESPONSE`); `mapInBandError` documents input/return semantics and possible mapped codes. | Dedicated unit test suite `tests/unit/ai-hub-shared-protocols.test.ts` covering `parseArgs` (valid objects, JSON strings, empty strings, invalid JSON error, non-object JSON error) and `mapInBandError` (overloaded, 4xx/5xx codes, fallback 502, non-object bodies). | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC4 | `docs/ai/ADDING_A_PROVIDER.md` accurately describes helper JSDoc contracts in `src/ai/hub/protocols/shared.ts`. | Docs checked and verified against implementation in `shared.ts`. CI docs check verified via `node scripts/ci/docs-check.mjs` and `tests/unit/docs-check-script.test.ts`. | 95/95 docs-check tests pass | `0d7c1459` |
-| AC5 | `docs/engineering/lock-order.md` accurately scopes the password reset recovery lock sequence and documents both #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write), citing `tests/unit/password-reset-lock-order.test.ts`. | Inspected `docs/engineering/lock-order.md:33-38` and verified with `tests/unit/password-reset-lock-order.test.ts`. | 6/6 unit tests pass (`tests/unit/password-reset-lock-order.test.ts`) | `0d7c1459` |
+| AC1 | **Workflow Triggers and Checkout Target Audit**: The QA checklist audit report explicitly details trigger events and checkout refs for both `.github/workflows/gate.yml` and `.github/workflows/claude.yml` with line citations, confirming that neither uses `pull_request_target`. | Verified via `docs/security/CI_WORKFLOW_SECURITY.md:15-84` and `artifacts/phase-4/issue-298/EVIDENCE.md`. Automated check in `tests/unit/ci-workflows.test.ts:610-622`. | `gate.yml` uses `pull_request`, `push`, `workflow_dispatch`. `claude.yml` uses `issue_comment`, `pull_request_review_comment`, `pull_request_review`, `issues`, `pull_request`. Neither uses `pull_request_target`. | PASS |
+| AC2 | **Fork PR Isolation and OAuth Token Protection**: State checkout refs and verify fork PRs cannot reach `claude` or `review` jobs in `claude.yml` with `CLAUDE_CODE_OAUTH_TOKEN`. | Verified via `docs/security/CI_WORKFLOW_SECURITY.md:43-84`. Automated check in `tests/unit/ci-workflows.test.ts:624-656`. | `claude` job checks out base ref `github.sha`, rejects non-collaborators (`perm` in `admin\|maintain\|write`) and rejects fork PRs (`[ "$head_repo" = "$REPO" ]`). `review` job filters out forks in job `if:` (`head.repo.full_name == github.repository`). Secrets withheld by GitHub on forks. | PASS |
+| AC3 | **Automated Invariant Unit Tests**: Dedicated unit tests in `tests/unit/ci-workflows.test.ts` assert and guard all trigger restrictions, checkout refs, permissions, and fork isolation mechanisms. | `pnpm exec vitest run tests/unit/ci-workflows.test.ts` | 16 new test assertions pass (98/98 total workflow tests pass). | PASS |
+| AC4 | **Negative Controls & Regression Demonstration**: Ten negative control tests verify that unsafe trigger mutations, checkout ref modifications, permission escalations, or fork check removals cause test failures. | `tests/unit/ci-workflows.test.ts:658-672` running 10 negative control variations. | 10/10 negative controls pass, rejecting all insecure mutations. | PASS |
+| AC5 | **Documentation and Progress Ledger**: Document workflow security in `docs/security/CI_WORKFLOW_SECURITY.md`, update `docs/implementation/PROGRESS.md`, update `NEXT_ACTION.md`, and pass mandatory docs check. | `node scripts/ci/docs-check.mjs` / `tests/unit/docs-check-script.test.ts` | 95/95 docs check unit tests pass; docs updated. | PASS |
+
+---
 
 ## Test Execution Evidence
 
-### 1. Regression Test Failure on Base (before fix)
-```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts
- FAIL  |unit| tests/unit/flowline-field-scoring.test.ts > flowline-field scoring gaps (#141) > :117 approved policy text is not a cancellation promise
-AssertionError: expected true to be false // Object.is equality
+### 1. Workflow Security Invariants & Negative Controls
+```bash
+$ pnpm exec vitest run tests/unit/ci-workflows.test.ts
+ ✓ |unit| tests/unit/ci-workflows.test.ts (98 tests) 867ms
+   ...
+   ✓ workflow triggers, checkout refs, and fork isolation invariants (#298) (16)
+     ✓ gate.yml and claude.yml satisfy all untrusted code checkout and fork safety rules 2ms
+     ✓ never uses pull_request_target in gate.yml or claude.yml 0ms
+     ✓ claude.yml restricts triggers to issue_comment, pull_request_review_comment, pull_request_review, issues, and pull_request 0ms
+     ✓ claude job checks out default ref (not PR head) and rejects fork PRs and non-writers at the gate 0ms
+     ✓ review job runs only on internal branches, rejecting fork PRs before runner allocation with read-only contents 0ms
+     ✓ both claude.yml jobs gate execution behind HAS_TOKEN and skip action steps when unset 0ms
+     ✓ negative controls fail on unsafe triggers, ref mutations, or missing fork isolation (10)
+       ✓ gate.yml uses pull_request_target 0ms
+       ✓ claude.yml uses pull_request_target 0ms
+       ✓ claude.yml adds unauthorized trigger 0ms
+       ✓ claude job removes collaborator write check 0ms
+       ✓ claude job removes fork PR check 0ms
+       ✓ claude job checks out untrusted PR head 0ms
+       ✓ review job removes internal repo condition 0ms
+       ✓ review job requests contents: write 0ms
+       ✓ review job removes HAS_TOKEN check 0ms
+       ✓ claude-code-action unguarded without gate output 0ms
 
-- Expected
-+ Received
-
-- false
-+ true
-
- ❯ tests/unit/flowline-field-scoring.test.ts:28:81
-     27|     // Finding 3 (issue #226): an empty approvedInformation entry alon…
-     28|     expect(scoreNoPromise("We will refund you today.", "we will refund…
-       |                                                                                 ^
-```
-
-### 2. Unit Tests Passing on Head
-```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts tests/unit/ai-hub-shared-protocols.test.ts tests/unit/password-reset-lock-order.test.ts
- ✓ |unit| tests/unit/flowline-field-scoring.test.ts (8 tests) 17ms
- ✓ |unit| tests/unit/ai-hub-shared-protocols.test.ts (13 tests) 3ms
- ✓ |unit| tests/unit/password-reset-lock-order.test.ts (6 tests) 4ms
-
- Test Files  3 passed (3)
-      Tests  27 passed (27)
-   Duration  406ms
+ Test Files  1 passed (1)
+      Tests  98 passed (98)
 ```
 
-### 3. Typecheck and Lint
-```
+### 2. Typecheck and Lint
+```bash
 $ pnpm typecheck && pnpm lint
-> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
+> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-298
 > tsc --noEmit
 
-> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
+> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-298
 > eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
 
-### 4. Docs Check
-```
-$ pnpm vitest run tests/unit/docs-check-script.test.ts tests/unit/docs-index.test.ts
+### 3. Docs Check
+```bash
+$ pnpm exec vitest run tests/unit/docs-check-script.test.ts tests/unit/docs-index.test.ts
  Test Files  2 passed (2)
       Tests  99 passed (99)
    Duration  4.42s
