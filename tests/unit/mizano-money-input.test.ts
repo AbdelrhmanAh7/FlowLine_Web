@@ -100,18 +100,50 @@ describe("mizano moneyInput zod schema", () => {
       expect(data.lines[1]?.taxRate).toBe("0.00");
     }
 
-    // Invalid negative qty does NOT crash safeParse with raw unhandled error
-    let invalidRes: ReturnType<NonNullable<typeof action>["input"]["safeParse"]>;
-    expect(() => {
-      invalidRes = action!.input.safeParse({
-        customerId: "cust_123",
-        currency: "EGP",
-        lines: [
-          { item: "Service", qty: -5, unitPrice: 50, taxRate: 15 },
-        ],
-      });
-    }).not.toThrow();
-    expect(invalidRes!.success).toBe(false);
+    // Invalid negative qty, unitPrice, and taxRate (numbers and strings) do NOT crash safeParse with raw unhandled error
+    const negativeCases = [
+      { field: "qty", line: { item: "Service", qty: -5, unitPrice: 50, taxRate: 15 } },
+      { field: "qty", line: { item: "Service", qty: "-5.00", unitPrice: 50, taxRate: 15 } },
+      { field: "unitPrice", line: { item: "Service", qty: 5, unitPrice: -50, taxRate: 15 } },
+      { field: "unitPrice", line: { item: "Service", qty: 5, unitPrice: "-50.00", taxRate: 15 } },
+      { field: "taxRate", line: { item: "Service", qty: 5, unitPrice: 50, taxRate: -15 } },
+      { field: "taxRate", line: { item: "Service", qty: 5, unitPrice: 50, taxRate: "-15.00" } },
+    ];
+
+    for (const testCase of negativeCases) {
+      let invalidRes: ReturnType<NonNullable<typeof action>["input"]["safeParse"]>;
+      expect(() => {
+        invalidRes = action!.input.safeParse({
+          customerId: "cust_123",
+          currency: "EGP",
+          lines: [testCase.line],
+        });
+      }).not.toThrow();
+      expect(invalidRes!.success).toBe(false);
+      if (!invalidRes!.success) {
+        expect(invalidRes!.error).toBeInstanceOf(z.ZodError);
+      }
+    }
+  });
+
+  it("AC3: mizano.create_draft_quote action input normalizes Arabic-Indic digits across qty, unitPrice, and taxRate", () => {
+    const action = getAction("mizano.create_draft_quote")?.action;
+    expect(action).toBeDefined();
+
+    const res = action!.input.safeParse({
+      customerId: "cust_123",
+      currency: "EGP",
+      lines: [
+        { item: "Service", qty: "١٢.٥", unitPrice: "١٠", taxRate: "١٥.٥٠" },
+      ],
+    });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      const data = res.data as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+      expect(data.lines[0]?.qty).toBe("12.50");
+      expect(data.lines[0]?.unitPrice).toBe("10.00");
+      expect(data.lines[0]?.taxRate).toBe("15.50");
+    }
   });
 
   it("AC4: proves regression where throwing raw Error in transform escapes safeParse (PR #279 bug)", async () => {
