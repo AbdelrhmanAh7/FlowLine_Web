@@ -104,7 +104,7 @@ export function CopyEditor() {
         return;
       }
       if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
-        const errorKey = `errors.${cause.code}` as MessageKey;
+        const errorKey: MessageKey = cause.code === "NETWORK" ? "errors.NETWORK" : "errors.REVISION_CONFLICT";
         setError(t(errorKey));
         // For NETWORK errors, the refetch would hit the same connectivity problem; don't await it.
         // For REVISION_CONFLICT, refetch to get the latest server state.

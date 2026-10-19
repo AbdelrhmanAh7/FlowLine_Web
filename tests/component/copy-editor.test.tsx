@@ -108,7 +108,10 @@ describe("CopyEditor error handling (#181)", () => {
   });
 
   describe.each(LOCALES)("locale %s", (locale) => {
-    const user = userEvent.setup();
+    let user: ReturnType<typeof userEvent.setup>;
+    beforeEach(() => {
+      user = userEvent.setup();
+    });
 
     async function edit(t: Translator) {
       await user.type(screen.getByLabelText(t("platformAdmin.copyEditor.english")), " edited");
@@ -199,7 +202,7 @@ describe("CopyEditor error handling (#181)", () => {
         const refetchPromise = new Promise((resolve) => { refetchResolve = resolve; });
         stateRefetch.mockReturnValue(refetchPromise);
         mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch", true));
-        await user.click(await trigger("save", t));
+        await user.click(await trigger(name, t));
 
         // The error alert should appear without waiting for the refetch to resolve
         const alert = await screen.findByRole("alert");
@@ -208,7 +211,7 @@ describe("CopyEditor error handling (#181)", () => {
         // Now resolve the refetch to clean up
         refetchResolve!({ data: copyState });
         await refetchPromise;
-        expectOneWrite(writes[0].request);
+        expectOneWrite(request);
       });
 
       it("a 5xx renders the fallback message (not the server text) and refetches the copy", async () => {

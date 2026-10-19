@@ -86,7 +86,10 @@ The issue asks for a contract test of the code-to-key mapping and the envelope. 
 - `package.json`: `pnpm test` also runs the `component` project (`dbf88dca`).
 - `e2e-army/200-route-error-headers.e2e.ts`: AC3 checks language and direction in the browser (`fcd1bc80`).
 
-`tests/integration/platform-copy-errors.test.ts` and `tests/component/copy-editor.test.tsx` did not change this round; both were rerun above.
+- `tests/component/copy-editor.test.tsx`: userEvent setup scoped to beforeEach per locale, and the NETWORK error immediate-alert test parameterized across both save and publish with request validation.
+- `src/app/admin/copy/copy-editor.tsx`: type-safe literal MessageKey ternary for REVISION_CONFLICT and NETWORK.
+
+`tests/integration/platform-copy-errors.test.ts` was not changed this round; rerun above.
 
 ## Left for the harness
 
