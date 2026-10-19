@@ -60,4 +60,14 @@ describe("@issue-297 guard against stray audit deliverables in AI_QUESTIONS.md (
     expect(docContent).toMatch(/PR #83/);
     expect(docContent).toMatch(/PR #87/);
   });
+
+  it("verifies that active documentation files contain no stray audit checklist tables", () => {
+    for (const relPath of ["NEXT_ACTION.md", "docs/implementation/PROGRESS.md"]) {
+      const fullPath = resolve(root, relPath);
+      if (existsSync(fullPath)) {
+        const content = readFileSync(fullPath, "utf8");
+        expect(findDeliverableViolationsInQuestions(content), `Stray deliverable in ${relPath}`).toEqual([]);
+      }
+    }
+  });
 });

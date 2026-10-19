@@ -5,7 +5,6 @@
 - **Parent Issue**: #250 (`audit CI workflows #81, #83, #87 against QA checklist`)
 - **Supersedes**: part of PR #271
 - **Branch**: `ai/297` (clean branch off `origin/main` at `264336fb`)
-- **Tested Commit**: `6aac0127`
 - **Originating Sentry Issue**: None (internal reviewer finding split from PR #271)
 - **User-Facing**: No (internal documentation and test guard chore; exempt from E2E test — `E2E: not needed — internal documentation and test guard chore`)
 
@@ -13,11 +12,12 @@
 
 | ID | Acceptance Criterion | Verification Method | Observed Result | Exit Code |
 |---|---|---|---|---|
-| **AC1** | Guard against stray audit deliverables in `AI_QUESTIONS.md` via `findDeliverableViolationsInQuestions` in `tests/unit/questions-deliverable-guard.test.ts`. | `pnpm vitest run tests/unit/questions-deliverable-guard.test.ts` | 3 passed, 0 failed | 0 |
-| **AC2** | Regression test proves historical PR #271 text (commit `163fc544`) is rejected (fails on base, passes on head). | `tests/unit/questions-deliverable-guard.test.ts` test 1 | 5 violations detected on historical content | 0 |
-| **AC3** | Repository `AI_QUESTIONS.md` is clean and contains no stray audit deliverables or checklist tables. | `tests/unit/questions-deliverable-guard.test.ts` test 2 | 0 violations found on current head | 0 |
-| **AC4** | QA checklist audit deliverable for PRs #81, #83, #87 is preserved under `docs/evidence/250/qa-checklist-audit.md` fulfilling reviewer instruction. | `tests/unit/questions-deliverable-guard.test.ts` test 3 | File exists with complete PR audit sections | 0 |
-| **AC5** | Clean checks: `pnpm typecheck`, `pnpm lint`, and unit tests pass; diff kept under 300 changed lines. | `pnpm typecheck && pnpm lint` | Clean output (tsc exit 0, eslint exit 0) | 0 |
+| **AC1** | Guard against stray audit deliverables in `AI_QUESTIONS.md` via `findDeliverableViolationsInQuestions` in `tests/unit/questions-deliverable-guard.test.ts:7-21`. | `pnpm vitest run tests/unit/questions-deliverable-guard.test.ts` | 4 passed, 0 failed | 0 |
+| **AC2** | Regression test proves historical PR #271 text (commit `163fc544`) is rejected (fails on base, passes on head, `tests/unit/questions-deliverable-guard.test.ts:34-42`). | `tests/unit/questions-deliverable-guard.test.ts` test 1 | 5 violations detected on historical content | 0 |
+| **AC3** | Repository `AI_QUESTIONS.md` is clean and contains no stray audit deliverables or checklist tables (`tests/unit/questions-deliverable-guard.test.ts:44-52`). | `tests/unit/questions-deliverable-guard.test.ts` test 2 | 0 violations found on current head | 0 |
+| **AC4** | QA checklist audit deliverable for PRs #81, #83, #87 is preserved under `docs/evidence/250/qa-checklist-audit.md` (`tests/unit/questions-deliverable-guard.test.ts:54-62`). | `tests/unit/questions-deliverable-guard.test.ts` test 3 | File exists with complete PR audit sections | 0 |
+| **AC5** | Active documentation files contain no stray checklist audit tables (`tests/unit/questions-deliverable-guard.test.ts:64-72`). | `tests/unit/questions-deliverable-guard.test.ts` test 4 | 0 violations in active docs | 0 |
+| **AC6** | Clean checks: `pnpm typecheck`, `pnpm lint`, and unit tests pass; diff kept under 300 changed lines. | `pnpm typecheck && pnpm lint` | Clean output (tsc exit 0, eslint exit 0) | 0 |
 
 ## Root Cause Analysis
 1. In PR #271 (implementing #250), the audit deliverable for CI PRs #81, #83, and #87 against the QA checklist was committed into root `AI_QUESTIONS.md` (commit `163fc544`).
@@ -27,24 +27,25 @@
 
 ## Verification Commands & Outputs
 
-### 1. Regression & Guard Unit Test Execution (AC1, AC2, AC3, AC4)
+### 1. Regression & Guard Unit Test Execution (AC1, AC2, AC3, AC4, AC5)
 ```bash
 pnpm vitest run tests/unit/questions-deliverable-guard.test.ts
 ```
 Output:
 ```
- ✓ |unit| tests/unit/questions-deliverable-guard.test.ts (3 tests) 5ms
-   ✓ @issue-297 guard against stray audit deliverables in AI_QUESTIONS.md (supersedes part of #271) (3)
-     ✓ rejects historical QA finding: Issue #250 audit deliverable incorrectly placed in AI_QUESTIONS.md 2ms
-     ✓ verifies that repository AI_QUESTIONS.md contains no stray audit deliverables on current head 1ms
-     ✓ verifies that QA checklist audit deliverable is preserved in docs/ rather than AI_QUESTIONS.md 0ms
+ ✓ |unit| tests/unit/questions-deliverable-guard.test.ts (4 tests) 12ms
+   ✓ @issue-297 guard against stray audit deliverables in AI_QUESTIONS.md (supersedes part of #271) (4)
+     ✓ rejects historical QA finding: Issue #250 audit deliverable incorrectly placed in AI_QUESTIONS.md 7ms
+     ✓ verifies that repository AI_QUESTIONS.md contains no stray audit deliverables on current head 2ms
+     ✓ verifies that QA checklist audit deliverable is preserved in docs/ rather than AI_QUESTIONS.md 1ms
+     ✓ verifies that active documentation files contain no stray audit checklist tables 1ms
 
  Test Files  1 passed (1)
-      Tests  3 passed (3)
+      Tests  4 passed (4)
 ```
 Exit code: 0
 
-### 2. Typecheck (AC5)
+### 2. Typecheck (AC6)
 ```bash
 pnpm typecheck
 ```
@@ -55,7 +56,7 @@ Output:
 ```
 Exit code: 0
 
-### 3. Linter (AC5)
+### 3. Linter (AC6)
 ```bash
 pnpm lint
 ```
