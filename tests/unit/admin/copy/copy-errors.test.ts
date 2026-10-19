@@ -25,7 +25,7 @@ describe("handleWriteError (what the editor does after a failed save or publish)
     { on: "a 503 without a JSON body", cause: new ApiError(503, "HTTP_503", "Request failed (503)"), shows: "serverError" },
     { on: "a 400", cause: new ApiError(400, "VALIDATION", "Invalid request"), shows: "fallback" },
     { on: "a 401", cause: new ApiError(401, "UNAUTHORIZED", "Unauthorized"), shows: "fallback" },
-    { on: "a 403 other than step-up", cause: new ApiError(403, "CSRF_TOKEN_INVALID", "Invalid CSRF token"), shows: "fallback" },
+    { on: "a 403 other than step-up or CSRF", cause: new ApiError(403, "FORBIDDEN", "Forbidden"), shows: "fallback" },
     { on: "a 404", cause: new ApiError(404, "NOT_FOUND", "Not found"), shows: "fallback" },
     { on: "a 422", cause: new ApiError(422, "UNPROCESSABLE", "Unprocessable"), shows: "fallback" },
     { on: "a plain Error", cause: new Error("generic"), shows: "fallback" },
@@ -52,6 +52,18 @@ describe("handleWriteError (what the editor does after a failed save or publish)
     const fx = editor(stepUpUntil);
     await handleWriteError(new ApiError(403, "STEP_UP_REQUIRED", "Step-up required"), "platformAdmin.copyEditor.publishError", fx);
     expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.stepUp");
+    expect(fx.refetchMe).toHaveBeenCalledTimes(1);
+    expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(active);
+    expect(fx.refetchCopy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { refreshed: "still valid", stepUpUntil: "2026-10-13T12:01:00.000Z", active: true },
+    { refreshed: "expired", stepUpUntil: "2026-10-13T11:59:00.000Z", active: false },
+  ])("on CSRF_TOKEN_INVALID re-reads the session, updates stepUpActive to $active, and shows fallback error", async ({ stepUpUntil, active }) => {
+    const fx = editor(stepUpUntil);
+    await handleWriteError(new ApiError(403, "CSRF_TOKEN_INVALID", "Invalid CSRF token"), "platformAdmin.copyEditor.saveError", fx);
+    expect(fx.setError).toHaveBeenCalledExactlyOnceWith("t:platformAdmin.copyEditor.saveError");
     expect(fx.refetchMe).toHaveBeenCalledTimes(1);
     expect(fx.setStepUpActive).toHaveBeenCalledExactlyOnceWith(active);
     expect(fx.refetchCopy).not.toHaveBeenCalled();

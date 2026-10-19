@@ -147,7 +147,14 @@ export function CopyEditor() {
       <p className="text-med">{t("platformAdmin.copyEditor.subtitle")}</p>
       {!stepUpActive && <p role="note" className="text-warning">{t("platformAdmin.copyEditor.stepUp")}</p>}
       {meError && <p role="alert" className="text-danger">{t("platformAdmin.copyEditor.meLoadError")}</p>}
-      {error && <p role="alert" className="text-danger">{error}</p>}
+      {error && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg p-3 text-danger sm:p-4">
+          <p className="text-sm font-medium">{error}</p>
+          <Button size="sm" onClick={() => setError("")}>
+            {t("platformAdmin.copyEditor.dismiss")}
+          </Button>
+        </div>
+      )}
       {message && <p role="status" className="text-success">{message}</p>}
       {state.isPending ? <p>{t("common.loading")}</p> : state.isLoadingError ? <ErrorState title={t("platformAdmin.copyEditor.loadError")} onRetry={() => state.refetch()} /> : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">

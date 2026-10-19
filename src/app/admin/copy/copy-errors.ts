@@ -46,7 +46,7 @@ export interface WriteErrorEffects {
  */
 export async function handleWriteError(cause: unknown, fallbackKey: CopyWriteFallbackKey, fx: WriteErrorEffects): Promise<void> {
   fx.setError(fx.t(copyErrorKey(cause, fallbackKey)));
-  if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
+  if (cause instanceof ApiError && (cause.code === "STEP_UP_REQUIRED" || cause.code === "CSRF_TOKEN_INVALID")) {
     const refreshed = await fx.refetchMe();
     const isSuccess = !refreshed.isError && !refreshed.error;
     const expiresAt = isSuccess && refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;

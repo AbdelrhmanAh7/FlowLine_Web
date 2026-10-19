@@ -17,6 +17,15 @@ describe("api() response-body failures", () => {
     expect(fx.refetchCopy).toHaveBeenCalledTimes(1);
   });
 
+  it("reports a network fetch error (offline/DNS) as a network ApiError (status 0)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    const err = await api("/api/platform/copy", { method: "PATCH", json: {} }).catch((e: unknown) => e) as ApiError;
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.isNetwork).toBe(true);
+    expect(err.status).toBe(0);
+    expect(err.code).toBe("NETWORK");
+  });
+
   it("still parses a normal response body", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, text: async () => '{"a":1}' })));
     await expect(api("/x")).resolves.toEqual({ a: 1 });

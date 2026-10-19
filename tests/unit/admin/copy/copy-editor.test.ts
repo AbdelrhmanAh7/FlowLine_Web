@@ -151,7 +151,7 @@ describe("CopyEditor failures (interaction, en)", () => {
     const save = () => button(t("platformAdmin.copyEditor.save"))!;
     expect(save().disabled).toBe(false);
     await click(save());
-    expect(alert()).toBe(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
+    expect(alert()).toContain(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
     expect(refetch).toHaveBeenCalledTimes(1); // the write may have committed, so the state reloads
     expect(save().disabled).toBe(false); // pending cleared and the draft is still dirty: the admin can retry
     await click(save()); // the admin retries the same write
@@ -171,7 +171,7 @@ describe("CopyEditor failures (interaction, en)", () => {
     const apply = () => button(t("platformAdmin.copyEditor.apply"))!;
     expect(apply().disabled).toBe(false);
     await click(apply());
-    expect(alert()).toBe(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
+    expect(alert()).toContain(t("platformAdmin.copyEditor.serverError")); // translated, never the server's "boom"
     expect(refetch).toHaveBeenCalledTimes(1); // the publish may have committed, so the state reloads
     expect(apply().disabled).toBe(false);
     await click(apply()); // the admin retries
@@ -188,7 +188,7 @@ describe("CopyEditor failures (interaction, en)", () => {
     await mount();
     await type("#copy-en", "New title");
     await click(button(t("platformAdmin.copyEditor.save"))!);
-    expect(alert()).toBe(t("platformAdmin.copyEditor.reauthRequired"));
+    expect(alert()).toContain(t("platformAdmin.copyEditor.reauthRequired"));
     expect(queries.me.refetch).toHaveBeenCalledTimes(1);
     expect(refetch).not.toHaveBeenCalled();
     expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
@@ -208,5 +208,46 @@ describe("CopyEditor failures (interaction, en)", () => {
     await mount();
     await type("#copy-en", "New title");
     expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
+  });
+
+  it("shows the serverError alert on failed Save (500), preserves typed text, and Dismiss clears the alert leaving edits intact", async () => {
+    const refetch = vi.fn(async () => undefined);
+    writable(refetch);
+    vi.mocked(api).mockRejectedValueOnce(new ApiError(500, "INTERNAL", "boom"));
+    await mount();
+    await type("#copy-en", "New title preserved");
+    const save = () => button(t("platformAdmin.copyEditor.save"))!;
+    expect(save().disabled).toBe(false);
+    await click(save());
+    expect(alert()).toContain(t("platformAdmin.copyEditor.serverError"));
+    expect(alert()).toContain(t("platformAdmin.copyEditor.dismiss"));
+    expect(container.querySelector<HTMLTextAreaElement>("#copy-en")?.value).toBe("New title preserved");
+
+    const dismissBtn = button(t("platformAdmin.copyEditor.dismiss"))!;
+    expect(dismissBtn).toBeDefined();
+    await click(dismissBtn);
+
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(alert()).toBe("");
+    expect(container.querySelector<HTMLTextAreaElement>("#copy-en")?.value).toBe("New title preserved");
+    expect(save().disabled).toBe(false);
+  });
+
+  it.each(["en", "ar"] as const)("shows the translated networkError text in %s on a network ApiError (status 0) and triggers refetchCopy", async (locale) => {
+    const locT = createTranslator(locale);
+    const refetch = vi.fn(async () => undefined);
+    writable(refetch);
+    vi.mocked(api).mockRejectedValueOnce(new ApiError(0, "NETWORK", "Can't reach Flowline"));
+    await act(async () => {
+      root.render(createElement(I18nProvider, { locale }, createElement(CopyEditor)));
+    });
+    const targetField = locale === "ar" ? "#copy-ar" : "#copy-en";
+    await type(targetField, "New title");
+    const saveBtn = button(locT("platformAdmin.copyEditor.save"))!;
+    expect(saveBtn).toBeDefined();
+    expect(saveBtn.disabled).toBe(false);
+    await click(saveBtn);
+    expect(alert()).toContain(locT("platformAdmin.copyEditor.networkError"));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
