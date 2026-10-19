@@ -17,21 +17,17 @@ import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-
 // Issue #108 (part 1 of #47): a user confirms their account deletion (`consumeAccountToken("delete")`) while their own
 // SSO sign-in (`completeSso`, direct branch) is in flight. The SSO transaction share-locks the user row first and inserts
 // its `audit_event` last; that insert key-share locks the `workspace` row. Deletion locks every workspace of the user
-// `FOR UPDATE`, then deletes the user. When deletion took the workspaces before the user (the order before #45/PR #65:
-// token row, workspaces, then the user through the delete), it held W and waited for the user, while the SSO transaction
-// held the user and waited for W: PostgreSQL aborted one with 40P01. Deletion now locks the user row before the
-// workspaces (docs/engineering/lock-order.md, "Workspace FOR UPDATE vs SSO audit insert").
+// `FOR UPDATE`, then deletes the user. Fixed in #109 / PR #216 (commit d86fb7d7): deletion now locks the user row and
+// writes its audit rows before locking workspaces `FOR UPDATE` (docs/engineering/lock-order.md, "Workspace FOR UPDATE vs SSO audit insert").
+// Prior to d86fb7d7 (parent commit 83c7bb8e), deletion held the workspace row and waited at `delete from "user"`,
+// while the in-flight SSO transaction held the user row and needed a key-share lock on that workspace: PostgreSQL aborted one with 40P01.
 //
 // Each test runs both REAL production functions, one per dedicated connection, pauses the first right after its user-row
 // lock, starts the second and observes it waiting at the user row through pg_blocking_pids. Waiting there it holds no
 // workspace lock, so no cycle can form. Against the old deletion order the SSO-first case fails: deletion is seen
 // waiting at `delete from "user"` holding W, and on release the SSO audit insert deadlocks with it.
 //
-// Acceptance criterion & history: This test was authored for #108 to replicate and verify the deadlock scenario.
-// PR #216 (#109) incorporated this test and helper verbatim to verify the fix in flows.ts before PR #214 landed.
-// Per CTO directive (2026-10-13, head b9ae3ee), on the merged tree where the fix is present on main, this test serves as
-// the regression baseline verifying that both orders complete without deadlock (2/2 pass). The pre-#65 deadlock
-// hazard it guards against is the circular wait in the SSO-first case described above.
+// History: authored on ai/108, copied into PR #216, and a regression guard on main verifying that both orders complete without deadlock (2/2 pass).
 
 afterEach(() => { vi.restoreAllMocks(); });
 beforeEach(() => { mockTenantIdp(); });
