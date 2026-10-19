@@ -12,10 +12,19 @@ import { createHash } from "node:crypto";
  */
 export function verifyPacketChecksum(bytes: Buffer, fileName: string, sumsText: string): string {
   const computed = createHash("sha256").update(bytes).digest("hex");
-  const line = sumsText.split("\n").find((l) => l.trim().endsWith(` ${fileName}`));
-  if (!line) throw new Error(`${fileName} has no entry in packet/SHA256SUMS: refusing a run not bound to frozen packet contents`);
-  const expected = line.trim().split(/\s+/)[0];
-  if (computed !== expected) {
+  const entry = sumsText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("#"))
+    .map((l) => {
+      const m = /^([0-9a-fA-F]{64})\s+[ *]?(.*)$/.exec(l);
+      return m ? { hash: m[1]!.toLowerCase(), name: m[2] } : null;
+    })
+    .find((e) => e && e.name === fileName);
+
+  if (!entry) throw new Error(`${fileName} has no entry in packet/SHA256SUMS: refusing a run not bound to frozen packet contents`);
+  const expected = entry.hash;
+  if (computed.toLowerCase() !== expected) {
     throw new Error(`${fileName} SHA256 mismatch (computed ${computed}, expected ${expected}): refusing a run with modified packet contents`);
   }
   return computed;

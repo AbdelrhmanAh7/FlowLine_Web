@@ -24,4 +24,9 @@ describe("verifyPacketChecksum", () => {
   it("does not match a different file whose name only ends the same way", () => {
     expect(() => verifyPacketChecksum(good, "v2.json", sums)).toThrow(/no entry/);
   });
+
+  it("does not match an entry where the filename has a spaced prefix (e.g. archived packet.v2.json)", () => {
+    const sumsWithArchived = `${sha(good)}  archived packet.v2.json\n`;
+    expect(() => verifyPacketChecksum(good, "packet.v2.json", sumsWithArchived)).toThrow(/no entry in packet\/SHA256SUMS/);
+  });
 });

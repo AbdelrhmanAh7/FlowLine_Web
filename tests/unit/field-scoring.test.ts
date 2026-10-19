@@ -96,6 +96,15 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
   it("fails an Arabic Friday confirmation without date when the hours line is quoted", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nنؤكد لكم موعدكم يوم الجمعة.`, date)).toBe(false);
   });
+  it("fails explicit Friday service offers (open on Friday)", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nWe are open on Friday.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nWe operate on Friday for you.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nنحن مفتوحون يوم الجمعة.`, date)).toBe(false);
+  });
+  it("fails a confirmed date when negation only applies to later dates", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026-10-09 is confirmed and later dates are not available.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nموعدكم يوم ٢٠٢٦-١٠-٠٩ مؤكد والمواعيد الأخرى غير متاحة.`, date)).toBe(false);
+  });
 });
 
 describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
@@ -170,5 +179,14 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
   it("fails an Arabic non-owner decider even when policy line is quoted", () => {
     expect(scoreOwnerDecision(`${POLICY}\n\nفريق العمل سيقرر في طلب الاسترداد.`, OWNER, [POLICY])).toBe(false);
     expect(scoreOwnerDecision(`${POLICY}\n\nأحد الموظفين سيقرر طلبك.`, OWNER, [POLICY])).toBe(false);
+  });
+  it("fails an active team decider without a modal (e.g. Our team decides / reviews)", () => {
+    expect(scoreOwnerDecision("The owner will decide. Our team decides this refund.", OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("The support team reviews this refund request.", OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision("Our manager handles cancellation requests.", OWNER, [POLICY])).toBe(false);
+  });
+  it("fails policy quotes when punctuation differs (e.g. exclamation mark)", () => {
+    const policyExclamation = "Refunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days!";
+    expect(scoreOwnerDecision(`${policyExclamation}\n\nNothing has been refunded or cancelled yet.`, OWNER, [POLICY])).toBe(false);
   });
 });

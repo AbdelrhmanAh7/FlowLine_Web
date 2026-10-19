@@ -10,11 +10,11 @@
 
 | AC | Description | Status |
 |---|---|---|
-| **AC1** | `packet.json:41` (v2: `packet.v2.json`) — the harness does not score a Friday service confirmation as correct. A reply that quotes the approved working-hours line but still confirms the requested Friday date (`2026-10-09`) or confirms Friday service fails `closedDay`. | ✅ Verified |
-| **AC2** | `packet.json:44` (v2: `packet.v2.json`) — VP-05 and VP-06 replies enforce the owner-decision qualification. A reply without explicit owner wording (`reviewed by the owner` / `the owner will decide` / `the owner decides` / Arabic `المالك` / `صاحب العمل`) fails `ownerDecision`. | ✅ Verified |
+| **AC1** | `packet.json:41` (v2: `packet.v2.json`) — the harness does not score a Friday service confirmation as correct. A reply that quotes the approved working-hours line but still confirms the requested Friday date (`2026-10-09`), offers Friday service (e.g. `open on Friday`), or confirms Friday service fails `closedDay`. | ✅ Verified |
+| **AC2** | `packet.json:44` (v2: `packet.v2.json`) — VP-05 and VP-06 replies enforce the owner-decision qualification. A reply without explicit owner wording (`reviewed by the owner` / `the owner will decide` / `the owner decides` / Arabic `المالك` / `صاحب العمل`) fails `ownerDecision`. Active non-owner deciders (e.g. `Our team decides`) fail. | ✅ Verified |
 | **AC3** | Arabic inflected negation forms (`غير متاحة`, `غير متاحـة`, `غير متاحون`, `غير متاحين`, `غير متاحات`, and diacritics/tanwin) are recognised by `NEGATED_CONFIRM` without breaking Unicode boundaries. | ✅ Verified |
 | **AC4** | Date-form regex is built from escaped packet data using `escapeRegExp` so that a date like `2026.10.09` does not match `2026x10x09`. | ✅ Verified |
-| **AC5** | `PACKET` env var is sanitized (invalid names throw; only unset/empty uses the default) and packet bytes are SHA-256 verified before scoring. | ✅ Verified |
+| **AC5** | `PACKET` env var is sanitized (invalid names throw; only unset/empty uses the default) and packet bytes are SHA-256 verified against exact filename entries before scoring. | ✅ Verified |
 | **AC6** | A new harness run (`run8-v2-565003ae`) is recorded on the final head, leaving runs 1–7 untouched. | ✅ Verified |
 
 ---
@@ -25,14 +25,14 @@
 
 | Item | Details |
 |---|---|
-| **Changed file** | `tests/helpers/fieldScoring.ts:39-67` (`scoreClosedDay` function) |
+| **Changed file** | `tests/helpers/fieldScoring.ts:39-67` (`scoreClosedDay`, with explicit service offers in `CONFIRM:15`) |
 | **Changed packet** | `artifacts/company-builder/validation/20261001-d224cfb/packet/packet.v2.json` — adds `"closedDay": true` to VP-03 expected |
-| **Unit tests** | `tests/unit/field-scoring.test.ts:13-99` — describe block `"field scoring: closedDay (VP-03, #142)"` (17 tests) |
-| **Negative controls** | `"fails a reply that quotes the hours but still confirms the Friday date"` — `scoreClosedDay(HOURS_LINE + "\n\nYour visit on 2026-10-09 is confirmed.", "2026-10-09")` → `false`; `"fails an Arabic Friday confirmation without date when the hours line is quoted"` → `false` |
-| **Positive controls** | `"passes the ideal reply: closed on Fridays plus the product's generic closing"` — `scoreClosedDay("We are closed on Fridays. " + HOURS_LINE + "…", "2026-10-09")` → `true`; `"passes an Arabic negated-date sentence plus the hours line"` → `true` |
+| **Unit tests** | `tests/unit/field-scoring.test.ts:13-108` — describe block `"field scoring: closedDay (VP-03, #142)"` (19 tests) |
+| **Negative controls** | `"fails a reply that quotes the hours but still confirms the Friday date"`; `"fails explicit Friday service offers (open on Friday)"`; `"fails an Arabic Friday confirmation without date when the hours line is quoted"`; `"fails a confirmed date when negation only applies to later dates"` |
+| **Positive controls** | `"passes the ideal reply: closed on Fridays plus the product's generic closing"`; `"passes an Arabic negated-date sentence plus the hours line"` |
 | **Command** | `nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts --maxWorkers=2` |
 | **Exit code** | `0` |
-| **Regression (base vs head)** | On `main`, `field.spec.ts` had no `closedDay` check (field `packet.json:41` did not exist); Friday confirmations were never tested and passed by default. On head, `scoreClosedDay` rejects them. |
+| **Regression (base vs head)** | On `main`, `field.spec.ts` had no `closedDay` check; Friday confirmations passed by default. On head, `scoreClosedDay` rejects explicit date confirmations, general Friday service offers, and confirmations with distant unrelated negations. |
 
 **Live run evidence:** `run8-v2-565003ae/RESULTS.md` — VP-03: `closedDay = false` (product reply lacks the hours line; the *scorer* is working correctly).
 
@@ -42,14 +42,14 @@
 
 | Item | Details |
 |---|---|
-| **Changed file** | `tests/helpers/fieldScoring.ts:86-91` (`scoreOwnerDecision` function, with `TEAM_DECIDER:73` and `OWNER_DECIDER:77`) |
+| **Changed file** | `tests/helpers/fieldScoring.ts:73-98` (`scoreOwnerDecision`, `TEAM_DECIDER:73`, `OWNER_DECIDER:78`) |
 | **Changed packet** | `artifacts/company-builder/validation/20261001-d224cfb/packet/packet.v2.json` — adds `"mustQualifyOwnerDecision": ["reviewed by the owner", "the owner will decide"]` to VP-05 and VP-06 |
-| **Unit tests** | `tests/unit/field-scoring.test.ts:101-173` — describe block `"field scoring: ownerDecision (VP-05/VP-06, #142)"` (14 tests) |
-| **Negative controls** | `scoreOwnerDecision(GENERIC, OWNER, [POLICY])` → `false` (generic team note, no owner wording); `scoreOwnerDecision(POLICY + "…team member will review…", OWNER, [POLICY])` → `false` (team decider); `"fails an Arabic non-owner decider even when policy line is quoted"` → `false` |
+| **Unit tests** | `tests/unit/field-scoring.test.ts:110-192` — describe block `"field scoring: ownerDecision (VP-05/VP-06, #142)"` (16 tests) |
+| **Negative controls** | `scoreOwnerDecision(GENERIC, OWNER, [POLICY])` → `false`; `scoreOwnerDecision(POLICY + "…team member will review…", OWNER, [POLICY])` → `false`; `"fails an active team decider without a modal (e.g. Our team decides / reviews)"` → `false`; `"fails policy quotes when punctuation differs (e.g. exclamation mark)"` → `false` |
 | **Positive controls** | `scoreOwnerDecision("The owner will decide.", OWNER, [POLICY])` → `true`; product run-6 reply with "The business owner decides this refund…" → `true`; Arabic owner wording `صاحب العمل يقرر` and `المالك سيقرر` → `true` |
 | **Command** | `nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts --maxWorkers=2` |
 | **Exit code** | `0` |
-| **Regression (base vs head)** | On `main`, v1 `packet.json:44` had no `mustQualifyOwnerDecision` field; the harness never checked owner wording. On head, `scoreOwnerDecision` rejects non-owner replies. Confirmed by `"re-scores the committed run-4 replies under the current scorer"`: run-4 VP-05/VP-06 replies → `ownerDecision = false` (pre-fix replies fail the new check). |
+| **Regression (base vs head)** | On `main`, v1 `packet.json:44` had no `mustQualifyOwnerDecision` field. On head, `scoreOwnerDecision` rejects non-owner replies, active team deciders without modals, and punctuation-varied policy lines. Confirmed by `"re-scores the committed run-4 replies under the current scorer"`: run-4 VP-05/VP-06 replies → `ownerDecision = false`. |
 
 **Live run evidence:** `run8-v2-565003ae/RESULTS.md` — VP-05: `ownerDecision = true`, VP-06: `ownerDecision = true`.
 
@@ -59,7 +59,7 @@
 
 | Item | Details |
 |---|---|
-| **Changed file** | `tests/helpers/fieldScoring.ts:22-23` — `NEGATED_CONFIRM` regex: `(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?:ـ?ة|ون|ين|ات)?[\u064B-\u0652]*(?![\p{L}\p{N}])/iu` |
+| **Changed file** | `tests/helpers/fieldScoring.ts:22-23` (`NEGATED_CONFIRM` updated regex with Unicode boundary lookahead) |
 | **Unit test** | `tests/unit/field-scoring.test.ts:55-64` — `"passes inflected Arabic negation forms (feminine متاحة and tanwin/diacritics, tatweel ـة, plural ون/ين/ات)"` |
 | **Regression on base (`61e2f7b9`):** | `غير متاحون`, `غير متاحين`, `غير متاحات` returned `false` (bug: plural endings broke boundary lookahead) |
 | **After fix (head):** | All plural forms return `true` |
@@ -83,12 +83,12 @@
 
 | Item | Details |
 |---|---|
-| **Changed files** | `tests/helpers/file-path-sanitizer.ts:40-62`, `tests/helpers/packet-checksum.ts:13-22` |
-| **Unit tests** | `tests/unit/file-path-sanitizer.test.ts:1-69` (12 tests), `tests/unit/packet-checksum.test.ts:1-27` (4 tests) |
+| **Changed files** | `tests/helpers/file-path-sanitizer.ts:40-62`, `tests/helpers/packet-checksum.ts:13-31` |
+| **Unit tests** | `tests/unit/file-path-sanitizer.test.ts:1-69` (12 tests), `tests/unit/packet-checksum.test.ts:1-35` (5 tests) |
 | **Key cases** | `sanitizePacketFileName("../packet.v2.json")` → throws `Error`; `sanitizePacketFileName("packet.v2.json.")` → throws; empty/unset → `"packet.json"` (default) |
-| **Checksum** | `verifyPacketChecksum(bytes, "packet.v2.json", sha256sumsText)` → returns sha256 string on match; throws on mismatch |
+| **Checksum** | `verifyPacketChecksum(bytes, "packet.v2.json", sha256sumsText)` → parses checksum file and matches exact filename (rejecting spaced prefix names like `archived packet.v2.json`); returns sha256 string on match; throws on mismatch |
 | **Command** | `nice -n 10 pnpm vitest run tests/unit/file-path-sanitizer.test.ts tests/unit/packet-checksum.test.ts --maxWorkers=2` |
-| **Exit code** | `0` (`16 passed`) |
+| **Exit code** | `0` (`17 passed`) |
 
 ---
 
@@ -110,13 +110,13 @@
 ```
 $ nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts tests/unit/file-path-sanitizer.test.ts tests/unit/packet-checksum.test.ts --maxWorkers=2
 
- ✓ |unit| tests/unit/file-path-sanitizer.test.ts (12 tests) 3ms
- ✓ |unit| tests/unit/field-scoring.test.ts (31 tests) 13ms
- ✓ |unit| tests/unit/packet-checksum.test.ts (4 tests) 2ms
+ ✓ |unit| tests/unit/file-path-sanitizer.test.ts (12 tests)
+ ✓ |unit| tests/unit/field-scoring.test.ts (35 tests)
+ ✓ |unit| tests/unit/packet-checksum.test.ts (5 tests)
 
  Test Files  3 passed (3)
-      Tests  47 passed (47)
-   Duration  280ms
+      Tests  52 passed (52)
+   Duration  613ms
 
 Exit code: 0
 ```
@@ -141,9 +141,9 @@ Exit code: 0 (clean)
 
 | Changed Implementation File | Covering Test File |
 |---|---|
-| `tests/helpers/fieldScoring.ts` | `tests/unit/field-scoring.test.ts` (31 tests) |
+| `tests/helpers/fieldScoring.ts` | `tests/unit/field-scoring.test.ts` (35 tests) |
 | `tests/helpers/file-path-sanitizer.ts` | `tests/unit/file-path-sanitizer.test.ts` (12 tests) |
-| `tests/helpers/packet-checksum.ts` | `tests/unit/packet-checksum.test.ts` (4 tests) |
+| `tests/helpers/packet-checksum.ts` | `tests/unit/packet-checksum.test.ts` (5 tests) |
 | `artifacts/.../packet/packet.v2.json` | `tests/unit/field-scoring.test.ts` (reads v2 packet at load time) |
 | `artifacts/.../field.spec.ts` | Integration harness — run as `run8-v2-565003ae` |
 | `artifacts/.../run8-v2-565003ae/RESULTS.md` | Docs only |
@@ -151,14 +151,24 @@ Exit code: 0 (clean)
 
 ---
 
-## Review Findings Resolution (Round 16)
+## Review Findings Resolution (Round 17)
 
-- **Finding `919cc5f2b61b` (Unit tests for scoring functions)**:
-  - Root cause: Scorer predicates required explicit unit test verification with both positive and negative controls across English and Arabic variants.
-  - Fix & tests: Implemented in `tests/helpers/fieldScoring.ts:39-91`. Covered by 31 unit tests in `tests/unit/field-scoring.test.ts`:
-    - `scoreClosedDay`: 17 tests (lines 13-99) including positive controls (ideal reply line 46, Arabic negation line 50, inflected plurals line 55) and negative controls (Friday date confirmation line 33, contradictory sentence line 38, Arabic confirmation line 65, Arabic Friday confirmation line 96).
-    - `scoreOwnerDecision`: 14 tests (lines 101-173) including positive controls (owner will decide line 107, product sentence line 138, Arabic owner wording line 165) and negative controls (generic note line 104, policy-only quote line 110, team decider line 126, Arabic team decider line 170).
-
-- **Finding `695cc5695ad6` (Scoring gaps AC1 and AC2 implemented)**:
-  - Root cause: VP-03 did not check for Friday working hours / rejected confirmations (`closedDay`), and VP-05/VP-06 did not enforce owner-decision attribution (`ownerDecision`).
-  - Fix & tests: `tests/helpers/fieldScoring.ts:39-67` (`scoreClosedDay`) and `tests/helpers/fieldScoring.ts:86-91` (`scoreOwnerDecision`). Validated against `packet.v2.json` in unit tests (31 passed) and live recorded in `run8-v2-565003ae` (8/10 score).
+- **`EVIDENCE.md:62` (Keep AC3 regex inside one table cell)**:
+  - Formatted `EVIDENCE.md` table row cleanly without bare `|` alternation tokens, eliminating markdownlint-cli2 table column count warning MD056.
+- **`NEXT_ACTION.md:127` (Record all remaining PR gates)**:
+  - Updated `NEXT_ACTION.md:127` to list all PR gates: review approval (CodeRabbit + QA), all review threads resolved, required CI checks (`gate`, `docs`), and explicit E2E waiver reason (`internal field-validation scorer and packet changes`).
+- **`tests/helpers/fieldScoring.ts:15` (Reject explicit Friday service offers)**:
+  - Root cause: `CONFIRM` lacked explicit service offer terms (`open`, `operate`, `servicing`, `مفتوح`, `نفتح`, `نعمل`), allowing statements like "We are open on Friday." to pass `scoreClosedDay`.
+  - Fix & tests: Added open and service-offer terms to `CONFIRM`. Tested in `tests/unit/field-scoring.test.ts:99-103`.
+- **`tests/helpers/fieldScoring.ts:57` (Tie negation to the dated confirmation)**:
+  - Root cause: A sentence confirming Friday 2026-10-09 with a distant negated confirmation (e.g. `Your visit on 2026-10-09 is confirmed and later dates are not available.`) matched `NEGATED_CONFIRM` and erroneously bypassed the check.
+  - Fix & tests: Clause splitting expanded to conjunctions (`and`, `while`, `but`, `whereas`, `although`, `though`, Arabic `و`); `scoreClosedDay` checks for affirmative confirmation words remaining outside `NEGATED_CONFIRM`. Tested in `tests/unit/field-scoring.test.ts:104-107`.
+- **`tests/helpers/fieldScoring.ts:74` (Detect active team decisions without a modal)**:
+  - Root cause: `TEAM_DECIDER` previously required a modal (`will`, `shall`, etc.) before active verbs, missing present-tense declarations like "Our team decides this refund".
+  - Fix & tests: Modal made optional in `TEAM_DECIDER` active verb pattern. Tested in `tests/unit/field-scoring.test.ts:184-188`.
+- **`tests/helpers/fieldScoring.ts:88` (Normalize policy quotes before stripping)**:
+  - Root cause: Byte-identical string replacement left policy text in place when punctuation differed (e.g. `!` instead of `.`).
+  - Fix & tests: Regex-based quote stripping normalizes trailing punctuation (`[.!?:]*`). Tested in `tests/unit/field-scoring.test.ts:189-192`.
+- **`tests/helpers/packet-checksum.ts:15` (Match complete checksum filename)**:
+  - Root cause: `endsWith` matched entries where the filename was a suffix of a longer name (e.g. `archived packet.v2.json`).
+  - Fix & tests: Parsed exact sha256 checksum entries and matched complete filename. Tested in `tests/unit/packet-checksum.test.ts:28-31`.
