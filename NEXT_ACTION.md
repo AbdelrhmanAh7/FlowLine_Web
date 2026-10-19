@@ -136,3 +136,10 @@ the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this inter
 5. After PR #77 (issue #62, `source-map-js` override) merges: confirm Dependabot alert #3 (GHSA-68fv-2mgg-jv7q) is closed as `fixed`, and that every alert left in `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` was created after issue #62 (2026-10-07T15:00Z); record both on issue #62, then close it. On 2026-10-11 the open alerts were #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4, created 2026-10-08), which need their own issues; no tracking issue was found ([evidence](artifacts/phase-4/issue-62/EVIDENCE.md)).
 
 Production deployment, live payments, invitations, DNS/Pi changes, and spending remain unapproved. No production readiness is implied by the stack implementation, review, or CI.
+
+## Issue #251 — CSV build keeps later-row columns (2026-10-19)
+
+PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from all rows in first-seen order.
+The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
+The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
+(sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
