@@ -73,6 +73,23 @@ describe("data nodes", () => {
     expect(res.output.r).toEqual({ count: 2, names: ["B", "C"] });
   });
 
+  it("CSV build keeps each row's key order and every column that appears in any row", async () => {
+    const build = async (rows: object[]) => {
+      const g: FlowGraph = {
+        nodes: [trigger({ rows }), n("c", "data.csv", { mode: "build", source: "rows", delimiter: "," }), n("o", "output", { key: "csv", expression: "" })],
+        edges: [e("t", "c"), e("c", "o")],
+      };
+      const res = await executeGraph(g, { rows });
+      expect(res.status).toBe("succeeded");
+      return (res.output.csv as { csv: string }).csv.replace(/\r\n/g, "\n");
+    };
+    expect(await build([{ name: "A", qty: 1 }, { name: "B", qty: 2 }])).toBe("name,qty\nA,1\nB,2");
+    // Non-alphabetical, non-length-sorted keys keep their insertion order.
+    expect(await build([{ z: 1, a: 2 }])).toBe("z,a\n1,2");
+    // A column that first appears in a later row is kept (Papa.unparse alone reads the header from row 1).
+    expect(await build([{ name: "A" }, { name: "B", qty: 2 }])).toBe("name,qty\nA,\nB,2");
+  });
+
   it("$steps references read upstream outputs and must point upstream", async () => {
     const g: FlowGraph = {
       nodes: [trigger({ a: 1 }), n("x", "transform.json", { expression: "{ 'twice': a * 2 }" }), n("y", "transform.json", { expression: "{ 'orig': $steps.t.a, 'twice': $steps.x.twice }" }), n("o", "output", { key: "r", expression: "" })],
