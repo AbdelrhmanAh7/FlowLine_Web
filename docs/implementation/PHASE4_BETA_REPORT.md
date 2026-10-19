@@ -49,7 +49,13 @@ Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected
 already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
 then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
 
-## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-15
+
+The fix and migration below are already on main via `83a80114` (#253). Revalidation adds isolated numbering coverage,
+a deterministic two-connection publish/unique-index regression, and fixes the legacy fixture so 0025 actually clears numbers.
+The issue and feature API E2E tests pass 2/2 on the isolated dev stack; authenticated EN/AR routes return 200.
+Exact hub production-stack validation, hosted CI and review confirmation remain pending. [Current evidence](../../artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15).
+The following results are historical (2026-10-13):
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
@@ -65,9 +71,11 @@ Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/r
 keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
 then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
 `tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
-subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
-stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`.
+e2e-army tooling and hygiene (`tests/unit/e2e-army-tooling.test.ts`, 12/12 passed): `e2e-army/117-flows-list-dashboard.e2e.ts`
+uses `expect.poll` (no fixed `setTimeout` delay) and passes 1/1 against a stack built from `c95f8b5`; top-level e2e-army files
+stay within the 8-file cap by consolidating the Mizano integration actions spec (`148` into `147`).
+`pnpm typecheck` and eslint on the changed files are clean.
 Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
@@ -127,7 +135,7 @@ Issue #72 adds a bounded failure audit for failed and abandoned federated MFA st
 
 ### PR #46 review follow-up — 2026-10-11
 
-Merged `origin/main` at `6aa89ed` into `claude/issue-42`, preserving #42 membership locks and #45 email-token locks and reconciling their documentation. The three queued comments affirm the implementation and identify no code defect; no runtime change was made for them. Focused local verification: `pnpm exec vitest run --project unit tests/unit/member-lock-order.test.ts tests/unit/federated-lock-order.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/docs-index.test.ts` passed (4 files, 22 tests). PostgreSQL integration and the full suite were not run in this follow-up; CI must verify the merged candidate. Round 5 (QA): the rank table in [lock-order.md](../engineering/lock-order.md) was reordered to the order the code takes the locks (user, email token, session, account, workspace, member, audit) and its backward sequences (reset writes account before session; the audit insert key-share locks the workspace after the member row) are written down as exceptions with the reason each cannot deadlock; `tests/unit/lock-order-doc.test.ts` pins the table. The `FOR NO KEY UPDATE` conflict list now includes `FOR SHARE`. The `tests/integration/member-lock-order.test.ts` file runs in the `checks` integration shards on CI; its pass on the final head must be confirmed there. Round 8 (merge conflict): merged the local `origin/main` ref (`d136811`; a fetch was blocked by the sandbox, so later main commits are not included) into the branch; the conflicts were only in [lock-order.md](../engineering/lock-order.md) and [FEDERATED_MFA.md](../security/FEDERATED_MFA.md). Both keep this PR's rank table and #42 fix, and take main's additions: the #241 account-after-member gap (tracked, not fixed here), the #109 note that `delete` inserts its audit rows before its workspace locks, and the scope sentence on implicit locks. The `changeRole`/`removeMember` known gap main still listed is removed because this fix closes it. Focused local run, serial: `pnpm exec vitest run "$FILE"` for `tests/unit/lock-order-doc.test.ts` (3 tests), `tests/unit/member-lock-order.test.ts` (6), `tests/unit/sso-callback-lock-order.test.ts` (2), `tests/unit/password-reset-lock-order.test.ts` (6) and `tests/unit/federated-lock-order.test.ts` (4) all passed. `tests/integration/member-lock-order.test.ts` also passed locally (5 tests) against a throwaway `flowline_test_46` database via `scripts/with-env.mjs`, its first real execution; the other integration files were not run locally and CI runs them. The Stop hook's `vitest related` run fails on integration files at `global-setup.ts` because it passes no `DATABASE_URL`; that is the hook's environment, not a test failure.
+Merged `origin/main` at `6aa89ed` into `claude/issue-42`, preserving #42 membership locks and #45 email-token locks and reconciling their documentation. The three queued comments affirm the implementation and identify no code defect; no runtime change was made for them. Focused local verification: `pnpm exec vitest run --project unit tests/unit/member-lock-order.test.ts tests/unit/federated-lock-order.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/docs-index.test.ts` passed (4 files, 22 tests). PostgreSQL integration and the full suite were not run in this follow-up; CI must verify the merged candidate. Round 5 (QA): the rank table in [lock-order.md](../engineering/lock-order.md) was reordered to the order the code takes the locks (user, email token, session, account, workspace, member, audit) and its backward sequences (reset writes account before session; the audit insert key-share locks the workspace after the member row) are written down as exceptions with the reason each cannot deadlock; `tests/unit/lock-order-doc.test.ts` pins the table. The `FOR NO KEY UPDATE` conflict list now includes `FOR SHARE`. The `tests/integration/member-lock-order.test.ts` file runs in the `checks` integration shards on CI; its pass on the final head must be confirmed there. Round 8 (merge conflict): merged the local `origin/main` ref (`d136811`; a fetch was blocked by the sandbox, so later main commits are not included) into the branch; the conflicts were only in [lock-order.md](../engineering/lock-order.md) and [FEDERATED_MFA.md](../security/FEDERATED_MFA.md). Both keep this PR's rank table and #42 fix, and take main's additions: the #241 account-after-member gap (tracked, not fixed here), the #109 note that `delete` inserts its audit rows before its workspace locks, and the scope sentence on implicit locks. The `changeRole`/`removeMember` known gap main still listed is removed because this fix closes it. Focused local run, serial: `pnpm exec vitest run "$FILE"` for `tests/unit/lock-order-doc.test.ts` (3 tests), `tests/unit/member-lock-order.test.ts` (6), `tests/unit/sso-callback-lock-order.test.ts` (2), `tests/unit/password-reset-lock-order.test.ts` (6) and `tests/unit/federated-lock-order.test.ts` (4) all passed. `tests/integration/member-lock-order.test.ts` also passed locally (5 tests) against a throwaway `flowline_test_46` database via `scripts/with-env.mjs`, its first real execution; the other integration files were not run locally and CI runs them. The Stop hook's `vitest related` run fails on integration files at `global-setup.ts` because it passes no `DATABASE_URL`; that is the hook's environment, not a test failure. Round 10 (merge conflict): merged latest `origin/main` into `claude/issue-42`; verified `tests/unit/lock-order-doc.test.ts` (3 tests), `tests/unit/member-lock-order.test.ts` (6 tests), `tests/unit/docs-index.test.ts` (4 tests), `tests/integration/member-lock-order.test.ts` (5 tests passed against `flowline_test_46`), `pnpm lint` and `pnpm typecheck` (clean, exit code 0).
 
 ## PR #14 diagnostic checkpoint — 2026-10-03
 
@@ -317,3 +325,12 @@ Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 t
 131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
 for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
 No push, GitHub writes, dependency changes, secrets or permission changes.
+
+
+## CSV build keeps later-row columns (issue #251) — 2026-10-19
+
+`data.csv` build mode (`src/engine/execute.ts:335-342`) now builds the header from every row's keys in first-seen order;
+before, `Papa.unparse` used row 1 only and dropped columns that first appear later. Regression test:
+`tests/unit/engine-v2.test.ts` (fails on base, passes on head). The jsonb→json run input change that fixed the
+gate's `qty,name` ordering is already on main (`39364b5d`, migration 0027). Local e2e-army run not possible
+(sandbox); see `artifacts/phase-4/issue-251/EVIDENCE.md`.

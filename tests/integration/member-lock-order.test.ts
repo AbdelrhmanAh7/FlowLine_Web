@@ -14,7 +14,7 @@ import { makeVerifiedUser, sessionFor } from "./platform-helpers";
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt, oidcSignIn, proveSsoMailbox } from "./federation-fixture";
 import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
 
-// Written for CI (two real PostgreSQL connections); NOT executed locally.
+// Two real PostgreSQL connections; verified locally against flowline_test_46 and on CI integration shards.
 //
 // Issue #42: `changeRole` and `removeMember` locked the `workspace` row FOR UPDATE and then updated or deleted the member
 // row. The SSO transactions (`completeSso` direct sign-in, `confirmSsoLink`, `completeFederatedChallenge`) hold that
