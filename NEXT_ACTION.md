@@ -138,3 +138,13 @@ PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from al
 The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
 The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
 (sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #250 — QA checklist audit of merged CI workflows (2026-10-19)
+
+PR #271. Completed review of CI workflows merged outside automerge (PRs #81, #83, #87) against the 8 QA checklist rules.
+Resolved finding T5 (collaborator write check on `claude.yml` review job) and finding T6 (chromium 2-way matrix sharding under 5-minute cap in `gate.yml`).
+Automated QA checklist checker `scripts/ci/qa-checklist.mjs` reports 8/8 PASS (exit code 0).
+Unit test suites `tests/unit/ci-qa-checklist.test.ts` (11/11) and `tests/unit/ci-workflows.test.ts` (90/90) pass clean.
+Typecheck and lint pass clean. See [evidence](artifacts/phase-4/issue-250/EVIDENCE.md) and [root evidence](EVIDENCE.md).
+Next harness action: push head commit and await CI gate pass on PR #271.
+
