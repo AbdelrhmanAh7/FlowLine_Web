@@ -23,15 +23,6 @@ CI and review are deferred to the harness under the owner's worktree-only/no-pus
 this local commit is not a merge-ready or CI-gated claim.
 
 
-## CSV node column order and queue persistence (issue #251) — 2026-10-18
-
-Resolves stable release gate failure for `fl-csv-data-node` (PR #280 on branch `ai/251`):
-- **Engine column ordering**: `src/engine/execute.ts:335-349` in `data.csv` `build` mode now dynamically collects all unique column keys in order of first appearance across all row objects when `columns` is omitted, passing them as explicit `columns` to `Papa.unparse`. This preserves property order and ensures columns appearing in later rows are not dropped. When `columns` is explicitly configured (`src/engine/validate.ts`), that configuration is validated as `string[]` and respected.
-- **Queue boundary**: PostgreSQL `json` type for `run.input` in `src/db/schema.ts` (migration `0027_awesome_nemesis.sql`) preserves row key order across run queuing and worker claim.
-- **E2E contract**: `e2e-army/features/runs.e2e.ts:186` adheres strictly to "Fix the product, never weaken the test" with `N.csv("text", "build", "rows")`.
-- **Validation**: `tests/unit/engine-v2.test.ts:76-113` (13/13 unit tests pass) and `tests/integration/runs.test.ts:427-446` pass. Typecheck and lint pass.
-
-
 ## route() error-header unit coverage (issue #234) — 2026-10-15
 
 PR #200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.

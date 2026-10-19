@@ -1,14 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #251 — PR #280 CSV node column order fix (2026-10-18)
-
-Stable release gate failure for `fl-csv-data-node` (PR #280 on branch `ai/251`) is resolved:
-- **Root cause 1 (DB schema)**: `schema.run.input` in `src/db/schema.ts:249` was stored as `jsonb`, which sorts keys by length (putting `qty` before `name`). Changed to `json("input")` in `src/db/schema.ts` and migration `drizzle/0027_awesome_nemesis.sql`.
-- **Root cause 2 (Engine CSV build)**: In `src/engine/execute.ts:335-349`, when `columns` is omitted, the engine now extracts all unique column keys in order of first appearance across rows and passes them to `Papa.unparse`.
-- **E2E test**: `e2e-army/features/runs.e2e.ts:186` is restored to `N.csv("text", "build", "rows")` without `columns`, adhering strictly to "Fix the product, never weaken the test".
-- **Verification**: `tests/unit/engine-v2.test.ts:76-113` unit tests cover default column ordering, multi-row key collection, and explicit columns. Integration tests in `tests/integration/runs.test.ts:427-446` verify PostgreSQL JSON column order preservation across the queue. All unit test files and contract test files pass; `pnpm typecheck` and `pnpm lint` pass.
-- Harness can push branch `ai/251` to update PR #280.
-
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
