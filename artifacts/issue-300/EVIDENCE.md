@@ -13,7 +13,7 @@
 | ID | Acceptance Criterion | Verification Method | Observed Result | Exit Code |
 |---|---|---|---|---|
 | **AC1** | Stale reference to #196 (prerequisite #196 not on main, branch 196 unmerged, conflict with #197) and stale #179 reference in `AI_QUESTIONS.md` are resolved and removed from repository docs. | Verified removal of `AI_QUESTIONS.md` and lack of stale references in docs; unit regression assertions in `tests/unit/stale-questions-guard.test.ts`. | 0 violations found in active repository files | 0 |
-| **AC2** | Regression unit test covers and rejects historical offending texts that caused QA findings on PR #268 / parent #199 and the binding board finding on #179 (red on offending text, green on clean head). | `pnpm vitest run tests/unit/stale-questions-guard.test.ts` | 6 passed, 0 failed | 0 |
+| **AC2** | Regression unit test covers and rejects historical offending texts that caused QA findings on PR #268 / parent #199 and the binding board finding on #179 (red on offending text, green on clean head). | `pnpm vitest run tests/unit/stale-questions-guard.test.ts` | 8 passed, 0 failed | 0 |
 | **AC3** | Fresh branch off `main` (`ai/300`) is used instead of broken parent branch `ai/199-p2`, clearing the root causes of the `gate` failure (e.g. 11 e2e-army files exceeding the 8-file cap, unmerged branch conflicts). | `pnpm typecheck` && `pnpm lint` | Clean output (tsc exit 0, eslint exit 0) | 0 |
 | **AC4** | Verification evidence and documentation updated (`artifacts/issue-300/EVIDENCE.md`, `docs/implementation/PROGRESS.md`, `NEXT_ACTION.md`). | `git status` and test inspection | Docs updated, CI docs check satisfied | 0 |
 
@@ -31,17 +31,19 @@ pnpm vitest run tests/unit/stale-questions-guard.test.ts
 ```
 Output:
 ```
- ✓ |unit| tests/unit/stale-questions-guard.test.ts (6 tests) 4ms
-   ✓ @issue-300 guard against stale #196 blocker notes and #179 references in AI_QUESTIONS.md (supersedes part of #268) (6)
-     ✓ rejects historical QA finding: stale reference to prerequisite #196 being blocked 1ms
-     ✓ rejects historical QA finding: branch 196 not merged and conflicting with #197 0ms
+ ✓ |unit| tests/unit/stale-questions-guard.test.ts (8 tests) 7ms
+   ✓ @issue-300 guard against stale #196 blocker notes and #179 references in AI_QUESTIONS.md (supersedes part of #268) (8)
+     ✓ rejects historical QA finding: stale reference to prerequisite #196 being blocked 2ms
+     ✓ rejects historical QA finding: branch 196 not merged and conflicting with #197 1ms
      ✓ rejects binding board finding: stale reference to #179 in AI_QUESTIONS.md 0ms
      ✓ rejects the full unmerged AI_QUESTIONS.md text that blocked PR #268 0ms
      ✓ verifies that repository AI_QUESTIONS.md contains no stale #196 or #179 claims, or is absent 0ms
+     ✓ explicitly verifies that AI_QUESTIONS.md is removed on head to eliminate stale blocker notes 0ms
      ✓ verifies that active documentation files contain no stale references claiming #196 blocks progress 2ms
+     ✓ handles case-insensitivity and formatting variations for stale blocker patterns 0ms
 
  Test Files  1 passed (1)
-      Tests  6 passed (6)
+      Tests  8 passed (8)
 ```
 Exit code: 0
 

@@ -122,6 +122,11 @@ Still blocked. \`ai/196\` still has only f59477d committed; its worktree (\`impl
     }
   });
 
+  it("explicitly verifies that AI_QUESTIONS.md is removed on head to eliminate stale blocker notes", () => {
+    const questionsPath = resolve(root, "AI_QUESTIONS.md");
+    expect(existsSync(questionsPath)).toBe(false);
+  });
+
   it("verifies that active documentation files contain no stale references claiming #196 blocks progress", () => {
     const docsToCheck = [
       "NEXT_ACTION.md",
@@ -136,6 +141,22 @@ Still blocked. \`ai/196\` still has only f59477d committed; its worktree (\`impl
         const violations = findStaleQuestionViolations(content);
         expect(violations, `Stale #196 blocker in ${relPath}`).toEqual([]);
       }
+    }
+  });
+
+  it("handles case-insensitivity and formatting variations for stale blocker patterns", () => {
+    const variations = [
+      "BLOCKED ON #196",
+      "Blocked: Prerequisite #196 is missing",
+      "Branch ai/196 is not merged into main",
+      "need for merging #196 into 'main'",
+      "This change conflicts with #197 and is blocked",
+      "Until then, see #179 for details",
+    ];
+
+    for (const variation of variations) {
+      const violations = findStaleQuestionViolations(variation);
+      expect(violations.length, `Expected violation for "${variation}"`).toBeGreaterThan(0);
     }
   });
 });
