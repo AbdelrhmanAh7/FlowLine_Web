@@ -3,6 +3,7 @@
 // "same run does not create a second customer/quote" criterion, AC2) is proved in tests/contract/mizano.test.ts by
 // "mizano create steps against a stateful fake that dedupes on Idempotency-Key": two executions of one run leave one
 // customer and one quote in the fake, a new run a second pair. Live proof waits on the Mizano scoped API key (MZ G5).
+// Issue #148: the catalog also offers Mizano's "List overdue invoices" action.
 // The #224 Mizano localization test (below) was moved here from its own file to stay within the hub's cap of 8 top-level
 // e2e-army/*.e2e.ts files.
 import { test } from "@e2e-dev/web";
@@ -19,6 +20,18 @@ test(
     await agent.assert("the Mizano integration lists an action named Create draft quote");
     await expect(screen.getByText("Create customer").first()).toBeVisible();
     await expect(screen.getByText("Create draft quote").first()).toBeVisible();
+  },
+);
+
+test(
+  "@issue-148 AC1: the integrations catalog lists Mizano with the List overdue invoices action",
+  { tags: ["feat:fl-integrations", "feat:fl-integration-actions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/");
+    await agent.act("open the workspace's Integrations page from the navigation");
+    await agent.act("open the Mizano integration");
+    await agent.assert("the Mizano integration lists an action named List overdue invoices");
+    await expect(screen.getByText("List overdue invoices").first()).toBeVisible();
   },
 );
 

@@ -1,5 +1,34 @@
 # Next action — 2026-10-03
 
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+## PR #287 CI repair — 2026-10-16
+
+Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
+fresh CI and review confirmation; this worker performs no GitHub writes. Migration 0027
+applied successfully with all predecessors on a throwaway localhost:5432 database.
+See the phase-4 report for exact local checks and the pre-existing conditional skip.
+
+## Pilot E2E corrections — 2026-10-15
+
+Local work on `fix/pilot-e2e-failures` is recorded in
+[the evidence report](artifacts/pilot-e2e/EVIDENCE.md). Owner requested no push, PR or writes outside
+this worktree. Harness next: link the tracking issue, arrange CI/review, and update the hub's outdated
+`fl-flow-versions.1` expectation per CTO decision #204 (save version numbers intentionally null).
+Apply migration 0027 before verifying CSV queue behavior. No hub files were changed.
+
+## Issue #226 — resolve CodeRabbit review backlog (2026-10-16)
+
+Resolved all four deferred CodeRabbit review findings from merged PRs:
+1. `tests/helpers/field-scoring.ts`: `scoreNoPromise` skips empty or whitespace-only entries in `approvedInformation` before splitting or matching; regression test in `tests/unit/flowline-field-scoring.test.ts` fails on base and passes on head.
+2. `src/ai/hub/protocols/shared.ts`: `badToolArgs` uses conditional billing language ("may have been billed"), and all shared protocol exports have complete JSDoc blocks detailing parameters, returns, and thrown/returned `HubError` codes. Unit tests in `tests/unit/ai-hub-shared-protocols.test.ts` verify `parseArgs`, `badToolArgs`, `streamJson`, and `mapInBandError`.
+3. `docs/ai/ADDING_A_PROVIDER.md`: accurately reflects the JSDoc contracts provided by `src/ai/hub/protocols/shared.ts`.
+4. `docs/engineering/lock-order.md`: updated Example #41 to cite #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write, pinned by `password-reset-lock-order.test.ts`).
+E2E: not needed — pure internal docs and test helper chore.
+
 ## Issue #234 — review after main integration (2026-10-15)
 
 PR #200 landed as `d1368116`, so the unit suite runs without skips. Main conflicts are resolved, preserving its combined #179/#200 E2E file. The harness must push this branch and obtain fresh CI and reviewer confirmation for PR #247; no push or PR mutation was performed here. E2E: not needed — #234 adds unit coverage only, with no product behavior change. No dependencies added; secrets, permissions and workflow tokens unchanged.
@@ -106,3 +135,10 @@ the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this inter
 5. After PR #77 (issue #62, `source-map-js` override) merges: confirm Dependabot alert #3 (GHSA-68fv-2mgg-jv7q) is closed as `fixed`, and that every alert left in `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` was created after issue #62 (2026-10-07T15:00Z); record both on issue #62, then close it. On 2026-10-11 the open alerts were #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4, created 2026-10-08), which need their own issues; no tracking issue was found ([evidence](artifacts/phase-4/issue-62/EVIDENCE.md)).
 
 Production deployment, live payments, invitations, DNS/Pi changes, and spending remain unapproved. No production readiness is implied by the stack implementation, review, or CI.
+
+## Issue #251 — CSV build keeps later-row columns (2026-10-19)
+
+PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from all rows in first-seen order.
+The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
+The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
+(sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
