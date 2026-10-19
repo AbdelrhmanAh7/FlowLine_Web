@@ -70,8 +70,8 @@ user menu.
 5. **Agents** answer from your Knowledge with sources, and ask before running "Ask" tools.
 6. **Copilot is experimental:** it proposes drafts only; nothing runs without your approval. "Ran without errors"
    doesn't mean correct, so check the output before approving.
-7. **Account and privacy:**
+7. **Privacy:**
    - Your data runs your workflows and isn't used to train models.
    - Deleting your account takes an emailed confirmation link.
-   - Account, Security (user menu) shows whether two-step verification is on or off; turning it on or off from this page is coming in later parts.
-8. **Help:** use "Report an issue", and include the Request ID shown with any error.
+8. **Account, Security:** (user menu) shows whether two-step verification is on or off; turning it on or off from this page is coming soon.
+9. **Help:** use "Report an issue", and include the Request ID shown with any error.

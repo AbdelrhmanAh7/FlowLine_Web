@@ -11,6 +11,7 @@ test("user menu opens the security page and shows the two-step status", async ({
   await expect(page).toHaveURL(/\/account\/security$/);
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-en-ltr.png" });
 
   // Turn MFA on through the API (the UI flow is a later part), then the page reads On.
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
@@ -22,6 +23,24 @@ test("user menu opens the security page and shows the two-step status", async ({
   expect(verify.ok()).toBeTruthy();
   await page.reload();
   await expect(page.getByRole("main").getByText("On", { exact: true })).toBeVisible();
+});
+
+test("the security page renders in Arabic with RTL layout", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await page.context().addCookies([
+    { name: "fl_locale", value: "ar", domain: "localhost", path: "/" },
+  ]);
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await page.getByRole("complementary").getByRole("button", { name: /E2E User/ }).click();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/user-menu-ar-rtl.png" });
+
+  await page.goto("/account/security");
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { level: 1, name: "الأمان" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("غير مفعّل", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-ar-rtl.png" });
 });
 
 test("a signed-out visit to the security page redirects to sign-in", async ({ browser }) => {
