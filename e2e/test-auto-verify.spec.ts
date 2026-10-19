@@ -59,7 +59,7 @@ test("#124 on this FLOWLINE_ENV=test stack, open /api/test/auto-verify (lands on
   expect(await inbox(page.request, email)).toEqual([]);
 });
 
-test("#124 no opt-in: sign-up shows Check your inbox; Resend with that email on /resend-verification shows If the account is eligible, an email will arrive shortly.", async ({ page }) => {
+test("#124 no opt-in: sign-up shows Check your inbox; open /resend-verification, fill Email, click Resend: If the account is eligible, an email will arrive shortly.", async ({ page }) => {
   const email = uniqueEmail("no-auto-verify");
   await signUp(page, email);
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
