@@ -201,7 +201,7 @@ const provider: ProviderDef = {
       version: 1,
       provider: "mizano",
       title: "Create draft quote",
-      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate). Money values are normalized to fixed-scale decimal strings.",
+      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
       input: z.object({
         customerId: z.string().min(1).max(200),
         currency: z.string().regex(/^[A-Z]{3}$/),
