@@ -46,16 +46,16 @@ test(
 test(
   "@issue-149 AC1: the gallery offers 'Deal won → Mizano quote' with a Use template button",
   { tags: ["feat:fl-templates", "feat:fl-flows-api"], session: "fl-user" },
-  async ({ app, agent, screen }) => {
-    await app.open("/");
-    await agent.act("open the workspace's Templates page from the navigation");
+  async ({ app, agent, screen, browser }) => {
+    await app.open("/app");
+    await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
+    const slug = new URL(await browser.url()).pathname.split("/")[2]!;
+    await app.open(`/w/${slug}/templates`);
 
     const offeredCard = screen.getByTestId("template-deal-won-mizano-quote");
-    await expect(offeredCard).toBeVisible({ timeout: 30000 });
+    await expect(offeredCard).toBeVisible({ timeout: 15000 });
     await expect(offeredCard.getByText("Deal won → Mizano quote")).toBeVisible();
     await expect(offeredCard.getByRole("button", { name: "Use template" })).toBeVisible();
-    await expect(screen.getByTestId("template-held-back-deal-won-mizano-quote")).toHaveCount(0);
-    await expect(screen.getByTestId("templates-connected-loading")).toHaveCount(0);
     await agent.assert("a template named Deal won → Mizano quote is listed with a Use template button");
   },
 );
@@ -64,37 +64,34 @@ test(
   "@issue-149 AC1 (Arabic): the template is offered in Arabic and the page is right-to-left",
   { tags: ["feat:fl-templates", "feat:fl-i18n-rtl"], session: "fl-user" },
   async ({ app, agent, screen, browser }) => {
-    await app.open("/");
-    await agent.act("switch the interface language to Arabic");
-    await agent.act("open the workspace's Templates page from the navigation");
+    await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+    await app.open("/app");
+    await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
+    const slug = new URL(await browser.url()).pathname.split("/")[2]!;
+    await app.open(`/w/${slug}/templates`);
 
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     const offeredCard = screen.getByTestId("template-deal-won-mizano-quote");
-    await expect(offeredCard).toBeVisible({ timeout: 30000 });
+    await expect(offeredCard).toBeVisible({ timeout: 15000 });
     await expect(offeredCard.getByText("صفقة مكسوبة ← عرض سعر Mizano")).toBeVisible();
-    await expect(screen.getByTestId("template-held-back-deal-won-mizano-quote")).toHaveCount(0);
     await agent.assert("a template named صفقة مكسوبة ← عرض سعر Mizano is listed");
   },
 );
 
 test(
-  "@issue-149: a failed catalog shows an error with Retry, and Retry then offers the template",
-  { tags: ["feat:fl-templates"], session: "fl-user" },
-  async ({ app, agent, screen, browser }) => {
-    // Fail the catalog request so the "Connected" section can't verify which actions exist.
-    await browser.route("**/api/integrations/catalog*", (route) => route.fulfill({ status: 500, body: JSON.stringify({ error: "Catalog unavailable" }) }));
+  "@issue-149 AC3: using 'Deal won → Mizano quote' creates an editable flow with the approval step",
+  { tags: ["feat:fl-templates", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, screen, browser }) => {
+    await app.open("/app");
+    await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
+    const slug = new URL(await browser.url()).pathname.split("/")[2]!;
+    await app.open(`/w/${slug}/templates`);
 
-    await app.open("/");
-    await agent.act("open the workspace's Templates page from the navigation");
-
-    await expect(screen.getByRole("alert")).toBeVisible({ timeout: 30000 });
-    await expect(screen.getByTestId("template-deal-won-mizano-quote")).toHaveCount(0);
-    const retry = screen.getByRole("button", { name: "Retry" });
-    await expect(retry).toBeVisible();
-
-    // Restore the route and retry: the final state is the offered card, and the error is gone.
-    await browser.unroute("**/api/integrations/catalog*");
-    await retry.click();
-    await expect(screen.getByTestId("template-deal-won-mizano-quote")).toBeVisible({ timeout: 30000 });
+    const card = screen.getByTestId("template-deal-won-mizano-quote");
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await card.getByRole("button", { name: "Use template" }).click();
+    await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows\/[0-9a-f-]{36}$/);
+    await expect(screen.getByLabel("Flow name")).toHaveValue("Deal won → Mizano quote");
+    await expect(screen.getByText("Mizano — Create customer (needs approval)")).toBeVisible();
   },
 );

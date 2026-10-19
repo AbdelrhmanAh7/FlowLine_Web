@@ -2,7 +2,7 @@
 
 ## Issue #149 — unblocked by #147 (2026-10-15)
 
-PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which landed with **#147** (now on `main`), so the template is a usable gallery entry (offered card with "Use template"). The gallery still withholds any template whose actions are missing (`availableDesignTemplates`), so the dependency stays self-healing. The approval shows the customer only (CTO decision on #149, 2026-10-12); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
+PR #244 (`ai/149`) adds the "Deal won → Mizano quote" template. It calls `mizano.create_customer` / `mizano.create_draft_quote`, which landed with **#147** (now on `main`), so the template is a usable gallery entry (offered card with "Use template"). The templates gallery renders planned templates cleanly without mid-component client withholding, while the backend guards against unverified actions with 409 TEMPLATE_UNAVAILABLE. The approval shows the customer only (CTO decision on #149, 2026-10-12); an approval that can also show the quote lines is a follow-up. Details: [MIZANO-DEAL-WON-TEMPLATE.md](docs/integrations/MIZANO-DEAL-WON-TEMPLATE.md).
 
 ## Issue #204 — harness handoff (2026-10-15)
 
