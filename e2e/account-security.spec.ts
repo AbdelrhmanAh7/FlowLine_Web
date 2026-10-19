@@ -58,13 +58,13 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // A wrong password shows an error and no secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill("not-the-password-1");
-  await page.getByRole("button", { name: "Enable" }).click();
-  await expect(dangerToast).toHaveText("That password isn't correct.");
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(dangerToast).toHaveText("That password isn't valid. Try again.");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 
   // The right password shows the secret and backup codes (left-to-right) with the one-time warning.
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   const secret = page.getByTestId("totp-secret");
   await expect(secret).toBeVisible();
   await expect(secret).toHaveAttribute("dir", "ltr");
@@ -81,7 +81,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // A wrong code is rejected and the status is still Off after a reload.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   // 000000 is only a safe "wrong" code when the accepted window (previous, current, next step) doesn't contain it.
   const current = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
   const accepted = [-30_000, 0, 30_000].map((d) => totpCodeFor(current, Date.now() + d));
@@ -94,7 +94,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // Enabling again replaces the unconfirmed secret; the current code turns it On and hides the secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   const second = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
   expect(second.equals(raw)).toBeFalsy();
   await page.getByLabel("Authentication code").fill(totpCodeFor(second));
@@ -126,7 +126,7 @@ test("cancelling a pending enable keeps the secret hidden", async ({ page }) => 
   await page.getByLabel("Account password").fill(PASSWORD);
   const started = page.waitForRequest("**/api/auth/two-factor/enable");
   const responded = page.waitForResponse((r) => r.url().includes("/api/auth/two-factor/enable") && r.status() === 200);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   await started;
   await page.getByRole("button", { name: "Cancel" }).click();
   release();
@@ -154,9 +154,48 @@ test("a non-password enable failure shows its own message", async ({ page }) => 
 
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
 
   await expect(dangerToast).toContainText("Two-factor is already enabled");
-  await expect(dangerToast).not.toContainText("That password isn't correct.");
+  await expect(dangerToast).not.toContainText("That password isn't valid. Try again.");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+});
+
+test("enable two-step verification in Arabic (RTL)", async ({ page }) => {
+  await setupUser(page);
+  await page.context().addCookies([{ name: "fl_locale", value: "ar", path: "/", domain: "localhost" }]);
+  await page.goto("/account/security");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveAttribute("data-state", "off");
+  await expect(status).toHaveText("غير مفعّل");
+
+  // Click enable (تفعيل) to open password form
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  await page.getByLabel("كلمة مرور الحساب").fill("not-the-password-1");
+  await page.getByRole("button", { name: "إرسال" }).click();
+  const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
+  await expect(dangerToast).toHaveText("كلمة المرور غير صالحة. حاول مجددًا.");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+
+  // Correct password
+  await page.getByLabel("كلمة مرور الحساب").fill(PASSWORD);
+  await page.getByRole("button", { name: "إرسال" }).click();
+  const secret = page.getByTestId("totp-secret");
+  await expect(secret).toBeVisible();
+  await expect(secret).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes-warning")).toHaveText("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+
+  // Confirm code
+  const raw = base32Decode((await secret.textContent())!.trim());
+  await page.getByLabel("رمز المصادقة").fill(totpCodeFor(raw));
+  await page.getByRole("button", { name: "تأكيد التفعيل" }).click();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(status).toHaveText("مفعّل");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+  await page.reload();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(status).toHaveText("مفعّل");
 });
