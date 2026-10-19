@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { checkUrl, EgressError } from "@/server/egress";
 import { ProviderError, type Credentials, type ProviderDef } from "../types";
+import { toDecimalString } from "@/lib/format";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONEY = /^\d+\.\d{2}$/;
@@ -54,6 +55,36 @@ type MizanoCustomer = z.infer<typeof _mizanoCustomerSchema>;
 const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
+
+const MONEY_MESSAGE = "must be a non-negative decimal with up to 2 decimal places";
+const STRING_MONEY = /^\d+(\.\d{1,2})?$/;
+const FIXED_MONEY = /^\d+\.\d{2}$/;
+
+// Accepts a number or a decimal string for qty, unitPrice and taxRate and normalizes it to a fixed-scale (2) decimal
+// string via toDecimalString. Nothing is rounded: values the old string-only schema rejected (more than 2 decimals,
+// signs, exponents, whitespace, NaN/Infinity, negatives) are still rejected, as zod issues rather than raw exceptions.
+const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
+  const valid =
+    typeof val === "string"
+      ? STRING_MONEY.test(val)
+      : Number.isFinite(val) &&
+        val >= 0 &&
+        val <= Number.MAX_SAFE_INTEGER / 100 &&
+        STRING_MONEY.test(String(val));
+  let out = "";
+  if (valid) {
+    try {
+      out = toDecimalString(val, 2);
+    } catch {
+      out = "";
+    }
+  }
+  if (!FIXED_MONEY.test(out)) {
+    ctx.addIssue({ code: "custom", message: MONEY_MESSAGE });
+    return z.NEVER;
+  }
+  return out;
+});
 
 const provider: ProviderDef = {
   id: "mizano",
@@ -176,16 +207,16 @@ const provider: ProviderDef = {
       version: 1,
       provider: "mizano",
       title: "Create draft quote",
-      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
+      description: "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate). Money values are normalized to fixed-scale decimal strings.",
       input: z.object({
         customerId: z.string().min(1).max(200),
         currency: z.string().regex(/^[A-Z]{3}$/),
         lines: z.array(
           z.object({
             item: z.string().min(1).max(200),
-            qty: decimalString,
-            unitPrice: decimalString,
-            taxRate: decimalString,
+            qty: moneyInput,
+            unitPrice: moneyInput,
+            taxRate: moneyInput,
           }),
         ).min(1).max(200),
       }),

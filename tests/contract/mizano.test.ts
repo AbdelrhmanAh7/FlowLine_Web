@@ -4,6 +4,7 @@ import { createProviderHttp } from "@/integrations/http";
 import { getAction, getProvider } from "@/integrations/registry";
 import type { ActionContext, Credentials, HttpRequest, HttpResponse } from "@/integrations/types";
 import { ProviderError } from "@/integrations/types";
+import { ZodError } from "zod";
 import { runAction } from "./helpers";
 
 vi.mock("node:dns", async (importOriginal) => {
@@ -309,6 +310,7 @@ describe("mizano.create_draft_quote", () => {
     const found = getAction("mizano.create_draft_quote");
     expect(found?.action.sideEffect).toBe("non_idempotent");
     expect(found?.provider.id).toBe("mizano");
+    expect(found?.action.description).toContain("Money values are normalized to fixed-scale decimal strings");
   });
 
   it("creates a draft quote via POST /api/quotes with the run id as idempotency key", async () => {
@@ -330,8 +332,8 @@ describe("mizano.create_draft_quote", () => {
       customerId: "cust_123",
       currency: "EGP",
       lines: [
-        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
-        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+        { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1.00", unitPrice: "100.00", taxRate: "15.00" },
       ],
     });
   });
@@ -439,6 +441,84 @@ describe("mizano.create_draft_quote", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("rejects a negative number for qty, unitPrice and taxRate", async () => {
+    for (const line of [
+      { item: "Consulting", qty: -5, unitPrice: "500.00", taxRate: "15.00" },
+      { item: "Consulting", qty: "10", unitPrice: -100, taxRate: "15.00" },
+      { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: -5 },
+    ]) {
+      const { ctx, request } = ctxReturning(quoteResponse);
+      await expect(runAction("mizano.create_draft_quote", ctx, { customerId: "cust_123", currency: "EGP", lines: [line] })).rejects.toThrow();
+      expect(request).not.toHaveBeenCalled();
+    }
+  });
+
+  it("normalizes qty to a 2-decimal string whether it arrives as '10', 10 or 12.5", async () => {
+    const send = async (qty: unknown) => {
+      const { ctx, request } = ctxReturning(quoteResponse);
+      await runAction("mizano.create_draft_quote", ctx, {
+        customerId: "cust_123",
+        currency: "EGP",
+        lines: [{ item: "Consulting", qty, unitPrice: 500, taxRate: "15" }],
+      });
+      return request.mock.calls[0][0].json as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+    };
+    expect((await send("10")).lines[0]).toEqual({ item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" });
+    expect((await send(10)).lines[0].qty).toBe("10.00");
+    expect((await send(12.5)).lines[0].qty).toBe("12.50");
+  });
+
+  it.each([
+    [1234567.89, "1234567.89"],
+    [99999999.99, "99999999.99"],
+    [0.07, "0.07"],
+    [0, "0.00"],
+  ])(
+    "normalizes number %j to exact string %j for qty, unitPrice and taxRate",
+    async (val, expected) => {
+      for (const field of ["qty", "unitPrice", "taxRate"] as const) {
+        const { ctx, request } = ctxReturning(quoteResponse);
+        const line = { item: "Consulting", qty: "1.00", unitPrice: "1.00", taxRate: "0.00", [field]: val };
+        await runAction("mizano.create_draft_quote", ctx, {
+          customerId: "cust_123",
+          currency: "EGP",
+          lines: [line],
+        });
+        expect(request).toHaveBeenCalledTimes(1);
+        const body = request.mock.calls[0][0].json as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+        expect(body.lines[0][field]).toBe(expected);
+      }
+    },
+  );
+
+  it.each([
+    "1.005",
+    0.001,
+    0.004,
+    10.505,
+    "abc",
+    " 5 ",
+    "1e3",
+    "",
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    1e21,
+    0.1 + 0.2,
+    1e-7,
+  ])(
+    "rejects %j as a validation error without rounding or calling Mizano",
+    async (bad) => {
+      for (const field of ["qty", "unitPrice", "taxRate"] as const) {
+        const { ctx, request } = ctxReturning(quoteResponse);
+        const line = { item: "Consulting", qty: "1", unitPrice: "1.00", taxRate: "0.00", [field]: bad };
+        const err = await runAction("mizano.create_draft_quote", ctx, { customerId: "cust_123", currency: "EGP", lines: [line] }).catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(ZodError);
+        expect((err as ZodError).issues[0].path).toEqual(["lines", 0, field]);
+        expect(request).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("accepts decimal strings for qty, unitPrice, and taxRate", async () => {
     const decimalQuote = {
