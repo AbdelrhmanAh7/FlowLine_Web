@@ -1,4 +1,4 @@
-// Issues #200, #179 and #181: the error/rejection boundary of route() and of /api/platform/copy and /admin/copy. Request-level (no model).
+// Issues #200, #179 and #181: the error/rejection boundary of route() and of /api/platform/copy and /admin/copy. No model: request-level, and AC3 also checks the rendered 404 page in the browser.
 //
 // #200 AC: route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer.
 // #179 AC1: GET /api/platform/copy (getCopyEditorState) never leaks state or an internal error to a non-admin caller.
@@ -10,8 +10,9 @@
 // tests/integration/platform-copy-errors.test.ts.
 //
 // AC2 (UI-level error handling in the copy editor) is covered by the component tests in tests/component/copy-editor.test.tsx
-// (load error, me load error, save/publish errors, STEP_UP_REQUIRED, 5xx errors, network errors) because the e2e test stack
-// does not have a platform admin, which is required to exercise the copy editor's write error handling.
+// (load error, me load error, save/publish errors, STEP_UP_REQUIRED, 5xx errors, network errors) and, in a real browser with the
+// Playwright stack's platform admin, by e2e/admin-panel.spec.ts, because this throwaway stack has no platform admin, which is
+// required to exercise the copy editor's write error handling.
 //
 // The tests live in one file to stay within the hub's cap of 8 top-level e2e-army/*.e2e.ts files: the hub's verify job
 // copies readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8) (nql-agents src/lib/e2earmy.ts), and
@@ -126,22 +127,38 @@ test(
 
 test(
   "@issue-181 AC3: /admin/copy shows a non-admin the localized 404 page (Arabic RTL and English), never a server error",
-  { tags: ["feat:fl-platform-admin", "lvl:api"] },
-  async ({ app }) => {
+  { tags: ["feat:fl-platform-admin", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
     const base = app.baseUrl!;
     const session = await signedIn(base, emailFor(base, "page"));
     const ar = await fetch(`${base}/admin/copy`, { headers: { cookie: `fl_test_beta_mode=open; fl_locale=ar; ${session}` } });
     expect(ar.status).toBe(404);
     const arHtml = await ar.text();
-    expect(arHtml).toMatch(/<html[^>]*\blang="ar"/);
-    expect(arHtml).toMatch(/<html[^>]*\bdir="rtl"/);
     expect(arHtml).toContain("لم نعثر على هذه الصفحة");
     expect(arHtml).not.toContain("platformAdmin.copyEditor");
 
     const en = await fetch(`${base}/admin/copy`, { headers: { cookie: `${FIXED}; ${session}` } });
     expect(en.status).toBe(404);
     const enHtml = await en.text();
-    expect(enHtml).toMatch(/<html[^>]*\bdir="ltr"/);
     expect(enHtml).toContain("find that page");
+    expect(enHtml).not.toContain("platformAdmin.copyEditor");
+
+    // Language and direction are checked on the rendered page. Next 16 answers every thrown notFound() (/admin, the workspace
+    // layout and /billing/checkout too) with its error shell, <html id="__next_error__"> without lang or dir, and the browser
+    // renders the root layout and the 404 page from the payload, so the raw HTML never carries them.
+    const cookies = session.split("; ").map((pair) => ({ url: base, name: pair.slice(0, pair.indexOf("=")), value: pair.slice(pair.indexOf("=") + 1) }));
+    const pages = [
+      { locale: "ar", dir: "rtl", notFound: "لم نعثر على هذه الصفحة", editor: "تحرير النصوص" },
+      { locale: "en", dir: "ltr", notFound: "We couldn't find that page", editor: "Copy editor" },
+    ];
+    for (const p of pages) {
+      await browser.setCookies([...cookies, { url: base, name: "fl_test_beta_mode", value: "open" }, { url: base, name: "fl_locale", value: p.locale }]);
+      await app.open("/admin/copy");
+      await expect(screen.getByRole("heading", p.notFound)).toBeVisible();
+      await expect(browser.locator("html")).toHaveAttribute("lang", p.locale);
+      await expect(browser.locator("html")).toHaveAttribute("dir", p.dir);
+      await expect(screen.getByRole("heading", p.editor)).toHaveCount(0);
+      expect(await browser.url()).toMatch(/\/admin\/copy$/);
+    }
   },
 );
