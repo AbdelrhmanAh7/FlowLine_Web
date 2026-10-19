@@ -321,3 +321,12 @@ Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 t
 131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
 for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
 No push, GitHub writes, dependency changes, secrets or permission changes.
+
+
+## CSV build keeps later-row columns (issue #251) — 2026-10-19
+
+`data.csv` build mode (`src/engine/execute.ts:335-342`) now builds the header from every row's keys in first-seen order;
+before, `Papa.unparse` used row 1 only and dropped columns that first appear later. Regression test:
+`tests/unit/engine-v2.test.ts` (fails on base, passes on head). The jsonb→json run input change that fixed the
+gate's `qty,name` ordering is already on main (`39364b5d`, migration 0027). Local e2e-army run not possible
+(sandbox); see `artifacts/phase-4/issue-251/EVIDENCE.md`.
