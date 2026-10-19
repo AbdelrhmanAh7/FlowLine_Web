@@ -310,6 +310,7 @@ describe("mizano.create_draft_quote", () => {
     const found = getAction("mizano.create_draft_quote");
     expect(found?.action.sideEffect).toBe("non_idempotent");
     expect(found?.provider.id).toBe("mizano");
+    expect(found?.action.description).toContain("Money values are normalized to fixed-scale decimal strings");
   });
 
   it("creates a draft quote via POST /api/quotes with the run id as idempotency key", async () => {

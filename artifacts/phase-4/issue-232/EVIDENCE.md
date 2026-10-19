@@ -19,23 +19,21 @@ Integrates `toDecimalString` with the Mizano connector (`mizano.create_draft_quo
 | **AC3** | Malformed and negative input rejection: Negative values (`-5`, `"-5"`, `"-100.00"`), exponent forms (`"1e3"`, `1e21`, `1e-7`), non-numeric strings (`"abc"`, `" 5 "`, `""`), `NaN`, and `Infinity` are rejected as validation errors; no raw exceptions escape zod transforms. | `tests/contract/mizano.test.ts:405-454, 494-521` | Same run — "rejects invalid input (invalid qty - negative)" + it.each rejection tests |
 | **AC4** | Large numeric bounds & float precision handling: Large legitimate amounts up to `MAX_SAFE_INTEGER / 100` (e.g., `1234567.89` → `"1234567.89"`, `99999999.99` → `"99999999.99"`, `0.07` → `"0.07"`, `0` → `"0.00"`) are accepted and correctly formatted without false rejections from float error. | `tests/contract/mizano.test.ts:471-492` | Same run — "normalizes number %j to exact string %j for qty, unitPrice and taxRate" |
 | **AC5** | E2E-army path testing: `e2e-army/232-mizano-decimal-string.e2e.ts` tests actions through `action.input.safeParse` before `action.run`, asserting request payload matches fixed 2-decimal format and malformed amounts (`"1.005"`) make 0 requests. | `e2e-army/232-mizano-decimal-string.e2e.ts:1-65` | TypeScript type check passes (exit code 0) |
-| **AC6** | Documentation sync: `docs/integrations/SUPPORTED-ACTIONS.md` updated to document `mizano.create_draft_quote` input normalization behavior. | `docs/integrations/SUPPORTED-ACTIONS.md:129` | docs-check passes (exit code 0) |
+| **AC6** | Documentation sync: `docs/integrations/SUPPORTED-ACTIONS.md` updated to document `mizano.create_draft_quote` input normalization behavior, and action description verified by contract test. | `docs/integrations/SUPPORTED-ACTIONS.md:129`<br>`tests/contract/mizano.test.ts:313` | docs-check passes (exit code 0); contract test passes |
 
-## Verification Commands and Evidence (HEAD sha=7dd6d50a, session 2026-10-19T19:31+03:00)
+## Verification Commands and Evidence (session 2026-10-19T20:24+03:00)
 
 ### 1. Contract Tests (`tests/contract/mizano.test.ts`)
 ```
-$ pnpm exec vitest run tests/contract/mizano.test.ts --maxWorkers=2
+$ pnpm exec vitest run tests/contract/mizano.test.ts
  RUN  v5.0.2
 
- ✓ |contract| tests/contract/mizano.test.ts (62 tests) 35ms
+ ✓ |contract| tests/contract/mizano.test.ts (62 tests) 95ms
 
  Test Files  1 passed (1)
       Tests  62 passed (62)
-   Start at  19:31:26
-   Duration  446ms (transform 48%, import 40%, tests 11%, worker 1%)
 ```
-Exit code: **0**. Run at 2026-10-19T19:31:26+03:00.
+Exit code: **0**. Run at 2026-10-19T20:24:14+03:00.
 
 Key tests from this run:
 - ✓ normalizes qty to a 2-decimal string whether it arrives as '10', 10 or 12.5
