@@ -232,6 +232,17 @@ test("a non-admin visiting /admin sees the ordinary 404 page, not a redirect tha
   await expect(page.getByRole("heading", { name: "Platform admin" })).toHaveCount(0);
 });
 
+// #181: the hub's verify browser is this kind of user, so this 404 is the expected refusal, not a missing page.
+test("a non-admin opening /admin/copy sees the ordinary 404 page, not the copy editor or its title", async ({ page }) => {
+  await setupUser(page);
+  const res = await page.goto("/admin/copy");
+  expect(res?.status()).toBe(404);
+  expect(page.url()).toMatch(/\/admin\/copy$/);
+  await expect(page.getByRole("heading", { name: "We couldn't find that page", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Copy editor" })).toHaveCount(0);
+  await expect(page).not.toHaveTitle(/Copy editor/);
+});
+
 test("members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)", async ({ page, browser }) => {
   const owner = await setupUser(page);
   const ws = owner.workspace;
