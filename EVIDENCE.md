@@ -1,66 +1,100 @@
-# Evidence — Issue #226: chore(code-quality): resolve CodeRabbit review backlog (2026-10-12)
+# Evidence — Issue #296: fix(mizano): use ctx.addIssue in moneyInput transform to prevent raw Error escape
 
-Tested commit: `0d7c1459fdfc38db8c7090e25840356f25f986ed`
+Tested commit: `0d3a505473b3d0ff913a033d25acbe3e549d4dd3`
 
-All checks and tests were executed locally against commit `0d7c1459fdfc38db8c7090e25840356f25f986ed` in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226`.
+All checks and tests were executed locally against commit `0d3a505473b3d0ff913a033d25acbe3e549d4dd3` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
 
 ## Acceptance Criteria and Verification
 
 | Req / AC | Description | Verification Method | Result | Commit |
 |---|---|---|---|---|
-| AC1 | `scoreNoPromise` in `tests/helpers/field-scoring.ts` ignores empty or whitespace-only strings in `approvedInformation` before splitting or matching; blank entries do not cause refund promises to pass scoring. | Regression test in `tests/unit/flowline-field-scoring.test.ts:28-29` (`expect(scoreNoPromise("We will refund you today.", "we will refund", [""])).toBe(false)`). Tested on base (FAILED with `AssertionError: expected true to be false`) and on head (PASSED). | 8/8 unit tests pass (`tests/unit/flowline-field-scoring.test.ts`) | `0d7c1459` |
-| AC2 | In `src/ai/hub/protocols/shared.ts:22`, `badToolArgs` uses conditional language ("may have been billed") rather than asserting unverified billing ("was still billed"). | Inspected source code JSDoc and verified via unit test `tests/unit/ai-hub-shared-protocols.test.ts:9-17` checking `possibleCharge: true`. | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC3 | Complete JSDoc contracts for exports in `src/ai/hub/protocols/shared.ts` (`num`, `badToolArgs`, `parseArgs`, `structuredOutputMode`, `validateRequest`, `scrubProviderMessage`, `createSseParser`, `streamJson`, `errorTokens`, `mapProviderError`, `mapInBandError`, `safetyRefusal`, `scrubHubError`, `parseBody`, `errorBody`, `pathModel`). `parseArgs` documents parameter/return semantics and thrown `HubError` (`AI_BAD_RESPONSE`); `mapInBandError` documents input/return semantics and possible mapped codes. | Dedicated unit test suite `tests/unit/ai-hub-shared-protocols.test.ts` covering `parseArgs` (valid objects, JSON strings, empty strings, invalid JSON error, non-object JSON error) and `mapInBandError` (overloaded, 4xx/5xx codes, fallback 502, non-object bodies). | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC4 | `docs/ai/ADDING_A_PROVIDER.md` accurately describes helper JSDoc contracts in `src/ai/hub/protocols/shared.ts`. | Docs checked and verified against implementation in `shared.ts`. CI docs check verified via `node scripts/ci/docs-check.mjs` and `tests/unit/docs-check-script.test.ts`. | 95/95 docs-check tests pass | `0d7c1459` |
-| AC5 | `docs/engineering/lock-order.md` accurately scopes the password reset recovery lock sequence and documents both #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write), citing `tests/unit/password-reset-lock-order.test.ts`. | Inspected `docs/engineering/lock-order.md:33-38` and verified with `tests/unit/password-reset-lock-order.test.ts`. | 6/6 unit tests pass (`tests/unit/password-reset-lock-order.test.ts`) | `0d7c1459` |
+| **AC1** | `moneyInput.safeParse` of a negative or invalid value returns `success: false` with a `ZodError` and does not throw. | Unit test `tests/unit/mizano-money-input.test.ts:7-56` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid strings (`"abc"`, `"12.345"`), `NaN`, `Infinity`, and float noise (`0.1 + 0.2`). | 8/8 unit tests pass | `0d3a5054` |
+| **AC2** | `mizano.create_draft_quote` input `safeParse` rejects a negative qty, unitPrice, or taxRate without throwing. | Unit test `tests/unit/mizano-money-input.test.ts:79-114` and contract tests `tests/contract/mizano.test.ts:404-442` verifying `action.input.safeParse(...)` returns `{ success: false }` without throwing, and `parse` rejects with `ZodError`. | 43/43 contract tests pass, 8/8 unit tests pass | `0d3a5054` |
+| **AC3** | Valid inputs normalise to 2-decimal strings, including Arabic-Indic digits. | Unit test `tests/unit/mizano-money-input.test.ts:67-77` verifying numbers (`10`, `10.5`, `0`), decimal strings (`"10"`, `"10.5"`, `"10.50"`, `"0.00"`), and Arabic-Indic digits (`"١٢.٥"`) format to `"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`. | 8/8 unit tests pass | `0d3a5054` |
+| **AC4** | Regression test demonstrates the PR #279 bug pattern escaping `safeParse` as an unhandled raw `Error`. | Unit test `tests/unit/mizano-money-input.test.ts:116-150` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` implementation. | 8/8 unit tests pass | `0d3a5054` |
+
+---
 
 ## Test Execution Evidence
 
-### 1. Regression Test Failure on Base (before fix)
+### 1. Regression Test Failure on Base (`origin/main`)
+On base `origin/main`, `moneyInput` is not defined in `src/integrations/providers/mizano.ts`:
+
 ```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts
- FAIL  |unit| tests/unit/flowline-field-scoring.test.ts > flowline-field scoring gaps (#141) > :117 approved policy text is not a cancellation promise
-AssertionError: expected true to be false // Object.is equality
-
-- Expected
-+ Received
-
-- false
-+ true
-
- ❯ tests/unit/flowline-field-scoring.test.ts:28:81
-     27|     // Finding 3 (issue #226): an empty approvedInformation entry alon…
-     28|     expect(scoreNoPromise("We will refund you today.", "we will refund…
-       |                                                                                 ^
+$ nice -n 10 pnpm vitest run tests/unit/mizano-money-input.test.ts --maxWorkers=2
+ FAIL  |unit| tests/unit/mizano-money-input.test.ts > mizano moneyInput zod schema > AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error
+AssertionError: expected [Function] to not throw an error but 'TypeError: Cannot read properties of undefined (reading 'safeParse')' was thrown
+...
+Test Files  1 failed (1)
+     Tests  8 failed (8)
+Exit code: 1
 ```
 
-### 2. Unit Tests Passing on Head
+Furthermore, in test case `AC4`, executing the flawed pattern from PR #279 proves that throwing a plain `Error` escapes `safeParse`:
+```typescript
+const buggyTransformSchema = z.union([z.number(), z.string()]).transform((val) => {
+  const result = toDecimalString(val, 2);
+  if (result.startsWith("-")) {
+    throw new Error("must be a positive decimal string with up to 2 decimal places");
+  }
+  return result;
+});
+
+// Throws raw Error escaping safeParse boundary:
+expect(() => buggyTransformSchema.safeParse(-5)).toThrowError(
+  "must be a positive decimal string with up to 2 decimal places"
+);
 ```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts tests/unit/ai-hub-shared-protocols.test.ts tests/unit/password-reset-lock-order.test.ts
- ✓ |unit| tests/unit/flowline-field-scoring.test.ts (8 tests) 17ms
- ✓ |unit| tests/unit/ai-hub-shared-protocols.test.ts (13 tests) 3ms
- ✓ |unit| tests/unit/password-reset-lock-order.test.ts (6 tests) 4ms
+
+### 2. Unit and Contract Tests Passing on Head (`0d3a5054`)
+```
+$ nice -n 10 pnpm vitest run tests/unit/mizano-money-input.test.ts --maxWorkers=2
+ ✓ |unit| tests/unit/mizano-money-input.test.ts (8 tests) 5ms
+   ✓ mizano moneyInput zod schema (8)
+     ✓ AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error 1ms
+     ✓ AC1 & AC2: safeParse on negative decimal strings returns { success: false } without throwing 0ms
+     ✓ AC1 & AC2: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing 0ms
+     ✓ AC1 & AC2: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing 0ms
+     ✓ AC2: parse on negative values throws a ZodError, not a plain Error 0ms
+     ✓ AC3: normalizes valid positive numbers and decimal strings to fixed scale 2 0ms
+     ✓ AC2: mizano.create_draft_quote action input schema uses moneyInput with safeParse 1ms
+     ✓ AC4: proves regression where throwing raw Error in transform escapes safeParse (PR #279 bug) 0ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Duration  340ms
+Exit code: 0
+```
+
+Contract tests:
+```
+$ npx vitest run tests/contract/mizano.test.ts tests/contract/mizano-http.test.ts tests/contract/mizano-fake.test.ts
+ ✓ |contract| tests/contract/mizano-fake.test.ts (8 tests) 75ms
+ ✓ |contract| tests/contract/mizano-http.test.ts (3 tests) 92ms
+ ✓ |contract| tests/contract/mizano.test.ts (43 tests) 31ms
 
  Test Files  3 passed (3)
-      Tests  27 passed (27)
-   Duration  406ms
+      Tests  54 passed (54)
+Exit code: 0
 ```
 
 ### 3. Typecheck and Lint
 ```
-$ pnpm typecheck && pnpm lint
-> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
+$ pnpm typecheck
+> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296
 > tsc --noEmit
+Exit code: 0
 
-> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
+$ pnpm lint
+> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296
 > eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
 
-### 4. Docs Check
-```
-$ pnpm vitest run tests/unit/docs-check-script.test.ts tests/unit/docs-index.test.ts
- Test Files  2 passed (2)
-      Tests  99 passed (99)
-   Duration  4.42s
-```
+---
+
+## Originating Issue & Sentry
+- **Originating review finding:** [PR #279 discussion r4278242714](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/279#discussion_r4278242714)
+- **Originating Sentry issue:** None (internal review finding split from PR #279)
+- **E2E Waiver:** `E2E: not needed — internal schema validation in mizano.ts; contract and unit tests cover safeParse/parse behavior`
+- **Linkage:** Supersedes part of #279. Refs #232.
