@@ -531,3 +531,54 @@ describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
     }
   });
 });
+
+describe("claude.yml safety and inertness invariants", () => {
+  const text = read(".github/workflows/claude.yml");
+  const byJob = jobs(text);
+
+  it("does not use pull_request_target on either job", () => {
+    expect(stripComments(text)).not.toMatch(/pull_request_target/);
+  });
+
+  it("gates execution behind HAS_TOKEN tied to secrets.CLAUDE_CODE_OAUTH_TOKEN so it stays inert when unset", () => {
+    for (const [name, jobText] of Object.entries(byJob)) {
+      expect(jobText, `job ${name}`).toContain("HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}");
+      expect(jobText, `job ${name}`).toMatch(/HAS_TOKEN.*=.*"true"|\[\s*"\$HAS_TOKEN"\s*=\s*"true"\s*\]/);
+      // All action steps are gated on steps.gate.outputs.run == 'true'
+      const actionSteps = steps(jobText).filter((s) => s.uses?.includes("claude-code-action") || s.uses?.includes("actions/checkout"));
+      expect(actionSteps.length).toBeGreaterThan(0);
+      for (const step of actionSteps) {
+        expect(step.if).toBe("steps.gate.outputs.run == 'true'");
+      }
+    }
+  });
+
+  it("pins external actions to 40-character commit SHAs", () => {
+    const uses = text.split(/\r?\n/).filter((line) => /^\s*(?:- )?uses:/.test(line) && !/uses:\s*\.\//.test(line));
+    expect(uses.length).toBeGreaterThanOrEqual(2);
+    for (const line of uses) {
+      expect(line).toMatch(/uses:\s*[\w.-]+\/[\w.-]+@[0-9a-f]{40}\s+# v\d+\.\d+\.\d+\s*$/);
+    }
+  });
+
+  it("declares ubuntu-24.04 runners and no self-hosted runners", () => {
+    for (const [name, jobText] of Object.entries(byJob)) {
+      expect(jobText, `job ${name}`).toMatch(/^ {4}runs-on:\s*ubuntu-24.04$/m);
+      expect(jobText, `job ${name}`).not.toContain("self-hosted");
+    }
+  });
+
+  it("keeps least-privilege permissions: review job has contents: read, not contents: write", () => {
+    expect(byJob.review).toMatch(/^ {6}contents: read\b/m);
+    expect(byJob.review).not.toMatch(/^ {6}contents: write\b/m);
+  });
+});
+
+describe("gate.yml security invariants", () => {
+  const text = read(".github/workflows/gate.yml");
+
+  it("never uses pull_request_target, preventing checkout of untrusted code with write permissions", () => {
+    expect(stripComments(text)).not.toMatch(/pull_request_target/);
+  });
+});
+
