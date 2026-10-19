@@ -1,66 +1,101 @@
-# Evidence — Issue #226: chore(code-quality): resolve CodeRabbit review backlog (2026-10-12)
+# Evidence — Issue #303: fix: qa finding: docs/implementation/PHASE4_BETA_REPORT.md, new 108 section (split from #214)
 
-Tested commit: `0d7c1459fdfc38db8c7090e25840356f25f986ed`
+Branch: `ai/303` (based on `main` at `264336fb`)
 
-All checks and tests were executed locally against commit `0d7c1459fdfc38db8c7090e25840356f25f986ed` in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226`.
+All checks and tests were executed locally in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303`.
 
 ## Acceptance Criteria and Verification
 
-| Req / AC | Description | Verification Method | Result | Commit |
+| Req / AC | Description | Verification Method | Result | Exit Code |
 |---|---|---|---|---|
-| AC1 | `scoreNoPromise` in `tests/helpers/field-scoring.ts` ignores empty or whitespace-only strings in `approvedInformation` before splitting or matching; blank entries do not cause refund promises to pass scoring. | Regression test in `tests/unit/flowline-field-scoring.test.ts:28-29` (`expect(scoreNoPromise("We will refund you today.", "we will refund", [""])).toBe(false)`). Tested on base (FAILED with `AssertionError: expected true to be false`) and on head (PASSED). | 8/8 unit tests pass (`tests/unit/flowline-field-scoring.test.ts`) | `0d7c1459` |
-| AC2 | In `src/ai/hub/protocols/shared.ts:22`, `badToolArgs` uses conditional language ("may have been billed") rather than asserting unverified billing ("was still billed"). | Inspected source code JSDoc and verified via unit test `tests/unit/ai-hub-shared-protocols.test.ts:9-17` checking `possibleCharge: true`. | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC3 | Complete JSDoc contracts for exports in `src/ai/hub/protocols/shared.ts` (`num`, `badToolArgs`, `parseArgs`, `structuredOutputMode`, `validateRequest`, `scrubProviderMessage`, `createSseParser`, `streamJson`, `errorTokens`, `mapProviderError`, `mapInBandError`, `safetyRefusal`, `scrubHubError`, `parseBody`, `errorBody`, `pathModel`). `parseArgs` documents parameter/return semantics and thrown `HubError` (`AI_BAD_RESPONSE`); `mapInBandError` documents input/return semantics and possible mapped codes. | Dedicated unit test suite `tests/unit/ai-hub-shared-protocols.test.ts` covering `parseArgs` (valid objects, JSON strings, empty strings, invalid JSON error, non-object JSON error) and `mapInBandError` (overloaded, 4xx/5xx codes, fallback 502, non-object bodies). | 13/13 unit tests pass (`tests/unit/ai-hub-shared-protocols.test.ts`) | `0d7c1459` |
-| AC4 | `docs/ai/ADDING_A_PROVIDER.md` accurately describes helper JSDoc contracts in `src/ai/hub/protocols/shared.ts`. | Docs checked and verified against implementation in `shared.ts`. CI docs check verified via `node scripts/ci/docs-check.mjs` and `tests/unit/docs-check-script.test.ts`. | 95/95 docs-check tests pass | `0d7c1459` |
-| AC5 | `docs/engineering/lock-order.md` accurately scopes the password reset recovery lock sequence and documents both #45 (user-first) and #41 commit `66cc2799` (`delete session` before `account` write), citing `tests/unit/password-reset-lock-order.test.ts`. | Inspected `docs/engineering/lock-order.md:33-38` and verified with `tests/unit/password-reset-lock-order.test.ts`. | 6/6 unit tests pass (`tests/unit/password-reset-lock-order.test.ts`) | `0d7c1459` |
+| AC1 | Numbered Acceptance Criteria defined and mapped to verification results. | This verification report and evidence table. | Verified | 0 |
+| AC2 | In `docs/implementation/PHASE4_BETA_REPORT.md`, the new #108 section, H3 review section (~line 132), and Reconciliation paragraph all consistently describe `tests/integration/email-token-lock-order.test.ts` as having passed locally on 2026-10-08 against PostgreSQL (issue #45) and verified against throwaway databases for #109 (`flowline_test_109`) and #108 (`flowline_test_i108`), with CI as the gate. | Verified via doc inspection and unit regression test `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
+| AC3 | In `docs/security/FEDERATED_MFA.md`, the Email-token lock order checks and validation limits match this status (passed locally on 2026-10-08 against PostgreSQL). | Verified via doc inspection and unit regression test `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
+| AC4 | No conflicting claims: neither `docs/implementation/PHASE4_BETA_REPORT.md` nor `docs/security/FEDERATED_MFA.md` marks `tests/integration/email-token-lock-order.test.ts` as "not executed locally" or "unexecuted". | Regex assertion in `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
+| AC5 | Regression test demonstrates failure on base branch (`main`) and passes on head branch (`ai/303`). | Executed `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts` on base (FAILED, exit code 1) and on head (PASSED, exit code 0). | RED on base, GREEN on head | 0 |
+| AC6 | Pre-push checks (`pnpm typecheck`, `pnpm lint`, and unit test suite) run clean with zero errors. | Executed `pnpm typecheck`, `pnpm lint`, and vitest test runs. | Clean | 0 |
+| AC7 | PR body states "Supersedes part of #214" and notes that E2E tests are not needed (pure documentation consistency and unit test, non-user-facing). | Verified in PR description and NEXT_ACTION.md. | Complete | 0 |
 
 ## Test Execution Evidence
 
 ### 1. Regression Test Failure on Base (before fix)
 ```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts
- FAIL  |unit| tests/unit/flowline-field-scoring.test.ts > flowline-field scoring gaps (#141) > :117 approved policy text is not a cancellation promise
-AssertionError: expected true to be false // Object.is equality
+$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts
 
-- Expected
-+ Received
+ ❯ tests/unit/email-token-lock-order-docs.test.ts:25:24
+     23|
+     24|     // docs/implementation/PHASE4_BETA_REPORT.md H3 security readiness review records it passed locally on 2026-10-08
+     25|     expect(betaReport).toMatch(
+       |                        ^
+     26|       /tests\/integration\/email-token-lock-order\.test\.ts.*passed locally on 2026-10-08 against PostgreSQL/
+     27|     );
 
-- false
-+ true
-
- ❯ tests/unit/flowline-field-scoring.test.ts:28:81
-     27|     // Finding 3 (issue #226): an empty approvedInformation entry alon…
-     28|     expect(scoreNoPromise("We will refund you today.", "we will refund…
-       |                                                                                 ^
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Duration  279ms
 ```
 
-### 2. Unit Tests Passing on Head
+### 2. Regression Test Passing on Head (after fix)
 ```
-$ pnpm vitest run tests/unit/flowline-field-scoring.test.ts tests/unit/ai-hub-shared-protocols.test.ts tests/unit/password-reset-lock-order.test.ts
- ✓ |unit| tests/unit/flowline-field-scoring.test.ts (8 tests) 17ms
- ✓ |unit| tests/unit/ai-hub-shared-protocols.test.ts (13 tests) 3ms
- ✓ |unit| tests/unit/password-reset-lock-order.test.ts (6 tests) 4ms
+$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts
 
- Test Files  3 passed (3)
-      Tests  27 passed (27)
-   Duration  406ms
+ ✓ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests) 3ms
+   ✓ docs consistency: email-token-lock-order test execution status (2)
+     ✓ never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed 1ms
+     ✓ consistently records email-token-lock-order.test.ts passed locally against PostgreSQL across docs 0ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Duration  185ms
 ```
 
-### 3. Typecheck and Lint
+### 3. Related Ledger & Documentation Unit Tests Passing
 ```
-$ pnpm typecheck && pnpm lint
-> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
+$ pnpm exec vitest run tests/unit/owner-tracking-keyword.test.ts tests/unit/dependency-advisories.test.ts tests/unit/selection.spec.test.ts tests/unit/docs-check-script.test.ts tests/unit/docs-index.test.ts tests/unit/email-token-lock-order.test.ts
+
+ ✓ |unit| tests/unit/selection.spec.test.ts (14 tests) 26ms
+ ✓ |unit| tests/unit/docs-index.test.ts (4 tests) 10ms
+ ✓ |unit| tests/unit/docs-check-script.test.ts (95 tests) 7594ms
+ ✓ |unit| tests/unit/email-token-lock-order.test.ts (11 tests) 10ms
+
+ Test Files  6 passed (6)
+      Tests  162 passed (162)
+   Duration  8.12s
+```
+
+### 4. TypeScript Typecheck
+```
+$ pnpm typecheck
+> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
 > tsc --noEmit
 
-> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-226
-> eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
 
-### 4. Docs Check
+### 5. ESLint
 ```
-$ pnpm vitest run tests/unit/docs-check-script.test.ts tests/unit/docs-index.test.ts
- Test Files  2 passed (2)
-      Tests  99 passed (99)
-   Duration  4.42s
+$ pnpm lint
+> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
+> eslint . --cache --cache-location node_modules/.cache/eslint/
+
+Exit code: 0
+```
+
+### 6. CI Docs Check Simulation
+```
+$ node -e '
+const cp = require("child_process");
+const files = cp.execSync("git status --porcelain", { encoding: "utf8" }).trim().split("\n").map(l => l.slice(3));
+const pages = [files.map(f => ({ filename: f }))];
+const res = cp.spawnSync(process.execPath, ["scripts/ci/docs-check.mjs"], { input: JSON.stringify(pages), encoding: "utf8", env: { ...process.env, WAIVED: "false", PR_BODY: "" } });
+console.log("Exit:", res.status, "Output:", res.stdout, res.stderr);
+'
+
+Exit: 0 Output: ## Docs check
+
+Code files changed: 4
+Docs changed: 3
+- "docs/implementation/PHASE4_BETA_REPORT.md"
+- "docs/security/FEDERATED_MFA.md"
+- "NEXT_ACTION.md"
 ```

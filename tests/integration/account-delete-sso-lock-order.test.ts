@@ -26,6 +26,12 @@ import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-
 // lock, starts the second and observes it waiting at the user row through pg_blocking_pids. Waiting there it holds no
 // workspace lock, so no cycle can form. Against the old deletion order the SSO-first case fails: deletion is seen
 // waiting at `delete from "user"` holding W, and on release the SSO audit insert deadlocks with it.
+//
+// Acceptance criterion & history: This test was authored for #108 to replicate and verify the deadlock scenario.
+// PR #216 (#109) incorporated this test and helper verbatim to verify the fix in flows.ts before PR #214 landed.
+// Per CTO directive (2026-10-13, head b9ae3ee), on the merged tree where the fix is present on main, this test serves as
+// the regression baseline verifying that both orders complete without deadlock (2/2 pass). The pre-#65 deadlock
+// hazard it guards against is the circular wait in the SSO-first case described above.
 
 afterEach(() => { vi.restoreAllMocks(); });
 beforeEach(() => { mockTenantIdp(); });

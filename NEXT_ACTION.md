@@ -1,5 +1,10 @@
 # Next action — 2026-10-03
 
+## Issue #303 — harness handoff (2026-10-19)
+
+Resolved QA finding split from PR #214: reconciled `tests/integration/email-token-lock-order.test.ts` status across `docs/implementation/PHASE4_BETA_REPORT.md` (#108 section, H3 readiness section, Reconciliation paragraph) and `docs/security/FEDERATED_MFA.md` (Checks, Validation limits) to consistently record that it passed locally on 2026-10-08 against PostgreSQL (issue #45) and was verified locally on #108 (`flowline_test_i108`) and #109 (`flowline_test_109`). Added unit test `tests/unit/email-token-lock-order-docs.test.ts` (fails on base, passes on head).
+Harness next: push branch `ai/303`, open PR with "Supersedes part of #214", ensure checks pass, and automerge. E2E: not needed — docs consistency and unit test only.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
