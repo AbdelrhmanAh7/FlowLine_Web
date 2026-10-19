@@ -40,7 +40,7 @@ async function collectResponses(page: Page) {
   return bodies;
 }
 
-test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)", async ({ page }) => {
+test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)", async ({ page, browser }) => {
   test.setTimeout(120_000);
   const bodies = await collectResponses(page);
   const email = uniqueEmail("platform-admin");
@@ -125,6 +125,59 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await expect(englishPreview).toBeVisible();
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await expect(publishedNote).toHaveText("Previewed English copy");
+
+    // #181: a refused save shows the translated message for its error code (never the server's text), the editor stays
+    // on screen without the app error boundary, and the same Save draft button saves again without a reload. The
+    // refusals are injected at the network edge; tests/integration/platform-copy-errors.test.ts proves the route
+    // really answers with these codes.
+    const copyApi = "**/api/platform/copy";
+    const editorAlert = (p: Page) => p.getByRole("main").getByRole("alert");
+    const refuseSave = (p: Page, refusal: { status: number; code: string } | "network") =>
+      p.route(copyApi, (route) => {
+        if (route.request().method() !== "PATCH") return route.continue();
+        if (refusal === "network") return route.abort("failed");
+        return route.fulfill({ status: refusal.status, json: { error: { code: refusal.code, message: "Refused (server text)" } } });
+      });
+    const refusals = [
+      { refusal: { status: 409, code: "REVISION_CONFLICT" }, shown: "This changed since you loaded it. Reload and try again." },
+      { refusal: { status: 403, code: "STEP_UP_REQUIRED" }, shown: "Confirm your identity in the admin panel before saving or publishing." },
+      { refusal: { status: 500, code: "INTERNAL" }, shown: "Could not save the draft. Check the text and refresh if it changed elsewhere." },
+      { refusal: "network" as const, shown: "Can't reach Flowline — check your connection and try again." },
+    ];
+    for (const [i, { refusal, shown }] of refusals.entries()) {
+      await page.locator("#copy-en").fill(`Refused save ${i}`);
+      await refuseSave(page, refusal);
+      try {
+        await page.getByRole("button", { name: "Save draft" }).click();
+        await expect(editorAlert(page)).toHaveText(shown);
+        await expect(page.getByText("Draft saved.")).toHaveCount(0);
+        await expect(page.getByRole("heading", { name: "Copy editor" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "⚠ Something went wrong" })).toHaveCount(0);
+      } finally {
+        // A refusal left in place would also refuse the restore below and hide this failure behind it.
+        await page.unroute(copyApi);
+      }
+      await page.getByRole("button", { name: "Save draft" }).click();
+      await expect(page.getByText("Draft saved.")).toBeVisible();
+      await expect(editorAlert(page)).toHaveCount(0);
+    }
+    // The same admin session in Arabic (RTL) shows the Arabic catalogue text; nothing is saved from this context.
+    const state = await page.context().storageState();
+    const arabic = await browser.newContext({ storageState: { ...state, cookies: state.cookies.map((c) => (c.name === "fl_locale" ? { ...c, value: "ar" } : c)) } });
+    try {
+      const ar = await arabic.newPage();
+      await ar.goto("/admin/copy");
+      await expect(ar.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(ar.getByRole("heading", { name: "تحرير النصوص" })).toBeVisible();
+      await ar.locator("#copy-en").fill("Refused save ar");
+      await refuseSave(ar, "network");
+      await ar.getByRole("button", { name: "حفظ في المسودة", exact: true }).click();
+      await expect(editorAlert(ar)).toHaveText("تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا.");
+      await expect(ar.getByRole("heading", { name: "⚠ حدث خطأ ما" })).toHaveCount(0);
+      await expect(ar.getByRole("button", { name: "حفظ في المسودة", exact: true })).toBeEnabled();
+    } finally {
+      await arabic.close();
+    }
   } finally {
     // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
     // is dirty raises window.confirm (accept it), and Save/Publish are disabled when there is nothing to save or publish.
