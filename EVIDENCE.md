@@ -1,6 +1,6 @@
 # Evidence — Issue #303: fix: qa finding: docs/implementation/PHASE4_BETA_REPORT.md, new 108 section (split from #214)
 
-Branch: `ai/303` (based on `main` at `264336fb`)
+Branch: `ai/303` (based on `main` at `264336fb`). Tested head SHA: `26c2e2535363aebcacea5a1e38aa543808b48c09`.
 
 All checks and tests were executed locally in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303`.
 
@@ -136,9 +136,9 @@ Docs changed: 3
 - "NEXT_ACTION.md"
 ```
 
-## QA Round 1 Finding — Root-Cause Analysis and Resolution
+## QA Review Findings — Root-Cause Analysis and Verification
 
-### Finding
+### QA Round 1 Finding (`494f1c201fd5`)
 `tests/unit/email-token-lock-order-docs.test.ts:25-27` (on commit `4b78381`): the H3 assertion
 `/tests\/integration\/email-token-lock-order\.test\.ts.*passed locally on 2026-10-08 against PostgreSQL/`
 matched against the **entire** `betaReport` string, so it was also satisfied by the Reconciliation
@@ -150,13 +150,18 @@ Because the Reconciliation paragraph (in `## Account deletion vs the user's own 
 line 122) **also** contains `email-token-lock-order.test.ts … passed locally on 2026-10-08
 against PostgreSQL`, the regex was ambiguous: it did not pin the H3 paragraph.
 
-### Fix (commit `a941cbb2`, file `tests/unit/email-token-lock-order-docs.test.ts:26-30`)
+### Fix (commit `26c2e253`, file `tests/unit/email-token-lock-order-docs.test.ts:24-30`)
 1. **Section scoping**: `betaReport.split("## H3 security readiness review")[1]?.split(/^## /m)[0]`
    extracts only the text between `## H3 security readiness review` and the next `## ` heading.
    The Reconciliation paragraph (in a different `##` section) is excluded.
 2. **Unique anchor**: the regex now requires `two-connection PostgreSQL test` — a phrase present
    only in the H3 section, never in the Reconciliation paragraph.
 3. Applied the same section-scoping to the `#108` and `#109` assertions (lines 33-47).
+
+### QA Round 2 Verification (`742158b6c8c2` & `fb7fc4f024d6`)
+On commit `26c2e253`:
+- Finding `742158b6c8c2` (`docs/implementation/PHASE4_BETA_REPORT.md`): Verified that H3 review section (~line 140) states that `tests/integration/email-token-lock-order.test.ts` passed locally on 2026-10-08 against PostgreSQL (issue #45; also verified locally on #108 and #109), and CI is the gate, consistent with `docs/security/FEDERATED_MFA.md`.
+- Finding `fb7fc4f024d6` (`tests/unit/email-token-lock-order-docs.test.ts`): Verified that `tests/unit/email-token-lock-order-docs.test.ts` asserts this status with scoped assertions that fail on base (`main`) and pass on head (`ai/303`).
 
 ### Proof the fix is correct
 ```

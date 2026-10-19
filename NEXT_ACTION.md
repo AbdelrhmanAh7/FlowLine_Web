@@ -2,8 +2,8 @@
 
 ## Issue #303 — harness handoff (2026-10-19)
 
-Resolved QA finding split from PR #214: reconciled `tests/integration/email-token-lock-order.test.ts` status across `docs/implementation/PHASE4_BETA_REPORT.md` (#108 section, H3 readiness section, Reconciliation paragraph) and `docs/security/FEDERATED_MFA.md` (Checks, Validation limits) to consistently record that it passed locally on 2026-10-08 against PostgreSQL (issue #45) and was verified locally on #108 (`flowline_test_i108`) and #109 (`flowline_test_109`). Added unit test `tests/unit/email-token-lock-order-docs.test.ts` (fails on base, passes on head; H3 assertion anchored specifically to `## H3 security readiness review` and `two-connection PostgreSQL test` per QA Round 1 finding).
-Harness next: push branch `ai/303`, open PR with "Supersedes part of #214", ensure checks pass, and automerge. E2E: not needed — docs consistency and unit test only.
+Resolved QA finding split from PR #214: reconciled `tests/integration/email-token-lock-order.test.ts` status across `docs/implementation/PHASE4_BETA_REPORT.md` (#108 section, H3 readiness section, Reconciliation paragraph) and `docs/security/FEDERATED_MFA.md` (Checks, Validation limits) to consistently record that it passed locally on 2026-10-08 against PostgreSQL (issue #45) and was verified locally on #108 (`flowline_test_i108`) and #109 (`flowline_test_109`). Added unit test `tests/unit/email-token-lock-order-docs.test.ts` (fails on base, passes on head; H3 assertion anchored specifically to `## H3 security readiness review` and `two-connection PostgreSQL test` per QA Round 1 finding; verified clean in QA Round 2 on head `26c2e253`).
+Harness next: push branch `ai/303`, ensure checks pass, and automerge PR #308. E2E: not needed — docs consistency and unit test only.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
