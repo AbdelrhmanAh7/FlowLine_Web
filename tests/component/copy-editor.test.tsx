@@ -192,6 +192,25 @@ describe("CopyEditor error handling (#181)", () => {
         expectOneWrite(request);
       });
 
+      it("NETWORK error shows the message immediately without awaiting the refetch", async () => {
+        const { t, stateRefetch } = setup(locale);
+        // Make the refetch slow to verify the error appears first
+        let refetchResolve: (value: unknown) => void;
+        const refetchPromise = new Promise((resolve) => { refetchResolve = resolve; });
+        stateRefetch.mockReturnValue(refetchPromise);
+        mockApi.mockRejectedValueOnce(new ApiError(0, "NETWORK", "Failed to fetch", true));
+        await user.click(await trigger("save", t));
+
+        // The error alert should appear without waiting for the refetch to resolve
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(t("errors.NETWORK"));
+        expect(stateRefetch).toHaveBeenCalledTimes(1);
+        // Now resolve the refetch to clean up
+        refetchResolve!({ data: copyState });
+        await refetchPromise;
+        expectOneWrite(writes[0].request);
+      });
+
       it("a 5xx renders the fallback message (not the server text) and refetches the copy", async () => {
         const { t, stateRefetch } = setup(locale);
         mockApi.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "Something went wrong on our side (server text)"));

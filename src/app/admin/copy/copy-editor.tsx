@@ -104,9 +104,15 @@ export function CopyEditor() {
         return;
       }
       if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
-        await state.refetch();
         const errorKey = `errors.${cause.code}` as MessageKey;
         setError(t(errorKey));
+        // For NETWORK errors, the refetch would hit the same connectivity problem; don't await it.
+        // For REVISION_CONFLICT, refetch to get the latest server state.
+        if (cause.code === "REVISION_CONFLICT") {
+          await state.refetch();
+        } else {
+          void state.refetch();
+        }
         return;
       }
     }
