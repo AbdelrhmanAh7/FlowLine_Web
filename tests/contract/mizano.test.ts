@@ -468,7 +468,44 @@ describe("mizano.create_draft_quote", () => {
     expect((await send(12.5)).lines[0].qty).toBe("12.50");
   });
 
-  it.each(["1.005", 0.001, 0.004, 10.505, "abc", " 5 ", "1e3", "", Number.NaN, Number.POSITIVE_INFINITY, 1e21])(
+  it.each([
+    [1234567.89, "1234567.89"],
+    [99999999.99, "99999999.99"],
+    [0.07, "0.07"],
+    [0, "0.00"],
+  ])(
+    "normalizes number %j to exact string %j for qty, unitPrice and taxRate",
+    async (val, expected) => {
+      for (const field of ["qty", "unitPrice", "taxRate"] as const) {
+        const { ctx, request } = ctxReturning(quoteResponse);
+        const line = { item: "Consulting", qty: "1.00", unitPrice: "1.00", taxRate: "0.00", [field]: val };
+        await runAction("mizano.create_draft_quote", ctx, {
+          customerId: "cust_123",
+          currency: "EGP",
+          lines: [line],
+        });
+        expect(request).toHaveBeenCalledTimes(1);
+        const body = request.mock.calls[0][0].json as { lines: Array<{ qty: string; unitPrice: string; taxRate: string }> };
+        expect(body.lines[0][field]).toBe(expected);
+      }
+    },
+  );
+
+  it.each([
+    "1.005",
+    0.001,
+    0.004,
+    10.505,
+    "abc",
+    " 5 ",
+    "1e3",
+    "",
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    1e21,
+    0.1 + 0.2,
+    1e-7,
+  ])(
     "rejects %j as a validation error without rounding or calling Mizano",
     async (bad) => {
       for (const field of ["qty", "unitPrice", "taxRate"] as const) {

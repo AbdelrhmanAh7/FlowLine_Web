@@ -70,7 +70,7 @@ const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
       : Number.isFinite(val) &&
         val >= 0 &&
         val <= Number.MAX_SAFE_INTEGER / 100 &&
-        Math.abs(val * 100 - Math.round(val * 100)) < 1e-9;
+        STRING_MONEY.test(String(val));
   let out = "";
   if (valid) {
     try {
