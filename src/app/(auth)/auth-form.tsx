@@ -77,7 +77,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           setPending(false);
           return;
         }
-        // Test-environment-only (#124): the account is already verified and no e-mail was sent. With the server-wide switch
+        // Test-environment-only (issue 124): the account is already verified and no e-mail was sent. With the server-wide switch
         // the sign-up has signed in too (it returns a session token); with the per-browser cookie it has not, so sign in
         // now instead of showing "Check your inbox". If that fails, the sign-in page takes over.
         if (res.data?.user.emailVerified) {
