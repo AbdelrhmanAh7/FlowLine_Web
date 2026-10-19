@@ -3,7 +3,7 @@
 Part 1/4 of #195: account security page, user-menu link and read-only two-step verification status.
 Originating Sentry issue: none (feature work from goal demo #150, FL G1 step 4, not an error report).
 
-Tested code: branch `ai/196` at `440219f5` (merged `origin/main` commit `264336fb`).
+Tested code: branch `ai/196` at `fffaa412` (merged `origin/main` commit `264336fb`).
 Runs: 2026-10-19, local macOS, Node 26, Chromium (Playwright), isolated stack on port 3100 with database `flowline_test`.
 
 ## Acceptance criteria
@@ -18,9 +18,9 @@ Runs: 2026-10-19, local macOS, Node 26, Chromium (Playwright), isolated stack on
 
 | AC | Covering tests / commands | Observed exit code & result |
 |---|---|---|
-| AC1 | `e2e/account-security.spec.ts` ("user menu opens the security page and shows the two-step status"); army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` ("@issue-196 AC1"), `e2e-army/features/ui-flows.e2e.ts` ("[fl-workspace-nav.3]") | Exit 0: Playwright passed in 7.3s. Screenshot `user-menu-ar-rtl.png` verifies the "الأمان" item in the Account group. |
+| AC1 | `e2e/account-security.spec.ts` ("user menu opens the security page and shows the two-step status"); army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` ("@issue-196 AC1"), `e2e-army/features/ui-flows.e2e.ts` ("[fl-workspace-nav.3]") | Exit 0: Playwright passed in 2.7s. Screenshot `user-menu-ar-rtl.png` verifies the "الأمان" item in the Account group. |
 | AC2 | `e2e/account-security.spec.ts` (Off initially, then TOTP enabled via `/api/auth/two-factor/enable` + `verify-totp`, reload, On) | Exit 0: Playwright passed. Shows heading "Two-step verification" and badge "Off", then "On" after MFA enrollment. |
-| AC3 | `e2e/account-security.spec.ts` ("a signed-out visit to the security page redirects to sign-in"); army: `e2e-army/109-account-delete-shared-audit.e2e.ts` ("@issue-196 AC3"), `e2e-army/features/core-api.e2e.ts` ("[fl-email-flows.7]") | Exit 0: Playwright passed in 1.4s (`GET /account/security 307` redirect to `/sign-in 200`). |
+| AC3 | `e2e/account-security.spec.ts` ("a signed-out visit to the security page redirects to sign-in"); army: `e2e-army/109-account-delete-shared-audit.e2e.ts` ("@issue-196 AC3"), `e2e-army/features/core-api.e2e.ts` ("[fl-email-flows.7]") | Exit 0: Playwright passed in 596ms (`GET /account/security 307` redirect to `/sign-in 200`). |
 | AC4 | `tests/unit/account-security-page.test.ts` (10 tests); `tests/unit/i18n.test.ts` (16 tests ar/en key parity); army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` ("@issue-196 AC4"); screenshots EN/LTR and AR/RTL | Exit 0: unit tests 26/26 passed. Arabic `dir=rtl`, heading "الأمان", "التحقق بخطوتين", badge "غير مفعّل" at row end. Mutation check below. |
 | AC5 | `git diff --name-only origin/main...HEAD \| grep -E "setup-flow\|\.github\|src/db/schema\|drizzle/\|src/server/auth\|src/lib/auth"` | Exit 1 (no forbidden files matched). |
 
@@ -40,8 +40,9 @@ Feature map (`node src/lib/featurecov.ts map FlowLine_Web <changed files>` in th
 
 | Command | Exit Code | Result |
 |---|---|---|
-| `FLOWLINE_BETA_MODE=invite_only pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` | 0 | 2 passed (13.8s) |
+| `FLOWLINE_BETA_MODE=invite_only pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` | 0 | 2 passed (7.6s) |
 | `pnpm vitest run --project unit tests/unit/account-security-page.test.ts tests/unit/i18n.test.ts` | 0 | 26 passed (26) |
+| `pnpm vitest run --project unit tests/unit/gate-groups.test.ts` | 0 | 8 passed (8) |
 | same, with `text-left` in page and `shell.userMenu.security` removed from `ar.json` (reverted) | 1 | 2 failed / 8 passed (regression test red verification) |
 | `pnpm typecheck` (`tsc --noEmit`) | 0 | clean, 0 errors |
 | `pnpm eslint src/app/account/security/page.tsx src/components/shell/app-shell.tsx e2e/account-security.spec.ts tests/unit/account-security-page.test.ts e2e-army/85-sign-in-and-core-flow.e2e.ts e2e-army/109-account-delete-shared-audit.e2e.ts e2e-army/features/core-api.e2e.ts e2e-army/features/ui-flows.e2e.ts` | 0 | clean, 0 warnings/errors |
