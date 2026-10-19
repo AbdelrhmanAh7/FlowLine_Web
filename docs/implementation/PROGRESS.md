@@ -71,6 +71,7 @@ All times are 2026-09-27, local. Branch `phase-2`.
 
 - #179 (Refs #119 part 1/3): `getCopyEditorState` (`src/server/platform-copy.ts`) now maps a settings-store failure to `HttpError(503, COPY_STATE_UNAVAILABLE)` (log carries only the error type name) and never emits `undefined` base entries. Covered by `tests/unit/platform-copy-state.test.ts` and the `@issue-179` test in `e2e-army/200-route-error-headers.e2e.ts` (merged there to stay within the hub's 8-file e2e-army cap; see that file's header).
 - #158 (Refs #30): Safe non-sensitive scaffolding for Owner Actions PP-02..PP-09 (types and read-only contract stub in `src/types/ownerActions.ts`, unit tests in `tests/unit/ownerActions.test.ts`, documented in `docs/implementation/OWNER_ACTIONS.md`). Real payment processing, pricing, legal terms, credentials, and user contact remain strictly owner-only.
+- #300 (Refs #199, supersedes part of #268): Resolved failing check `gate` split from PR #268. Fresh branch `ai/300` off default branch `main` resolves the stale reference to #196 in `AI_QUESTIONS.md`. Guarded by unit regression test `tests/unit/stale-questions-guard.test.ts` (5/5 passed); `pnpm typecheck` and `pnpm lint` exit 0. No user-facing changes (docs/test guard only). Evidence in `artifacts/issue-300/EVIDENCE.md`.
 
 # G5 · Mizano connector v1 (#144) progress log
 

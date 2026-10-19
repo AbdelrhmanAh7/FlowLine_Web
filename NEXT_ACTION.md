@@ -1,5 +1,13 @@
 # Next action — 2026-10-03
 
+## Issue #300 — fix failing check `gate` (supersedes part of #268, 2026-10-19)
+
+Split from PR #268 (parent #199). PR #268 failed `gate` because it was based on `ai/199-p2` containing 11 `e2e-army/*.e2e.ts` files (exceeding the 8-file cap) and unmerged feature commits.
+On clean branch `ai/300` off default branch `main`, the stale blocker reference to #196 in `AI_QUESTIONS.md` is resolved.
+Added regression unit test `tests/unit/stale-questions-guard.test.ts` (5/5 pass) ensuring stale #196 blocker notes and conflicting dependency references are rejected.
+Local checks: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest run tests/unit/stale-questions-guard.test.ts` (5 passed, 0 failed).
+The harness next: push `ai/300`, verify `gate` CI, and automerge with body "Supersedes part of #268".
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
