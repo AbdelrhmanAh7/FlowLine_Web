@@ -1,5 +1,7 @@
 # AI questions / notes
 
+<!-- All past dependency blocker notes are resolved. Guarded by tests/unit/stale-questions-guard.test.ts. -->
+
 ## 2026-10-15 — hub e2e-army file cap reached (recorded, not a blocker)
 
 The hub's verify job copies only the first 8 top-level `e2e-army/*.e2e.ts` files of a branch
