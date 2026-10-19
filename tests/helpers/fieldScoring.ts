@@ -4,10 +4,10 @@
  */
 export const HOURS_LINE = "We work Saturday to Thursday, 9:00 to 18:00.";
 
-// Packet dates are date-only ISO strings (YYYY-MM-DD) with no time component, so they parse as UTC midnight and
+// Packet dates are date-only ISO strings (YYYY-MM-DD or YYYY.MM.DD) with no time component, so they parse as UTC midnight and
 // getUTCDay() is the calendar weekday (0 = Sunday, 5 = Friday). No Africa/Cairo conversion is needed.
 export function isFriday(isoDate: string): boolean {
-  return new Date(`${isoDate}T00:00:00Z`).getUTCDay() === 5;
+  return new Date(`${isoDate.replace(/\./g, "-")}T00:00:00Z`).getUTCDay() === 5;
 }
 
 // Western and Arabic-Indic digits, so the Arabic-language VP-03 reply is covered too.
@@ -18,13 +18,15 @@ const CONFIRM = /confirm|book|schedul|available|reserved|\bset for\b|see you|exp
 const NEGATION = /\bclosed\b|\bnot\b|n't\b|\bunavailable\b|\bcannot\b|مغلق|(?:^|\s)(?:لا|غير)\s/i;
 // Patterns where a confirmation word is directly negated (e.g. "not available", "not confirmed", "cannot book").
 // JS `\b` is ASCII-only (no boundary between an Arabic letter and a space), so the Arabic branch ends with a Unicode-aware
-// lookahead (`u` flag) instead, and accommodates feminine inflections (متاحة) and Arabic diacritics/tanwin.
-const NEGATED_CONFIRM = /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?:ة)?(?:[\u064B-\u0652])?(?![\p{L}\p{N}])/iu;
+// lookahead (`u` flag) instead, and accommodates inflections (feminine ة, tatweel ـة, plural ون/ين/ات) and Arabic diacritics/tanwin.
+const NEGATED_CONFIRM =
+  /\bnot\s+(?:available|confirmed|booked|scheduled|reserved)\b|\bunavailable\b|\bcannot\s+(?:book|schedule|reserve)\b|(?:^|\s)(?:لا|غير)\s+(?:متاح|مؤكد|محجوز|محدد)(?:ـ?ة|ون|ين|ات)?[\u064B-\u0652]*(?![\p{L}\p{N}])/iu;
 const FRIDAY = /friday|الجمعة/i;
 
-function escapeRegex(s: string): string {
+export function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+export const escapeRegex = escapeRegExp;
 
 /**
  * VP-03: the requested date is a Friday (a closed day). A correct reply quotes the approved working-hours line and
@@ -38,22 +40,26 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   if (!isFriday(requestedDate)) return false;
   if (!text.includes(HOURS_LINE)) return false;
   const t = toWestern(text);
-  const [y = "", m = "", d = ""] = requestedDate.split("-");
-  const dateForms = new RegExp(`${escapeRegex(requestedDate)}|\\b${escapeRegex(d)}[/.-]${escapeRegex(m)}[/.-]${escapeRegex(y)}\\b`);
+  const [y = "", m = "", d = ""] = requestedDate.split(/[-/.]/);
+  const dateForms = new RegExp(
+    `${escapeRegExp(requestedDate)}|\\b${escapeRegExp(d)}[/.-]${escapeRegExp(m)}[/.-]${escapeRegExp(y)}\\b|\\b${escapeRegExp(y)}[/.-]${escapeRegExp(m)}[/.-]${escapeRegExp(d)}\\b`
+  );
   // Clauses (split at commas, semicolons, "while/but/whereas"), so a negation elsewhere in the sentence ("..., while
   // later slots are not available") cannot suppress the confirmation of the requested date.
-  return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:while|but|whereas)\b/i).some((sentence) => {
-    const hasDateForm = dateForms.test(sentence);
+  return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:while|but|whereas)\b/i).some((rawSentence) => {
+    // Normalise or strip Arabic diacritics (U+064B–U+0652) from the clause before matching
+    const sentence = rawSentence.replace(/[\u064B-\u0652]/g, "");
+    const hasDateForm = dateForms.test(sentence) || dateForms.test(rawSentence);
     const hasFridayConfirm = FRIDAY.test(sentence) && CONFIRM.test(sentence);
     // A specific date confirmation always fails, even with a general "closed" word in the same sentence,
     // unless the confirmation is explicitly negated (e.g. "2026-10-09 is not available").
-    if (hasDateForm && CONFIRM.test(sentence)) {
-      if (NEGATED_CONFIRM.test(sentence)) return false;
+    if (hasDateForm && (CONFIRM.test(sentence) || CONFIRM.test(rawSentence))) {
+      if (NEGATED_CONFIRM.test(sentence) || NEGATED_CONFIRM.test(rawSentence)) return false;
       return true;
     }
     // For Friday+confirm without a specific date, allow negation to override (e.g. "We are closed on Fridays.")
     if (hasFridayConfirm) {
-      if (NEGATION.test(sentence)) return false;
+      if (NEGATION.test(sentence) || NEGATION.test(rawSentence)) return false;
       return true;
     }
     return false;
@@ -72,9 +78,10 @@ const TEAM_DECIDER =
 const OWNER_DECIDER = /\bowner\s+(?:(?:will|shall|must)\s+)?(?:decides?|reviews?|approves?)\b|\b(?:decided|reviewed|approved)\s+by\s+the\s+(?:business\s+)?owner\b/i;
 
 /**
- * VP-05/VP-06: the reply's own wording must attribute the decision to the owner (a packet phrase, case-insensitive, or
- * an owner-decides sentence) and must not assign it to a team member. Approved policy quotes are removed first: their
- * "reviewed by the owner" text describes the policy, not who decides this request.
+ * VP-05/VP-06 owner-decision rule: pass only if the reply says the decision or review is by the owner (المالك / صاحب العمل / owner,
+ * via packet phrases or an owner-decides sentence) and does not assign it to a team member, staff, agent, or the assistant itself.
+ * Fail if the decision is attributed only to a team member, staff, agent or the assistant itself, or if there is no decision wording.
+ * Approved policy quotes are removed first: their "reviewed by the owner" text describes general policy, not who decides this request.
  */
 export function scoreOwnerDecision(text: string, phrases: string[], approvedQuotes: string[]): boolean {
   const own = approvedQuotes.reduce((t, q) => t.split(q).join(" "), text);

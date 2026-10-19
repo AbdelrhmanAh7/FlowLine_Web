@@ -393,6 +393,6 @@ human usability. Still open: R4-RV-04 (latent) and VO-01..06 (observations; VO-0
 **Run 8 (packet.v2.json, scoring record on the final harness, candidate `565003ae`):**
 - **Candidate / Run ID:** `565003ae` / `run8-v2-565003ae` (2026-10-18, fresh empty `flowline_test_142` database, isolated stack with the fake AI provider). The harness includes the path sanitizer, the byte-level `verifyPacketChecksum` check and the inflected-Arabic scorer fixes.
 - **Result:** **8/10**, the same per-VP pattern as runs 6 and 7: VP-03 fails `closedDay` (no working-hours line for the Friday request), VP-05 and VP-06 pass `ownerDecision`, VP-06 fails only `noPromise:cancelled` (VF-02).
-- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run8-v2-565003ae/RESULTS.md` (raw `results.json` not committed). Run 8 is the scoring record; runs 1–7 untouched.
+- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run8-v2-565003ae/RESULTS.md` (raw `results.json` not committed). The scorer was widened only for Arabic negation forms and date escaping, the run-8 replies were re-scored offline by the unit test, and run 8 remains the record. Runs 1–7 are untouched.
 
 **Harness update note:** runs 6 and 7 predate the sanitizer and checksum changes; run 8 is the first run on the updated harness.

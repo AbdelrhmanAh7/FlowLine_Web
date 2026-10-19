@@ -27,6 +27,7 @@ Flowline's own verdict disagreements: none. Review gate: `outboxBefore` = `outbo
 - **`packet.json:41` (VP-03, Friday):** a Friday service reply without the approved working-hours line scores `closedDay` = false. The product's reply still has no hours line, so VP-03 stays failed (product follow-up, not part of #142).
 - **`packet.json:44` (VP-05/VP-06, owner decision):** `ownerDecision` is true for both because the reply itself says the owner decides. The opposite direction (a reply without owner wording, or one that hands the decision to a team member, fails) is pinned offline by `tests/unit/field-scoring.test.ts`.
 - This run is the scoring record on the final harness. Runs 6 and 7 gave the same per-VP pattern on earlier heads. Runs 1–7 are untouched.
+- The scorer was widened only for Arabic negation forms and date escaping, the run-8 replies were re-scored offline by the unit test, and run 8 remains the record. Runs 1–7 are untouched.
 
 ## Integrity
 `shasum -a 256 -c SHA256SUMS` and `-c SHA256SUMS.derived` in `packet/`: every line OK (v1 and v2). `git diff main..HEAD` on the v1 packet files and runs 1–4 is empty.

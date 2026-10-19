@@ -1,16 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { HOURS_LINE, isFriday, scoreClosedDay, scoreOwnerDecision } from "../helpers/fieldScoring";
+import { HOURS_LINE, escapeRegExp, isFriday, scoreClosedDay, scoreOwnerDecision } from "../helpers/fieldScoring";
 
 const DIR = "artifacts/company-builder/validation/20261001-d224cfb/packet";
 const v2 = JSON.parse(readFileSync(`${DIR}/packet.v2.json`, "utf8"));
 const OWNER = v2.expected["VP-05"].mustQualifyOwnerDecision as string[];
+const date = v2.expected["VP-03"].date as string;
 
 const GENERIC = "Hello,\n\nA member of our team will review your request and confirm the next step. Nothing has been refunded or cancelled yet.";
 const POLICY = "Refunds for cancelled paid visits are reviewed by the owner and confirmed within 3 working days.";
 
 describe("field scoring: closedDay (VP-03, #142)", () => {
-  const date = v2.expected["VP-03"].date as string;
 
   it("packet v2 asks for the check on a Friday date", () => {
     expect(v2.expected["VP-03"].closedDay).toBe(true);
@@ -52,23 +52,43 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاح`, date)).toBe(true);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ لا مؤكد، نأسف.`, date)).toBe(true);
   });
-  it("passes inflected Arabic negation forms (feminine متاحة and tanwin/diacritics)", () => {
+  it("passes inflected Arabic negation forms (feminine متاحة and tanwin/diacritics, tatweel ـة, plural ون/ين/ات)", () => {
     expect(scoreClosedDay(`الخدمة في يوم ٢٠٢٦-١٠-٠٩ غير متاحة.\n\n${HOURS_LINE}`, date)).toBe(true);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاحٍ`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ غير متاحـة`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالموظفون ليوم ٢٠٢٦-١٠-٠٩ غير متاحين.`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالموظفون ليوم ٢٠٢٦-١٠-٠٩ غير متاحون.`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالخدمات ليوم ٢٠٢٦-١٠-٠٩ غير متاحات.`, date)).toBe(true);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nالمواعيد ليوم ٢٠٢٦-١٠-٠٩ لا مؤكدة.`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالمواعيد ليوم ٢٠٢٦-١٠-٠٩ غير مُتَاحَة.`, date)).toBe(true);
   });
-  it("fails an Arabic confirmation of the date even with the hours line", () => {
+  it("fails an Arabic confirmation of the date with an inflected form not preceded by negation, or with diacritics", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ متاح`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nالخدمة في يوم ٢٠٢٦-١٠-٠٩ متاحة.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالخدمة في يوم ٢٠٢٦-١٠-٠٩ متاحـة.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالموظفون في يوم ٢٠٢٦-١٠-٠٩ متاحون.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nالموظفون في يوم ٢٠٢٦-١٠-٠٩ متاحين.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nيوم ٢٠٢٦-١٠-٠٩ مُتاح.`, date)).toBe(false);
   });
   it("fails confirmations worded outside the basic list, and a confirmation next to an unrelated negation", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit is set for 2026-10-09.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nSee you on 2026-10-09.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026-10-09 is confirmed, while later appointments are not available.`, date)).toBe(false);
   });
-  it("fails a dotted date confirmation (09.10.2026) next to the hours line", () => {
+  it("fails a dotted date confirmation (09.10.2026 or 2026.10.09) next to the hours line", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 09.10.2026 is confirmed.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026.10.09 is confirmed.`, date)).toBe(false);
+  });
+  it("date fragment containing '.' does not match an arbitrary character (escapeRegExp, 2026-10-09 vs 2026x10x09)", () => {
+    expect(escapeRegExp("2026.10.09")).toBe("2026\\.10\\.09");
+    expect(new RegExp(escapeRegExp("2026.10.09")).test("2026x10x09")).toBe(false);
+    expect(new RegExp("2026.10.09").test("2026x10x09")).toBe(true);
+    expect(isFriday("2026.10.09")).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026.10.09 is confirmed.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026x10x09 is confirmed.`, date)).toBe(true);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026.10.09 is confirmed.`, "2026.10.09")).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026x10x09 is confirmed.`, "2026.10.09")).toBe(true);
   });
   it("fails when the requested date is not a Friday (the check does not apply)", () => {
     expect(scoreClosedDay(HOURS_LINE, "2026-10-08")).toBe(false);
@@ -129,5 +149,14 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
     expect(scoreClosedDay(body("VP-03"), v2.expected["VP-03"].date)).toBe(false);
     expect(scoreOwnerDecision(body("VP-05"), OWNER, approved())).toBe(false);
     expect(scoreOwnerDecision(body("VP-06"), OWNER, approved())).toBe(false);
+  });
+  it("re-scores the run-8 VP-03, VP-05 and VP-06 reply texts verbatim under the fixed scorer", () => {
+    const vp03Reply = "مرحبًا،\n\nOffice cleaning starts at 900 EGP per visit.\n\nشكرًا لك، وسنؤكد التفاصيل معك.";
+    const vp05Reply = `Hello,\n\n${POLICY}\n\nThe business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.\n\nThank you — we'll confirm the details with you.`;
+    const vp06Reply = `Hello,\n\nCancellations are free up to 24 hours before the visit.\n\n${POLICY}\n\nThe business owner decides this refund or cancellation request. Nothing has been refunded or cancelled.\n\nThank you — we'll confirm the details with you.`;
+
+    expect(scoreClosedDay(vp03Reply, date)).toBe(false);
+    expect(scoreOwnerDecision(vp05Reply, OWNER, v2.approvedInformation)).toBe(true);
+    expect(scoreOwnerDecision(vp06Reply, OWNER, v2.approvedInformation)).toBe(true);
   });
 });
