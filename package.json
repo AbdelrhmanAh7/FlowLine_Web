@@ -20,7 +20,7 @@
     "db:migrate:test": "node scripts/with-env.mjs .env.test tsx src/db/migrate.ts",
     "lint": "eslint . --cache --cache-location node_modules/.cache/eslint/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --project unit",
+    "test": "vitest run --project unit --project component",
     "test:integration": "node scripts/with-env.mjs .env.test vitest run --project integration",
     "test:integration:sharded": "node scripts/test-integration-sharded.mjs",
     "test:e2e": "playwright test",

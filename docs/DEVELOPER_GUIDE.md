@@ -37,7 +37,7 @@ Arabic and light are the defaults. English and dark remain selectable. Use logic
 - **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); renders the translated `errors.NETWORK` message (never the raw client text) and refetches state.
 All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
 
-**Component test coverage (as of #181):** `tests/component/copy-editor.test.tsx` mocks the query hooks and `api`, uses the real translator over the real `ar.json`/`en.json`, and runs every case below in both English and Arabic:
+**Component test coverage (as of #181):** `tests/component/copy-editor.test.tsx` runs in the vitest `component` project (jsdom, Testing Library, setup in `tests/component/setup.ts`). `pnpm test` runs that project together with `unit`, so CI's unit step runs it too. The test mocks the query hooks and `api`, uses the real translator over the real `ar.json`/`en.json`, and runs every case below in both English and Arabic:
 - Catalogue check: every key the error states render exists in both catalogues and resolves to text (Arabic differs from English).
 - Load error with a Retry button that refetches the copy; the write `api()` is not called.
 - Admin session (`me`) load error: the editor still renders, the step-up prompt shows and "Publish draft" is disabled.
