@@ -114,11 +114,19 @@ describe("Deal won → Mizano quote: availability", () => {
     const tpl = DESIGN_TEMPLATES.find((t) => t.id === "deal-won-mizano-quote")!;
     const graph = structuredClone(tpl.graph) as FlowGraph;
     const unknownNodes = async () => (await serverIssues(db, ws.id, graph)).filter((i) => i.code === "UNKNOWN_ACTION").map((i) => i.nodeId).sort();
-    const missing = ["mizano.create_customer", "mizano.create_draft_quote"].filter((id) => !getAction(id));
-    if (missing.length > 0) {
+    // Take both Mizano actions out of the registry for this part, whatever #147 registered, then put them back.
+    const ids = ["mizano.create_customer", "mizano.create_draft_quote"];
+    const removed = ids.flatMap((id) => {
+      const i = mizano.actions.findIndex((a) => a.id === id);
+      return i === -1 ? [] : mizano.actions.splice(i, 1);
+    });
+    try {
+      expect(ids.some((id) => getAction(id))).toBe(false);
       await expect(createFlow(user, ws.id, { templateId: "deal-won-mizano-quote" })).rejects.toMatchObject({ status: 409, code: "TEMPLATE_UNAVAILABLE" });
       // The publish check (serverIssues) also refuses the graph while the actions are unregistered: both Mizano steps.
       expect(await unknownNodes()).toEqual(["customer", "quote"]);
+    } finally {
+      mizano.actions.push(...removed);
     }
     record("mizano.create_customer", (a) => ({ id: "cust-1", name: a.name, company: a.company, email: a.email, phone: a.phone }));
     record("mizano.create_draft_quote", (a) => ({ id: "Q-1", customerId: a.customerId, currency: a.currency, lines: a.lines }));
