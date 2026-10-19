@@ -66,7 +66,7 @@ describe("mizano.create_draft_quote against the fake Mizano API", () => {
     const input = {
       customerId: "cust_fake_1",
       currency: "EGP",
-      lines: [{ item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" }],
+      lines: [{ item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" }],
     };
     const ctx = makeCtx(provider("mizano"), creds, { idempotencyKey: "fl_run1_create_quote" });
 
