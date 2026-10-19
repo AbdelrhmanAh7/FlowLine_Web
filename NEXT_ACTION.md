@@ -41,9 +41,9 @@ Documentation scope follows the CTO answer: no duplicate security doc; dependenc
 
 Local lock/rollback regression fixes are ready; harness pushes. Backfill/runs integration: 26/26; E2E tooling hygiene: 12/12; typecheck, lint and drizzle metadata check pass. GitHub rejected retargeting PR #253 to ai/204 because PR #211 already uses ai/205 → ai/204. Reconcile duplicate PRs under the recorded-exception rules; #207 remains open, so keep #205 stacked until it merges, then rebase only #205 onto main and rerun CI/review. The inherited #204 E2E spec was removed as explicitly requested; add no E2E spec for this internal migration. [Details](docs/implementation/PHASE4_BETA_REPORT.md#legacy-backfill-0026-issue-205--2026-10-14).
 
-## Issue #224 / PR #256 — 2026-10-15
+## Issue #224 / PR #256 — 2026-10-20
 
-Conflict and translation review fixes are prepared locally. Harness must push this branch to the existing PR and request reviewer confirmation; threads remain unresolved until confirmed. Run `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` in the hub throwaway stack (local `.env.test` is absent), plus hosted checks. Preserve existing Mizano actions.
+Main merge conflict resolved; both docs and code aligned to keep existing Mizano action translations unchanged while localizing provider connection copy and field labels in EN and AR. Harness must push this branch to existing PR #256 and request reviewer confirmation; threads remain unresolved until confirmed. Run `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` in the hub throwaway stack (local `.env.test` is absent), plus hosted checks. Preserve existing Mizano actions.
 
 ## Issue #160 — await the owner after the pilot (2026-10-13)
 

@@ -82,7 +82,7 @@ snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
 ## Mizano localization (#224 / PR #256) — 2026-10-15
 
-Resolved the main merge conflict while retaining all three existing Mizano action translations. Updated connection copy and labels in both catalogues; Arabic customer creation now names customer and company separately. The regression in `tests/unit/i18n.test.ts` failed before the Arabic correction and now passes (17/17 total); `pnpm lint` and `pnpm typecheck` pass under Node 26.10.0 (Node 24 remains for hosted CI). The new `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` covers both locales, RTL and an empty connection form. Its local run exits 2 because `.env.test` is absent; browser/screenshots and hosted verification remain pending. No real Mizano connection is claimed.
+Resolved the main merge conflict while retaining all three existing Mizano action translations. Updated connection copy and labels in both catalogues; existing action translations are kept unchanged. The regression in `tests/unit/i18n.test.ts` failed before the Arabic correction and now passes (17/17 total); `pnpm lint` and `pnpm typecheck` pass under Node 26.10.0 (Node 24 remains for hosted CI). The new `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` covers both locales, RTL and an empty connection form. Its local run exits 2 because `.env.test` is absent; browser/screenshots and hosted verification remain pending. No real Mizano connection is claimed.
 
 ## route() error headers (issue #200) — 2026-10-13
 
