@@ -1,5 +1,17 @@
 # Next action — 2026-10-03
 
+## Issue #145 — Mizano connection type and Test connection (PR #215 handoff, 2026-10-20)
+
+Resolved merge conflicts with `origin/main` without dropping any of main's changes:
+1. Deleted accidental dev-stack log `.e2e-stack-145.log` and added `.e2e-stack-*.log` to `.gitignore`.
+2. Consolidated Mizano catalog tests from #147 and #148 into `e2e-army/145-mizano-connection-test.e2e.ts`, maintaining the hub's strict 8-file cap (`tests/unit/e2e-army-tooling.test.ts:129`) with all assertions preserved.
+3. Resolved CodeRabbit review findings:
+   - `README.md:18`: limited Test connection claim to saved non-OAuth connections.
+   - `src/app/w/[slug]/integrations/page.tsx:253`: hid Test connection button until catalog provider resolves (`Boolean(provider && provider.authType !== "oauth2")`).
+4. Reverted isolated test-dist inclusions in `tsconfig.json` back to canonical `origin/main`.
+5. Updated `artifacts/phase-4/issue-145/EVIDENCE.md` with verified commit SHA, tests, and findings resolution.
+All checks pass locally: `pnpm typecheck` clean, `pnpm lint` clean, vitest 97/97 tests pass across 5 files (`mizano-connection.test.ts`, `mizano-fake.test.ts`, `mizano.test.ts`, `connection-test-i18n.test.ts`, `e2e-army-tooling.test.ts`), `pnpm check:evidence` clean. Harness pushes and requests review confirmation.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
