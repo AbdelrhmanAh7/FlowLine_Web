@@ -44,7 +44,7 @@ const FLOW_ID = sql.raw(`"flow"."id"`);
 
 /**
  * The flows of a workspace with a summary of their runs. The summary covers every run of the flow, whichever revision or
- * version it ran. The last run is the run that finished last (`finishedAt desc nulls last, startedAt desc, id desc`, the
+ * version it ran. The last run is the run that finished last (`finishedAt desc nulls last, startedAt desc nulls last, id desc`, the
  * #117 spec): a run still queued, running or waiting for approval (no `finishedAt` yet) is the last run only while no run
  * of the flow has finished. `lastRunAt` is when that run finished or, for an in-flight run, when it started (or was queued).
  */

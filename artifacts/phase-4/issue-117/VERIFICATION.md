@@ -20,19 +20,18 @@ I set it to CI's value from `.github/ci/env.test.template` (`127.0.0.1:4010,127.
 
 | Command | Exit | Output |
 |---------|------|--------|
-| `node scripts/with-env.mjs <env> vitest run --project integration tests/integration/flows.test.ts --maxWorkers=1` | 0 | 16 passed (16) |
+| `node scripts/with-env.mjs .env.test vitest run --project integration tests/integration/flows.test.ts --maxWorkers=1` | 0 | 16 passed (16) |
 | Same, `-t "in flight"`, with `src/server/flows.ts` from the previous head `4fe2643` (`nulls first`) | 1 | 1 failed: `lastRunStatus` expected `"running"`, received `"queued"` |
 | `node scripts/e2e-army.mjs --shard-id flows-api --grep fl-flows-list` | 0 | `[fl-flows-list.3]` and `@issue-117 [fl-flows-list.4]` passed (2) |
 | `node scripts/e2e-army.mjs e2e-army/117-flows-list-dashboard.e2e.ts` | 0 | 1 passed |
-| `vitest run --project unit tests/unit/no-conflict-markers.test.ts` | 0 | 1 passed |
+| `vitest run --project unit tests/unit/no-conflict-markers.test.ts` | 0 | 5 passed |
 | `eslint` on the 5 changed source/test files | 0 | clean |
 | `pnpm typecheck` | 0 | clean |
 | `tsc` on the army files against the hub's `e2e` packages | 0 | clean |
 
 ## Changed covering tests
 
-- `tests/integration/flows.test.ts`: the in-flight test now asserts the spec's order. It is the regression test for the
-  `nulls first` bug: it fails on `4fe2643` and passes on `5c6f939a`.
+- `tests/integration/flows.test.ts`: the in-flight test now asserts the ordering clause (`finishedAt desc nulls last, startedAt desc nulls last, id desc`), where `startedAt desc nulls last` is a deliberate refinement over the literal spec text (`startedAt DESC`, which defaults to NULLS FIRST in Postgres) so that a running run ranks ahead of a queued one when neither has finished. It is the regression test for the `nulls first` bug: it fails on `4fe2643` and passes on `5c6f939a`.
 - `e2e-army/features/flows-api.e2e.ts`: new `@issue-117 [fl-flows-list.4]`, request level, no model.
 
 No UI file changed, so there are no screenshots. Sentry: the issue does not link a Sentry issue, and none is known for
@@ -40,7 +39,7 @@ this failure. It came from the hub's stable gate (`fl-flows-list` on main @ `d21
 
 ## Stop-hook run (`vitest related` on the changed files)
 
-The hub stop hook runs `vitest related --run --maxWorkers=2 <changed files>` without the test env. It fails at
+The hub stop hook runs `vitest related --run --maxWorkers=2 $CHANGED_FILES` without the test env. It fails at
 `tests/integration/global-setup.ts` ("must run against flowline_test (got )") before any test starts. With the env
 set, `related` picks up the 34 files that import `src/server/flows.ts` and runs them two at a time on one database:
 7 tests failed. Two causes were in the local env: the owner's `.env.test` uses the same key for the platform and the

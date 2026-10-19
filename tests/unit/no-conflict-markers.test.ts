@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -23,3 +24,35 @@ describe("no unresolved merge-conflict markers", () => {
     expect(result.stdout.trim()).toBe("");
   });
 });
+
+describe("issue #117 documentation hygiene and contract assertions", () => {
+  it("commands in issue #117 verification report contain copy-pasteable shell commands without <placeholder> angle brackets", () => {
+    const text = readFileSync(fileURLToPath(new URL("../../artifacts/phase-4/issue-117/VERIFICATION.md", import.meta.url)), "utf8");
+    const commands = [...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]!).filter((c) => /^(node|pnpm|vitest|eslint|tsc)\b/.test(c));
+    expect(commands.length).toBeGreaterThan(0);
+    for (const cmd of commands) {
+      expect(cmd, `command "${cmd}" must be copy-pasteable and not contain angle-bracket placeholders`).not.toMatch(/<[a-zA-Z][^>]*>/);
+    }
+  });
+
+  it("src/server/flows.ts doc comment for listFlows accurately matches the SQL order including startedAt nulls last", () => {
+    const flowsSource = readFileSync(fileURLToPath(new URL("../../src/server/flows.ts", import.meta.url)), "utf8");
+    expect(flowsSource).toContain("`finishedAt desc nulls last, startedAt desc nulls last, id desc`");
+    expect(flowsSource).not.toContain("`finishedAt desc nulls last, startedAt desc, id desc`");
+  });
+
+  it("docs accurately describe startedAt nulls last as a deliberate refinement rather than literal spec wording", () => {
+    const report = readFileSync(fileURLToPath(new URL("../../docs/implementation/PHASE4_BETA_REPORT.md", import.meta.url)), "utf8");
+    const verification = readFileSync(fileURLToPath(new URL("../../artifacts/phase-4/issue-117/VERIFICATION.md", import.meta.url)), "utf8");
+    expect(report).toMatch(/deliberate refinement/i);
+    expect(report).not.toMatch(/follows the spec's order:\s*`finished_at desc nulls last, started_at desc nulls last/);
+    expect(verification).toMatch(/deliberate refinement/i);
+  });
+
+  it("PHASE4_BETA_REPORT.md accurately describes the dashboard consequence without inaccurate 'no earlier run' phrasing", () => {
+    const report = readFileSync(fileURLToPath(new URL("../../docs/implementation/PHASE4_BETA_REPORT.md", import.meta.url)), "utf8");
+    expect(report).not.toMatch(/only while no earlier run of the flow has finished/i);
+    expect(report).toMatch(/precedence over an in-flight run|precedence over any in-flight run/i);
+  });
+});
+
