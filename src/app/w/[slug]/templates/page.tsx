@@ -102,7 +102,14 @@ export default function TemplatesPage() {
                         <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
                           <Chain items={chain.map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
-                            <p className="text-lg font-semibold">{shown.name}</p>
+                            <button
+                              type="button"
+                              className="text-left text-lg font-semibold hover:underline focus:outline-none"
+                              onClick={() => {}}
+                              aria-label={shown.name}
+                            >
+                              {shown.name}
+                            </button>
                             <p className="mt-1 text-base text-med">{shown.description}</p>
                             <dl className="mt-2 flex flex-col gap-1 text-sm">
                               <div>
@@ -141,7 +148,14 @@ export default function TemplatesPage() {
                         <Card className="flex h-full flex-col gap-3 p-4" data-testid={`template-${tpl.id}`}>
                           <Chain items={topoOrder(tpl.graph).slice(0, 4).map((n) => `${NODE_DEFINITIONS[n.type].icon} ${templateNodeLabel(t, tpl.id, n)}`)} />
                           <div className="flex-1">
-                            <p className="text-lg font-semibold">{shown.name}</p>
+                            <button
+                              type="button"
+                              className="text-left text-lg font-semibold hover:underline focus:outline-none"
+                              onClick={() => {}}
+                              aria-label={shown.name}
+                            >
+                              {shown.name}
+                            </button>
                             <p className="mt-1 text-base text-med">{shown.description}</p>
                           </div>
                           <Requirements tpl={tpl} status={(p) => reqStatus(t, p, ai.data?.status, connections.data)} />
