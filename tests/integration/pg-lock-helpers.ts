@@ -71,7 +71,8 @@ export async function blockedByObserver(observer: Client, waiterPid: number, fin
 type TransactionRunner = Pick<typeof db, "transaction">;
 
 /** Routes every `db.transaction` made inside `run(target, fn)` to that connection (and only those), so two production
- * functions can run at once, each on its own PostgreSQL connection, without a test hook in production code. */
+ * functions can run at once, each on its own PostgreSQL connection, without a test hook in production code.
+ * Exported for #108 (`account-delete-sso-lock-order.test.ts`) and reused by #37 (`federated-lock-order.test.ts`). */
 export function routeTransactions() {
   const route = new AsyncLocalStorage<TransactionRunner>();
   const original = db.transaction.bind(db);

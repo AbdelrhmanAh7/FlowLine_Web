@@ -1,0 +1,41 @@
+# Issue #315 — QA finding: docs/implementation/PHASE4_BETA_REPORT.md, new #108 section: deadlock fix attribution
+
+Branch `ai/315`. Split from PR #214 (parent issue #108).
+Originating report: QA review on PR #214 (`https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574`).
+Sentry issue: none; originating issue is QA review finding on PR #214.
+UI: No UI changes; Playwright screenshots and Arabic RTL/LTR checks exempt.
+
+## Context and Root Cause
+
+In PR #214, the section added for issue #108 in `docs/implementation/PHASE4_BETA_REPORT.md` and the header in `tests/integration/account-delete-sso-lock-order.test.ts` contained an attribution ambiguity flagged during QA review:
+1. One sentence credited the deadlock removal to issue #45 (PR #65) which established user-first locking in `consumeAccountToken("delete")`.
+2. A later sentence referred to issue #109 (PR #216) as having implemented "the lock-reordering fix in `src/server/email/flows.ts`".
+3. The header comment in `account-delete-sso-lock-order.test.ts` line 30 stated PR #216 (#109) incorporated the test "to verify the fix in flows.ts", while line 33 termed the hazard "the pre-#65 deadlock hazard".
+
+### Resolution
+
+- **Deadlock removal:** The circular wait between account deletion (`consumeAccountToken("delete")`) and the user's SSO sign-in (`completeSso`) was removed by **issue #45 (PR #65)**. Before PR #65, deletion locked workspaces first and only locked the user row on `DELETE FROM "user"`, creating a deadlock cycle with SSO (which locked user `FOR SHARE` first and workspace `KEY SHARE` on audit insert last). PR #65 locked the user row before workspaces, eliminating the circular wait.
+- **Audit reordering:** Issue #109 (PR #216) implemented the subsequent audit-before-workspace reordering in `src/server/email/flows.ts` (part 2 of #47) to align deletion's statement order with SSO and prevent the co-member deletion upgrade hazard (serialized by `lockRetainedFileAccounting`). PR #216 also brought `account-delete-sso-lock-order.test.ts` into `main` as enduring regression coverage.
+- **Consistent terminology:** The deadlock hazard guarded by `account-delete-sso-lock-order.test.ts` is consistently identified as **pre-#65**.
+
+## Acceptance Criteria
+
+- **AC1:** `docs/implementation/PHASE4_BETA_REPORT.md` contains the #108 section with a preceding blank line (preventing markdownlint MD022), explicitly states that issue #45 (PR #65) removed the deadlock between deletion and SSO by locking the user row before workspaces, clarifies that issue #109 (PR #216) implemented the subsequent audit-before-workspace reordering, and consistently names the deadlock hazard as pre-#65.
+- **AC2:** `tests/integration/account-delete-sso-lock-order.test.ts` header comments consistently attribute the deadlock removal to issue #45 (PR #65), describe PR #216 (#109) as the audit-before-workspace reordering, and name the hazard as pre-#65.
+- **AC3:** Dedicated unit test `tests/unit/account-delete-lock-order-docs.test.ts` validates that both files consistently credit issue #45 (PR #65), describe #109 (PR #216) as audit reordering, and use `pre-#65` consistently.
+- **AC4:** All repo checks pass cleanly: `pnpm typecheck`, `eslint` on touched files, and vitest unit tests.
+
+## Verification Report
+
+| AC | Evidence | Command | Exit Code | Observed Result |
+|---|---|---|---|---|
+| AC1, AC2, AC3 | `tests/unit/account-delete-lock-order-docs.test.ts` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 0 | 3 passed (3/3 tests pass) |
+| Regression on base (fails on base) | Same unit test against unmodified base `origin/main` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 1 | 3 failed (3/3 tests fail) |
+| AC4: Types | TypeScript compiler check | `pnpm typecheck` | 0 | clean (`tsc --noEmit` exit 0) |
+| AC4: Lint | ESLint on changed and new files | `pnpm exec eslint tests/integration/account-delete-sso-lock-order.test.ts tests/integration/federated-lock-order.test.ts tests/integration/pg-lock-helpers.ts tests/unit/account-delete-lock-order-docs.test.ts` | 0 | clean (0 errors, 0 warnings) |
+| AC4: Evidence Secrets | Secret scanner self-test | `node scripts/check-evidence-secrets.mjs` | 0 | clean (0 hits across 174 files) |
+| Lock-order unit suite | Email-token and account-delete lock order unit tests | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts --maxWorkers=2` | 0 | 14 passed (14/14 tests pass) |
+
+## Changed Covering Tests
+
+- `tests/unit/account-delete-lock-order-docs.test.ts` (new covering unit test for AC1, AC2, AC3).
