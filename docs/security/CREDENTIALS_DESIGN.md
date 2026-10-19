@@ -101,7 +101,13 @@ The two reviews agree on all of these.
       code `NETWORK`, `isNetwork=true` and a message without the submitted text. `HTTP_502` (a non-JSON gateway page)
       gives the fixed message `Request failed (502)`, never the gateway body.
     - `e2e-army/200-route-error-headers.e2e.ts` (the #181 tests, merged into that file for the hub's 8-file cap) checks the non-admin and cross-site refusals and the localized 404 page on a
-      live stack; the admin-only codes are proven only in the integration test.
+      live stack (Arabic RTL and English LTR, checked in the browser). That the route emits the admin-only codes is proven only in the integration test.
+    - `e2e/admin-panel.spec.ts` checks in a real browser how the copy editor shows a refusal. In its platform-admin test,
+      "Save draft" is refused with `REVISION_CONFLICT`, `STEP_UP_REQUIRED`, `INTERNAL` and a dropped connection,
+      injected at the network edge (`page.route`). Each refusal shows only the translated message for its code, the
+      app error boundary is not shown, and the same button saves again without a reload. The same session in Arabic
+      shows the Arabic network message on an RTL page. A separate test checks that a non-admin opening `/admin/copy`
+      gets the ordinary 404 page, without the editor or its title.
     - Error responses built by `route()` carry `no-store` / `no-referrer` since #200 (`errorJson()` in `src/server/http.ts`).
 
 ### OAuth correctness

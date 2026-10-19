@@ -1,8 +1,10 @@
 # Next action — 2026-10-03
 
-## Issue #181 — e2e-army cap fix (2026-10-15)
+## Issue #181 — verify round 4 answered, browser checks added (2026-10-19)
 
-The CI `checks (static·unit·contract)` leg failed on `tests/unit/e2e-army-tooling.test.ts`: the branch had 9 top-level `e2e-army/*.e2e.ts` files (hub cap 8) and `181-admin-copy.e2e.ts` used `setTimeout`. The #181 tests now live in `e2e-army/200-route-error-headers.e2e.ts` (same precedent as #179; every test and tag kept) and the outbox wait uses `expect.poll`. The stale "route() error responses lack no-store" known-gap note is removed (fixed by #200). The harness pushes and reruns CI; the integration test `tests/integration/platform-copy-errors.test.ts` was not rerun locally (needs the test DB; unchanged in this step).
+Verify's "[high] 404 on /admin/copy" (head `be71f9f`) is the designed refusal: its browser is a non-admin, and `/admin/copy` answers every non-admin with the ordinary 404 (CREDENTIALS_DESIGN item 10). No product change; `e2e/admin-panel.spec.ts` now pins that 404 and checks refused saves in a real browser, `pnpm test` runs the component tests (so CI does), and the e2e-army `@issue-181 AC3` test, which had never passed (Next serves a thrown `notFound()` without `lang`/`dir`), checks them on the rendered page. Commits and evidence: [VERIFICATION.md](artifacts/phase-4/issue-181/VERIFICATION.md).
+
+Harness next: push; get green `gate` and `docs`; run the full tier once on the final candidate (`admin-panel.spec.ts` runs only there); confirm that the hub's e2e-army result lists the four tests of `e2e-army/200-route-error-headers.e2e.ts`. Not fixed here (app-wide, outside #181): the server HTML of every thrown `notFound()` is Next's error shell without `lang`/`dir`; the browser renders the localized 404 page from the payload.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
