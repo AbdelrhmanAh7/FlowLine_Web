@@ -71,11 +71,12 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
 // contact you with that decision" does not decide anything, "the billing manager will decide" does. The gap between
 // party and verb stops at punctuation, so "the owner will decide; a team member will contact you" is not misread.
 const TEAM_DECIDER =
-  /\b(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b[^.!?\n;,]{0,40}?\b(?:will|shall|would|must|can|may)\s+(?:also\s+|then\s+)?(?:decide|review|approve|reject|refuse|grant|handle|process|assess|determine)\b|\b(?:decided|reviewed|approved|rejected|handled|processed|assessed|determined)\s+by\s+(?:our|the|a|an)\s+(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b/i;
+  /\b(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b[^.!?\n;,]{0,40}?\b(?:will|shall|would|must|can|may)\s+(?:also\s+|then\s+)?(?:decide|review|approve|reject|refuse|grant|handle|process|assess|determine)\b|\b(?:decided|reviewed|approved|rejected|handled|processed|assessed|determined)\s+by\s+(?:our|the|a|an)\s+(?:team|colleague|staff|manager|supervisor|accountant|bookkeeper|admin(?:istrator)?|agent|employee|someone|somebody|billing|finance|support)\b|(?:فريق\s+العمل|أحد\s+الموظفين|خدمة\s+العملاء|الدعم)\s+(?:سوف\s+)?س?(?:يقرر|تقرر|يراجع|تراجع|يعتمد|تعتمد)/iu;
 
 // The owner as the decider in the reply's own words, beyond the packet's two literal phrases: the product says "The
-// business owner decides this refund or cancellation request." (run 6), which the literal list missed.
-const OWNER_DECIDER = /\bowner\s+(?:(?:will|shall|must)\s+)?(?:decides?|reviews?|approves?)\b|\b(?:decided|reviewed|approved)\s+by\s+the\s+(?:business\s+)?owner\b/i;
+// business owner decides this refund or cancellation request." (run 6), which the literal list missed, and supports Arabic owner wording.
+const OWNER_DECIDER =
+  /\bowner\s+(?:(?:will|shall|must)\s+)?(?:decides?|reviews?|approves?)\b|\b(?:decided|reviewed|approved)\s+by\s+the\s+(?:business\s+)?owner\b|(?:المالك|صاحب\s+العمل)\s+(?:سوف\s+)?س?(?:يقرر|تقرر|يراجع|تراجع|يعتمد|تعتمد)|(?:القرار|المراجعة)\s+بيد\s+(?:المالك|صاحب\s+العمل)|(?:مقرر|مراجَع|معتمَد)\s+من\s+قبل\s+(?:المالك|صاحب\s+العمل)/iu;
 
 /**
  * VP-05/VP-06 owner-decision rule: pass only if the reply says the decision or review is by the owner (المالك / صاحب العمل / owner,

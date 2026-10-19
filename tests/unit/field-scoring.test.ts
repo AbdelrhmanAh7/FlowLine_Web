@@ -93,6 +93,9 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
   it("fails when the requested date is not a Friday (the check does not apply)", () => {
     expect(scoreClosedDay(HOURS_LINE, "2026-10-08")).toBe(false);
   });
+  it("fails an Arabic Friday confirmation without date when the hours line is quoted", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nنؤكد لكم موعدكم يوم الجمعة.`, date)).toBe(false);
+  });
 });
 
 describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
@@ -158,5 +161,14 @@ describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {
     expect(scoreClosedDay(vp03Reply, date)).toBe(false);
     expect(scoreOwnerDecision(vp05Reply, OWNER, v2.approvedInformation)).toBe(true);
     expect(scoreOwnerDecision(vp06Reply, OWNER, v2.approvedInformation)).toBe(true);
+  });
+  it("passes Arabic owner-decision wording (المالك / صاحب العمل) in accordance with the documented rule", () => {
+    expect(scoreOwnerDecision("صاحب العمل يقرر طلبات الإلغاء والاسترداد.", OWNER, [POLICY])).toBe(true);
+    expect(scoreOwnerDecision("المالك سيقرر بخصوص هذا الاسترداد.", OWNER, [POLICY])).toBe(true);
+    expect(scoreOwnerDecision("القرار بيد المالك.", OWNER, [POLICY])).toBe(true);
+  });
+  it("fails an Arabic non-owner decider even when policy line is quoted", () => {
+    expect(scoreOwnerDecision(`${POLICY}\n\nفريق العمل سيقرر في طلب الاسترداد.`, OWNER, [POLICY])).toBe(false);
+    expect(scoreOwnerDecision(`${POLICY}\n\nأحد الموظفين سيقرر طلبك.`, OWNER, [POLICY])).toBe(false);
   });
 });
