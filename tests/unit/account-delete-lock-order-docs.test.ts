@@ -44,8 +44,27 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     expect(section).not.toMatch(/exact wording/i);
   });
 
-  it("docs/security/FEDERATED_MFA.md explicitly names tests/integration/federated-lock-order.test.ts", () => {
-    expect(federatedMfa).toContain("`tests/integration/federated-lock-order.test.ts` ran locally on 2026-10-12");
+  it("docs/security/FEDERATED_MFA.md consistently states federated-lock-order.test.ts ran locally in both Lock order and Validation limits", () => {
+    const lockOrderMatch = federatedMfa.match(
+      /## Lock order[\s\S]*?(?=\n## [^#]|$)/
+    );
+    expect(lockOrderMatch).not.toBeNull();
+    const lockOrder = lockOrderMatch![0];
+    expect(lockOrder).toMatch(
+      /`tests\/integration\/federated-lock-order\.test\.ts`[\s\S]*?The test ran locally on 2026-10-12 against a throwaway PostgreSQL database for #108, and CI is the gate\./
+    );
+    expect(lockOrder).not.toMatch(
+      /federated-lock-order\.test\.ts[\s\S]*?not executed locally/i
+    );
+
+    const validationLimitsMatch = federatedMfa.match(
+      /## Validation limits[\s\S]*?(?=\n## [^#]|$)/
+    );
+    expect(validationLimitsMatch).not.toBeNull();
+    const validationLimits = validationLimitsMatch![0];
+    expect(validationLimits).toContain(
+      "`tests/integration/federated-lock-order.test.ts` ran locally on 2026-10-12 against a throwaway PostgreSQL database for #108, and CI is the gate"
+    );
   });
 
   it("account-delete-sso-lock-order.test.ts header consistently attributes deadlock removal, naming, and expected failure", () => {
