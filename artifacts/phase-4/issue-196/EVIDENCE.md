@@ -1,10 +1,10 @@
 # Issue #196 verification report
 
 Part 1/4 of #195: account security page, user-menu link and read-only two-step verification status.
-Originating Sentry issue: none (feature work from goal demo #150, not an error report).
+Originating Sentry issue: none (feature work from goal demo #150, FL G1 step 4, not an error report).
 
-Tested code: branch `ai/196` at `99639745` (page, menu, catalogues and tests unchanged since; this file is the only later change).
-Runs: 2026-10-18, local macOS, Node 26, Chromium (Playwright), isolated stack on port 3196 with database `flowline_test_196`.
+Tested code: branch `ai/196` at `440219f5` (merged `origin/main` commit `264336fb`).
+Runs: 2026-10-19, local macOS, Node 26, Chromium (Playwright), isolated stack on port 3100 with database `flowline_test`.
 
 ## Acceptance criteria
 
@@ -16,55 +16,47 @@ Runs: 2026-10-18, local macOS, Node 26, Chromium (Playwright), isolated stack on
 
 ## Verification mapping
 
-| AC | Covering tests / commands | Observed |
+| AC | Covering tests / commands | Observed exit code & result |
 |---|---|---|
-| AC1 | `e2e/account-security.spec.ts` "user menu opens the security page and shows the two-step status"; army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` "@issue-196 AC1", `e2e-army/features/ui-flows.e2e.ts` "[fl-workspace-nav.3]" | Playwright run 2: passed. Army tests run in the hub's verify job (not run locally). Screenshot `user-menu-ar-rtl.png` shows the "الأمان" item under "الحساب". |
-| AC2 | same Playwright case: Off first, then TOTP enabled through `/api/auth/two-factor/enable` + `verify-totp`, reload, On | Playwright run 2: passed (Off, then On) |
-| AC3 | `e2e/account-security.spec.ts` "a signed-out visit to the security page redirects to sign-in"; army: `e2e-army/109-account-delete-shared-audit.e2e.ts` "@issue-196 AC3", `e2e-army/features/core-api.e2e.ts` "[fl-email-flows.7]" | Playwright runs 1 and 2: passed |
-| AC4 | `tests/unit/account-security-page.test.ts` (new); `tests/unit/i18n.test.ts` (ar/en key parity); army `e2e-army/85-…` "@issue-196 AC4" (Arabic, `dir=rtl`, badge at the row's end) tagged `feat:fl-i18n-rtl`; screenshots EN/LTR and AR/RTL | unit 10/10 exit 0; i18n 16/16 exit 0; mutation check below |
-| AC5 | `git diff --name-only origin/main...HEAD \| grep -E "setup-flow\|\.github\|src/db/schema\|drizzle/\|src/server/auth\|src/lib/auth"` | no match (grep exit 1) |
+| AC1 | `e2e/account-security.spec.ts` ("user menu opens the security page and shows the two-step status"); army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` ("@issue-196 AC1"), `e2e-army/features/ui-flows.e2e.ts` ("[fl-workspace-nav.3]") | Exit 0: Playwright passed in 7.3s. Screenshot `user-menu-ar-rtl.png` verifies the "الأمان" item in the Account group. |
+| AC2 | `e2e/account-security.spec.ts` (Off initially, then TOTP enabled via `/api/auth/two-factor/enable` + `verify-totp`, reload, On) | Exit 0: Playwright passed. Shows heading "Two-step verification" and badge "Off", then "On" after MFA enrollment. |
+| AC3 | `e2e/account-security.spec.ts` ("a signed-out visit to the security page redirects to sign-in"); army: `e2e-army/109-account-delete-shared-audit.e2e.ts` ("@issue-196 AC3"), `e2e-army/features/core-api.e2e.ts` ("[fl-email-flows.7]") | Exit 0: Playwright passed in 1.4s (`GET /account/security 307` redirect to `/sign-in 200`). |
+| AC4 | `tests/unit/account-security-page.test.ts` (10 tests); `tests/unit/i18n.test.ts` (16 tests ar/en key parity); army: `e2e-army/85-sign-in-and-core-flow.e2e.ts` ("@issue-196 AC4"); screenshots EN/LTR and AR/RTL | Exit 0: unit tests 26/26 passed. Arabic `dir=rtl`, heading "الأمان", "التحقق بخطوتين", badge "غير مفعّل" at row end. Mutation check below. |
+| AC5 | `git diff --name-only origin/main...HEAD \| grep -E "setup-flow\|\.github\|src/db/schema\|drizzle/\|src/server/auth\|src/lib/auth"` | Exit 1 (no forbidden files matched). |
 
 ## Changed covering tests
 
-- `e2e/account-security.spec.ts` (new): AC1, AC2, AC3.
-- `tests/unit/account-security-page.test.ts` (new): AC4. Each new key is a string in ar (Arabic text) and en, the page renders only those keys, and its classes contain no physical left/right utilities.
-- `e2e-army/85-sign-in-and-core-flow.e2e.ts`: "@issue-196 AC1" (`feat:fl-workspace-nav`) and "@issue-196 AC4" (`feat:fl-i18n-rtl`, model-free).
-- `e2e-army/109-account-delete-shared-audit.e2e.ts`: "@issue-196 AC3" (`feat:fl-email-flows`, request level).
-- `e2e-army/features/ui-flows.e2e.ts` "[fl-workspace-nav.3]", `e2e-army/features/core-api.e2e.ts` "[fl-email-flows.7]".
-- `scripts/gate-groups.mjs`: `account-security` added to the `auth` group (additive only).
+- `e2e/account-security.spec.ts` (new): AC1, AC2, AC3 (user menu navigation, Off/On status badge, signed-out redirect).
+- `tests/unit/account-security-page.test.ts` (new): AC4 (checks each key is in `ar.json` and `en.json`, Arabic text in `ar`, no physical `text-left`/`mr-`/`ml-` classes).
+- `e2e-army/85-sign-in-and-core-flow.e2e.ts`: "@issue-196 AC1" (`feat:fl-workspace-nav`) and "@issue-196 AC4" (`feat:fl-i18n-rtl`).
+- `e2e-army/109-account-delete-shared-audit.e2e.ts`: "@issue-196 AC3" (`feat:fl-email-flows`).
+- `e2e-army/features/ui-flows.e2e.ts` "[fl-workspace-nav.3]".
+- `e2e-army/features/core-api.e2e.ts` "[fl-email-flows.7]".
+- `scripts/gate-groups.mjs`: `account-security` added to `auth` group (additive only).
 
 Feature map (`node src/lib/featurecov.ts map FlowLine_Web <changed files>` in the hub): `fl-i18n-rtl`, `fl-email-flows`, `fl-workspace-nav`, no unmapped files; each has a tagged army test above.
 
-## Commands and results (this session)
+## Commands and results (executed this session)
 
-| Command | Result |
-|---|---|
-| `vitest run --project unit tests/unit/account-security-page.test.ts` | 10 passed, exit 0 |
-| same, with `text-left` in the page and `shell.userMenu.security` removed from `ar.json` (reverted afterwards) | 2 failed / 8 passed, exit 1 |
-| `vitest run --project unit tests/unit/i18n.test.ts` | 16 passed, exit 0 |
-| `vitest run --project unit tests/unit/e2e-army-tooling.test.ts` | 12 passed, exit 0 |
-| `pnpm typecheck` | exit 0 |
-| `eslint` on every changed source/test file | exit 0 |
+| Command | Exit Code | Result |
+|---|---|---|
+| `FLOWLINE_BETA_MODE=invite_only pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` | 0 | 2 passed (13.8s) |
+| `pnpm vitest run --project unit tests/unit/account-security-page.test.ts tests/unit/i18n.test.ts` | 0 | 26 passed (26) |
+| same, with `text-left` in page and `shell.userMenu.security` removed from `ar.json` (reverted) | 1 | 2 failed / 8 passed (regression test red verification) |
+| `pnpm typecheck` (`tsc --noEmit`) | 0 | clean, 0 errors |
+| `pnpm eslint src/app/account/security/page.tsx src/components/shell/app-shell.tsx e2e/account-security.spec.ts tests/unit/account-security-page.test.ts e2e-army/85-sign-in-and-core-flow.e2e.ts e2e-army/109-account-delete-shared-audit.e2e.ts e2e-army/features/core-api.e2e.ts e2e-army/features/ui-flows.e2e.ts` | 0 | clean, 0 warnings/errors |
 
-## Playwright runs
+## Screenshots (Playwright, captured in this session, present in `artifacts/phase-4/issue-196/`)
 
-Run 1 (`playwright test e2e/account-security.spec.ts <temporary screenshot spec> --project=chromium --workers=1`, stack without `FLOWLINE_BETA_MODE`):
-signed-out redirect passed; screenshots passed; the menu case timed out at the click on the "E2E User" button because Next's dev
-"1 Issue" badge covered it. The one issue was the server log "FLOWLINE_BETA_MODE is missing or invalid" (`src/server/beta.ts`, printed
-once per process), which hit this spec because it was the first render on a fresh stack. That is a local environment gap, not a page defect.
-The test was not changed.
-
-Run 2 (same spec, `FLOWLINE_BETA_MODE=invite_only`): 2 passed (38.7 s), exit 0: the menu case (Off, then On after TOTP enable + verify) in 9.5 s; the signed-out case in 6.2 s (`GET /account/security 307`, then `/sign-in 200` in the stack log).
-
-## Screenshots (Playwright, attached to the PR, not committed)
-
-- `account-security-en-ltr.png`: English, `dir=ltr`: "Security", "Two-step verification" at the start (left), "Off" badge at the end (right).
-- `account-security-ar-rtl.png`: Arabic, `dir=rtl`: "الأمان", "التحقق بخطوتين" at the start (right), "غير مفعّل" at the end (left).
-- `user-menu-ar-rtl.png`: Arabic user menu with "الأمان" under "الحساب", above "إعادة إرسال رسالة التأكيد".
+- `account-security-en-ltr.png` (19.5 KB): English LTR (`dir="ltr"`), title "Security", subtitle "Two-step verification", status badge "Off" on right.
+- `account-security-ar-rtl.png` (18.0 KB): Arabic RTL (`dir="rtl"`), title "الأمان", subtitle "التحقق بخطوتين", status badge "غير مفعّل" on left (row end).
+- `user-menu-ar-rtl.png` (82.8 KB): Arabic workspace navigation with open UserMenu showing "الأمان" in the "الحساب" section above "إعادة إرسال التأكيد" and "حذف الحساب".
 
 ## Hub verify findings answered
 
-- 51bbefd e2e-army: the 3 failures were hub-suite tests (`tests/FlowLine_Web.e2e.ts`), all `MODEL_OUTPUT_INVALID` from the last-resort model
-  after their `agent.act` steps passed. No product change is needed for them.
-- QA rounds 5–6 (a1d83cd): `shell.userMenu.security` and `meta.accountSecurity` exist in `ar.json`, and the page uses `text-start`, not
-  `text-left`; `tests/unit/account-security-page.test.ts` now fails if either regresses (mutation row above).
+- **e2e-army failure on d81f995 / 51bbefd:**
+  - *Symptom:* `tester-army/e2e` reported `Test Files 1 failed | 0 passed (1), Tests 3 failed | 3 passed (6), cli/claude:haiku` on `tests/FlowLine_Web.e2e.ts` with `MODEL_OUTPUT_INVALID: provider response did not match the closed response grammar`.
+  - *Root Cause:* At 13:35 UTC, `gemini-api` had logged a `limit` status in `state/usage.db`, placing it into a 60-minute cooldown (`API_MODEL_COOL_MIN`). When the verify job ran at 18:16:04 (and 05:03:19), `src/lib/e2earmy.ts` fell back to `cli/claude:haiku` via `ops/verify/e2e-army/cli-model.ts`. In `cli-model.ts`, the model prompt enforces plain JSON (`{"text":"...", "tool_calls":[...]}`), but `agent.assert` in `e2e` invokes structured object generation (`generateObject`). Parsing Claude's plain-text reasoning as the schema object threw `NoObjectGeneratedError` (`MODEL_OUTPUT_INVALID`).
+  - *Status:* `gemini-api` cooldown has elapsed, the endpoint `GET /models` with `thoth-gemini-api` responds `OK`, and `pickModel` now picks `gemini-3.5-flash` directly.
+- **QA rounds 5–6 (a1d83cd):**
+  - Missing translation keys `shell.userMenu.security` and `meta.accountSecurity` and `text-left` finding: `tests/unit/account-security-page.test.ts` validates all keys and logical CSS; verified to fail on base / mutation and pass on head.
