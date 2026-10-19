@@ -88,3 +88,36 @@ The Arabic sign-up page is mirrored, with the form and logo on the right and **Ø
 - No Sentry issue exists for #124. It is a feature request for automated testers (context #110), not a production error.
 - `/security-review` on the branch diff at `d581a195` reported no findings. The `/simplify` commit changes no access rule: the same opt-ins under the same `FLOWLINE_ENV=test` check.
 - No CI, e2e-army, verify or CodeRabbit result is claimed for a head that contains these commits.
+
+## Verification round on `0a64f97` and head `4a92d264` (2026-10-19)
+
+### Gate and CI status
+- The earlier CI failure on head `68408af` (Gate run 39076067076, static leg) was caused by the design-system token guard misidentifying `#124` in a comment in `src/app/(auth)/auth-form.tsx` as a forbidden hex color literal. Head `0a64f97` reworded the comment; Gate run 39222132887 passed cleanly.
+- Origin/main was merged into `ai/124` at commit `44dc8166` with zero product conflict.
+- Diff against `origin/main` for `AI_QUESTIONS.md` is empty (`git diff origin/main -- AI_QUESTIONS.md`).
+- Diff against `origin/main` for `.github/` workflows is empty (`git diff origin/main --stat -- .github/`).
+- e2e-army top-level file count is exactly 8 (`e2e-army/*.e2e.ts`), adhering to the repo limit in `tests/unit/e2e-army-tooling.test.ts`.
+- No duplicate test titles exist in `e2e-army/85-sign-in-and-core-flow.e2e.ts`.
+
+### Verify round on `0a64f97` root-cause analysis
+- In verify round 5 on head `0a64f97`, the hub judged all acceptance criteria met, but `verify` reported `e2e-army` failed.
+- The failure was external: three of the hub's own test cases hit `MODEL_OUTPUT_INVALID` under its Claude Haiku adapter.
+- Two test titles were clarified to prevent runner/planner misinterpretation:
+  1. `e2e/test-auto-verify.spec.ts` (`55b6e6ee`): Changed title from naming an action phrase "... Resend with that email on /resend-verification shows ..." to explicit steps "open /resend-verification, fill Email, click Resend: If the account is eligible, an email will arrive shortly."
+  2. `tests/integration/test-auto-verify-staging.test.ts` (`d1b0431f`, `4a92d264`): Clarified that the test verifies auth built outside the Next.js server (scripts/tests), which logs one warning and ignores the env var, whereas the Next.js server itself refuses to start via `src/instrumentation.ts`.
+
+### Local verification results on head `4a92d264`
+- `pnpm typecheck`: Exit 0 (`tsc --noEmit` clean).
+- `pnpm lint`: Exit 0 (ESLint clean across the repository).
+- Unit tests:
+  `pnpm exec vitest run --project unit tests/unit/test-auto-verify.test.ts tests/unit/test-auto-verify-route.test.ts tests/unit/e2e-army-tooling.test.ts tests/unit/gate-groups.test.ts --maxWorkers=2`
+  Result: 4 test files passed, 72 tests passed (44 in test-auto-verify, 8 in test-auto-verify-route, 12 in e2e-army-tooling, 8 in gate-groups), 0 failed, exit 0.
+- Integration tests:
+  `FLOWLINE_ENV=test DATABASE_URL="postgres://flowline:flowline@localhost:5432/flowline_test" pnpm exec vitest run --project integration tests/integration/test-auto-verify-staging.test.ts --maxWorkers=2`
+  Result: 1 test file passed, 5 tests passed (all 5 staging and test scenarios pass), 0 failed, exit 0.
+
+### Security posture
+- Dependencies: None added or updated.
+- Secrets: None added or read.
+- Environment variables: One test-only variable `FLOWLINE_TEST_AUTO_VERIFY` (strictly gated to `FLOWLINE_ENV=test`, refused at start-up in non-test environments).
+- Permissions: Unchanged.
