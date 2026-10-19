@@ -225,3 +225,19 @@ describe("spec AC3: the server refuses to start with FLOWLINE_TEST_AUTO_VERIFY s
     }
   });
 });
+
+describe("AGENTS.md documentation guard (#124)", () => {
+  it("AGENTS.md focuses on the key security constraint and stays concise without implementation detail", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const text = readFileSync(fileURLToPath(new URL("../../AGENTS.md", import.meta.url)), "utf8");
+    const betaLine = text.split("\n").find((line) => line.startsWith("- **Private beta:**")) ?? "";
+    expect(betaLine).toContain("test-only sign-up auto-verify switch");
+    expect(betaLine).toContain("FLOWLINE_ENV=test");
+    expect(betaLine).toContain("never set it on beta or production");
+    // Implementation mechanics belong in DEVELOPER_GUIDE.md, not AGENTS.md
+    expect(betaLine).not.toContain("fl_test_auto_verify=1");
+    expect(betaLine).not.toContain("GET /api/test/auto-verify");
+  });
+});
+

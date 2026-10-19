@@ -121,3 +121,12 @@ The Arabic sign-up page is mirrored, with the form and logo on the right and **Ø
 - Secrets: None added or read.
 - Environment variables: One test-only variable `FLOWLINE_TEST_AUTO_VERIFY` (strictly gated to `FLOWLINE_ENV=test`, refused at start-up in non-test environments).
 - Permissions: Unchanged.
+
+## Review round on `343e387` (2026-10-19)
+
+### QA Finding 6acb57cdc997
+- Finding: In `AGENTS.md`, the description of the auto-verify feature was overly detailed and needed simplification to focus on the key security constraint (only works in test environment).
+- Root cause: Testing/usage mechanics (cookie parameters, endpoint path, browser API notes) were placed in the high-level `AGENTS.md` constitution rather than staying confined to `docs/DEVELOPER_GUIDE.md` and `README.md`.
+- Fix in `AGENTS.md:33`: Simplified the clause to: `The only exception is the test-only sign-up auto-verify switch (src/server/test-auto-verify.ts, #124), strictly test-only (refused at startup outside FLOWLINE_ENV=test); never set it on beta or production.`
+- Proof in `tests/unit/test-auto-verify.test.ts:229-242`: Added `AGENTS.md documentation guard (#124)` asserting that `AGENTS.md` explicitly states the test-only security constraint and startup refusal while omitting low-level testing mechanics. (Red: failed with `AssertionError: expected ... not to contain 'fl_test_auto_verify=1'`; Green: passed in 0ms).
+
