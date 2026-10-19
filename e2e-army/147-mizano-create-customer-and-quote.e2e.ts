@@ -61,5 +61,3 @@ test(
     await agent.act("cancel the connection form");
   },
 );
-
-
