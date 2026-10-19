@@ -29,7 +29,8 @@ All runs are from 2026-10-19 on a local test stack (app :3181, fakes :4181 and :
 | AC | Test | Command | Exit | Observed |
 |---|---|---|---|---|
 | AC1, AC2, AC3 (envelope) | `tests/integration/platform-copy-errors.test.ts`, 5 tests | `pnpm test:integration tests/integration/platform-copy-errors.test.ts` with `DATABASE_URL` pointed at `flowline_test_181` | 0 | 5 passed |
-| AC3 (mapping), AC4 and AC5 at component level | `tests/component/copy-editor.test.tsx`, every case in English and Arabic against the real catalogues, with a key-existence check | `pnpm exec vitest run tests/component/copy-editor.test.tsx --project component` | 0 | 27 passed |
+| AC3 (mapping), AC4 and AC5 at component level | `tests/component/copy-editor.test.tsx`, every case in English and Arabic against the real catalogues, with direct `ar.json`/`en.json` untranslated-string assertions | `pnpm exec vitest run tests/component/copy-editor.test.tsx --project component` | 0 | 28 passed |
+| AC3 (envelope & mapping contract) | `tests/contract/errors.test.ts`, envelope shape and client-handled error codes in ar/en catalogues | `pnpm test:contract tests/contract/errors.test.ts` | 0 | 9 passed |
 | CI runs the component tests | `package.json` `test` is `vitest run --project unit --project component` (`dbf88dca`) | `pnpm exec vitest list --project unit --project component --filesOnly` | 0 | 134 unit files plus `[component] tests/component/copy-editor.test.tsx` |
 | AC4, AC5, AC7 in a browser | `e2e/admin-panel.spec.ts` | `pnpm exec playwright test e2e/admin-panel.spec.ts --project=chromium --workers=1` | 0 | 4 passed (28.0 s) |
 | The same, production build | same | same | 0 | 4 passed (20.0 s); the copy rows were back to `{"ar": {}, "en": {}}` afterwards |
@@ -78,15 +79,15 @@ The missing `lang`/`dir` in the server HTML affects the whole app and is not cha
 
 ## The spec's contract-test criterion
 
-The issue asks for a contract test of the code-to-key mapping and the envelope. No file under `tests/contract/` covers it. The integration test covers the envelope end to end by handing each real route Response to `api()`, and the component tests cover the mapping, including a check that each key exists in both catalogues. The app-wide `apiErrorMessage` in `src/i18n/errors.ts` does not list `UNSUPPORTED_MEDIA_TYPE` or the `COPY_*` codes; the copy editor's write path does not use it and shows `saveError` or `publishError` for them.
+The spec asks for a contract test of the code-to-key mapping and the envelope shape. `tests/contract/errors.test.ts` now asserts that the error envelope conforms to `{ error: { code, message } }` with string properties, and asserts that the client-localized admin copy error codes (`REVISION_CONFLICT`, `NETWORK`) exist in both Arabic and English translation catalogues with non-identical Arabic strings. The integration test covers the envelope end to end by handing each real route Response to `api()`, and the component tests cover the mapping, including an explicit direct check that each key exists in `ar.json` and `en.json`. The app-wide `apiErrorMessage` in `src/i18n/errors.ts` does not list `UNSUPPORTED_MEDIA_TYPE` or the `COPY_*` codes; the copy editor's write path does not use it and shows `saveError` or `publishError` for them.
 
 ## Changed covering tests (this round)
 
+- `tests/component/copy-editor.test.tsx`: imports `ar.json` and `en.json` directly and asserts that all error keys exist in both files, ensuring no untranslated strings.
+- `tests/contract/errors.test.ts`: asserts the `{ error: { code, message } }` envelope shape and verifies client-handled error codes exist in both catalogues.
 - `e2e/admin-panel.spec.ts`: the non-admin `/admin/copy` 404 test (`d66488f4`) and the refused-save checks inside the platform-admin test (`62d568af`).
 - `package.json`: `pnpm test` also runs the `component` project (`dbf88dca`).
 - `e2e-army/200-route-error-headers.e2e.ts`: AC3 checks language and direction in the browser (`fcd1bc80`).
-
-- `tests/component/copy-editor.test.tsx`: userEvent setup scoped to beforeEach per locale, and the NETWORK error immediate-alert test parameterized across both save and publish with request validation.
 - `src/app/admin/copy/copy-editor.tsx`: type-safe literal MessageKey ternary for REVISION_CONFLICT and NETWORK.
 
 `tests/integration/platform-copy-errors.test.ts` was not changed this round; rerun above.

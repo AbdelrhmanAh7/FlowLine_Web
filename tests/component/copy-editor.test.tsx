@@ -18,6 +18,8 @@ import { createTranslator, type Translator } from "@/i18n/translate";
 import { api, ApiError } from "@/lib/api";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/i18n/types";
+import arMessages from "@/i18n/messages/ar.json";
+import enMessages from "@/i18n/messages/en.json";
 import { renderWithProviders } from "./setup";
 
 // vi.hoisted runs before the hoisted vi.mock factories below, so the holders are
@@ -103,6 +105,21 @@ describe("CopyEditor error handling (#181)", () => {
       for (const key of keys) {
         expect(ar(key)).toMatch(ARABIC);
         expect(ar(key)).not.toBe(en(key));
+      }
+    });
+
+    it("verifies that all error keys exist in both ar.json and en.json translation files, ensuring no untranslated strings", () => {
+      const getVal = (obj: unknown, path: string): unknown =>
+        path.split(".").reduce((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
+
+      for (const key of keys) {
+        const arVal = getVal(arMessages, key);
+        const enVal = getVal(enMessages, key);
+        expect(typeof arVal, `ar.json is missing key "${key}"`).toBe("string");
+        expect(typeof enVal, `en.json is missing key "${key}"`).toBe("string");
+        expect(arVal, `ar.json key "${key}" must differ from en.json (no untranslated strings)`).not.toBe(enVal);
+        expect(arVal, `ar.json key "${key}" must contain Arabic characters`).toMatch(ARABIC);
+        expect(enVal, `en.json key "${key}" must not be empty`).not.toBe("");
       }
     });
   });

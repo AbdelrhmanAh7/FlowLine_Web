@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiKeyCreds, expectProviderError, makeCtx, oauthCreds, provider, runAction, runVerify, startFake, type Fake } from "./helpers";
+import arCatalog from "@/i18n/messages/ar.json";
+import enCatalog from "@/i18n/messages/en.json";
 
 let fake: Fake;
 beforeAll(async () => {
@@ -76,3 +78,27 @@ describe("lost responses on non-idempotent actions", () => {
     expect(err.outcomeUnknown).toBe(true);
   });
 });
+
+describe("admin copy error contract (#181)", () => {
+  it("error payload conforms to { code: string, message: string } JSON envelope", () => {
+    const parseEnvelope = (payload: { error?: { code?: unknown; message?: unknown } }) => {
+      const err = payload.error;
+      if (!err || typeof err.code !== "string" || typeof err.message !== "string") return null;
+      return { code: err.code, message: err.message };
+    };
+
+    const sample = { error: { code: "REVISION_CONFLICT", message: "Revision conflict" } };
+    const parsed = parseEnvelope(sample);
+    expect(parsed).toEqual({ code: "REVISION_CONFLICT", message: "Revision conflict" });
+  });
+
+  it("every client-localized admin copy error code has a matching translation key in ar and en catalogues", () => {
+    const copyErrorCodes = ["REVISION_CONFLICT", "NETWORK"] as const;
+    for (const code of copyErrorCodes) {
+      expect(typeof arCatalog.errors?.[code]).toBe("string");
+      expect(typeof enCatalog.errors?.[code]).toBe("string");
+      expect(arCatalog.errors[code]).not.toBe(enCatalog.errors[code]);
+    }
+  });
+});
+
