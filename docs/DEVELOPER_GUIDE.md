@@ -177,8 +177,9 @@ Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-r
 worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
 to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
 Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
-expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
-`e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+expression-defined order. `data.csv` build mode takes its header from every row's keys in first-seen order, so a
+column that first appears in a later row is kept. Regression coverage: `tests/unit/engine-v2.test.ts`,
+`tests/integration/runs.test.ts` and `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
 
 `pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
 
