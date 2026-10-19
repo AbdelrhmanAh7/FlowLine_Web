@@ -28,9 +28,19 @@ describe("account security page (#196)", () => {
     expect(arText as string, `ar:${key} is Arabic`).toMatch(ARABIC);
   });
 
-  it("uses the Arabic two-step verification title from the issue", () => {
+  it("uses the Arabic two-step verification title and descriptive active status", () => {
     expect(ar.account.security.twoFactor.title).toBe("التحقق بخطوتين");
     expect(en.account.security.twoFactor.title).toBe("Two-step verification");
+    expect(ar.account.security.twoFactor.on).toBe("مفعّل (نشط)");
+    expect(en.account.security.twoFactor.on).toBe("On");
+    expect(ar.account.security.twoFactor.off).toBe("غير مفعّل");
+    expect(en.account.security.twoFactor.off).toBe("Off");
+  });
+
+  it("verifies the BETA_USER_GUIDE English summary contains a standalone Account, Security bullet", () => {
+    const doc = readFileSync("docs/implementation/BETA_USER_GUIDE.md", "utf8");
+    expect(doc).toMatch(/\n8\.\s+\*\*Account, Security:\*\*\s+\(user menu\)\s+shows whether two-step verification is on or off/);
+    expect(doc).not.toMatch(/Account and privacy/);
   });
 
   it("renders only catalogue keys and logical CSS", () => {

@@ -40,7 +40,27 @@ test("the security page renders in Arabic with RTL layout", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1, name: "الأمان" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
   await expect(page.getByRole("main").getByText("غير مفعّل", { exact: true })).toBeVisible();
+
+  // Verify RTL layout geometry: row starts on the right (h2) and badge is placed to the left (inline-end)
+  const isRtlLayout = await page.evaluate(() => {
+    const h2 = document.querySelector("main h2")!;
+    const badge = h2.nextElementSibling!;
+    return badge.getBoundingClientRect().right <= h2.getBoundingClientRect().left;
+  });
+  expect(isRtlLayout).toBe(true);
   await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-ar-rtl.png" });
+
+  // Turn MFA on through API and verify descriptive active Arabic badge
+  const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
+  expect(enable.ok()).toBeTruthy();
+  const { totpURI } = (await enable.json()) as { totpURI: string };
+  const secret = new URL(totpURI).searchParams.get("secret");
+  expect(secret).toBeTruthy();
+  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret!)) } });
+  expect(verify.ok()).toBeTruthy();
+  await page.reload();
+  await expect(page.getByRole("main").getByText("مفعّل (نشط)", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-ar-on.png" });
 });
 
 test("a signed-out visit to the security page redirects to sign-in", async ({ browser }) => {
