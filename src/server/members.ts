@@ -129,9 +129,9 @@ async function ownerCount(tx: Tx, workspaceId: string) {
 }
 
 /**
- * Serializes membership changes per workspace (two owners must not demote each other at once; the last-owner check
- * reads the owner count under this lock). The mode is FOR NO KEY UPDATE and must stay that way: it conflicts with
- * itself, FOR UPDATE and FOR SHARE, so membership changes still queue one behind the other, but NOT with FOR KEY SHARE, the
+ * Serializes membership changes per workspace (`changeRole` and `removeMember`; two owners must not demote each other at once;
+ * the last-owner check reads the owner count under this lock). The mode is FOR NO KEY UPDATE and must stay that way:
+ * it conflicts with itself, FOR UPDATE and FOR SHARE, so membership changes still queue one behind the other, but NOT with FOR KEY SHARE, the
  * lock every insert of an `audit_event` row (foreign key to `workspace`) takes on the workspace row. The SSO
  * transactions hold a `workspace_member` row (FOR SHARE or FOR UPDATE) and then insert an audit row; a FOR UPDATE
  * workspace lock here made this transaction wait for their member row while they waited for the workspace row, a
@@ -157,7 +157,10 @@ export async function changeRole(user: CurrentUser, workspaceId: string, targetU
   });
 }
 
-/** Removes a member. Access ends on their next request (membership is checked per request). */
+/**
+ * Removes a member under lockWorkspaceMembership (FOR NO KEY UPDATE), serializing removals without deadlocking against concurrent SSO audit inserts.
+ * Access ends on their next request (membership is checked per request).
+ */
 export async function removeMember(user: CurrentUser, workspaceId: string, targetUserId: string) {
   return db.transaction(async (tx) => {
     await lockWorkspaceMembership(tx, workspaceId);

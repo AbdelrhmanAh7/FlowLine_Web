@@ -1,3 +1,6 @@
+/**
+ * @file Unit tests verifying member lock order and mode (FOR NO KEY UPDATE), ensuring no conflict with FOR KEY SHARE.
+ */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getTableName } from "drizzle-orm";
 import { HttpError } from "@/server/http";

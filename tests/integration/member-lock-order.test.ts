@@ -1,3 +1,7 @@
+/**
+ * @file Integration tests verifying member lock order and mode with real PostgreSQL connections,
+ * confirming concurrent SSO and membership change operations complete without deadlock.
+ */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
