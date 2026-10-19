@@ -235,8 +235,8 @@ describe("structural run against real repo files", () => {
     const jsonRun = spawnSync(process.execPath, [scriptPath, "--json"], { encoding: "utf8", cwd: root });
     const textRun = spawnSync(process.execPath, [scriptPath], { encoding: "utf8", cwd: root });
 
-    expect(jsonRun.status).toBe(1); // Known findings on current main
-    expect(textRun.status).toBe(1);
+    expect(jsonRun.status).toBe(0); // All checklist items pass on ai/250
+    expect(textRun.status).toBe(0);
 
     const jsonData = JSON.parse(jsonRun.stdout);
     expect(jsonData).toHaveLength(8);

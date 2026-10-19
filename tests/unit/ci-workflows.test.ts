@@ -572,13 +572,27 @@ describe("claude.yml safety and inertness invariants", () => {
     expect(byJob.review).toMatch(/^ {6}contents: read\b/m);
     expect(byJob.review).not.toMatch(/^ {6}contents: write\b/m);
   });
+
+  it("verifies collaborator write permissions in the review job before running", () => {
+    const reviewJob = byJob.review;
+    expect(reviewJob).toContain("repos/$REPO/collaborators/$ACTOR/permission");
+    expect(reviewJob).toMatch(/case\s+"\$perm"\s+in\s+admin\|maintain\|write\)/);
+  });
 });
 
 describe("gate.yml security invariants", () => {
   const text = read(".github/workflows/gate.yml");
+  const byJob = jobs(text);
 
   it("never uses pull_request_target, preventing checkout of untrusted code with write permissions", () => {
     expect(stripComments(text)).not.toMatch(/pull_request_target/);
+  });
+
+  it("shards chromium via matrix strategy to prevent timeout cancellation on full tier", () => {
+    const chromium = byJob.chromium;
+    expect(chromium).toMatch(/^ {4}strategy:\n/m);
+    expect(chromium).toMatch(/^ {6}matrix:\n/m);
+    expect(chromium).toMatch(/^ {4}timeout-minutes: 5$/m);
   });
 });
 

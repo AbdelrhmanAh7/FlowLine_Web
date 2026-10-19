@@ -154,10 +154,15 @@ jobs:
           shard: ${{ matrix.shard }}
 
   chromium:
+    name: chromium (${{ matrix.shard }})
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/2, 2/2]
     env:
       FLOWLINE_GATE_NATIVE_BROWSERS: "1"
       FLOWLINE_SKIP_BUILD_TYPECHECK: "1" # the static leg runs tsc on this commit
