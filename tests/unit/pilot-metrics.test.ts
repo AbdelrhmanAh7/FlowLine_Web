@@ -7,6 +7,7 @@ import {
   isMainModule,
   NOT_LOGGED_DENIALS,
   NOT_TRACKED_ARABIC,
+  NOT_TRACKED_UPTIME,
   parseRange,
   UsageError,
   type PilotMetrics,
@@ -23,6 +24,7 @@ const empty: PilotMetrics = {
   runSuccessRate: null,
   p95QueueToStartMs: null,
   webhookRuns: 0,
+  scheduledRuns: 0,
   approvals: 0,
   duplicateWebhookRuns: 0,
 };
@@ -50,11 +52,13 @@ describe("pilot-metrics: parseRange", () => {
 describe("pilot-metrics: formatMetricsAsMarkdown", () => {
   it("prints every row on an empty range without crashing", () => {
     const md = formatMetricsAsMarkdown(empty, FROM, TO);
-    expect(rows(md)).toHaveLength(11);
+    expect(rows(md)).toHaveLength(13);
     expect(md).toContain("| Sign-ups | 0 |");
     expect(md).toContain("| Median time to verified | N/A |");
     expect(md).toContain("| Run success rate | N/A |");
+    expect(md).toContain("| Scheduled runs | 0 |");
     expect(md).toContain("| Duplicate webhook runs | 0 |");
+    expect(md).toContain(NOT_TRACKED_UPTIME);
     expect(md).not.toMatch(/\|[ \t]*\|/); // no empty cell
   });
 
@@ -63,10 +67,12 @@ describe("pilot-metrics: formatMetricsAsMarkdown", () => {
   });
 
   it("formats a fractional rate and says plainly what is not recorded", () => {
-    const md = formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0.8 }, FROM, TO);
+    const md = formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0.8, scheduledRuns: 3 }, FROM, TO);
     expect(md).toContain("| Run success rate | 80.0% |");
+    expect(md).toContain("| Scheduled runs | 3 |");
     expect(md).toContain(NOT_LOGGED_DENIALS);
     expect(md).toContain(NOT_TRACKED_ARABIC);
+    expect(md).toContain(NOT_TRACKED_UPTIME);
   });
 });
 

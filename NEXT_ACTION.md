@@ -1,8 +1,8 @@
 # Next action — 2026-10-03
 
-## Issue #143 — pilot metrics script rework (2026-10-18)
+## Issue #143 — pilot metrics script rework (2026-10-19)
 
-CTO round on PR #170 applied in `scripts/pilot-metrics.ts`: publish metric reads `flow_version` publish snapshots, day-1 metric uses the sign-up cohort, duplicate metric counts runs, `0.0%` success rate, strict range validation (exit 2), real-path CLI guard, and honest `N/A` rows for access denials and Arabic share (nothing records them). Synthetic 2001-03 window in the integration test. Harness next: push, obtain CI + CodeRabbit confirmation, reply to threads T1-T10. E2E: not needed (internal read-only ops script, no user flow).
+CTO and review round 3 on PR #170 applied in `scripts/pilot-metrics.ts`: publish metric reads `flow_version` publish snapshots, day-1 metric uses the sign-up cohort, duplicate metric counts runs, `0.0%` success rate with dedicated all-failed runs integration test, scheduled runs metric added from `schema.run` (`trigger_kind = 'schedule'`), staging uptime metric added (`N/A` with explanation of external `/api/health` probe), strict range validation (exit 2), real-path CLI guard, and honest `N/A` rows for access denials, Arabic share, and uptime. Synthetic 2001-03 window in the integration test (9 passing cases), unit tests (11 passing cases). Harness next: push, obtain CI + CodeRabbit confirmation, reply to threads T1-T10. E2E: not needed (internal read-only ops script, no user flow).
 
 ## Issue #204 — harness handoff (2026-10-15)
 

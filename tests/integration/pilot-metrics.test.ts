@@ -181,7 +181,7 @@ async function seedTestData(): Promise<SeededIds> {
     createdAt: Date;
     startedAt?: Date;
     finishedAt?: Date;
-    triggerKind?: "manual" | "webhook";
+    triggerKind?: "manual" | "webhook" | "schedule";
     triggerRef?: string;
   }) => {
     const id = randomUUID();
@@ -283,7 +283,15 @@ async function seedTestData(): Promise<SeededIds> {
     startedAt: new Date("2001-03-18T10:00:01Z"),
     finishedAt: new Date("2001-03-18T10:00:05Z"),
   });
-  await db.insert(schema.run).values([runForWebhook1, runForWebhook2]);
+  const runForSchedule = mkRun({
+    number: 11,
+    status: "succeeded",
+    triggerKind: "schedule",
+    createdAt: new Date("2001-03-18T08:00:00Z"),
+    startedAt: new Date("2001-03-18T08:00:10Z"), // 10s queue-to-start
+    finishedAt: new Date("2001-03-18T08:00:20Z"),
+  });
+  await db.insert(schema.run).values([runForWebhook1, runForWebhook2, runForSchedule]);
 
   const webhookEvents = await db
     .insert(schema.webhookEvent)
@@ -481,10 +489,21 @@ describe("pilot-metrics", () => {
   it("reports run success rate and p95 queue-to-start over finished runs", async () => {
     const metrics = await collectPilotMetrics(db, TEST_FROM, TEST_TO);
 
-    // 7 succeeded, 2 failed; the queued run is not finished.
-    expect(metrics.runSuccessRate).toBeCloseTo(7 / 9, 5);
-    // Queue-to-start seconds of the 9 started runs: 1,1,5,10,15,20,25,30,40 -> p95 = 30 + 0.6 * 10 = 36s.
-    expect(metrics.p95QueueToStartMs).toBeCloseTo(36_000, 0);
+    // 8 succeeded (5 manual, 2 webhook, 1 schedule), 2 failed; the queued run is not finished.
+    expect(metrics.runSuccessRate).toBe(0.8);
+    // Queue-to-start seconds of the 10 started runs: 1,1,5,10,10,15,20,25,30,40 -> p95 = 30 + 0.55 * 10 = 35.5s.
+    expect(metrics.p95QueueToStartMs).toBeCloseTo(35_500, 0);
+  });
+
+  it("reports 0.0% run success rate when all finished runs in range failed", async () => {
+    // 2001-03-19 contains only run 7 (failed) and run 8 (queued, not finished); no succeeded runs.
+    const from = new Date("2001-03-19T00:00:00Z");
+    const to = new Date("2001-03-19T23:59:59.999Z");
+    const metrics = await collectPilotMetrics(db, from, to);
+
+    expect(metrics.runSuccessRate).toBe(0);
+    const markdown = formatMetricsAsMarkdown(metrics, from, to);
+    expect(markdown).toContain("| Run success rate | 0.0% |");
   });
 
   it("counts onboarding + workspace within 24h of sign-up, excluding skippers and earlier cohorts", async () => {
@@ -503,10 +522,11 @@ describe("pilot-metrics", () => {
     expect(metrics.publishedFlowWithin3Days).toBe(2);
   });
 
-  it("counts accepted webhook runs and decided workflow approvals in range", async () => {
+  it("counts accepted webhook runs, scheduled runs and decided workflow approvals in range", async () => {
     const metrics = await collectPilotMetrics(db, TEST_FROM, TEST_TO);
 
     expect(metrics.webhookRuns).toBe(2);
+    expect(metrics.scheduledRuns).toBe(1);
     // appr1+appr2 decided in range. Not counted: the agent review, a still-pending approval, one decided after the range.
     expect(metrics.approvals).toBe(2);
   });
@@ -543,6 +563,7 @@ describe("pilot-metrics", () => {
       onboardingAndWorkspaceDay1: 0,
       publishedFlowWithin3Days: 0,
       webhookRuns: 0,
+      scheduledRuns: 0,
       approvals: 0,
       duplicateWebhookRuns: 0,
     });
@@ -551,6 +572,8 @@ describe("pilot-metrics", () => {
     expect(metrics.p95QueueToStartMs).toBeNull();
     const markdown = formatMetricsAsMarkdown(metrics, TEST_FROM, TEST_TO);
     expect(markdown).toContain("| Sign-ups | 0 |");
+    expect(markdown).toContain("| Scheduled runs | 0 |");
+    expect(markdown).toContain("| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |");
   });
 
   it("formats metrics as a Markdown table with no connection string", async () => {
@@ -560,7 +583,9 @@ describe("pilot-metrics", () => {
     expect(markdown).toContain("# Pilot Metrics: 2001-03-16 to 2001-03-23");
     expect(markdown).toContain("| Metric | Value |");
     expect(markdown).toContain(`| Sign-ups | ${metrics.signups} |`);
-    expect(markdown).toContain(`| Run success rate | 77.8% |`);
+    expect(markdown).toContain(`| Run success rate | 80.0% |`);
+    expect(markdown).toContain(`| Scheduled runs | 1 |`);
+    expect(markdown).toContain("| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |");
     expect(markdown).not.toMatch(/postgres(ql)?:\/\//);
   });
 });

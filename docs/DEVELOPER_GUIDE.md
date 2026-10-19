@@ -187,7 +187,7 @@ column that first appears in a later row is kept. Regression coverage: `tests/un
 
 ### `scripts/pilot-metrics.ts`
 
-Prints the 8 week-1 pilot success criteria (11 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
+Prints the 8 week-1 pilot success criteria (13 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
 
 **Usage** (the env wrapper loads `DATABASE_URL`; plain `tsx` does not read `.env`):
 ```bash
@@ -204,11 +204,12 @@ A missing, malformed, nonexistent (`2026-02-30`) or reversed range exits with co
 | 2 | Onboarding + workspace on day 1 | Cohort users with onboarding completed (not skipped) and a workspace created, both within 24h of sign-up |
 | 3 | Published ≥1 flow within 3 days | Cohort users whose earliest `flow_version` with `reason = 'publish'` is within 3 days of sign-up (later edits, republishing or unpublishing cannot change it) |
 | 4 | Run success rate, p95 queue-to-start | `succeeded / (succeeded + failed)` for runs created in range (shows `0.0%` when all failed, `N/A` when none finished); p95 of `started_at - created_at` |
-| 5 | Webhook runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
+| 5 | Webhook runs, scheduled runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; runs triggered by schedule (`trigger_kind = 'schedule'`) created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
 | 6 | Cross-workspace access denials | `N/A`: workspace access checks answer 404 without writing an audit row (`admin.access_denied` is platform-admin probes only, so it is not used as a proxy) |
 | 7 | Share who switched to Arabic | `N/A`: the UI language is a cookie, not stored per user |
+| 8 | Staging uptime | `N/A`: measured via external probe of `/api/health` (target ≥99%), not stored in DB |
 
-Rows 6 and 7 stay `N/A` until the app records those events; the script does not print a made-up `0`.
+Rows 6, 7 and 8 report `N/A` with explanation because those events are not recorded in the DB; the script does not print a made-up `0`.
 
 **Example** (empty range):
 ```
@@ -223,13 +224,15 @@ Rows 6 and 7 stay `N/A` until the app records those events; the script does not 
 | Run success rate | N/A |
 | p95 queue-to-start | N/A |
 | Webhook runs | 0 |
+| Scheduled runs | 0 |
 | Approvals (workflow) | 0 |
 | Duplicate webhook runs | 0 |
 | Cross-workspace access denials | N/A (not logged: workspace 404s write no audit row) |
 | Share of users who switched to Arabic | N/A (not tracked, locale is cookie-only) |
+| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |
 ```
 
-**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; removes only the rows it seeded).
+**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, scheduled runs, uptime, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; all-failed `0.0%` run, webhook, schedule and approval counts; removes only the rows it seeded).
 
 Admin page metadata is subject to the same platform-admin authorization boundary as page content.
 Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor

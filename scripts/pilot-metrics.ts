@@ -28,6 +28,7 @@ export interface PilotMetrics {
   runSuccessRate: number | null;
   p95QueueToStartMs: number | null;
   webhookRuns: number;
+  scheduledRuns: number;
   approvals: number;
   duplicateWebhookRuns: number;
 }
@@ -167,7 +168,18 @@ async function getWebhookRuns(db: Queryable, from: Date, to: Date) {
   return result.rows[0] as { count: number };
 }
 
-/** Query 5b: workflow approval decisions (approved or rejected) made in range, by decided_at. Agent tool approvals and reviews are excluded. */
+/** Query 5b: Scheduled runs (runs triggered by schedule) */
+async function getScheduledRuns(db: Queryable, from: Date, to: Date) {
+  const result = await db.execute(sql`
+    SELECT COUNT(*)::int AS count
+    FROM ${schema.run}
+    WHERE trigger_kind = 'schedule'
+      AND ${dateRangeClause(sql`created_at`, from, to)}
+  `);
+  return result.rows[0] as { count: number };
+}
+
+/** Query 5c: workflow approval decisions (approved or rejected) made in range, by decided_at. Agent tool approvals and reviews are excluded. */
 async function getApprovals(db: Queryable, from: Date, to: Date) {
   const result = await db.execute(sql`
     SELECT COUNT(*)::int AS count
@@ -181,7 +193,7 @@ async function getApprovals(db: Queryable, from: Date, to: Date) {
 }
 
 /**
- * Query 5c: duplicate webhook runs. The hook route never stores a rejected "duplicate" row
+ * Query 5d: duplicate webhook runs. The hook route never stores a rejected "duplicate" row
  * (same-event retries return the existing event; signature replays hit a unique constraint),
  * so duplicates are measured on runs: for webhook runs created in range, sum (count - 1)
  * per (flow, trigger_ref) group that has more than one run. The unique index run_trigger_unique
@@ -211,6 +223,7 @@ export async function collectPilotMetrics(db: Queryable, from: Date, to: Date): 
   const publishedFlow = await getPublishedFlowWithin3Days(db, from, to);
   const runs = await getRunMetrics(db, from, to);
   const webhookRuns = await getWebhookRuns(db, from, to);
+  const scheduledRuns = await getScheduledRuns(db, from, to);
   const approvals = await getApprovals(db, from, to);
   const duplicateRuns = await getDuplicateWebhookRuns(db, from, to);
 
@@ -222,16 +235,19 @@ export async function collectPilotMetrics(db: Queryable, from: Date, to: Date): 
     runSuccessRate: runs.success_rate,
     p95QueueToStartMs: runs.p95_queue_to_start_ms,
     webhookRuns: webhookRuns.count,
+    scheduledRuns: scheduledRuns.count,
     approvals: approvals.count,
     duplicateWebhookRuns: duplicateRuns.count,
   };
 }
 
-// No table records these two, so the report says so rather than printing a misleading 0.
+// No table records these three, so the report says so rather than printing a misleading 0.
 /** Workspace access checks answer 404 (src/server/access.ts) without an audit row; `admin.access_denied` is platform-admin probes only. */
 export const NOT_LOGGED_DENIALS = "N/A (not logged: workspace 404s write no audit row)";
 /** The UI language is a cookie (src/i18n), never stored per user. */
 export const NOT_TRACKED_ARABIC = "N/A (not tracked, locale is cookie-only)";
+/** Staging uptime (goal: ≥99%) is monitored via external probe of /api/health (docs/runbooks/restore-rollback-alerts.md:154); not stored in DB. */
+export const NOT_TRACKED_UPTIME = "N/A (measured via external /api/health probe, not stored in DB)";
 
 /** Format metrics as a Markdown table. */
 export function formatMetricsAsMarkdown(metrics: PilotMetrics, from: Date, to: Date): string {
@@ -241,16 +257,18 @@ export function formatMetricsAsMarkdown(metrics: PilotMetrics, from: Date, to: D
     "| Metric | Value |",
     "|--------|-------|",
     `| Sign-ups | ${metrics.signups} |`,
-    `| Median time to verified | ${metrics.medianHoursToVerified == null ? "N/A" : `${formatNumber(Number(metrics.medianHoursToVerified))} hours`} |`,
+    `| Median time to verified | ${metrics.medianHoursToVerified != null ? `${formatNumber(Number(metrics.medianHoursToVerified))} hours` : "N/A"} |`,
     `| Onboarding completed + workspace created on day 1 | ${metrics.onboardingAndWorkspaceDay1} |`,
     `| Published ≥1 flow within 3 days | ${metrics.publishedFlowWithin3Days} |`,
-    `| Run success rate | ${metrics.runSuccessRate == null ? "N/A" : (Number(metrics.runSuccessRate) * 100).toFixed(1) + "%"} |`,
+    `| Run success rate | ${metrics.runSuccessRate != null ? `${(Number(metrics.runSuccessRate) * 100).toFixed(1)}%` : "N/A"} |`,
     `| p95 queue-to-start | ${formatMs(metrics.p95QueueToStartMs)} |`,
     `| Webhook runs | ${metrics.webhookRuns} |`,
+    `| Scheduled runs | ${metrics.scheduledRuns} |`,
     `| Approvals (workflow) | ${metrics.approvals} |`,
     `| Duplicate webhook runs | ${metrics.duplicateWebhookRuns} |`,
     `| Cross-workspace access denials | ${NOT_LOGGED_DENIALS} |`,
     `| Share of users who switched to Arabic | ${NOT_TRACKED_ARABIC} |`,
+    `| Staging uptime | ${NOT_TRACKED_UPTIME} |`,
   ];
   return lines.join("\n");
 }
