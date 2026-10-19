@@ -22,17 +22,27 @@ describe("docs consistency: email-token-lock-order test execution status", () =>
     );
 
     // docs/implementation/PHASE4_BETA_REPORT.md H3 security readiness review records it passed locally on 2026-10-08
-    expect(betaReport).toMatch(
-      /tests\/integration\/email-token-lock-order\.test\.ts.*passed locally on 2026-10-08 against PostgreSQL/
+    // Anchored specifically to the "## H3 security readiness review" section and "two-connection PostgreSQL test" phrase
+    const h3Section =
+      betaReport.split("## H3 security readiness review")[1]?.split(/^## /m)[0] ?? "";
+    expect(h3Section).toMatch(
+      /two-connection PostgreSQL test `tests\/integration\/email-token-lock-order\.test\.ts` passed locally on 2026-10-08 against PostgreSQL/
     );
 
-    // docs/implementation/PHASE4_BETA_REPORT.md #108 section records local verification against flowline_test_i108
-    expect(betaReport).toMatch(
+    // docs/implementation/PHASE4_BETA_REPORT.md #108 section records local verification against flowline_test_i108 and 2026-10-08 pass
+    const i108Section =
+      betaReport.split("## Account deletion vs the user's own SSO sign-in: lock-order test")[1]?.split(/^## /m)[0] ?? "";
+    expect(i108Section).toMatch(
       /Verified locally against a throwaway `flowline_test_i108` database:[^\n]*?email-token-lock-order\.test\.ts/
+    );
+    expect(i108Section).toMatch(
+      /The `tests\/integration\/email-token-lock-order\.test\.ts` suite also passed locally on 2026-10-08 against PostgreSQL/
     );
 
     // docs/implementation/PHASE4_BETA_REPORT.md #109 section records local verification against flowline_test_109
-    expect(betaReport).toMatch(
+    const i109Section =
+      betaReport.split("## Account deletion: audit rows before the workspace lock")[1]?.split(/^## /m)[0] ?? "";
+    expect(i109Section).toMatch(
       /flowline_test_109` database \(PostgreSQL\):[^\n]*?`email-token-lock-order\.test\.ts` \(3\/3\)/
     );
   });
