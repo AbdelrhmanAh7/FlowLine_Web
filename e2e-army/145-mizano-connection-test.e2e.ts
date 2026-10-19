@@ -1,5 +1,7 @@
-// Issue #145: the Mizano connection type (a per-workspace base URL plus a scoped API key, stored encrypted) and the
-// "Test connection" action that verifies a SAVED connection by calling the provider's identity() (for Mizano GET /api/health, then GET /api/me).
+// Issues #145, #147 and #148: the Mizano connection type (a per-workspace base URL plus a scoped API key, stored encrypted), the
+// "Test connection" action that verifies a SAVED connection by calling the provider's identity() (for Mizano GET /api/health, then GET /api/me),
+// and the catalog actions ("Create customer", "Create draft quote", and "List overdue invoices").
+// The Mizano tests are kept in this file to stay strictly within the hub's cap of 8 top-level e2e-army/*.e2e.ts files.
 //
 // Request-level test (AC1: the key is encrypted and never returned; AC2: Test connection checks the saved credentials
 // and takes no body, so a caller cannot point the stored key at another host). The UI tests then open Integrations through
@@ -200,5 +202,31 @@ test(
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     await card.getByRole("button", "اختبار الاتصال").tap();
     await expect(screen.getByText(/الاتصال سليم — Alice A Mizano/)).toBeVisible({ timeout: 30_000 });
+  },
+);
+
+test(
+  "@issue-147 AC1: the integrations catalog lists Mizano with the Create customer and Create draft quote actions",
+  { tags: ["feat:fl-integrations", "feat:fl-integration-actions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/");
+    await agent.act("open the workspace's Integrations page from the navigation");
+    await agent.act("open the Mizano integration");
+    await agent.assert("the Mizano integration lists an action named Create customer");
+    await agent.assert("the Mizano integration lists an action named Create draft quote");
+    await expect(screen.getByText("Create customer").first()).toBeVisible();
+    await expect(screen.getByText("Create draft quote").first()).toBeVisible();
+  },
+);
+
+test(
+  "@issue-148 AC1: the integrations catalog lists Mizano with the List overdue invoices action",
+  { tags: ["feat:fl-integrations", "feat:fl-integration-actions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/");
+    await agent.act("open the workspace's Integrations page from the navigation");
+    await agent.act("open the Mizano integration");
+    await agent.assert("the Mizano integration lists an action named List overdue invoices");
+    await expect(screen.getByText("List overdue invoices").first()).toBeVisible();
   },
 );

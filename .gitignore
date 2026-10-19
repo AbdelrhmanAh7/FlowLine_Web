@@ -12,6 +12,7 @@ test-results/
 playwright-report/
 # tester-army/e2e output: report, artifacts, sessions, replay cache, test-stack log (pnpm e2e:army)
 .e2e/
+.e2e-stack-*.log
 blob-report/
 .DS_Store
 .env.staging

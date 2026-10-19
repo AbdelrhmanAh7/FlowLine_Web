@@ -15,7 +15,7 @@ Arabic is the default language (RTL), with English as a secondary language throu
   scoped API keys).
 - **Integrations:** Google Sheets, Gmail, Slack, HubSpot, Zendesk, Airtable, Snowflake, GitHub, Stripe, Notion,
   PostgreSQL, Linear and Mizano (overdue invoices, customer and draft quote creation; Mizano's integration API is pending). They come with OAuth or API-key connections, encrypted credentials, private connections,
-  a **Test connection** action that re-checks a saved connection's credentials against its own saved URL, and
+  a **Test connection** action that re-checks a saved non-OAuth connection's credentials against its own saved URL, and
   repair and revocation handling. Per-workspace owners can also override the OAuth app used for a provider
   (Settings → OAuth apps).
 - **AI hub:** cloud-only, multi-provider. Each workspace brings its own keys in **Settings → AI Providers** — never
