@@ -177,8 +177,9 @@ Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-r
 worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
 to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
 Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
-expression-defined order. Regression coverage: `tests/integration/runs.test.ts` and
-`e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+expression-defined order. `data.csv` build mode takes its header from every row's keys in first-seen order, so a
+column that first appears in a later row is kept. Regression coverage: `tests/unit/engine-v2.test.ts`,
+`tests/integration/runs.test.ts` and `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
 
 Admin page metadata is subject to the same platform-admin authorization boundary as page content.
 Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
