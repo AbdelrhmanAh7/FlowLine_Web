@@ -20,21 +20,23 @@ In PR #214, the section added for issue #108 in `docs/implementation/PHASE4_BETA
 
 ## Acceptance Criteria
 
-- **AC1:** `docs/implementation/PHASE4_BETA_REPORT.md` contains the #108 section with a preceding blank line (preventing markdownlint MD022), explicitly states that issue #45 (PR #65) removed the deadlock between deletion and SSO by locking the user row before workspaces, clarifies that issue #109 (PR #216) implemented the subsequent audit-before-workspace reordering, and consistently names the deadlock hazard as pre-#65.
-- **AC2:** `tests/integration/account-delete-sso-lock-order.test.ts` header comments consistently attribute the deadlock removal to issue #45 (PR #65), describe PR #216 (#109) as the audit-before-workspace reordering, and name the hazard as pre-#65.
-- **AC3:** Dedicated unit test `tests/unit/account-delete-lock-order-docs.test.ts` validates that both files consistently credit issue #45 (PR #65), describe #109 (PR #216) as audit reordering, and use `pre-#65` consistently.
+- **AC1:** `docs/implementation/PHASE4_BETA_REPORT.md` contains the #108 section with a preceding blank line (preventing markdownlint MD022), explicitly states that issue #45 (PR #65) removed the deadlock between deletion and SSO by locking the user row before workspaces, clarifies that issue #109 (PR #216) implemented the subsequent audit-before-workspace reordering, and consistently names the deadlock hazard as pre-#65. In the Reconciliation 2026-10-14 note, it states status agreement rather than false "exact wording", and `docs/security/FEDERATED_MFA.md` explicitly names `tests/integration/federated-lock-order.test.ts`.
+- **AC2:** `tests/integration/account-delete-sso-lock-order.test.ts` header comments consistently attribute the deadlock removal to issue #45 (PR #65), describe PR #216 (#109) as the audit-before-workspace reordering, name the hazard as pre-#65, and describe expected rather than observed failure against the old deletion order.
+- **AC3:** Dedicated unit test `tests/unit/account-delete-lock-order-docs.test.ts` validates that both files consistently credit issue #45 (PR #65), describe #109 (PR #216) as audit reordering, use `pre-#65` consistently, that `FEDERATED_MFA.md` explicitly names `tests/integration/federated-lock-order.test.ts`, that `account-delete-sso-lock-order.test.ts` uses expected-failure phrasing, and that `EVIDENCE.md` lists AC5 linking the CTO decision.
 - **AC4:** All repo checks pass cleanly: `pnpm typecheck`, `eslint` on touched files, and vitest unit tests.
+- **AC5:** The issue #108 criterion ("the test reliably fails due to the lock ordering") is explicitly tracked as skipped/superseded on `main`. Because PR #65 (#45) and PR #216 (#109) are already merged to `main`, `tests/integration/account-delete-sso-lock-order.test.ts` passes 2/2 as a regression guard. Per CTO decision on PR #214 (`https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574`, head `b9ae3ee`), pre-fix failure execution is skipped on `main` and the test is delivered as an enduring regression baseline.
 
 ## Verification Report
 
 | AC | Evidence | Command | Exit Code | Observed Result |
 |---|---|---|---|---|
-| AC1, AC2, AC3 | `tests/unit/account-delete-lock-order-docs.test.ts` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 0 | 3 passed (3/3 tests pass) |
-| Regression on base (fails on base) | Same unit test against unmodified base `origin/main` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 1 | 3 failed (3/3 tests fail) |
+| AC1, AC2, AC3 | `tests/unit/account-delete-lock-order-docs.test.ts` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 0 | 5 passed (5/5 tests pass) |
+| Regression on base (fails on base) | Same unit test against unmodified base `origin/main` | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts --maxWorkers=2` | 1 | failed on base |
 | AC4: Types | TypeScript compiler check | `pnpm typecheck` | 0 | clean (`tsc --noEmit` exit 0) |
 | AC4: Lint | ESLint on changed and new files | `pnpm exec eslint tests/integration/account-delete-sso-lock-order.test.ts tests/integration/federated-lock-order.test.ts tests/integration/pg-lock-helpers.ts tests/unit/account-delete-lock-order-docs.test.ts` | 0 | clean (0 errors, 0 warnings) |
 | AC4: Evidence Secrets | Secret scanner self-test | `node scripts/check-evidence-secrets.mjs` | 0 | clean (0 hits across 174 files) |
-| Lock-order unit suite | Email-token and account-delete lock order unit tests | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts --maxWorkers=2` | 0 | 14 passed (14/14 tests pass) |
+| Lock-order unit suite | Email-token and account-delete lock order unit tests | `pnpm exec vitest run tests/unit/account-delete-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts --maxWorkers=2` | 0 | 16 passed (16/16 tests pass) |
+| AC5: #108 criterion deviation | Tracked as skipped/superseded per CTO decision | CTO decision on PR #214 (`https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574`, head `b9ae3ee`) | N/A | Skipped/superseded on `main` (fix already on main); 2/2 pass as regression guard |
 
 ## Changed Covering Tests
 

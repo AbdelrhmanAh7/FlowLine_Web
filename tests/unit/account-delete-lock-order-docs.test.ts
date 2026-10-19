@@ -7,7 +7,9 @@ const read = (relPath: string) =>
 
 describe("@issue-315 docs and comment consistency: account deletion lock-order attribution", () => {
   const betaReport = read("docs/implementation/PHASE4_BETA_REPORT.md");
+  const federatedMfa = read("docs/security/FEDERATED_MFA.md");
   const testFile = read("tests/integration/account-delete-sso-lock-order.test.ts");
+  const evidenceFile = read("artifacts/phase-4/issue-315/EVIDENCE.md");
 
   it("PHASE4_BETA_REPORT.md contains the #108 section with a preceding blank line (MD022)", () => {
     // Heading exists
@@ -36,9 +38,17 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     // Consistently names the hazard pre-#65
     expect(section).toMatch(/pre-#65/);
     expect(section).not.toMatch(/pre-#109/);
+
+    // Reconciliation note asserts status agreement rather than "exact wording"
+    expect(section).toMatch(/agrees on the status/i);
+    expect(section).not.toMatch(/exact wording/i);
   });
 
-  it("account-delete-sso-lock-order.test.ts header consistently attributes deadlock removal and naming", () => {
+  it("docs/security/FEDERATED_MFA.md explicitly names tests/integration/federated-lock-order.test.ts", () => {
+    expect(federatedMfa).toContain("`tests/integration/federated-lock-order.test.ts` ran locally on 2026-10-12");
+  });
+
+  it("account-delete-sso-lock-order.test.ts header consistently attributes deadlock removal, naming, and expected failure", () => {
     // Attributes deadlock removal to issue #45 (PR #65)
     expect(testFile).toMatch(
       /Issue #45 \(PR #65\) removed the deadlock by locking the user row before the workspaces/
@@ -52,5 +62,16 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     // Identifies the hazard as pre-#65
     expect(testFile).toMatch(/The pre-#65 deadlock hazard it guards against/);
     expect(testFile).not.toMatch(/The pre-#109 deadlock hazard/);
+
+    // Uses expected failure phrasing against old deletion order
+    expect(testFile).toMatch(
+      /Against the old deletion order the SSO-first case is expected to fail: deletion\s*\/\/\s*would wait at `delete from "user"` holding W, and on release the SSO audit insert would deadlock with it \(40P01\)\./
+    );
+  });
+
+  it("artifacts/phase-4/issue-315/EVIDENCE.md tracks AC5 linking the CTO decision", () => {
+    expect(evidenceFile).toContain("AC5");
+    expect(evidenceFile).toContain("https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574");
+    expect(evidenceFile).toContain("b9ae3ee");
   });
 });
