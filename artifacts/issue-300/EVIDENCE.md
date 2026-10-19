@@ -12,8 +12,8 @@
 
 | ID | Acceptance Criterion | Verification Method | Observed Result | Exit Code |
 |---|---|---|---|---|
-| **AC1** | Stale reference to #196 (prerequisite #196 not on main, branch 196 unmerged, conflict with #197) is resolved and barred from `AI_QUESTIONS.md` and repository docs. | Verified `AI_QUESTIONS.md` on `main`; unit regression assertions in `tests/unit/stale-questions-guard.test.ts`. | 0 violations found in active repository files | 0 |
-| **AC2** | Regression unit test covers and rejects historical offending texts that caused QA findings on PR #268 / parent #199 (red on offending text, green on clean head). | `pnpm vitest run tests/unit/stale-questions-guard.test.ts` | 5 passed, 0 failed | 0 |
+| **AC1** | Stale reference to #196 (prerequisite #196 not on main, branch 196 unmerged, conflict with #197) and stale #179 reference in `AI_QUESTIONS.md` are resolved and removed from repository docs. | Verified removal of `AI_QUESTIONS.md` and lack of stale references in docs; unit regression assertions in `tests/unit/stale-questions-guard.test.ts`. | 0 violations found in active repository files | 0 |
+| **AC2** | Regression unit test covers and rejects historical offending texts that caused QA findings on PR #268 / parent #199 and the binding board finding on #179 (red on offending text, green on clean head). | `pnpm vitest run tests/unit/stale-questions-guard.test.ts` | 6 passed, 0 failed | 0 |
 | **AC3** | Fresh branch off `main` (`ai/300`) is used instead of broken parent branch `ai/199-p2`, clearing the root causes of the `gate` failure (e.g. 11 e2e-army files exceeding the 8-file cap, unmerged branch conflicts). | `pnpm typecheck` && `pnpm lint` | Clean output (tsc exit 0, eslint exit 0) | 0 |
 | **AC4** | Verification evidence and documentation updated (`artifacts/issue-300/EVIDENCE.md`, `docs/implementation/PROGRESS.md`, `NEXT_ACTION.md`). | `git status` and test inspection | Docs updated, CI docs check satisfied | 0 |
 
@@ -21,7 +21,7 @@
 1. PR #268 attempted to delete `AI_QUESTIONS.md` to resolve QA findings about stale #196 notes.
 2. However, PR #268 was opened on `ai/199-p2`, a branch diverged from `main` with unmerged code from #196/#197/#199 and 11 top-level `e2e-army/*.e2e.ts` files, violating the strict 8-file limit enforced by `tests/unit/e2e-army-tooling.test.ts`.
 3. Merging `lane/ai/199` into `lane/ai/199-p2` in commit `eb5ee4d` failed check `gate`, reaching the 3/3 fix-round cap.
-4. Issue #300 isolates the task on a clean branch off `main` (`ai/300`), where `AI_QUESTIONS.md` contains no stale #196 blocker notes, and adds a regression test ensuring these notes cannot recur.
+4. Issue #300 isolates the task on a clean branch off `main` (`ai/300`), where `AI_QUESTIONS.md` is removed to clear all stale blocker and interim notes (including #196 and the #179 reference flagged by the High Board), and adds a regression test ensuring these notes cannot recur.
 
 ## Verification Commands & Outputs
 
@@ -31,16 +31,17 @@ pnpm vitest run tests/unit/stale-questions-guard.test.ts
 ```
 Output:
 ```
- ✓ |unit| tests/unit/stale-questions-guard.test.ts (5 tests) 4ms
-   ✓ @issue-300 guard against stale #196 blocker notes in AI_QUESTIONS.md (supersedes part of #268) (5)
+ ✓ |unit| tests/unit/stale-questions-guard.test.ts (6 tests) 4ms
+   ✓ @issue-300 guard against stale #196 blocker notes and #179 references in AI_QUESTIONS.md (supersedes part of #268) (6)
      ✓ rejects historical QA finding: stale reference to prerequisite #196 being blocked 1ms
      ✓ rejects historical QA finding: branch 196 not merged and conflicting with #197 0ms
+     ✓ rejects binding board finding: stale reference to #179 in AI_QUESTIONS.md 0ms
      ✓ rejects the full unmerged AI_QUESTIONS.md text that blocked PR #268 0ms
-     ✓ verifies that repository AI_QUESTIONS.md contains no stale #196 blocker claims on the current head 1ms
+     ✓ verifies that repository AI_QUESTIONS.md contains no stale #196 or #179 claims, or is absent 0ms
      ✓ verifies that active documentation files contain no stale references claiming #196 blocks progress 2ms
 
  Test Files  1 passed (1)
-      Tests  5 passed (5)
+      Tests  6 passed (6)
 ```
 Exit code: 0
 

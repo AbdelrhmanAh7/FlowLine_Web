@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const root = resolve(__dirname, "../..");
 
 /**
- * Checks text for stale blockers or unmerged branch dependency notes regarding #196 / #197.
+ * Checks text for stale blockers or unmerged branch dependency notes regarding #196 / #197 / #179.
  */
 export function findStaleQuestionViolations(content: string): string[] {
   const violations: string[] = [];
@@ -31,6 +31,10 @@ export function findStaleQuestionViolations(content: string): string[] {
       regex: /conflicts\s+with\s+#197/i,
       description: "Claim of conflicting changes with #197",
     },
+    {
+      regex: /(?:until\s+then[^\n]*#179|blocked[^\n]*#179)/i,
+      description: "Stale reference to merged issue #179 in questions",
+    },
   ];
 
   for (const { regex, description } of stalePatterns) {
@@ -42,7 +46,7 @@ export function findStaleQuestionViolations(content: string): string[] {
   return violations;
 }
 
-describe("@issue-300 guard against stale #196 blocker notes in AI_QUESTIONS.md (supersedes part of #268)", () => {
+describe("@issue-300 guard against stale #196 blocker notes and #179 references in AI_QUESTIONS.md (supersedes part of #268)", () => {
   it("rejects historical QA finding: stale reference to prerequisite #196 being blocked", () => {
     const historicalOffendingText = [
       "# Questions for #197 (account security page 2/4)",
@@ -66,6 +70,14 @@ describe("@issue-300 guard against stale #196 blocker notes in AI_QUESTIONS.md (
     expect(violations).toContain("Reference to branch 196 not being merged");
     expect(violations).toContain("Claim of conflicting changes with #197");
     expect(violations.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("rejects binding board finding: stale reference to #179 in AI_QUESTIONS.md", () => {
+    const historical179Text =
+      "Until then, #166 keeps the repo at 8 by merging the two same-route platform-admin API tests (#179 into `e2e-army/200-route-error-headers.e2e.ts`); every test and tag is kept. See that file's header.";
+    const violations = findStaleQuestionViolations(historical179Text);
+    expect(violations).toContain("Stale reference to merged issue #179 in questions");
+    expect(violations.length).toBeGreaterThan(0);
   });
 
   it("rejects the full unmerged AI_QUESTIONS.md text that blocked PR #268", () => {
@@ -98,13 +110,15 @@ Still blocked. \`ai/196\` still has only f59477d committed; its worktree (\`impl
     expect(violations.length).toBeGreaterThan(0);
   });
 
-  it("verifies that repository AI_QUESTIONS.md contains no stale #196 blocker claims on the current head", () => {
+  it("verifies that repository AI_QUESTIONS.md contains no stale #196 or #179 claims, or is absent", () => {
     const questionsPath = resolve(root, "AI_QUESTIONS.md");
     if (existsSync(questionsPath)) {
       const content = readFileSync(questionsPath, "utf8");
       const violations = findStaleQuestionViolations(content);
       expect(violations).toEqual([]);
-      expect(content).not.toMatch(/\b196\b/);
+      expect(content).not.toMatch(/\b(196|179)\b/);
+    } else {
+      expect(existsSync(questionsPath)).toBe(false);
     }
   });
 
