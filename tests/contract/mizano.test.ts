@@ -30,6 +30,16 @@ function ctxReturning(data: unknown, idempotencyKey = "idem-mizano") {
   return { ctx, request };
 }
 
+/** Asserts the rejection is a zod schema failure at the given path, not an unrelated error (e.g. an unregistered action). */
+async function expectSchemaRejection(promise: Promise<unknown>, path: (string | number)[]) {
+  const err = await promise.then(
+    () => null,
+    (e: unknown) => e,
+  );
+  expect(err).toBeInstanceOf(ZodError);
+  expect((err as ZodError).issues.some((issue) => JSON.stringify(issue.path) === JSON.stringify(path))).toBe(true);
+}
+
 const overdueResponse = {
   currency: "EGP",
   invoices: [
@@ -110,7 +120,7 @@ describe("mizano.list_overdue_invoices", () => {
       currency: "EGP",
       invoices: [{ number: "INV-9", customerName: "X", balanceDue: 1200, dueDate: "2026-09-10" }],
     });
-    await expect(runAction("mizano.list_overdue_invoices", ctx, {})).rejects.toThrow();
+    await expectSchemaRejection(runAction("mizano.list_overdue_invoices", ctx, {}), [0, "balanceDue"]);
   });
 
   it("refuses a base URL that is not a bare https origin, before any request is sent", async () => {
@@ -155,7 +165,7 @@ describe("mizano.list_overdue_invoices", () => {
 
   it("rejects an /api/me response that is not the expected identity shape", async () => {
     const { ctx } = ctxReturning({ id: "ws_1", workspaceName: "" });
-    await expect(getProvider("mizano")!.identity(ctx)).rejects.toThrow();
+    await expectSchemaRejection(getProvider("mizano")!.identity(ctx), ["workspaceName"]);
   });
 });
 
@@ -598,16 +608,6 @@ describe("mizano create steps error handling", () => {
     expect(logCalls).not.toContain("mizano.test");
   });
 });
-
-/** Asserts the rejection is a zod schema failure at the given path, not an unrelated error (e.g. an unregistered action). */
-async function expectSchemaRejection(promise: Promise<unknown>, path: (string | number)[]) {
-  const err = await promise.then(
-    () => null,
-    (e: unknown) => e,
-  );
-  expect(err).toBeInstanceOf(ZodError);
-  expect((err as ZodError).issues.some((issue) => JSON.stringify(issue.path) === JSON.stringify(path))).toBe(true);
-}
 
 describe("mizano.create_customer response schema", () => {
   const validInput = { name: "Acme Corp", company: "Acme Inc", email: "contact@acme.test", phone: "+201000000000" };
