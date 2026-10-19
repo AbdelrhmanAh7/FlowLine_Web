@@ -162,8 +162,9 @@ that would reveal whether the address has an account.
 | Everything except E2E | `pnpm check` |
 
 The blocking E2E gate for AI pull requests is the `e2e-army` commit status, posted by the hub's verify job: it starts
-the app from the PR branch and runs its FlowLine suite plus up to 8 top-level `e2e-army/*.e2e.ts` files of the branch (`features/` is not
-copied; the hub keeps its own feature suite). A PR that
+the app from the PR branch and runs its FlowLine suite, with up to 8 top-level `e2e-army/*.e2e.ts` files of the branch passed to the same run (`features/` is not
+copied; the hub keeps its own feature suite). The hub copies those files into a dot folder that e2e's default test glob skips, so as of
+2026-10-19 they run only locally ([developer guide](docs/DEVELOPER_GUIDE.md)). A PR that
 changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit (title `@issue-<N> <criterion>`,
 one goal per `agent.act`, checked with `agent.assert` or an exact `expect`; import only `e2e`, `@e2e-dev/web` and node
 built-ins, because the hub copies the file into its runner). Signed-in tests use the `fl-user` session (a verified user

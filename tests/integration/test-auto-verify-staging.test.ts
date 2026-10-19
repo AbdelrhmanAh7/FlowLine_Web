@@ -12,8 +12,8 @@ import { closeDb, unique } from "./helpers";
  *
  * - FLOWLINE_ENV=staging ignores BOTH opt-ins (env var and cookie): the account stays unverified, still gets its
  *   verification e-mail and cannot sign in. A stray `FLOWLINE_TEST_AUTO_VERIFY` var logs exactly one configuration
- *   warning when auth is built, before any sign-up; the cookie is ignored silently. That is auth built without the
- *   Next.js server (scripts, tests): the server itself refuses to start with the var set (src/instrumentation.ts).
+ *   warning when auth is built without the Next.js server (scripts, tests), before any sign-up, and the cookie is
+ *   ignored silently; the server itself refuses to start with the var set (src/instrumentation.ts).
  * - Under FLOWLINE_ENV=test each opt-in verifies the sign-up and sends no verification e-mail; the server-wide switch
  *   also turns off requireEmailVerification, so that sign-up returns a session itself. Without an opt-in the default
  *   behaviour is unchanged (unverified + verification e-mail).
