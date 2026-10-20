@@ -1,13 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #143 — pilot metrics script rework & reconciliation (2026-10-20)
-
-Merged `origin/main` (including commit `9a345f18` which resolved split issue #316 for `0.0%` run success rate formatting and #320 findings).
-PR #170 / #143 pilot metrics script (`scripts/pilot-metrics.ts`) provides all 8 week-1 pilot criteria (13 Markdown table rows).
-All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
-Harness next: push branch `ai/143`, verify CI gate, and obtain final review confirmation.
-E2E: not needed (internal read-only ops script, no user flow).
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
