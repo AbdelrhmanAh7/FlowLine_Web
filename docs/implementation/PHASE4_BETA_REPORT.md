@@ -348,3 +348,19 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## Pilot metrics script: week-1 success criteria (issue #143 / PR #170) — 2026-10-20
+
+Added `scripts/pilot-metrics.ts` (read-only SQL against configured DB) printing the 8 week-1 pilot
+success criteria (13 table rows) as a Markdown table for any given date range.
+All review findings from rounds 1-3 on PR #170 are resolved and reconciled with main:
+- Sign-ups and median time to verified (distinct users created in range; median hours to first consumed verify token).
+- Day-1 onboarding + workspace creation count (sign-up cohort within 24h, excluding skippers).
+- Published ≥1 flow within 3 days (earliest immutable publish `flow_version` within 3 days of sign-up).
+- Run success rate (formats 0.0% on all-failed runs, N/A on no finished runs) and p95 queue-to-start.
+- Webhook runs, scheduled runs (`trigger_kind = 'schedule'`), approvals, and duplicate webhook runs (dedupe guard).
+- Honest N/A reporting for cross-workspace access denials (workspace 404s write no audit row), Arabic language switch share (cookie-only locale), and staging uptime (external probe of `/api/health`).
+- Range validation with exit code 2 and usage on stderr; safe direct execution guard via normalized paths.
+- Read-only queries only (no INSERT/UPDATE/DELETE); sanitized output with zero secrets or URLs.
+Tests: 15/15 unit tests pass (`tests/unit/pilot-metrics.test.ts`), 9/9 integration tests pass with PostgreSQL (`tests/integration/pilot-metrics.test.ts`).
+Documentation: `docs/DEVELOPER_GUIDE.md` and `artifacts/phase-4/issue-143/EVIDENCE.md`.
+

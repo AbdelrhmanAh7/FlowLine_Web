@@ -1,6 +1,6 @@
 # Issue #143: pilot metrics script (verification report)
 
-Tested code on branch `ai/143` at commit `01f48999` (merged with `origin/main` at `264336fb`). Local run, 2026-10-20, Node 26 / pnpm 10.32.1, test DB `flowline_test_143` (migrated with `src/db/migrate.ts`). CI (`gate`) runs the full suite after push; it was not run locally.
+Tested code on branch `ai/143` at commit `3729bc91` (merged with `origin/main` at `116935af`). Local run, 2026-10-20, Node 26 / pnpm 10.32.1, test DB `flowline_test` (migrated with `src/db/migrate.ts`). CI (`gate`) runs the full suite after push; it was not run locally.
 
 E2E: not needed. The script is a read-only internal ops tool; it has no user-facing flow, so no `e2e-army` test is added.
 UI: none, so no screenshots or RTL/LTR captures apply. Sentry: no originating Sentry issue; this is a feature (review threads T1-T10 on PR #170).
@@ -33,11 +33,12 @@ UI: none, so no screenshots or RTL/LTR captures apply. Sentry: no originating Se
 ## Commands and exit codes
 
 - `pnpm typecheck` (`tsc --noEmit`): exit 0, no errors. (2026-10-20)
-- `pnpm exec eslint scripts/pilot-metrics.ts tests/unit/pilot-metrics.test.ts tests/integration/pilot-metrics.test.ts`: exit 0. (2026-10-20)
-- `pnpm exec vitest run --project unit tests/unit/pilot-metrics.test.ts`: 11 passed, exit 0. (2026-10-20)
-- `pnpm exec vitest run --project unit`: 1791 passed, 1 skipped, exit 0. (2026-10-20)
-- `FLOWLINE_ENV=test DATABASE_URL=postgres://... pnpm vitest run --project integration tests/integration/pilot-metrics.test.ts`: 9 passed, exit 0. (not run locally - requires test DB)
-- `pnpm tsx scripts/pilot-metrics.ts --from 1999-01-01 --to 1999-01-02`: exit 0, 13 rows printed as Markdown table. (not run locally - requires test DB)
+- `pnpm lint` (`eslint .`): exit 0. (2026-10-20)
+- `pnpm check:evidence`: exit 0. (2026-10-20)
+- `nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2`: 15 passed, 0 failed, exit 0. (2026-10-20)
+- `nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2`: 9 passed, 0 failed, exit 0. (2026-10-20)
+- `DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm tsx scripts/pilot-metrics.ts --from 1999-01-01 --to 1999-01-02`: exit 0, 13 rows printed as Markdown table with 0s and N/A. (2026-10-20)
+- `DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23`: exit 0, 13 rows printed as Markdown table matching DB data. (2026-10-20)
 - `pnpm tsx scripts/pilot-metrics.ts --from 2026-10-23 --to 2026-10-16`: exit 2, stderr shows usage message. (2026-10-20)
 - `pnpm tsx scripts/pilot-metrics.ts --from 2026-02-30 --to 2026-03-05`: exit 2, stderr shows usage message. (2026-10-20)
 - `pnpm tsx scripts/pilot-metrics.ts --from 2026-10-16`: exit 2, stderr shows usage message. (2026-10-20)
