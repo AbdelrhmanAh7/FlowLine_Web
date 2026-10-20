@@ -61,6 +61,7 @@ PR #244 failed check `gate` on commit `7634b2c` due to:
   - `pnpm vitest run tests/unit/i18n.test.ts` — exit 0, 16 passed.
   - `pnpm vitest run tests/unit/i18n-content-text.test.ts` — exit 0, 43 passed.
   - `tests/integration/deal-won-mizano-approval.test.ts` — exit 0, 4 passed.
+  - `pnpm vitest run tests/unit/e2e-army-tooling.test.ts` — exit 0, 12 passed.
 
 ---
 
@@ -75,3 +76,4 @@ PR #244 failed check `gate` on commit `7634b2c` due to:
 | `pnpm vitest run tests/unit/i18n.test.ts` | 0 | 16 passed (16 tests) | 100% pass across Arabic and English catalogues |
 | `pnpm vitest run tests/unit/i18n-content-text.test.ts` | 0 | 43 passed (43 tests) | 100% pass on bilingual message catalogues |
 | `pnpm vitest run tests/integration/deal-won-mizano-approval.test.ts` | 0 | 4 passed (4 tests) | 100% pass on real worker approval path & availability guard |
+| `pnpm vitest run tests/unit/e2e-army-tooling.test.ts` | 0 | 12 passed (12 tests) | 100% pass on e2e-army tooling & hygiene |
