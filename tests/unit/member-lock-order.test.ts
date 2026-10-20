@@ -102,7 +102,14 @@ describe("member change lock order (mocked transactions: statement order and loc
 
   it("a missing member is a 404 after the lock, with no write and no audit row", async () => {
     fx.member = undefined;
-    await expect(removeMember(actor, WORKSPACE, TARGET)).rejects.toBeInstanceOf(HttpError);
+    const errRole = await changeRole(actor, WORKSPACE, TARGET, "editor").catch((e) => e);
+    expect(errRole).toBeInstanceOf(HttpError);
+    expect(errRole).toMatchObject({ status: 404 });
+    expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read"]);
+    fx.events.length = 0;
+    const errRemove = await removeMember(actor, WORKSPACE, TARGET).catch((e) => e);
+    expect(errRemove).toBeInstanceOf(HttpError);
+    expect(errRemove).toMatchObject({ status: 404 });
     expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read"]);
   });
 

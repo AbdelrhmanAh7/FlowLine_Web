@@ -2,7 +2,6 @@
  * @file Integration tests verifying member lock order and mode with real PostgreSQL connections,
  * confirming concurrent SSO and membership change operations complete without deadlock.
  */
-import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -16,7 +15,7 @@ import { confirmSsoLink } from "@/server/sso-link";
 import { addMember, closeDb } from "./helpers";
 import { makeVerifiedUser, sessionFor } from "./platform-helpers";
 import { configuredTenant, ISSUER, mockTenantIdp, oidcAttempt, oidcSignIn, proveSsoMailbox } from "./federation-fixture";
-import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
+import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-lock-helpers";
 
 // Two real PostgreSQL connections; verified locally against flowline_test_46 and on CI integration shards.
 //
@@ -40,20 +39,6 @@ import { blockedByObserver, connect, pauseAfter } from "./pg-lock-helpers";
 afterEach(() => { vi.restoreAllMocks(); });
 beforeEach(() => { mockTenantIdp(); });
 afterAll(closeDb);
-
-type TransactionRunner = Pick<typeof db, "transaction">;
-
-/** Routes every `db.transaction` made inside `run(target, fn)` to that connection (and only those), so two production
- * functions can run at once, each on its own PostgreSQL connection, without a test hook in production code. */
-function routeTransactions() {
-  const route = new AsyncLocalStorage<TransactionRunner>();
-  const original = db.transaction.bind(db);
-  const spy = vi.spyOn(db, "transaction").mockImplementation(((callback: never, config?: never) => {
-    const target = route.getStore();
-    return target ? target.transaction(callback, config) : original(callback, config);
-  }) as never);
-  return { run: <T>(target: TransactionRunner, work: () => Promise<T>) => route.run(target, work), restore: () => spy.mockRestore() };
-}
 
 const pidOf = async (client: Client) => (await client.query<{ pid: number }>("select pg_backend_pid() as pid")).rows[0]!.pid;
 
