@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { Card, StatusBadge } from "@/components/ui";
+import { Card, StatusBadge, cn } from "@/components/ui";
 import { getT } from "@/i18n/server";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/server/access";
@@ -27,7 +27,9 @@ export default async function Page() {
         <h1 className="text-start text-xl font-semibold text-hi">{t("account.security.title")}</h1>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-start text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
-          <StatusBadge tone={on ? "success" : "muted"}>{on ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
+          <StatusBadge tone={on ? "success" : "muted"} className={cn("justify-between", on && "font-semibold")}>
+            {on ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}
+          </StatusBadge>
         </div>
         <div>
           <Link href="/" className="text-start text-sm text-muted underline">

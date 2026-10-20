@@ -43,6 +43,12 @@ describe("account security page (#196)", () => {
     expect(doc).not.toMatch(/Account and privacy/);
   });
 
+  it("uses visually distinct styling and layout alignment on StatusBadge", () => {
+    const src = readFileSync(PAGE, "utf8");
+    expect(src).toContain("font-semibold");
+    expect(src).toContain("justify-between");
+  });
+
   it("renders only catalogue keys and logical CSS", () => {
     const src = readFileSync(PAGE, "utf8");
     for (const key of KEYS.filter((k) => k !== "shell.userMenu.security")) expect(src, key).toContain(`"${key}"`);
