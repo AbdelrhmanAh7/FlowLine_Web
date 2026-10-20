@@ -28,4 +28,17 @@ describe("docs index and PR #159 docs", () => {
       prevWasTable = true;
     }
   });
+
+  it("indexes security/ACCOUNT_SECURITY.md and documents /account/security and two-factor card", () => {
+    const row = tableLines(read("README.md")).find((line) => line.includes("[security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md)"));
+    expect(row).toBeDefined();
+    const cells = row!.split("|").slice(1, -1).map((c) => c.trim());
+    expect(cells[0]).toBe("[security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md)");
+    expect(cells[2]).toBe("yes");
+    expect(cells[3]).toBe("approved");
+
+    const content = read("security/ACCOUNT_SECURITY.md");
+    expect(content).toContain("/account/security");
+    expect(content.toLowerCase()).toContain("two-factor card");
+  });
 });
