@@ -1,6 +1,6 @@
 # Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Branch:** `ai/145` (head `39019b9d`)  
+**Branch:** `ai/145` (head `82ebf3c1`)  
 **Date:** 2026-10-20  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145; part of FlowLine G5 #144)  
@@ -11,16 +11,16 @@
 |----|-------------|----------------|----------------------|-----------|--------|
 | **AC1** | Connection saved encrypted; key never returned to the client after save | `tests/contract/mizano-connection.test.ts:99-102` (`runConnectionTest` never echoes key); `tests/integration/mizano-connection-test.test.ts:98-106` (`secretEnc` at rest, connection list redaction); `e2e-army/145-mizano-connection-test.e2e.ts:71-77,83-84` (create/test responses omit key). | `pnpm vitest run tests/contract/mizano-connection.test.ts` | 0 | **PASS** — Scoped API key encrypted at rest; never returned in API responses or UI. |
 | **AC2** | Test connection shows OK / a clear error (401, unreachable) | `tests/contract/mizano-connection.test.ts:69-90` (OK returns accountLabel, 401 maps to `AUTHENTICATION_FAILED`, unreachable/timeout maps to `PROVIDER_UNREACHABLE`); `tests/integration/mizano-connection-test.test.ts:84-96` (revoked key, timeout); `tests/unit/connection-test-i18n.test.ts:1-41` (all codes mapped to English and Arabic translations); `e2e-army/145-mizano-connection-test.e2e.ts:79-84,179-206` (OK and error card flows, LTR and RTL Arabic). | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/unit/connection-test-i18n.test.ts` | 0 | **PASS** — Every error maps to a bounded code with user-friendly translated text in EN and AR (RTL); raw provider body discarded. |
-| **AC3** | Unit test with a mocked HTTP server | `tests/contract/mizano-connection.test.ts:1-126` (24 tests against local fake provider server `e2e/fakes/provider-server.ts`); `tests/contract/mizano-fake.test.ts:1-55` (8 tests for fake server health and me handlers); `tests/contract/mizano.test.ts` (43 contract tests). | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts` | 0 | **PASS** — 75 contract tests against the mocked/fake HTTP server with faults, auth verification, and health checking. |
+| **AC3** | Unit test with a mocked HTTP server | `tests/contract/mizano-connection.test.ts:1-126` (24 tests against local fake provider server `e2e/fakes/provider-server.ts`); `tests/contract/mizano-fake.test.ts:1-55` (8 tests for fake server health and me handlers); `tests/contract/mizano.test.ts` (43 contract tests). | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts` | 0 | **PASS** — 75 contract tests against the mocked/fake HTTP server with faults, auth verification, and health checking. Total 104 tests across 5 files including i18n and tooling guards. |
 
 ## Test Execution Evidence
 
 ```
 $ pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/e2e-army-tooling.test.ts
  Test Files  5 passed (5)
-      Tests  97 passed (97)
-   Start at  03:17:54
-   Duration  2.29s
+      Tests  104 passed (104)
+   Start at  05:32:03
+   Duration  3.41s
 
 $ pnpm lint
 > eslint . --cache --cache-location node_modules/.cache/eslint/
