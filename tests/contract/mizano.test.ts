@@ -238,6 +238,25 @@ describe("mizano.create_customer", () => {
     expect(req.json).not.toHaveProperty("taxId");
   });
 
+  it("accepts optional quote lines for approval preview and omits them from the customer API request", async () => {
+    const { ctx, request } = ctxReturning(customerResponse);
+    await runAction("mizano.create_customer", ctx, {
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+      lines: [{ item: "Oven service plan", qty: "1.00", unitPrice: "4800.00", taxRate: "14.00" }],
+    });
+    const req = request.mock.calls[0][0];
+    expect(req.json).toEqual({
+      name: "Test Customer",
+      company: "Test Company Ltd",
+      email: "test@example.com",
+      phone: "+1-555-0123",
+    });
+    expect(req.json).not.toHaveProperty("lines");
+  });
+
   it("sends the same Idempotency-Key when the same run repeats, and a different one for another run", async () => {
     const input = { name: "Test Customer", company: "Test Company Ltd", email: "test@example.com", phone: "+1-555-0123" };
     const first = ctxReturning(customerResponse, "fl_run1_node1");
