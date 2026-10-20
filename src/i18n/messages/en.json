@@ -2323,15 +2323,15 @@
         "on": "On",
         "off": "Off",
         "enable": "Enable",
+        "disable": "Disable",
+        "disableBody": "Enter your account password to turn off two-step verification. Sign-in will then need only your password.",
+        "disabled": "Two-step verification is off.",
         "cancel": "Cancel",
         "password": "Account password",
         "passwordInvalid": "That password isn't correct.",
         "secret": "Secret key (add it to your authenticator app)",
         "backupCodes": "Backup codes — shown only once, store them offline.",
-        "confirm": "Confirm and turn on",
-        "disable": "Disable",
-        "disableBody": "Turning this off removes the extra sign-in code. Enter your account password to confirm.",
-        "disabled": "Two-step verification is off."
+        "confirm": "Confirm and turn on"
       }
     },
     "settings": {

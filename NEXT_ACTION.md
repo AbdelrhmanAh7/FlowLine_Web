@@ -1,5 +1,10 @@
 # Next action — 2026-10-03
 
+## Issue #199 review follow-up — 2026-10-14
+
+PR #262 remains for the harness to push and request review. Cancel buttons explicitly use `type="button"`; the enable and disable password fields use separate refs and `cancel()` clears both plus any pending code. The existing better-auth disable endpoint is POST JSON `{ password }`, with no code field. Regression tests assert cancellation discards enrolment/password UI without a mutation and Disable sends only the password. Reuse: the installed MIT better-auth twoFactor plugin; no new dependency or server code.
+
+Runtime verification now runs: this checkout has `.env.test` and PostgreSQL on `127.0.0.1:5432`, so an isolated stack (`flowline_test_199`, `:3100`, one worker) started. `pnpm exec playwright test e2e/account-security.spec.ts e2e/arabic.spec.ts --project=chromium --workers=1` passed 5/5 (the enable → sign-in prompt → disable journey and the Arabic/RTL case included); `pnpm typecheck` and `pnpm lint` are clean, and the unit guards pass. `e2e-army/72-federated-mfa-failure-audit.e2e.ts` also passed locally for its locator-only Arabic/RTL test (the AC1 test needs the optional `ai` peer dependency of `e2e`, which the hub installs, so it skipped here). Read-only GitHub checks on 2026-10-14 still show prerequisite PRs #261 (#196) and #259 (#197) OPEN. The branch already shares those prerequisite commits with `origin/ai/196`/`origin/ai/197`, so once they merge the diff-vs-main shrinks to the part-4 commits with no conflict; no rebase is required. No push, PR reply, merge or release action was performed in this turn.
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".

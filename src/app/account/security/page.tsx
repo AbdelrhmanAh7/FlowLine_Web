@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getT())("meta.accountSecurity") };
 }
 
-/** Account security: two-step verification status and enrolment (disable follows in a later part). */
+/** Account security: two-step verification status, enrolment (enable) and disable. */
 export default async function Page() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
