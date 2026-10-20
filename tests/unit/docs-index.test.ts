@@ -29,3 +29,34 @@ describe("docs index and PR #159 docs", () => {
     }
   });
 });
+
+describe("security posture docs and shell command safety (#107)", () => {
+  const repoRoot = (name: string) => readFileSync(fileURLToPath(new URL(`../../${name}`, import.meta.url)), "utf8");
+
+  it("AGENTS.md links to REPO_SECURITY_SETTINGS.md as a navigation reference", () => {
+    const agents = repoRoot("AGENTS.md");
+    // Verifies markdown link exists in the Security posture PR requirement section
+    expect(agents).toMatch(/\[`?docs\/security\/REPO_SECURITY_SETTINGS\.md`?\]\(docs\/security\/REPO_SECURITY_SETTINGS\.md\)/);
+  });
+
+  it("docs/security/REPO_SECURITY_SETTINGS.md uses ${PR_NUMBER:-123} default example value and has no unescaped angle brackets", () => {
+    const doc = read("security/REPO_SECURITY_SETTINGS.md");
+    expect(doc).toContain("${PR_NUMBER:-123}");
+    expect(doc).not.toContain("${PR_NUMBER:?set PR_NUMBER first}");
+    expect(doc).not.toContain("<PR_NUMBER>");
+
+    // Check code blocks have no raw angle bracket placeholders
+    const shMatches = doc.match(/```sh\n([\s\S]*?)\n```/g) ?? [];
+    for (const block of shMatches) {
+      expect(block).not.toMatch(/<[^>]+>/);
+    }
+  });
+
+  it("docs/security/REPO_SECURITY_SETTINGS.md accurately summarizes enabled settings and ready PRs", () => {
+    const doc = read("security/REPO_SECURITY_SETTINGS.md");
+    expect(doc).not.toMatch(/enabled the first four/i);
+    expect(doc).toMatch(/the settings shown as enabled below/i);
+    expect(doc).toMatch(/next non-draft or ready-for-review PR into main/i);
+  });
+});
+
