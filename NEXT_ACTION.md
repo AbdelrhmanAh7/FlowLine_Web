@@ -1,10 +1,27 @@
 # Next action — 2026-10-03
 
-## Issue #199 review follow-up — 2026-10-14
+## Issue #318 — Account security docs & review follow-up (2026-10-20)
 
-PR #262 remains for the harness to push and request review. Cancel buttons explicitly use `type="button"`; the enable and disable password fields use separate refs and `cancel()` clears both plus any pending code. The existing better-auth disable endpoint is POST JSON `{ password }`, with no code field. Regression tests assert cancellation discards enrolment/password UI without a mutation and Disable sends only the password. Reuse: the installed MIT better-auth twoFactor plugin; no new dependency or server code.
+PR #327 (supersedes part of #269, parent issue #199).
+- Documented `/account/security` route and `TwoFactorCard` in `docs/security/ACCOUNT_SECURITY.md` (indexed in `docs/README.md`).
+- Localized TOTP specification with Arabic terms (`TOTP (SHA-1، 6 أرقام، خطوة 30 ثانية)`), clarified secret input DOM clearing, scoped Engine execution separation, and cited federated MFA session fencing implementation (`src/server/federated-mfa.ts`) and tests (`tests/unit/mfa-session-fence.test.ts`, `tests/integration/sec-federated-mfa-regression.test.ts`).
+- Reinforced `TwoFactorCard` cancellation safety: disabled Cancel button while async operations are pending (`disabled={pending !== null}`), added request-id abort/stale-response guard discarding late responses on Cancel, and added RTL code comment.
+- Fixed hyphen in Arabic message for `account.security.twoFactor.backupCodes`.
+- Updated test qualifications: Playwright accounts for 4 tests in `e2e/account-security.spec.ts` plus 1 targeted test in `e2e/arabic.spec.ts` (`-g "Arabic account security page"`), totaling 5/5 targeted specifications.
 
-Runtime verification now runs: this checkout has `.env.test` and PostgreSQL on `127.0.0.1:5432`, so an isolated stack (`flowline_test_199`, `:3100`, one worker) started. `pnpm exec playwright test e2e/account-security.spec.ts e2e/arabic.spec.ts --project=chromium --workers=1` passed 5/5 (the enable → sign-in prompt → disable journey and the Arabic/RTL case included); `pnpm typecheck` and `pnpm lint` are clean, and the unit guards pass. `e2e-army/199-disable-two-factor.e2e.ts` also passed locally for its locator-only Arabic/RTL test (the AC1 test needs the optional `ai` peer dependency of `e2e`, which the hub installs, so it skipped here). Read-only GitHub checks on 2026-10-14 still show prerequisite PRs #261 (#196) and #259 (#197) OPEN. The branch already shares those prerequisite commits with `origin/ai/196`/`origin/ai/197`, so once they merge the diff-vs-main shrinks to the part-4 commits with no conflict; no rebase is required. No push, PR reply, merge or release action was performed in this turn.
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
+
+## Issue #204 — harness handoff (2026-10-15)
+
+The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
+After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
+See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
@@ -131,3 +148,14 @@ the frozen `20261001-d224cfb` run. No new e2e-army test is needed for this inter
 5. After PR #77 (issue #62, `source-map-js` override) merges: confirm Dependabot alert #3 (GHSA-68fv-2mgg-jv7q) is closed as `fixed`, and that every alert left in `gh api 'repos/AbdelrhmanAh7/FlowLine_Web/dependabot/alerts?state=open'` was created after issue #62 (2026-10-07T15:00Z); record both on issue #62, then close it. On 2026-10-11 the open alerts were #3 plus #4–#17 (`next` 16.3.6, `shell-quote` 1.9.0, `sharp` 0.35.4, created 2026-10-08), which need their own issues; no tracking issue was found ([evidence](artifacts/phase-4/issue-62/EVIDENCE.md)).
 
 Production deployment, live payments, invitations, DNS/Pi changes, and spending remain unapproved. No production readiness is implied by the stack implementation, review, or CI.
+
+## Issue #251 — CSV build keeps later-row columns (2026-10-19)
+
+PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from all rows in first-seen order.
+The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
+The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
+(sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #297 — guard AI_QUESTIONS.md against stray audit deliverables (2026-10-19)
+
+PR branch `ai/297` supersedes part of #271. Resolves reviewer finding where the Issue #250 CI PR audit deliverable was incorrectly placed into root `AI_QUESTIONS.md`. The QA checklist audit deliverable is properly housed under `docs/evidence/250/qa-checklist-audit.md`, and unit regression test `tests/unit/questions-deliverable-guard.test.ts` guards `AI_QUESTIONS.md` from containing stray audit deliverables or checklist tables. Harness next: CI and reviewer confirmation. E2E: not needed — internal documentation and test guard chore.
