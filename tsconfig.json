@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -43,6 +44,7 @@
     ".next-test",
     "artifacts",
     "playwright-report",
-    "test-results"
+    "test-results",
+    "tools/demo-video"
   ]
 }
