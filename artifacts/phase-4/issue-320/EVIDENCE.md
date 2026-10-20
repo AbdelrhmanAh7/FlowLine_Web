@@ -4,7 +4,7 @@ Supersedes part of #170. Refs #143.
 
 Workspace: `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320`  
 Branch: `ai/320`  
-Tested commit: `749955a4`  
+Tested commit: `a9ce495b`  
 Originating review finding: PR #170 review discussion `r4241768670` (finding `f7eba2a4e9dd`)  
 Originating Sentry issue: None (internal ops script review finding split from PR #170)  
 E2E Waiver: `E2E: not needed — internal ops CLI script (scripts/pilot-metrics.ts), no user-facing UI or endpoints`
