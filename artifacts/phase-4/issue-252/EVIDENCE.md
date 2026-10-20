@@ -4,7 +4,7 @@
 **Sentry:** none. This is a release-gate e2e failure, not a Sentry exception.
 **Root cause:** `src/integrations/registry.ts` returned the pre-GA `mizano` provider from `listProviders()` (appended after `linear`), so the catalog route and the integrations page exposed 13 providers.
 **Fix:** `listProviders()` filters `PRE_GA = {"mizano"}` (`src/integrations/registry.ts:18-24`); `allProviders()` keeps Mizano registered for lookups by id. Hub expectation and `e2e/` are untouched.
-**Tested commit SHA:** `3f24bb55` (code, tests and e2e; merged `origin/main`). Later commits on this branch change only docs/evidence.
+**Tested commit SHA:** `04fa7080` (Merge remote-tracking branch 'origin/main' into ai/252 and resolve conflicts)
 **Type:** bug fix, user-facing catalog (UI + API). No new UI strings and no layout change, so no new screenshots; Arabic/RTL is unaffected (the 12 provider names are brand names; the e2e check is language-independent for the Mizano absence).
 
 ## Acceptance criteria
