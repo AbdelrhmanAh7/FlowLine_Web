@@ -138,3 +138,7 @@ PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from al
 The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
 The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
 (sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #297 — guard AI_QUESTIONS.md against stray audit deliverables (2026-10-19)
+
+PR branch `ai/297` supersedes part of #271. Resolves reviewer finding where the Issue #250 CI PR audit deliverable was incorrectly placed into root `AI_QUESTIONS.md`. The QA checklist audit deliverable is properly housed under `docs/evidence/250/qa-checklist-audit.md`, and unit regression test `tests/unit/questions-deliverable-guard.test.ts` guards `AI_QUESTIONS.md` from containing stray audit deliverables or checklist tables. Harness next: CI and reviewer confirmation. E2E: not needed — internal documentation and test guard chore.
