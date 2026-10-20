@@ -40,5 +40,10 @@ describe("docs index and PR #159 docs", () => {
     const content = read("security/ACCOUNT_SECURITY.md");
     expect(content).toContain("/account/security");
     expect(content.toLowerCase()).toContain("two-factor card");
+    expect(content).toContain("TOTP (SHA-1، 6 أرقام، خطوة 30 ثانية");
+    expect(content).toContain("cleared from the input on submit");
+    expect(content).toContain("src/server/federated-mfa.ts");
+    expect(content).toContain("tests/unit/mfa-session-fence.test.ts");
+    expect(content).toContain("Engine Decoupling and Access");
   });
 });

@@ -27,8 +27,10 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const enablePasswordRef = useRef<HTMLInputElement>(null);
   const disablePasswordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
+  const requestIdRef = useRef(0);
 
   const cancel = () => {
+    requestIdRef.current += 1;
     takeSecret(enablePasswordRef.current);
     takeSecret(disablePasswordRef.current);
     if (codeRef.current) codeRef.current.value = "";
@@ -39,46 +41,61 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
 
   const enable = async () => {
     const password = takeSecret(enablePasswordRef.current) ?? "";
+    const reqId = ++requestIdRef.current;
     setPending("enable");
     try {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } });
+      if (reqId !== requestIdRef.current) return;
       setEnrolment({ totpURI: r.totpURI, secret: new URL(r.totpURI).searchParams.get("secret") ?? "", backupCodes: r.backupCodes });
       setAskPassword(false);
     } catch (err) {
+      if (reqId !== requestIdRef.current) return;
       toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
     } finally {
-      setPending(null);
+      if (reqId === requestIdRef.current) {
+        setPending(null);
+      }
     }
   };
 
   const verify = async () => {
     const code = (codeRef.current?.value ?? "").trim();
     if (codeRef.current) codeRef.current.value = "";
+    const reqId = ++requestIdRef.current;
     setPending("verify");
     try {
       await api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code } });
+      if (reqId !== requestIdRef.current) return;
       setEnrolment(null);
       router.refresh();
     } catch (err) {
+      if (reqId !== requestIdRef.current) return;
       toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("auth.twoFactorInvalid") : apiErrorMessage(t, err), "danger");
     } finally {
-      setPending(null);
+      if (reqId === requestIdRef.current) {
+        setPending(null);
+      }
     }
   };
 
   const disable = async () => {
     const password = takeSecret(disablePasswordRef.current) ?? "";
+    const reqId = ++requestIdRef.current;
     setPending("disable");
     try {
       // better-auth disableTwoFactor accepts a POST JSON body with only the account password.
       await api("/api/auth/two-factor/disable", { method: "POST", json: { password } });
+      if (reqId !== requestIdRef.current) return;
       setAskDisable(false);
       toast(t("account.security.twoFactor.disabled"), "success");
       router.refresh();
     } catch (err) {
+      if (reqId !== requestIdRef.current) return;
       toast(err instanceof ApiError && (err.status === 400 || err.status === 401) ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
     } finally {
-      setPending(null);
+      if (reqId === requestIdRef.current) {
+        setPending(null);
+      }
     }
   };
 
@@ -105,7 +122,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               <Button type="submit" variant="primary" loading={pending === "disable"}>
                 {t("account.security.twoFactor.disable")}
               </Button>
-              <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+              <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
             </div>
           </form>
         ) : (
@@ -115,6 +132,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         )
       ) : enrolment ? (
         <div className="flex flex-col gap-3">
+          {/* Base32 TOTP secret is a technical credential rendered LTR to avoid character inversion in Arabic/RTL displays. */}
           <Field label={t("account.security.twoFactor.secret")} htmlFor="two-factor-secret">
             <code id="two-factor-secret" dir="ltr" className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm" data-testid="totp-secret">
               {enrolment.secret}
@@ -122,6 +140,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
           </Field>
           <div>
             <p className="text-sm text-warning">{t("account.security.twoFactor.backupCodes")}</p>
+            {/* Backup codes are alphanumeric tokens rendered LTR to preserve sequence readability in Arabic/RTL contexts. */}
             <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
                 <li key={c}>{c}</li>
@@ -141,7 +160,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
           </form>
         </div>
       ) : askPassword ? (
@@ -159,7 +178,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
-            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
           </div>
         </form>
       ) : (
