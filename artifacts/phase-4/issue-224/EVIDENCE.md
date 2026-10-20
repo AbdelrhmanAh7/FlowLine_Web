@@ -3,11 +3,12 @@
 **Issue:** [#224](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/224) (Part of [#145](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/145))  
 **PR:** [#256](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/256)  
 **Branch:** `ai/224`  
+**Tested SHA:** `2ea1e6799413003ac8abbb091d938465381f94cb`  
 
 ## Numbered Acceptance Criteria
 
 - **AC1 (English catalog strings):** In `src/i18n/messages/en.json`, under `integrationCatalog.mizano`, `description` is `"Connect FlowLine to your Mizano accounting workspace with a scoped API key."`, `fields.baseUrl.label` is `"Base URL"`, and `fields.token.label` is `"API key"`.
-- **AC2 (Arabic catalog strings):** In `src/i18n/messages/ar.json`, under `integrationCatalog.mizano`, `description` is `"اربط FlowLine بمساحة عملك المحاسبية في Mizano بمفتاح API ذي نطاق محدد."`, `fields.baseUrl.label` is `"الرابط الأساسي"`, and `fields.token.label` is `"مفتاح API"`.
+- **AC2 (Arabic catalog strings):** In `src/i18n/messages/ar.json`, under `integrationCatalog.mizano`, `description` is `"اربط FlowLine بمساحة عملك المحاسبية في Mizano بمفتاح API محدود النطاق."`, `fields.baseUrl.label` is `"الرابط الأساسي"`, and `fields.token.label` is `"مفتاح API"`.
 - **AC3 (Action preservation):** Existing action translations (`list_overdue_invoices`, `create_customer`, `create_draft_quote`) are preserved and kept unchanged; documentation in `docs/integrations/SUPPORTED-ACTIONS.md` and `docs/implementation/PHASE4_BETA_REPORT.md` accurately reflects that existing action translations are kept unchanged.
 - **AC4 (Provider definition sync):** In `src/integrations/providers/mizano.ts`, the default provider definition matches `en.json` (`description: "Connect FlowLine to your Mizano accounting workspace with a scoped API key."`, `token` label `"API key"`, and `baseUrl` label `"Base URL"`), satisfying `tests/unit/i18n-content-text.test.ts`.
 - **AC5 (Testing and Verification):** Unit tests in `tests/unit/i18n.test.ts` (17/17 tests), `tests/unit/i18n-content-text.test.ts` (41/41 tests), `tests/unit/e2e-army-tooling.test.ts` (12/12 tests), `pnpm typecheck`, and `pnpm lint` pass with exit code 0.
