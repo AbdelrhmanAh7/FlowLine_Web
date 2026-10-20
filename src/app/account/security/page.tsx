@@ -27,7 +27,7 @@ export default async function Page() {
         <h1 className="text-start text-xl font-semibold text-hi">{t("account.security.title")}</h1>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-start text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
-          <StatusBadge tone={on ? "success" : "muted"} className={cn("justify-between", on && "font-semibold")}>
+          <StatusBadge tone={on ? "success" : "muted"} className={cn("shrink-0", on && "font-semibold")}>
             {on ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}
           </StatusBadge>
         </div>

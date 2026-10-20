@@ -43,10 +43,14 @@ describe("account security page (#196)", () => {
     expect(doc).not.toMatch(/Account and privacy/);
   });
 
-  it("uses visually distinct styling and layout alignment on StatusBadge", () => {
+  it("uses row-end layout alignment and visually distinct active StatusBadge styling", () => {
     const src = readFileSync(PAGE, "utf8");
     expect(src).toContain("font-semibold");
+    // Row container positions the title and badge at opposite ends of the flex row
     expect(src).toContain("justify-between");
+    // StatusBadge itself must not have justify-between (which can cause internal layout issues in RTL)
+    expect(src).not.toMatch(/<StatusBadge[^>]*className=[^>]*justify-between/);
+    expect(src).toContain("shrink-0");
   });
 
   it("renders only catalogue keys and logical CSS", () => {
