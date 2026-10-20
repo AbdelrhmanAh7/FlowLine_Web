@@ -1,73 +1,16 @@
-# AI_QUESTIONS.md
+# AI questions / notes
 
-## Issue #173: Add unit tests for hub transport
+## 2026-10-15 — hub e2e-army file cap reached (recorded, not a blocker)
 
-### Name Mismatch
+The hub's verify job copies only the first 8 top-level `e2e-army/*.e2e.ts` files of a branch
+(`readdirSync(e2e-army).filter(/^[\w.-]+\.e2e\.ts$/).slice(0, 8)` in `nql-agents src/lib/e2earmy.ts`),
+and `tests/unit/e2e-army-tooling.test.ts` asserts the repo stays within that cap.
 
-The issue brief mentions testing functions that don't exist in `src/ai/hub/transport.ts`:
+`main` now sits exactly at 8 files (#221 added `e2e-army/221-auth-isolation.e2e.ts`), so the required
+#166 test (`e2e-army/166-mena-template.e2e.ts`) is the ninth and the cap guard fails on any fresh CI run
+of the PR. Since the hub cannot run the ninth file, the repo has to stay at 8.
 
-| Issue mentions | Actual export | Notes |
-|----------------|---------------|-------|
-| `createRequest` | `assertAllowedUrl` + `providerHeaders` | Validates URL against allowlist, builds headers |
-| `executeRequest` | `hubFetch` | Main fetch function with error mapping |
-| `handleResponse` | (part of `hubFetch`) | Error mapping: EGRESS_TOO_MANY_REDIRECTS→AI_REDIRECT_REFUSED, TimeoutError→AI_TIMEOUT, other→AI_UNAVAILABLE |
-
-The tests cover the actual exported functions with the same behavioral coverage.
-
-### Proposed Replacement Acceptance Check
-
-The original acceptance criterion uses a Jest flag that doesn't exist in vitest:
-
-```
-npx tsc --noEmit && npm test -- --listTests | grep transport.spec
-```
-
-**Proposed replacement:**
-
-```
-npx tsc --noEmit && npx vitest list --project unit | grep transport
-```
-
-This verifies:
-1. TypeScript compiles without errors
-2. The transport test file is discovered by vitest's unit project
-3. All transport-related tests are listed
-
-### Test Coverage Summary
-
-Created `tests/unit/ai-hub-transport.test.ts` with 19 tests covering:
-
-**assertAllowedUrl (createRequest equivalent)** - 6 tests:
-- Accepts allowlisted https host
-- Refuses http
-- Refuses IP address hosts
-- Refuses credentials in URL
-- Refuses unknown hosts
-- Works with dashscope placeholder hosts
-
-**providerHeaders** - 3 tests:
-- Keeps provider's fixed static headers (anthropic-version)
-- Adds header-mapped connection fields (OpenAI-Organization, OpenAI-Project)
-- Does not add headers for empty/missing fields
-
-**hubFetch (executeRequest equivalent)** - 8 tests:
-- Calls safeFetch with correct URL, auth header, maxRedirects: 0, JSON body
-- Uses fromOrigin to resolve against origin instead of base URL
-- Maps EGRESS_TOO_MANY_REDIRECTS → AI_REDIRECT_REFUSED
-- Maps TimeoutError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps AbortError → AI_TIMEOUT (retryable, possibleCharge)
-- Maps other errors → AI_UNAVAILABLE (retryable)
-- Maps EGRESS_TOO_LARGE → AI_RESPONSE_TOO_LARGE (possibleCharge)
-- Maps other EgressError codes → AI_EGRESS_BLOCKED
-
-**resolveBaseUrl and resolveOrigin** - 2 tests:
-- Returns documented base URL without trailing slash
-- Fills dashscope placeholders from settings
-
-### Notes
-
-- No e2e-army test needed: this change only adds unit tests (pure test addition)
-- PR description should include: `E2E: not needed — unit tests only`
-- File named `*.test.ts` (not `*.spec.ts`) to match vitest conventions
-- Does not modify `transport.ts` — tests only
-- Uses real providers from `getProviderDef` as specified in the manager plan
+**Suggestion for the owner (hub-side, not changed here):** raise the hub cap above 8, or make the hub run
+every `e2e-army/*.e2e.ts` file, so a new feature test no longer silently evicts the alphabetically last one.
+Until then, #166 keeps the repo at 8 by merging the two same-route platform-admin API tests (#179 into
+`e2e-army/200-route-error-headers.e2e.ts`); every test and tag is kept. See that file's header.

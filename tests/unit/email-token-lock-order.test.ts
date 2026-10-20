@@ -9,6 +9,13 @@ const fx = vi.hoisted(() => ({
   events: [] as string[],
   token: { id: "token-1", userId: "user-1" as string | null, purpose: "reset", consumedAt: null as Date | null, expiresAt: new Date("2099-01-01") },
   userExists: true,
+  // Same-link race (#65): both calls pass every unlocked check before either transaction starts, the transactions then
+  // run one after the other (as the user-row lock makes them), and consuming the token is visible to the second one.
+  racing: false,
+  arrived: [] as Array<() => void>,
+  txChain: Promise.resolve() as Promise<unknown>,
+  /** workspace_member rows: each read takes the next entry; the last one repeats. */
+  members: [] as { workspaceId: string; role: string; userId: string }[][],
 }));
 
 vi.mock("@/db", async () => {
@@ -17,6 +24,7 @@ vi.mock("@/db", async () => {
     switch (name) {
       case "email_token": return [fx.token];
       case "user": return fx.userExists ? [{ id: "user-1" }] : [];
+      case "workspace_member": return (fx.members.length > 1 ? fx.members.shift() : fx.members[0]) ?? [];
       default: return [];
     }
   };
@@ -33,9 +41,19 @@ vi.mock("@/db", async () => {
   } }) });
   const write = (kind: string) => (table: Table) => {
     const done = async () => { fx.events.push(`${kind}:${getTableName(table)}`); };
-    return { set: () => ({ where: done }), values: done, where: done };
+    const consume = (values: { consumedAt?: Date }) => async () => {
+      await done();
+      if (fx.racing && getTableName(table) === "email_token" && values.consumedAt) fx.token.consumedAt = values.consumedAt;
+    };
+    return { set: (values: { consumedAt?: Date }) => ({ where: consume(values) }), values: done, where: done };
   };
-  const db = { select, update: write("update"), insert: write("insert"), delete: write("delete"), transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => callback(db) };
+  const db = { select, update: write("update"), insert: write("insert"), delete: write("delete"), transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => {
+    if (!fx.racing) return callback(db);
+    await new Promise<void>((arrive) => { fx.arrived.push(arrive); if (fx.arrived.length === 2) fx.arrived.forEach((go) => go()); });
+    const run = fx.txChain.then(() => callback(db));
+    fx.txChain = run.catch(() => undefined);
+    return run;
+  } };
   return { db, schema: await import("@/db/schema") };
 });
 vi.mock("better-auth/crypto", () => ({ hashPassword: async () => { fx.events.push("hash"); return "hashed"; } }));
@@ -51,6 +69,10 @@ const locks = () => fx.events.filter((e) => e.startsWith("lock:"));
 beforeEach(() => {
   fx.events.length = 0;
   fx.userExists = true;
+  fx.racing = false;
+  fx.arrived.length = 0;
+  fx.txChain = Promise.resolve();
+  fx.members = [];
   fx.token = { id: "token-1", userId: "user-1", purpose: "reset", consumedAt: null, expiresAt: new Date("2099-01-01") };
 });
 
@@ -76,6 +98,17 @@ describe("account token lock order", () => {
     expect(fx.events).toEqual([]);
   });
 
+  it("hashes once when two resets present the same link at once: the second finds it used under the locks (#65)", async () => {
+    fx.racing = true;
+    const results = await Promise.all([
+      consumeAccountToken("reset", TOKEN, "first-password-123"),
+      consumeAccountToken("reset", TOKEN, "second-password-123"),
+    ]);
+    expect(results).toEqual(["done", "used"]);
+    expect(fx.events.filter((e) => e === "hash")).toHaveLength(1);
+    expect(locks()).toEqual(["lock:user:update", "lock:email_token:update", "lock:user:update", "lock:email_token:update"]);
+  });
+
   it("refuses a token whose user was deleted after the unlocked read, without locking the token", async () => {
     fx.userExists = false;
     expect(await consumeAccountToken("verify", TOKEN)).toBe("invalid");
@@ -98,5 +131,28 @@ describe("account token lock order", () => {
     fx.token.consumedAt = new Date();
     expect(await consumeAccountToken("reset", TOKEN, "long-enough-password")).toBe("used");
     expect(fx.events).toEqual([]);
+  });
+
+  // Issue #109 (part 2 of #47): the deletion now writes its audit rows before locking the workspaces FOR UPDATE,
+  // avoiding the KEY SHARE → FOR UPDATE upgrade. completeSso's audit() still takes its key-share after
+  // its user lock, so the deletion's user-first order prevents a cycle with SSO.
+  it("delete writes the account.deleted audit rows before locking the shared workspaces FOR UPDATE", async () => {
+    fx.token.purpose = "delete";
+    fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }]];
+    expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
+    expect(fx.events.slice(0, 5)).toEqual(["lock:retained-accounting", "lock:user:update", "lock:email_token:update", "insert:audit_event", "lock:workspace:update"]);
+    expect(fx.events.filter((e) => e.endsWith(":audit_event"))).toEqual(["insert:audit_event"]);
+    expect(fx.events.slice(-2)).toEqual(["update:email_token", "delete:user"]);
+  });
+
+  it("delete corrects its audit row under the workspace lock when the membership changed before that lock", async () => {
+    fx.token.purpose = "delete";
+    // First read (before the lock): editor. Every read under the lock: viewer (a concurrent role change).
+    fx.members = [[{ workspaceId: "ws-shared", role: "editor", userId: "user-2" }], [{ workspaceId: "ws-shared", role: "viewer", userId: "user-2" }]];
+    expect(await consumeAccountToken("delete", TOKEN, undefined, "user-1")).toBe("done");
+    const lock = fx.events.indexOf("lock:workspace:update");
+    // Before the workspace lock: initial audit insert for `seen` (editor). After the workspace lock: reconciliation
+    // deletes the stale editor row and inserts the current viewer row.
+    expect(fx.events.slice(lock + 1).filter((e) => e.endsWith(":audit_event"))).toEqual(["delete:audit_event", "insert:audit_event"]);
   });
 });

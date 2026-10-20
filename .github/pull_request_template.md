@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- One short paragraph: the change and the reason. Link the issue with `Closes #N`; for an owner-tracking issue (label `owner-only` or `needs-owner`) write `Refs #N` instead, so merging does not close it. -->
+<!-- One short paragraph: the change and the reason. Link the issue with `Closes #N`; for an owner-tracking issue (label `owner-only` or `needs-owner`) write `Refs #N` instead, so merging does not close it. If acceptance criteria are deferred to another issue, also use `Refs #N` and link the follow-up. Verify the live body before merge with `gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`; local notes do not change GitHub linkage. -->
 
 ## Docs updated (mandatory — AGENTS.md "Docs (mandatory)")
 
@@ -11,6 +11,15 @@
 - [ ] `NEXT_ACTION.md` if work stops mid-task or the next step changed
 - [ ] `SCOPE_MATRIX.md` / `AGENTS.md` if scope or a rule changed
 - [ ] No doc still describes the old behaviour
+
+## Security posture (AGENTS.md "Security posture")
+
+<!-- Settings and states only. Never paste secret values or what an alert contains. -->
+
+- [ ] Dependencies: none added or upgraded, or listed above with the reason
+- [ ] Secrets: none added or read, or the new variable names are listed (no values)
+- [ ] Permissions / workflow tokens: unchanged, or the change is explained above
+- [ ] No claim that an owner-only GitHub security setting is enabled without the owner's recorded evidence
 
 ## Checks
 

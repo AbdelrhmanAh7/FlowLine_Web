@@ -11,8 +11,17 @@ import { HttpError } from "./http";
 export const RUNS_PER_MINUTE = 30;
 const WINDOW_SECONDS = 60;
 
+/**
+ * `key` is a bucket name built from ids, enum values or a client IP. Never build it from a password, token or API-key
+ * secret: it only gets plain SHA-256, and the false-positive dismissal of CodeQL alert #12 relies on that. List a new
+ * caller in the caller audit of docs/security/codeql-triage-hashing.md.
+ */
 export async function checkRate(key: string, limit = RUNS_PER_MINUTE, windowSeconds = WINDOW_SECONDS, now = new Date()) {
   const { db } = await import("@/db");
+  // CodeQL `js/insufficient-password-hash` (alert #12): false positive. `key` is a bucket name (`runs:apikey:<row id>`,
+  // `platform-write:<user id>`, `public-body:<kind>:<ip>`), never a password or secret; SHA-256 only gives a
+  // fixed-length table key and lock id; it does not hide the name. A slow KDF would slow every check and change the
+  // stored keys. See docs/security/codeql-triage-hashing.md.
   const hashed = createHash("sha256").update(key).digest("hex");
   const allowed = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${hashed}, 0))`);

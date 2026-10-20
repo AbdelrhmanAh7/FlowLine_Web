@@ -16,7 +16,7 @@ Track every task on GitHub first: issue, milestone, labels and the project board
 
 The docs check (`scripts/ci/docs-check.mjs`) covers `src/`, `worker/`, `scripts/`, `e2e/`, `tests/`, `drizzle/`, `deploy/`, `.github/` and these root files: `package.json`, `pnpm-lock.yaml`, `Dockerfile*`, `docker-compose*.yml`, `next.config.*`, `tsconfig*.json`, `drizzle.config.*`, `vitest.config.*` (including `vitest.config.mts`), `playwright.config.*`, and `*.config.{ts,mjs,js,cjs}`. The workflow checks out the script without installing dependencies, reads paginated PR filenames as JSON (preserving spaces), and supplies the event PR body through `PR_BODY`. A label alone, an empty/whitespace-only reason, the unfilled template placeholder, or a different format does not waive the check. The placeholder is rejected when the reason is only `<reason>` (any case or inner spacing, optionally in backticks or quotes, with trailing punctuation), any other lone `<...>` token such as `<explain why>`, or the bare word `reason`; a reason that still contains the `<reason>` token anywhere is also rejected (a real explanation never includes it), while other sentences, even ones starting with the word "reason", are accepted, and each body line is judged on its own. GitHub's PR files API returns at most 3000 files, so a list of 3000 entries or more may have dropped code files: the check then assumes code changed (a visible Markdown change outside `artifacts/` or a valid waiver is still required) and says so in the step summary and a `::warning::`. See the PR template for the exact format. Both rules are fixture-tested in `tests/unit/docs-check-script.test.ts`.
 
-Toolchain: Node.js 24.x (`engines`; CI and the release image use Node 24 LTS), pnpm 10.32.1, Next.js 16.3.6 and React 19.3.0 (`package.json`). Use `pnpm.cmd` on Windows if the PowerShell launcher fails.
+Toolchain: Node.js 24.x (`engines`; CI and the release image use Node 24 LTS), pnpm 10.32.1, Next.js 16.3.6 and React 19.3.0 (`package.json`). Use `pnpm.cmd` on Windows if the PowerShell launcher fails. Security advisories for transitive dependencies (such as Dependabot alert #3 for `source-map-js`, GHSA-68fv-2mgg-jv7q) are overridden in `pnpm-workspace.yaml` under `overrides` and validated via `tests/unit/dependency-advisories.test.ts` (see [DEPENDENCIES.md](security/DEPENDENCIES.md)).
 
 ## Localization
 
@@ -38,7 +38,9 @@ Use meaningful existing Lucide icons; preserve textual accessible names. Motion 
 
 Use the relevant `src/server/access.ts` helper (`requireWorkspace`, `requireFlow`, `requireRun`, etc.) before accessing workspace resources. Authentication alone is insufficient: enforce the requested role/capability and preserve non-member 404 behavior. Follow existing route wrappers for mutation validation and CSRF; App Router does not automatically protect arbitrary route handlers.
 
-Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. Engine connection rules belong in shared `checkConnection`.
+Persist flows, versions, runs and steps in Postgres. Change `src/db/schema.ts` and run `pnpm db:generate` for schema changes; retain the generated migration and metadata. A data backfill must be safe to run twice; when it overwrites data, it keeps the old values in a backup table and ships a reverse script under `drizzle/reverse/` (outside the journal, run by hand with `psql -v ON_ERROR_STOP=1 --single-transaction -f`), tested in `tests/integration/` (example: `flow-version-run-backfill.test.ts`). Engine connection rules belong in shared `checkConnection`.
+
+Backfill 0026 and its manual reverse hold a `SHARE ROW EXCLUSIVE` lock on `flow_version` through commit, with transaction-local lock/statement timeouts of 5/30 seconds. Writers wait while readers continue; run the focused migration integration spec on an isolated test database before deployment. A timeout aborts the transaction rather than leaving triggers disabled or clearing unbacked numbers.
 
 Provider credentials use uncontrolled `SecretInput` plus `takeSecret`; never store them in controlled form state, drafts, URLs, query caches or evidence. Follow `docs/security/CREDENTIALS_DESIGN.md`. Account login/recovery forms have their existing dedicated handling; do not generalize that exception to provider secrets.
 
@@ -50,15 +52,26 @@ pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/http-ca
 
 Unit tests exercise concurrent-transaction behaviour without Postgres through `runConcurrent(txA, txB, { timeoutMs })` in `tests/helpers/concurrentTx.ts`: a two-party barrier holds each transaction at its first lock until both have arrived, an error with `code === "40P01"` is reported as a deadlock, and a hung pair rejects after `timeoutMs` (the timer is cleared in `finally`, so no handle is left open). The fakes-only suite `tests/unit/concurrentTx.test.ts` covers the barrier, the deadlock mapping and the timeout in the `unit` project; integration suites never run it.
 
+Money amounts bound for Mizano go through `toDecimalString(value, scale = 2)` in `src/server/money.ts` (re-exporting the canonical implementation in `src/lib/format.ts`): it turns a number or decimal string (including exponent form and Arabic-Indic digits) into an exact fixed-point string with string arithmetic only, never `toFixed` or float rounding. It throws an `Error` for NaN/Infinity, malformed input, a bad scale, or a value with more decimals than `scale` (`0.1 + 0.2` is rejected rather than rounded); trailing zeros are not precision (`"12.500"` → `"12.50"`). Tests: `tests/unit/money.test.ts` and `tests/unit/lib-format.test.ts`.
+
 Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. The complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` tuple takes precedence over encrypted platform DB settings; all absent permits that legacy configuration, but a partial or malformed tuple disables ZITADEL without fallback. Restart web processes after environment changes; never expose the tuple to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
 
 Federated sign-in for enrolled users issues only a pending local-TOTP challenge. The shared Better Auth adapter rejects unassured sessions for both application access and the library's account APIs; retain disabled session-cookie caching and authoritative DB reads. MFA proof is tied to the current factor and has a fixed expiry even when the session refreshes. A transaction that locks the user, session and authority rows of these flows must follow the lock order in [FEDERATED_MFA.md](security/FEDERATED_MFA.md#lock-order) (use `lockUserThenSessions` from `src/server/federated-locks.ts`); `tests/unit/federated-lock-order.test.ts` pins it. Review any new transaction that takes row locks against the global order and checklist in [engineering/lock-order.md](engineering/lock-order.md). See [FEDERATED_MFA.md](security/FEDERATED_MFA.md) before adding session storage, sign-in methods or account-linking paths.
 
 ## Verification and handoff
 
-Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. The five display helpers in `src/lib/format.ts` (`percent`, `pretty`, `initials`, `duration`, `timeAgo`) are pinned by `tests/unit/lib-format.test.ts` (English and Arabic, no DB or browser): `pnpm exec vitest run --project unit tests/unit/lib-format.test.ts`. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only from `workflow_dispatch` with `tier=full`. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
+Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. The helpers in `src/lib/format.ts` (`percent`, `pretty`, `initials`, `duration`, `timeAgo` and the money helper `toDecimalString`, also exported via `src/server/money.ts`) are pinned by `tests/unit/lib-format.test.ts` and `tests/unit/money.test.ts` (English and Arabic, no DB or browser): `pnpm exec vitest run --project unit tests/unit/lib-format.test.ts tests/unit/money.test.ts`. `toDecimalString(value, scale = 2)` (#146; flow numbers to the Mizano decimal strings, e.g. `12.5` becomes `"12.50"`) converts a number or decimal string to an exact fixed-scale string by string/digit manipulation only, with no float arithmetic or rounding: it normalises Arabic-Indic digits (`٠-٩`) to `0-9`, rejects Extended Arabic-Indic (Persian/Urdu) digits (U+06F0–U+06F9), the Arabic decimal separator `٫` (U+066B), and grouping separators (e.g. `1,000` and `١٬٠٠٠`), and throws (rather than truncating or rounding) when the value needs more decimals than the scale, for scale 0 too; it is not yet called by any Mizano step (#232). UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only from `workflow_dispatch` with `tier=full`. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
 
-Natural-language e2e-army tests (`e2e-army/<issue>-<flow>.e2e.ts`, the blocking `e2e-army` status) are copied and run by the hub's verify job, which type-checks them against its own `e2e` and `@e2e-dev/web` packages. Those packages are not dependencies here yet (issue #85, PR #88 adds them), so `tsconfig.json` excludes `e2e-army/` from `pnpm typecheck`; drop that exclusion when they land. `pnpm lint` still covers the folder.
+Natural-language e2e-army tests (`e2e-army/<issue>-<flow>.e2e.ts`, the blocking `e2e-army` status) are copied and run by the hub's verify job, which type-checks them against its own `e2e` and `@e2e-dev/web` packages. Both are devDependencies here (issue #85), but `tsconfig.json` still excludes `e2e-army/` from `pnpm typecheck` until follow-up #217 type-checks the folder. `pnpm lint` still covers the folder.
+
+### Field-run and other synthetic sign-up harnesses
+
+A harness that creates its own users through the public `/api/auth/sign-up/email` endpoint and reads the verification link from `/api/test/outbox` (the `signUpFieldUser` helper of the field-validation v2 harness, `scripts/field-validation/v2/signup.ts`, which lives on branch `claude/issue-6` and is not on `main` yet) needs the target server started with **both**:
+
+- `FLOWLINE_ENV=test`: the test outbox and the other `/api/test/*` routes answer only in the test environment; elsewhere they are 404.
+- `FLOWLINE_BETA_MODE=open`: with `invite_only`, a sign-up without an invitation, access code or `FLOWLINE_BETA_ADMINS` entry is refused (`src/server/beta.ts`), and so are a missing or invalid value, which default to `invite_only` and log a configuration error. `FLOWLINE_ENV=test` does not relax this by itself; only the isolated E2E stack's per-context `fl_test_beta_mode` cookie does.
+
+Start the stack with both variables set (the isolated stack from `scripts/test-stack.cjs` and the `flowline_test_<suffix>` database rules in "CI gate" below still apply), for example `FLOWLINE_ENV=test FLOWLINE_BETA_MODE=open` in the server's process environment, never in a shared env file. The v2 harness README on that branch does not list `FLOWLINE_BETA_MODE=open` yet; add it there when the branch is merged.
 
 ### Git hooks and local CI
 
@@ -79,19 +92,32 @@ Gate has no `labeled` trigger and the `full-gate` label no longer does anything.
 
 Actions are pinned by full commit SHA with a `# vX.Y.Z` comment (checkout v7.0.1, setup-node v7.0.0, upload-artifact v7.0.1, pnpm/action-setup v6.1.0, cache v6.1.0; all Node 24) and every job runs on `ubuntu-24.04`, so a moving tag or `ubuntu-latest` cannot change CI silently. Upgrade by resolving the latest release tag to its commit (`gh api repos/<owner>/<repo>/releases/latest --jq .tag_name`, then `gh api repos/<owner>/<repo>/commits/<tag> --jq .sha`), reading its release notes for input changes, and keeping the comment current; `tests/unit/ci-workflows.test.ts` fails on an unpinned action or a floating runner.
 
+The blocking E2E gate for AI pull requests is the hub's `e2e-army` commit status (tester-army/e2e, natural-language steps): its verify job starts the app from the branch and runs its FlowLine suite together with up to 8 top-level `e2e-army/*.e2e.ts` files of the branch (the first 8 by name; `features/` is not copied). Every PR, backend-only ones included, adds or updates an `e2e-army/*.e2e.ts` test tagged `feat:<id>` for each feature its changed files touch (mapped by the `paths` globs of the hub's feature map; a backend-only change runs the feature's api-level shard; waiver: `E2E: not needed — <reason>` in the PR description); files no feature claims run the smoke shard and are reported as "feature map gap" until the feature map claims them. A PR that changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit; the title carries `@issue-<N>` and the acceptance criterion, each `agent.act` has one goal and is checked with `agent.assert` or an exact `expect`, and the file imports only `e2e`, `@e2e-dev/web` and node built-ins. Signed-in tests use `{ session: "fl-user" }`, which the hub suite's setup provides, and `e2e-army/features/_setup.e2e.ts` does the same locally (never declare a second `fl-user` setup at the top level: the hub runs both files together and one session name allows one setup). Tests that need the owner's workspace open `/app`, which continues in it. The per-feature suite (a port of the hub's, one or more `[<feature>.<n>]` tests per entry of the feature map, tagged `feat:`/`shard:`/`lvl:`) lives in `e2e-army/features/` (the hub keeps its own copy and copies only the top-level files); run one shard with `pnpm e2e:army --shard-id core-api` (smoke, core-api, flows-api, runs, triggers, schedule, ai-api, platform-api, ui-auth, ui-auth2, ui-flows, ui-builder, ui-settings, ui-ai, ui-admin, ui-misc). Run the quick default with `pnpm e2e:army` (`scripts/e2e-army.mjs`, config `e2e.config.ts`): it starts the test stack on :3100 (or reuses a running `pnpm dev:test`; `E2E_ARMY_URL` points it at another app; the browser and the API helpers both take that origin from `appUrl()` in `e2e-army/lib.ts`, default `http://localhost:3100`, so cookies set by one reach the other), uses `agy` (Gemini Flash, the owner's login) when it is on `PATH` or `E2E_ARMY_CLI=agy|claude`, skips the agent tests without a model, keeps telemetry off; budget 5 min per shard, enforced by `scripts/e2e-army.mjs`; not yet timed in CI. Output and the replay cache are in `.e2e/` (git-ignored); the cache replays on a throwaway database, while on a persistent local one the UI tests' workspaces get a `-2`, `-3` … slug on each repeat run (no API deletes a workspace) and their steps are re-recorded. The resend-verification UI test checks the real 60 s cooldown (`requestToken`): inside it the page answers neutrally and no second mail is sent. Chromium comes from `pnpm exec playwright install chromium` (the same Playwright 1.63 build). No GitHub Actions job runs the suite yet; the Playwright specs stay as plain tests.
+
 Tests default to port 3100 and `flowline_test`; isolated stacks use the ports and `flowline_test_<suffix>` databases from `scripts/test-stack.cjs`, never the development database. `pnpm test:e2e` selects all three configured browsers; use `--project=chromium --project=firefox` for only those two. English suites use `EN_STATE`; Arabic/RTL needs explicit coverage. No deleted assertions, hidden failures, retries presented as clean passes, or skipped acceptance checks.
 
 For browser timeouts, distinguish the whole-test deadline from time spent on the final action: the 60 s Playwright timeout covers the whole test, so a click that fails may have started late because earlier actions used up the budget. A failed browser job uploads what tells the two apart (the trace and the JSON report, see [Playwright traces in CI](#playwright-traces-in-ci)); a trace path printed in a text report is only a path on the runner, so download the artifact instead of relying on the report. See [the PR #14 WebKit diagnosis](implementation/WEBKIT_14_DIAGNOSIS.md) for the exact three-stack comparison and isolated-journey commands; these require a dedicated test environment, not a shared laptop session with heavy checks prohibited.
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
-Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`.
+Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated. `runConcurrentPg` runs callbacks you write against its client; to race two production functions (which call `db.transaction` themselves), use `tests/integration/pg-lock-helpers.ts` instead: `routeTransactions()` sends each function's transactions to its own connection, `pauseAfter(client, pattern)` holds the first right after a lock statement, and `blockedByObserver` waits until PostgreSQL reports the second blocked by it and returns the statement it waits at (re-read from a fresh `pg_stat_activity` snapshot, because that view's `query` can lag behind its live `wait_event`). Examples: `email-token-lock-order.test.ts`, `federated-lock-order.test.ts`, `account-delete-sso-lock-order.test.ts`.
 
 Local evidence helpers that start Vitest against a disposable database (`artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs`, `.../federated-mfa/run-focused.mjs`, `.../paid-pilot-round1/run-auth-focused.mjs` and `artifacts/phase-4/security-auth/run-focused.mjs`) must not pass `process.env` to the child, because an ambient `FLOWLINE_*`, provider key or `NODE_OPTIONS` would silently change what a run proves. They call `buildFocusedTestEnv` from `scripts/focused-run-env.mjs`: the child gets only OS/runtime names the parent has (`PATH`, temp/home directories, the Windows system variables, `NODE_OPTIONS` when set) plus the synthetic values the helper constructs, and the call refuses anything but `FLOWLINE_ENV=test` and a `flowline_test` or `flowline_test_<suffix>` database. The variable names (never values) go into the result JSON (`childEnv`) or stderr, and `--dry-run` prints them without git, Docker or a database (`run-auth-focused.mjs` and `security-auth/run-focused.mjs` read the target from `DATABASE_URL`, so it must be set even for `--dry-run`). A new helper reuses the module and joins the list in `tests/unit/focused-run-env.test.ts`. CI's unit job runs that test (the helpers' `--dry-run` included) but never a helper's real database run. Other scripts that spread `process.env` (`check-drizzle-prune.mjs`, gate, release, Company Builder and the frozen `artifacts/beta-execution` and `artifacts/design-v2` helpers) are not database-backed focused runs and are unchanged.
 
 For the H3 security regression set without a database or browser, run `pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/mfa-session-fence.test.ts tests/unit/federated-mfa-lifecycle.test.ts tests/unit/auth-provider-fence.test.ts tests/unit/federated-mfa.test.ts tests/unit/auth-confirmation.test.ts tests/unit/zitadel-issuer-binding.test.ts tests/unit/zitadel-review-fixes.test.ts tests/unit/i18n.test.ts tests/unit/federated-lock-order.test.ts`. Use `pnpm` instead of `pnpm.cmd` off Windows. This focused command does not replace integration tests or the full main-target CI gate.
 
 For a handoff, describe the concrete changed behavior, files/configuration, validation, and material limitations. Do not claim every route or integration was manually verified when coverage was partial.
+
+## Landing demo media
+
+The landing demo videos in `public/media/demo/` are generated from the real UI by a local-only pipeline (never CI):
+`pnpm demo:setup` once (installs the isolated Remotion package in `tools/demo-video`, which has its own lockfile, is not a
+workspace member and is excluded from the root `tsc`, ESLint and Vitest), `pnpm demo:doctor` to check the machine,
+`pnpm demo:build [--only hero --locale ar]` to record and encode (it starts its own stack on `:3190` with the
+`flowline_test_demo` database), and `pnpm demo:verify` before committing the result. Run them outside agent sandboxes.
+Scenarios use roles, test ids and message keys, so a UI-only change re-records without script edits; regenerate at UI
+freezes. Unit tests: `tests/unit/demo-*.test.ts`; compositor math: `cd tools/demo-video && node --test src/camera.test.ts`.
+Full guide, budgets and troubleshooting: [landing/DEMO_MEDIA.md](landing/DEMO_MEDIA.md).
 
 ### Playwright traces in CI
 
@@ -120,6 +146,95 @@ Download and open a trace on your own machine: `gh run download <run id> -R Abde
 
 ## Worktrees
 
-Agent lanes never create folders beside the repo. `pnpm wt add <name> [--base origin/main] [--branch <branch>]` creates `.claude/worktrees/<name>` (git-ignored) with `node_modules` linked to the main install. `<name>` must be a bare lane name matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` (letters, digits, `.`, `_`, `-`, starting with a letter or digit); a name with `/` or `\` (for example `feat/x` or `../../sibling`) is rejected before git runs, because it would create a nested lane that `pnpm wt rm` cannot address or escape the managed directory. The branch defaults to the lane name; use `--branch feat/x` for a slashed branch name. `pnpm wt rm <name|path>` accepts only registered worktrees: a bare name (no `/` or `\`, not absolute) resolves only to `<root>/.claude/worktrees/<name>`, even if a registered `<cwd>/<name>` collides. An external worktree requires an explicit path (absolute or containing `/` or `\`); relative paths such as `./lane` resolve from the current working directory, without a managed-lane fallback. All path comparisons resolve and normalize separators, and ignore case only on Windows, including the main-checkout guard and list/prune skips. It rejects the main checkout and locked entries, and checks that the lane is clean and its HEAD is on a remote branch before unlinking `node_modules` and removing the worktree. Removal never forces and never deletes the branch.
+Agent lanes live under `.claude/worktrees/<name>` (git-ignored), with `node_modules` linked to the main install. Run `pnpm wt` from any checkout; the branch defaults to the lane name, and `add` always creates a new branch.
 
-`pnpm wt list` shows each available, unlocked lane's dirty/pushed state and reports missing or locked entries without inspecting them. `pnpm wt prune` runs `git worktree prune` first to clear stale registrations, then applies the same clean/pushed removal checks to all remaining lanes (including external worktrees); do not run it while agents are starting lanes. It skips missing directories and locked entries. Both list and prune report per-entry errors, continue to later lanes, and exit nonzero if any entry failed.
+```bash
+pnpm wt add my-lane                               # new branch my-lane from origin/main; prints the path
+pnpm wt add branch-lane --branch feat/branch-lane  # slashed branch, bare lane name
+pnpm wt add base-lane --base origin/dev           # choose the start point
+pnpm wt list                                        # <path> | <branch> | dirty=<n> | pushed=<true|false>
+pnpm wt remove my-lane                              # alias of rm; refuses dirty or unpushed work
+pnpm wt prune                                       # clear stale registrations; remove clean, pushed lanes
+```
+
+Safety rules:
+
+- Lane names must match this pattern; `add` rejects anything else before git runs:
+
+  ```
+  ^[A-Za-z0-9][A-Za-z0-9._-]*$
+  ```
+
+  Use `--branch feat/x` for a slashed branch name.
+- The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
+- Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
+- `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+
+
+### Pilot CSV input persistence and admin 404s (2026-10-15)
+
+Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-row key order when the
+worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
+to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
+Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
+expression-defined order. `data.csv` build mode takes its header from every row's keys in first-seen order, so a
+column that first appears in a later row is kept. Regression coverage: `tests/unit/engine-v2.test.ts`,
+`tests/integration/runs.test.ts` and `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+## Useful scripts
+
+### `scripts/pilot-metrics.ts`
+
+Prints the 8 week-1 pilot success criteria (13 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
+
+**Usage** (the env wrapper loads `DATABASE_URL`; plain `tsx` does not read `.env`):
+```bash
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23
+```
+A missing, malformed, nonexistent (`2026-02-30`) or reversed range exits with code 2 and a usage message on stderr, before the database is touched. Against the test database use `.env.test` (or a `flowline_test_<suffix>` `DATABASE_URL`).
+
+**Metrics.** Sign-up cohort metrics (1-4) filter on the user's `created_at`; run and webhook metrics filter on the event's own time.
+
+| # | Row | Definition |
+|---|-----|------------|
+| 1 | Sign-ups, median time to verified | Distinct users created in range; median hours from sign-up to each user's first consumed `verify` token (users who never verified are left out of the median) |
+| 2 | Onboarding + workspace on day 1 | Cohort users with onboarding completed (not skipped) and a workspace created, both within 24h of sign-up |
+| 3 | Published ≥1 flow within 3 days | Cohort users whose earliest `flow_version` with `reason = 'publish'` is within 3 days of sign-up (later edits, republishing or unpublishing cannot change it) |
+| 4 | Run success rate, p95 queue-to-start | `succeeded / (succeeded + failed)` for runs created in range (shows `0.0%` when all failed, `N/A` when none finished); p95 of `started_at - created_at` |
+| 5 | Webhook runs, scheduled runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; runs triggered by schedule (`trigger_kind = 'schedule'`) created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
+| 6 | Cross-workspace access denials | `N/A`: workspace access checks answer 404 without writing an audit row (`admin.access_denied` is platform-admin probes only, so it is not used as a proxy) |
+| 7 | Share who switched to Arabic | `N/A`: the UI language is a cookie, not stored per user |
+| 8 | Staging uptime | `N/A`: measured via external probe of `/api/health` (target ≥99%), not stored in DB |
+
+Rows 6, 7 and 8 report `N/A` with explanation because those events are not recorded in the DB; the script does not print a made-up `0`.
+
+**Example** (empty range):
+```
+# Pilot Metrics: 1999-01-01 to 1999-01-02
+
+| Metric | Value |
+|--------|-------|
+| Sign-ups | 0 |
+| Median time to verified | N/A |
+| Onboarding completed + workspace created on day 1 | 0 |
+| Published ≥1 flow within 3 days | 0 |
+| Run success rate | N/A |
+| p95 queue-to-start | N/A |
+| Webhook runs | 0 |
+| Scheduled runs | 0 |
+| Approvals (workflow) | 0 |
+| Duplicate webhook runs | 0 |
+| Cross-workspace access denials | N/A (not logged: workspace 404s write no audit row) |
+| Share of users who switched to Arabic | N/A (not tracked, locale is cookie-only) |
+| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |
+```
+
+**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, scheduled runs, uptime, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; all-failed `0.0%` run, webhook, schedule and approval counts; removes only the rows it seeded).
+
+Admin page metadata is subject to the same platform-admin authorization boundary as page content.
+Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
+text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
+the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
+requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
+numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).

@@ -1,0 +1,14 @@
+{
+  "clip": "hero",
+  "beats": ["establish", "chip1", "run", "results", "wide"],
+  "chips": {
+    "in": "establish",
+    "out": "wide",
+    "items": [
+      { "beat": "chip1", "ar": "ابدأ", "en": "Build" },
+      { "beat": "run", "ar": "شغّل", "en": "Run" },
+      { "beat": "results", "ar": "راجع", "en": "Review" }
+    ]
+  },
+  "poster": { "beat": "establish", "at": 0.6 }
+}
