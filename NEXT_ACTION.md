@@ -1,5 +1,16 @@
 # Next action — 2026-10-03
 
+## Issue #320 — pilot-metrics duplicate runs, scheduled runs and uptime (2026-10-20)
+
+Implemented pilot metrics requirements from issue #320 (split from PR #170 / #143):
+1. Measure actual duplicate runs grouped by `(flow_id, trigger_ref)` where `trigger_kind = 'webhook'` instead of querying rejected event rows.
+2. Report scheduled runs (`trigger_kind = 'schedule'`) in `PilotMetrics` and Markdown table.
+3. Include staging uptime criterion with `NOT_TRACKED_UPTIME` documenting external `/api/health` probe.
+Exported `getScheduledRuns` and `getDuplicateWebhookRuns` for direct query execution testing.
+All 18 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal ops CLI script (`scripts/pilot-metrics.ts`), no user-facing UI or endpoints changed.
+Harness next: push branch `ai/320` and obtain CI and review confirmation on PR #330.
+
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".

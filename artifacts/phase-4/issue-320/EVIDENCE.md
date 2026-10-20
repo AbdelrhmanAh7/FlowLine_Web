@@ -1,50 +1,87 @@
 # Evidence — Issue #320: fix: pilot-metrics.ts — measure actual duplicate runs, scheduled runs, and uptime
 
-Tested commit: `9a345f18` (merge base of `ai/320` and `main`; PR #316/#324)
+Supersedes part of #170. Refs #143.
 
-All checks and tests were executed locally against commit `9a345f18` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320`.
+Workspace: `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320`  
+Branch: `ai/320`  
+Originating review finding: PR #170 review discussion `r4241768670` (finding `f7eba2a4e9dd`)  
+Originating Sentry issue: None (internal ops script review finding split from PR #170)  
+E2E Waiver: `E2E: not needed — internal ops CLI script (scripts/pilot-metrics.ts), no user-facing UI or endpoints`
 
-## Acceptance Criteria and Verification
+## Acceptance Criteria
 
-| Req / AC | Description | Verification Method | Result | Commit |
-|---|---|---|---|---|
-| **AC1 (P1)** | Measure actual duplicate webhook runs instead of rejected `webhook_event` rows. The hook route never stores rejected rows for duplicates (same-event retries return 200 with existing event; signature replays return 409). New `getDuplicateWebhookRuns` counts `run` rows grouped by `(flow_id, trigger_ref)` where `trigger_kind = 'webhook'` and `trigger_ref IS NOT NULL`, summing (n - 1) for groups with COUNT(*) > 1. | Unit test: `tests/unit/pilot-metrics.test.ts:59-63` (format includes `duplicateWebhookRuns: 0`). Integration test: `tests/integration/pilot-metrics.test.ts:534-556` — seeds 2 accepted webhook runs with unique `trigger_ref` (expects 0), then drops `run_trigger_unique` index in a rolled-back transaction, inserts a second run with same `trigger_ref`, asserts `duplicateWebhookRuns === 1`. | 15/15 unit tests pass; 9/9 integration tests pass | `9a345f18` |
-| **AC2 (P2)** | Report scheduled runs required by pilot goal. Added `getScheduledRuns` querying `run` where `trigger_kind = 'schedule'`, included in `PilotMetrics.scheduledRuns` and formatted in Markdown report. | Integration test: `tests/integration/pilot-metrics.test.ts:525-532` — seeds 1 scheduled run, asserts `metrics.scheduledRuns === 1`. Unit test: `tests/unit/pilot-metrics.test.ts:59-63` — format includes `| Scheduled runs | 0 |` on empty range. | 15/15 unit tests pass; 9/9 integration tests pass | `9a345f18` |
-| **AC3 (P2)** | Include required uptime criterion (staging uptime ≥99%). Added `NOT_TRACKED_UPTIME` constant documenting external `/api/health` probe monitoring (not stored in DB), rendered in Markdown table. | Unit test: `tests/unit/pilot-metrics.test.ts:59-63` — format includes `NOT_TRACKED_UPTIME` string. Integration test: `tests/integration/pilot-metrics.test.ts:558-577` — asserts markdown contains `| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |`. | 15/15 unit tests pass; 9/9 integration tests pass | `9a345f18` |
+1. **AC1 (P1 — Measure actual duplicate runs instead of rejected event rows)**:
+   In PR #170 (`scripts/pilot-metrics.ts:22233f18`), the query counted `webhook_event` rows where `status = 'rejected'`. Production webhook handlers at `src/app/api/hooks/[token]/route.ts:88-91` return the existing event on same-event retry (status 200) and signature replays hit the unique constraint returning status 409 without persisting a rejected row. Thus, the old query reported 0 regardless of duplicate delivery and would miss duplicate runs if deduplication drifted.
+   `getDuplicateWebhookRuns` now counts duplicate `run` rows grouped by `(flow_id, trigger_ref)` where `trigger_kind = 'webhook'` and `trigger_ref IS NOT NULL`, summing `(n - 1)` for groups with `COUNT(*) > 1`.
+2. **AC2 (P2 — Report scheduled runs required by pilot goal)**:
+   `docs/vision.md:7` requires proving that users can run both webhook-triggered and schedule-triggered workflows. The original report omitted scheduled runs.
+   Added `getScheduledRuns` querying `run` where `trigger_kind = 'schedule'`, included in `PilotMetrics.scheduledRuns` and formatted in the Markdown report table (`| Scheduled runs | <count> |`).
+3. **AC3 (P2 — Include required uptime criterion)**:
+   `docs/vision.md:16` requires staging uptime ≥99% among week-1 pilot success criteria.
+   Added `NOT_TRACKED_UPTIME` documenting external `/api/health` probe monitoring (`N/A (measured via external /api/health probe, not stored in DB)`), included in `formatMetricsAsMarkdown` as `| Staging uptime | ... |`.
+4. **AC4 (Regression Coverage)**:
+   Dedicated regression tests in `tests/unit/pilot-metrics.test.ts` prove:
+   - AC1 regression: base query reports 0 duplicate runs when actual duplicate runs exist, whereas head query correctly detects duplicate runs.
+   - AC2 regression: base markdown omitted scheduled runs row entirely, whereas head markdown formats `| Scheduled runs | <count> |`.
+   - AC3 regression: base markdown omitted staging uptime row entirely, whereas head markdown formats `| Staging uptime | ... |`.
+5. **AC5 (Code & Verification Cleanliness)**:
+   Exported `getScheduledRuns` and `getDuplicateWebhookRuns` in `scripts/pilot-metrics.ts` for direct testability.
+   18/18 unit tests (`tests/unit/pilot-metrics.test.ts`) pass with exit code 0.
+   9/9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass with exit code 0.
+   `pnpm typecheck` exits with code 0.
+   `pnpm lint` exits with code 0.
 
 ---
 
-## Test Execution Evidence
+## Verification Matrix
+
+| Acceptance Criterion | Verification Method | Tests / Commands | Observed Exit Code |
+|---|---|---|---|
+| **AC1 (P1 - Duplicate Runs)** | Unit test `tests/unit/pilot-metrics.test.ts:74-77` & `213-221` (`getDuplicateWebhookRuns`); Integration test `tests/integration/pilot-metrics.test.ts:534-556` (transactional index drop duplicate run test) | `pnpm vitest run tests/unit/pilot-metrics.test.ts`<br>`env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts` | 0 |
+| **AC2 (P2 - Scheduled Runs)** | Unit test `tests/unit/pilot-metrics.test.ts:69-72` & `223-231` (`getScheduledRuns`); Integration test `tests/integration/pilot-metrics.test.ts:525-532` (counts accepted webhook and scheduled runs) | `pnpm vitest run tests/unit/pilot-metrics.test.ts`<br>`env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts` | 0 |
+| **AC3 (P2 - Staging Uptime)** | Unit test `tests/unit/pilot-metrics.test.ts:56-67` (`formatMetricsAsMarkdown` contains `NOT_TRACKED_UPTIME`); Integration test `tests/integration/pilot-metrics.test.ts:558-577` | `pnpm vitest run tests/unit/pilot-metrics.test.ts`<br>`env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts` | 0 |
+| **AC4 (Regression Tests)** | Unit regression test suite in `tests/unit/pilot-metrics.test.ts:91-188` (`AC1 (P1): proves regression where base counted rejected webhook_event rows instead of actual duplicate runs`, `AC2 (P2): proves regression where scheduled runs were missing from report in base`, `AC3 (P2): proves regression where staging uptime criterion was missing in base`) | `pnpm vitest run tests/unit/pilot-metrics.test.ts` | 0 |
+| **AC5 (Clean Checks)** | Full unit test suite (18 tests), integration test suite (9 tests), TypeScript typecheck, and ESLint | `pnpm vitest run tests/unit/pilot-metrics.test.ts`<br>`env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts`<br>`pnpm typecheck`<br>`pnpm lint` | 0 |
+
+---
+
+## Command Outputs
 
 ### 1. Unit Tests (`tests/unit/pilot-metrics.test.ts`)
 
 ```
 $ nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2
-  ✓ |unit| tests/unit/pilot-metrics.test.ts (15 tests) 316ms
-    ✓ pilot-metrics: parseRange (6)
-      ✓ reads an inclusive UTC day range 1ms
-      ✓ rejects ["--from","2026-10-16"] (missing --to) with a UsageError 0ms
-      ✓ rejects ["--to","2026-10-16"] (missing --from) with a UsageError 0ms
-      ✓ rejects ["--from","2026-10-16","--to","tomorrow"] (not a date) with a UsageError 0ms
-      ✓ rejects ["--from","2026-02-30","--to","2026-03-05"] (nonexistent day JS would roll over) with a UsageError 0ms
-      ✓ rejects ["--from","2026-10-23","--to","2026-10-16"] (reversed range) with a UsageError 0ms
-    ✓ pilot-metrics: formatMetricsAsMarkdown (6)
-      ✓ prints every row on an empty range without crashing 1ms
-      ✓ AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed) 0ms
-      ✓ AC2: formats null runSuccessRate as N/A (no finished runs in range) 0ms
-      ✓ AC3: formats 100% success rate as 100.0% (all finished runs succeeded) 0ms
-      ✓ AC3: formats a fractional rate and says plainly what is not recorded 0ms
-      ✓ AC5: proves regression where truthiness check treats 0 as falsy returning N/A 0ms
-    ✓ pilot-metrics: collectPilotMetrics (1)
-      ✓ AC4: propagates a 0 success rate from run metrics query to PilotMetrics 0ms
-    ✓ pilot-metrics: CLI (2)
-      ✓ detects direct execution by real path, even for relative paths and spaces 0ms
-      ✓ exits non-zero with a usage message on stderr for a reversed range, before touching the DB 313ms
 
-  Test Files  1 passed (1)
-       Tests  15 passed (15)
-    Start at  06:08:12
-    Duration  81.60s
+ RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320
+
+ ✓ |unit| tests/unit/pilot-metrics.test.ts (18 tests) 274ms
+   ✓ pilot-metrics: parseRange (6)
+     ✓ reads an inclusive UTC day range 1ms
+     ✓ rejects ["--from","2026-10-16"] (missing --to) with a UsageError 0ms
+     ✓ rejects ["--to","2026-10-16"] (missing --from) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-16","--to","tomorrow"] (not a date) with a UsageError 0ms
+     ✓ rejects ["--from","2026-02-30","--to","2026-03-05"] (nonexistent day JS would roll over) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-23","--to","2026-10-16"] (reversed range) with a UsageError 0ms
+   ✓ pilot-metrics: formatMetricsAsMarkdown (4)
+     ✓ AC2 & AC3: prints every row on an empty range without crashing (all 13 metrics) 1ms
+     ✓ AC2: formats scheduled runs count in markdown 0ms
+     ✓ AC1: formats duplicate webhook runs count in markdown 0ms
+     ✓ formats run success rate as 0.0%, 100.0%, or fractional percentage 0ms
+   ✓ pilot-metrics: regressions (demonstrating base failure vs head pass) (3)
+     ✓ AC1 (P1): proves regression where base counted rejected webhook_event rows instead of actual duplicate runs 0ms
+     ✓ AC2 (P2): proves regression where scheduled runs were missing from report in base 0ms
+     ✓ AC3 (P2): proves regression where staging uptime criterion was missing in base 0ms
+   ✓ pilot-metrics: collectPilotMetrics and queries (3)
+     ✓ AC1 & AC2: propagates scheduled runs and duplicate runs from queryable to PilotMetrics 0ms
+     ✓ AC1: getDuplicateWebhookRuns executes query against Queryable 1ms
+     ✓ AC2: getScheduledRuns executes query against Queryable 0ms
+   ✓ pilot-metrics: CLI (2)
+     ✓ detects direct execution by real path, even for relative paths and spaces 0ms
+     ✓ exits non-zero with a usage message on stderr for a reversed range, before touching the DB 270ms
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Duration  651ms
 Exit code: 0
 ```
 
@@ -52,22 +89,24 @@ Exit code: 0
 
 ```
 $ nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2
-  ✓ |integration| tests/integration/pilot-metrics.test.ts (9 tests) 106ms
-    ✓ pilot-metrics (9)
-      ✓ counts sign-ups once per user and takes the median of each user's first verification 9ms
-      ✓ reports run success rate and p95 queue-to-start over finished runs 3ms
-      ✓ reports 0.0% run success rate when all finished runs in range failed 3ms
-      ✓ counts onboarding + workspace within 24h of sign-up, excluding skippers and earlier cohorts 4ms
-      ✓ counts a first publication within 3 days of sign-up from immutable publish versions 2ms
-      ✓ counts accepted webhook runs, scheduled runs and decided workflow approvals in range 3ms
-      ✓ counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise) 14ms
-      ✓ prints every metric as 0 or N/A on a range with no data 3ms
-      ✓ formats metrics as a Markdown table with no connection string 2ms
 
-  Test Files  1 passed (1)
-       Tests  9 passed (9)
-    Start at  06:09:41
-    Duration  59.20s
+ RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320
+
+ ✓ |integration| tests/integration/pilot-metrics.test.ts (9 tests) 887ms
+   ✓ pilot-metrics (9)
+     ✓ counts sign-ups once per user and takes the median of each user's first verification 154ms
+     ✓ reports run success rate and p95 queue-to-start over finished runs 20ms
+     ✓ reports 0.0% run success rate when all finished runs in range failed 18ms
+     ✓ counts onboarding + workspace within 24h of sign-up, excluding skippers and earlier cohorts 17ms
+     ✓ counts a first publication within 3 days of sign-up from immutable publish versions 18ms
+     ✓ AC2: counts accepted webhook runs, scheduled runs and decided workflow approvals in range 18ms
+     ✓ AC1: counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise) 64ms
+     ✓ AC3: prints every metric as 0 or N/A on a range with no data 15ms
+     ✓ AC3: formats metrics as a Markdown table with no connection string 18ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Duration  2.90s
 Exit code: 0
 ```
 
@@ -88,36 +127,3 @@ $ pnpm lint
 > eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
-
-Evidence secrets scan:
-```
-$ pnpm check:evidence
-> flowline@0.1.0 check:evidence /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-320
-> node scripts/check-evidence-secrets.mjs
-check-evidence-secrets: 0 local secret value(s) checked across 174 file(s); 0 hit(s)
-Exit code: 0
-```
-
----
-
-## Originating Issue & Sentry
-
-- **Originating review findings:** PR #170 discussions:
-  - `r4241768670` (finding `f7eba2a4e9dd`) by CTO: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/170#discussion_r4241768670 (P1: duplicate runs)
-  - `r4241768670` follow-ups for P2: scheduled runs and uptime
-- **Originating Sentry issue:** None (internal review findings split from PR #170; parent issue #143)
-- **E2E Waiver:** `E2E: not needed — read-only internal ops CLI script, no user-facing UI or endpoints`
-- **Linkage:** Supersedes part of #170. Refs #143.
-
----
-
-## Files Changed (in commit `9a345f18`)
-
-- `scripts/pilot-metrics.ts` — core implementation:
-  - `getDuplicateWebhookRuns` (lines 195–216): measures duplicates at `run` level via `(flow_id, trigger_ref)`
-  - `getScheduledRuns` (lines 171–180): counts runs with `trigger_kind = 'schedule'`
-  - `NOT_TRACKED_UPTIME` (lines 249–250): documents external `/api/health` probe
-  - `formatMetricsAsMarkdown` (lines 253–274): includes all three new rows
-  - `PilotMetrics` interface (lines 23–34): includes `scheduledRuns` and `duplicateWebhookRuns`
-- `tests/unit/pilot-metrics.test.ts` — unit tests for formatting and CLI
-- `tests/integration/pilot-metrics.test.ts` — integration tests against real PostgreSQL
