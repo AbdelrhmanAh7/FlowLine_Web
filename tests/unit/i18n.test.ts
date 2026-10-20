@@ -39,7 +39,7 @@ describe("i18n catalogues", () => {
     expect(en.integrationCatalog.mizano.fields.token.label).toBe("API key");
     expect(ar.integrationCatalog.mizano.fields.baseUrl.label).toBe("الرابط الأساسي");
     expect(ar.integrationCatalog.mizano.fields.token.label).toBe("مفتاح API");
-    expect(ar.integrationCatalog.mizano.description).toContain("بمفتاح API ذي نطاق محدد");
+    expect(ar.integrationCatalog.mizano.description).toContain("بمفتاح API محدود النطاق");
     for (const catalog of [ar, en]) {
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.title).toBeTruthy();
       expect(catalog.integrationCatalog.mizano.actions.list_overdue_invoices.description).toBeTruthy();
