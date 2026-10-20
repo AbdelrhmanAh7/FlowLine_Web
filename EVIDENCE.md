@@ -1,17 +1,17 @@
 # Evidence — Issue #296: fix(mizano): use ctx.addIssue in moneyInput transform to prevent raw Error escape
 
-Tested commit: `f591b0d1c7f9996a60db2802613b5ee00388279c`
+Tested commit: `f19ca8a29a0090ff913a033d25acbe3e549d4dd3`
 
-All checks and tests were executed locally against commit `f591b0d1c7f9996a60db2802613b5ee00388279c` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
+All checks and tests were executed locally against commit `f19ca8a29a0090ff913a033d25acbe3e549d4dd3` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
 
 ## Acceptance Criteria and Verification
 
 | Req / AC | Description | Verification Method | Result | Commit |
 |---|---|---|---|---|
-| **AC1** | `moneyInput.safeParse` of a negative, invalid, or non-primitive value returns `success: false` with a `ZodError` and does not throw. | Unit test `tests/unit/mizano-money-input.test.ts:7-66` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid strings (`"abc"`, `"12.345"`), `NaN`, `Infinity`, float noise (`0.1 + 0.2`), and non-primitive types (`null`, `undefined`, `true`, `false`, `{}`, `[]`, functions). | 10/10 unit tests pass | `f591b0d1` |
-| **AC2** | `mizano.create_draft_quote` input `safeParse` rejects a negative qty, unitPrice, or taxRate without throwing. | Unit test `tests/unit/mizano-money-input.test.ts:92-140` (covering negative numbers and negative strings for `qty`, `unitPrice`, and `taxRate` individually) and contract tests `tests/contract/mizano.test.ts:404-455` verifying `action.input.safeParse(...)` returns `{ success: false }` without throwing, and `parse` rejects with `ZodError`. | 43/43 contract tests pass, 10/10 unit tests pass | `f591b0d1` |
-| **AC3** | Valid inputs normalise to 2-decimal strings, including Arabic-Indic digits. | Unit test `tests/unit/mizano-money-input.test.ts:80-90, 142-160` verifying numbers (`10`, `10.5`, `0`), decimal strings (`"10"`, `"10.5"`, `"10.50"`, `"0.00"`), and Arabic-Indic digits (`"١٢.٥"`, `"١٠"`, `"١٥.٥٠"`) directly and in `mizano.create_draft_quote` action input schema format to `"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`, `"15.50"`. Also verified in `tests/unit/i18n-content-text.test.ts` (41/41 pass). | 10/10 unit tests pass | `f591b0d1` |
-| **AC4** | Regression test demonstrates the PR #279 bug pattern escaping `safeParse` as an unhandled raw `Error`. | Unit test `tests/unit/mizano-money-input.test.ts:162-196` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` implementation. | 10/10 unit tests pass | `f591b0d1` |
+| **AC1** | `moneyInput.safeParse` of a negative, invalid, or non-primitive value returns `success: false` with a `ZodError` and does not throw. | Unit test `tests/unit/mizano-money-input.test.ts:7-66` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid strings (`"abc"`, `"12.345"`), `NaN`, `Infinity`, float noise (`0.1 + 0.2`), and non-primitive types (`null`, `undefined`, `true`, `false`, `{}`, `[]`, functions). | 10/10 unit tests pass | `f19ca8a2` |
+| **AC2** | `mizano.create_draft_quote` input `safeParse` rejects a negative qty, unitPrice, or taxRate without throwing. | Unit test `tests/unit/mizano-money-input.test.ts:92-140` (covering negative numbers and negative strings for `qty`, `unitPrice`, and `taxRate` individually) and contract tests `tests/contract/mizano.test.ts:404-455` verifying `action.input.safeParse(...)` returns `{ success: false }` without throwing, and `parse` rejects with `ZodError`. | 43/43 contract tests pass, 10/10 unit tests pass | `f19ca8a2` |
+| **AC3** | Valid inputs normalise to 2-decimal strings, including Arabic-Indic digits. | Unit test `tests/unit/mizano-money-input.test.ts:80-90, 142-160` verifying numbers (`10`, `10.5`, `0`), decimal strings (`"10"`, `"10.5"`, `"10.50"`, `"0.00"`), and Arabic-Indic digits (`"١٢.٥"`, `"١٠"`, `"١٥.٥٠"`) directly and in `mizano.create_draft_quote` action input schema format to `"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`, `"15.50"`. Also verified in `tests/unit/i18n-content-text.test.ts` (41/41 pass). | 10/10 unit tests pass | `f19ca8a2` |
+| **AC4** | Regression test demonstrates the PR #279 bug pattern escaping `safeParse` as an unhandled raw `Error`. | Unit test `tests/unit/mizano-money-input.test.ts:162-196` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` implementation. | 10/10 unit tests pass | `f19ca8a2` |
 
 ---
 
