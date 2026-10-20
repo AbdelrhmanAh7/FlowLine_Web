@@ -73,3 +73,82 @@ test(
     expect((await fetch(`${base}/api/platform/audit`, { headers: owner })).status).toBe(404);
   },
 );
+
+// Issue #196 (account security page 1/4): the user menu links to /account/security, which shows the two-step status.
+// A fresh throwaway user has no MFA, so the page must say Off; enabling is covered by the Playwright spec (needs a TOTP code).
+test(
+  "@issue-196 AC1: the user menu opens the security page showing two-step verification Off",
+  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/");
+    await agent.act("open the user menu at the bottom of the sidebar");
+    await agent.act("click Security in the Account group");
+    await expect(screen.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
+    await expect(screen.getByText("Off", { exact: true })).toBeVisible();
+  },
+);
+
+test("@issue-196 AC3: a signed-out visit to the security page redirects to sign-in", { tags: ["feat:fl-accounts-sessions"] }, async ({ app }) => {
+  const res = await fetch(new URL("/account/security", app.baseUrl), { redirect: "manual" });
+  expect(res.status).toBeGreaterThanOrEqual(300);
+  expect(res.status).toBeLessThan(400);
+  expect(res.headers.get("location") ?? "").toContain("/sign-in");
+});
+
+// Issue #197 (account security page 2/4): Enable on the security page asks for the account password. A wrong password
+// shows an error and no secret key. The correct-password, wrong/right-code and reload cases need the account password and
+// a TOTP code computed from the shown secret, so they live in e2e/account-security.spec.ts.
+test(
+  "@issue-197 AC1: Enable asks for the account password and a wrong password shows an error and no secret",
+  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "not-the-real-password-1" } });
+    await agent.assert("an error message is shown and no secret key is displayed");
+    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
+    await expect(screen.getByText("Off", { exact: true })).toBeVisible();
+  },
+);
+
+// Issue #199 (account security page 4/4): with two-step verification Off the page offers Enable and no Disable, and in
+// Arabic the page is right-to-left with no horizontal scroll. The wrong/right password, sign-in prompt and the LTR
+// secret/backup-code inputs need the account password and a TOTP code computed from the shown secret, so they live in
+// e2e/account-security.spec.ts and e2e/arabic.spec.ts.
+/** Agent steps need a model; without one (E2E_ARMY_NOAGENT=1) they are skipped and the locator tests still run. */
+const needsModel = () => test.skip(process.env.E2E_ARMY_NOAGENT === "1", "no model available: agent steps skipped");
+
+test(
+  "@issue-199 AC1: with two-step verification Off the security page shows Enable and no Disable button",
+  { tags: ["feat:fl-accounts-sessions"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    needsModel();
+    await app.open("/account/security");
+    await agent.assert("the Two-step verification status reads Off and an Enable button is shown");
+    await expect(screen.getByText("Off", { exact: true })).toBeVisible();
+    await expect(screen.getByRole("button", { name: "Disable" })).toHaveCount(0);
+    await agent.act("click Enable to open the account password form");
+    await expect(screen.getByLabel("Account password")).toBeVisible();
+    await agent.act("cancel the account password form");
+    await agent.assert("two-step verification is still Off, the password form is hidden, and Enable is available");
+    await expect(screen.getByLabel("Account password")).toHaveCount(0);
+    await expect(screen.getByRole("button", { name: "Enable" })).toBeVisible();
+  },
+);
+
+test(
+  "@issue-199 AC4: the security page in Arabic is right-to-left with no horizontal scroll",
+  { tags: ["feat:fl-i18n-rtl"], session: "fl-user" },
+  async ({ app, browser, screen }) => {
+    await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+    await app.open("/account/security");
+    expect(await browser.evaluate(() => document.documentElement.lang)).toBe("ar");
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+    await expect(screen.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+    for (const width of [375, 1280]) {
+      await browser.setViewport({ width, height: 900 });
+      const overflow = await browser.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow, `account/security @${width}: no horizontal scroll`).toBeLessThanOrEqual(0);
+    }
+  },
+);
