@@ -1,6 +1,6 @@
 # Evidence for Issue #180: Client-side error display for /admin/copy
 
-Tested commit: `0f85a74d6a1662a3550d0c2d86c6ae34c1819079`
+Tested commit: `179c0e7e3c9217412a2dce48d0252ed94b03ee46`
 
 ## Summary
 Implements comprehensive client-side error display, resilience, and user-friendly error banners for `/admin/copy` (part 2/3 of #119). When server errors occur (HTTP 500, revision conflicts, step-up/CSRF refusals, session expirations, rate limits, network outages, and truncated responses), the UI displays appropriate localized error messages in a dismissible alert banner without breaking the page or losing in-progress edits. Access to `/admin/copy` enforces the platform-admin boundary (`platformAdminOrNull()` returning `null` → `notFound()`), and the 8-file top-level cap for `e2e-army/` is strictly maintained.
