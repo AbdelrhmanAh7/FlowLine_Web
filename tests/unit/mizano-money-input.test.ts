@@ -39,6 +39,11 @@ describe("mizano moneyInput zod schema", () => {
         expect(res!.error).toBeInstanceOf(z.ZodError);
       }
     }
+    const abcRes = moneyInput.safeParse("abc");
+    expect(abcRes.success).toBe(false);
+    if (!abcRes.success) {
+      expect(abcRes.error.issues[0]?.message).toMatch(/invalid decimal/);
+    }
   });
 
   it("AC1 & AC2: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing", () => {
@@ -51,6 +56,11 @@ describe("mizano moneyInput zod schema", () => {
       if (!res!.success) {
         expect(res!.error).toBeInstanceOf(z.ZodError);
       }
+    }
+    const floatRes = moneyInput.safeParse(0.1 + 0.2);
+    expect(floatRes.success).toBe(false);
+    if (!floatRes.success) {
+      expect(floatRes.error.issues[0]?.message).toMatch(/decimal places/);
     }
   });
 

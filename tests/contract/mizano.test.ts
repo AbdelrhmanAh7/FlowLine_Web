@@ -428,6 +428,7 @@ describe("mizano.create_draft_quote", () => {
         safeRes = action.input.safeParse(input);
       }).not.toThrow();
       expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
 
       await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
     }
@@ -449,6 +450,7 @@ describe("mizano.create_draft_quote", () => {
         safeRes = action.input.safeParse(input);
       }).not.toThrow();
       expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
 
       await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
     }
@@ -470,6 +472,7 @@ describe("mizano.create_draft_quote", () => {
         safeRes = action.input.safeParse(input);
       }).not.toThrow();
       expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
 
       await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
     }
