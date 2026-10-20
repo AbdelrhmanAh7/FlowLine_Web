@@ -1,6 +1,6 @@
 # Issue #117 verification report
 
-Tested SHA: `237c33ba` (branch `ai/117`, PR #139), 2026-10-20.
+Tested SHA: `12b249c9` (branch `ai/117`, PR #139), 2026-10-20 (merges `origin/main`).
 Previous test run SHA: `5c6f939a`, 2026-10-18, Mac mini, database `flowline_test_117c`.
 
 ## Acceptance criteria
@@ -106,3 +106,19 @@ Rerun one file at a time on `flowline_test_117c`:
 | company-builder | 1 failed / 51 passed ("Billing isn't configured for this installation") | same 1 failed / 51 passed |
 
 Neither remaining failure reads the run summary, and both fail the same way without this change. They were not fixed here (out of scope for #117).
+
+## Triage of Thoth headless verification finding (2026-10-20)
+
+### Finding
+```
+[high] Dashboard navigation fails from flows list page — Step 6: locator.click: Timeout 15000ms exceeded. [planner guess: target absent from this page vocabulary] (repro: 1. Navigate to /w/{ws}/flows
+2. Click on Dashboard button
+3. Observe timeout error)
+```
+
+### Analysis & Resolution
+- **Root cause:** The automated verification planner synthesized this scenario from the issue title `[e2e] Flows list and dashboard failing on main`. In FlowLine's architecture (`design-reference/DESIGN-REFERENCE.md` Slide 7, `src/app/w/[slug]/flows/dashboard.tsx`), the Flows list and the Dashboard are the identical surface (`/w/[slug]/flows`), rendered by `<Dashboard />`.
+- There is no separate "Dashboard" button on the flows list page because `/w/[slug]/flows` already is the flows dashboard.
+- As the planner noted in its output (`[planner guess: target absent from this page vocabulary]`), "Dashboard" is not a target button on this page.
+- Per the issue #117 specification ("Out of scope: Changing dashboard rendering/layout in src/app/w/[slug]/flows/dashboard.tsx beyond what is required to consume the corrected fields (none expected)"), issue #117 is an API aggregation fix for `runCount`, `lastRunStatus`, `lastRunAt`, and `successRate`. No UI navigation buttons or layout changes are in scope.
+
