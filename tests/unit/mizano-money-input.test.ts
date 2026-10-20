@@ -54,6 +54,19 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
+  it("AC1 & AC2: safeParse on non-number, non-string types returns { success: false } without throwing", () => {
+    for (const bad of [null, undefined, true, false, {}, [], () => {}]) {
+      let res: ReturnType<typeof moneyInput.safeParse>;
+      expect(() => {
+        res = moneyInput.safeParse(bad);
+      }).not.toThrow();
+      expect(res!.success).toBe(false);
+      if (!res!.success) {
+        expect(res!.error).toBeInstanceOf(z.ZodError);
+      }
+    }
+  });
+
   it("AC2: parse on negative values throws a ZodError, not a plain Error", () => {
     try {
       moneyInput.parse(-5);

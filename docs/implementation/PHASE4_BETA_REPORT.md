@@ -182,7 +182,7 @@ What it changed:
 - `src/integrations/providers/mizano.ts`: resolved Sonnet 5.5 review finding where `moneyInput` threw a raw `Error` inside a Zod `.transform`, which escaped `safeParse`/`parse` as an unhandled exception causing 500 crashes instead of clean validation issues.
 - Replaced thrown raw `Error` with `ctx.addIssue({ code: z.ZodIssueCode.custom, message })` and returned `z.NEVER`, handling negative values, non-decimal strings, non-finite values, and excess precision cleanly.
 - Updated `mizano.create_draft_quote` input schema to use `moneyInput` for `qty`, `unitPrice`, and `taxRate`.
-- Verification: unit tests in `tests/unit/mizano-money-input.test.ts` (9/9 pass) verify safeParse never throws, parse throws ZodError, and numbers/strings normalize to 2-decimal-place strings (including Arabic-Indic digits); `tests/unit/i18n-content-text.test.ts` (41/41 pass); contract tests in `tests/contract/mizano.test.ts` (43/43 pass) and `tests/contract/mizano-http.test.ts` (3/3 pass). E2E: not needed (internal schema validation logic).
+- Verification: unit tests in `tests/unit/mizano-money-input.test.ts` (10/10 pass) verify safeParse never throws, parse throws ZodError, and numbers/strings normalize to 2-decimal-place strings (including Arabic-Indic digits); `tests/unit/i18n-content-text.test.ts` (41/41 pass); contract tests in `tests/contract/mizano.test.ts` (43/43 pass) and `tests/contract/mizano-http.test.ts` (3/3 pass). E2E: not needed (internal schema validation logic).
 
 ## Current execution — 2026-09-30
 
