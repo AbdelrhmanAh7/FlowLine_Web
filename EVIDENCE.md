@@ -1,121 +1,152 @@
-# Evidence — Issue #296: fix(mizano): use ctx.addIssue in moneyInput transform to prevent raw Error escape
+# Evidence — Issue #316: fix: pilot-metrics.ts: major (Claude Opus 5.5·medium): metrics.runSuccessRate ? ... : "N/A" …
 
-Tested commit: `74515ca343637e63a14c9c39c113c8de909911d9`
+Tested commit: `8ac9e870`
 
-All checks and tests were executed locally against commit `74515ca343637e63a14c9c39c113c8de909911d9` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
+All checks and tests were executed locally against commit `8ac9e870` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316`.
 
 ## Acceptance Criteria and Verification
 
 | Req / AC | Description | Verification Method | Result | Commit |
 |---|---|---|---|---|
-| **AC1** | `moneyInput.safeParse` of a negative, invalid, or non-primitive value returns `success: false` with a `ZodError` and does not throw. | Unit test `tests/unit/mizano-money-input.test.ts:7-76` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid strings (`"abc"`, `"12.345"`), `NaN`, `Infinity`, float noise (`0.1 + 0.2`), and non-primitive types (`null`, `undefined`, `true`, `false`, `{}`, `[]`, functions). | 10/10 unit tests pass (exit code 0) | `74515ca3` |
-| **AC2** | `mizano.create_draft_quote` input `safeParse` rejects a negative qty, unitPrice, or taxRate without throwing. | Unit test `tests/unit/mizano-money-input.test.ts:102-150` (covering negative numbers and negative strings for `qty`, `unitPrice`, and `taxRate` individually) and contract tests `tests/contract/mizano.test.ts:415-480` verifying `action.input.safeParse(...)` returns `{ success: false }` with `ZodError` without throwing, and `parse` rejects with `ZodError`. | 50/50 contract tests pass, 10/10 unit tests pass (exit code 0) | `74515ca3` |
-| **AC3** | Valid inputs normalise to 2-decimal strings, including Arabic-Indic digits. | Unit test `tests/unit/mizano-money-input.test.ts:90-100, 152-170` verifying numbers (`10`, `10.5`, `0`), decimal strings (`"10"`, `"10.5"`, `"10.50"`, `"0.00"`), and Arabic-Indic digits (`"١٢.٥"`, `"١٠"`, `"١٥.٥٠"`) directly and in `mizano.create_draft_quote` action input schema format to `"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`, `"15.50"`. Also verified in `tests/unit/i18n-content-text.test.ts` (41/41 pass). | 10/10 unit tests pass (exit code 0) | `74515ca3` |
-| **AC4** | Regression test demonstrates the PR #279 bug pattern escaping `safeParse` as an unhandled raw `Error`. | Unit test `tests/unit/mizano-money-input.test.ts:172-206` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` implementation. | 10/10 unit tests pass (exit code 0) | `74515ca3` |
-
----
-
-## Changed Covering Tests
-- `tests/unit/mizano-money-input.test.ts`: Dedicated unit tests covering `moneyInput` schema and `mizano.create_draft_quote` action input validation, parsing, normalization of Arabic-Indic digits, and regression comparison (10 tests).
-- `tests/contract/mizano.test.ts`: Contract tests verifying `mizano.create_draft_quote` rejects negative `qty`, `unitPrice`, and `taxRate` (both numbers and strings) via `safeParse` returning `{ success: false }` and `ZodError` without throwing (50 tests).
-- `tests/contract/mizano-http.test.ts`: Contract tests verifying wire format normalization with fake Mizano API server (3 tests).
+| **AC1** | `formatMetricsAsMarkdown` in `scripts/pilot-metrics.ts` checks `metrics.runSuccessRate != null` rather than truthiness (`metrics.runSuccessRate ? ...`), formatting `runSuccessRate: 0` as `"0.0%"` instead of `"N/A"`. | Unit test `tests/unit/pilot-metrics.test.ts:65-67` (`shows a 0% success rate as 0.0%, not N/A (every finished run failed)`) and integration test `tests/integration/pilot-metrics.test.ts:498-507`. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC2** | When `metrics.runSuccessRate` is `null` (no finished runs in the query range), `formatMetricsAsMarkdown` outputs `"N/A"`. | Unit test `tests/unit/pilot-metrics.test.ts:69-71` (`formats null runSuccessRate as N/A (no finished runs in range)`) and integration test `tests/integration/pilot-metrics.test.ts:553-568`. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC3** | When `metrics.runSuccessRate` is a positive number (e.g. `0.8` or `1.0`), `formatMetricsAsMarkdown` formats as percentage with one decimal place (`"80.0%"`, `"100.0%"`). | Unit test `tests/unit/pilot-metrics.test.ts:73-83` (`formats 100% success rate as 100.0%` and `formats a fractional rate`). | 15/15 unit tests pass | `8ac9e870` |
+| **AC4** | A cohort where every finished run failed (`runSuccessRate: 0`) is covered end-to-end, asserting `| Run success rate | 0.0% |`. | Unit test `tests/unit/pilot-metrics.test.ts:100-123` (`collectPilotMetrics` mock returning `success_rate: 0`) and integration test `tests/integration/pilot-metrics.test.ts:498-507` querying PostgreSQL runs where all finished runs in range failed. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC5** | Regression test proves that the base truthiness check fails when `runSuccessRate === 0` (producing `"N/A"`), while the head `!= null` check passes (producing `"0.0%"`). | Unit regression test `tests/unit/pilot-metrics.test.ts:85-94` and negative control test run on base code (failing with exit code 1). | Failed on base (exit code 1); Passed on head (exit code 0) | `8ac9e870` |
 
 ---
 
 ## Test Execution Evidence
 
-### 1. Regression Test Failure on Base (`origin/main`)
-On base `origin/main`, `moneyInput` is not defined in `src/integrations/providers/mizano.ts`:
+### 1. Regression Test Failure on Base (Truthiness Check)
 
+When `scripts/pilot-metrics.ts:263` used the truthiness check:
+```typescript
+`| Run success rate | ${metrics.runSuccessRate ? `${(Number(metrics.runSuccessRate) * 100).toFixed(1)}%` : "N/A"} |`,
 ```
-$ nice -n 10 pnpm vitest run tests/unit/mizano-money-input.test.ts --maxWorkers=2
- FAIL  |unit| tests/unit/mizano-money-input.test.ts > mizano moneyInput zod schema > AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error
-AssertionError: expected [Function] to not throw an error but 'TypeError: Cannot read properties of undefined (reading 'safeParse')' was thrown
-...
-Test Files  1 failed (1)
-     Tests  10 failed (10)
+
+Unit test run on base truthiness check:
+```
+$ nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2
+ FAIL  |unit| tests/unit/pilot-metrics.test.ts > pilot-metrics: formatMetricsAsMarkdown > AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed)
+AssertionError: expected '# Pilot Metrics: 2026-10-16 to 2026-1…' to contain '| Run success rate | 0.0% |'
+
+- Expected
++ Received
+
+- | Run success rate | 0.0% |
++ | Run success rate | N/A |
+
+ ❯ tests/unit/pilot-metrics.test.ts:66:80
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
 Exit code: 1
 ```
 
-Furthermore, in test case `AC4`, executing the flawed pattern from PR #279 proves that throwing a plain `Error` escapes `safeParse`:
-```typescript
-const buggyTransformSchema = z.union([z.number(), z.string()]).transform((val) => {
-  const result = toDecimalString(val, 2);
-  if (result.startsWith("-")) {
-    throw new Error("must be a positive decimal string with up to 2 decimal places");
-  }
-  return result;
-});
+Integration test run on base truthiness check:
+```
+$ nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test_pilot pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2
+ FAIL  |integration| tests/integration/pilot-metrics.test.ts > pilot-metrics > reports 0.0% run success rate when all finished runs in range failed
+AssertionError: expected '# Pilot Metrics: 2001-03-19 to 2001-0…' to contain '| Run success rate | 0.0% |'
 
-// Throws raw Error escaping safeParse boundary:
-expect(() => buggyTransformSchema.safeParse(-5)).toThrowError(
-  "must be a positive decimal string with up to 2 decimal places"
-);
+- Expected
++ Received
+
+- | Run success rate | 0.0% |
++ | Run success rate | N/A |
+
+ ❯ tests/integration/pilot-metrics.test.ts:506:22
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+Exit code: 1
 ```
 
-### 2. Unit and Contract Tests Passing on Head
-Unit tests:
+### 2. Passing Tests on Head
+
+Unit tests (`tests/unit/pilot-metrics.test.ts`):
 ```
-$ nice -n 10 pnpm vitest run tests/unit/mizano-money-input.test.ts --maxWorkers=2
- ✓ |unit| tests/unit/mizano-money-input.test.ts (10 tests) 5ms
-   ✓ mizano moneyInput zod schema (10)
-     ✓ AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error 1ms
-     ✓ AC1 & AC2: safeParse on negative decimal strings returns { success: false } without throwing 0ms
-     ✓ AC1 & AC2: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing 0ms
-     ✓ AC1 & AC2: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing 1ms
-     ✓ AC1 & AC2: safeParse on non-number, non-string types returns { success: false } without throwing 0ms
-     ✓ AC2: parse on negative values throws a ZodError, not a plain Error 0ms
-     ✓ AC3: normalizes valid positive numbers and decimal strings to fixed scale 2 0ms
-     ✓ AC2: mizano.create_draft_quote action input schema uses moneyInput with safeParse 1ms
-     ✓ AC3: mizano.create_draft_quote action input normalizes Arabic-Indic digits across qty, unitPrice, and taxRate 0ms
-     ✓ AC4: proves regression where throwing raw Error in transform escapes safeParse (PR #279 bug) 0ms
+$ nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2
+ ✓ |unit| tests/unit/pilot-metrics.test.ts (15 tests) 316ms
+   ✓ pilot-metrics: parseRange (6)
+     ✓ reads an inclusive UTC day range 1ms
+     ✓ rejects ["--from","2026-10-16"] (missing --to) with a UsageError 0ms
+     ✓ rejects ["--to","2026-10-16"] (missing --from) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-16","--to","tomorrow"] (not a date) with a UsageError 0ms
+     ✓ rejects ["--from","2026-02-30","--to","2026-03-05"] (nonexistent day JS would roll over) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-23","--to","2026-10-16"] (reversed range) with a UsageError 0ms
+   ✓ pilot-metrics: formatMetricsAsMarkdown (6)
+     ✓ prints every row on an empty range without crashing 1ms
+     ✓ AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed) 0ms
+     ✓ AC2: formats null runSuccessRate as N/A (no finished runs in range) 0ms
+     ✓ AC3: formats 100% success rate as 100.0% (all finished runs succeeded) 0ms
+     ✓ AC3: formats a fractional rate and says plainly what is not recorded 0ms
+     ✓ AC5: proves regression where truthiness check treats 0 as falsy returning N/A 0ms
+   ✓ pilot-metrics: collectPilotMetrics (1)
+     ✓ AC4: propagates a 0 success rate from run metrics query to PilotMetrics 0ms
+   ✓ pilot-metrics: CLI (2)
+     ✓ detects direct execution by real path, even for relative paths and spaces 0ms
+     ✓ exits non-zero with a usage message on stderr for a reversed range, before touching the DB 313ms
 
  Test Files  1 passed (1)
-      Tests  10 passed (10)
-   Duration  358ms
+      Tests  15 passed (15)
+   Start at  01:23:29
+   Duration  782ms
 Exit code: 0
 ```
 
-Contract tests:
+Integration tests (`tests/integration/pilot-metrics.test.ts`):
 ```
-$ nice -n 10 pnpm vitest run tests/contract/mizano.test.ts tests/contract/mizano-http.test.ts --maxWorkers=2
- ✓ |contract| tests/contract/mizano.test.ts (50 tests) 29ms
- ✓ |contract| tests/contract/mizano-http.test.ts (3 tests) 104ms
-
- Test Files  2 passed (2)
-      Tests  53 passed (53)
-   Duration  435ms
-Exit code: 0
-
-$ nice -n 10 pnpm vitest run tests/contract/mizano-fake.test.ts --maxWorkers=2
- ✓ |contract| tests/contract/mizano-fake.test.ts (8 tests) 75ms
+$ nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test_pilot pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2
+ ✓ |integration| tests/integration/pilot-metrics.test.ts (9 tests) 106ms
+   ✓ pilot-metrics (9)
+     ✓ counts sign-ups once per user and takes the median of each user's first verification 9ms
+     ✓ reports run success rate and p95 queue-to-start over finished runs 3ms
+     ✓ reports 0.0% run success rate when all finished runs in range failed 3ms
+     ✓ counts onboarding + workspace within 24h of sign-up, excluding skippers and earlier cohorts 4ms
+     ✓ counts a first publication within 3 days of sign-up from immutable publish versions 2ms
+     ✓ counts accepted webhook runs, scheduled runs and decided workflow approvals in range 3ms
+     ✓ counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise) 14ms
+     ✓ prints every metric as 0 or N/A on a range with no data 3ms
+     ✓ formats metrics as a Markdown table with no connection string 2ms
 
  Test Files  1 passed (1)
-      Tests  8 passed (8)
-   Duration  392ms
+      Tests  9 passed (9)
+   Start at  01:23:30
+   Duration  2.09s
 Exit code: 0
 ```
 
 ### 3. Typecheck and Lint
+
+Typecheck:
 ```
 $ pnpm typecheck
-> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296
+> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
 > tsc --noEmit
 Exit code: 0
+```
 
+Lint:
+```
 $ pnpm lint
-> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296
+> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
 > eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
 
-### 4. Arabic Localization and RTL Evidence
-Arabic-Indic digits normalization is verified across `qty`, `unitPrice`, and `taxRate` in `tests/unit/mizano-money-input.test.ts:152-170` (`"١٢.٥"` -> `"12.50"`, `"١٠"` -> `"10.00"`, `"١٥.٥٠"` -> `"15.50"`) and in `tests/unit/i18n-content-text.test.ts` (41/41 pass). UI components are exempt as this issue modifies backend Zod schema validation in `mizano.ts`.
+Evidence secrets scan:
+```
+$ pnpm check:evidence
+> flowline@0.1.0 check:evidence /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
+> node scripts/check-evidence-secrets.mjs
+check-evidence-secrets: 0 local secret value(s) checked across 174 file(s); 0 hit(s)
+Exit code: 0
+```
 
 ---
 
 ## Originating Issue & Sentry
-- **Originating review finding:** [PR #279 discussion r4278242714](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/279#discussion_r4278242714)
-- **Originating Sentry issue:** None (internal review finding split from PR #279 caught during code review prior to production deploy)
-- **E2E Waiver:** `E2E: not needed — internal zod schema transform refactor for Mizano connector input validation; contract and unit tests provide complete coverage of safeParse and parse error behavior.`
-- **Linkage:** Supersedes part of #279. Refs #232.
+- **Originating review finding:** PR #170 discussion `r4241760623` (finding `6bffc68a8711`) by Claude Opus 5.5: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/170#discussion_r4241760623
+- **Originating Sentry issue:** None (internal review finding split from PR #170; parent issue #143)
+- **E2E Waiver:** `E2E: not needed — read-only internal ops CLI script, no user-facing UI or endpoints`
+- **Linkage:** Supersedes part of #170. Refs #143.

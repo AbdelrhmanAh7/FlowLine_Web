@@ -1,13 +1,4 @@
 # Next action — 2026-10-03
- 
-## Issue #296 — Mizano connector money validation in zod transform (2026-10-19)
-
-Resolved Sonnet 5.5 review finding split from PR #279 (parent #232):
-- `src/integrations/providers/mizano.ts`: `moneyInput` replaces raw thrown `Error` inside Zod `.transform` with `ctx.addIssue({ code: z.ZodIssueCode.custom, message })` and `return z.NEVER`, so negative or invalid values do not escape `safeParse` / `parse`.
-- `mizano.create_draft_quote` action input uses `moneyInput` for `qty`, `unitPrice`, `taxRate`.
-- Covered by unit tests in `tests/unit/mizano-money-input.test.ts` (10/10 pass), `tests/unit/i18n-content-text.test.ts` (41/41 pass), and contract tests in `tests/contract/mizano.test.ts` (50/50 pass) and `tests/contract/mizano-http.test.ts` (3/3 pass).
-- E2E: not needed — internal schema validation logic with no user-facing flow change. Supersedes part of #279. Refs #232.
-
 
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
