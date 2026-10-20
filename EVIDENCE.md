@@ -204,3 +204,17 @@ $ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit
 $ pnpm typecheck  -> Exit code 0
 $ pnpm lint       -> Exit code 0
 ```
+
+### Rebase & Merge Verification on Latest `origin/main` (2026-10-20T07:24 UTC+3)
+Merged latest `origin/main` (commits up to `116935af` including #214 and `9a345f18` #316) into `ai/303`. Resolved all conflicts cleanly:
+- `NEXT_ACTION.md`: Kept both issue #303 and issue #316 handoffs intact.
+- `PHASE4_BETA_REPORT.md`: Preserved reconciled status for `email-token-lock-order.test.ts` (passed locally on 2026-10-08 against PostgreSQL, verified on #108 and #109) and incorporated new pilot-metrics section from main.
+- `FEDERATED_MFA.md`: Kept evidence link and local-pass status from origin/main.
+- `tests/integration/account-delete-sso-lock-order.test.ts`: Preserved clean concise history comment from main.
+
+Verification on merged working tree:
+- `pnpm typecheck` -> Exit code 0
+- `pnpm lint` -> Exit code 0
+- `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts` -> 2 files, 13 passed (13) -> Exit code 0
+- `node scripts/ci/docs-check.mjs` (simulated CI check) -> Exit code 0
+

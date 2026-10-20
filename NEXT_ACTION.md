@@ -1,9 +1,17 @@
 # Next action — 2026-10-03
 
-## Issue #303 — harness handoff (2026-10-19)
+## Issue #303 — harness handoff (2026-10-20)
 
-Resolved QA finding split from PR #214: reconciled `tests/integration/email-token-lock-order.test.ts` status across `docs/implementation/PHASE4_BETA_REPORT.md` (#108 section, H3 readiness section, Reconciliation paragraph) and `docs/security/FEDERATED_MFA.md` (Checks, Validation limits) to consistently record that it passed locally on 2026-10-08 against PostgreSQL (issue #45) and was verified locally on #108 (`flowline_test_i108`) and #109 (`flowline_test_109`). Added unit test `tests/unit/email-token-lock-order-docs.test.ts` (fails on base, passes on head; H3 assertion anchored specifically to `## H3 security readiness review` and `two-connection PostgreSQL test` per QA Round 1 finding; verified clean in QA Round 2 on head `26c2e253`).
+Resolved QA finding split from PR #214: reconciled `tests/integration/email-token-lock-order.test.ts` status across `docs/implementation/PHASE4_BETA_REPORT.md` (#108 section, H3 readiness section, Reconciliation paragraph) and `docs/security/FEDERATED_MFA.md` (Checks, Validation limits) to consistently record that it passed locally on 2026-10-08 against PostgreSQL (issue #45) and was verified locally on #108 (`flowline_test_i108`) and #109 (`flowline_test_109`). Added unit test `tests/unit/email-token-lock-order-docs.test.ts` (fails on base, passes on head; H3 assertion anchored specifically to `## H3 security readiness review` and `two-connection PostgreSQL test` per QA Round 1 finding; verified clean in QA Round 2 on head `26c2e253`). Merged latest `origin/main` cleanly into `ai/303`.
 Harness next: push branch `ai/303`, ensure checks pass, and automerge PR #308. E2E: not needed — docs consistency and unit test only.
+
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
