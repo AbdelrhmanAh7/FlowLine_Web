@@ -11,21 +11,67 @@ test("user menu opens the security page and shows the two-step status", async ({
   await expect(page).toHaveURL(/\/account\/security$/);
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
   const status = page.getByTestId("two-factor-status");
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-en-ltr.png" });
 
   // Turn MFA on through the API so this status test does not depend on the UI enrolment flow, then the page reads On.
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
   expect(enable.ok()).toBeTruthy();
   const { totpURI } = (await enable.json()) as { totpURI: string };
-  const secret = new URL(totpURI).searchParams.get("secret")!;
-  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret)) } });
+  const secret = new URL(totpURI).searchParams.get("secret");
+  expect(secret).toBeTruthy();
+  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret!)) } });
   expect(verify.ok()).toBeTruthy();
   await page.reload();
-  await expect(status).toHaveText("On");
+  await expect(status).toHaveAttribute("data-state", "on");
+});
+
+test("the security page renders in Arabic with RTL layout", async ({ page }) => {
+  const { workspace } = await setupUser(page);
+  await page.context().addCookies([
+    { name: "fl_locale", value: "ar", domain: "localhost", path: "/" },
+  ]);
+  await page.goto(`/w/${workspace.slug}/flows`);
+  await page.getByRole("complementary").getByRole("button", { name: /E2E User/ }).click();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/user-menu-ar-rtl.png" });
+
+  await page.goto("/account/security");
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { level: 1, name: "الأمان" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("غير مفعّل", { exact: true })).toBeVisible();
+
+  // Verify RTL layout geometry: row starts on the right (h2) and badge is placed to the left (inline-end)
+  const isRtlLayout = await page.evaluate(() => {
+    const h2 = document.querySelector("main h2")!;
+    const badge = h2.nextElementSibling!;
+    return badge.getBoundingClientRect().right <= h2.getBoundingClientRect().left;
+  });
+  expect(isRtlLayout).toBe(true);
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-ar-rtl.png" });
+
+  // Turn MFA on through API and verify descriptive active Arabic badge
+  const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
+  expect(enable.ok()).toBeTruthy();
+  const { totpURI } = (await enable.json()) as { totpURI: string };
+  const secret = new URL(totpURI).searchParams.get("secret");
+  expect(secret).toBeTruthy();
+  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret!)) } });
+  expect(verify.ok()).toBeTruthy();
+  await page.reload();
+  await expect(page.getByRole("main").getByText("مفعّل (نشط)", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "artifacts/phase-4/issue-196/account-security-ar-on.png" });
 });
 
 test("a signed-out visit to the security page redirects to sign-in", async ({ browser }) => {
-  const context = await browser.newContext({ baseURL: BASE_URL, storageState: EN_STATE });
+  const context = await browser.newContext({
+    baseURL: BASE_URL,
+    storageState: {
+      cookies: [{ name: "fl_locale", value: "en", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" }],
+      origins: [],
+    },
+  });
   const page = await context.newPage();
   await page.goto("/account/security");
   await expect(page).toHaveURL(/\/sign-in/);
@@ -45,7 +91,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.goto("/account/security");
   const status = page.getByTestId("two-factor-status");
   const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
 
   // Watch the two-factor endpoints: Cancel must never submit them.
   let enableRequests = 0;
@@ -58,7 +104,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // Cancel in the password form leaves it Off: no enable request, no error toast.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
   await expect(dangerToast).toHaveCount(0);
   expect(enableRequests).toBe(0);
@@ -66,14 +112,14 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // A wrong password shows an error and no secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill("not-the-password-1");
-  await page.getByRole("button", { name: "Enable" }).click();
-  await expect(dangerToast).toHaveText("That password isn't correct.");
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(dangerToast).toHaveText("That password isn't valid. Try again.");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 
   // The right password shows the QR, the secret below it and backup codes (left-to-right) with the one-time warning.
   const callsBefore = enableCalls;
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   const secret = page.getByTestId("totp-secret");
   await expect(secret).toBeVisible();
   await expect(secret).toHaveAttribute("dir", "ltr");
@@ -92,14 +138,14 @@ test("enable two-step verification from the account page", async ({ page }) => {
 
   // Cancel in the code form leaves it Off: no verify request, secret hidden.
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
   expect(verifyRequests).toBe(0);
 
   // A wrong code is rejected and the status is still Off after a reload.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   // 000000 is only a safe "wrong" code when the accepted window (previous, current, next step) doesn't contain it.
   const current = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
   const accepted = [-30_000, 0, 30_000].map((d) => totpCodeFor(current, Date.now() + d));
@@ -107,7 +153,7 @@ test("enable two-step verification from the account page", async ({ page }) => {
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
   await expect(dangerToast.last()).toHaveText("That code isn't valid. Try the current one.");
   await page.reload();
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
 
   // Cancel hides the QR too.
   await page.getByRole("button", { name: "Enable" }).click();
@@ -120,25 +166,25 @@ test("enable two-step verification from the account page", async ({ page }) => {
   // Enabling again replaces the unconfirmed secret; the current code turns it On and hides the secret.
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   const second = base32Decode((await page.getByTestId("totp-secret").textContent())!.trim());
   expect(second.equals(raw)).toBeFalsy();
   await page.getByLabel("Authentication code").fill(totpCodeFor(second));
   await page.getByRole("button", { name: "Confirm and turn on" }).click();
-  await expect(status).toHaveText("On");
+  await expect(status).toHaveAttribute("data-state", "on");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
   await expect(page.getByTestId("totp-qr")).toHaveCount(0);
   await expect(page.getByTestId("backup-codes")).toHaveCount(0);
   expect(foreign).toEqual([]);
   await page.reload();
-  await expect(status).toHaveText("On");
+  await expect(status).toHaveAttribute("data-state", "on");
 });
 
 test("cancelling a pending enable keeps the secret hidden", async ({ page }) => {
   await setupUser(page);
   await page.goto("/account/security");
   const status = page.getByTestId("two-factor-status");
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
 
   // Hold the enable response so Cancel can be clicked while the request is in flight.
   let release!: () => void;
@@ -154,14 +200,14 @@ test("cancelling a pending enable keeps the secret hidden", async ({ page }) => 
   await page.getByLabel("Account password").fill(PASSWORD);
   const started = page.waitForRequest("**/api/auth/two-factor/enable");
   const responded = page.waitForResponse((r) => r.url().includes("/api/auth/two-factor/enable") && r.status() === 200);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   await started;
   await page.getByRole("button", { name: "Cancel" }).click();
   release();
   await responded;
 
   // The late response must not reopen the secret: Cancel wins and the status stays Off.
-  await expect(status).toHaveText("Off");
+  await expect(status).toHaveAttribute("data-state", "off");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
   await expect(page.getByTestId("backup-codes")).toHaveCount(0);
 });
@@ -182,10 +228,10 @@ test("a non-password enable failure shows its own message", async ({ page }) => 
 
   await page.getByRole("button", { name: "Enable" }).click();
   await page.getByLabel("Account password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
 
   await expect(dangerToast).toContainText("Two-factor is already enabled");
-  await expect(dangerToast).not.toContainText("That password isn't correct.");
+  await expect(dangerToast).not.toContainText("That password isn't valid. Try again.");
   await expect(page.getByTestId("totp-secret")).toHaveCount(0);
 });
 
@@ -208,4 +254,78 @@ test("the enrolment QR stays inside the page in Arabic (RTL)", async ({ browser 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
   await expect(page.getByTestId("totp-secret")).toHaveAttribute("dir", "ltr");
   await context.close();
+});
+
+test("enable two-step verification in Arabic (RTL)", async ({ page }) => {
+  await setupUser(page);
+  await page.context().addCookies([{ name: "fl_locale", value: "ar", path: "/", domain: "localhost" }]);
+  await page.goto("/account/security");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveAttribute("data-state", "off");
+  await expect(status).toHaveText("غير مفعّل");
+
+  // Click enable (تفعيل) to open password form
+  await page.getByRole("button", { name: "تفعيل" }).click();
+  await page.getByLabel("كلمة مرور الحساب").fill("not-the-password-1");
+  await page.getByRole("button", { name: "إرسال" }).click();
+  const dangerToast = page.locator('[aria-live="polite"]').getByRole("alert");
+  await expect(dangerToast).toHaveText("كلمة المرور غير صالحة. حاول مجددًا.");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+
+  // Correct password
+  await page.getByLabel("كلمة مرور الحساب").fill(PASSWORD);
+  await page.getByRole("button", { name: "إرسال" }).click();
+  const secret = page.getByTestId("totp-secret");
+  await expect(secret).toBeVisible();
+  await expect(secret).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes-warning")).toHaveText("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+
+  // Confirm code
+  const raw = base32Decode((await secret.textContent())!.trim());
+  await page.getByLabel("رمز المصادقة").fill(totpCodeFor(raw));
+  await page.getByRole("button", { name: "تأكيد التفعيل" }).click();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(status).toHaveText("مفعّل");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+  await page.reload();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(status).toHaveText("مفعّل");
+});
+
+test("the correct code turns the status On, hides the secret and backup codes, and the status remains On after a reload", async ({ page }) => {
+  await setupUser(page);
+  await page.goto("/account/security");
+  const status = page.getByTestId("two-factor-status");
+  await expect(status).toHaveAttribute("data-state", "off");
+
+  await page.getByRole("button", { name: "Enable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  const secret = page.getByTestId("totp-secret");
+  await expect(secret).toBeVisible();
+  await expect(secret).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+
+  // Verify secret toggle works
+  await page.getByRole("button", { name: "Hide" }).click();
+  await expect(secret).toHaveText("••••••••••••••••");
+  await page.getByRole("button", { name: "Show" }).click();
+  await expect(secret).not.toHaveText("••••••••••••••••");
+
+  const raw = base32Decode((await secret.textContent())!.trim());
+  await page.getByLabel("Authentication code").fill(totpCodeFor(raw));
+  await page.getByRole("button", { name: "Confirm and turn on" }).click();
+
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
+
+  await page.reload();
+  await expect(status).toHaveAttribute("data-state", "on");
+  await expect(page.getByTestId("totp-secret")).toHaveCount(0);
+  await expect(page.getByTestId("backup-codes")).toHaveCount(0);
 });

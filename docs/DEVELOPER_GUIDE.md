@@ -52,13 +52,15 @@ pnpm.cmd exec vitest run --project unit --configLoader runner tests/unit/http-ca
 
 Unit tests exercise concurrent-transaction behaviour without Postgres through `runConcurrent(txA, txB, { timeoutMs })` in `tests/helpers/concurrentTx.ts`: a two-party barrier holds each transaction at its first lock until both have arrived, an error with `code === "40P01"` is reported as a deadlock, and a hung pair rejects after `timeoutMs` (the timer is cleared in `finally`, so no handle is left open). The fakes-only suite `tests/unit/concurrentTx.test.ts` covers the barrier, the deadlock mapping and the timeout in the `unit` project; integration suites never run it.
 
+Money amounts bound for Mizano go through `toDecimalString(value, scale = 2)` in `src/server/money.ts` (re-exporting the canonical implementation in `src/lib/format.ts`): it turns a number or decimal string (including exponent form and Arabic-Indic digits) into an exact fixed-point string with string arithmetic only, never `toFixed` or float rounding. It throws an `Error` for NaN/Infinity, malformed input, a bad scale, or a value with more decimals than `scale` (`0.1 + 0.2` is rejected rather than rounded); trailing zeros are not precision (`"12.500"` → `"12.50"`). Tests: `tests/unit/money.test.ts` and `tests/unit/lib-format.test.ts`.
+
 Preserve invitation-only signup when configured, verification requirements and test-only environment boundaries. The complete server-only `ZITADEL_ISSUER`, `ZITADEL_CLIENT_ID`, `ZITADEL_CLIENT_SECRET` tuple takes precedence over encrypted platform DB settings; all absent permits that legacy configuration, but a partial or malformed tuple disables ZITADEL without fallback. Restart web processes after environment changes; never expose the tuple to customers. Workspace SSO has its own configuration and callback path. Test-double success does not establish live tenant readiness. Billing remains sandbox-only.
 
 Federated sign-in for enrolled users issues only a pending local-TOTP challenge. The shared Better Auth adapter rejects unassured sessions for both application access and the library's account APIs; retain disabled session-cookie caching and authoritative DB reads. MFA proof is tied to the current factor and has a fixed expiry even when the session refreshes. A transaction that locks the user, session and authority rows of these flows must follow the lock order in [FEDERATED_MFA.md](security/FEDERATED_MFA.md#lock-order) (use `lockUserThenSessions` from `src/server/federated-locks.ts`); `tests/unit/federated-lock-order.test.ts` pins it. Review any new transaction that takes row locks against the global order and checklist in [engineering/lock-order.md](engineering/lock-order.md). See [FEDERATED_MFA.md](security/FEDERATED_MFA.md) before adding session storage, sign-in methods or account-linking paths.
 
 ## Verification and handoff
 
-Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. The helpers in `src/lib/format.ts` (`percent`, `pretty`, `initials`, `duration`, `timeAgo` and the money helper `toDecimalString`) are pinned by `tests/unit/lib-format.test.ts` (English and Arabic, no DB or browser): `pnpm exec vitest run --project unit tests/unit/lib-format.test.ts`. `toDecimalString(value, scale = 2)` converts a number or decimal string to an exact fixed-scale string by string/digit manipulation only, with no float arithmetic or rounding: it normalises Arabic-Indic digits (`٠-٩`) to `0-9`, rejects Persian digits and the Arabic decimal separator `٫`, and throws (rather than truncating or rounding) when the value needs more decimals than the scale, for scale 0 too. UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only from `workflow_dispatch` with `tier=full`. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
+Run focused local checks such as `pnpm lint`, `pnpm typecheck`, and `pnpm test`; stop the test stack with `pnpm stop:test` before integration tests. The helpers in `src/lib/format.ts` (`percent`, `pretty`, `initials`, `duration`, `timeAgo` and the money helper `toDecimalString`, also exported via `src/server/money.ts`) are pinned by `tests/unit/lib-format.test.ts` and `tests/unit/money.test.ts` (English and Arabic, no DB or browser): `pnpm exec vitest run --project unit tests/unit/lib-format.test.ts tests/unit/money.test.ts`. `toDecimalString(value, scale = 2)` (#146; flow numbers to the Mizano decimal strings, e.g. `12.5` becomes `"12.50"`) converts a number or decimal string to an exact fixed-scale string by string/digit manipulation only, with no float arithmetic or rounding: it normalises Arabic-Indic digits (`٠-٩`) to `0-9`, rejects Extended Arabic-Indic (Persian/Urdu) digits (U+06F0–U+06F9), the Arabic decimal separator `٫` (U+066B), and grouping separators (e.g. `1,000` and `١٬٠٠٠`), and throws (rather than truncating or rounding) when the value needs more decimals than the scale, for scale 0 too; it is not yet called by any Mizano step (#232). UI changes require browser coverage through CI. The GitHub Actions workflow `.github/workflows/gate.yml` runs the fast tier on PRs and pushes to main; the full tier (every Chromium spec, Firefox, WebKit) runs only from `workflow_dispatch` with `tier=full`. Run `pnpm gate` locally only when explicitly needed. Respect any feature flags required by the feature under test.
 
 Natural-language e2e-army tests (`e2e-army/<issue>-<flow>.e2e.ts`, the blocking `e2e-army` status) are copied and run by the hub's verify job, which type-checks them against its own `e2e` and `@e2e-dev/web` packages. Both are devDependencies here (issue #85), but `tsconfig.json` still excludes `e2e-army/` from `pnpm typecheck` until follow-up #217 type-checks the folder. `pnpm lint` still covers the folder.
 
@@ -98,7 +100,7 @@ For browser timeouts, distinguish the whole-test deadline from time spent on the
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
-Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated.
+Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated. `runConcurrentPg` runs callbacks you write against its client; to race two production functions (which call `db.transaction` themselves), use `tests/integration/pg-lock-helpers.ts` instead: `routeTransactions()` sends each function's transactions to its own connection, `pauseAfter(client, pattern)` holds the first right after a lock statement, and `blockedByObserver` waits until PostgreSQL reports the second blocked by it and returns the statement it waits at (re-read from a fresh `pg_stat_activity` snapshot, because that view's `query` can lag behind its live `wait_event`). Examples: `email-token-lock-order.test.ts`, `federated-lock-order.test.ts`, `account-delete-sso-lock-order.test.ts`.
 
 Local evidence helpers that start Vitest against a disposable database (`artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs`, `.../federated-mfa/run-focused.mjs`, `.../paid-pilot-round1/run-auth-focused.mjs` and `artifacts/phase-4/security-auth/run-focused.mjs`) must not pass `process.env` to the child, because an ambient `FLOWLINE_*`, provider key or `NODE_OPTIONS` would silently change what a run proves. They call `buildFocusedTestEnv` from `scripts/focused-run-env.mjs`: the child gets only OS/runtime names the parent has (`PATH`, temp/home directories, the Windows system variables, `NODE_OPTIONS` when set) plus the synthetic values the helper constructs, and the call refuses anything but `FLOWLINE_ENV=test` and a `flowline_test` or `flowline_test_<suffix>` database. The variable names (never values) go into the result JSON (`childEnv`) or stderr, and `--dry-run` prints them without git, Docker or a database (`run-auth-focused.mjs` and `security-auth/run-focused.mjs` read the target from `DATABASE_URL`, so it must be set even for `--dry-run`). A new helper reuses the module and joins the list in `tests/unit/focused-run-env.test.ts`. CI's unit job runs that test (the helpers' `--dry-run` included) but never a helper's real database run. Other scripts that spread `process.env` (`check-drizzle-prune.mjs`, gate, release, Company Builder and the frozen `artifacts/beta-execution` and `artifacts/design-v2` helpers) are not database-backed focused runs and are unchanged.
 
@@ -167,3 +169,72 @@ Safety rules:
 - The `node_modules` link `add` creates is the helper's own and is not counted as a change, so a fresh lane is `dirty=0` and can be removed straight away; a `node_modules` that is not that link counts as work. `rm`/`remove` refuse dirty or unpushed work with exit 1 and a clear message, e.g. `refusing to remove <path>: 1 uncommitted change(s); commit or discard them first`. Removal never forces and never deletes the branch.
 - Removal requires a registered worktree and refuses the main checkout and locked lanes. Bare names select only managed lanes; an external worktree needs an explicit path (absolute, or containing `/` or `\`), and relative paths resolve from the current directory. Path comparisons normalize separators and ignore case only on Windows.
 - `list`/`prune` skip missing directories and locked lanes, report per-lane errors, continue with later lanes, and exit nonzero on an error. `prune` keeps dirty or unpushed lanes; do not run it while agents are starting lanes.
+
+
+### Pilot CSV input persistence and admin 404s (2026-10-15)
+
+Run input uses PostgreSQL `json` (migration 0027), preserving a caller's first-row key order when the
+worker builds CSV. The CSV serializer uses that order; do not sort the keys or change run input back
+to `jsonb`. Existing rows already reordered by `jsonb` cannot recover their original key order.
+Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the engine keep their
+expression-defined order. `data.csv` build mode takes its header from every row's keys in first-seen order, so a
+column that first appears in a later row is kept. Regression coverage: `tests/unit/engine-v2.test.ts`,
+`tests/integration/runs.test.ts` and `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+## Useful scripts
+
+### `scripts/pilot-metrics.ts`
+
+Prints the 8 week-1 pilot success criteria (13 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
+
+**Usage** (the env wrapper loads `DATABASE_URL`; plain `tsx` does not read `.env`):
+```bash
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23
+```
+A missing, malformed, nonexistent (`2026-02-30`) or reversed range exits with code 2 and a usage message on stderr, before the database is touched. Against the test database use `.env.test` (or a `flowline_test_<suffix>` `DATABASE_URL`).
+
+**Metrics.** Sign-up cohort metrics (1-4) filter on the user's `created_at`; run and webhook metrics filter on the event's own time.
+
+| # | Row | Definition |
+|---|-----|------------|
+| 1 | Sign-ups, median time to verified | Distinct users created in range; median hours from sign-up to each user's first consumed `verify` token (users who never verified are left out of the median) |
+| 2 | Onboarding + workspace on day 1 | Cohort users with onboarding completed (not skipped) and a workspace created, both within 24h of sign-up |
+| 3 | Published ≥1 flow within 3 days | Cohort users whose earliest `flow_version` with `reason = 'publish'` is within 3 days of sign-up (later edits, republishing or unpublishing cannot change it) |
+| 4 | Run success rate, p95 queue-to-start | `succeeded / (succeeded + failed)` for runs created in range (shows `0.0%` when all failed, `N/A` when none finished); p95 of `started_at - created_at` |
+| 5 | Webhook runs, scheduled runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; runs triggered by schedule (`trigger_kind = 'schedule'`) created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
+| 6 | Cross-workspace access denials | `N/A`: workspace access checks answer 404 without writing an audit row (`admin.access_denied` is platform-admin probes only, so it is not used as a proxy) |
+| 7 | Share who switched to Arabic | `N/A`: the UI language is a cookie, not stored per user |
+| 8 | Staging uptime | `N/A`: measured via external probe of `/api/health` (target ≥99%), not stored in DB |
+
+Rows 6, 7 and 8 report `N/A` with explanation because those events are not recorded in the DB; the script does not print a made-up `0`.
+
+**Example** (empty range):
+```
+# Pilot Metrics: 1999-01-01 to 1999-01-02
+
+| Metric | Value |
+|--------|-------|
+| Sign-ups | 0 |
+| Median time to verified | N/A |
+| Onboarding completed + workspace created on day 1 | 0 |
+| Published ≥1 flow within 3 days | 0 |
+| Run success rate | N/A |
+| p95 queue-to-start | N/A |
+| Webhook runs | 0 |
+| Scheduled runs | 0 |
+| Approvals (workflow) | 0 |
+| Duplicate webhook runs | 0 |
+| Cross-workspace access denials | N/A (not logged: workspace 404s write no audit row) |
+| Share of users who switched to Arabic | N/A (not tracked, locale is cookie-only) |
+| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |
+```
+
+**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, scheduled runs, uptime, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; all-failed `0.0%` run, webhook, schedule and approval counts; removes only the rows it seeded).
+
+Admin page metadata is subject to the same platform-admin authorization boundary as page content.
+Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
+text, including in embedded metadata. Next.js may use its `__next_error__` envelope for `notFound()`;
+the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
+requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
+numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).

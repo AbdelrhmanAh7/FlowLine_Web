@@ -24,6 +24,8 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const [askPassword, setAskPassword] = useState(false);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [pending, setPending] = useState<"enable" | "verify" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [secretVisible, setSecretVisible] = useState(true);
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   // Bumped whenever an in-flight enable/verify is cancelled or replaced, so a late response can't reopen the secret.
@@ -32,15 +34,18 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const cancel = () => {
     requestRef.current += 1;
     takeSecret(passwordRef.current);
+    setError(null);
     setAskPassword(false);
     setEnrolment(null);
     setPending(null);
+    setSecretVisible(true);
   };
 
   const enable = async () => {
     const req = ++requestRef.current;
     const password = takeSecret(passwordRef.current) ?? "";
     setPending("enable");
+    setError(null);
     try {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } });
       if (requestRef.current !== req) return;
@@ -49,7 +54,9 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     } catch (err) {
       if (requestRef.current !== req) return;
       // Only a wrong/missing password gets the friendly line; other failures show their own (or a generic) message.
-      toast(err instanceof ApiError && err.code === "INVALID_PASSWORD" ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err), "danger");
+      const msg = err instanceof ApiError && err.code === "INVALID_PASSWORD" ? t("account.security.twoFactor.passwordInvalid") : apiErrorMessage(t, err);
+      setError(msg);
+      toast(msg, "danger");
     } finally {
       if (requestRef.current === req) setPending(null);
     }
@@ -82,47 +89,73 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-medium text-hi">{t("account.security.twoFactor.title")}</h2>
-        <span data-testid="two-factor-status">
+        <span data-testid="two-factor-status" data-state={enabled ? "on" : "off"}>
           <StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? t("account.security.twoFactor.on") : t("account.security.twoFactor.off")}</StatusBadge>
         </span>
       </div>
       {enabled ? null : enrolment ? (
         <div className="flex flex-col gap-3">
           <TotpQr uri={enrolment.totpURI} />
-          <div className="flex flex-col gap-1.5" role="group" aria-labelledby="two-factor-secret-label">
+          <div className="flex flex-col gap-1.5 text-start" role="group" aria-labelledby="two-factor-secret-label">
             {/* <code> is not labelable, so the secret is named with aria-labelledby on the group container instead of a <label for>. */}
-            <p id="two-factor-secret-label" className="text-xs font-medium uppercase tracking-[0.4px] text-med">
-              {t("account.security.twoFactor.secret")}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <span id="two-factor-secret-label" className="text-xs font-medium text-med text-start">
+                {t("account.security.twoFactor.secret")}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSecretVisible((v) => !v)}
+              >
+                {secretVisible ? t("account.security.twoFactor.hideSecret") : t("account.security.twoFactor.showSecret")}
+              </Button>
+            </div>
             <code
               id="two-factor-secret"
               dir="ltr"
-              className="break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm"
+              className="data break-all rounded-md border border-line bg-surface px-2 py-1.5 font-mono text-sm text-start"
               data-testid="totp-secret"
+              aria-labelledby="two-factor-secret-label"
             >
-              {enrolment.secret}
+              {secretVisible ? enrolment.secret : "••••••••••••••••"}
             </code>
           </div>
-          <div>
-            <p data-testid="backup-codes-warning" className="text-sm text-warning">{t("account.security.twoFactor.backupCodes")}</p>
-            <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
+          <div className="text-start">
+            <div className="flex items-center justify-between gap-2">
+              <p data-testid="backup-codes-warning" className="text-sm text-warning text-start">{t("account.security.twoFactor.backupCodesWarning")}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                    void navigator.clipboard.writeText(enrolment.backupCodes.join("\n"));
+                  }
+                  toast(t("account.security.twoFactor.backupCodesCopied"), "success");
+                }}
+              >
+                {t("account.security.twoFactor.copyBackupCodes")}
+              </Button>
+            </div>
+            <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm text-start" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
                 <li key={c}>{c}</li>
               ))}
             </ul>
           </div>
           <form
-            className="flex flex-wrap items-end gap-3"
+            className="flex flex-wrap items-end gap-3 text-start"
             onSubmit={(e) => {
               e.preventDefault();
               void verify();
             }}
           >
-            <Field label={t("auth.twoFactorCode")} htmlFor="two-factor-code">
-              <Input ref={codeRef} id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className="h-9 w-32 font-mono tracking-widest" />
+            <Field label={t("account.security.twoFactor.codeLabel")} htmlFor="two-factor-code">
+              <Input ref={codeRef} id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className="h-9 w-32 font-mono tracking-widest text-start" />
             </Field>
             <Button type="submit" variant="primary" loading={pending === "verify"}>
-              {t("account.security.twoFactor.confirm")}
+              {t("account.security.twoFactor.confirmButton")}
             </Button>
             {/* Once the code is submitted the server may already have turned MFA on, so Cancel would only hide that. */}
             <Button type="button" onClick={cancel} disabled={pending === "verify"}>
@@ -132,18 +165,18 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         </div>
       ) : askPassword ? (
         <form
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-3 text-start"
           onSubmit={(e) => {
             e.preventDefault();
             void enable();
           }}
         >
-          <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-password">
+          <Field label={t("account.security.twoFactor.password")} htmlFor="two-factor-password" error={error}>
             <SecretInput ref={passwordRef} id="two-factor-password" maxLength={128} />
           </Field>
           <div className="flex gap-2">
-            <Button type="submit" variant="primary" loading={pending === "enable"}>
-              {t("account.security.twoFactor.enable")}
+            <Button type="submit" variant="primary" loading={pending === "enable"} data-testid="two-factor-submit">
+              {t("account.security.twoFactor.submit")}
             </Button>
             <Button type="button" onClick={cancel}>
               {t("account.security.twoFactor.cancel")}

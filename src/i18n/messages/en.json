@@ -2323,12 +2323,20 @@
         "on": "On",
         "off": "Off",
         "enable": "Enable",
+        "submit": "Submit",
         "cancel": "Cancel",
         "password": "Account password",
-        "passwordInvalid": "That password isn't correct.",
+        "passwordInvalid": "That password isn't valid. Try again.",
         "secret": "Secret key (add it to your authenticator app)",
+        "hideSecret": "Hide",
+        "showSecret": "Show",
         "backupCodes": "Backup codes — shown only once, store them offline.",
-        "confirm": "Confirm and turn on"
+        "backupCodesWarning": "Backup codes — shown only once, store them offline.",
+        "copyBackupCodes": "Copy codes",
+        "backupCodesCopied": "Backup codes copied",
+        "codeLabel": "Authentication code",
+        "confirm": "Confirm and turn on",
+        "confirmButton": "Confirm and turn on"
       }
     },
     "settings": {

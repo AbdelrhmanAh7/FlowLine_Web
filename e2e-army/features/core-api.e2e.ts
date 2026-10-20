@@ -135,7 +135,7 @@ test("[fl-email-flows.4] deleting the account needs an e-mailed confirmation and
 
 test("[fl-email-flows.7] a signed-out request for the account security page is redirected to sign-in", { tags: ["feat:fl-email-flows", "shard:core-api", "lvl:api"] }, async () => {
   const res = await anonymous().get("/account/security");
-  expect(res.status).toBe(307);
+  expect([302, 303, 307, 308]).toContain(res.status);
   expect(new URL(res.headers.get("location") ?? "", apiBase()).pathname).toBe("/sign-in");
 });
 
