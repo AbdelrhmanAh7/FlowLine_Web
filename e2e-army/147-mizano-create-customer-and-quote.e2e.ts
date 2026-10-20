@@ -47,19 +47,22 @@ test(
     await agent.act("open the connection form for the Mizano integration");
     await expect(screen.getByLabel("Scoped API key")).toBeVisible();
     await expect(screen.getByLabel("Mizano URL")).toBeVisible();
-    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("ltr");
+    await expect(browser.locator("html")).toHaveAttribute("dir", "ltr");
     await agent.act("cancel the connection form");
     await agent.assert("the connection form is closed and no longer visible");
+    await expect(screen.getByLabel("Scoped API key")).toBeHidden();
 
     await agent.act("switch the language to Arabic");
+    await agent.act("open the workspace's Integrations page from the navigation");
     await expect(screen.getByText("موصل المحاسبة Mizano").first()).toBeVisible();
     await agent.act("open the Mizano integration");
     await expect(screen.getByText("إنشاء عميل").first()).toBeVisible();
     await agent.act("open the connection form for the Mizano integration");
     await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeVisible();
     await expect(screen.getByLabel("رابط Mizano")).toBeVisible();
-    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+    await expect(browser.locator("html")).toHaveAttribute("dir", "rtl");
     await agent.act("cancel the connection form");
     await agent.assert("the connection form is closed and no longer visible");
+    await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeHidden();
   },
 );

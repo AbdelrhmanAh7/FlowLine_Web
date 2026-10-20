@@ -198,7 +198,6 @@ describe("integration catalog text", () => {
     expect(connectFieldLabel(ar, "mizano", baseUrlField)).toBe("رابط Mizano");
   });
 
-
   it("unknown providers, actions and categories fall back to the catalog's own text", () => {
     expect(providerCategory(ar, "Robotics")).toBe("Robotics");
     expect(providerDescription(ar, { id: "acme", description: "Acme things" })).toBe("Acme things");
