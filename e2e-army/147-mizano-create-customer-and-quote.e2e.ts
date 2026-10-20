@@ -49,6 +49,7 @@ test(
     await expect(screen.getByLabel("Mizano URL")).toBeVisible();
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("ltr");
     await agent.act("cancel the connection form");
+    await agent.assert("the connection form is closed and no longer visible");
 
     await agent.act("switch the language to Arabic");
     await expect(screen.getByText("موصل المحاسبة Mizano").first()).toBeVisible();
@@ -59,5 +60,6 @@ test(
     await expect(screen.getByLabel("رابط Mizano")).toBeVisible();
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     await agent.act("cancel the connection form");
+    await agent.assert("the connection form is closed and no longer visible");
   },
 );
