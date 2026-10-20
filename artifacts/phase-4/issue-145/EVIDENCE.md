@@ -1,16 +1,17 @@
 # Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Branch:** `ai/145` (head `54a551b6`)  
+**Branch:** `ai/145` (head `546fb4d5`)  
 **Date:** 2026-10-20  
-**Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1
+**Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
+**Originating Sentry issue:** None (feature request #145; part of FlowLine G5 #144)  
 
-## Requirements and Verification
+## Explicit Acceptance Criteria & Verification Mapping
 
-| Req ID | Description | Verification Method | Result |
-|--------|-------------|---------------------|--------|
-| #145:1 (AC1) | Connection saved encrypted; key never returned to the client after save | **Contract test:** `tests/contract/mizano-connection.test.ts` (lines 99-102) asserts `runConnectionTest` never echoes the key. **Integration test:** `tests/integration/mizano-connection-test.test.ts` (lines 98-106) asserts the stored `secretEnc` and `settings` never contain the key, and the connection list endpoint never returns it. **E2E test:** `e2e-army/145-mizano-connection-test.e2e.ts` (lines 71-77, 83-84) asserts the create response and test response never contain the key. | **PASS** — All tests verify the scoped API key is encrypted at rest and never appears in any API response. |
-| #145:2 (AC2) | Test connection shows OK / a clear error (401, unreachable) | **Contract test (OK):** `tests/contract/mizano-connection.test.ts` lines 69-71 — `runConnectionTest` returns `"Alice A Mizano"` for a valid key. **Contract test (401):** lines 73-77 — wrong key yields `HttpError` 400 `AUTHENTICATION_FAILED` with fixed text "Invalid API key". **Contract test (unreachable/timeout):** lines 79-85 — timeout on `/api/health` yields 502 `PROVIDER_UNREACHABLE` within deadline. **Contract test (dropped connection):** lines 87-90 — dropped connection yields 502 `PROVIDER_UNREACHABLE`. **Integration test:** `tests/integration/mizano-connection-test.test.ts` lines 84-96 — revoked stored key gives 400 `AUTHENTICATION_FAILED`, timeout gives 502 `PROVIDER_UNREACHABLE`. **E2E test:** `e2e-army/145-mizano-connection-test.e2e.ts` lines 79-84 — test connection returns `{ ok: true, accountLabel: "Alice A Mizano" }`. | **PASS** — Every error path maps to a bounded code with fixed UI text; no provider message ever reaches the client. |
-| #145:3 (AC3) | Unit test with a mocked HTTP server | **Contract tests run against the fake provider server** (`e2e/fakes/provider-server.ts`, path prefix `/mizano`), which is a real HTTP server started on a local port. Tests in `tests/contract/mizano-connection.test.ts` exercise `GET /api/health` then `GET /api/me` with Bearer auth, inject faults (timeout, drop, 500, unhealthy bodies), and verify the error mapping. The fake server also covers the health handler (`tests/contract/mizano-fake.test.ts`). | **PASS** — 24 contract tests in `mizano-connection.test.ts` + 8 in `mizano-fake.test.ts` + 43 in `mizano.test.ts` + 10 unit tests in `connection-test-i18n.test.ts` + 12 unit tests in `e2e-army-tooling.test.ts` = 97 tests passing. |
+| ID | Description | Covering Tests | Verification Command | Exit Code | Result |
+|----|-------------|----------------|----------------------|-----------|--------|
+| **AC1** | Connection saved encrypted; key never returned to the client after save | `tests/contract/mizano-connection.test.ts:99-102` (`runConnectionTest` never echoes key); `tests/integration/mizano-connection-test.test.ts:98-106` (`secretEnc` at rest, connection list redaction); `e2e-army/145-mizano-connection-test.e2e.ts:71-77,83-84` (create/test responses omit key). | `pnpm vitest run tests/contract/mizano-connection.test.ts` | 0 | **PASS** — Scoped API key encrypted at rest; never returned in API responses or UI. |
+| **AC2** | Test connection shows OK / a clear error (401, unreachable) | `tests/contract/mizano-connection.test.ts:69-90` (OK returns accountLabel, 401 maps to `AUTHENTICATION_FAILED`, unreachable/timeout maps to `PROVIDER_UNREACHABLE`); `tests/integration/mizano-connection-test.test.ts:84-96` (revoked key, timeout); `tests/unit/connection-test-i18n.test.ts:1-41` (all codes mapped to English and Arabic translations); `e2e-army/145-mizano-connection-test.e2e.ts:79-84,179-206` (OK and error card flows, LTR and RTL Arabic). | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/unit/connection-test-i18n.test.ts` | 0 | **PASS** — Every error maps to a bounded code with user-friendly translated text in EN and AR (RTL); raw provider body discarded. |
+| **AC3** | Unit test with a mocked HTTP server | `tests/contract/mizano-connection.test.ts:1-126` (24 tests against local fake provider server `e2e/fakes/provider-server.ts`); `tests/contract/mizano-fake.test.ts:1-55` (8 tests for fake server health and me handlers); `tests/contract/mizano.test.ts` (43 contract tests). | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts` | 0 | **PASS** — 75 contract tests against the mocked/fake HTTP server with faults, auth verification, and health checking. |
 
 ## Test Execution Evidence
 
@@ -18,8 +19,8 @@
 $ pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/e2e-army-tooling.test.ts
  Test Files  5 passed (5)
       Tests  97 passed (97)
-   Start at  01:38:59
-   Duration  3.73s
+   Start at  03:17:54
+   Duration  2.29s
 
 $ pnpm lint
 > eslint . --cache --cache-location node_modules/.cache/eslint/
@@ -30,7 +31,7 @@ $ pnpm typecheck
 # Exit code 0, no errors
 
 $ pnpm check:evidence
-check-evidence-secrets: 0 local secret value(s) checked across 197 file(s); 0 hit(s)
+check-evidence-secrets: 0 local secret value(s) checked across 176 file(s); 0 hit(s)
 # Exit code 0
 ```
 
