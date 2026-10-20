@@ -41,9 +41,24 @@ describe("docs index and PR #159 docs", () => {
     expect(content).toContain("/account/security");
     expect(content.toLowerCase()).toContain("two-factor card");
     expect(content).toContain("TOTP (SHA-1، 6 أرقام، خطوة 30 ثانية");
+    expect(content).toContain("SHA-1, 6 digits, 30-second step");
     expect(content).toContain("cleared from the input on submit");
     expect(content).toContain("src/server/federated-mfa.ts");
     expect(content).toContain("tests/unit/mfa-session-fence.test.ts");
+    expect(content).toContain("tests/integration/sec-federated-mfa-regression.test.ts");
     expect(content).toContain("Engine Decoupling and Access");
+    expect(content).toContain("disabled={pending !== null}");
+  });
+
+  it("records valid, non-zero Playwright commands for account-security in PHASE4_BETA_REPORT.md and NEXT_ACTION.md", () => {
+    const betaReport = read("implementation/PHASE4_BETA_REPORT.md");
+    expect(betaReport).toContain("pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1");
+    expect(betaReport).toContain('pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1');
+    expect(betaReport).toContain("PR #327 supersedes part of #269");
+
+    const nextAction = readFileSync(fileURLToPath(new URL("../../NEXT_ACTION.md", import.meta.url)), "utf8");
+    expect(nextAction).toContain("pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1");
+    expect(nextAction).toContain('pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1');
+    expect(nextAction).toContain("PR #327 (supersedes part of #269");
   });
 });

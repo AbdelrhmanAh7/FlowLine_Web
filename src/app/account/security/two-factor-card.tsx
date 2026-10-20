@@ -143,7 +143,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             {/* Backup codes are alphanumeric tokens rendered LTR to preserve sequence readability in Arabic/RTL contexts. */}
             <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
-                <li key={c}>{c}</li>
+                <li key={c} dir="ltr">{c}</li>
               ))}
             </ul>
           </div>

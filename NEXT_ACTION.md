@@ -6,8 +6,8 @@ PR #327 (supersedes part of #269, parent issue #199).
 - Documented `/account/security` route and `TwoFactorCard` in `docs/security/ACCOUNT_SECURITY.md` (indexed in `docs/README.md`).
 - Localized TOTP specification with Arabic terms (`TOTP (SHA-1، 6 أرقام، خطوة 30 ثانية)`), clarified secret input DOM clearing, scoped Engine execution separation, and cited federated MFA session fencing implementation (`src/server/federated-mfa.ts`) and tests (`tests/unit/mfa-session-fence.test.ts`, `tests/integration/sec-federated-mfa-regression.test.ts`).
 - Reinforced `TwoFactorCard` cancellation safety: disabled Cancel button while async operations are pending (`disabled={pending !== null}`), added request-id abort/stale-response guard discarding late responses on Cancel, and added RTL code comment.
-- Fixed hyphen in Arabic message for `account.security.twoFactor.backupCodes`.
-- Updated test qualifications: Playwright accounts for 4 tests in `e2e/account-security.spec.ts` plus 1 targeted test in `e2e/arabic.spec.ts` (`-g "Arabic account security page"`), totaling 5/5 targeted specifications.
+- Fixed em-dash in Arabic message for `account.security.twoFactor.backupCodes` (`—`).
+- Updated test qualifications: Playwright accounts for 4 tests in `e2e/account-security.spec.ts` (`pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1`) plus 1 targeted test in `e2e/arabic.spec.ts` (`pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1`), totaling 5/5 targeted specifications.
 
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 

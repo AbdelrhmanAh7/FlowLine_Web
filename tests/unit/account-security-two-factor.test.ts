@@ -61,6 +61,37 @@ describe("account security two-factor card", () => {
     expect(src).toMatch(/credentials|tokens/);
   });
 
+  it("explicitly sets dir=\"ltr\" on TOTP secret code element, backup codes list, and each code item", () => {
+    expect(src).toMatch(/<code[^>]*id="two-factor-secret"[^>]*dir="ltr"/);
+    expect(src).toMatch(/<ul[^>]*dir="ltr"[^>]*data-testid="backup-codes"/);
+    expect(src).toMatch(/<li[^>]*dir="ltr"/);
+    expect(src).toMatch(/<Input[^>]*id="two-factor-code"[^>]*dir="ltr"/);
+  });
+
+  it("uses an em-dash (—) in ar.json for account.security.twoFactor.backupCodes", () => {
+    const arJson = JSON.parse(readFileSync("src/i18n/messages/ar.json", "utf8"));
+    const msg = arJson.account.security.twoFactor.backupCodes;
+    expect(msg).toContain("—");
+    expect(msg).not.toMatch(/ [-\u05BE\u2212] /);
+  });
+
+  it("clears password and code inputs from DOM upon submission for enable, verify, and disable", () => {
+    const enableFn = src.slice(src.indexOf("const enable ="), src.indexOf("const verify ="));
+    expect(enableFn).toContain("takeSecret(enablePasswordRef.current)");
+
+    const verifyFn = src.slice(src.indexOf("const verify ="), src.indexOf("const disable ="));
+    expect(verifyFn).toContain('codeRef.current.value = ""');
+
+    const disableFn = src.slice(src.indexOf("const disable ="), src.indexOf("return ("));
+    expect(disableFn).toContain("takeSecret(disablePasswordRef.current)");
+  });
+
+  it("enforces complete API contract: enable with password & Flowline issuer, verify with code, disable with password only", () => {
+    expect(src).toContain('api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", { method: "POST", json: { password, issuer: "Flowline" } })');
+    expect(src).toContain('api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code } })');
+    expect(src).toContain('api("/api/auth/two-factor/disable", { method: "POST", json: { password } })');
+  });
+
   it("enable and disable read their password through separate refs", () => {
     expect(src).toContain("<SecretInput ref={enablePasswordRef}");
     expect(src).toContain("<SecretInput ref={disablePasswordRef}");
