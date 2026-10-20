@@ -1,0 +1,42 @@
+/**
+ * Issue #112: CodeQL triage B (scripts/ alerts) - verify-beta-stack (alert #8)
+ */
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+// @ts-expect-error TS7016: standalone script has no declaration file
+import { buildVerifyArgs, isLoopbackTarget, resolveTlsPolicy } from "../../scripts/release/verify-beta-stack.mjs";
+
+const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
+
+describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
+  it("isLoopbackTarget identifies loopback targets and rejects non-loopback", () => {
+    for (const h of ["https://localhost", "http://127.0.0.1:8080", "https://[::1]", "localhost", "127.0.0.1", "::1"]) {
+      expect(isLoopbackTarget(h)).toBe(true);
+    }
+    for (const h of ["https://beta.example.com", "https://93.184.216.34", "http://192.168.1.1", "", "invalid"]) {
+      expect(isLoopbackTarget(h)).toBe(false);
+    }
+  });
+
+  it("resolveTlsPolicy keeps certificate validation ON unless BETA_STACK_ALLOW_INSECURE=1 with loopback", () => {
+    expect(resolveTlsPolicy({}, "https://localhost")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
+    expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://beta.example.com")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
+    expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://93.184.216.34")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
+    for (const h of ["https://localhost", "https://127.0.0.1:443", "https://[::1]"]) {
+      expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, h)).toEqual({ rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } });
+    }
+  });
+
+  it("buildVerifyArgs returns stable ordered argv array and carries no --insecure in default path", () => {
+    expect(buildVerifyArgs({}, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
+    expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
+    expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://127.0.0.1:443")).toEqual(["--base", "https://127.0.0.1:443", "--insecure-local"]);
+    expect(buildVerifyArgs({}, "https://localhost", { out: "artifacts/test" })).toEqual(["--base", "https://localhost", "--out", "artifacts/test"]);
+  });
+
+  it("alert #8 is documented in triage doc and code", () => {
+    expect(read("docs/security/codeql-triage-scripts.md")).toMatch(/\|\s*#8\s*\|\s*`js\/disabling-certificate-validation`\s*\|\s*`scripts\/release\/verify-beta-stack\.mjs`\s*\|\s*Fixed\s*\|/);
+    expect(read("scripts/release/verify-beta-stack.mjs")).toContain("(alert #8)");
+    expect(read("scripts/release/verify-beta-stack.mjs")).toContain("docs/security/codeql-triage-scripts.md");
+  });
+});
