@@ -330,3 +330,15 @@ before, `Papa.unparse` used row 1 only and dropped columns that first appear lat
 `tests/unit/engine-v2.test.ts` (fails on base, passes on head). The jsonb→json run input change that fixed the
 gate's `qty,name` ordering is already on main (`39364b5d`, migration 0027). Local e2e-army run not possible
 (sandbox); see `artifacts/phase-4/issue-251/EVIDENCE.md`.
+
+## Pilot metrics: run success rate 0.0% formatting (issue #316) — 2026-10-20
+
+Fixed truthiness check bug on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263`.
+Previously, `metrics.runSuccessRate ? ... : "N/A"` evaluated a true `0` success rate (when every
+finished run in the cohort failed) as falsy, outputting `"N/A"` instead of `"0.0%"`.
+Using `metrics.runSuccessRate != null` ensures that `0` correctly formats as `"0.0%"`, while `null`
+(no finished runs) outputs `"N/A"`.
+Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and integration
+tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
+Regression tested against base failure. Supersedes part of #170.
+
