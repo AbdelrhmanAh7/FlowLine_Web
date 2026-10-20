@@ -1,11 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #181 — verify round 4 answered, browser checks added, contract and localization tests verified (2026-10-19)
-
-Verify's "[high] 404 on /admin/copy" (head `be71f9f`) is the designed refusal: its browser is a non-admin, and `/admin/copy` answers every non-admin with the ordinary 404 (CREDENTIALS_DESIGN item 10). No product change; `e2e/admin-panel.spec.ts` now pins that 404 and checks refused saves in a real browser, `pnpm test` runs the component tests (so CI does), and the e2e-army `@issue-181 AC3` test, which had never passed (Next serves a thrown `notFound()` without `lang`/`dir`), checks them on the rendered page. Review cleanup addressed type-safe literal keys for MessageKey in copy-editor.tsx, userEvent setup in beforeEach, parameterizing the NETWORK test across save and publish, unit tests in `tests/unit/admin-copy-errors.test.ts` (verifying 404 NOT_FOUND for anonymous/non-admins per CREDENTIALS_DESIGN item 10, 401 PLATFORM_REAUTH_REQUIRED, 403 PLATFORM_MFA_REQUIRED, 500 INTERNAL with response body sanitization against stack/SQL/driver leaks, and security headers), direct assertions against `ar.json` and `en.json` ensuring no untranslated strings in `tests/component/copy-editor.test.tsx`, and contract tests in `tests/contract/errors.test.ts` for `{ error: { code, message } }` envelope parsing and error catalogue completeness. Commits and evidence: [VERIFICATION.md](artifacts/phase-4/issue-181/VERIFICATION.md).
-
-Harness next: push; get green `gate` and `docs`; run the full tier once on the final candidate (`admin-panel.spec.ts` runs only there); confirm that the hub's e2e-army result lists the four tests of `e2e-army/200-route-error-headers.e2e.ts`. Not fixed here (app-wide, outside #181): the server HTML of every thrown `notFound()` is Next's error shell without `lang`/`dir`; the browser renders the localized 404 page from the payload.
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
@@ -19,7 +13,6 @@ Harness next: push branch `ai/316` and obtain CI and review confirmation.
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
-
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain
