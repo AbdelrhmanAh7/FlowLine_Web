@@ -117,7 +117,7 @@ For browser timeouts, distinguish the whole-test deadline from time spent on the
 
 Store evidence under `artifacts/phase-N/` with tested SHA and, for uncommitted work, a source fingerprint. Report exact checks and external blockers. No secrets or customer data in artifacts. Production deployment, live payments and release-scope changes require explicit owner approval.
 
-Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated.
+Lock-order regression tests (deadlock checks against real Postgres) use `runConcurrentPg(txA, txB, { timeoutMs })` from `tests/helpers/concurrentPgTx.ts`, built on the DB-free `runConcurrent` core: it opens one connection per transaction, wraps each callback in `BEGIN`/`COMMIT` (`ROLLBACK` on error), passes it `{ client, arrive }` so both can hold their first lock before either takes its second, and rejects with `deadlock detected (40P01): …` or `runConcurrent timed out after <n>ms`. On any failure it ends both backends with `pg_terminate_backend` from a third connection, so a hung lock wait never outlives the test. Usage example in the file header; its tests are `tests/integration/concurrent-tx.test.ts` (advisory locks) and `tests/integration/concurrent-tx-pg.test.ts` (row locks on two scratch tables, unique per run and dropped in `afterAll`: an opposite-order pair is reported as `40P01`, a same-order pair finishes, an error thrown before `arrive()` rejects at once while the other side waits at the barrier, and no row lock or idle-in-transaction backend is left behind). They need the test database, so they run in the integration project, not `pnpm test`. The DB-free `tests/unit/concurrentPgTx.test.ts` (issue #192, the review findings of PR #125) replaces `pg` with a scripted fake and pins three cleanup rules in the `unit` project: a client whose `pg_backend_pid()` query fails after `connect()` is ended along with the other one, `timeoutMs` also bounds opening the connections (a connection that finishes later is ended), and a `40P01` from one callback is reported at once without waiting for the other, after both backends are terminated. `runConcurrentPg` runs callbacks you write against its client; to race two production functions (which call `db.transaction` themselves), use `tests/integration/pg-lock-helpers.ts` instead: `routeTransactions()` sends each function's transactions to its own connection, `pauseAfter(client, pattern)` holds the first right after a lock statement, and `blockedByObserver` waits until PostgreSQL reports the second blocked by it and returns the statement it waits at (re-read from a fresh `pg_stat_activity` snapshot, because that view's `query` can lag behind its live `wait_event`). Examples: `email-token-lock-order.test.ts`, `federated-lock-order.test.ts`, `account-delete-sso-lock-order.test.ts`.
 
 Local evidence helpers that start Vitest against a disposable database (`artifacts/phase-4/paid-pilot-round1/upload-admission/run-focused.mjs`, `.../federated-mfa/run-focused.mjs`, `.../paid-pilot-round1/run-auth-focused.mjs` and `artifacts/phase-4/security-auth/run-focused.mjs`) must not pass `process.env` to the child, because an ambient `FLOWLINE_*`, provider key or `NODE_OPTIONS` would silently change what a run proves. They call `buildFocusedTestEnv` from `scripts/focused-run-env.mjs`: the child gets only OS/runtime names the parent has (`PATH`, temp/home directories, the Windows system variables, `NODE_OPTIONS` when set) plus the synthetic values the helper constructs, and the call refuses anything but `FLOWLINE_ENV=test` and a `flowline_test` or `flowline_test_<suffix>` database. The variable names (never values) go into the result JSON (`childEnv`) or stderr, and `--dry-run` prints them without git, Docker or a database (`run-auth-focused.mjs` and `security-auth/run-focused.mjs` read the target from `DATABASE_URL`, so it must be set even for `--dry-run`). A new helper reuses the module and joins the list in `tests/unit/focused-run-env.test.ts`. CI's unit job runs that test (the helpers' `--dry-run` included) but never a helper's real database run. Other scripts that spread `process.env` (`check-drizzle-prune.mjs`, gate, release, Company Builder and the frozen `artifacts/beta-execution` and `artifacts/design-v2` helpers) are not database-backed focused runs and are unchanged.
 
@@ -197,6 +197,57 @@ Flow graphs and other JSONB columns are unchanged. CSV rows produced inside the 
 expression-defined order. `data.csv` build mode takes its header from every row's keys in first-seen order, so a
 column that first appears in a later row is kept. Regression coverage: `tests/unit/engine-v2.test.ts`,
 `tests/integration/runs.test.ts` and `e2e-army/features/runs.e2e.ts` (`feat:fl-csv-data-node`).
+
+## Useful scripts
+
+### `scripts/pilot-metrics.ts`
+
+Prints the 8 week-1 pilot success criteria (13 table rows) from the configured database as a Markdown table, for an inclusive UTC day range. Read-only (SELECT only); it prints no connection string.
+
+**Usage** (the env wrapper loads `DATABASE_URL`; plain `tsx` does not read `.env`):
+```bash
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD
+node scripts/with-env.mjs .env tsx scripts/pilot-metrics.ts --from 2026-10-16 --to 2026-10-23
+```
+A missing, malformed, nonexistent (`2026-02-30`) or reversed range exits with code 2 and a usage message on stderr, before the database is touched. Against the test database use `.env.test` (or a `flowline_test_<suffix>` `DATABASE_URL`).
+
+**Metrics.** Sign-up cohort metrics (1-4) filter on the user's `created_at`; run and webhook metrics filter on the event's own time.
+
+| # | Row | Definition |
+|---|-----|------------|
+| 1 | Sign-ups, median time to verified | Distinct users created in range; median hours from sign-up to each user's first consumed `verify` token (users who never verified are left out of the median) |
+| 2 | Onboarding + workspace on day 1 | Cohort users with onboarding completed (not skipped) and a workspace created, both within 24h of sign-up |
+| 3 | Published ≥1 flow within 3 days | Cohort users whose earliest `flow_version` with `reason = 'publish'` is within 3 days of sign-up (later edits, republishing or unpublishing cannot change it) |
+| 4 | Run success rate, p95 queue-to-start | `succeeded / (succeeded + failed)` for runs created in range (shows `0.0%` when all failed, `N/A` when none finished); p95 of `started_at - created_at` |
+| 5 | Webhook runs, scheduled runs, approvals, duplicate runs | Accepted webhook events whose run was created in range; runs triggered by schedule (`trigger_kind = 'schedule'`) created in range; workflow approvals (`kind = 'approval'`, approved or rejected) decided in range; duplicate runs = for webhook runs created in range, runs beyond the first per `(flow, trigger_ref)`. The hook route stores no row for a rejected duplicate, and `run_trigger_unique` makes a duplicate run impossible, so anything above 0 means the dedupe guard failed |
+| 6 | Cross-workspace access denials | `N/A`: workspace access checks answer 404 without writing an audit row (`admin.access_denied` is platform-admin probes only, so it is not used as a proxy) |
+| 7 | Share who switched to Arabic | `N/A`: the UI language is a cookie, not stored per user |
+| 8 | Staging uptime | `N/A`: measured via external probe of `/api/health` (target ≥99%), not stored in DB |
+
+Rows 6, 7 and 8 report `N/A` with explanation because those events are not recorded in the DB; the script does not print a made-up `0`.
+
+**Example** (empty range):
+```
+# Pilot Metrics: 1999-01-01 to 1999-01-02
+
+| Metric | Value |
+|--------|-------|
+| Sign-ups | 0 |
+| Median time to verified | N/A |
+| Onboarding completed + workspace created on day 1 | 0 |
+| Published ≥1 flow within 3 days | 0 |
+| Run success rate | N/A |
+| p95 queue-to-start | N/A |
+| Webhook runs | 0 |
+| Scheduled runs | 0 |
+| Approvals (workflow) | 0 |
+| Duplicate webhook runs | 0 |
+| Cross-workspace access denials | N/A (not logged: workspace 404s write no audit row) |
+| Share of users who switched to Arabic | N/A (not tracked, locale is cookie-only) |
+| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |
+```
+
+**Tests.** `tests/unit/pilot-metrics.test.ts` (range parsing, formatting, `0.0%`, scheduled runs, uptime, direct-run guard, usage exit code) and `tests/integration/pilot-metrics.test.ts` (SQL against seeded rows in a synthetic 2001-03 window; all-failed `0.0%` run, webhook, schedule and approval counts; removes only the rows it seeded).
 
 Admin page metadata is subject to the same platform-admin authorization boundary as page content.
 Denied `/admin`, `/admin/copy`, and unknown admin paths return 404 without authenticator/setup/copy-editor
