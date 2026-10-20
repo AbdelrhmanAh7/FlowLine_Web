@@ -12,6 +12,14 @@ Resolved merge conflicts with `origin/main` without dropping any of main's chang
 5. Updated `artifacts/phase-4/issue-145/EVIDENCE.md` with verified commit SHA, tests, and findings resolution.
 All checks pass locally: `pnpm typecheck` clean, `pnpm lint` clean, vitest 97/97 tests pass across 5 files (`mizano-connection.test.ts`, `mizano-fake.test.ts`, `mizano.test.ts`, `connection-test-i18n.test.ts`, `e2e-army-tooling.test.ts`), `pnpm check:evidence` clean. Harness pushes and requests review confirmation.
 
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
+
 ## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
