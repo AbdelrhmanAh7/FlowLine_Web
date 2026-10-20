@@ -75,4 +75,5 @@ user menu.
    - Your data runs your workflows and isn't used to train models.
    - Deleting your account takes an emailed confirmation link.
    - Two-step verification (Account → Security in the user menu): choose Enable, enter your account password, add the manual secret key to your authenticator app, save the backup codes offline (shown once), and confirm with the 6-digit code. If cancelled before confirming, the status remains Off.
-8. **Help:** use "Report an issue", and include the Request ID shown with any error.
+8. **Account, Security:** (user menu) shows whether two-step verification is on or off; you can turn it on from this page; turning it off here is coming soon.
+9. **Help:** use "Report an issue", and include the Request ID shown with any error.
