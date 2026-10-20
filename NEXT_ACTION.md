@@ -1,12 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #117 — flows list and dashboard run summary (2026-10-20)
-
-Merged `origin/main` into `ai/117` (`12b249c9`). All 6 acceptance criteria for the flows list and dashboard run summary are verified.
-Triaged Thoth status finding regarding "Dashboard button" (flows list and dashboard are the identical `/w/[slug]/flows` surface).
-All unit tests (`tests/unit/no-conflict-markers.test.ts`), `pnpm typecheck`, and `eslint` pass clean.
-Harness next: push branch `ai/117` and obtain CI, e2e-army, and reviewer confirmation for PR #139.
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".

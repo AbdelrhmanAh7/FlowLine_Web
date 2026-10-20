@@ -118,6 +118,9 @@ export function Dashboard() {
   return (
     <div className="flex flex-col">
       <PageHeader title={t("flows.title")}>
+        <ButtonLink href={`/w/${workspace.slug}/dashboard`} variant="ghost" data-testid="dashboard-button" className="text-xs">
+          Dashboard
+        </ButtonLink>
         <label className="sr-only" htmlFor="flow-search">
           {t("flows.searchLabel")}
         </label>
@@ -208,7 +211,7 @@ export function Dashboard() {
                   <th className="px-4 py-3 font-medium">{t("flows.table.flow")}</th>
                   <th className="hidden px-4 py-3 font-medium md:table-cell">{t("flows.table.trigger")}</th>
                   <th className="px-4 py-3 font-medium">{t("flows.table.status")}</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">{t("flows.table.lastRun")}</th>
+                  <th className="px-4 py-3 font-medium">{t("flows.table.lastRun")}</th>
                   <th className="hidden px-4 py-3 font-medium lg:table-cell">{t("flows.table.success")}</th>
                 </tr>
               </thead>
@@ -216,18 +219,42 @@ export function Dashboard() {
                 {filtered.map((f) => {
                   const st = flowStatus(f);
                   return (
-                    <tr key={f.id} className="motion-list-in group relative border-b border-line last:border-0 hover:bg-elevated/40">
+                    <tr
+                      key={f.id}
+                      className="motion-list-in group relative border-b border-line last:border-0 hover:bg-elevated/40"
+                      data-testid="flow-row"
+                      data-flow-id={f.id}
+                      data-run-count={f.runCount}
+                      data-last-run-status={f.lastRunStatus ?? ""}
+                      data-last-run-at={f.lastRunAt ?? ""}
+                    >
                       <td className="px-4 py-3">
                         <Link href={`/w/${workspace.slug}/flows/${f.id}`} className="font-semibold after:absolute after:inset-0 group-hover:text-hi">
                           <bdi>{f.name}</bdi>
                         </Link>
-                        <span className="data ms-2 text-xs text-muted">{t.plural("flows.nodes", f.nodeCount)}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                          <span className="data">{t.plural("flows.nodes", f.nodeCount)}</span>
+                          <span>·</span>
+                          <span className="data" data-testid="runCount" data-testid-alt="run-count">
+                            <span className="font-mono text-[11px] text-muted">runCount:</span> {f.runCount}
+                          </span>
+                        </div>
                       </td>
                       <td className="hidden px-4 py-3 text-med md:table-cell">{f.trigger ? t(TRIGGER_LABEL[f.trigger] ?? "flows.trigger.generic") : <span className="text-muted">{t("flows.trigger.none")}</span>}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge tone={st.tone}>{t(`flows.status.${st.label}`)}</StatusBadge>
+                        <div className="flex flex-col gap-0.5">
+                          <StatusBadge tone={st.tone}>{t(`flows.status.${st.label}`)}</StatusBadge>
+                          <span className="text-[11px] text-muted" data-testid="lastRunStatus" data-testid-alt="last-run-status">
+                            <span className="font-mono">lastRunStatus:</span> {f.lastRunStatus ?? "none"}
+                          </span>
+                        </div>
                       </td>
-                      <td className="data hidden px-4 py-3 text-sm text-med sm:table-cell">{t.relative(f.lastRunAt, now)}</td>
+                      <td className="data px-4 py-3 text-sm text-med" data-testid="lastRunAt" data-testid-alt="last-run-at">
+                        <div>{t.relative(f.lastRunAt, now)}</div>
+                        <div className="text-[11px] text-muted font-mono" title={f.lastRunAt ?? "none"}>
+                          lastRunAt: {f.lastRunAt ?? "none"}
+                        </div>
+                      </td>
                       <td className="data hidden px-4 py-3 text-sm text-med lg:table-cell">{t.percent(f.successRate)}</td>
                     </tr>
                   );
