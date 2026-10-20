@@ -4,6 +4,13 @@
 
 The branch meets the planner spec's AC1 to AC5 and the CTO's 2026-10-17 orders on PR #135 except the last, which is still open: green CI, `e2e-army` and a fresh CodeRabbit approval on the new head (CodeRabbit skipped `0a64f97` because automatic reviews are disabled; its last review approved `77ad7a31` on 2026-10-10). The QA review on `343e387` requested simplifying the auto-verify description in `AGENTS.md` to focus on the key test-only security constraint; simplified line 33 of `AGENTS.md` and added unit test in `tests/unit/test-auto-verify.test.ts`. Next, the harness: push to PR #135, then get fresh CI, `e2e-army`, verify and CodeRabbit results on the new head. For the hub owner (no issues filed, because the owner's issue freeze is on): check the Claude adapter's output against e2e's response grammar; name the PR copy directory without a leading dot (or add a glob for it to the runner's `tests`) so PR army tests run at all; the verify planner's vocabulary scan covered only `/auth/step-up`, `/sign-in` and `/sign-up`, so it guessed the controls of `/resend-verification`; the stop hook still runs `vitest related` without a test `DATABASE_URL`; and agent steps in a local `e2e` run need the `ai` peer dependency, which this checkout does not resolve.
 
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
@@ -144,3 +151,7 @@ PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from al
 The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
 The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
 (sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #297 — guard AI_QUESTIONS.md against stray audit deliverables (2026-10-19)
+
+PR branch `ai/297` supersedes part of #271. Resolves reviewer finding where the Issue #250 CI PR audit deliverable was incorrectly placed into root `AI_QUESTIONS.md`. The QA checklist audit deliverable is properly housed under `docs/evidence/250/qa-checklist-audit.md`, and unit regression test `tests/unit/questions-deliverable-guard.test.ts` guards `AI_QUESTIONS.md` from containing stray audit deliverables or checklist tables. Harness next: CI and reviewer confirmation. E2E: not needed — internal documentation and test guard chore.
