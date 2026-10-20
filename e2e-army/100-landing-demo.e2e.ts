@@ -5,8 +5,8 @@ import { expect } from "e2e";
 // media. This test must not depend on it, so it uses the test-only cookie `fl_test_demo=fixture` (honoured only when the stack
 // runs with FLOWLINE_ENV=test), which makes the server read e2e/fixtures/demo/manifest.json, and answers every /media/demo/*
 // request itself (an empty body for videos and images, a one-cue file for captions). Playback is stubbed (Playwright builds lack H.264), so these checks are about WHEN the
-// page asks for video, WHICH file it asks for, and what the visitor can operate. Reduced motion cannot be emulated by the
-// e2e-army web engine; reduce / saveData / 2g / live toggling are covered by e2e/landing-demo.spec.ts.
+// page asks for video, WHICH file it asks for, and what the visitor can operate. Reduced motion is emulated here by overriding
+// window.matchMedia (AC2); saveData / 2g / live toggling and the real browser media query are covered by e2e/landing-demo.spec.ts.
 const base = (app: { baseUrl?: string }) => process.env.E2E_ARMY_URL ?? app.baseUrl ?? "http://127.0.0.1:3000";
 const VTT = "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nfixture\n";
 
