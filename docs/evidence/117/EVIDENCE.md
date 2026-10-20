@@ -25,7 +25,9 @@ Base: `origin/main`
 - Linter:
   `pnpm lint` — exit code 0
 - Unit tests:
-  `pnpm exec vitest run --project unit tests/unit/no-conflict-markers.test.ts --maxWorkers=1` — exit code 0 (5 passed)
+  `pnpm exec vitest run --project unit tests/unit/no-conflict-markers.test.ts tests/unit/gate-groups.test.ts --maxWorkers=1` — exit code 0 (13 passed)
+- Gate runner static verification:
+  `node scripts/gate.mjs --only=static` — exit code 0 (lint, typecheck, evidence passed)
 - Integration tests:
   `node scripts/with-env.mjs .env.test vitest run --project integration tests/integration/flows.test.ts --maxWorkers=1` — exit code 0 (16 passed)
 - Regression demonstration:

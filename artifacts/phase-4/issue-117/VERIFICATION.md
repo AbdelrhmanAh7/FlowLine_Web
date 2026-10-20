@@ -55,14 +55,21 @@ Covers:
 
 ### Deterministic last-run ordering
 
-**Code (file:line):** `src/server/flows.ts:70`:
+**Code (file:line):** `src/server/flows.ts:46-51,70`:
 ```sql
 finishedAt desc nulls last, startedAt desc nulls last, id desc
 ```
 
-`nulls last` on `startedAt` is a deliberate refinement over the literal spec text (`startedAt DESC`, which defaults to NULLS FIRST in Postgres). This ensures a running run (which has `startedAt` but no `finishedAt`) ranks ahead of a queued run (which has neither) when no run of the flow has finished yet.
+`nulls last` on `startedAt` is a deliberate refinement over the literal spec text (`startedAt DESC`, which defaults to NULLS FIRST in Postgres). This ensures a running run (which has `startedAt` but no `finishedAt`) ranks ahead of a queued run (which has neither) when no run of the flow has finished yet. Documented explicitly in `src/server/flows.ts:46-51,70`.
 
 **Test proving it (regression):** `tests/integration/flows.test.ts:260-293`: seeds three runs (two running, one queued), asserts `lastRunStatus: "running"` (not `"queued"`). On the previous head `4fe2643` (which used `startedAt desc` without `nulls last`), this test failed with `lastRunStatus` expected `"running"`, received `"queued"`.
+
+### Gate manifest registration for Playwright E2E
+
+**Code (file:line):** `scripts/gate-groups.mjs:24`:
+Registers `flows-list` in `GROUPS.editor.specs` so `checkManifest()` and `pnpm gate` pass without rejecting unassigned browser specs.
+
+**Test proving it:** `tests/unit/gate-groups.test.ts` (8/8 passed).
 
 ### UI: Dashboard route, button, and visible flow statistics
 
@@ -82,7 +89,9 @@ finishedAt desc nulls last, startedAt desc nulls last, id desc
 | `node scripts/e2e-army.mjs --shard-id flows-api --grep fl-flows-list` | 0 | `[fl-flows-list.3]` and `@issue-117 [fl-flows-list.4]` passed (2) |
 | `node scripts/e2e-army.mjs e2e-army/117-flows-list-dashboard.e2e.ts` | 0 | 1 passed |
 | `pnpm exec vitest run --project unit tests/unit/no-conflict-markers.test.ts --maxWorkers=1` | 0 | 5 passed (5) |
-| `pnpm exec eslint src/server/flows.ts src/app/api/v1/flows/route.ts tests/integration/flows.test.ts src/app/w/[slug]/flows/dashboard.tsx src/app/w/[slug]/dashboard/page.tsx src/components/shell/app-shell.tsx e2e/flows-list.spec.ts` | 0 | clean |
+| `pnpm exec vitest run --project unit tests/unit/gate-groups.test.ts --maxWorkers=1` | 0 | 8 passed (8) |
+| `node scripts/gate.mjs --only=static` | 0 | passed (lint, typecheck, evidence) |
+| `pnpm exec eslint src/server/flows.ts src/app/api/v1/flows/route.ts tests/integration/flows.test.ts src/app/w/[slug]/flows/dashboard.tsx src/app/w/[slug]/dashboard/page.tsx src/components/shell/app-shell.tsx e2e/flows-list.spec.ts scripts/gate-groups.mjs` | 0 | clean |
 | `pnpm typecheck` | 0 | clean |
 
 ## Changed covering tests

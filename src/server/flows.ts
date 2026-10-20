@@ -44,8 +44,9 @@ const FLOW_ID = sql.raw(`"flow"."id"`);
 
 /**
  * The flows of a workspace with a summary of their runs. The summary covers every run of the flow, whichever revision or
- * version it ran. The last run is the run that finished last (`finishedAt desc nulls last, startedAt desc nulls last, id desc`, the
- * #117 spec): a run still queued, running or waiting for approval (no `finishedAt` yet) is the last run only while no run
+ * version it ran. The last run is selected by `finishedAt desc nulls last, startedAt desc nulls last, id desc` (a deliberate refinement
+ * over the literal #117 spec text where nulls last on startedAt ensures a running run ranks ahead of a queued run when neither has finished yet):
+ * a run still queued, running or waiting for approval (no `finishedAt` yet) is the last run only while no run
  * of the flow has finished. `lastRunAt` is when that run finished or, for an in-flight run, when it started (or was queued).
  */
 export async function listFlows(workspaceId: string) {
@@ -66,7 +67,7 @@ export async function listFlows(workspaceId: string) {
     })
     .from(schema.run)
     .where(ofThisFlow)
-    // startedAt is null for a queued run; nulls last keeps a running run ahead of it when neither has finished.
+    // startedAt is null for a queued run; nulls last is a deliberate refinement over the literal spec text (startedAt DESC) so a running run ranks ahead of a queued run when neither has finished.
     .orderBy(sql`${schema.run.finishedAt} desc nulls last`, sql`${schema.run.startedAt} desc nulls last`, desc(schema.run.id))
     .limit(1)
     .as("last_run");
