@@ -1,8 +1,20 @@
 # Next action — 2026-10-03
 
-## Issue #143 — pilot metrics script rework (2026-10-19)
+## Issue #143 — pilot metrics script rework & reconciliation (2026-10-20)
 
-CTO and review round 3 on PR #170 applied in `scripts/pilot-metrics.ts`: publish metric reads `flow_version` publish snapshots, day-1 metric uses the sign-up cohort, duplicate metric counts runs, `0.0%` success rate with dedicated all-failed runs integration test, scheduled runs metric added from `schema.run` (`trigger_kind = 'schedule'`), staging uptime metric added (`N/A` with explanation of external `/api/health` probe), strict range validation (exit 2), real-path CLI guard, and honest `N/A` rows for access denials, Arabic share, and uptime. Synthetic 2001-03 window in the integration test (9 passing cases), unit tests (11 passing cases). Harness next: push, obtain CI + CodeRabbit confirmation, reply to threads T1-T10. E2E: not needed (internal read-only ops script, no user flow).
+Merged `origin/main` (including commit `9a345f18` which resolved split issue #316 for `0.0%` run success rate formatting and #320 findings).
+PR #170 / #143 pilot metrics script (`scripts/pilot-metrics.ts`) provides all 8 week-1 pilot criteria (13 Markdown table rows).
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+Harness next: push branch `ai/143`, verify CI gate, and obtain final review confirmation.
+E2E: not needed (internal read-only ops script, no user flow).
+
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
 
 ## Issue #204 — harness handoff (2026-10-15)
 
@@ -142,3 +154,7 @@ PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from al
 The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
 The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
 (sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #297 — guard AI_QUESTIONS.md against stray audit deliverables (2026-10-19)
+
+PR branch `ai/297` supersedes part of #271. Resolves reviewer finding where the Issue #250 CI PR audit deliverable was incorrectly placed into root `AI_QUESTIONS.md`. The QA checklist audit deliverable is properly housed under `docs/evidence/250/qa-checklist-audit.md`, and unit regression test `tests/unit/questions-deliverable-guard.test.ts` guards `AI_QUESTIONS.md` from containing stray audit deliverables or checklist tables. Harness next: CI and reviewer confirmation. E2E: not needed — internal documentation and test guard chore.
