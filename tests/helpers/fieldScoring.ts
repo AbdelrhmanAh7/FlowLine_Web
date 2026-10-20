@@ -45,9 +45,12 @@ export function scoreClosedDay(text: string, requestedDate: string): boolean {
   const dateForms = new RegExp(
     `${escapeRegExp(requestedDate)}|\\b${escapeRegExp(d)}[/.-]${escapeRegExp(m)}[/.-]${escapeRegExp(y)}\\b|\\b${escapeRegExp(y)}[/.-]${escapeRegExp(m)}[/.-]${escapeRegExp(d)}\\b`
   );
-  // Clauses (split at punctuation and conjunctions "and/while/but/whereas"), so a negation elsewhere in the sentence ("..., while
+  // Clauses (split at punctuation and contrastive conjunctions "while/but/whereas"), so a negation elsewhere in the sentence ("..., while
   // later slots are not available") cannot suppress the confirmation of the requested date.
-  return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:and|while|but|whereas|although|though)\b|\s+و(?=[\p{L}])/iu).some((rawSentence) => {
+  // Note: We do NOT split at "and", "though", or Arabic "و" because doing so can separate a date from its confirmation word
+  // (e.g. "Your visit for 2026-10-09 and the requested time are confirmed." or Arabic "في وقت"), and the `withoutNegated`
+  // check already ties negation to the confirmed date.
+  return !t.split(/[!?؟\n,;،؛]+|\.(?=\s|$)|\b(?:while|but|whereas)\b/i).some((rawSentence) => {
     // Normalise or strip Arabic diacritics (U+064B–U+0652) from the clause before matching
     const sentence = rawSentence.replace(/[\u064B-\u0652]/g, "");
     const hasDateForm = dateForms.test(sentence) || dateForms.test(rawSentence);

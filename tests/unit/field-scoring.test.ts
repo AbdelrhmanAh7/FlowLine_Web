@@ -105,6 +105,11 @@ describe("field scoring: closedDay (VP-03, #142)", () => {
     expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit on 2026-10-09 is confirmed and later dates are not available.`, date)).toBe(false);
     expect(scoreClosedDay(`${HOURS_LINE}\n\nموعدكم يوم ٢٠٢٦-١٠-٠٩ مؤكد والمواعيد الأخرى غير متاحة.`, date)).toBe(false);
   });
+  it("fails a confirmed date even when joined by 'and' or Arabic words starting with و", () => {
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nYour visit for 2026-10-09 and the requested time are confirmed.`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nتم تأكيد موعدكم في وقت ٢٠٢٦-١٠-٠٩`, date)).toBe(false);
+    expect(scoreClosedDay(`${HOURS_LINE}\n\nتم تأكيد موعدكم وفق المتاح في ٢٠٢٦-١٠-٠٩`, date)).toBe(false);
+  });
 });
 
 describe("field scoring: ownerDecision (VP-05/VP-06, #142)", () => {

@@ -27,8 +27,8 @@
 |---|---|
 | **Changed file** | `tests/helpers/fieldScoring.ts:39-67` (`scoreClosedDay`, with explicit service offers in `CONFIRM:15`) |
 | **Changed packet** | `artifacts/company-builder/validation/20261001-d224cfb/packet/packet.v2.json` — adds `"closedDay": true` to VP-03 expected |
-| **Unit tests** | `tests/unit/field-scoring.test.ts:13-108` — describe block `"field scoring: closedDay (VP-03, #142)"` (19 tests) |
-| **Negative controls** | `"fails a reply that quotes the hours but still confirms the Friday date"`; `"fails explicit Friday service offers (open on Friday)"`; `"fails an Arabic Friday confirmation without date when the hours line is quoted"`; `"fails a confirmed date when negation only applies to later dates"` |
+| **Unit tests** | `tests/unit/field-scoring.test.ts:13-113` — describe block `"field scoring: closedDay (VP-03, #142)"` (20 tests) |
+| **Negative controls** | `"fails a reply that quotes the hours but still confirms the Friday date"`; `"fails explicit Friday service offers (open on Friday)"`; `"fails an Arabic Friday confirmation without date when the hours line is quoted"`; `"fails a confirmed date when negation only applies to later dates"`; `"fails a confirmed date even when joined by 'and' or Arabic words starting with و"` |
 | **Positive controls** | `"passes the ideal reply: closed on Fridays plus the product's generic closing"`; `"passes an Arabic negated-date sentence plus the hours line"` |
 | **Command** | `nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts --maxWorkers=2` |
 | **Exit code** | `0` |
@@ -44,7 +44,7 @@
 |---|---|
 | **Changed file** | `tests/helpers/fieldScoring.ts:73-98` (`scoreOwnerDecision`, `TEAM_DECIDER:73`, `OWNER_DECIDER:78`) |
 | **Changed packet** | `artifacts/company-builder/validation/20261001-d224cfb/packet/packet.v2.json` — adds `"mustQualifyOwnerDecision": ["reviewed by the owner", "the owner will decide"]` to VP-05 and VP-06 |
-| **Unit tests** | `tests/unit/field-scoring.test.ts:110-192` — describe block `"field scoring: ownerDecision (VP-05/VP-06, #142)"` (16 tests) |
+| **Unit tests** | `tests/unit/field-scoring.test.ts:115-197` — describe block `"field scoring: ownerDecision (VP-05/VP-06, #142)"` (16 tests) |
 | **Negative controls** | `scoreOwnerDecision(GENERIC, OWNER, [POLICY])` → `false`; `scoreOwnerDecision(POLICY + "…team member will review…", OWNER, [POLICY])` → `false`; `"fails an active team decider without a modal (e.g. Our team decides / reviews)"` → `false`; `"fails policy quotes when punctuation differs (e.g. exclamation mark)"` → `false` |
 | **Positive controls** | `scoreOwnerDecision("The owner will decide.", OWNER, [POLICY])` → `true`; product run-6 reply with "The business owner decides this refund…" → `true`; Arabic owner wording `صاحب العمل يقرر` and `المالك سيقرر` → `true` |
 | **Command** | `nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts --maxWorkers=2` |
@@ -111,11 +111,11 @@
 $ nice -n 10 pnpm vitest run tests/unit/field-scoring.test.ts tests/unit/file-path-sanitizer.test.ts tests/unit/packet-checksum.test.ts --maxWorkers=2
 
  ✓ |unit| tests/unit/file-path-sanitizer.test.ts (12 tests)
- ✓ |unit| tests/unit/field-scoring.test.ts (35 tests)
+ ✓ |unit| tests/unit/field-scoring.test.ts (36 tests)
  ✓ |unit| tests/unit/packet-checksum.test.ts (5 tests)
 
  Test Files  3 passed (3)
-      Tests  52 passed (52)
+      Tests  53 passed (53)
    Duration  613ms
 
 Exit code: 0
@@ -141,7 +141,7 @@ Exit code: 0 (clean)
 
 | Changed Implementation File | Covering Test File |
 |---|---|
-| `tests/helpers/fieldScoring.ts` | `tests/unit/field-scoring.test.ts` (35 tests) |
+| `tests/helpers/fieldScoring.ts` | `tests/unit/field-scoring.test.ts` (36 tests) |
 | `tests/helpers/file-path-sanitizer.ts` | `tests/unit/file-path-sanitizer.test.ts` (12 tests) |
 | `tests/helpers/packet-checksum.ts` | `tests/unit/packet-checksum.test.ts` (5 tests) |
 | `artifacts/.../packet/packet.v2.json` | `tests/unit/field-scoring.test.ts` (reads v2 packet at load time) |
@@ -169,6 +169,9 @@ Exit code: 0 (clean)
 - **`tests/helpers/fieldScoring.ts:88` (Normalize policy quotes before stripping)**:
   - Root cause: Byte-identical string replacement left policy text in place when punctuation differed (e.g. `!` instead of `.`).
   - Fix & tests: Regex-based quote stripping normalizes trailing punctuation (`[.!?:]*`). Tested in `tests/unit/field-scoring.test.ts:189-192`.
+- **`tests/helpers/fieldScoring.ts:50` (Do not split clauses at `and`/`though` or Arabic `و`)**:
+  - Root cause: Splitting clauses at `and`/`though` and `\s+و` separated the requested date from its confirmation word in sentences like `Your visit for 2026-10-09 and the requested time are confirmed.`, and in ordinary Arabic words starting with `و` (e.g. `وقت`, `وفق` in `تم تأكيد موعدكم في وقت ٢٠٢٦-١٠-٠٩`), causing false passes. The `withoutNegated` check already ties negation to the dated confirmation without splitting on conjunctions.
+  - Fix & tests: Reverted clause splitting to contrastive conjunctions (`while|but|whereas`), omitting `and`, `though`, and `و`. Added unit test covering `and` and Arabic `و` words in `tests/unit/field-scoring.test.ts:108-112`.
 - **`tests/helpers/packet-checksum.ts:15` (Match complete checksum filename)**:
   - Root cause: `endsWith` matched entries where the filename was a suffix of a longer name (e.g. `archived packet.v2.json`).
   - Fix & tests: Parsed exact sha256 checksum entries and matched complete filename. Tested in `tests/unit/packet-checksum.test.ts:28-31`.
