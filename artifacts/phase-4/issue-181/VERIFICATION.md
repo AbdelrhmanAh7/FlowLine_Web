@@ -29,9 +29,9 @@ All runs are from 2026-10-19 on a local test stack (app :3181, fakes :4181 and :
 | AC | Test | Command | Exit | Observed |
 |---|---|---|---|---|
 | AC1, AC2, AC3 (envelope) | `tests/integration/platform-copy-errors.test.ts`, 5 tests | `pnpm test:integration tests/integration/platform-copy-errors.test.ts` with `DATABASE_URL` pointed at `flowline_test_181` | 0 | 5 passed |
-| AC1, AC2, AC3 (unit) | `tests/unit/admin-copy-errors.test.ts`, 6 tests covering 401/403/404/500, response body sanitization (no stack/SQL/driver) | `pnpm exec vitest run tests/unit/admin-copy-errors.test.ts --project unit` | 0 | 6 passed (7 ms) |
+| AC1, AC2, AC3 (unit) | `tests/unit/admin-copy-errors.test.ts`, 8 tests covering 404 NOT_FOUND for anonymous/non-admin (CREDENTIALS_DESIGN item 10: does not reveal panel existence with 401/403), 401 PLATFORM_REAUTH_REQUIRED, 403 PLATFORM_MFA_REQUIRED, 500 INTERNAL with response body sanitization (no stack/SQL/driver) and no-store/no-referrer security headers | `pnpm exec vitest run tests/unit/admin-copy-errors.test.ts --project unit` | 0 | 8 passed (5 ms) |
 | AC3 (mapping), AC4 and AC5 at component level | `tests/component/copy-editor.test.tsx`, every case in English and Arabic against the real catalogues, with direct `ar.json`/`en.json` untranslated-string assertions | `pnpm exec vitest run tests/component/copy-editor.test.tsx --project component` | 0 | 28 passed |
-| AC3 (envelope & mapping contract) | `tests/contract/errors.test.ts`, envelope shape and client-handled error codes in ar/en catalogues | `pnpm test:contract tests/contract/errors.test.ts` | 0 | 9 passed |
+| AC3 (envelope & mapping contract) | `tests/contract/errors.test.ts`, envelope shape, client-handled error codes, and server refusal codes in ar/en catalogues | `pnpm test:contract tests/contract/errors.test.ts` | 0 | 10 passed |
 | CI runs the component tests | `package.json` `test` is `vitest run --project unit --project component` (`dbf88dca`) | `pnpm exec vitest list --project unit --project component --filesOnly` | 0 | 134 unit files plus `[component] tests/component/copy-editor.test.tsx` |
 | AC4, AC5, AC7 in a browser | `e2e/admin-panel.spec.ts` | `pnpm exec playwright test e2e/admin-panel.spec.ts --project=chromium --workers=1` | 0 | 4 passed (28.0 s) |
 | The same, production build | same | same | 0 | 4 passed (20.0 s); the copy rows were back to `{"ar": {}, "en": {}}` afterwards |
@@ -84,7 +84,7 @@ The spec asks for a contract test of the code-to-key mapping and the envelope sh
 
 ## Changed covering tests (this round)
 
-- `tests/unit/admin-copy-errors.test.ts`: unit tests for admin copy route error modes (401/403/404/500) and response-body sanitization against stack/SQL/driver leaks.
+- `tests/unit/admin-copy-errors.test.ts`: unit tests for admin copy route error modes (404 NOT_FOUND for anonymous and non-admin callers without revealing panel existence per CREDENTIALS_DESIGN item 10, 401 PLATFORM_REAUTH_REQUIRED, 403 PLATFORM_MFA_REQUIRED, 500 INTERNAL with response-body sanitization against stack/SQL/driver leaks, and security headers).
 - `tests/component/copy-editor.test.tsx`: imports `ar.json` and `en.json` directly and asserts that all error keys exist in both files, ensuring no untranslated strings.
 - `tests/contract/errors.test.ts`: asserts the `{ error: { code, message } }` envelope shape and verifies client-handled error codes exist in both catalogues.
 - `e2e/admin-panel.spec.ts`: the non-admin `/admin/copy` 404 test (`d66488f4`) and the refused-save checks inside the platform-admin test (`62d568af`).

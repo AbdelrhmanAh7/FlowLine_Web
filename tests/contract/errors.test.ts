@@ -100,5 +100,27 @@ describe("admin copy error contract (#181)", () => {
       expect(arCatalog.errors[code]).not.toBe(enCatalog.errors[code]);
     }
   });
+
+  it("all admin copy server and security refusal error codes have translation keys in ar and en catalogues", () => {
+    const serverCodes = [
+      "NOT_FOUND",
+      "PLATFORM_REAUTH_REQUIRED",
+      "PLATFORM_MFA_REQUIRED",
+      "PLATFORM_TOTP_REQUIRED",
+      "PLATFORM_EMAIL_UNVERIFIED",
+      "CROSS_SITE_REQUEST",
+      "CSRF_TOKEN_INVALID",
+      "STEP_UP_REQUIRED",
+      "REVISION_CONFLICT",
+      "RATE_LIMITED",
+      "INTERNAL",
+    ] as const;
+
+    for (const code of serverCodes) {
+      expect(typeof arCatalog.errors?.[code]).toBe("string");
+      expect(typeof enCatalog.errors?.[code]).toBe("string");
+      expect(arCatalog.errors[code]).not.toBe(enCatalog.errors[code]);
+    }
+  });
 });
 

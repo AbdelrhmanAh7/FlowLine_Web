@@ -4,7 +4,7 @@ import { HttpError, notFound, forbidden, unauthorized } from "@/server/http";
 vi.mock("@/db", () => ({ db: {}, schema: {} }));
 
 const accessMock = vi.hoisted(() => ({
-  mode: "admin" as "admin" | "unauthenticated" | "forbidden" | "not_found" | "db_error",
+  mode: "admin" as "admin" | "anonymous" | "non_admin" | "reauth_required" | "mfa_required" | "totp_required" | "db_error",
   customError: null as Error | null,
 }));
 
@@ -14,14 +14,18 @@ vi.mock("@/server/platform-access", async (importOriginal) => {
     ...actual,
     requirePlatformAdmin: async () => {
       if (accessMock.customError) throw accessMock.customError;
-      if (accessMock.mode === "unauthenticated") {
-        throw new HttpError(401, "unauthenticated", "Authentication required");
+      // CREDENTIALS_DESIGN item 10: Anonymous and non-admin callers get 404 NOT_FOUND so the panel's existence is never confirmed.
+      if (accessMock.mode === "anonymous" || accessMock.mode === "non_admin") {
+        throw notFound();
       }
-      if (accessMock.mode === "forbidden") {
-        throw new HttpError(403, "forbidden", "Admin access required");
+      if (accessMock.mode === "reauth_required") {
+        throw new HttpError(401, "PLATFORM_REAUTH_REQUIRED", "Sign in again to use the platform panel (sessions older than 24 hours are refused)");
       }
-      if (accessMock.mode === "not_found") {
-        throw new HttpError(404, "not_found", "Admin copy resource not found");
+      if (accessMock.mode === "mfa_required") {
+        throw new HttpError(403, "PLATFORM_MFA_REQUIRED", "Sign in again and complete your authenticator challenge");
+      }
+      if (accessMock.mode === "totp_required") {
+        throw new HttpError(403, "PLATFORM_TOTP_REQUIRED", "Enrol an authenticator app before using the platform panel");
       }
       return {
         user: { id: "admin-1", email: "admin@flowline.test", name: "Admin" },
@@ -53,8 +57,34 @@ describe("admin copy error handling unit tests (#181)", () => {
       headers: { "x-request-id": "unit-test-req-181" },
     });
 
-  it("returns 401 with code unauthenticated when no session is present", async () => {
-    accessMock.mode = "unauthenticated";
+  it("refuses anonymous caller with 404 NOT_FOUND (CREDENTIALS_DESIGN item 10: does not reveal panel existence with 401)", async () => {
+    accessMock.mode = "anonymous";
+    accessMock.customError = null;
+
+    const res = await GET(createRequest(), { params: Promise.resolve({}) });
+    expect(res.status).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+    expect(body.error.code).toBe("NOT_FOUND");
+    expect(typeof body.error.message).toBe("string");
+  });
+
+  it("refuses non-admin caller with 404 NOT_FOUND (CREDENTIALS_DESIGN item 10: does not reveal panel existence with 403)", async () => {
+    accessMock.mode = "non_admin";
+    accessMock.customError = null;
+
+    const res = await GET(createRequest(), { params: Promise.resolve({}) });
+    expect(res.status).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+    expect(body.error.code).toBe("NOT_FOUND");
+    expect(typeof body.error.message).toBe("string");
+  });
+
+  it("returns 401 with PLATFORM_REAUTH_REQUIRED when authenticated admin session exceeds 24h", async () => {
+    accessMock.mode = "reauth_required";
     accessMock.customError = null;
 
     const res = await GET(createRequest(), { params: Promise.resolve({}) });
@@ -62,12 +92,12 @@ describe("admin copy error handling unit tests (#181)", () => {
 
     const body = await res.json();
     expect(body).toHaveProperty("error");
-    expect(body.error.code.toLowerCase()).toBe("unauthenticated");
+    expect(body.error.code).toBe("PLATFORM_REAUTH_REQUIRED");
     expect(typeof body.error.message).toBe("string");
   });
 
-  it("returns 403 with code forbidden for a non-admin caller", async () => {
-    accessMock.mode = "forbidden";
+  it("returns 403 with PLATFORM_MFA_REQUIRED when authenticated admin lacks session MFA assurance", async () => {
+    accessMock.mode = "mfa_required";
     accessMock.customError = null;
 
     const res = await GET(createRequest(), { params: Promise.resolve({}) });
@@ -75,20 +105,20 @@ describe("admin copy error handling unit tests (#181)", () => {
 
     const body = await res.json();
     expect(body).toHaveProperty("error");
-    expect(body.error.code.toLowerCase()).toBe("forbidden");
+    expect(body.error.code).toBe("PLATFORM_MFA_REQUIRED");
     expect(typeof body.error.message).toBe("string");
   });
 
-  it("returns 404 with code not_found for an unknown source id or missing resource", async () => {
-    accessMock.mode = "not_found";
-    accessMock.customError = null;
+  it("returns 404 with code NOT_FOUND for an unknown source id or missing resource", async () => {
+    accessMock.mode = "admin";
+    accessMock.customError = notFound("Unknown copy resource");
 
     const res = await GET(createRequest("http://localhost:3000/api/platform/copy?sourceId=unknown-id"), { params: Promise.resolve({}) });
     expect(res.status).toBe(404);
 
     const body = await res.json();
     expect(body).toHaveProperty("error");
-    expect(body.error.code.toLowerCase()).toBe("not_found");
+    expect(body.error.code).toBe("NOT_FOUND");
     expect(typeof body.error.message).toBe("string");
   });
 
@@ -127,11 +157,13 @@ describe("admin copy error handling unit tests (#181)", () => {
     expect(rawText).not.toMatch(/platform_copy/i);
   });
 
-  it("verifies standard FlowLine platform-admin refusal codes (UNAUTHORIZED, FORBIDDEN, NOT_FOUND)", async () => {
+  it("verifies standard FlowLine platform-admin refusal codes and response security headers (no-store, no-referrer)", async () => {
     // 401 standard
     accessMock.customError = unauthorized();
     let res = await GET(createRequest(), { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     let body = await res.json();
     expect(body.error.code).toBe("UNAUTHORIZED");
 
@@ -139,6 +171,8 @@ describe("admin copy error handling unit tests (#181)", () => {
     accessMock.customError = forbidden();
     res = await GET(createRequest(), { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     body = await res.json();
     expect(body.error.code).toBe("FORBIDDEN");
 
@@ -146,6 +180,8 @@ describe("admin copy error handling unit tests (#181)", () => {
     accessMock.customError = notFound();
     res = await GET(createRequest(), { params: Promise.resolve({}) });
     expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     body = await res.json();
     expect(body.error.code).toBe("NOT_FOUND");
   });
