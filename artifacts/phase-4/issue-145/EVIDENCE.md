@@ -1,6 +1,6 @@
 # Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Branch:** `ai/145` (head `7ca59835`)  
+**Branch:** `ai/145` (head `cbf2d0b9`)  
 **Date:** 2026-10-20  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145; part of FlowLine G5 #144)  

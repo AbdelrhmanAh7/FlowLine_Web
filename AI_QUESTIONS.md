@@ -1,5 +1,23 @@
 # AI questions / notes
 
+## 2026-10-20 — tester-army/e2e Claude Haiku closed response grammar failure on agent.assert (hub-side)
+
+In PR #215 verification (head `cbf2d0b9`), `tester-army/e2e` failed with:
+`MODEL_OUTPUT_INVALID: provider response did not match the closed response grammar`
+across the 3 tests in `tests/FlowLine_Web.e2e.ts` that execute `agent.assert`:
+1. `a wrong password is rejected on the sign-in screen` (line 66)
+2. `a signed-in user opens the flows list and creates another blank flow on the canvas` (line 74)
+3. `the workspace navigation reaches Runs and Templates` (line 82)
+
+Inspection of the captured failure screens (`screen.txt`) confirms the application state was 100% correct in all three cases:
+- Sign-in: alert `"That email and password don't match."` rendered on screen at `/sign-in`.
+- Flows canvas: heading `"Start with a trigger"` and button `"+ Add a trigger"` rendered on screen.
+- Runs: heading `"Run history"` rendered on screen.
+
+Root cause: When `cli/claude:haiku` is selected as the model (due to agy/Gemini quota hold), `cli-model.ts` injects a prompt instructing the model to reply with `{"text": "...", "tool_calls": [...]}`. However, `agent.assert` calls `invocation.ask` with schema `agent-judgment-2` (`{"verdict": "holds"|"fails"|"inconclusive", "explanation": "..."}`) with no tools. Claude Haiku replies with `{"text": "...", "tool_calls": []}`, and the inner string fails `agent-judgment-2` JSON validation.
+
+Note for the owner/CTO: This is a hub runner / model protocol issue in `ops/verify/e2e-army/cli-model.ts`, not a defect in FlowLine_Web product code or PR #215. PR #215's own flows and unit/contract tests (104/104) are all passing.
+
 ## 2026-10-15 — hub e2e-army file cap reached (recorded, not a blocker)
 
 The hub's verify job copies only the first 8 top-level `e2e-army/*.e2e.ts` files of a branch
