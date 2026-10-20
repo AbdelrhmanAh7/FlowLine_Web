@@ -1,6 +1,6 @@
 # Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Branch:** `ai/145` (head `82ebf3c1`)  
+**Branch:** `ai/145` (head `748d489a`)  
 **Date:** 2026-10-20  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145; part of FlowLine G5 #144)  
@@ -19,8 +19,8 @@
 $ pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/e2e-army-tooling.test.ts
  Test Files  5 passed (5)
       Tests  104 passed (104)
-   Start at  05:32:03
-   Duration  3.41s
+   Start at  06:17:48
+   Duration  2.71s
 
 $ pnpm lint
 > eslint . --cache --cache-location node_modules/.cache/eslint/

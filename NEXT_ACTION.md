@@ -10,7 +10,7 @@ Resolved merge conflicts with `origin/main` without dropping any of main's chang
    - `src/app/w/[slug]/integrations/page.tsx:253`: hid Test connection button until catalog provider resolves (`Boolean(provider && provider.authType !== "oauth2")`).
 4. Reverted isolated test-dist inclusions in `tsconfig.json` back to canonical `origin/main`.
 5. Updated `artifacts/phase-4/issue-145/EVIDENCE.md` with verified commit SHA, tests, and findings resolution.
-All checks pass locally: `pnpm typecheck` clean, `pnpm lint` clean, vitest 97/97 tests pass across 5 files (`mizano-connection.test.ts`, `mizano-fake.test.ts`, `mizano.test.ts`, `connection-test-i18n.test.ts`, `e2e-army-tooling.test.ts`), `pnpm check:evidence` clean. Harness pushes and requests review confirmation.
+All checks pass locally: `pnpm typecheck` clean, `pnpm lint` clean, vitest 104/104 tests pass across 5 files (`mizano-connection.test.ts`, `mizano-fake.test.ts`, `mizano.test.ts`, `connection-test-i18n.test.ts`, `e2e-army-tooling.test.ts`), `pnpm check:evidence` clean. Harness pushes and requests review confirmation.
 
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
