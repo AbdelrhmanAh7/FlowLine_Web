@@ -212,6 +212,12 @@ Merged latest `origin/main` (commits up to `116935af` including #214 and `9a345f
 - `FEDERATED_MFA.md`: Kept evidence link and local-pass status from origin/main.
 - `tests/integration/account-delete-sso-lock-order.test.ts`: Preserved clean concise history comment from main.
 
+### CTO Rework Resolution on PR #308 (2026-10-20)
+Addressed CTO rework review finding on PR #308 regarding internal contradiction in `docs/implementation/PHASE4_BETA_REPORT.md`:
+1. In `docs/implementation/PHASE4_BETA_REPORT.md` line 124, restored attribution to issue #109 (PR #216, commit `d86fb7d7`) for account deletion vs SSO lock ordering ('lock the user row and write its account.deleted audit rows before locking workspaces FOR UPDATE').
+2. In line 126, restored pre-fix references to consistently point to pre-d86fb7d7 / parent `83c7bb8e` rather than pre-#65.
+3. Verified clean execution of `tests/unit/email-token-lock-order-docs.test.ts` (2/2 pass) and all pre-push checks (`pnpm typecheck`, `pnpm lint`).
+
 Verification on merged working tree:
 - `pnpm typecheck` -> Exit code 0
 - `pnpm lint` -> Exit code 0
