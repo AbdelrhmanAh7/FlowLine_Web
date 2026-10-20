@@ -149,6 +149,18 @@ describe("integration catalog text", () => {
     const mizano = listProviders().find((p) => p.id === "mizano")!;
     expect(providerDescription(en, mizano)).toBe("Mizano accounting connector.");
     expect(providerDescription(ar, mizano)).toBe("موصل المحاسبة Mizano");
+    expect(providerCategory(en, mizano.category)).toBe("Finance");
+    expect(providerCategory(ar, mizano.category)).toBe("المالية");
+
+    const listOverdue = mizano.actions.find((a) => a.id === "mizano.list_overdue_invoices")!;
+    expect(actionTitle(en, listOverdue)).toBe("List overdue invoices");
+    expect(actionTitle(ar, listOverdue)).toBe("عرض الفواتير المتأخرة");
+    expect(actionDescription(en, listOverdue)).toBe(
+      "List unpaid invoices past their due date on the date you choose, in the workspace currency.",
+    );
+    expect(actionDescription(ar, listOverdue)).toBe(
+      "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل",
+    );
 
     const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;
     expect(actionTitle(en, createCustomer)).toBe("Create customer");
@@ -158,11 +170,24 @@ describe("integration catalog text", () => {
     );
     // Arabic description must explicitly include customer name, company, email, phone and optional tax ID
     const arDesc = actionDescription(ar, createCustomer);
+    expect(arDesc).toBe(
+      "ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري.",
+    );
     expect(arDesc).toContain("الاسم");
     expect(arDesc).toContain("الشركة");
     expect(arDesc).toContain("البريد الإلكتروني");
     expect(arDesc).toContain("رقم الهاتف");
     expect(arDesc).toContain("الضريبة");
+
+    const createDraftQuote = mizano.actions.find((a) => a.id === "mizano.create_draft_quote")!;
+    expect(actionTitle(en, createDraftQuote)).toBe("Create draft quote");
+    expect(actionTitle(ar, createDraftQuote)).toBe("إنشاء عرض أسعار مسودّة");
+    expect(actionDescription(en, createDraftQuote)).toBe(
+      "Create a draft quote in Mizano with a customer and line items (currency, lines with item, qty, unitPrice, taxRate).",
+    );
+    expect(actionDescription(ar, createDraftQuote)).toBe(
+      "ينشئ عرض أسعار مسودّة في Mizano مع عميل وبنود (العملة، العناصر مع الكمية وسعر الوحدة ونسبة الضريبة).",
+    );
 
     const tokenField = mizano.connectFields!.find((f) => f.key === "token")!;
     expect(connectFieldLabel(en, "mizano", tokenField)).toBe("Scoped API key");

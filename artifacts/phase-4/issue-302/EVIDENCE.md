@@ -23,19 +23,19 @@ This task verifies and completes the internationalization (i18n) of the Mizano a
 
 | AC | Requirement | Covering Test(s) & Location | Command / Proof | Observed Exit Code |
 |---|---|---|---|---|
-| **AC1** | **English catalog parity**: Mizano provider description (`"Mizano accounting connector."`) and connection field labels (`"Scoped API key"`, `"Mizano URL"`) in `src/i18n/messages/en.json` match the provider source definitions in `src/integrations/providers/mizano.ts`. | `tests/unit/i18n-content-text.test.ts:148-150, 166-174` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts` | **0 (PASS)** |
-| **AC2** | **Arabic catalog parity & natural translations**: Mizano description (`"موصل المحاسبة Mizano"`), connection fields (`"مفتاح API محدود النطاق"`, `"رابط Mizano"`), and actions are natural Arabic adhering to RTL layout and logical CSS guidelines. | `tests/unit/i18n-content-text.test.ts:151, 168, 174`<br>`e2e-army/147-mizano-create-customer-and-quote.e2e.ts:37-65` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts`<br>Playwright screenshots in `artifacts/phase-4/issue-302/screenshots/` | **0 (PASS)** |
-| **AC3** | **Customer name in Arabic create_customer description**: Arabic translation for `mizano.create_customer.description` lists customer name, company, email, phone, and optional tax ID (`"ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."`). | `tests/unit/i18n-content-text.test.ts:159-165` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts` | **0 (PASS)** |
+| **AC1** | **English catalog parity**: Mizano provider description (`"Mizano accounting connector."`), connection field labels (`"Scoped API key"`, `"Mizano URL"`), and action titles/descriptions in `src/i18n/messages/en.json` match the provider source definitions in `src/integrations/providers/mizano.ts`. | `tests/unit/i18n-content-text.test.ts:148-199` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts` | **0 (PASS)** |
+| **AC2** | **Arabic catalog parity & natural translations**: Mizano description (`"موصل المحاسبة Mizano"`), connection fields (`"مفتاح API محدود النطاق"`, `"رابط Mizano"`), category (`"المالية"`), and all three actions (`list_overdue_invoices`, `create_customer`, `create_draft_quote`) are natural Arabic adhering to RTL layout and logical CSS guidelines. | `tests/unit/i18n-content-text.test.ts:148-199`<br>`e2e-army/147-mizano-create-customer-and-quote.e2e.ts:37-65` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts`<br>Playwright screenshots in `artifacts/phase-4/issue-302/screenshots/` | **0 (PASS)** |
+| **AC3** | **Customer name in Arabic create_customer description**: Arabic translation for `mizano.create_customer.description` lists customer name, company, email, phone, and optional tax ID (`"ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."`). | `tests/unit/i18n-content-text.test.ts:167-178` | `nice -n 10 pnpm vitest run tests/unit/i18n-content-text.test.ts` | **0 (PASS)** |
 | **AC4** | **E2E-Army gate scenario**: Natural-language e2e-army test covers the localized Mizano integration card and connection form in both English (LTR) and Arabic (RTL), asserting form closure on cancellation and maintaining the 8-file top-level cap. | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:37-65`<br>`tests/unit/e2e-army-tooling.test.ts:121-130` | `nice -n 10 pnpm vitest run tests/unit/e2e-army-tooling.test.ts` | **0 (PASS)** |
 
 ---
 
 ## Changed Covering Tests
 
-1. `tests/unit/i18n-content-text.test.ts`:
+1. `tests/unit/i18n-content-text.test.ts:148-199`:
    - Added unit test `the Mizano provider description, actions and connect fields are localized in Arabic and English (issue #302)`.
-   - Asserts exact English and Arabic strings for provider description, connection fields, and each parameter of `create_customer.description` (name, company, email, phone, taxId).
-2. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts`:
+   - Asserts exact English and Arabic strings for provider description, category, connection fields, and all three actions (`list_overdue_invoices`, `create_customer`, `create_draft_quote`), verifying each parameter descriptor in `create_customer.description` (name, company, email, phone, taxId).
+2. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:37-65`:
    - Added `@issue-302 AC1` scenario covering language switching, card text verification, opening the connection dialog, asserting form closure after cancellation, and validating field labels in both LTR (en) and RTL (ar).
    - Preserved existing `@issue-147` and `@issue-148` scenarios and strictly maintained the 8 top-level `.e2e.ts` file cap.
 
