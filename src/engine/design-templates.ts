@@ -31,11 +31,10 @@ export function missingTemplateActions(graph: FlowGraph, available: { has(action
 }
 
 /**
- * The templates whose every action `available` provides, in gallery order. A template is offered only once the actions
- * it calls exist, so the gallery and "Use template" can never hand a user a flow that cannot run (the server refuses
- * one that slips through with 409 TEMPLATE_UNAVAILABLE, src/server/flows.ts, and publish refuses an unknown action with
- * UNKNOWN_ACTION, src/server/publish.ts). This makes the dependency self-healing: adding the actions reveals the
- * template with no change here.
+ * The templates whose every action `available` provides, in gallery order.
+ * Note: The templates gallery renders design templates directly without filtering by action availability.
+ * If an action is unavailable, createFlow() rejects the submission with 409 TEMPLATE_UNAVAILABLE (src/server/flows.ts),
+ * and publish refuses an unknown action with UNKNOWN_ACTION (src/server/publish.ts).
  */
 export function availableDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): DesignTemplate[] {
   return templates.filter((t) => missingTemplateActions(t.graph, available).length === 0);
@@ -277,16 +276,21 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
           expression:
             '(\n  $money := function($v) { $formatNumber($number($v), "0.00") };\n  {\n    "customer": {\n      "name": deal.customer.name,\n      "company": deal.customer.company,\n      "email": deal.customer.email,\n      "phone": deal.customer.phone,\n      "taxId": deal.customer.taxId\n    },\n    "currency": deal.currency,\n    "lines": [deal.lines.{ "item": item, "qty": $money(qty), "unitPrice": $money(unitPrice), "taxRate": $money(taxRate) }]\n  }\n)',
         }),
-        // Availability (#147): mizano.create_customer and mizano.create_draft_quote land with #147, so until that
-        // merges this template is held back instead of offered: availableDesignTemplates() drops it from the gallery
-        // grid, "Use template" is not rendered for it, createFlow() answers 409 TEMPLATE_UNAVAILABLE
+        // Availability: The gallery renders templates directly without filtering by action availability.
+        // If required actions are not available, createFlow() rejects flow creation with 409 TEMPLATE_UNAVAILABLE
         // (src/server/flows.ts) and publishing the graph reports UNKNOWN_ACTION (serverIssues, src/server/publish.ts).
-        // It becomes usable automatically the moment the two ids resolve — no change here.
         //
-        // CTO decision on #149 (2026-10-12): one approval gate on "Create customer". The approver reviews the customer
-        // details; the quote lines are visible in the "Prepare customer and quote" step output. Binding customer + lines
-        // into one approval needs a preview-capable approval step (a follow-up), so this stays customer-only.
-        act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", "customer", { requireApproval: true }),
+        // The approval gate is placed on "Create customer", binding customer details and quote lines into the
+        // approval payload so approvers review both before any write is sent to Mizano.
+        act(
+          "customer",
+          "Mizano — Create customer (needs approval)",
+          780,
+          60,
+          "mizano.create_customer",
+          '{\n  "name": customer.name,\n  "company": customer.company,\n  "email": customer.email,\n  "phone": customer.phone,\n  "taxId": customer.taxId,\n  "lines": lines\n}',
+          { requireApproval: true },
+        ),
         act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", '{\n  "customerId": id,\n  "currency": $steps.prepare.currency,\n  "lines": $steps.prepare.lines\n}'),
         act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", '{\n  "channel": "REPLACE_WITH_CHANNEL_ID",\n  "text": "Draft quote " & id & " created in Mizano for " & $steps.prepare.customer.company & " (" & $count($steps.prepare.lines) & " lines)"\n}'),
         n("skipped", "output", "Deal not won", 520, 280, { key: "status", expression: '"deal not won: nothing sent to Mizano"' }),

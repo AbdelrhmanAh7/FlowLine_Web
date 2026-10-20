@@ -137,6 +137,7 @@ const provider: ProviderDef = {
         email: z.string().email(),
         phone: z.string().min(1).max(50),
         taxId: z.string().max(50).optional(),
+        lines: z.array(z.record(z.string(), z.unknown())).optional(),
       }),
       output: z.object({
         id: z.string(),

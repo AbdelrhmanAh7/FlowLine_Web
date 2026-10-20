@@ -19,18 +19,22 @@
   - `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` (`@issue-149 AC1: the gallery offers 'Deal won → Mizano quote' with a Use template button` and `@issue-149 AC1 (Arabic): the template is offered in Arabic and the page is right-to-left`).
 
 ### AC2: The approval step blocks until approved; reject ends the run without calls to Mizano
-- **Requirement:** The template flow pauses at the approval step before any Mizano action executes. Rejecting terminates the run with status failed/ended and makes zero calls to Mizano or Slack.
+- **Requirement:** The template flow pauses at the approval step before any Mizano action executes. The approval record's preview/payload contains both customer details and quote lines. Rejecting terminates the run with status failed/ended and makes zero calls to Mizano or Slack.
 - **Implementation:**
-  - `src/engine/design-templates.ts`: `requireApproval: true` configured on the first Mizano action node (`mizano.create_customer`).
-  - Approval hash/preview binds customer arguments (name, company, email, phone, taxId) per CTO decision 2026-10-12.
+  - `src/engine/design-templates.ts`: `requireApproval: true` configured on the first Mizano action node (`mizano.create_customer`), mapping customer details and quote lines into the input arguments.
+  - `src/integrations/providers/mizano.ts`: `mizano.create_customer` accepts optional quote lines in its input schema for approval display, while sending only customer properties to the Mizano customer API.
+  - Approval hash/preview binds customer arguments and lines.
 - **Covering Tests:**
   - `tests/unit/deal-won-mizano-template.test.ts`:
     - "puts the approval on the first Mizano call, so nothing reaches Mizano before it is granted" — exit 0, passed.
     - "blocks at the approval while it is pending: no Mizano call is made" — exit 0, passed.
     - "rejecting ends the run with no call to Mizano and no Slack message" — exit 0, passed.
+    - "approved: creates the customer, then a draft quote for that customer with two-decimal amounts, then tells Slack" — exit 0, passed (asserts customer details and lines passed in approval args).
   - `tests/integration/deal-won-mizano-approval.test.ts`:
-    - "waits for approval with nothing sent to Mizano, shows the customer, then runs once approved"
+    - "waits for approval with nothing sent to Mizano, shows customer and lines, then runs once approved" (asserts `approval.argsPreview` contains customer and quote lines)
     - "rejecting ends the run: no call reaches Mizano, nothing is posted to Slack"
+  - `tests/contract/mizano.test.ts`:
+    - "accepts optional quote lines for approval preview and omits them from the customer API request" — exit 0, passed.
 
 ### AC3: e2e spec for the template happy path with a mocked Mizano
 - **Requirement:** Happy-path execution creates the customer in Mizano, creates a draft quote with formatted decimal lines, and sends a notification. Using the template in the UI creates an editable canvas flow.
@@ -50,5 +54,7 @@
 | Command | Exit Code | Result | Notes |
 |---|---|---|---|
 | `pnpm typecheck` | 0 | Clean (0 errors) | `tsc --noEmit` |
-| `pnpm eslint src/server/access.ts src/app/w/[slug]/templates/page.tsx` | 0 | Clean (0 warnings/errors) | ESLint check on changed code files |
+| `pnpm lint` | 0 | Clean (0 warnings/errors) | ESLint check across repository |
 | `pnpm vitest run tests/unit/deal-won-mizano-template.test.ts` | 0 | 8 passed (8 tests) | 100% pass across all template unit assertions |
+| `pnpm vitest run tests/contract/mizano.test.ts` | 0 | 51 passed (51 tests) | Contract tests including customer creation with optional lines |
+| `FLOWLINE_ENV=test DATABASE_URL=postgres://flowline@localhost:5432/flowline_test_149 pnpm vitest run tests/integration/deal-won-mizano-approval.test.ts` | 0 | 4 passed (4 tests) | Real worker path with pending approval, customer + lines preview, approve and reject flows |

@@ -74,6 +74,7 @@ function record(id: string, response: Record<string, unknown> | ((args: Record<s
 }
 
 beforeAll(async () => {
+  process.env.FLOWLINE_ENCRYPTION_KEY ??= "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
   fake = await startFake();
   mizano.identity = async () => ({ accountId: "mz-test", label: "Mizano test" });
 });
@@ -155,14 +156,16 @@ describe("Deal won → Mizano quote: real worker approval path", () => {
     record("mizano.create_draft_quote", (a) => ({ id: "Q-1", customerId: a.customerId, currency: a.currency, lines: a.lines }));
   });
 
-  it("waits for approval with nothing sent to Mizano, shows the customer, then runs once approved", async () => {
+  it("waits for approval with nothing sent to Mizano, shows customer and lines, then runs once approved", async () => {
     const { user, ws, run, approval } = await startRun();
     expect((await freshRun(run.id)).status).toBe("waiting_approval");
     expect(calls).toEqual([]);
-    expect(approval.argsPreview).toMatchObject({ name: "Mona Hassan", company: "Nile Bakery" });
-    // The approval is bound to the customer only (CTO decision on #149, 2026-10-12): the quote lines are not part of
-    // the preview. They live in the Prepare step output and are sent to Mizano with the draft quote below.
-    expect(JSON.stringify(approval.argsPreview)).not.toContain("Oven service plan");
+    expect(approval.argsPreview).toMatchObject({
+      name: "Mona Hassan",
+      company: "Nile Bakery",
+      lines: expect.arrayContaining([expect.objectContaining({ item: "Oven service plan" })]),
+    });
+    expect(JSON.stringify(approval.argsPreview)).toContain("Oven service plan");
 
     await decide(db, { workspaceId: ws.id, approvalId: approval.id, userId: user.id, decision: "approve" });
     await claimAndProcess(run.id);

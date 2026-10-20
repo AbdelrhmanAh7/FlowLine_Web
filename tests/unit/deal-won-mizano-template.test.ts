@@ -120,7 +120,17 @@ describe("Deal won → Mizano quote template", () => {
     expect(res.error).toBeNull();
     expect(res.status).toBe("succeeded");
     expect(calls.map((c) => c.action)).toEqual(["mizano.create_customer", "mizano.create_draft_quote", "slack.post_message"]);
-    expect(calls[0]!.args).toEqual({ name: "Mona Hassan", company: "Nile Bakery", email: "mona@nilebakery.example", phone: "+20 100 555 0142", taxId: "EG-100-200-300" });
+    expect(calls[0]!.args).toEqual({
+      name: "Mona Hassan",
+      company: "Nile Bakery",
+      email: "mona@nilebakery.example",
+      phone: "+20 100 555 0142",
+      taxId: "EG-100-200-300",
+      lines: [
+        { item: "Oven service plan", qty: "1.00", unitPrice: "4800.00", taxRate: "14.00" },
+        { item: "Spare gasket kit", qty: "3.00", unitPrice: "125.50", taxRate: "14.00" },
+      ],
+    });
     expect(calls[1]!.args).toEqual({
       customerId: "cust-1",
       currency: "EGP",

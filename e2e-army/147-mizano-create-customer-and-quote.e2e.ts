@@ -34,10 +34,10 @@ test(
 );
 
 // --- Issue #149 tests, kept in this file because the hub copies only the first 8 top-level e2e-army/*.e2e.ts files (see AI_QUESTIONS.md) ---
-// Issue #149 (Mizano connector v1): the "Deal won → Mizano quote" template is listed in the gallery. Its Mizano create
-// actions come from #147 (on main), so once the catalog has loaded the template is an offered card with a "Use template"
-// button. The page renders no design card while the catalog loads (loading state, then offered / held back / error), so
-// every assertion below waits (auto-retrying `expect`) for ONE final state and asserts it; nothing branches on a snapshot.
+// Issue #149 (Mizano connector v1): the "Deal won → Mizano quote" template is listed in the gallery. The gallery
+// renders templates directly without filtering by action availability, and createFlow() rejects unavailable templates
+// with TEMPLATE_UNAVAILABLE. Its Mizano create actions come from #147 (on main), so the template has an accessible
+// "Use template" button.
 //
 // AC1 (gallery listing EN + AR) is covered here. AC2 (approval blocks; reject ends the run) and AC3 (happy path with a mocked
 // Mizano) are verified at worker/engine level in tests/integration/deal-won-mizano-approval.test.ts and
