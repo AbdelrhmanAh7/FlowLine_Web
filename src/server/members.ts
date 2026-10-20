@@ -118,7 +118,7 @@ export async function acceptInvite(user: CurrentUser, token: string) {
   });
 }
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function ownerCount(tx: Tx, workspaceId: string) {
   const [r] = await tx
@@ -137,7 +137,7 @@ async function ownerCount(tx: Tx, workspaceId: string) {
  * workspace lock here made this transaction wait for their member row while they waited for the workspace row, a
  * deadlock (issue #42). Rule: docs/security/FEDERATED_MFA.md, "Lock order" > "Member changes".
  */
-async function lockWorkspaceMembership(tx: Tx, workspaceId: string) {
+export async function lockWorkspaceMembership(tx: Tx, workspaceId: string) {
   await tx.select({ id: schema.workspace.id }).from(schema.workspace).where(eq(schema.workspace.id, workspaceId)).for("no key update");
 }
 

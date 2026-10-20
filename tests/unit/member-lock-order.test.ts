@@ -52,7 +52,7 @@ vi.mock("@/db", async () => {
   return { db, schema: await import("@/db/schema") };
 });
 vi.mock("@/server/email/flows", () => ({ checkEmailRate: async () => {}, sendInviteEmail: async () => {} }));
-import { changeRole, removeMember } from "@/server/members";
+import { changeRole, lockWorkspaceMembership, removeMember, type Tx } from "@/server/members";
 
 const actor = { id: "owner-1", email: "owner@example.test", name: "Owner" };
 const WORKSPACE = "11111111-1111-4111-8111-111111111111";
@@ -73,23 +73,33 @@ const CONFLICTS_WITH_ITSELF = new Set(["update", "no key update"]);
 const workspaceLocks = (events: string[]) => events.filter((e) => e.startsWith("workspace:lock(")).map((e) => /\((.*)\)/.exec(e)![1]!);
 
 describe("member change lock order (mocked transactions: statement order and lock mode only; PostgreSQL deadlock behaviour runs in CI)", () => {
-  it("changeRole locks the workspace FOR NO KEY UPDATE before it reads or writes the member, then audits", async () => {
+  it("AC1: lockWorkspaceMembership acquires FOR NO KEY UPDATE on the workspace row", async () => {
+    const { db } = await import("@/db");
+    await db.transaction(async (tx) => {
+      await lockWorkspaceMembership(tx as Tx, WORKSPACE);
+    });
+    expect(fx.events).toEqual(["workspace:lock(no key update)"]);
+    const locks = workspaceLocks(fx.events);
+    expect(locks).toEqual(["no key update"]);
+  });
+
+  it("AC1: changeRole locks the workspace FOR NO KEY UPDATE before it reads or writes the member, then audits", async () => {
     await expect(changeRole(actor, WORKSPACE, TARGET, "editor")).resolves.toEqual({ role: "editor" });
     expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read", "workspace_member:update", "audit_event:insert"]);
   });
 
-  it("changeRole counts owners under the same lock when it demotes an owner", async () => {
+  it("AC1: changeRole counts owners under the same lock when it demotes an owner", async () => {
     fx.member = { role: "owner" };
     await expect(changeRole(actor, WORKSPACE, TARGET, "editor")).resolves.toEqual({ role: "editor" });
     expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read", "workspace_member:count", "workspace_member:update", "audit_event:insert"]);
   });
 
-  it("removeMember locks the workspace FOR NO KEY UPDATE before it reads or deletes the member, then audits", async () => {
+  it("AC1: removeMember locks the workspace FOR NO KEY UPDATE before it reads or deletes the member, then audits", async () => {
     await expect(removeMember(actor, WORKSPACE, TARGET)).resolves.toBeUndefined();
     expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read", "workspace_member:delete", "audit_event:insert"]);
   });
 
-  it("refuses to demote or remove the last owner after the owner count was read under the lock, and writes nothing", async () => {
+  it("AC2: refuses to demote or remove the last owner after the owner count was read under the lock, and writes nothing", async () => {
     fx.member = { role: "owner" };
     fx.owners = 1;
     await expect(changeRole(actor, WORKSPACE, TARGET, "viewer")).rejects.toMatchObject({ status: 409, code: "LAST_OWNER" });
@@ -100,7 +110,7 @@ describe("member change lock order (mocked transactions: statement order and loc
     ]);
   });
 
-  it("a missing member is a 404 after the lock, with no write and no audit row", async () => {
+  it("AC3: a missing member is a 404 after the lock, with no write and no audit row", async () => {
     fx.member = undefined;
     const errRole = await changeRole(actor, WORKSPACE, TARGET, "editor").catch((e) => e);
     expect(errRole).toBeInstanceOf(HttpError);
@@ -111,6 +121,35 @@ describe("member change lock order (mocked transactions: statement order and loc
     expect(errRemove).toBeInstanceOf(HttpError);
     expect(errRemove).toMatchObject({ status: 404 });
     expect(fx.events).toEqual(["workspace:lock(no key update)", "workspace_member:read"]);
+  });
+
+  it("AC4: demonstrates that FOR UPDATE causes deadlocks while FOR NO KEY UPDATE avoids them", async () => {
+    // 1. Buggy base implementation: FOR UPDATE conflicts with FOR KEY SHARE (taken by audit_event insert foreign key)
+    const baseLockMode = "update";
+    const baseConflictsWithAuditKeyShare = CONFLICTS_WITH_KEY_SHARE.has(baseLockMode);
+    expect(
+      baseConflictsWithAuditKeyShare,
+      "base FOR UPDATE conflicts with FOR KEY SHARE, causing 40P01 deadlocks with SSO audit inserts"
+    ).toBe(true);
+
+    // 2. Fixed head implementation: FOR NO KEY UPDATE does NOT conflict with FOR KEY SHARE
+    const { db } = await import("@/db");
+    await db.transaction(async (tx) => {
+      await lockWorkspaceMembership(tx as Tx, WORKSPACE);
+    });
+    const headLocks = workspaceLocks(fx.events);
+    expect(headLocks).toEqual(["no key update"]);
+
+    for (const mode of headLocks) {
+      expect(
+        CONFLICTS_WITH_KEY_SHARE.has(mode),
+        `head FOR ${mode.toUpperCase()} must NOT conflict with FOR KEY SHARE (avoids 40P01 deadlock)`
+      ).toBe(false);
+      expect(
+        CONFLICTS_WITH_ITSELF.has(mode),
+        `head FOR ${mode.toUpperCase()} must conflict with itself to serialize concurrent member changes`
+      ).toBe(true);
+    }
   });
 
   it("the workspace lock never blocks the key-share lock an audit insert takes, and still serializes membership changes", async () => {

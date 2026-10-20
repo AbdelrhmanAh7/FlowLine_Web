@@ -24,8 +24,8 @@ These known violations of the global lock order were identified in the PR #128 r
 
 | Violation | Code | Ranks (taken order) | Deadlock pair | Tracking |
 |---|---|---|---|---|
-| V1 | `src/server/audit.ts` (`audit()`, called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts`) | Member (5) → Workspace key-share (6) → SSO audit insert (7) | `changeRole` and `removeMember` in `src/server/members.ts` (lock `workspace` 6 `FOR UPDATE`, then update `workspace_member` 5: taken order 6 → 5) | [#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42) |
-| V2 | `src/server/sso.ts` (`completeSso` callbacks, MFA and non-MFA paths) | Member (5) → Account (4) (share-locks provider link `account` row after `workspace_member`: taken order 5 → 4) | Any concurrent transaction that locks `account` (rank 4, `FOR UPDATE`) before `workspace_member` (rank 5) | [#241](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/241) (part of [#192](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/192)) |
+| V1 (resolved) | `src/server/audit.ts` (`audit()`, called last by `src/server/sso-link.ts`, `src/server/federated-mfa.ts` and `src/server/sso.ts`) | Workspace key-share (5) → Member (6) → SSO audit insert (7) | Resolved by #42: `changeRole` and `removeMember` in `src/server/members.ts` lock `workspace` (5) `FOR NO KEY UPDATE` before `workspace_member` (6); does not conflict with audit insert's `FOR KEY SHARE`. | Closed by [#42](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/42) |
+| V2 | `src/server/sso.ts` (`completeSso` callbacks, MFA and non-MFA paths) | Member (6) → Account (4) (share-locks provider link `account` row after `workspace_member`: taken order 6 → 4) | Any concurrent transaction that locks `account` (rank 4, `FOR UPDATE`) before `workspace_member` (rank 6) | [#241](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/241) (part of [#192](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/192)) |
 
 ## Review checklist for a new transaction
 
