@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Select, Button, Card, ErrorState, Input, Textarea } from "@/components/ui";
+import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { api } from "@/lib/api";
 import { handleWriteError } from "./copy-errors";
@@ -156,7 +156,14 @@ export function CopyEditor() {
         </div>
       )}
       {message && <p role="status" className="text-success">{message}</p>}
-      {state.isPending ? <p>{t("common.loading")}</p> : state.isLoadingError ? <ErrorState title={t("platformAdmin.copyEditor.loadError")} onRetry={() => state.refetch()} /> : draft && <>
+      {state.isPending ? <p>{t("common.loading")}</p> : state.isLoadingError ? (
+        <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-danger-border bg-danger-bg p-4">
+          <p className="font-semibold text-danger">{t("platformAdmin.copyEditor.loadError")}</p>
+          <Button size="sm" onClick={() => state.refetch()}>
+            {t("ui.retry")}
+          </Button>
+        </div>
+      ) : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <Card className="p-4">
             <label className="block text-sm font-medium" htmlFor="copy-search">{t("platformAdmin.copyEditor.search")}</label>

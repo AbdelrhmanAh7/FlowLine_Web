@@ -1,17 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #180 — Client-side error display for /admin/copy (2026-10-20)
-
-Merged `origin/main` to resolve merge conflict in `EVIDENCE.md`.
-Verified full implementation of client-side error display for `/admin/copy` (part 2/3 of #119):
-- Dismissible error banner for write errors (`platformAdmin.copyEditor.dismiss`) in `copy-editor.tsx`.
-- Localization in both English (`en.json`) and Arabic (`ar.json`).
-- Session refresh on `CSRF_TOKEN_INVALID` and `STEP_UP_REQUIRED` in `copy-errors.ts`.
-- Network `ApiError(0, "NETWORK")` on truncated response body in `src/lib/api.ts`.
-- Page gate (`platformAdminOrNull()` returning `null` → `notFound()`) confirmed matching main; verified in `copy-page.test.ts` and `e2e-army/200-route-error-headers.e2e.ts`.
-- All 64 unit tests pass, typecheck and lint clean, 8-file e2e-army cap strictly observed.
-Harness next: push branch `ai/180` to update PR #186, run CI, and trigger CodeRabbit re-review.
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
