@@ -1,18 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #145 — Mizano connection type and Test connection (PR #215 handoff, 2026-10-20)
-
-Resolved merge conflicts with `origin/main` without dropping any of main's changes:
-1. Deleted accidental dev-stack log `.e2e-stack-145.log` and added `.e2e-stack-*.log` to `.gitignore`.
-2. Consolidated Mizano catalog tests from #147 and #148 into `e2e-army/145-mizano-connection-test.e2e.ts`, maintaining the hub's strict 8-file cap (`tests/unit/e2e-army-tooling.test.ts:129`) with all assertions preserved.
-3. Resolved CodeRabbit review findings:
-   - `README.md:18`: limited Test connection claim to saved non-OAuth connections.
-   - `src/app/w/[slug]/integrations/page.tsx:253`: hid Test connection button until catalog provider resolves (`Boolean(provider && provider.authType !== "oauth2")`).
-4. Reverted isolated test-dist inclusions in `tsconfig.json` back to canonical `origin/main`.
-5. Updated `artifacts/phase-4/issue-145/EVIDENCE.md` with verified commit SHA, tests, and findings resolution.
-6. Verification round 14 triage: all 3 planned browser verification flows passed (`integrations-entry-without-slug` 9/9 ok, `mizano-provider-connect-dialog` 8/8 ok, `integrations-search-no-match` 7/7 ok) with 0 console errors. The reported failure in `tester-army/e2e` (`tests/FlowLine_Web.e2e.ts`) was root-caused to Claude Haiku CLI returning output failing `agent-judgment-2` JSON schema validation (`MODEL_OUTPUT_INVALID`) during `agent.assert`. As proven by failure screenshots (`screen.txt`), application behavior was 100% correct across all 3 tests. Detailed in `AI_QUESTIONS.md`.
-All checks pass locally: `pnpm typecheck` clean, `pnpm lint` clean, vitest 104/104 tests pass across 5 files (`mizano-connection.test.ts`, `mizano-fake.test.ts`, `mizano.test.ts`, `connection-test-i18n.test.ts`, `e2e-army-tooling.test.ts`), `pnpm check:evidence` clean. Harness pushes and requests review confirmation.
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
