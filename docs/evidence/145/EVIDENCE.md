@@ -1,6 +1,6 @@
 # Verification Evidence — Issue #145: Mizano connection type: base URL + scoped API key with 'Test connection'
 
-**Tested commit SHA:** `HEAD` (recorded on commit)  
+**Tested commit SHA:** `806c0fb7` (docs(#145): add per-issue evidence, update progress, and remove AI_QUESTIONS.md per CTO directive)  
 **Date:** 2026-10-21  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145; part of FlowLine G5 #144)  
