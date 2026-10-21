@@ -11,6 +11,7 @@ test("user menu opens the security page and shows the two-step status", async ({
   await expect(page).toHaveURL(/\/account\/security$/);
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toBeVisible();
   await expect(page.getByText("Off", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/screenshots/account-security-en-ltr.png", fullPage: true });
 
   // Turn MFA on through the API (the UI flow is a later part), then the page reads On.
   const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
@@ -163,4 +164,49 @@ test("enable, sign in with the code, disable", async ({ page }) => {
   await signIn();
   await expect(page).not.toHaveURL(/\/sign-in/);
   await expect(page.getByRole("heading", { name: "Two-step verification" })).toHaveCount(0);
+});
+
+test("Cancel is disabled while disable request is in flight", async ({ page }) => {
+  await setupUser(page);
+
+  // Turn MFA on through the API so Disable is offered.
+  const enable = await page.request.post("/api/auth/two-factor/enable", { data: { password: PASSWORD } });
+  expect(enable.ok()).toBeTruthy();
+  const { totpURI } = (await enable.json()) as { totpURI: string };
+  const secret = new URL(totpURI).searchParams.get("secret")!;
+  const verify = await page.request.post("/api/auth/two-factor/verify-totp", { data: { code: totpCodeFor(base32Decode(secret)) } });
+  expect(verify.ok()).toBeTruthy();
+
+  await page.goto("/account/security");
+  await expect(page.getByText("On", { exact: true })).toBeVisible();
+
+  // Click Disable to open password form.
+  await page.getByRole("button", { name: "Disable" }).click();
+  await page.getByLabel("Account password").fill(PASSWORD);
+
+  // Intercept and delay /api/auth/two-factor/disable.
+  let finishRequest: () => void = () => {};
+  const delayed = new Promise<void>((resolve) => {
+    finishRequest = resolve;
+  });
+
+  await page.route("**/api/auth/two-factor/disable", async (route) => {
+    await delayed;
+    await route.continue();
+  });
+
+  const cancelButton = page.getByRole("button", { name: "Cancel" });
+  await expect(cancelButton).toBeEnabled();
+
+  // Submit disable form.
+  await page.getByRole("button", { name: "Disable" }).click();
+
+  // Assert Cancel is disabled while the request is pending.
+  await expect(cancelButton).toBeDisabled();
+
+  // Let the request finish.
+  finishRequest();
+
+  // Status becomes Off.
+  await expect(page.getByText("Off", { exact: true })).toBeVisible();
 });

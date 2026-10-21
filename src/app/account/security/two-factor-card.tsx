@@ -105,12 +105,12 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               <Button type="submit" variant="primary" loading={pending === "disable"}>
                 {t("account.security.twoFactor.disable")}
               </Button>
-              <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+              <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
             </div>
           </form>
         ) : (
           <div>
-            <Button onClick={() => setAskDisable(true)}>{t("account.security.twoFactor.disable")}</Button>
+            <Button onClick={() => setAskDisable(true)} disabled={pending !== null}>{t("account.security.twoFactor.disable")}</Button>
           </div>
         )
       ) : enrolment ? (
@@ -141,7 +141,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "verify"}>
               {t("account.security.twoFactor.confirm")}
             </Button>
-            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
           </form>
         </div>
       ) : askPassword ? (
@@ -159,12 +159,12 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             <Button type="submit" variant="primary" loading={pending === "enable"}>
               {t("account.security.twoFactor.enable")}
             </Button>
-            <Button type="button" onClick={cancel}>{t("account.security.twoFactor.cancel")}</Button>
+            <Button type="button" onClick={cancel} disabled={pending !== null}>{t("account.security.twoFactor.cancel")}</Button>
           </div>
         </form>
       ) : (
         <div>
-          <Button variant="primary" onClick={() => setAskPassword(true)}>
+          <Button variant="primary" onClick={() => setAskPassword(true)} disabled={pending !== null}>
             {t("account.security.twoFactor.enable")}
           </Button>
         </div>

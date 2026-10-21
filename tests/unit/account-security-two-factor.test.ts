@@ -18,11 +18,19 @@ describe("account security two-factor card", () => {
     expect(plugin).not.toMatch(/disableTwoFactorBodySchema = [^\n]*code/);
   });
 
-  it("every Cancel control is an explicit type=\"button\" (the shared Button also defaults to it)", () => {
+  it("every Cancel control is an explicit type=\"button\" and carries disabled={pending !== null}", () => {
     expect(readFileSync("src/components/ui/button.tsx", "utf8")).toContain('type = "button"');
     const cancels = src.match(/<Button[^>]*>\{t\("account\.security\.twoFactor\.cancel"\)\}<\/Button>/g) ?? [];
     expect(cancels).toHaveLength(3);
-    for (const button of cancels) expect(button).toContain('type="button"');
+    for (const button of cancels) {
+      expect(button).toContain('type="button"');
+      expect(button).toContain("disabled={pending !== null}");
+    }
+  });
+
+  it("Disable and Enable trigger buttons are disabled while pending", () => {
+    expect(src).toContain("setAskDisable(true)} disabled={pending !== null}");
+    expect(src).toContain("setAskPassword(true)} disabled={pending !== null}");
   });
 
   it("Cancel discards both password fields and any pending code without a request", () => {

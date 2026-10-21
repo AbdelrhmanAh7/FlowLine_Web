@@ -370,6 +370,7 @@ test("Arabic account security page: RTL page, LTR secret, backup codes and code 
   await page.goto("/account/security");
   await expectArabic(page);
   await expect(page.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+  await page.screenshot({ path: "test-results/screenshots/account-security-ar-rtl.png", fullPage: true });
   for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await noHorizontalScroll(page, `account/security @${width}`);
