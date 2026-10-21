@@ -20,4 +20,4 @@ The same handler now also answers `GET /api/me` with `{ id: "mz-ws-fake", worksp
 
 Verification: `nice -n 10 npx vitest run --project contract tests/contract/mizano-http.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts` passes (3 files, 54 tests). The stale path/method 404 assertion in `tests/contract/mizano-fake.test.ts` was updated: `/api/me` is no longer 404 and `/api/invoices` still is.
 
-E2E: not needed — still internal fake-server/test infrastructure; the shipped `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` remains the UI catalog check. No push, PR mutation, or deployment is claimed by this section.
+E2E: not needed — still internal fake-server/test infrastructure; the shipped `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` is the UI catalog check (since #252 it asserts the 12 supported providers are shown and pre-GA Mizano is not offered). No push, PR mutation, or deployment is claimed by this section.
