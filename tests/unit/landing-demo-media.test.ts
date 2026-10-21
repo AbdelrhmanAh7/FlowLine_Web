@@ -160,7 +160,12 @@ describe("delivery and copy", () => {
   });
   it("added client demo code stays well under the 6 KB gz budget", async () => {
     const { execSync } = await import("node:child_process");
-    const esbuildBin = "./node_modules/.pnpm/node_modules/.bin/esbuild";
+    const esbuildBin =
+      [
+        "./node_modules/.pnpm/node_modules/esbuild/bin/esbuild",
+        "./node_modules/.bin/esbuild",
+        "./node_modules/.pnpm/node_modules/.bin/esbuild",
+      ].find((p) => existsSync(p)) ?? "esbuild";
     const outDir = join(tmpdir(), `fl-demo-size-check-${Date.now()}`);
     try {
       execSync(
