@@ -34,7 +34,19 @@ This task verifies and completes the internationalization (i18n) of the Mizano a
   2. Replaced `browser.evaluate` calls with `await expect(browser.locator("html")).toHaveAttribute("dir", "ltr")` and `await expect(browser.locator("html")).toHaveAttribute("dir", "rtl")`.
   3. Added `await expect(screen.getByLabel("Scoped API key")).toBeHidden()` and `await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeHidden()` after cancellation.
   4. Removed extra blank line in `tests/unit/i18n-content-text.test.ts`.
-  5. Updated `docs/implementation/PROGRESS.md` with commit hash `973b9362`.
+  5. Updated `docs/implementation/PROGRESS.md` and docs.
+
+---
+
+## Review Finding 13d3c0f0b1f1 (Round 3) Root Cause Analysis & Resolution
+
+### Finding
+- `[qa · major] src/i18n/messages/ar.json:1330: Arabic description for 'mizano.create_customer' was updated to include customer name, which was previously missing.`
+
+### Root Cause
+- On `main`, `src/i18n/messages/ar.json` had `"ينشئ عميلاً جديدًا في Mizano باسم الشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."`, which erroneously translated "with name, company" as `"باسم الشركة"` (dropping the customer's individual name field).
+- In PR #325, line 1330 was corrected to `"ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."` and comprehensively covered by unit test assertions in `tests/unit/i18n-content-text.test.ts:165-181` (`toContain("الاسم")`, `toContain("الشركة")`, `toContain("البريد الإلكتروني")`, `toContain("رقم الهاتف")`, `toContain("الضريبة")`).
+- In addition, `list_overdue_invoices.description` in `src/i18n/messages/ar.json:1326` was missing its trailing period compared to English and other providers in `ar.json`. A trailing period was added (`"يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل."`), and `tests/unit/i18n-content-text.test.ts:161-163` was updated to assert the complete punctuated string.
 
 ---
 

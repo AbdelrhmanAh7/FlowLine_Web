@@ -159,7 +159,7 @@ describe("integration catalog text", () => {
       "List unpaid invoices past their due date on the date you choose, in the workspace currency.",
     );
     expect(actionDescription(ar, listOverdue)).toBe(
-      "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل",
+      "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل.",
     );
 
     const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;
