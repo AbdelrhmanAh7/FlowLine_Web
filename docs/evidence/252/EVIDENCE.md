@@ -1,6 +1,6 @@
 # Verification Evidence — Issue #252: [e2e] Integrations catalog page failing on main
 
-**Tested commit SHA:** `04fa7080` (Merge remote-tracking branch 'origin/main' into ai/252 and resolve conflicts)  
+**Tested commit SHA:** `a9be0816` (docs(evidence): add docs/evidence/252/EVIDENCE.md and update progress record)  
 **Originating Sentry Issue:** None. Originating issue is a stable release gate failure: `fl-integrations` failed on `main` @ `9c754b2` (2026-10-13) where `expected ["google_sheets","gmail","slack","hubspot","zendesk","airtable","snowflake","github","stripe","notion","postgres","linear","mizano"] to equal ["google_sheets","gmail","slack","hubspot","zendesk","airtable","snowflake","github","stripe","notion","postgres","linear"]`. Run logs: `~/agents/logs/stable/FlowLine_Web/2026-10-13`.  
 **Root cause:** `src/integrations/registry.ts` included pre-GA `mizano` in `PROVIDERS` and returned it in `listProviders()`, exposing 13 providers instead of the 12 supported ones across `/api/integrations/catalog` and the UI integrations page.  
 **Fix:** `listProviders()` filters out `PRE_GA = new Set(["mizano"])` (`src/integrations/registry.ts:18-24`). `allProviders()` preserves full registration of all providers (including Mizano) for `getProvider`, `getAction`, `tests/contract/mizano.test.ts`, and `tests/unit/i18n-content-text.test.ts`. `src/server/copilot-patch.ts` uses `getProvider()`.  
