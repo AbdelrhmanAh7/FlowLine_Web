@@ -170,6 +170,7 @@ function mapNode(
   }
 
   if (n.type === "n8n-nodes-base.httpRequest") {
+    // Current n8n HTTP Request (V3) stores the verb in `method`; older exports use `requestMethod`.
     const method = String(params.method ?? params.requestMethod ?? "GET").toUpperCase() as HttpConfig["method"];
     const url = params.url;
     if (typeof url === "string" && HTTP_METHODS.includes(method)) {
@@ -234,13 +235,14 @@ export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
   for (const [source, outputs] of Object.entries(workflow.connections ?? {})) {
     const sourceId = ids.get(source);
     if (!sourceId) invalid(`Connection starts at "${source}", which is not a node`);
+    // Only the first output is imported; branches from other outputs are not supported yet.
     for (const conn of outputs.main?.[0] ?? []) {
       if (!conn) continue;
       const targetId = ids.get(conn.node);
       if (!targetId) invalid(`Connection goes to "${conn.node}", which is not a node`);
       if (sourceId === targetId) invalid(`Node "${source}" is connected to itself`);
       const key = `${sourceId}->${targetId}`;
-      if (seenEdges.has(key)) continue;
+      if (seenEdges.has(key)) continue; // the same connection twice is one edge
       seenEdges.add(key);
       edges.push({ id: `e${edges.length}`, source: sourceId, target: targetId, sourceHandle: "out", targetHandle: null });
     }
@@ -256,6 +258,7 @@ export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
     }),
     edges,
   };
+  // Same size ceiling other save paths enforce (graphSchema): refuse a graph too large to store.
   if (JSON.stringify(graph).length >= MAX_GRAPH_BYTES) invalid("This workflow is too large to import (512 KB max)");
 
   return { name: workflow.name?.trim().slice(0, 80) || "Imported n8n workflow", graph };

@@ -1,6 +1,6 @@
 # Verification Report for Issue #295 (replaces #164, supersedes #267)
 
-**Branch:** `ai/295` (targeting `main`, open PR #362)  
+**Branch:** `ai/295-p2` (targeting `ai/295`, open PR #368)  
 **Originating Sentry issue:** None (feature request #164 / #295, approved by founder)  
 **Tested Commit SHA:** `98cb931f`
 
@@ -71,3 +71,14 @@
 4. **Upload button text localization (AC4, `src/app/w/[slug]/flows/dashboard.tsx:157`)**:
    - **Root Cause**: The button rendered `{t('flows.importN8nFile')}`. Reviewer questioned whether it matched the expected "Upload .json file".
    - **Fix**: Added explicit `aria-label={t("flows.importN8nFile")}` and `data-testid="import-n8n-file-btn"`. Pinned both `en` ("Upload .json file") and `ar` ("رفع ملف .json") in `tests/unit/n8n-import.test.ts`.
+
+---
+
+## Reviewer Findings Addressed (from old PR #267)
+
+1. **Upload button text localization (AC4)**: Verified in both `/en` ("Upload .json file") and `/ar` ("رفع ملف .json").
+2. **File upload validation in UI**: Validates JSON syntax and confirms presence of `nodes` array with at least 1 node via `isN8nWorkflow`.
+3. **Error handling in UI for file upload**: Sets error state displaying `<p role="alert">` with `importN8nInvalid` or `importN8nNotWorkflow` and marks textarea invalid.
+4. **Textarea inspection after upload (AC5)**: Verified textarea retains parsed text allowing review before mutation.
+5. **URL containing expressions or credentials**: In `src/server/n8n-import.ts`, URLs with `{{...}}` expressions, `[CREDENTIAL:...]`, `$credentials`, or `=...` become unsupported placeholders.
+6. **Unit test coverage**: 31 unit tests in `tests/unit/n8n-import.test.ts` provide complete coverage for all new behaviors.

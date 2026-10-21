@@ -51,6 +51,7 @@ describe("n8nToFlow", () => {
     const placeholder = graph.nodes[1];
     expect(placeholder.type).toBe("transform.json");
     expect(placeholder.data.label).toBe("Unsupported n8n node: n8n-nodes-base.googleSheets — replace");
+    // `placeholder: true` is the flag validateGraph rejects, independent of the REPLACE_WITH_ marker text.
     expect(placeholder.data.config).toEqual({ expression: '"REPLACE_WITH_N8N_NODES_BASE_GOOGLESHEETS"', placeholder: true });
   });
 
@@ -64,6 +65,7 @@ describe("n8nToFlow", () => {
       connections: { Hook: { main: [[{ node: "Shape", type: "main", index: 0 }]] }, Shape: { main: [[{ node: "Sheet", type: "main", index: 0 }]] } },
     });
     const issues = validateGraph(graph);
+    // No placeholder may run: the flow is refused (runs.ts and publish.ts both call validateGraph).
     expect(issues.map((i) => i.code)).toContain("SETUP_REQUIRED");
     const setup = issues.find((i) => i.code === "SETUP_REQUIRED")!;
     expect(setup.nodeId).toBe(graph.nodes[2].id);
@@ -80,6 +82,22 @@ describe("n8nToFlow", () => {
     } as unknown as Parameters<typeof validateGraph>[0];
     const setup = validateGraph(graph).find((i) => i.code === "SETUP_REQUIRED")!;
     expect(setup.message).toContain("REPLACE_WITH_UNSUPPORTED_N8N_NODE");
+  });
+
+  it("rejects an unsupported trigger or a lone unsupported node: NO_TRIGGER plus the placeholder block", () => {
+    const unknownTrigger = n8nToFlow({ nodes: [{ name: "Cron", type: "n8n-nodes-base.scheduleTrigger", position: [0, 0], parameters: {} }], connections: {} }).graph;
+    expect(unknownTrigger.nodes[0].type).toBe("transform.json");
+    const codes = validateGraph(unknownTrigger).map((i) => i.code);
+    expect(codes).toContain("SETUP_REQUIRED");
+    expect(codes).toContain("NO_TRIGGER");
+  });
+
+  it("accepts a workflow with no name or no connections", () => {
+    const res = n8nToFlow({
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }],
+    });
+    expect(res.name).toBe("Imported n8n workflow");
+    expect(res.graph.edges).toHaveLength(0);
   });
 
   it("replaces non-alphanumeric chars in unsupported node token", () => {
@@ -105,6 +123,15 @@ describe("n8nToFlow", () => {
     for (const bad of [null, undefined, 42, "{}", { nodes: [] }, { nodes: [{ type: "missing-name" }] }]) {
       expect(() => n8nToFlow(bad)).toThrowError(HttpError);
     }
+    let thrown: unknown;
+    try {
+      n8nToFlow({ foo: "bar" });
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(HttpError);
+    expect((thrown as HttpError).code).toBe("INVALID_N8N_JSON");
+    expect((thrown as HttpError).status).toBe(400);
   });
 
   it("turns httpRequest node with n8n expressions in URL into a placeholder", () => {
@@ -223,6 +250,14 @@ describe("n8nToFlow", () => {
     expect((code.data.config as { expression: string }).expression).toContain("code is longer than 20000 characters");
   });
 
+  it("maps n8n jsCode parameter as well as functionCode", () => {
+    const res = n8nToFlow({
+      nodes: [{ name: "Fn", type: "n8n-nodes-base.code", position: [0, 0], parameters: { jsCode: "return [{ json: {} }];" } }],
+    });
+    const code = (res.graph.nodes[0].data.config as { code: string }).code;
+    expect(code).toContain("return [{ json: {} }];");
+  });
+
   it("rejects duplicate node names", () => {
     const dupNames = {
       nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Hook", type: "n8n-nodes-base.function", position: [240, 0], parameters: {} }],
@@ -274,30 +309,6 @@ describe("n8nToFlow", () => {
       connections: {},
     };
     expect(() => n8nToFlow(huge)).toThrow(/too large to import/);
-  });
-
-  it("maps n8n jsCode parameter as well as functionCode", () => {
-    const res = n8nToFlow({
-      nodes: [{ name: "Fn", type: "n8n-nodes-base.code", position: [0, 0], parameters: { jsCode: "return [{ json: {} }];" } }],
-    });
-    const code = (res.graph.nodes[0].data.config as { code: string }).code;
-    expect(code).toContain("return [{ json: {} }];");
-  });
-
-  it("accepts a workflow with no name or no connections", () => {
-    const res = n8nToFlow({
-      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }],
-    });
-    expect(res.name).toBe("Imported n8n workflow");
-    expect(res.graph.edges).toHaveLength(0);
-  });
-
-  it("rejects an unsupported trigger or a lone unsupported node: NO_TRIGGER plus the placeholder block", () => {
-    const unknownTrigger = n8nToFlow({ nodes: [{ name: "Cron", type: "n8n-nodes-base.scheduleTrigger", position: [0, 0], parameters: {} }], connections: {} }).graph;
-    expect(unknownTrigger.nodes[0].type).toBe("transform.json");
-    const codes = validateGraph(unknownTrigger).map((i) => i.code);
-    expect(codes).toContain("SETUP_REQUIRED");
-    expect(codes).toContain("NO_TRIGGER");
   });
 
   it("parses string workflow input and strips UTF-8 BOM", () => {
