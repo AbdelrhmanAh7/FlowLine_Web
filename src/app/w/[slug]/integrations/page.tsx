@@ -8,6 +8,7 @@ import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
 import { Checkbox, Button, Card, Dialog, EmptyState, ErrorState, Field, InlineConfirmation, Input, SectionLabel, Skeleton, StatusBadge, cx } from "@/components/ui";
 import { useT } from "@/i18n/client";
+import { connectionTestErrorText } from "@/i18n/connection-test";
 import { apiErrorMessage } from "@/i18n/errors";
 import { actionTitle, connectFieldHelp, connectFieldLabel, providerCategory, providerDescription } from "@/i18n/integration-text";
 import { dataText } from "@/i18n/workspace-text";
@@ -206,6 +207,13 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const returnAfterRemoval = () => document.getElementById(`connect-${c.provider}`) ?? document.getElementById("int-search");
+  // Testing a SAVED connection: the stored key is only ever sent to the connection's own saved URL (never an
+  // unsaved one), so the route takes no body and the server's bounded code decides the message.
+  const test = useMutation({
+    mutationFn: () => api<{ ok: true; accountLabel: string }>(`/api/workspaces/${workspace.id}/connections/${c.id}/test`, { method: "POST" }),
+    onSuccess: (r) => toast(t("integrations.card.testOk", { account: r.accountLabel }), "success"),
+    onError: (e) => toast(connectionTestErrorText(t, e), "danger"),
+  });
   const remove = useMutation({
     mutationFn: () => api(`/api/connections/${c.id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -238,6 +246,11 @@ function ConnectionCard({ c, provider, onReconnect }: { c: ConnectionDto; provid
           <Button size="sm" onClick={onReconnect} disabledReason={viewerReason}>
             {t("integrations.card.reconnect")}
           </Button>
+          {Boolean(provider && provider.authType !== "oauth2") && (
+            <Button size="sm" onClick={() => test.mutate()} loading={test.isPending} disabledReason={viewerReason}>
+              {t("integrations.card.test")}
+            </Button>
+          )}
           <Button size="sm" variant="danger-ghost" aria-expanded={confirm} onClick={() => setConfirm(true)} disabledReason={viewerReason}>
             {t("integrations.card.remove")}
           </Button>
