@@ -2,16 +2,16 @@ import { test, type Browser } from "@e2e-dev/web";
 import { expect } from "e2e";
 
 // Landing demo media (#100, part of #96). The app reads public/media/demo/manifest.json on the server; #99 produces the real
-// media. This test must not depend on it, so it uses the test-only cookie `fl_test_demo=fixture` (honoured only when the stack
-// runs with FLOWLINE_ENV=test), which makes the server read e2e/fixtures/demo/manifest.json, and answers every /media/demo/*
-// request itself (an empty body for videos and images, a one-cue file for captions). Playback is stubbed (Playwright builds lack H.264), so these checks are about WHEN the
-// page asks for video, WHICH file it asks for, and what the visitor can operate. Reduced motion is emulated here by overriding
-// window.matchMedia (AC2); saveData / 2g / live toggling and the real browser media query are covered by e2e/landing-demo.spec.ts.
+// media. This test uses the test-only cookie `fl_test_demo=fixture` (honoured on FLOWLINE_ENV=test), which makes the server
+// read e2e/fixtures/demo/manifest.json, and answers every /media/demo/* request with mock fixtures (an empty body for videos and
+// images, a one-cue file for captions). Playback and codec capabilities are stubbed deterministically via init scripts to verify
+// request timing, AV1 vs H.264 codec selection, and interactive controls.
+// Reduced motion is tested via matchMedia emulation in AC2; saveData, 2g, and live toggles are covered in e2e/landing-demo.spec.ts.
 const base = (app: { baseUrl?: string }) => process.env.E2E_ARMY_URL ?? app.baseUrl ?? "http://127.0.0.1:3000";
 const VTT = "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nfixture\n";
 
 /** Serves the fixture media and records every request; a stub player makes play/pause/seek deterministic. */
-async function arm(browser: Browser, locale: "en" | "ar", url: string, reduced = false) {
+async function arm(browser: Browser, locale: "en" | "ar", url: string, reduced = false, caps: "av1" | "h264" = "av1") {
   const hits: string[] = [];
   await browser.route("**/media/demo/**", async (route) => {
     const path = new URL(route.request.url).pathname;
@@ -19,17 +19,28 @@ async function arm(browser: Browser, locale: "en" | "ar", url: string, reduced =
     if (path.endsWith(".vtt")) return route.fulfill({ status: 200, contentType: "text/vtt", body: VTT });
     return route.fulfill({ status: 200, contentType: path.endsWith(".mp4") ? "video/mp4" : "image/jpeg" });
   });
-  await browser.addInitScript(() => {
-    const w = window as unknown as { __played: string[] };
+  await browser.addInitScript((c: "av1" | "h264") => {
+    const w = window as unknown as { __played: string[]; __caps: "av1" | "h264" };
     w.__played = [];
+    w.__caps = c;
     const proto = HTMLMediaElement.prototype;
     Object.defineProperty(proto, "paused", { configurable: true, get() { return (this as { __p?: boolean }).__p !== false; } });
     proto.play = function () { (this as { __p?: boolean }).__p = false; w.__played.push(this.currentSrc || this.getAttribute("src") || ""); this.dispatchEvent(new Event("play")); return Promise.resolve(); };
     proto.pause = function () { if ((this as { __p?: boolean }).__p === false) { (this as { __p?: boolean }).__p = true; this.dispatchEvent(new Event("pause")); } };
     Object.defineProperty(proto, "currentTime", { configurable: true, get() { return (this as { __t?: number }).__t ?? 0; }, set(v: number) { (this as { __t?: number }).__t = v; } });
-    // Deterministic codec choice: AV1 is supported, smooth and power efficient.
-    Object.defineProperty(navigator, "mediaCapabilities", { configurable: true, value: { decodingInfo: async () => ({ supported: true, smooth: true, powerEfficient: true }) } });
-  });
+    // Codec-aware mediaCapabilities: AV1 returns supported/smooth/powerEfficient only when av1 capability is enabled.
+    Object.defineProperty(navigator, "mediaCapabilities", {
+      configurable: true,
+      value: {
+        decodingInfo: async (info?: { video?: { contentType?: string } }) => {
+          const isAv1 = /av01/.test(info?.video?.contentType ?? "");
+          return w.__caps === "av1"
+            ? { supported: true, smooth: true, powerEfficient: isAv1 }
+            : { supported: !isAv1, smooth: !isAv1, powerEfficient: !isAv1 };
+        },
+      },
+    });
+  }, caps);
   if (reduced) await browser.addInitScript(() => {
     const original = window.matchMedia.bind(window);
     window.matchMedia = (query) => {
@@ -43,7 +54,7 @@ async function arm(browser: Browser, locale: "en" | "ar", url: string, reduced =
 }
 
 test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after load, and downloads exactly one video file", { tags: ["feat:fl-landing"] }, async ({ app, browser }) => {
-  const hits = await arm(browser, "en", base(app));
+  const hits = await arm(browser, "en", base(app), false, "av1");
   await app.open("/");
   const hero = await browser.evaluate(() => {
     const v = document.querySelector(".hero-scrub video[data-demo-clip='hero']") as HTMLVideoElement | null;
@@ -62,6 +73,14 @@ test("@issue-100 AC1: the hero loop sits in the hero visual, starts muted after 
   expect(chosen[0]).toContain(".av1."); // AV1 smooth + power efficient wins over H.264
   expect(await browser.evaluate(() => (document.querySelector("video[data-demo-clip='hero']") as HTMLVideoElement).muted)).toBe(true);
   expect(hits.filter((p) => /\/(templates|build|run|history)\..*\.mp4$/.test(p))).toEqual([]); // Posters may load eagerly; below-fold videos must not fetch.
+});
+
+test("@issue-100 AC1: hero loop chooses H.264 fallback when AV1 is not supported", { tags: ["feat:fl-landing"] }, async ({ app, browser }) => {
+  const hits = await arm(browser, "en", base(app), false, "h264");
+  await app.open("/");
+  await expect.poll(() => hits.filter((p) => /\/hero\..*\.mp4$/.test(p)).length).toBe(1);
+  const chosen = hits.filter((p) => /\/hero\..*\.mp4$/.test(p));
+  expect(chosen[0]).toContain(".h264."); // falls back to H.264 when AV1 is unsupported
 });
 
 test("@issue-100 AC3: a loop longer than 5 s has a keyboard-operable Pause/Play button of at least 44x44 px that sticks", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {

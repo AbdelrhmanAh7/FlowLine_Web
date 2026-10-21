@@ -53,3 +53,16 @@ describe("DemoWalkthrough server markup", () => {
     expect(html.match(/aria-current="step"/g)).toHaveLength(1);
   });
 });
+
+describe("Landing hero and header layout reservation (CLS 0 guards)", () => {
+  it("reserves header height and hero headline layout to prevent layout shift", async () => {
+    const { readFileSync } = await import("node:fs");
+    const pageSrc = readFileSync("src/app/page.tsx", "utf8");
+    // Header layout is reserved across viewports (min-h-14 lg:h-16)
+    expect(pageSrc).toContain("min-h-14 lg:h-16");
+    // Hero title reserves 2-line height and keeps accent span nowrap/inline-block to eliminate wrap shift
+    expect(pageSrc).toContain("min-h-[80px]");
+    expect(pageSrc).toContain("sm:min-h-[112px]");
+    expect(pageSrc).toContain("text-accent-text inline-block whitespace-nowrap");
+  });
+});

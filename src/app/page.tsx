@@ -66,8 +66,8 @@ export default async function Landing() {
             its two groups take part in this flex-wrap layout directly; the preferences are pushed to their own full-width line with `order-last`.
           flex-wrap is the safety net: if a translation ever makes a row too wide, a group drops to the next line instead of overflowing the page.
         */}
-        <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8 lg:min-h-16 lg:content-center lg:py-0">
+        <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur-sm min-h-14 lg:h-16">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8 min-h-14 lg:h-16 lg:py-0">
             <Link href="/" aria-label={t("common.homeAria")} className="shrink-0">
               <Logo />
             </Link>
@@ -100,9 +100,9 @@ export default async function Landing() {
         <main>
           <section id="product" className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-14 pb-16 text-center sm:px-8 sm:pt-20">
             <span className="rounded-full border border-line-strong bg-card px-3 py-1 text-sm text-med">{t("landing.badge")}</span>
-            <h1 className="mt-6 max-w-3xl text-[34px] leading-[40px] font-semibold tracking-tight sm:text-[48px] sm:leading-[56px]">
+            <h1 className="mt-6 max-w-3xl min-h-[80px] text-[34px] leading-[40px] font-semibold tracking-tight sm:min-h-[112px] sm:text-[48px] sm:leading-[56px]">
               {t("landing.heroTitle")}{" "}
-              <span className="text-accent-text">
+              <span className="text-accent-text inline-block whitespace-nowrap">
                 {t("landing.heroAccent")}
               </span>
             </h1>
