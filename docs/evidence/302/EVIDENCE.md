@@ -34,7 +34,7 @@ This task verifies and completes the internationalization (i18n) of the Mizano a
   2. Replaced `browser.evaluate` calls with `await expect(browser.locator("html")).toHaveAttribute("dir", "ltr")` and `await expect(browser.locator("html")).toHaveAttribute("dir", "rtl")`.
   3. Added `await expect(screen.getByLabel("Scoped API key")).toBeHidden()` and `await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeHidden()` after cancellation.
   4. Removed extra blank line in `tests/unit/i18n-content-text.test.ts`.
-  5. Updated `docs/implementation/PROGRESS.md` and docs.
+  5. Updated `docs/implementation/PROGRESS.md` and docs with commit hash `3212c340`.
 
 ---
 
