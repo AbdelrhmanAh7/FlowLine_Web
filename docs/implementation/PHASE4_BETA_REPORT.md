@@ -348,3 +348,17 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## e2e-army signup-verify deletion guard (issue #337) — 2026-10-21
+
+Resolved QA finding `4eeabaf55600` split from PR #135 (Refs #124, supersedes part of #135).
+Confirmed `e2e-army/124-signup-verify.e2e.ts` is deleted and absent from the repository.
+The historical file duplicated auto-verify tests and was unpassable due to client-side
+`process.env` mutations, hardcoded `test@example.com` collision address, invalid `/en/signup`
+route, non-existent `/api/users/` probe, unisolated outbox assertions, and exceeding the
+8-file top-level e2e-army cap.
+Guarded by unit regression test `tests/unit/e2e-signup-verify-guard.test.ts` (4/4 passing),
+which checks that the file is absent, flags historical anti-patterns (demonstrated via base
+regression failure), verifies active e2e-army suite hygiene, and enforces the <= 8 top-level
+file cap. `pnpm typecheck` and `pnpm eslint` exit 0. Evidence in `docs/evidence/337/EVIDENCE.md`.
+No user-facing flows changed (`E2E: not needed — test-only hygiene chore and deletion guard`).
+
