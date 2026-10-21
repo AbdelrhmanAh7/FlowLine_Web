@@ -341,8 +341,8 @@ describe("mizano.create_draft_quote", () => {
       customerId: "cust_123",
       currency: "EGP",
       lines: [
-        { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "15.00" },
-        { item: "Hosting", qty: "1", unitPrice: "100.00", taxRate: "15.00" },
+        { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: "15.00" },
+        { item: "Hosting", qty: "1.00", unitPrice: "100.00", taxRate: "15.00" },
       ],
     });
   });
@@ -412,43 +412,70 @@ describe("mizano.create_draft_quote", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects invalid input (invalid qty - negative)", async () => {
+  it("rejects invalid input (invalid qty - negative number and string)", async () => {
     const { ctx } = ctxReturning(quoteResponse);
-    await expect(
-      runAction("mizano.create_draft_quote", ctx, {
+    for (const badQty of [-5, "-5"]) {
+      const input = {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "-5", unitPrice: "500.00", taxRate: "15.00" },
+          { item: "Consulting", qty: badQty, unitPrice: "500.00", taxRate: "15.00" },
         ],
-      }),
-    ).rejects.toThrow();
+      };
+      const action = getAction("mizano.create_draft_quote")!.action;
+      let safeRes: ReturnType<typeof action.input.safeParse>;
+      expect(() => {
+        safeRes = action.input.safeParse(input);
+      }).not.toThrow();
+      expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
+
+      await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
+    }
   });
 
-  it("rejects invalid input (invalid unitPrice - negative)", async () => {
+  it("rejects invalid input (invalid unitPrice - negative number and string)", async () => {
     const { ctx } = ctxReturning(quoteResponse);
-    await expect(
-      runAction("mizano.create_draft_quote", ctx, {
+    for (const badPrice of [-100, "-100.00"]) {
+      const input = {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "10", unitPrice: "-100.00", taxRate: "15.00" },
+          { item: "Consulting", qty: "10.00", unitPrice: badPrice, taxRate: "15.00" },
         ],
-      }),
-    ).rejects.toThrow();
+      };
+      const action = getAction("mizano.create_draft_quote")!.action;
+      let safeRes: ReturnType<typeof action.input.safeParse>;
+      expect(() => {
+        safeRes = action.input.safeParse(input);
+      }).not.toThrow();
+      expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
+
+      await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
+    }
   });
 
-  it("rejects invalid input (invalid taxRate - negative)", async () => {
+  it("rejects invalid input (invalid taxRate - negative number and string)", async () => {
     const { ctx } = ctxReturning(quoteResponse);
-    await expect(
-      runAction("mizano.create_draft_quote", ctx, {
+    for (const badTax of [-5, "-5.00"]) {
+      const input = {
         customerId: "cust_123",
         currency: "EGP",
         lines: [
-          { item: "Consulting", qty: "10", unitPrice: "500.00", taxRate: "-5.00" },
+          { item: "Consulting", qty: "10.00", unitPrice: "500.00", taxRate: badTax },
         ],
-      }),
-    ).rejects.toThrow();
+      };
+      const action = getAction("mizano.create_draft_quote")!.action;
+      let safeRes: ReturnType<typeof action.input.safeParse>;
+      expect(() => {
+        safeRes = action.input.safeParse(input);
+      }).not.toThrow();
+      expect(safeRes!.success).toBe(false);
+      expect(safeRes!.error).toBeInstanceOf(ZodError);
+
+      await expect(runAction("mizano.create_draft_quote", ctx, input)).rejects.toThrow();
+    }
   });
 
   it("accepts decimal strings for qty, unitPrice, and taxRate", async () => {

@@ -348,3 +348,14 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## Mizano draft quote money input validation (issue #355) — 2026-10-21
+
+`mizano.create_draft_quote` input schema now validates line item `qty`, `unitPrice`, and `taxRate`
+using `moneyInput` (`src/integrations/providers/mizano.ts:59-83`).
+Normalizes valid number and decimal string inputs (including Arabic-Indic digits) to 2-decimal strings.
+Replaces the PR #279 pattern (throwing raw Error inside Zod transform, which escaped safeParse as an unhandled exception)
+with `ctx.addIssue` and `return z.NEVER`, ensuring safeParse returns `{ success: false, error: ZodError }` without throwing.
+Covered by 10 unit tests in `tests/unit/mizano-money-input.test.ts` (including AC4 regression test),
+50 contract tests in `tests/contract/mizano.test.ts`, and 3 contract tests in `tests/contract/mizano-http.test.ts`.
+Supersedes part of #309.
+
