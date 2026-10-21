@@ -105,10 +105,10 @@ test(
   async ({ app, screen, browser }) => {
     const base = app.baseUrl!;
     const owner = await signedIn(base, `army-301-integrations-${seeded(base, "integrations")}@flowline-e2e.test`);
-    await savedMizano(base, owner);
+    const { workspace } = await savedMizano(base, owner);
     await onboard(base, owner);
     await browser.setCookies(browserCookies(base, owner.cookie, "en"));
-    await app.open("/app/integrations");
+    await app.open(`/w/${workspace.slug}/integrations`);
     const card = screen.getByTestId("connection-mizano");
     await expect(card).toBeVisible({ timeout: 30_000 });
     await card.getByRole("button", "Test connection").tap();
@@ -122,10 +122,10 @@ test(
   async ({ app, screen, browser }) => {
     const base = app.baseUrl!;
     const owner = await signedIn(base, `army-301-integrations-ar-${seeded(base, "integrations-ar")}@flowline-e2e.test`);
-    await savedMizano(base, owner);
+    const { workspace } = await savedMizano(base, owner);
     await onboard(base, owner);
     await browser.setCookies(browserCookies(base, owner.cookie, "ar"));
-    await app.open("/app/integrations");
+    await app.open(`/w/${workspace.slug}/integrations`);
     const card = screen.getByTestId("connection-mizano");
     await expect(card).toBeVisible({ timeout: 30_000 });
     expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");

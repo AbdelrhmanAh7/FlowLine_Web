@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/server/access";
-import { entryWorkspace } from "@/server/workspaces";
+import { getUserSettings, listWorkspaces } from "@/server/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,10 @@ export default async function AppEntry({ searchParams }: { searchParams: Promise
   // Invitation links survive sign-in/sign-up: finish on the invite page.
   const invite = /^invite:([A-Za-z0-9_-]{20,100})$/.exec(nextParam ?? "");
   if (invite) redirect(`/invite/${invite[1]}`);
-  const ws = await entryWorkspace(user);
-  if (!ws) redirect("/onboarding");
+  const [settings, workspaces] = await Promise.all([getUserSettings(user.id), listWorkspaces(user)]);
+  const onboarded = Boolean(settings?.onboardingCompletedAt || settings?.onboardingSkipped);
+  if (!onboarded || workspaces.length === 0) redirect("/onboarding");
+  const ws = workspaces.find((w) => w.id === settings?.lastWorkspaceId) ?? workspaces[0]!;
   const { next } = await searchParams;
   if (next === "canvas") {
     const [recent] = await db

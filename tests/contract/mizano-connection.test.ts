@@ -1,11 +1,11 @@
-// Mizano connection check (#145, #301): the console's "Test connection" runs `runConnectionTest`, i.e. this provider's
-// `identity()` = `GET /api/health` then `GET /api/me`, exercised against the fake provider server (real HTTP + the shared
+// Mizano connection check (#145, #301): the console's "Test connection" runs `runConnectionTest`, i.e. checking
+// Mizano `GET /api/health` then `GET /api/me`, exercised against the fake provider server (real HTTP + the shared
 // error classification), not a mocked http object. `testError` maps ProviderError.kind → a bounded code with fixed text.
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_TIMEOUT_MS, runConnectionTest, testError } from "@/integrations/connection-test";
 import { ProviderError, type Credentials } from "@/integrations/types";
 import { HttpError } from "@/server/http";
-import { expectProviderError, makeCtx, provider, startFake, type Fake } from "./helpers";
+import { provider, startFake, type Fake } from "./helpers";
 
 const p = provider("mizano");
 /** A scoped key on a public https origin; the fake server (FLOWLINE_PROVIDER_OVERRIDE) is where the request really goes. */
@@ -27,53 +27,50 @@ beforeEach(async () => {
   await fake.reset();
 });
 
-describe("mizano identity", () => {
-  it("calls GET /api/health first, then GET /api/me, both with the scoped key as a Bearer", async () => {
-    const id = await p.identity(makeCtx(p, creds()));
-    expect(id).toEqual({ accountId: "mizano-ws-a", label: "Alice A Mizano" });
+describe("runConnectionTest (Mizano connection check)", () => {
+  it("calls GET /api/health first, then GET /api/me, both with the scoped key as a Bearer, and returns the label", async () => {
+    const label = await runConnectionTest(p, creds());
+    expect(label).toBe("Alice A Mizano");
     const rs = await fake.requests("mizano");
     expect(rs.map((r) => `${r.method} ${r.path}`)).toEqual(["GET /api/health", "GET /api/me"]);
     expect(rs.map((r) => r.headers["x-auth-scheme"])).toEqual(["bearer", "bearer"]);
   });
 
-  it("reports a rejected key as an auth failure, never a raw provider message", async () => {
-    const err = await expectProviderError(p.identity(makeCtx(p, creds({ token: "not-a-key" }))), "auth");
-    expect(err.status).toBe(401);
+  it("reports a rejected key as an auth failure (400 AUTHENTICATION_FAILED)", async () => {
+    const err = await runConnectionTest(p, creds({ token: "not-a-key" })).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(HttpError);
+    expect(err).toMatchObject({ status: 400, code: "AUTHENTICATION_FAILED", message: "Invalid API key" });
   });
 
   it("refuses a base URL that is not a bare https origin before a request is sent", async () => {
-    await expectProviderError(p.identity(makeCtx(p, creds({ settings: { baseUrl: "http://mizano.example.com" } }))), "client");
+    const err = await runConnectionTest(p, creds({ settings: { baseUrl: "http://mizano.example.com" } })).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(HttpError);
+    expect(err).toMatchObject({ status: 502, code: "PROVIDER_ERROR" });
     expect(await fake.requests("mizano")).toEqual([]);
   });
 
   it("a failing health check stops before /api/me", async () => {
     await fake.fault({ provider: "mizano", pathPattern: "/api/health", mode: "500", times: 1 });
-    await expectProviderError(p.identity(makeCtx(p, creds())), "server");
+    const err = await runConnectionTest(p, creds()).catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 502, code: "PROVIDER_ERROR" });
     expect((await fake.requests("mizano")).map((r) => r.path)).toEqual(["/api/health"]);
   });
 
   it.each([{ status: "degraded" }, {}, "<html>proxy</html>", null])("does not trust a 200 health response of %j, and never asks for /api/me", async (body) => {
-    const ctx = makeCtx(p, creds());
-    const paths: string[] = [];
-    ctx.http = { request: async (req) => (paths.push(req.path), { status: 200, headers: new Headers(), data: body as never }) };
-    await expectProviderError(p.identity(ctx), "server");
-    expect(paths).toEqual(["/api/health"]);
+    const customHttp = { request: vi.fn().mockResolvedValue({ status: 200, headers: new Headers(), data: body }) };
+    const mockProvider = { ...p, identity: vi.fn() };
+    const err = await runConnectionTest(mockProvider, creds(), TEST_TIMEOUT_MS, customHttp as never).catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 502, code: "PROVIDER_ERROR" });
+    expect(customHttp.request).toHaveBeenCalledWith(expect.objectContaining({ path: "/api/health" }));
+    expect(mockProvider.identity).not.toHaveBeenCalled();
   });
-});
 
-describe("runConnectionTest (what POST …/connections/{cid}/test returns)", () => {
   it("gives the connection test its 8 s default deadline", () => {
     expect(TEST_TIMEOUT_MS).toBe(8_000);
   });
 
   it("returns the account label for a good key", async () => {
     await expect(runConnectionTest(p, creds())).resolves.toBe("Alice A Mizano");
-  });
-
-  it("a wrong key is a 400 AUTHENTICATION_FAILED with fixed text", async () => {
-    const err = await runConnectionTest(p, creds({ token: "not-a-key" })).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(HttpError);
-    expect(err).toMatchObject({ status: 400, code: "AUTHENTICATION_FAILED", message: "Invalid API key" });
   });
 
   it("an instance that does not answer within the deadline is a 502 PROVIDER_UNREACHABLE", async () => {

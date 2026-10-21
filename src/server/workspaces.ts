@@ -62,18 +62,6 @@ export async function getUserSettings(userId: string) {
   return row ?? null;
 }
 
-/**
- * Where a signed-in user's slug-free links land (`/app`, `/app/integrations`): their last-used workspace, else their
- * first. Null until onboarding is finished or skipped, or when they belong to no workspace: the caller sends them to
- * /onboarding instead.
- */
-export async function entryWorkspace(user: CurrentUser) {
-  const [settings, workspaces] = await Promise.all([getUserSettings(user.id), listWorkspaces(user)]);
-  const onboarded = Boolean(settings?.onboardingCompletedAt || settings?.onboardingSkipped);
-  if (!onboarded || workspaces.length === 0) return null;
-  return workspaces.find((w) => w.id === settings?.lastWorkspaceId) ?? workspaces[0]!;
-}
-
 export async function listMembers(workspaceId: string) {
   return db
     .select({ userId: schema.user.id, name: schema.user.name, email: schema.user.email, role: schema.workspaceMember.role, joinedAt: schema.workspaceMember.createdAt })
