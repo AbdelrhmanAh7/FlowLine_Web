@@ -194,12 +194,25 @@ describe("CopyEditor failures (interaction, en)", () => {
     expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
   });
 
-  it("keeps Save disabled while the copy state reloads after a failure", async () => {
+  it("keeps Save disabled while the copy state reloads after a failure, and shows a visual indicator", async () => {
     writable(vi.fn(async () => undefined));
     queries.state = { ...queries.state, isFetching: true };
     await mount();
     await type("#copy-en", "New title");
+    expect(container.textContent).toContain(t("platformAdmin.copyEditor.refreshing"));
     expect(button(t("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
+  });
+
+  it("shows the visual indicator that saving is disabled during copy state refresh in Arabic (RTL)", async () => {
+    const locT = createTranslator("ar");
+    writable(vi.fn(async () => undefined));
+    queries.state = { ...queries.state, isFetching: true };
+    await act(async () => {
+      root.render(createElement(I18nProvider, { locale: "ar" }, createElement(CopyEditor)));
+    });
+    await type("#copy-ar", "عنوان جديد");
+    expect(container.textContent).toContain(locT("platformAdmin.copyEditor.refreshing"));
+    expect(button(locT("platformAdmin.copyEditor.save"))!.disabled).toBe(true);
   });
 
   it("disables Save when the session has no step-up yet", async () => {

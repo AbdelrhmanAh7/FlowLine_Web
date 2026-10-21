@@ -15,9 +15,10 @@ Implements comprehensive client-side error display, resilience, and user-friendl
 | AC4 | The write error banner is dismissible via `platformAdmin.copyEditor.dismiss` button; clicking dismiss clears the alert state while keeping edits and form controls intact. | `tests/unit/admin/copy/copy-editor.test.ts:213-234` | Passed | 0 |
 | AC5 | On initial copy state load failure, `copy-editor` renders a load error alert with a Retry button; clicking Retry triggers query refetch. | `tests/unit/admin/copy/copy-editor.test.ts:45-51` & `:120-128` | Passed | 0 |
 | AC6 | Non-admins receive 404 on `/admin/copy` (platform-admin gate enforced), and unauthorized mutations return clean 404 NOT_FOUND JSON without stack traces. Respects 8-file cap. | `tests/unit/admin/copy/copy-page.test.ts:29-40`, `e2e-army/200-route-error-headers.e2e.ts:72-100`, and `tests/unit/e2e-army-tooling.test.ts:1-12` | Passed (12/12 e2e-army tooling tests pass) | 0 |
+| AC7 | When copy state refresh is in progress (`state.isFetching`), `copy-editor` renders a visual indicator (`platformAdmin.copyEditor.refreshing`) explaining that saving is temporarily disabled due to state refresh, preventing user confusion while leaving draft text intact. | `tests/unit/admin/copy/copy-editor.test.ts:197-217` | Passed (20/20 DOM tests pass) | 0 |
 
 ## Changed Covering Tests
-- `tests/unit/admin/copy/copy-editor.test.ts`: 19 DOM unit tests testing server render and full interactive React happy-dom mounting (500 server error, dismissible banner, preservation of textarea draft, Retry on load error, 401 session expiration, network failure in English LTR and Arabic RTL).
+- `tests/unit/admin/copy/copy-editor.test.ts`: 20 DOM unit tests testing server render and full interactive React happy-dom mounting (500 server error, dismissible banner, preservation of textarea draft, Retry on load error, 401 session expiration, network failure in English LTR and Arabic RTL, visual refreshing indicator in English LTR and Arabic RTL).
 - `tests/unit/admin/copy/copy-errors.test.ts`: 26 unit tests covering HTTP status code and error code mapping to translated message keys, session synchronization on CSRF / step-up, and refetch triggers.
 - `tests/unit/admin/copy/copy-page.test.ts`: 2 unit tests verifying that `CopyPage` renders `CopyEditor` for platform admins and throws `notFound()` (404) for non-admins.
 - `tests/unit/api-body-read.test.ts`: 4 unit tests verifying that stream/body cut-offs mid-read trigger network `ApiError(0, "NETWORK")` and invoke copy editor reload.
@@ -33,9 +34,11 @@ Implements comprehensive client-side error display, resilience, and user-friendl
   - `platformAdmin.copyEditor.networkError`: `"The connection failed, so the change may not have gone through. Check the copy before you try again."` / `"انقطع الاتصال، لذا ربما لم يكتمل التغيير. راجع النصوص قبل أن تحاول مجددًا."`
   - `platformAdmin.copyEditor.reauthRequired`: `"Your admin session has expired. Sign out and sign in again to keep editing the copy."` / `"انتهت جلسة الإدارة. سجّل الخروج ثم سجّل الدخول مجددًا لمتابعة تحرير النصوص."`
   - `platformAdmin.copyEditor.conflict`: `"This copy changed elsewhere since you loaded it. Review the latest version before you try again."` / `"تغيّر هذا النص في مكان آخر منذ أن حمّلته. راجع أحدث نسخة قبل أن تحاول مجددًا."`
+  - `platformAdmin.copyEditor.refreshing`: `"Saving is temporarily disabled while the copy refreshes."` / `"الحفظ معطّل مؤقتًا أثناء تحديث النصوص."`
   - Verified via `tests/unit/admin/copy/copy-editor.test.ts` (tested with `describe.each(["en", "ar"])` and `it.each(["en", "ar"])`).
 
 ## Bug Fix & Regression Proof
+- **Visual Refreshing Indicator**: When `state.isFetching` is true (background copy reload in flight), saving is temporarily blocked (`!state.isFetching` in `canWrite`). A visual indicator (`platformAdmin.copyEditor.refreshing`) is rendered in `src/app/admin/copy/copy-editor.tsx`, informing users why Save is disabled while keeping typed changes intact (`tests/unit/admin/copy/copy-editor.test.ts:197-217`).
 - **Body Cut-off / Truncated Stream**: In `src/lib/api.ts`, reading response text inside the `try/catch` block ensures that a response body truncated after headers is wrapped in `new ApiError(0, "NETWORK", ...)`, allowing the copy editor to handle it gracefully and trigger a state refetch (`tests/unit/api-body-read.test.ts`).
 - **Dismissible Error Banner & Preserved Edits**: Previously, write errors rendered a static alert without dismiss capabilities. `src/app/admin/copy/copy-editor.tsx` now renders a dismissible alert banner with `Button` invoking `setError("")`. Clicking dismiss clears the error banner while leaving all user edits intact in the `#copy-en` and `#copy-ar` textareas (`tests/unit/admin/copy/copy-editor.test.ts:213-234`).
 - **CSRF Token Stale Retry**: Previously, `CSRF_TOKEN_INVALID` only refetched copy state instead of session, causing retries to fail repeatedly with stale tokens. `handleWriteError` in `copy-errors.ts` now refetches the session via `refetchMe()` and synchronizes `stepUpActive`.
@@ -46,16 +49,16 @@ Implements comprehensive client-side error display, resilience, and user-friendl
 ```
 $ npx vitest run tests/unit/admin/copy/copy-editor.test.ts tests/unit/admin/copy/copy-errors.test.ts tests/unit/admin/copy/copy-page.test.ts tests/unit/api-body-read.test.ts tests/unit/e2e-army-tooling.test.ts tests/unit/company-builder-client-mode.test.ts
 
- ✓ |unit| tests/unit/admin/copy/copy-editor.test.ts (19 tests) 92ms
- ✓ |unit| tests/unit/admin/copy/copy-errors.test.ts (26 tests) 10ms
- ✓ |unit| tests/unit/api-body-read.test.ts (4 tests) 3ms
- ✓ |unit| tests/unit/e2e-army-tooling.test.ts (12 tests) 1489ms
+ ✓ |unit| tests/unit/admin/copy/copy-editor.test.ts (20 tests) 119ms
+ ✓ |unit| tests/unit/admin/copy/copy-errors.test.ts (26 tests) 7ms
+ ✓ |unit| tests/unit/company-builder-client-mode.test.ts (1 test) 8ms
+ ✓ |unit| tests/unit/api-body-read.test.ts (4 tests) 6ms
+ ✓ |unit| tests/unit/e2e-army-tooling.test.ts (12 tests) 1694ms
  ✓ |unit| tests/unit/admin/copy/copy-page.test.ts (2 tests) 2ms
- ✓ |unit| tests/unit/company-builder-client-mode.test.ts (1 test) 4ms
 
  Test Files  6 passed (6)
-      Tests  64 passed (64)
-   Duration  1.93s
+      Tests  65 passed (65)
+   Duration  1.95s
 Exit code: 0
 ```
 

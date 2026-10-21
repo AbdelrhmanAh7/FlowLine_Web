@@ -194,6 +194,7 @@ export function CopyEditor() {
                 <button type="button" disabled={pending} onClick={() => setEdits((old) => ({ ...old, [locale]: draft.base[locale][key] ?? "" }))} className="mt-1 text-sm text-accent-text hover:underline">{t("platformAdmin.copyEditor.reset")}</button>
               </div>)}
               {dirty && <p role="status" className="text-sm text-warning">{t("platformAdmin.copyEditor.unsaved")}</p>}
+              {state.isFetching && <p role="status" className="text-sm text-med">{t("platformAdmin.copyEditor.refreshing")}</p>}
               <Button onClick={save} disabled={!canWrite || !dirty}>{t("platformAdmin.copyEditor.save")}</Button>
             </Card>
             <Card className="space-y-3 p-4">

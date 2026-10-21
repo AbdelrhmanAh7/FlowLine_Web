@@ -3392,7 +3392,8 @@
       "meLoadError": "Could not load your admin session. Refresh the page and try again.",
       "reauthRequired": "Your admin session has expired. Sign out and sign in again to keep editing the copy.",
       "rateLimited": "Too many changes in a short time. Wait a minute and try again.",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "refreshing": "Saving is temporarily disabled while the copy refreshes."
     },
     "title": "Platform admin",
     "subtitle": "Flowline's own service credentials. Secrets are write-only: after you save one it is never shown again — not to you, not to anyone.",
