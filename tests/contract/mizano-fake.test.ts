@@ -53,10 +53,13 @@ describe("fake mizano GET /api/health", () => {
 });
 
 describe("fake mizano GET /api/me", () => {
-  it("returns the workspace identity the adapter parses", async () => {
-    const res = await get("/api/me", "test-token");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ id: "mz-ws-fake", workspaceName: "Fake Mizano Workspace" });
+  it("returns the workspace identity the adapter parses, bound to the scoped key", async () => {
+    const a = await get("/api/me", "test-token");
+    expect(a.status).toBe(200);
+    expect(await a.json()).toEqual({ id: "mizano-ws-a", workspaceName: "Alice A Mizano" });
+    const b = await get("/api/me", "second-account-token");
+    expect(b.status).toBe(200);
+    expect(await b.json()).toEqual({ id: "mizano-ws-b", workspaceName: "Bob B Mizano" });
   });
 });
 
