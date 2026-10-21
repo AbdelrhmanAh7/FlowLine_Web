@@ -356,6 +356,21 @@
         "nurture": "Nurture"
       }
     },
+    "deal-won-mizano-quote": {
+      "name": "Deal won → Mizano quote",
+      "description": "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+      "sample": "One won deal with customer details, currency and line items.",
+      "result": "A customer and a draft quote created in Mizano once approved, and a Slack notification sent.",
+      "nodes": {
+        "deal": "Deal",
+        "won": "Deal won?",
+        "prepare": "Prepare customer and quote",
+        "customer": "Mizano — Create customer (needs approval)",
+        "quote": "Mizano — Create draft quote",
+        "notify": "Slack — Quote ready",
+        "skipped": "Deal not won"
+      }
+    },
     "ticket-priority": {
       "name": "Ticket Priority Router",
       "description": "Score a support ticket by keywords and route urgent ones to an escalation output.",
