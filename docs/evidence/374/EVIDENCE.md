@@ -2,6 +2,7 @@
 
 **Branch:** `ai/374`  
 **Originating Sentry issue:** None (feature enhancement / blocker finding fix split from PR #362)  
+**Tested Commit SHA:** `ac330e68`  
 **Supersedes part of:** #362  
 
 ---
