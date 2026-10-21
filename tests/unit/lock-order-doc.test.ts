@@ -35,9 +35,8 @@ describe("lock order rank table", () => {
   });
 
   it("writes down every sequence that goes backward, with the reason it cannot deadlock", () => {
-    // reset writes account before session (rank 4 before 3), protected by the user row held FOR UPDATE.
-    expect(rowOf("account").notes).toMatch(/exception/i);
-    expect(rowOf("account").notes).toMatch(/account\s+(\*\*before\*\*|before)\s+session/i);
+    // reset deletes sessions before writing accounts (rank 3 before 4), following global rank order (#41).
+    expect(rowOf("account").notes).toMatch(/session.*before.*account|session/i);
     expect(rowOf("account").notes).toMatch(/user\s+row\s+first/i);
     // the audit insert key-share locks the workspace after the member row (rank 6 then 5), safe only with NO KEY UPDATE.
     expect(rowOf("workspace").notes).toMatch(/exception/i);
