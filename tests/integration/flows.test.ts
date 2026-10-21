@@ -67,6 +67,36 @@ describe("createFlow", () => {
     const { user, ws } = await setup();
     await expectHttpError(createFlow(user, ws.id, { templateId: "no-such-template" }), 400, "UNKNOWN_TEMPLATE");
   });
+
+  const n8nWorkflow = {
+    name: "n8n import",
+    nodes: [
+      { name: "Hook", type: "n8n-nodes-base.webhook", typeVersion: 1, position: [0, 0], parameters: { path: "lead" } },
+      { name: "Sheet", type: "n8n-nodes-base.googleSheets", typeVersion: 1, position: [240, 0], parameters: {} },
+    ],
+    connections: { Hook: { main: [[{ node: "Sheet", type: "main", index: 0 }]] } },
+  };
+
+  it("creates a flow from an n8n import and stores the converted graph (#164)", async () => {
+    const { user, ws } = await setup();
+    const flow = await createFlow(user, ws.id, { n8n: n8nWorkflow });
+    expect(flow.name).toBe("n8n import");
+    expect(flow.templateId).toBeNull();
+    const nodes = (flow.graph as FlowGraph).nodes;
+    expect(nodes.map((n) => n.type)).toEqual(["trigger.webhook", "transform.json"]);
+    // The unmapped node keeps the explicit placeholder flag validateGraph rejects.
+    expect((nodes[1]!.data.config as { placeholder?: boolean }).placeholder).toBe(true);
+  });
+
+  it("rejects a create that asks for a template and an n8n import at once with 400 (#164)", async () => {
+    const { user, ws } = await setup();
+    await expectHttpError(createFlow(user, ws.id, { templateId: "lead-qualifier", n8n: n8nWorkflow }), 400, "MIXED_CREATE_INPUT");
+  });
+
+  it("rejects an n8n import that is not a workflow with 400 (#164)", async () => {
+    const { user, ws } = await setup();
+    await expectHttpError(createFlow(user, ws.id, { n8n: { foo: "bar" } }), 400, "INVALID_N8N_JSON");
+  });
 });
 
 describe("saveFlow", () => {

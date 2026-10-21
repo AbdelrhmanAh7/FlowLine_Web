@@ -5,7 +5,8 @@
 // flow_version and took a version number, so the first publication after two runs was v3. Run snapshots are now unnumbered.
 // Copied files may import only `e2e`, `@e2e-dev/web` and node built-ins, so the helpers live here.
 import { createHash } from "node:crypto";
-import { rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -149,10 +150,11 @@ const N8N_WORKFLOW = JSON.stringify({
   },
 });
 
-function writeWorkflowFile(name: string, content: string): string {
-  const rel = `army-295-${name}.json`;
-  writeFileSync(join(process.cwd(), rel), content);
-  return rel;
+function createWorkflowFixture(name: string, content: string): { dir: string; file: string } {
+  const dir = mkdtempSync(join(tmpdir(), `fl-army-295-${name}-`));
+  const file = join(dir, "workflow.json");
+  writeFileSync(file, content, { flag: "wx" });
+  return { dir, file };
 }
 
 test(
@@ -164,6 +166,7 @@ test(
     await agent.act("click Import from n8n");
     await agent.act("paste {json} into the n8n workflow box and click Import", { params: { json: N8N_WORKFLOW } });
     await agent.assert("the flow editor opens and shows the steps named Webhook, Shape and Notify");
+    await expect(screen.getByLabel("Flow name")).toHaveValue("Army lead intake");
     await expect(screen.getByText("Webhook", { exact: true }).first()).toBeVisible();
     await expect(screen.getByText("Shape", { exact: true }).first()).toBeVisible();
     await expect(screen.getByText("Notify", { exact: true }).first()).toBeVisible();
@@ -220,14 +223,14 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    const file = writeWorkflowFile("valid", N8N_WORKFLOW);
+    const fixture = createWorkflowFixture("valid", N8N_WORKFLOW);
     try {
-      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      await screen.getByLabel("n8n workflow file").setInputFiles(fixture.file);
       const textarea = screen.getByRole("textbox", { name: "n8n workflow JSON" });
       await expect(textarea).toHaveValue(/Webhook/);
       await expect(textarea).toHaveValue(/Shape/);
     } finally {
-      rmSync(join(process.cwd(), file), { force: true });
+      rmSync(fixture.dir, { recursive: true, force: true });
     }
   },
 );
@@ -239,12 +242,12 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    const file = writeWorkflowFile("invalid", "{ not json");
+    const fixture = createWorkflowFixture("invalid", "{ not json");
     try {
-      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      await screen.getByLabel("n8n workflow file").setInputFiles(fixture.file);
       await expect(screen.getByRole("alert").first()).toBeVisible();
     } finally {
-      rmSync(join(process.cwd(), file), { force: true });
+      rmSync(fixture.dir, { recursive: true, force: true });
     }
   },
 );
@@ -256,12 +259,12 @@ test(
     await app.open("/en");
     await agent.act("open the Flows page from the navigation");
     await agent.act("click Import from n8n");
-    const file = writeWorkflowFile("notworkflow", '{"foo": "bar"}');
+    const fixture = createWorkflowFixture("notworkflow", '{"foo": "bar"}');
     try {
-      await screen.getByLabel("n8n workflow file").setInputFiles(file);
+      await screen.getByLabel("n8n workflow file").setInputFiles(fixture.file);
       await expect(screen.getByRole("alert").first()).toBeVisible();
     } finally {
-      rmSync(join(process.cwd(), file), { force: true });
+      rmSync(fixture.dir, { recursive: true, force: true });
     }
   },
 );
@@ -283,13 +286,17 @@ test(
     });
     expect(created.status).toBe(201);
     const { flow } = (await created.json()) as { flow: { id: string } };
-    const run = await fetch(new URL(`/api/flows/${flow.id}/runs`, app.baseUrl), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ input: {} }),
-    });
-    expect(run.status).toBe(422);
-    const body = (await run.json()) as { error?: { code?: string } };
-    expect(body.error?.code).toBe("INVALID_FLOW");
+    try {
+      const run = await fetch(new URL(`/api/flows/${flow.id}/runs`, app.baseUrl), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ input: {} }),
+      });
+      expect(run.status).toBe(422);
+      const body = (await run.json()) as { error?: { code?: string } };
+      expect(body.error?.code).toBe("INVALID_FLOW");
+    } finally {
+      await fetch(new URL(`/api/flows/${flow.id}`, app.baseUrl), { method: "DELETE", headers });
+    }
   },
 );
