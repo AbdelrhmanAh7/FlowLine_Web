@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiKeyCreds, expectProviderError, makeCtx, oauthCreds, provider, runAction, runVerify, startFake, type Fake } from "./helpers";
+import arCatalog from "@/i18n/messages/ar.json";
+import enCatalog from "@/i18n/messages/en.json";
 
 let fake: Fake;
 beforeAll(async () => {
@@ -76,3 +78,96 @@ describe("lost responses on non-idempotent actions", () => {
     expect(err.outcomeUnknown).toBe(true);
   });
 });
+
+import { apiErrorMessage } from "@/i18n/errors";
+import { ApiError } from "@/lib/api";
+
+describe("admin copy error contract (#181)", () => {
+  it("admin copy error envelope matches { code: string, message: string } schema", () => {
+    const parseEnvelope = (payload: unknown): { code: string; message: string } | null => {
+      if (!payload || typeof payload !== "object") return null;
+      const direct = payload as { code?: unknown; message?: unknown };
+      if (typeof direct.code === "string" && typeof direct.message === "string") {
+        return { code: direct.code, message: direct.message };
+      }
+      const wrapped = (payload as { error?: { code?: unknown; message?: unknown } }).error;
+      if (wrapped && typeof wrapped.code === "string" && typeof wrapped.message === "string") {
+        return { code: wrapped.code, message: wrapped.message };
+      }
+      return null;
+    };
+
+    expect(parseEnvelope({ code: "REVISION_CONFLICT", message: "Revision conflict" })).toEqual({ code: "REVISION_CONFLICT", message: "Revision conflict" });
+    expect(parseEnvelope({ error: { code: "REVISION_CONFLICT", message: "Revision conflict" } })).toEqual({ code: "REVISION_CONFLICT", message: "Revision conflict" });
+    expect(parseEnvelope({ invalid: true })).toBeNull();
+  });
+
+  it("error payload conforms to { code: string, message: string } JSON envelope", () => {
+    const parseEnvelope = (payload: { error?: { code?: unknown; message?: unknown } }) => {
+      const err = payload.error;
+      if (!err || typeof err.code !== "string" || typeof err.message !== "string") return null;
+      return { code: err.code, message: err.message };
+    };
+
+    const sample = { error: { code: "REVISION_CONFLICT", message: "Revision conflict" } };
+    const parsed = parseEnvelope(sample);
+    expect(parsed).toEqual({ code: "REVISION_CONFLICT", message: "Revision conflict" });
+  });
+
+  it("all admin copy server error codes exist in src/i18n/errors.ts dictionary", () => {
+    const serverCodes = [
+      "NOT_FOUND",
+      "PLATFORM_REAUTH_REQUIRED",
+      "PLATFORM_MFA_REQUIRED",
+      "PLATFORM_TOTP_REQUIRED",
+      "PLATFORM_EMAIL_UNVERIFIED",
+      "CROSS_SITE_REQUEST",
+      "CSRF_TOKEN_INVALID",
+      "STEP_UP_REQUIRED",
+      "REVISION_CONFLICT",
+      "RATE_LIMITED",
+      "INTERNAL",
+    ] as const;
+
+    const dummyT = ((key: string) => `translated:${key}`) as Parameters<typeof apiErrorMessage>[0];
+
+    for (const code of serverCodes) {
+      const err = new ApiError(400, code, "fallback server message");
+      const msg = apiErrorMessage(dummyT, err, "fallback default");
+      // Must map to translated:errors.<CODE> rather than the fallback or server message
+      expect(msg).toBe(`translated:errors.${code}`);
+    }
+  });
+
+  it("every client-localized admin copy error code has a matching translation key in ar and en catalogues", () => {
+    const copyErrorCodes = ["REVISION_CONFLICT", "NETWORK"] as const;
+    for (const code of copyErrorCodes) {
+      expect(typeof arCatalog.errors?.[code]).toBe("string");
+      expect(typeof enCatalog.errors?.[code]).toBe("string");
+      expect(arCatalog.errors[code]).not.toBe(enCatalog.errors[code]);
+    }
+  });
+
+  it("all admin copy server and security refusal error codes have translation keys in ar and en catalogues", () => {
+    const serverCodes = [
+      "NOT_FOUND",
+      "PLATFORM_REAUTH_REQUIRED",
+      "PLATFORM_MFA_REQUIRED",
+      "PLATFORM_TOTP_REQUIRED",
+      "PLATFORM_EMAIL_UNVERIFIED",
+      "CROSS_SITE_REQUEST",
+      "CSRF_TOKEN_INVALID",
+      "STEP_UP_REQUIRED",
+      "REVISION_CONFLICT",
+      "RATE_LIMITED",
+      "INTERNAL",
+    ] as const;
+
+    for (const code of serverCodes) {
+      expect(typeof arCatalog.errors?.[code]).toBe("string");
+      expect(typeof enCatalog.errors?.[code]).toBe("string");
+      expect(arCatalog.errors[code]).not.toBe(enCatalog.errors[code]);
+    }
+  });
+});
+

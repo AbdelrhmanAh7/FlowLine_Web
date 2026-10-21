@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { Select, Button, Card, Input, Textarea } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { ApiError, api } from "@/lib/api";
+import type { MessageKey } from "@/i18n/types";
 
 type Locale = "ar" | "en";
 type Overrides = Record<Locale, Record<string, string>>;
@@ -94,12 +95,26 @@ export function CopyEditor() {
   }
 
   async function handleWriteError(cause: unknown, fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError") {
-    if (cause instanceof ApiError && cause.code === "STEP_UP_REQUIRED") {
-      const refreshed = await refetchMe();
-      const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
-      setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
-      setError(t("platformAdmin.copyEditor.stepUp"));
-      return;
+    if (cause instanceof ApiError) {
+      if (cause.code === "STEP_UP_REQUIRED") {
+        const refreshed = await refetchMe();
+        const expiresAt = refreshed.data?.stepUpUntil ? Date.parse(refreshed.data.stepUpUntil) : Number.NaN;
+        setStepUpActive(Number.isFinite(expiresAt) && expiresAt > Date.now());
+        setError(t("platformAdmin.copyEditor.stepUp"));
+        return;
+      }
+      if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
+        const errorKey: MessageKey = cause.code === "NETWORK" ? "errors.NETWORK" : "errors.REVISION_CONFLICT";
+        setError(t(errorKey));
+        // For NETWORK errors, the refetch would hit the same connectivity problem; don't await it.
+        // For REVISION_CONFLICT, refetch to get the latest server state.
+        if (cause.code === "REVISION_CONFLICT") {
+          await state.refetch();
+        } else {
+          void state.refetch();
+        }
+        return;
+      }
     }
     await state.refetch();
     setError(t(fallbackKey));
@@ -156,7 +171,12 @@ export function CopyEditor() {
       {!stepUpActive && <p role="note" className="text-warning">{t("platformAdmin.copyEditor.stepUp")}</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
       {message && <p role="status" className="text-success">{message}</p>}
-      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? <p role="alert">{t("platformAdmin.copyEditor.loadError")}</p> : draft && <>
+      {state.isPending ? <p>{t("common.loading")}</p> : state.isError ? (
+        <div className="flex items-center gap-3" role="alert">
+          <p>{t("platformAdmin.copyEditor.loadError")}</p>
+          <Button variant="ghost" size="sm" onClick={() => void state.refetch()}>{t("common.retry")}</Button>
+        </div>
+      ) : draft && <>
         <div className="grid gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
           <Card className="p-4">
             <label className="block text-sm font-medium" htmlFor="copy-search">{t("platformAdmin.copyEditor.search")}</label>

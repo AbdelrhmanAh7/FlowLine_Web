@@ -130,7 +130,7 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | Check | Command |
 |---|---|
 | Lint / typecheck | `pnpm lint` / `pnpm typecheck` |
-| Unit | `pnpm test` |
+| Unit and component (React components in jsdom with Testing Library, `tests/component/`) | `pnpm test` |
 | Contract (adapters against the provider doubles) | `pnpm test:contract` |
 | Integration (real PostgreSQL, real worker code) | `pnpm test:integration` (refuses to run while a test-stack worker is up: `pnpm stop:test`) |
 | E2E, Chromium + Firefox + WebKit, dev server (starts the test stack on :3100) | `pnpm test:e2e`; for Chromium + Firefox only: `pnpm test:e2e --project=chromium --project=firefox` (install the selected browsers first with `pnpm exec playwright install chromium firefox`) |
