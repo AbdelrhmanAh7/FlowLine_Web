@@ -131,3 +131,47 @@ test(
     expect(overview).toMatchObject({ flows: 3, activeRuns: 0 });
   },
 );
+
+test(
+  "@issue-375 AC1: invalid flow creation is rejected and flow count and IDs remain unchanged (supersedes part of #362)",
+  { tags: ["feat:fl-flows-list", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const http = client(base, await signedIn(base, `army-375-${seeded(base, "army-375-owner")}@flowline-e2e.test`));
+    const created = await http.post("/api/workspaces", { name: `Reject ${seeded(base, "army-375-ws", 6)}` });
+    expect(created.status).toBe(201);
+    const ws = (created.json as { workspace: { id: string } }).workspace;
+    const w = `/api/workspaces/${ws.id}`;
+
+    // Seed one valid flow so the initial list is non-empty.
+    const initialFlow = await createFlow(http, ws.id, `Existing ${seeded(base, "army-375-init", 4)}`);
+    expect(initialFlow.id).toBeTruthy();
+
+    // Capture flow list (count and IDs) before the invalid creation attempt.
+    const beforeRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const beforeIds = beforeRows.map((f) => f.id);
+    expect(beforeRows).toHaveLength(1);
+    expect(beforeIds).toContain(initialFlow.id);
+
+    // Attempt invalid flow creation: unknown template ID.
+    const invalidTemplateRes = await http.post(`${w}/flows`, { templateId: "non-existent-template-id" });
+    expect(invalidTemplateRes.status).toBe(400);
+
+    // Verify flow list did not change: flow count and IDs captured before and after match exactly.
+    const afterInvalidTemplateRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const afterInvalidTemplateIds = afterInvalidTemplateRows.map((f) => f.id);
+    expect(afterInvalidTemplateRows).toHaveLength(beforeRows.length);
+    expect(afterInvalidTemplateIds).toEqual(beforeIds);
+
+    // Attempt invalid flow creation: invalid malformed body types (e.g. numeric name).
+    const invalidBodyRes = await http.post(`${w}/flows`, { name: 12345 });
+    expect(invalidBodyRes.status).toBe(400);
+
+    // Verify flow list did not change after second rejected attempt.
+    const afterInvalidBodyRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const afterInvalidBodyIds = afterInvalidBodyRows.map((f) => f.id);
+    expect(afterInvalidBodyRows).toHaveLength(beforeRows.length);
+    expect(afterInvalidBodyIds).toEqual(beforeIds);
+  },
+);
+
