@@ -73,3 +73,68 @@ test(
     expect((await fetch(`${base}/api/platform/audit`, { headers: owner })).status).toBe(404);
   },
 );
+
+// ── Account security page: enable two-step verification (#304 / #197) ──
+test(
+  "@issue-304 AC1: Enable asks for the account password and a wrong password shows an error and no secret",
+  { tags: ["feat:fl-email-flows", "feat:fl-i18n-rtl", "feat:fl-workspace-nav"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "not-the-real-password-1" } });
+    await agent.assert("an error message is shown and no secret key is displayed");
+    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
+  },
+);
+
+test(
+  "@issue-304 AC2: a correct password shows the manual secret and backup codes with the one-time warning",
+  { tags: ["feat:fl-email-flows", "feat:fl-i18n-rtl"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("fill the Account password field with the account password {pw} and submit the form", { params: { pw: "FlowlineDemo-2026!" } });
+    await agent.assert("the secret key and backup codes are displayed left-to-right with a warning that backup codes are shown only once");
+    await expect(screen.getByTestId("totp-secret")).toBeVisible();
+    await expect(screen.getByTestId("totp-secret")).toHaveAttribute("dir", "ltr");
+    await expect(screen.getByTestId("backup-codes")).toHaveAttribute("dir", "ltr");
+    await expect(screen.getByTestId("backup-codes-warning")).toBeVisible();
+  },
+);
+
+test(
+  "@issue-304 AC3: a wrong 6-digit code shows an error and the status stays Off after reload",
+  { tags: ["feat:fl-email-flows", "feat:fl-i18n-rtl"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "FlowlineDemo-2026!" } });
+    await agent.act("fill the Authentication code field with {code} and submit the form", { params: { code: "000000" } });
+    await agent.assert("an error says the code is invalid and the status is still Off");
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
+    await app.reload();
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
+  },
+);
+
+test(
+  "@issue-304 AC5: Cancel leaves the status Off and the secret hidden",
+  { tags: ["feat:fl-email-flows"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/account/security");
+    await agent.act("click the Enable button");
+    await agent.act("click the Cancel button in the password form");
+    await agent.assert("the status remains Off and no secret is shown");
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
+    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
+
+    await agent.act("click the Enable button again");
+    await agent.act("fill the Account password field with {pw} and submit the form", { params: { pw: "FlowlineDemo-2026!" } });
+    await agent.act("click the Cancel button in the verification code form");
+    await agent.assert("the status remains Off and the secret is hidden");
+    await expect(screen.getByTestId("two-factor-status")).toHaveText("Off");
+    await expect(screen.getByTestId("totp-secret")).toHaveCount(0);
+    await expect(screen.getByTestId("backup-codes")).toHaveCount(0);
+  },
+);
