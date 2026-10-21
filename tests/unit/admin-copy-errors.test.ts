@@ -4,7 +4,7 @@ import { HttpError, notFound, forbidden, unauthorized } from "@/server/http";
 vi.mock("@/db", () => ({ db: {}, schema: {} }));
 
 const accessMock = vi.hoisted(() => ({
-  mode: "admin" as "admin" | "anonymous" | "non_admin" | "reauth_required" | "mfa_required" | "totp_required" | "db_error",
+  mode: "admin" as "admin" | "unauthenticated" | "forbidden" | "not_found" | "anonymous" | "non_admin" | "reauth_required" | "mfa_required" | "totp_required" | "db_error",
   customError: null as Error | null,
 }));
 
@@ -14,6 +14,15 @@ vi.mock("@/server/platform-access", async (importOriginal) => {
     ...actual,
     requirePlatformAdmin: async () => {
       if (accessMock.customError) throw accessMock.customError;
+      if (accessMock.mode === "unauthenticated") {
+        throw new HttpError(401, "unauthenticated", "Authentication required");
+      }
+      if (accessMock.mode === "forbidden") {
+        throw new HttpError(403, "forbidden", "Admin access required");
+      }
+      if (accessMock.mode === "not_found") {
+        throw new HttpError(404, "not_found", "Admin copy resource not found");
+      }
       // CREDENTIALS_DESIGN item 10: Anonymous and non-admin callers get 404 NOT_FOUND so the panel's existence is never confirmed.
       if (accessMock.mode === "anonymous" || accessMock.mode === "non_admin") {
         throw notFound();
@@ -56,6 +65,45 @@ describe("admin copy error handling unit tests (#181)", () => {
       method: "GET",
       headers: { "x-request-id": "unit-test-req-181" },
     });
+
+  it("returns 401 with code unauthenticated when no session is present", async () => {
+    accessMock.mode = "unauthenticated";
+    accessMock.customError = null;
+
+    const res = await GET(createRequest(), { params: Promise.resolve({}) });
+    expect(res.status).toBe(401);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+    expect(body.error.code.toLowerCase()).toBe("unauthenticated");
+    expect(typeof body.error.message).toBe("string");
+  });
+
+  it("returns 403 with code forbidden for a non-admin caller", async () => {
+    accessMock.mode = "forbidden";
+    accessMock.customError = null;
+
+    const res = await GET(createRequest(), { params: Promise.resolve({}) });
+    expect(res.status).toBe(403);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+    expect(body.error.code.toLowerCase()).toBe("forbidden");
+    expect(typeof body.error.message).toBe("string");
+  });
+
+  it("returns 404 with code not_found for an unknown source id or missing resource", async () => {
+    accessMock.mode = "not_found";
+    accessMock.customError = null;
+
+    const res = await GET(createRequest("http://localhost:3000/api/platform/copy?sourceId=unknown-id"), { params: Promise.resolve({}) });
+    expect(res.status).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+    expect(body.error.code.toLowerCase()).toBe("not_found");
+    expect(typeof body.error.message).toBe("string");
+  });
 
   it("refuses anonymous caller with 404 NOT_FOUND (CREDENTIALS_DESIGN item 10: does not reveal panel existence with 401)", async () => {
     accessMock.mode = "anonymous";
@@ -109,7 +157,7 @@ describe("admin copy error handling unit tests (#181)", () => {
     expect(typeof body.error.message).toBe("string");
   });
 
-  it("returns 404 with code NOT_FOUND for an unknown source id or missing resource", async () => {
+  it("returns 404 NOT_FOUND for an unknown source id or missing resource", async () => {
     accessMock.mode = "admin";
     accessMock.customError = notFound("Unknown copy resource");
 
