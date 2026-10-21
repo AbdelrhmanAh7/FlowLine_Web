@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import { expect, test, type Page, type Response } from "@playwright/test";
 import { base32Decode, totpCodeFor } from "./tools/totp";
 import { EN_STATE } from "../playwright.config";
@@ -40,7 +41,7 @@ async function collectResponses(page: Page) {
   return bodies;
 }
 
-test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)", async ({ page }) => {
+test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a write-only credential (canary never leaks)", async ({ page, browser }) => {
   test.setTimeout(120_000);
   const bodies = await collectResponses(page);
   const email = uniqueEmail("platform-admin");
@@ -125,6 +126,64 @@ test("platform admin: onboard from a CLI setup code, enrol TOTP, step up, save a
     await expect(englishPreview).toBeVisible();
     await expect(page.locator('[lang="ar"]').getByText("نص عربي للمعاينة", { exact: true })).toBeVisible();
     await expect(publishedNote).toHaveText("Previewed English copy");
+
+    // #323: a refused save shows the translated message for its error code (never the server's text), the editor stays
+    // on screen without the app error boundary, and the same Save draft button saves again without a reload. The
+    // refusals are injected at the network edge; tests/unit/admin-copy-errors.test.ts proves the route
+    // answers with these codes.
+    mkdirSync("artifacts/phase-4/issue-323", { recursive: true });
+    const copyApi = "**/api/platform/copy";
+    const editorAlert = (p: Page) => p.getByRole("main").getByRole("alert");
+    const refuseSave = (p: Page, refusal: { status: number; code: string } | "network") =>
+      p.route(copyApi, (route) => {
+        if (route.request().method() !== "PATCH") return route.continue();
+        if (refusal === "network") return route.abort("failed");
+        return route.fulfill({ status: refusal.status, json: { error: { code: refusal.code, message: "Refused (server text)" } } });
+      });
+    const refusals = [
+      { refusal: { status: 409, code: "REVISION_CONFLICT" }, shown: "This changed since you loaded it. Reload and try again." },
+      { refusal: { status: 403, code: "STEP_UP_REQUIRED" }, shown: "Confirm your identity in the admin panel before saving or publishing." },
+      { refusal: { status: 500, code: "INTERNAL" }, shown: "Could not save the draft. Check the text and refresh if it changed elsewhere." },
+      { refusal: "network" as const, shown: "Can't reach Flowline — check your connection and try again." },
+    ];
+    for (const [i, { refusal, shown }] of refusals.entries()) {
+      await page.locator("#copy-en").fill(`Refused save ${i}`);
+      await refuseSave(page, refusal);
+      try {
+        await page.getByRole("button", { name: "Save draft" }).click();
+        await expect(editorAlert(page)).toHaveText(shown);
+        await expect(page.getByText("Draft saved.")).toHaveCount(0);
+        await expect(page.getByRole("heading", { name: "Copy editor" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "⚠ Something went wrong" })).toHaveCount(0);
+        await page.screenshot({ path: `artifacts/phase-4/issue-323/en-ltr-refusal-${i}.png` });
+      } finally {
+        // A refusal left in place would also refuse the restore below and hide this failure behind it.
+        await page.unroute(copyApi);
+      }
+      await page.getByRole("button", { name: "Save draft" }).click();
+      await expect(page.getByText("Draft saved.")).toBeVisible();
+      await expect(editorAlert(page)).toHaveCount(0);
+    }
+    await page.screenshot({ path: "artifacts/phase-4/issue-323/en-ltr-saved-after-refusal.png" });
+
+    // The same admin session in Arabic (RTL) shows the Arabic catalogue text; nothing is saved from this context.
+    const state = await page.context().storageState();
+    const arabic = await browser.newContext({ storageState: { ...state, cookies: state.cookies.map((c) => (c.name === "fl_locale" ? { ...c, value: "ar" } : c)) } });
+    try {
+      const ar = await arabic.newPage();
+      await ar.goto("/admin/copy");
+      await expect(ar.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(ar.getByRole("heading", { name: "تحرير النصوص" })).toBeVisible();
+      await ar.locator("#copy-en").fill("Refused save ar");
+      await refuseSave(ar, "network");
+      await ar.getByRole("button", { name: "حفظ في المسودة", exact: true }).click();
+      await expect(editorAlert(ar)).toHaveText("تعذّر الوصول إلى Flowline — تحقّق من اتصالك ثم حاول مجددًا.");
+      await expect(ar.getByRole("heading", { name: "⚠ حدث خطأ ما" })).toHaveCount(0);
+      await expect(ar.getByRole("button", { name: "حفظ في المسودة", exact: true })).toBeEnabled();
+      await ar.screenshot({ path: "artifacts/phase-4/issue-323/ar-rtl-network.png" });
+    } finally {
+      await arabic.close();
+    }
   } finally {
     // Always restore the shared published copy, even if an assertion above failed mid-way. Selecting a key while the editor
     // is dirty raises window.confirm (accept it), and Save/Publish are disabled when there is nothing to save or publish.
@@ -230,6 +289,19 @@ test("a non-admin visiting /admin sees the ordinary 404 page, not a redirect tha
   expect(res?.status()).toBe(404);
   expect(page.url()).toMatch(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Platform admin" })).toHaveCount(0);
+});
+
+// #323: the hub's verify browser is this kind of user, so this 404 is the expected refusal, not a missing page.
+test("a non-admin opening /admin/copy sees the ordinary 404 page, not the copy editor or its title", async ({ page }) => {
+  mkdirSync("artifacts/phase-4/issue-323", { recursive: true });
+  await setupUser(page);
+  const res = await page.goto("/admin/copy");
+  expect(res?.status()).toBe(404);
+  expect(page.url()).toMatch(/\/admin\/copy$/);
+  await expect(page.getByRole("heading", { name: "We couldn't find that page", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Copy editor" })).toHaveCount(0);
+  await expect(page).not.toHaveTitle(/Copy editor/);
+  await page.screenshot({ path: "artifacts/phase-4/issue-323/en-ltr-non-admin-404.png" });
 });
 
 test("members see which OAuth app asks for consent BEFORE the provider redirect (workspace-owned app)", async ({ page, browser }) => {

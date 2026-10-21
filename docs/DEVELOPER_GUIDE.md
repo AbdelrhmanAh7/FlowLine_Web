@@ -24,7 +24,18 @@ The complete canonical catalogues are `src/i18n/messages/ar.json` and `src/i18n/
 
 Use `t.plural()` for count messages and the translator's `number`, `date`, `relative`, `duration` and `percent` helpers for localized formatting. Both locales use digits 0–9 (`src/i18n/config.ts` / `format.ts`); Arabic remains RTL. Translate product catalogue content by stable ID. Never concatenate translated sentence fragments. Review wording in context rather than only checking key parity.
 
-Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue.
+Arabic and light are the defaults. English and dark remain selectable. Use logical CSS (`ms`, `me`, `start`, `end`) and keep emails, URLs, code and credentials LTR. The owner copy editor at `/admin/copy` (`src/app/admin/copy/copy-editor.tsx`, props, step-up and write behaviour in its JSDoc) provides protected draft/preview/publish overrides; developer JSON remains the base catalogue. Refusals of `/api/platform/copy` are bounded JSON errors `{ error: { code, message } }` that the client `api()` turns into an `ApiError`; the codes listed in `docs/security/CREDENTIALS_DESIGN.md` item 10 are covered by unit tests in `tests/unit/admin-copy-errors.test.ts`, contract tests in `tests/contract/errors.test.ts`, `e2e-army/200-route-error-headers.e2e.ts` (the #323 tests: bounded JSON error handling and non-admin localized 404 page in Arabic RTL and English LTR), and `e2e/admin-panel.spec.ts` in Playwright.
+
+**Copy editor error states (UI):** The copy editor surfaces the following user-facing error states, all translated in `src/i18n/messages/ar.json` and `en.json` under `platformAdmin.copyEditor.*` and `errors.*`:
+- **Load error** (`loadError`): shown when `GET /api/platform/copy` fails; includes a Retry button that calls `state.refetch()`.
+- **Me load error** (`platformAdmin.copyEditor.stepUp`): when `GET /api/platform/me` fails, the standing step-up prompt shows and the write controls stay disabled.
+- **Save error** (`saveError`): fallback for `PATCH /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Publish error** (`publishError`): fallback for `POST /api/platform/copy` failures other than `REVISION_CONFLICT`, `NETWORK`, or `STEP_UP_REQUIRED`; refetches state.
+- **Revision conflict** (`errors.REVISION_CONFLICT`): shown when the server returns `409 REVISION_CONFLICT`; renders the translated `errors.REVISION_CONFLICT` message for the active locale (never the raw server text) and refetches state.
+- **Step-up required** (`platformAdmin.copyEditor.stepUp`): shown when the server returns `403 STEP_UP_REQUIRED`; refetches `me` and shows the step-up prompt.
+- **Server error** (`saveError`/`publishError`): shown for `5xx` responses; refetches state.
+- **Network error** (`errors.NETWORK`): shown when `fetch` fails (status 0); renders the translated `errors.NETWORK` message (never the raw client text) and starts a refetch of the state without waiting for it, because the query client retries a network failure three times (1, 2 and 4 s backoff, `src/app/providers.tsx`).
+All write errors except `STEP_UP_REQUIRED` call `state.refetch()` to keep the draft in sync. The `common.retry` key is used for the Retry button.
 
 ## Components and design
 
