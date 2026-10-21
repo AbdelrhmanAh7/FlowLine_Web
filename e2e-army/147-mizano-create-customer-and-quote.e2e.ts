@@ -37,7 +37,7 @@ test(
 test(
   "@issue-302 AC1: Mizano integration card, actions, and connect fields are localized in English and Arabic (RTL)",
   { tags: ["feat:fl-integrations", "feat:fl-integration-actions", "feat:fl-i18n-rtl"], session: "fl-user" },
-  async ({ app, agent, screen, browser }) => {
+  async ({ app, agent, screen }) => {
     await app.open("/");
     await agent.act("switch the language to English");
     await agent.act("open the workspace's Integrations page from the navigation");
@@ -47,7 +47,7 @@ test(
     await agent.act("open the connection form for the Mizano integration");
     await expect(screen.getByLabel("Scoped API key")).toBeVisible();
     await expect(screen.getByLabel("Mizano URL")).toBeVisible();
-    await expect(browser.locator("html")).toHaveAttribute("dir", "ltr");
+    await expect(screen.locator("html")).toHaveAttribute("dir", "ltr");
     await agent.act("cancel the connection form");
     await agent.assert("the connection form is closed and no longer visible");
     await expect(screen.getByLabel("Scoped API key")).toBeHidden();
@@ -60,7 +60,7 @@ test(
     await agent.act("open the connection form for the Mizano integration");
     await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeVisible();
     await expect(screen.getByLabel("رابط Mizano")).toBeVisible();
-    await expect(browser.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(screen.locator("html")).toHaveAttribute("dir", "rtl");
     await agent.act("cancel the connection form");
     await agent.assert("the connection form is closed and no longer visible");
     await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeHidden();
