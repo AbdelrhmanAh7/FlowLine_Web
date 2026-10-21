@@ -2,7 +2,7 @@
 
 **Branch:** `ai/295-p2` (targeting `ai/295`, open PR #368)  
 **Originating Sentry issue:** None (feature request #164 / #295, approved by founder)  
-**Tested Commit SHA:** `98cb931f`
+**Tested Commit SHA:** `e3dc55b5`
 
 ---
 
