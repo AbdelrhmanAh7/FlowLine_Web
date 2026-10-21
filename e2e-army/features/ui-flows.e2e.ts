@@ -111,3 +111,18 @@ test("[fl-workspace-nav.2] the workspace shell is Arabic and right-to-left: tran
   await expect(screen.getByRole("heading", { level: 1 })).toHaveText("سجل التشغيل");
   await agent.assert("the Run history page is shown in Arabic inside the workspace");
 });
+
+test("[fl-workspace-nav.3] the user menu opens the security page showing two-step verification Off", { session: "fl-user", tags: ["feat:fl-workspace-nav", "shard:ui-flows", "lvl:ui"] }, async ({ app, screen, agent, browser }) => {
+  needsModel();
+  await browser.setCookies([{ url: apiBase(), name: "fl_locale", value: "en" }]);
+  await app.open("/app");
+  await agent.act("open the user menu by clicking the user avatar or initials button at the bottom of the navigation rail");
+  await expect(screen.getByRole("menuitem", "Security")).toBeVisible();
+  await agent.act("click Security in the user menu");
+  await expect(browser).toHaveURL("/account/security");
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText("Security");
+  await expect(screen.getByRole("heading", "Two-step verification")).toBeVisible();
+  await expect(screen.getByText("Off")).toBeVisible();
+  await agent.assert("the account security page says that two-step verification is off");
+});
+
