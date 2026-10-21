@@ -80,6 +80,10 @@ Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follo
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
+## Mizano localization (#224 / PR #256) — 2026-10-15
+
+Resolved the main merge conflict while retaining all three existing Mizano action translations. Updated connection copy and labels in both catalogues; existing action translations are kept unchanged. The regression in `tests/unit/i18n.test.ts` failed before the Arabic correction and now passes (17/17 total); `pnpm lint` and `pnpm typecheck` pass under Node 26.10.0 (Node 24 remains for hosted CI). The new `e2e-army/147-mizano-create-customer-and-quote.e2e.ts (`@issue-224`)` covers both locales, RTL and an empty connection form. Its local run exits 2 because `.env.test` is absent; browser/screenshots and hosted verification remain pending. No real Mizano connection is claimed.
+
 ## route() error headers (issue #200) — 2026-10-13
 
 `route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.

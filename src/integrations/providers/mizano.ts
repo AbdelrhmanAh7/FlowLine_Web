@@ -60,12 +60,12 @@ const provider: ProviderDef = {
   name: "Mizano",
   icon: "📒",
   category: "Finance",
-  description: "Mizano accounting connector.",
+  description: "Connect FlowLine to your Mizano accounting workspace with a scoped API key.",
   authType: "api_key",
   apiBase: "",
   connectFields: [
-    { key: "token", label: "Scoped API key", secret: true },
-    { key: "baseUrl", label: "Mizano URL", secret: false, placeholder: "https://mizano.example.com" },
+    { key: "token", label: "API key", secret: true },
+    { key: "baseUrl", label: "Base URL", secret: false, placeholder: "https://mizano.example.com" },
   ],
   async identity(ctx) {
     const { data } = await ctx.http.request<unknown>({
