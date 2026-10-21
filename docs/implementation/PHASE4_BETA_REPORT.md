@@ -1,5 +1,12 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Account security Disable review follow-up — 2026-10-21 (#199, PR #262)
+
+The existing MIT better-auth 1.7.6 twoFactor plugin defines `/two-factor/disable` as POST with JSON `{ password }` (`dist/plugins/two-factor/index.mjs`, password-only body schema and handler); the auth catch-all dispatches this endpoint. No code field, custom server implementation or new dependency is needed. The shared Button already defaults to `type="button"` (`src/components/ui/button.tsx`); all three account-security Cancel controls now state that type explicitly and carry `disabled={pending !== null}` so they cannot be clicked while an operation is in flight. Disable and Enable trigger buttons are also disabled while pending. The enable and disable password fields use separate refs; `cancel()` clears both and any pending code and issues no request. Regression assertions check no mutation on Cancel, removal of enrolment secrets/backup codes, password clearing, Cancel disabled during in-flight disable requests, and exactly password-only Disable requests.
+
+Runtime evidence (this checkout, PostgreSQL on `127.0.0.1:5432`, isolated stack `flowline_test_199` on `:3100`, one worker): `pnpm exec playwright test e2e/account-security.spec.ts e2e/arabic.spec.ts --project=chromium --workers=1` — 6 passed, 0 failed, including **"enable, sign in with the code, disable"**, **"Cancel is disabled while disable request is in flight"**, and **"Arabic account security page: RTL page, LTR secret, backup codes and code input, no horizontal scroll"**. Also `pnpm lint` clean, and `vitest run --project unit tests/unit/account-security-two-factor.test.ts tests/unit/i18n.test.ts --maxWorkers=2` — 21 passed, 0 failed. `e2e-army/72-federated-mfa-failure-audit.e2e.ts` holds a locator-level Arabic/RTL case (`feat:fl-i18n-rtl`) that runs and passes here; its model-backed companion and the feature-shard tests run in the hub verify job. Section ٧ of the Arabic `BETA_USER_GUIDE.md` now documents the account security two-step verification flow with matching terminology.
+
+Branch status: branch `ai/199` has `origin/main` merged and is mergeable (no conflict). The diff carries the full account-security implementation and test coverage. Follow-up commands and verification details are recorded in `docs/evidence/199/EVIDENCE.md`.
 
 ## Pilot E2E failure corrections — 2026-10-15
 
