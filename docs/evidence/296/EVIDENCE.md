@@ -1,17 +1,17 @@
 # Evidence — Issue #296: fix: mizano.ts: major: Throwing a plain Error inside a zod .transform
 
-Tested commit: `e604f934`
+Tested commit: `86638098`
 
-All checks and tests were executed locally against commit `e604f934` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
+All checks and tests were executed locally against commit `86638098` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-296`.
 
 ## Acceptance Criteria and Verification
 
 | Req / AC | Description | Verification Method | Result | Commit |
 |---|---|---|---|---|
-| **AC1** | `moneyInput.safeParse` on negative, invalid, or non-primitive values returns `success: false` with a `ZodError` without throwing raw errors. | Unit test `tests/unit/mizano-money-input.test.ts:7-76` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid decimal strings (`"abc"`, `"12.345"`), non-finite numbers (`NaN`, `Infinity`), float noise (`0.1 + 0.2`), and non-primitive types (`null`, `undefined`, `true`, `false`, `{}`, `[]`, functions). | 10/10 unit tests pass (exit code 0) | `e604f934` |
-| **AC2** | `mizano.create_draft_quote` input schema `safeParse` rejects negative `qty`, `unitPrice`, or `taxRate` (both numbers and strings) without throwing; `parse` throws `ZodError`. | Unit test `tests/unit/mizano-money-input.test.ts:78-86, 102-150` and contract tests `tests/contract/mizano.test.ts:415-478` verifying `action.input.safeParse(...)` returns `{ success: false }` with `ZodError` without throwing, and `parse` throws `ZodError`. | 10/10 unit tests pass, 50/50 contract tests pass (exit code 0) | `e604f934` |
-| **AC3** | Valid inputs normalize to 2-decimal strings, including Arabic-Indic digits (`"١٢.٥"` -> `"12.50"`). | Unit test `tests/unit/mizano-money-input.test.ts:88-100, 152-170` directly and in `mizano.create_draft_quote` action input schema format (`"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`, `"15.50"`). Also verified in `tests/unit/i18n-content-text.test.ts` (41/41 pass). | 10/10 unit tests pass, 41/41 i18n tests pass (exit code 0) | `e604f934` |
-| **AC4** | Regression test proves that throwing raw `Error` inside `.transform` escapes `safeParse` (PR #279 bug pattern), whereas `ctx.addIssue` + `z.NEVER` keeps errors within `ZodError`. | Unit test `tests/unit/mizano-money-input.test.ts:172-206` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` + `return z.NEVER` implementation. | 10/10 unit tests pass (exit code 0) | `e604f934` |
+| **AC1** | `moneyInput.safeParse` on negative, invalid, or non-primitive values returns `success: false` with a `ZodError` without throwing raw errors. | Unit test `tests/unit/mizano-money-input.test.ts:7-76` covering negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid decimal strings (`"abc"`, `"12.345"`), non-finite numbers (`NaN`, `Infinity`), float noise (`0.1 + 0.2`), and non-primitive types (`null`, `undefined`, `true`, `false`, `{}`, `[]`, functions). | 10/10 unit tests pass (exit code 0) | `86638098` |
+| **AC2** | `mizano.create_draft_quote` input schema `safeParse` rejects negative `qty`, `unitPrice`, or `taxRate` (both numbers and strings) without throwing; `parse` throws `ZodError`. | Unit test `tests/unit/mizano-money-input.test.ts:78-86, 102-150` and contract tests `tests/contract/mizano.test.ts:415-478` verifying `action.input.safeParse(...)` returns `{ success: false }` with `ZodError` without throwing, and `parse` throws `ZodError`. | 10/10 unit tests pass, 50/50 contract tests pass (exit code 0) | `86638098` |
+| **AC3** | Valid inputs normalize to 2-decimal strings, including Arabic-Indic digits (`"١٢.٥"` -> `"12.50"`). | Unit test `tests/unit/mizano-money-input.test.ts:88-100, 152-170` directly and in `mizano.create_draft_quote` action input schema format (`"10.00"`, `"10.50"`, `"0.00"`, `"12.50"`, `"15.50"`). Also verified in `tests/unit/i18n-content-text.test.ts` (41/41 pass). | 10/10 unit tests pass, 41/41 i18n tests pass (exit code 0) | `86638098` |
+| **AC4** | Regression test proves that throwing raw `Error` inside `.transform` escapes `safeParse` (PR #279 bug pattern), whereas `ctx.addIssue` + `z.NEVER` keeps errors within `ZodError`. | Unit test `tests/unit/mizano-money-input.test.ts:172-206` comparing the flawed `transform((val) => { throw new Error(...) })` pattern against the fixed `ctx.addIssue` + `return z.NEVER` implementation. | 10/10 unit tests pass (exit code 0) | `86638098` |
 
 ---
 
@@ -29,7 +29,7 @@ On base `origin/main`, `moneyInput` is not defined in `src/integrations/provider
 
 ```
 $ pnpm vitest run tests/unit/mizano-money-input.test.ts
- FAIL  |unit| tests/unit/mizano-money-input.test.ts > mizano moneyInput zod schema > AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error
+ FAIL  |unit| tests/unit/mizano-money-input.test.ts > mizano moneyInput zod schema > AC1: safeParse on negative numbers returns { success: false } without throwing raw Error
 AssertionError: expected [Function] to not throw an error but 'TypeError: Cannot read properties of undefined (reading 'safeParse')' was thrown
 ...
 Test Files  1 failed (1)
@@ -57,13 +57,13 @@ expect(() => buggyTransformSchema.safeParse(-5)).toThrowError(
 Unit tests:
 ```
 $ pnpm vitest run tests/unit/mizano-money-input.test.ts
- ✓ |unit| tests/unit/mizano-money-input.test.ts (10 tests) 6ms
+ ✓ |unit| tests/unit/mizano-money-input.test.ts (10 tests) 5ms
    ✓ mizano moneyInput zod schema (10)
-     ✓ AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error 1ms
-     ✓ AC1 & AC2: safeParse on negative decimal strings returns { success: false } without throwing 0ms
-     ✓ AC1 & AC2: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing 0ms
-     ✓ AC1 & AC2: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing 0ms
-     ✓ AC1 & AC2: safeParse on non-number, non-string types returns { success: false } without throwing 0ms
+     ✓ AC1: safeParse on negative numbers returns { success: false } without throwing raw Error 1ms
+     ✓ AC1: safeParse on negative decimal strings returns { success: false } without throwing 0ms
+     ✓ AC1: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing 0ms
+     ✓ AC1: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing 1ms
+     ✓ AC1: safeParse on non-number, non-string types returns { success: false } without throwing 0ms
      ✓ AC2: parse on negative values throws a ZodError, not a plain Error 0ms
      ✓ AC3: normalizes valid positive numbers and decimal strings to fixed scale 2 0ms
      ✓ AC2: mizano.create_draft_quote action input schema uses moneyInput with safeParse 1ms
@@ -72,19 +72,19 @@ $ pnpm vitest run tests/unit/mizano-money-input.test.ts
 
  Test Files  1 passed (1)
       Tests  10 passed (10)
-   Duration  369ms
+   Duration  342ms
 Exit code: 0
 ```
 
 Contract tests:
 ```
 $ pnpm vitest run tests/contract/mizano.test.ts tests/contract/mizano-http.test.ts
- ✓ |contract| tests/contract/mizano.test.ts (50 tests) 29ms
- ✓ |contract| tests/contract/mizano-http.test.ts (3 tests) 164ms
+ ✓ |contract| tests/contract/mizano.test.ts (50 tests) 33ms
+ ✓ |contract| tests/contract/mizano-http.test.ts (3 tests) 99ms
 
  Test Files  2 passed (2)
       Tests  53 passed (53)
-   Duration  504ms
+   Duration  439ms
 Exit code: 0
 ```
 
@@ -94,7 +94,7 @@ $ pnpm vitest run tests/unit/i18n-content-text.test.ts
  ✓ |unit| tests/unit/i18n-content-text.test.ts (41 tests) 11ms
  Test Files  1 passed (1)
       Tests  41 passed (41)
-   Duration  392ms
+   Duration  355ms
 Exit code: 0
 ```
 
