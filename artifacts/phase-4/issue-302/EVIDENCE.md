@@ -17,7 +17,7 @@ This task verifies and completes the internationalization (i18n) of the Mizano a
 4. E2E-Army coverage & CI Head 973b936 Rework:
    - Extended `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` with scenario `@issue-302 AC1` to test the localized Mizano card, action list, and connection dialog fields in both English (LTR) and Arabic (RTL), while strictly respecting the 8-file top-level cap.
    - Identified root cause of CI failure on head `973b936`: the scenario relied on the language switch preserving the route instead of explicitly reopening the Integrations page in Arabic, and used `browser.evaluate` rather than supported fixture assertions.
-   - Replaced `browser.evaluate` with `await expect(browser.locator("html")).toHaveAttribute("dir", "ltr" | "rtl")`, added explicit Arabic Integrations navigation, and asserted connection form closure on cancellation.
+   - Replaced `browser.evaluate` with `await expect(screen.locator("html")).toHaveAttribute("dir", "ltr" | "rtl")`, added explicit Arabic Integrations navigation, and asserted connection form closure on cancellation.
 
 ---
 
@@ -31,7 +31,7 @@ This task verifies and completes the internationalization (i18n) of the Mizano a
   3. Form cancellation lacked explicit locator visibility assertions (`await expect(screen.getByLabel(...)).toBeHidden()`) alongside `agent.assert`.
 - **Resolution**:
   1. Added explicit `agent.act("open the workspace's Integrations page from the navigation")` after switching to Arabic.
-  2. Replaced `browser.evaluate` calls with `await expect(browser.locator("html")).toHaveAttribute("dir", "ltr")` and `await expect(browser.locator("html")).toHaveAttribute("dir", "rtl")`.
+  2. Replaced `browser.evaluate` calls with `await expect(screen.locator("html")).toHaveAttribute("dir", "ltr")` and `await expect(screen.locator("html")).toHaveAttribute("dir", "rtl")`.
   3. Added `await expect(screen.getByLabel("Scoped API key")).toBeHidden()` and `await expect(screen.getByLabel("مفتاح API محدود النطاق")).toBeHidden()` after cancellation.
   4. Removed extra blank line in `tests/unit/i18n-content-text.test.ts`.
   5. Updated `docs/implementation/PROGRESS.md` and docs with commit hash `3212c340`.
