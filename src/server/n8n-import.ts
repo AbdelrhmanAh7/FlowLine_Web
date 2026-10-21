@@ -33,6 +33,30 @@ function invalid(message: string): never {
   throw new HttpError(400, "INVALID_N8N_JSON", message);
 }
 
+/**
+ * Validates whether an arbitrary value is a valid n8n workflow structure.
+ * Checks that it is a non-null object with a non-empty `nodes` array where each
+ * node is an object with valid non-empty string `name` and `type`.
+ */
+export function isN8nWorkflow(json: unknown): boolean {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return false;
+  const obj = json as Record<string, unknown>;
+  if (!Array.isArray(obj.nodes) || obj.nodes.length === 0 || obj.nodes.length > MAX_NODES) return false;
+  for (const n of obj.nodes) {
+    if (!n || typeof n !== "object" || Array.isArray(n)) return false;
+    const node = n as Record<string, unknown>;
+    if (typeof node.name !== "string" || !node.name.trim() || node.name.length > 120) return false;
+    if (typeof node.type !== "string" || !node.type.trim() || node.type.length > 120) return false;
+  }
+  if (obj.connections !== undefined && (typeof obj.connections !== "object" || obj.connections === null || Array.isArray(obj.connections))) {
+    return false;
+  }
+  if (obj.name !== undefined && typeof obj.name !== "string") {
+    return false;
+  }
+  return true;
+}
+
 function hasExpressionOrCredential(v: unknown): boolean {
   if (v === undefined || v === null) return false;
   const str = typeof v === "string" ? v : JSON.stringify(v);
@@ -181,7 +205,18 @@ function mapNode(
 
 /** Converts an n8n workflow export into a FlowLine graph. Unsupported nodes become labelled placeholders that block runs. */
 export function n8nToFlow(json: unknown): { name: string; graph: FlowGraph } {
-  const parsed = workflowSchema.safeParse(json);
+  let target = json;
+  if (typeof target === "string") {
+    try {
+      target = JSON.parse(target.replace(/^\uFEFF/, "").trim());
+    } catch {
+      invalid("This is not valid JSON");
+    }
+  }
+  if (!isN8nWorkflow(target)) {
+    invalid("This is not an n8n workflow export");
+  }
+  const parsed = workflowSchema.safeParse(target);
   if (!parsed.success) invalid("This is not an n8n workflow export");
   const workflow = parsed.data;
 

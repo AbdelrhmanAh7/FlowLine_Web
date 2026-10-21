@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { n8nToFlow } from "@/server/n8n-import";
+import { isN8nWorkflow, n8nToFlow } from "@/server/n8n-import";
 import { validateGraph } from "@/engine/validate";
 import { HttpError } from "@/server/http";
+import en from "@/i18n/messages/en.json";
+import ar from "@/i18n/messages/ar.json";
 
 const workflow = {
   name: "Lead intake",
@@ -272,5 +274,81 @@ describe("n8nToFlow", () => {
       connections: {},
     };
     expect(() => n8nToFlow(huge)).toThrow(/too large to import/);
+  });
+
+  it("maps n8n jsCode parameter as well as functionCode", () => {
+    const res = n8nToFlow({
+      nodes: [{ name: "Fn", type: "n8n-nodes-base.code", position: [0, 0], parameters: { jsCode: "return [{ json: {} }];" } }],
+    });
+    const code = (res.graph.nodes[0].data.config as { code: string }).code;
+    expect(code).toContain("return [{ json: {} }];");
+  });
+
+  it("accepts a workflow with no name or no connections", () => {
+    const res = n8nToFlow({
+      nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }],
+    });
+    expect(res.name).toBe("Imported n8n workflow");
+    expect(res.graph.edges).toHaveLength(0);
+  });
+
+  it("rejects an unsupported trigger or a lone unsupported node: NO_TRIGGER plus the placeholder block", () => {
+    const unknownTrigger = n8nToFlow({ nodes: [{ name: "Cron", type: "n8n-nodes-base.scheduleTrigger", position: [0, 0], parameters: {} }], connections: {} }).graph;
+    expect(unknownTrigger.nodes[0].type).toBe("transform.json");
+    const codes = validateGraph(unknownTrigger).map((i) => i.code);
+    expect(codes).toContain("SETUP_REQUIRED");
+    expect(codes).toContain("NO_TRIGGER");
+  });
+
+  it("parses string workflow input and strips UTF-8 BOM", () => {
+    const jsonStr = "\uFEFF" + JSON.stringify(workflow);
+    const { graph } = n8nToFlow(jsonStr);
+    expect(graph.nodes).toHaveLength(3);
+  });
+
+  it("handles extra n8n workflow export properties (meta, pinData, settings)", () => {
+    const extra = {
+      ...workflow,
+      meta: { templateCredsSetupCompleted: true, instanceId: "test-123" },
+      pinData: { Webhook: [{ json: { foo: "bar" } }] },
+      versionId: "12345",
+      settings: { executionOrder: "v1" },
+    };
+    const { graph } = n8nToFlow(extra);
+    expect(graph.nodes).toHaveLength(3);
+  });
+
+  it("isN8nWorkflow validates n8n workflow structure thoroughly", () => {
+    expect(isN8nWorkflow(workflow)).toBe(true);
+    expect(isN8nWorkflow({ nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook" }] })).toBe(true);
+
+    // Rejects non-objects and primitives
+    expect(isN8nWorkflow(null)).toBe(false);
+    expect(isN8nWorkflow(undefined)).toBe(false);
+    expect(isN8nWorkflow(42)).toBe(false);
+    expect(isN8nWorkflow("string")).toBe(false);
+    expect(isN8nWorkflow([])).toBe(false);
+
+    // Rejects empty or missing nodes
+    expect(isN8nWorkflow({})).toBe(false);
+    expect(isN8nWorkflow({ nodes: [] })).toBe(false);
+    expect(isN8nWorkflow({ foo: "bar" })).toBe(false);
+
+    // Rejects nodes with missing or invalid name/type
+    expect(isN8nWorkflow({ nodes: [{}] })).toBe(false);
+    expect(isN8nWorkflow({ nodes: [{ name: "Hook" }] })).toBe(false);
+    expect(isN8nWorkflow({ nodes: [{ type: "n8n-nodes-base.webhook" }] })).toBe(false);
+    expect(isN8nWorkflow({ nodes: [{ name: "", type: "n8n-nodes-base.webhook" }] })).toBe(false);
+    expect(isN8nWorkflow({ nodes: [{ name: "Hook", type: "" }] })).toBe(false);
+    expect(isN8nWorkflow({ nodes: ["not-an-object"] })).toBe(false);
+
+    // Rejects invalid connections structure
+    expect(isN8nWorkflow({ nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook" }], connections: "invalid" })).toBe(false);
+    expect(isN8nWorkflow({ nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook" }], connections: [1, 2] })).toBe(false);
+  });
+
+  it("has exact upload button text matching e2e requirements in en and ar", () => {
+    expect(en.flows.importN8nFile).toBe("Upload .json file");
+    expect(ar.flows.importN8nFile).toBe("رفع ملف .json");
   });
 });

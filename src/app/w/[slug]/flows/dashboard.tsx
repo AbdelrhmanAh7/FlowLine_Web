@@ -92,6 +92,25 @@ export function useCreateFlow() {
   });
 }
 
+function isN8nWorkflow(json: unknown): boolean {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return false;
+  const obj = json as Record<string, unknown>;
+  if (!Array.isArray(obj.nodes) || obj.nodes.length === 0) return false;
+  for (const n of obj.nodes) {
+    if (!n || typeof n !== "object" || Array.isArray(n)) return false;
+    const node = n as Record<string, unknown>;
+    if (typeof node.name !== "string" || !node.name.trim()) return false;
+    if (typeof node.type !== "string" || !node.type.trim()) return false;
+  }
+  if (obj.connections !== undefined && (typeof obj.connections !== "object" || obj.connections === null || Array.isArray(obj.connections))) {
+    return false;
+  }
+  if (obj.name !== undefined && typeof obj.name !== "string") {
+    return false;
+  }
+  return true;
+}
+
 function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT();
   const [text, setText] = useState("");
@@ -111,14 +130,15 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   };
 
   const submit = () => {
+    const content = text.replace(/^\uFEFF/, "").trim();
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(content);
     } catch {
       setError(t("flows.importN8nInvalid"));
       return;
     }
-    if (!parsed || typeof parsed !== "object" || !("nodes" in parsed) || !Array.isArray((parsed as Record<string, unknown>).nodes) || (parsed as { nodes: unknown[] }).nodes.length === 0) {
+    if (!isN8nWorkflow(parsed)) {
       setError(t("flows.importN8nNotWorkflow"));
       return;
     }
@@ -130,7 +150,8 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const content = await file.text();
+      const raw = await file.text();
+      const content = raw.replace(/^\uFEFF/, "").trim();
       let parsed: unknown;
       try {
         parsed = JSON.parse(content);
@@ -138,7 +159,7 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
         setError(t("flows.importN8nInvalid"));
         return;
       }
-      if (!parsed || typeof parsed !== "object" || !("nodes" in parsed) || !Array.isArray((parsed as Record<string, unknown>).nodes) || (parsed as { nodes: unknown[] }).nodes.length === 0) {
+      if (!isN8nWorkflow(parsed)) {
         setError(t("flows.importN8nNotWorkflow"));
         return;
       }
@@ -158,7 +179,13 @@ function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
     <Dialog open={open} onOpenChange={handleOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>
       <p className="mt-2 text-sm text-muted">{t("flows.importN8nHint")}</p>
       <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label={t("flows.importN8nFileInput")} tabIndex={-1} onChange={onFile} />
-      <Button variant="ghost" className="mt-2" onClick={() => fileRef.current?.click()}>
+      <Button
+        variant="ghost"
+        className="mt-2"
+        onClick={() => fileRef.current?.click()}
+        aria-label={t("flows.importN8nFile")}
+        data-testid="import-n8n-file-btn"
+      >
         {t("flows.importN8nFile")}
       </Button>
       <Textarea
