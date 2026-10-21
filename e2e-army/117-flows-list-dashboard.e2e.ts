@@ -270,6 +270,23 @@ test(
 );
 
 test(
+  "@issue-378 AC1: uploading a file with non-workflow nodes JSON is rejected with an error alert",
+  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+  async ({ app, agent, screen }) => {
+    await app.open("/en");
+    await agent.act("open the Flows page from the navigation");
+    await agent.act("click Import from n8n");
+    const fixture = createWorkflowFixture("invalidnodes", '{"nodes": [{}]}');
+    try {
+      await screen.getByLabel("n8n workflow file").setInputFiles(fixture.file);
+      await expect(screen.getByRole("alert").first()).toBeVisible();
+    } finally {
+      rmSync(fixture.dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   "@issue-295 AC8: an imported workflow with a placeholder cannot run until the placeholder is replaced",
   { tags: ["feat:fl-flow-validation", "feat:fl-flows-api"], session: "fl-user" },
   async ({ app, browser }) => {
