@@ -129,6 +129,17 @@ describe("e2e-army docs and suite", () => {
     expect(top.length).toBeLessThanOrEqual(8);
   });
 
+  it("tests folded into another file to stay within the cap keep their titles and tags (#166 lives in 200-route-error-headers)", () => {
+    const src = readFileSync(join(root, "e2e-army", "200-route-error-headers.e2e.ts"), "utf8");
+    for (const head of [
+      `test("@issue-166 AC1: the templates gallery shows 'ETA Invoice Notify' and Use template creates a flow from it", { session: "fl-user", tags: ["feat:fl-templates", "lvl:ui"] }`,
+      `test("@issue-166 AC1: an unknown template id is rejected and creates no flow", { session: "fl-user", tags: ["feat:fl-templates", "lvl:api"] }`,
+    ]) {
+      expect(src.split(head).length - 1, head).toBe(1);
+    }
+    expect(src).toContain("expect(status).toBe(400);");
+  });
+
   it("AGENTS.md, README and DEVELOPER_GUIDE state the feat:<id> rule for every PR (not only user-flow PRs), the waiver and the feature map gap", () => {
     for (const file of ["AGENTS.md", "README.md", "docs/DEVELOPER_GUIDE.md"]) {
       const text = readFileSync(join(root, file), "utf8").replace(/\s+/g, " ");

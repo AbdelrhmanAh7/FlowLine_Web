@@ -6,7 +6,7 @@ import { useT } from "@/i18n/client";
 export function LandingDocsLink() {
   const t = useT();
   return (
-    <Button variant="ghost" size="sm" className="!h-auto !px-0 text-base hover:!bg-transparent" disabledReason={t("landing.docsReason")}>
+    <Button variant="ghost" size="sm" className="!h-auto !px-0 border-b border-transparent py-1 text-base hover:!bg-transparent" disabledReason={t("landing.docsReason")}>
       {t("landing.nav.docs")}
     </Button>
   );

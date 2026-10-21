@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { preload } from "react-dom";
 import { auth } from "@/lib/auth";
 import { LANDING_TEMPLATES, LOCAL_TEMPLATES } from "@/engine/templates";
 import { listProviders } from "@/integrations/registry";
@@ -12,7 +13,12 @@ import { HeroPin } from "@/components/landing/hero-pin";
 import { Magnetic } from "@/components/landing/magnetic";
 import { Reveal, WordReveal } from "@/components/landing/reveal";
 import { ScrollRoot } from "@/components/landing/scroll-root";
-import { getT } from "@/i18n/server";
+import { DemoBento, BENTO_TILES } from "@/components/landing/demo-bento";
+import { DemoVideo } from "@/components/landing/demo-video";
+import { DemoWalkthrough } from "@/components/landing/demo-walkthrough";
+import { clipView, demoManifestForRequest, DEMO_TEST_COOKIE, walkthroughView } from "@/lib/demo-media";
+import { getLocale, getT } from "@/i18n/server";
+import { getTheme } from "@/theme/server";
 import type { MessageKey } from "@/i18n/types";
 import { LandingNav } from "@/components/landing/landing-nav";
 
@@ -24,6 +30,15 @@ export default async function Landing() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
   const signedIn = Boolean(session);
   const t = await getT();
+  // Recorded demo media (issue 100): without public/media/demo/manifest.json everything below renders exactly as before.
+  const [locale, theme, store] = await Promise.all([getLocale(), getTheme(), cookies()]);
+  const manifest = await demoManifestForRequest(store.get(DEMO_TEST_COOKIE)?.value);
+  const demoTheme = theme === "dark" ? "dark" : "light"; // "system" and anything without a dark twin use the light assets
+  const heroView = manifest && clipView(manifest, "hero", locale, demoTheme);
+  const bentoTiles = manifest ? BENTO_TILES.flatMap((id) => { const view = clipView(manifest, id, locale, demoTheme); return view ? [{ id, view }] : []; }) : [];
+  const walkthrough = manifest && walkthroughView(manifest, locale, demoTheme);
+  // The hero poster is the LCP element: tell the browser early and at high priority.
+  if (heroView) preload(heroView.poster.src, { as: "image", fetchPriority: "high" });
   // Built-in template copy is translated by id; anything else keeps the engine's English text.
   const tr = (key: string, fallback: string) => (t.has(key) ? t(key as MessageKey) : fallback);
 
@@ -51,8 +66,8 @@ export default async function Landing() {
             its two groups take part in this flex-wrap layout directly; the preferences are pushed to their own full-width line with `order-last`.
           flex-wrap is the safety net: if a translation ever makes a row too wide, a group drops to the next line instead of overflowing the page.
         */}
-        <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8 lg:min-h-16 lg:content-center lg:py-0">
+        <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur-sm min-h-14 lg:h-16">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8 min-h-14 lg:h-16 lg:py-0">
             <Link href="/" aria-label={t("common.homeAria")} className="shrink-0">
               <Logo />
             </Link>
@@ -85,9 +100,9 @@ export default async function Landing() {
         <main>
           <section id="product" className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-14 pb-16 text-center sm:px-8 sm:pt-20">
             <span className="rounded-full border border-line-strong bg-card px-3 py-1 text-sm text-med">{t("landing.badge")}</span>
-            <h1 className="mt-6 max-w-3xl text-[34px] leading-[40px] font-semibold tracking-tight sm:text-[48px] sm:leading-[56px]">
+            <h1 className="mt-6 max-w-3xl min-h-[80px] text-[34px] leading-[40px] font-semibold tracking-tight sm:min-h-[112px] sm:text-[48px] sm:leading-[56px]">
               {t("landing.heroTitle")}{" "}
-              <span className="text-accent-text">
+              <span className="text-accent-text inline-block whitespace-nowrap">
                 {t("landing.heroAccent")}
               </span>
             </h1>
@@ -111,8 +126,15 @@ export default async function Landing() {
               { id: "t", type: "trigger.manual", label: t("landing.heroNodes.trigger"), sub: t("landing.heroNodes.triggerSub") },
               { id: "n", type: "transform.json", label: t("landing.heroNodes.transform"), sub: t("landing.heroNodes.transformSub") },
               { id: "c", type: "logic.condition", label: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub") },
-            ]} />
+            ]} media={heroView ? (
+              <div className="overflow-hidden rounded-xl border border-line bg-card">
+                <DemoVideo view={heroView} label={t("landing.demo.heroAria")} />
+              </div>
+            ) : undefined} />
+            {walkthrough && <div className="mt-6"><DemoWalkthrough view={walkthrough} /></div>}
           </section>
+
+          <DemoBento tiles={bentoTiles} />
 
           <FlowScene nodes={[...flowNodes]} title={t("landing.flowSceneTitle")} body={t("landing.flowSceneBody")} />
 

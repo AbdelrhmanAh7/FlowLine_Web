@@ -1,5 +1,13 @@
 # Landing demo media
 
+This document covers both halves of the landing demo: how the media is recorded from the real UI (issue
+[#99](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/99), merged; its 46 assets and `manifest.json` are in `public/media/demo/`)
+and how the landing page consumes it (issue [#100](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/100), section
+[Consumption on the landing page](#consumption-on-the-landing-page)). Research, style spec and umbrella:
+[#96](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/96).
+
+## Recorded clips
+
 The landing page's demo videos are recorded from the **real Flowline UI** by one local, free command. Nothing here runs
 in CI (owner rule: CI jobs stay under 5 minutes and never build media). Issue [#99](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/99)
 builds the pipeline; [#100](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/100) embeds the result on the landing page
@@ -123,6 +131,106 @@ the hero's decoded Run button within 6 levels per channel of `semantic.light.acc
 `captions` with `lang`; `chapter-still` with `chapter`). Landing code treats a missing manifest as "no demo yet".
 `demo:verify` prints `stale:` when `src/` changed since any recording's commit; regenerate at UI freezes only (each full rebuild adds
 about 15-20 MB of binaries to git history).
+
+## Consumption on the landing page
+
+**The manifest is the only coupling.** `src/lib/demo-media.ts` reads `public/media/demo/manifest.json` on the server (`schema: 1`,
+a `hero` clip required). Missing, unreadable or invalid: `readDemoManifest` returns `null` and the page renders exactly as before
+(today's `HeroPin` illustration, no section, no button, no console output). Malformed clips and files are dropped; file paths must
+be plain names (no folders). Size, caching and `Range` delivery are measured in [Delivery](#delivery) and
+[Measured performance](#measured-performance).
+
+| Piece | File | What it does |
+|---|---|---|
+| Reader + helpers | `src/lib/demo-media.ts` | `readDemoManifest`, `parseManifest`, `fileFor(manifest, clip, locale, theme, kind, extra)` (dark falls back to light, a locale without files to Arabic), `clipView` / `walkthroughView` (serialisable props) |
+| Pure client helpers | `src/lib/demo-source.ts` | `chooseSource(files, caps)`, `shouldSkipVideo`, `startPlayback`; re-exported by `demo-media.ts` |
+| `DemoVideo` | `src/components/landing/demo-video.tsx` | one loop: poster, lazy start, source choice, Pause/Play |
+| Bento | `src/components/landing/demo-bento.tsx` | four tiles: templates (wide), build (square), history (square), run (wide); one column below `lg`, three columns from `lg` |
+| Walkthrough | `src/components/landing/demo-walkthrough.tsx` | native `dialog` element + chapter stepper + EN/AR caption tracks |
+| Wiring | `src/app/page.tsx` | hero visual inside `.hero-scrub` (via `HeroPin`'s `media` prop), the "Watch the walkthrough" button, the bento |
+
+### Behaviour of a loop (`DemoVideo`)
+
+- **Server markup is correct without JS**: a `video` element with `muted playsInline loop preload="none" poster width height aria-label` in a box
+  with a fixed `aspect-ratio` to reserve space (no layout shift from the media), no `autoplay` attribute, an H.264 `source` element as the default.
+  The hero poster is the LCP element and is preloaded early (`preload(..., { as: "image", fetchPriority: "high" })`).
+- **JS starts it** only after `window.load` and once the tile is visible (IntersectionObserver, threshold 0.25, root margin 200 px);
+  it pauses when out of view or when the tab is hidden. `video.muted = true` is set in the ref callback before any `play()`.
+- **Source choice** (`chooseSource`, `MediaCapabilities.decodingInfo` with the manifest's `type`, size, fps and bitrate): AV1 if
+  supported, smooth and power efficient; else H.264 if supported; else software AV1 (supported and smooth); else poster + Play.
+  `src` is set only after the choice, so exactly one video file is downloaded. Without MediaCapabilities it falls back to
+  `canPlayType` (H.264 first).
+- **No video at all** (poster + a visible **Play demo** button, nothing fetched) under `prefers-reduced-motion: reduce`,
+  `navigator.connection.saveData` and `effectiveType` `slow-2g`/`2g`. Pressing the button plays once, without loop. The media query is
+  followed live: switching reduce on pauses at once.
+- **A rejected `play()`** (iOS Low Power Mode, `NotAllowedError`) shows the Play button; the first tap anywhere on the tile starts it.
+- **Pause/Play button** on every loop longer than 5 s (WCAG 2.2.2): at least 44x44 px, `aria-pressed` (true while paused),
+  keyboard operable, at the inline end; the visitor's pause is kept for the session (`sessionStorage`, key
+  `flowline.demo.paused`) and is never undone by scrolling. Both labels sit in one grid cell, so the button keeps
+  its size and its text does not move when it flips (no layout shift).
+
+### Walkthrough
+
+The button (`data-testid="demo-watch"`) opens the dialog with `showModal()`; Esc or Close closes it and focus returns to the
+button. The video has `controls`, no loop, a `track kind="captions"` element for `ar` and `en` (the page language is the default track,
+styled by `::cue` in `globals.css`). The stepper has one button per manifest chapter plus Back/Next; `aria-current="step"`; Left/Right
+arrows follow the reading direction (flipped in RTL), Home/End jump. Choosing a chapter seeks the video to its start time.
+Under reduced motion nothing plays by itself. Under reduced motion, or when the video cannot play (a media `error`), the active
+chapter's **still** and text are shown, so the walkthrough works without playback. Turning reduced motion on while it plays pauses it at
+once; reopening the dialog drops a failed file and retries the video, and the stills stay until that retry plays. A visitor's tap may use the H.264 file when no codec
+was reported playable, but only if `canPlayType` accepts it; otherwise only the poster remains. Caption track labels come from
+`landing.demo.captionLang.*`. No API calls; it works logged out.
+
+### Delivery
+
+`next.config.ts` `headers()` configures `/media/demo/:path*` with `Cache-Control: public, max-age=31536000, immutable` (file names are
+content-hashed; Next's default for `public/` is `max-age=0`). The "served media" test in
+`e2e/landing-demo.spec.ts` requests bytes 0–1023 of real content-hashed media (`hero.ar.light.av1.e9c86093.mp4`) through Next's real static server
+and checks status 206, immutable caching headers, `Content-Range: bytes 0-1023/658371`, and the 1024-byte partial body.
+
+### Measured performance
+
+Lighthouse (desktop, performance only) on production builds, before (`main` `9b4d76ad`) and after (`1fad4fc3`): median 96 → 97, LCP element the
+H1 heading → the hero poster, added initial JS +3,740 B gz. The AC7 Chromium test fails on any layout shift whose source is in a demo surface.
+**CLS is not literally 0, an accepted deviation from AC7:** one small shift (0.0039) comes from the hero copy outside the demo, and it exists
+on `main` as well. It is recorded as a follow-up in `NEXT_ACTION.md`. Numbers, commands and the per-run table:
+[`artifacts/issue-100/EVIDENCE.md`](../../artifacts/issue-100/EVIDENCE.md#performance-ac7).
+
+### Honest copy
+
+Every string is in `src/i18n/messages/{ar,en}.json` under `landing.demo.*` (identical keys; Arabic is the source). The page says
+"Recorded in the app on sample data" and makes no claim about AI, integrations, pricing or numbers.
+
+### Tests and fixtures
+
+- `e2e/fixtures/demo/` (14,772 bytes total file contents, below the 150 KB cap): a schema-1 manifest plus one tiny video, poster and two caption files.
+- On the test stack (`FLOWLINE_ENV=test`, ignored everywhere else) the cookie `fl_test_demo=fixture` makes the server read the fixture
+  manifest and `fl_test_demo=off` ignores a real manifest. `playwright.config.ts` sets `off` for every spec, so the legacy hero keeps
+  being tested after the real media lands; `e2e/landing-demo.spec.ts` sets `fixture` and answers `/media/demo/*` with `page.route`.
+  Playwright builds lack H.264, so playback is stubbed: those specs assert **when** video is requested, **which** file and what the
+  visitor can operate, not decoding.
+- `e2e-army/100-landing-demo.e2e.ts` is the blocking `e2e-army` flow (hero, Pause/Play, walkthrough in Arabic, bento, reduced motion and missing manifest).
+- `tests/unit/landing-demo-media.test.ts` (manifest parsing, `fileFor`, `chooseSource`, the `play()` handler, the cache header, i18n keys) and
+  `tests/unit/landing-demo-markup.test.ts` (server markup).
+
+### Reusing the player for another clip
+
+`DemoVideo` takes any `ClipView`, and `clipView(manifest, id, locale, theme)` builds one for any clip id in the manifest. A further
+clip (for example the story video of #137) needs only its entry in the manifest and one `DemoVideo` element with `view={clipView(manifest, "story", locale, theme)}`; no
+second player.
+
+### Regenerating or swapping media
+
+Run the #99 pipeline and commit `public/media/demo/`; nothing else changes. If a locale has no files, the page falls back to the
+Arabic ones; a clip without a poster or video is left out of the bento.
+
+### Verification setup (issue #100)
+
+With no `public/media/demo/manifest.json`, the correct result is the legacy `HeroPin`, with no demo button or bento.
+Do not add placeholder production media to make those controls appear. A browser route for `manifest.json` cannot
+change the server filesystem reader. Fixture verification must start the app with `FLOWLINE_ENV=test`, set
+`fl_test_demo=fixture` before navigation, and intercept the media requests. The army test does this for EN and AR;
+its missing-manifest case uses `fl_test_demo=off`. Production ignores both cookie overrides.
 
 ## Troubleshooting
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMotionValueEvent, useScroll } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { FlowIllustration, type IllustrationNode } from "./flow-illustration";
 import { useFlowProgress } from "./flow-progress";
 import { FlowStepPreview } from "./flow-step-preview";
@@ -17,8 +17,11 @@ import { Reveal } from "./reveal";
  * declared in globals.css inside ONE `@supports (animation-timeline: view())` + `(min-width: 1024px)` +
  * `(prefers-reduced-motion: no-preference)` block, so the fallback has no dead scroll space. The markup is the same in
  * every case. Transform only, no layout shift.
+ *
+ * `media` (issue 100): when the demo manifest exists, the recorded hero loop takes the place of the illustration and step preview inside
+ * `.hero-scrub`; the pin, the scrub and the testid stay the same. Without it the page renders exactly as before.
  */
-export function HeroPin({ nodes, label }: { nodes: IllustrationNode[]; label: string }) {
+export function HeroPin({ nodes, label, media }: { nodes: IllustrationNode[]; label: string; media?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start center", "end center"] });
   const lit = useFlowProgress(scrollYProgress, nodes.length);
@@ -32,10 +35,12 @@ export function HeroPin({ nodes, label }: { nodes: IllustrationNode[]; label: st
     <div ref={ref} data-testid="landing-hero-scene" className="hero-pin w-full max-w-4xl">
       <div className="hero-pin-stage">
         <div className="hero-scrub">
+          {media ?? (<>
           <div role="group" aria-label={label} className="w-full rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
             <FlowIllustration nodes={nodes} lit={active + 1} onSelect={(index) => { selectedAt.current = scrollYProgress.get(); setSelected(index); }} />
           </div>
           <Reveal><FlowStepPreview node={nodes[active]} step={active} testId="landing-hero-step-preview" /></Reveal>
+          </>)}
         </div>
       </div>
     </div>

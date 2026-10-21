@@ -1,0 +1,530 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-09T00:00:00Z",
+  "uiCommit": "fixture",
+  "tooling": {},
+  "clips": {
+    "hero": {
+      "shape": "window",
+      "aspect": "16/9",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "durationS": 16,
+      "loop": true
+    },
+    "templates": {
+      "shape": "wide",
+      "aspect": "16/9",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "durationS": 7,
+      "loop": true
+    },
+    "build": {
+      "shape": "square",
+      "aspect": "1/1",
+      "width": 1080,
+      "height": 1080,
+      "fps": 30,
+      "durationS": 8,
+      "loop": true
+    },
+    "run": {
+      "shape": "wide",
+      "aspect": "16/9",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "durationS": 7,
+      "loop": true
+    },
+    "history": {
+      "shape": "square",
+      "aspect": "1/1",
+      "width": 1080,
+      "height": 1080,
+      "fps": 30,
+      "durationS": 6,
+      "loop": true
+    },
+    "walkthrough": {
+      "shape": "window",
+      "aspect": "16/9",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "durationS": 53,
+      "loop": false,
+      "chapters": [
+        {
+          "id": "templates",
+          "t": 0
+        },
+        {
+          "id": "shape",
+          "t": 12
+        },
+        {
+          "id": "run",
+          "t": 25
+        },
+        {
+          "id": "inspect",
+          "t": 38
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "path": "hero.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "path": "hero.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "hero",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "hero.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "path": "hero.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "path": "hero.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "hero",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "hero.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "templates.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "templates.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "templates",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "templates.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "templates.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "templates.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "templates",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "templates.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "build.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "build.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "build",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "build.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "build.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "build.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "build",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "build.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "run.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "run.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "run",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "run.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "run.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "run.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "run",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "run.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "history.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "history.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "history",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "history.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.08M.08\"",
+      "path": "history.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.640028\"",
+      "path": "history.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "history",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "history.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "path": "walkthrough.ar.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "path": "walkthrough.ar.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "poster",
+      "path": "walkthrough.ar.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "kind": "captions",
+      "lang": "ar",
+      "path": "walkthrough.ar.fx000001.vtt",
+      "bytes": 200
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "templates",
+      "path": "walkthrough.ar.light.ch1.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "shape",
+      "path": "walkthrough.ar.light.ch2.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "run",
+      "path": "walkthrough.ar.light.ch3.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "ar",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "inspect",
+      "path": "walkthrough.ar.light.ch4.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "av1",
+      "type": "video/mp4; codecs=\"av01.0.09M.08\"",
+      "path": "walkthrough.en.light.av1.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 600000
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "video",
+      "codec": "h264",
+      "type": "video/mp4; codecs=\"avc1.64002A\"",
+      "path": "walkthrough.en.light.h264.fx000001.mp4",
+      "bytes": 1682,
+      "bitrate": 1200000
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "poster",
+      "path": "walkthrough.en.light.poster.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "kind": "captions",
+      "lang": "en",
+      "path": "walkthrough.en.fx000001.vtt",
+      "bytes": 200
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "templates",
+      "path": "walkthrough.en.light.ch1.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "shape",
+      "path": "walkthrough.en.light.ch2.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "run",
+      "path": "walkthrough.en.light.ch3.fx000001.jpg",
+      "bytes": 583
+    },
+    {
+      "clip": "walkthrough",
+      "locale": "en",
+      "theme": "light",
+      "kind": "chapter-still",
+      "chapter": "inspect",
+      "path": "walkthrough.en.light.ch4.fx000001.jpg",
+      "bytes": 583
+    }
+  ]
+}

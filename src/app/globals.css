@@ -287,6 +287,19 @@ html, body {
   }
 }
 
+/*
+ * Landing demo media (issue 100). Captions of the walkthrough (`<track kind="captions">`, `ar` and `en`) take the design-system colours;
+ * the modal dialog's backdrop is the page background, dimmed. Nothing here moves: the loops are the only motion, and DemoVideo
+ * never starts them under prefers-reduced-motion, Save-Data or 2g (see src/components/landing/demo-video.tsx).
+ */
+::cue {
+  color: var(--text-hi);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+.demo-dialog::backdrop { background: color-mix(in oklab, var(--bg) 72%, transparent); }
+
 /* ───────── Reduced motion: non-essential motion off; running becomes a static ring ───────── */
 
 @media (prefers-reduced-motion: reduce) {
