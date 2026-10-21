@@ -2,7 +2,7 @@
 
 **Branch:** `ai/295` (targeting `main`, open PR #362)  
 **Originating Sentry issue:** None (feature request #164 / #295, approved by founder)  
-**Tested Commit SHA:** `06760a09`
+**Tested Commit SHA:** `06760a09` (merge `1f54cc85`)
 
 ---
 
