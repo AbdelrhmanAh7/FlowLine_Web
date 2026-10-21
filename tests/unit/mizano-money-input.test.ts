@@ -4,7 +4,7 @@ import { moneyInput } from "@/integrations/providers/mizano";
 import { getAction } from "@/integrations/registry";
 
 describe("mizano moneyInput zod schema", () => {
-  it("AC1 & AC2: safeParse on negative numbers returns { success: false } without throwing raw Error", () => {
+  it("AC1: safeParse on negative numbers returns { success: false } without throwing raw Error", () => {
     // Regression proof: throwing raw Error in transform escaped safeParse in PR #279
     let res: ReturnType<typeof moneyInput.safeParse>;
     expect(() => {
@@ -17,7 +17,7 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
-  it("AC1 & AC2: safeParse on negative decimal strings returns { success: false } without throwing", () => {
+  it("AC1: safeParse on negative decimal strings returns { success: false } without throwing", () => {
     let res: ReturnType<typeof moneyInput.safeParse>;
     expect(() => {
       res = moneyInput.safeParse("-5.00");
@@ -28,7 +28,7 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
-  it("AC1 & AC2: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing", () => {
+  it("AC1: safeParse on invalid decimal strings and excess precision returns { success: false } without throwing", () => {
     for (const bad of ["abc", "12.345", "", "1.2.3"]) {
       let res: ReturnType<typeof moneyInput.safeParse>;
       expect(() => {
@@ -46,7 +46,7 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
-  it("AC1 & AC2: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing", () => {
+  it("AC1: safeParse on NaN, Infinity, and float precision noise returns { success: false } without throwing", () => {
     for (const bad of [NaN, Infinity, -Infinity, 0.1 + 0.2, 10.1234]) {
       let res: ReturnType<typeof moneyInput.safeParse>;
       expect(() => {
@@ -64,7 +64,7 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
-  it("AC1 & AC2: safeParse on non-number, non-string types returns { success: false } without throwing", () => {
+  it("AC1: safeParse on non-number, non-string types returns { success: false } without throwing", () => {
     for (const bad of [null, undefined, true, false, {}, [], () => {}]) {
       let res: ReturnType<typeof moneyInput.safeParse>;
       expect(() => {
