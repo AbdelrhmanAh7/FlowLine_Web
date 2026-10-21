@@ -355,3 +355,11 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## i18n: Deal won → Mizano quote gallery strings (issue #242) — 2026-10-20
+
+Added `localTemplates.deal-won-mizano-quote` EN and AR entries to message catalogs (`src/i18n/messages/en.json` and `src/i18n/messages/ar.json`).
+Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result`, and `nodes` (`deal`, `won`, `prepare`, `customer`, `quote`, `notify`, `skipped`).
+Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
+Subtask of #149.
+
+
