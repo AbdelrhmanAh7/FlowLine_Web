@@ -355,4 +355,17 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Flow list invariance test verification (issue #375) — 2026-10-21
+
+Resolved CodeRabbit blocker finding (discussion `r4337196672`) split from PR #362.
+Previously, historical AC2 asserted "the flow list did not change" relying solely on alert visibility,
+without capturing flow count or IDs before the invalid creation/import attempt and comparing after.
+Added deterministic e2e test `@issue-375 AC1` to `e2e-army/117-flows-list-dashboard.e2e.ts` capturing
+flow count and IDs before an invalid creation attempt and verifying that after rejection, flow count and IDs
+are strictly unchanged (`toHaveLength` and `toEqual`).
+Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (4/4 passing) proving negative
+control failure on historical PR #362 test code and clean verification on head.
+Supersedes part of #362.
+
+
 

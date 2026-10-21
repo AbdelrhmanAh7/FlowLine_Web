@@ -7,6 +7,7 @@
 - **Parent Issues**: #295, #164
 - **Supersedes**: part of PR #362
 - **Branch**: `ai/375` (clean branch off `origin/main`)
+- **Tested Commit SHA**: `c4dd998e`
 - **User-Facing UI Changed**: No (test assertion correction and unit test guard; E2E request-level test added to existing suite)
 
 ## Root Cause & Finding Resolution
