@@ -8,10 +8,8 @@ import { base32Decode, totpCodeFor } from "./tools/totp";
 // i18n catalogue rather than hardcoded strings that drift out of sync with ar.json.
 const ar = JSON.parse(readFileSync("src/i18n/messages/ar.json", "utf8")) as {
   account: { security: { twoFactor: Record<string, string> } };
-  auth: Record<string, string>;
 };
 const tf = ar.account.security.twoFactor;
-const arAuth = ar.auth;
 
 test("user menu opens the security page and shows the two-step status", async ({ page }) => {
   const { workspace } = await setupUser(page);

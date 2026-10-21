@@ -109,6 +109,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
                 {secretVisible ? t("account.security.twoFactor.hideSecret") : t("account.security.twoFactor.showSecret")}
               </Button>
             </div>
+            {/* dir="ltr" is intentionally enforced for the manual TOTP secret even in RTL/Arabic contexts to prevent character transposition and ensure accurate copy/entry of ASCII keys. */}
             <code
               id="two-factor-secret"
               dir="ltr"
@@ -136,6 +137,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
                 {t("account.security.twoFactor.copyBackupCodes")}
               </Button>
             </div>
+            {/* dir="ltr" is intentionally enforced for backup codes even in RTL/Arabic layouts so alphanumeric tokens are displayed in their authentic left-to-right order. */}
             <ul dir="ltr" className="mt-1 grid grid-cols-2 gap-1 font-mono text-sm text-start" data-testid="backup-codes">
               {enrolment.backupCodes.map((c) => (
                 <li key={c}>{c}</li>
@@ -149,6 +151,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
               void verify();
             }}
           >
+            {/* The 6-digit TOTP verification code is numeric and must be entered LTR across all locales. */}
             <Field label={t("account.security.twoFactor.codeLabel")} htmlFor="two-factor-code">
               <Input ref={codeRef} id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" className="h-9 w-32 font-mono tracking-widest text-start" />
             </Field>
