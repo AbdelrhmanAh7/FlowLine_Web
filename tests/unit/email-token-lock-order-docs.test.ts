@@ -46,4 +46,24 @@ describe("docs consistency: email-token-lock-order test execution status", () =>
       /flowline_test_109` database \(PostgreSQL\):[^\n]*?`email-token-lock-order\.test\.ts` \(3\/3\)/
     );
   });
+
+  it("never contains unexecuted or not executed phrasing in the #108 Reconciliation paragraph", () => {
+    const i108Section =
+      betaReport.split("## Account deletion vs the user's own SSO sign-in: lock-order test")[1]?.split(/^## /m)[0] ?? "";
+    const reconciliationParagraph =
+      i108Section.split("\n\n").find((p) => p.includes("Reconciliation 2026-10-14")) ?? "";
+    expect(reconciliationParagraph).not.toBe("");
+    expect(reconciliationParagraph).not.toMatch(/unexecuted|not executed/i);
+    expect(reconciliationParagraph).toMatch(
+      /tests\/integration\/email-token-lock-order\.test\.ts` suite also passed locally on 2026-10-08 against PostgreSQL/
+    );
+  });
+
+  it("has exactly one H3 security readiness review paragraph without duplication or unexecuted statements", () => {
+    const h3Section =
+      betaReport.split("## H3 security readiness review")[1]?.split(/^## /m)[0] ?? "";
+    const occurrences = (h3Section.match(/PR #21 \(H3, open;/g) || []).length;
+    expect(occurrences).toBe(1);
+    expect(h3Section).not.toMatch(/email-token-lock-order(?:\.test\.ts)?[^.\n]*?(?:not executed|unexecuted)/i);
+  });
 });
