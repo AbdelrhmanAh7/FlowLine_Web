@@ -97,9 +97,11 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+import { NextRequest } from "next/server";
 import { isPlaceholderSlug, requireWorkspace, requireWorkspaceBySlug, type CurrentUser } from "@/server/access";
 import { createFlow, flowNameSchema } from "@/server/flows";
 import { POST as postFlowRoute } from "@/app/api/workspaces/[wid]/flows/route";
+import { middleware } from "@/middleware";
 
 const root = resolve(__dirname, "../..");
 
@@ -427,4 +429,61 @@ describe("@issue-375 guard against unverified flow list invariance (supersedes p
     const bodyWhitespace = (await resWhitespace.json()) as { error: { code: string } };
     expect(bodyWhitespace.error.code).toBe("VALIDATION");
   });
+
+  it("AC16: middleware rewrites malformed URI escape sequences to /not-found with 404 for pages and returns JSON 404 for API", async () => {
+    // 1. Page route with malformed URI escape in slug -> rewrite to /not-found with status 404
+    const pageReq = new NextRequest("http://localhost:3000/w/%E0%A4%A/flows");
+    const pageRes = middleware(pageReq);
+    expect(pageRes.status).toBe(404);
+    expect(pageRes.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/not-found");
+
+    const runsReq = new NextRequest("http://localhost:3000/w/%E0%A4%A/runs");
+    const runsRes = middleware(runsReq);
+    expect(runsRes.status).toBe(404);
+    expect(runsRes.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/not-found");
+
+    // 2. Query string with malformed escape -> rewrite to /not-found with status 404
+    const queryReq = new NextRequest("http://localhost:3000/w/valid-ws/flows?q=%E0%A4%A");
+    const queryRes = middleware(queryReq);
+    expect(queryRes.status).toBe(404);
+    expect(queryRes.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/not-found");
+
+    // 3. API route with malformed URI escape -> JSON 404 NOT_FOUND
+    const apiReq = new NextRequest("http://localhost:3000/api/workspaces/%E0%A4%A/flows");
+    const apiRes = middleware(apiReq);
+    expect(apiRes.status).toBe(404);
+    const apiJson = (await apiRes.json()) as { error: { code: string } };
+    expect(apiJson.error.code).toBe("NOT_FOUND");
+  });
+
+  it("AC17: middleware rewrites placeholder slugs to /not-found with 404 and passes valid tenant slugs", async () => {
+    // 1. Placeholder slugs in /w/:slug/* -> rewrite to /not-found with status 404
+    for (const ph of ["{slug}", "[slug]", ":slug", "{wid}", "[wid]", ":wid"]) {
+      const req = new NextRequest(`http://localhost:3000/w/${encodeURIComponent(ph)}/flows`);
+      const res = middleware(req);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/not-found");
+    }
+
+    // 2. Placeholder slugs in /api/workspaces/:wid/* -> JSON 404 NOT_FOUND
+    for (const ph of ["{wid}", "[wid]", ":wid", "{slug}"]) {
+      const req = new NextRequest(`http://localhost:3000/api/workspaces/${encodeURIComponent(ph)}/flows`);
+      const res = middleware(req);
+      expect(res.status).toBe(404);
+      const json = (await res.json()) as { error: { code: string } };
+      expect(json.error.code).toBe("NOT_FOUND");
+    }
+
+    // 3. Valid tenant slugs (e.g. "slug", "wid", "alpha-corp") -> allowed through (no rewrite)
+    for (const valid of ["slug", "wid", "alpha-corp", "my-workspace"]) {
+      const pageReq = new NextRequest(`http://localhost:3000/w/${valid}/flows`);
+      const pageRes = middleware(pageReq);
+      expect(pageRes.headers.get("x-middleware-rewrite")).toBeNull();
+
+      const apiReq = new NextRequest(`http://localhost:3000/api/workspaces/${valid}/flows`);
+      const apiRes = middleware(apiReq);
+      expect(apiRes.headers.get("x-middleware-rewrite")).toBeNull();
+    }
+  });
 });
+

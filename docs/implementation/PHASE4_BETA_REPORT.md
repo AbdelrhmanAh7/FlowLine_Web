@@ -359,27 +359,33 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
-## Flow list invariance test verification (issue #375) — 2026-10-22
+## Flow list invariance test verification & malformed URI handling (issue #375) — 2026-10-22
 
-Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related parent review findings split from PR #362 (PR #380 round 1 fix):
+Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related parent review findings split from PR #362 (PR #380 rounds 1 & 2 fixes):
 1. Flow list invariance: Previously, historical AC2 asserted "the flow list did not change" relying solely on alert visibility,
    without capturing flow count or IDs before the invalid creation/import attempt and comparing after. Added deterministic
    e2e test `@issue-375 AC1` to `e2e-army/117-flows-list-dashboard.e2e.ts` capturing flow count and IDs before an invalid
    creation attempt and verifying that after rejection (400 UNKNOWN_TEMPLATE, 400 VALIDATION), flow count and IDs are strictly
    unchanged (`toHaveLength` and `toEqual`). Documented why this API test is the canonical substitute for unmerged n8n import on main.
-2. Route status codes and negative control guard: Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (15/15 passing):
+2. Route status codes and negative control guard: Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (17/17 passing):
    - Proves negative control failure on historical PR #362 test code (missing snapshot, missing comparison, alert-only assertion,
      bypassing upload button wiring, and missing SETUP_REQUIRED assertion) and clean verification on head.
    - Verifies fluent Drizzle chaining (`.where`, `.limit`, `.returning`, `.for`) on mock DB without TypeErrors.
    - Invokes real route handler `POST /api/workspaces/[wid]/flows` confirming HTTP 400 codes for unknown template (`UNKNOWN_TEMPLATE`),
      numeric name (`VALIDATION`), and whitespace name (`VALIDATION`).
-3. Workspace placeholder slug rejection (`src/server/access.ts`): `isPlaceholderSlug` rejects ambiguous template placeholders
-   (`{slug}`, `[slug]`, `:slug`, `{wid}`, `[wid]`, `:wid`) while safely allowing real tenant slugs like `slug` or `wid`.
-   `requireWorkspace` rejects placeholder wids and non-UUIDs with 404 HttpError, and `requireWorkspaceBySlug` returns `null` (404)
-   for ambiguous placeholders, preventing silent creation or access in arbitrary workspaces.
-4. Safe slug decoding (`src/app/w/[slug]/layout.tsx`): Wrapped `decodeURIComponent(slug)` in try/catch to gracefully return
-   404 on malformed URI escapes (such as `%E0%A4%A`) rather than an unhandled 500 `URIError`, with no placeholder fallback.
+3. Workspace placeholder slug rejection (`src/lib/slug.ts` and `src/server/access.ts`): Decoupled `isPlaceholderSlug` into pure module
+   `src/lib/slug.ts` to reject ambiguous template placeholders (`{slug}`, `[slug]`, `:slug`, `{wid}`, `[wid]`, `:wid`) without pulling in
+   heavy database packages (`pg`, `drizzle-orm`). `requireWorkspace` rejects placeholder wids and non-UUIDs with 404 HttpError, and
+   `requireWorkspaceBySlug` returns `null` (404) for ambiguous placeholders, preventing silent creation or access in arbitrary workspaces.
+4. Middleware URI error interception and not-found routing (`src/middleware.ts`, `src/app/not-found/page.tsx`): Next.js App Router internal
+   route matching throws `DecodeError` before layout execution when encountering malformed URL percent-escapes like `%E0%A4%A`.
+   Implemented `src/middleware.ts` to intercept malformed percent-escapes and placeholder slugs prior to route matching:
+   - For UI page routes (`/w/%E0%A4%A/flows`, `/w/%E0%A4%A/runs`, `/w/{slug}/flows`), middleware rewrites to `/not-found` with HTTP status 404,
+     rendering `src/app/not-found.tsx` cleanly instead of an unhandled 500 `Internal Server Error`.
+   - For API routes, middleware returns an immediate JSON 404 response.
+   - Covered by E2E test `@issue-375 AC2` in `e2e-army/117-flows-list-dashboard.e2e.ts` and unit tests `AC16` and `AC17`.
 Supersedes part of #362.
+
 
 
 

@@ -201,3 +201,30 @@ test(
   },
 );
 
+test(
+  "@issue-375 AC2: malformed URL escapes and placeholder slugs return 404 not-found rather than 500 (supersedes part of #362)",
+  { tags: ["feat:fl-flows-list", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const http = client(base, await signedIn(base, `army-375-404-${seeded(base, "army-375-404")}@flowline-e2e.test`));
+
+    // 1. Malformed percent-escape in workspace slug returns 404 (not 500)
+    const malformedFlowsRes = await http.get("/w/%E0%A4%A/flows");
+    expect(malformedFlowsRes.status).toBe(404);
+
+    const malformedRunsRes = await http.get("/w/%E0%A4%A/runs");
+    expect(malformedRunsRes.status).toBe(404);
+
+    // 2. Placeholder slugs in workspace routes return 404 (not 500)
+    const placeholderBracesRes = await http.get("/w/{slug}/flows");
+    expect(placeholderBracesRes.status).toBe(404);
+
+    const placeholderColonRes = await http.get("/w/:slug/flows");
+    expect(placeholderColonRes.status).toBe(404);
+
+    const placeholderBracketsRes = await http.get("/w/[slug]/flows");
+    expect(placeholderBracketsRes.status).toBe(404);
+  },
+);
+
+
