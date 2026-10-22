@@ -301,8 +301,13 @@ export function validateGraph(graph: FlowGraph): ValidationIssue[] {
       issues.push({ code: "MERGE_NEEDS_INPUTS", message: `${n.data.label}: connect at least two branches to merge`, nodeId: n.id });
     }
     issues.push(...validateConfig(n));
-    // Templates ship with REPLACE_WITH_… placeholders; running is blocked until they're filled in.
-    const placeholders = [...new Set(JSON.stringify(n.data.config).match(/REPLACE_WITH_[A-Z0-9_]+/g) ?? [])];
+    // A step imported from n8n that FlowLine could not map carries `placeholder: true`; template stubs carry a
+    // REPLACE_WITH_… marker. Either way, running or publishing is blocked (SETUP_REQUIRED) until the step is replaced.
+    const nodeConfig = n.data.config as unknown as Record<string, unknown>;
+    const placeholders =
+      nodeConfig.placeholder === true
+        ? [String(nodeConfig.expression ?? "").match(/REPLACE_WITH_[A-Z0-9_]+/)?.[0] ?? "REPLACE_WITH_UNSUPPORTED_N8N_NODE"]
+        : [...new Set(JSON.stringify(n.data.config).match(/REPLACE_WITH_[A-Z0-9_]+/g) ?? [])];
     for (const ph of placeholders) issues.push({ code: "SETUP_REQUIRED", message: `${n.data.label}: finish setup — replace ${ph}`, nodeId: n.id });
     // References must point to steps that run before this one.
     const up = ancestors({ edges: accepted }, n.id);
