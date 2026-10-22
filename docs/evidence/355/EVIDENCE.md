@@ -6,8 +6,8 @@
 - **Issue**: #355 (`fix: qa finding: AC2 verified: moneyInput.safeParse correctly rejects negative qty, un… (split from #309)`)
 - **Parent Issues**: #309 (reached fix-round cap), #296 (`fix: mizano.ts: major: Throwing a plain Error inside a zod .transform`)
 - **Supersedes**: part of PR #309
-- **Branch**: `ai/355` (clean branch merged with `origin/main` at `a5e267c2`)
-- **Tested Commit SHA**: `022c0d50abe540d12ded7838252b483b2745549b`
+- **Branch**: `ai/355` (clean branch merged with `origin/main` at `a86674a8`)
+- **Tested Commit SHA**: `dfa2101d1297e68da78ca59c085fc4258908f514`
 - **Originating Sentry Issue**: None (internal provider schema validation issue originating in PR #279 / issue #296 / PR #309)
 - **User-Facing UI**: No (internal provider schema validation and error-handling fix; exempt from E2E UI tests — `E2E: not needed — internal provider input schema validation and error-handling fix (unit and contract tests cover safeParse/parse and negative money input handling; no user-facing UI flow changed)`)
 
