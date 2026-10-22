@@ -1144,16 +1144,18 @@ const snowflake: Handler = (ctx, req, res, path, _url, body) => {
   return json(ctx, req, res, 404, { code: "404", message: "Not found" });
 };
 
-// Mizano (#147, #222): health probe, workspace identity and the two create steps. Dispatch has already checked the Bearer
-// token (401 { message: "Unauthorized" }). A create without an Idempotency-Key is refused, and a key already seen for that
-// path replays the stored record instead of inserting a second one, so the engine's per-(run, node) key is observable here.
-const mizano: Handler = (ctx, req, res, path, _url, body) => {
+// Mizano (#147, #222, #301): health probe, the workspace bound to the scoped key and the two create steps. Dispatch has
+// already checked the Bearer token (401 { message: "Unauthorized" }). A create without an Idempotency-Key is refused, and a
+// key already seen for that path replays the stored record instead of inserting a second one, so the engine's per-(run,
+// node) key is observable here.
+const mizano: Handler = (ctx, req, res, path, _url, body, account) => {
   const s = ctx.state;
   if (req.method === "GET" && path === "/api/health") {
     return json(ctx, req, res, 200, { status: "ok", version: "fake" });
   }
   if (req.method === "GET" && path === "/api/me") {
-    return json(ctx, req, res, 200, { id: "mz-ws-fake", workspaceName: "Fake Mizano Workspace" });
+    // Each scoped key names its own workspace, so a connection check proves which account the key reached.
+    return json(ctx, req, res, 200, { id: `mizano-ws-${account}`, workspaceName: `${ACCOUNTS[account].name} Mizano` });
   }
   if (req.method === "POST" && (path === "/api/customers" || path === "/api/quotes")) {
     const key = String(req.headers["idempotency-key"] ?? "");
