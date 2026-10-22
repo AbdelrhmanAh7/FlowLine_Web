@@ -1,13 +1,14 @@
+/**
+ * Comprehensive unit tests verifying all acceptance criteria (AC1-AC4) for moneyInput:
+ * - AC1: negative value and invalid type rejection under safeParse without throwing unhandled errors.
+ * - AC2: safeParse returns { success: false, error: ZodError }, parse throws ZodError, and create_draft_quote input schema uses moneyInput.
+ * - AC3: valid number and string inputs (including Arabic-Indic digits) normalize to 2-decimal strings.
+ * - AC4: regression test demonstrating raw Error escape on PR #279 pattern vs ZodError containment with ctx.addIssue + z.NEVER.
+ */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { moneyInput } from "@/integrations/providers/mizano";
 import { getAction } from "@/integrations/registry";
-
-// Comprehensive unit tests verifying all acceptance criteria (AC1-AC4) for moneyInput:
-// AC1: negative value and invalid type rejection under safeParse without throwing unhandled errors.
-// AC2: safeParse returns { success: false, error: ZodError }, parse throws ZodError, and create_draft_quote input schema uses moneyInput.
-// AC3: valid number and string inputs (including Arabic-Indic digits) normalize to 2-decimal strings.
-// AC4: regression test demonstrating raw Error escape on PR #279 pattern vs ZodError containment with ctx.addIssue + z.NEVER.
 describe("mizano moneyInput zod schema", () => {
   it("AC1: safeParse on negative numbers returns { success: false } without throwing raw Error", () => {
     // Regression proof: throwing raw Error in transform escaped safeParse in PR #279
@@ -174,8 +175,8 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
-  // AC4 regression test: explicitly demonstrates the PR #279 buggy pattern where raw errors escaped safeParse
-  // and confirms that the fix (ctx.addIssue + z.NEVER) prevents unhandled exceptions by containing errors within ZodError.
+  // AC4 regression test: explicitly demonstrates the PR #279 buggy pattern where raw Error escaped safeParse,
+  // and proves that the fix (ctx.addIssue + z.NEVER) prevents unhandled exceptions by containing errors within ZodError.
   it("AC4: proves regression where throwing raw Error in transform escapes safeParse (PR #279 bug)", async () => {
     const { toDecimalString } = await import("@/lib/format");
 

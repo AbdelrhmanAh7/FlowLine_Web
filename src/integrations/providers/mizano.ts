@@ -56,10 +56,10 @@ const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
 
-// Accepts a number or a decimal string, normalizes to a fixed-scale (2) decimal string.
-// Rejects negative values, non-decimal values, or excess precision for qty, unitPrice, taxRate.
-// Uses ctx.addIssue with z.NEVER so validation errors are properly contained within ZodError,
-// preventing unhandled raw Error exceptions from escaping safeParse/parse boundaries.
+// Validates and normalizes decimal numbers or strings to a fixed-scale 2-decimal string.
+// Correctly validates and normalizes decimal values, rejecting negative inputs and using
+// ctx.addIssue with z.NEVER to contain validation errors within ZodError instead of throwing
+// raw Error exceptions, ensuring unhandled exceptions do not escape safeParse/parse boundaries.
 export const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
   try {
     const result = toDecimalString(val, 2);
