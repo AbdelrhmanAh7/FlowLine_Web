@@ -9,6 +9,8 @@ const nightlyFiles = [
   "tests/unit/drizzle-tooling-prune.test.ts",
 ];
 
+const hasTestDb = Boolean(process.env.DATABASE_URL && /\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(process.env.DATABASE_URL));
+
 export default defineConfig({
   resolve: { alias },
   test: {
@@ -18,19 +20,19 @@ export default defineConfig({
       { resolve: { alias }, test: { name: "contract", include: ["tests/contract/**/*.test.ts"], environment: "node", testTimeout: 20000, fileParallelism: false } },
       // Live/sandbox suite: real local Ollama, real Postgres, SaaS sandboxes (BLOCKED without credentials).
       // Kept separate from the deterministic suites; results land in artifacts/phase-2/live-results.json.
-      { resolve: { alias }, test: { name: "live", include: ["tests/live/**/*.test.ts"], environment: "node", testTimeout: 200000, fileParallelism: false } },
+      { resolve: { alias }, test: { name: "live", include: hasTestDb ? ["tests/live/**/*.test.ts"] : [], environment: "node", testTimeout: 200000, fileParallelism: false } },
       {
         resolve: { alias },
         test: {
           name: "integration",
-          include: ["tests/integration/**/*.test.ts"],
+          include: hasTestDb ? ["tests/integration/**/*.test.ts"] : [],
           exclude: nightlyFiles,
           environment: "node",
           // One DB, run files serially to keep laptop load and DB contention low.
           fileParallelism: false,
           testTimeout: 30000,
           hookTimeout: 60000,
-          globalSetup: ["tests/integration/global-setup.ts"],
+          globalSetup: hasTestDb ? ["tests/integration/global-setup.ts"] : [],
         },
       },
       // Nightly tier (.github/workflows/nightly.yml): slow or infra-sensitive suites moved out of the PR gate.
@@ -40,11 +42,12 @@ export default defineConfig({
         test: {
           name: "nightly",
           include: nightlyFiles,
+          exclude: hasTestDb ? [] : nightlyFiles,
           environment: "node",
           fileParallelism: false,
           testTimeout: 30000,
           hookTimeout: 60000,
-          globalSetup: ["tests/integration/global-setup.ts"],
+          globalSetup: hasTestDb ? ["tests/integration/global-setup.ts"] : [],
         },
       },
     ],

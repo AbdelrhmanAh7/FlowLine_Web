@@ -131,3 +131,100 @@ test(
     expect(overview).toMatchObject({ flows: 3, activeRuns: 0 });
   },
 );
+
+// Issue #375 (split from PR #362 finding r4337196672):
+// In PR #362 (which branched off main to add n8n import), AC2 asserted "the flow list did not change" on invalid import
+// relying solely on alert visibility without capturing flow count or IDs before/after.
+//
+// Why this API test is the canonical substitute:
+// PR #362 was closed unmerged after 6 fix rounds. The n8n import feature was restarted in issue #368.
+// Because the n8n import UI and route do not exist on main, an e2e test calling 'Import from n8n' cannot run on main.
+// On main, 117-flows-list-dashboard.e2e.ts is the canonical test suite for `feat:fl-flows-list`. Flow creation occurs
+// via POST /api/workspaces/:wid/flows (direct creation and templates). This test validates the flow list invariance
+// contract across all refusal paths on main: unknown templates return 400 UNKNOWN_TEMPLATE, invalid payload types
+// return 400 VALIDATION, and whitespace-only names return 400 VALIDATION. In all cases, flow count and IDs captured
+// before and after match exactly. Route handler status codes and error responses are verified by unit tests in
+// tests/unit/flows-list-ac2-guard.test.ts.
+test(
+  "@issue-375 AC1: invalid flow creation is rejected and flow count and IDs remain unchanged (supersedes part of #362)",
+  { tags: ["feat:fl-flows-list", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const http = client(base, await signedIn(base, `army-375-${seeded(base, "army-375-owner")}@flowline-e2e.test`));
+    const created = await http.post("/api/workspaces", { name: `Reject ${seeded(base, "army-375-ws", 6)}` });
+    expect(created.status).toBe(201);
+    const ws = (created.json as { workspace: { id: string } }).workspace;
+    const w = `/api/workspaces/${ws.id}`;
+
+    // Seed one valid flow so the initial list is non-empty.
+    const initialFlow = await createFlow(http, ws.id, `Existing ${seeded(base, "army-375-init", 4)}`);
+    expect(initialFlow.id).toBeTruthy();
+
+    // Capture flow list (count and IDs) before the invalid creation attempt.
+    const beforeRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const beforeIds = beforeRows.map((f) => f.id);
+    expect(beforeRows).toHaveLength(1);
+    expect(beforeIds).toContain(initialFlow.id);
+
+    // Attempt invalid flow creation: unknown template ID.
+    const invalidTemplateRes = await http.post(`${w}/flows`, { templateId: "non-existent-template-id" });
+    expect(invalidTemplateRes.status).toBe(400);
+    expect((invalidTemplateRes.json as { error?: { code?: string } }).error?.code).toBe("UNKNOWN_TEMPLATE");
+
+    // Verify flow list did not change: flow count and IDs captured before and after match exactly.
+    const afterInvalidTemplateRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const afterInvalidTemplateIds = afterInvalidTemplateRows.map((f) => f.id);
+    expect(afterInvalidTemplateRows).toHaveLength(beforeRows.length);
+    expect(afterInvalidTemplateIds).toEqual(beforeIds);
+
+    // Attempt invalid flow creation: invalid malformed body types (e.g. numeric name).
+    const invalidBodyRes = await http.post(`${w}/flows`, { name: 12345 });
+    expect(invalidBodyRes.status).toBe(400);
+    expect((invalidBodyRes.json as { error?: { code?: string } }).error?.code).toBe("VALIDATION");
+
+    // Verify flow list did not change after second rejected attempt.
+    const afterInvalidBodyRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const afterInvalidBodyIds = afterInvalidBodyRows.map((f) => f.id);
+    expect(afterInvalidBodyRows).toHaveLength(beforeRows.length);
+    expect(afterInvalidBodyIds).toEqual(beforeIds);
+
+    // Attempt invalid flow creation: whitespace-only name rejected by schema.
+    const invalidNameRes = await http.post(`${w}/flows`, { name: "   " });
+    expect(invalidNameRes.status).toBe(400);
+    expect((invalidNameRes.json as { error?: { code?: string } }).error?.code).toBe("VALIDATION");
+
+    // Verify flow list did not change after third rejected attempt.
+    const afterInvalidNameRows = ((await http.get(`${w}/flows`)).json as { flows: FlowRow[] }).flows;
+    const afterInvalidNameIds = afterInvalidNameRows.map((f) => f.id);
+    expect(afterInvalidNameRows).toHaveLength(beforeRows.length);
+    expect(afterInvalidNameIds).toEqual(beforeIds);
+  },
+);
+
+test(
+  "@issue-375 AC2: malformed URL escapes and placeholder slugs return 404 not-found rather than 500 (supersedes part of #362)",
+  { tags: ["feat:fl-flows-list", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const http = client(base, await signedIn(base, `army-375-404-${seeded(base, "army-375-404")}@flowline-e2e.test`));
+
+    // 1. Malformed percent-escape in workspace slug returns 404 (not 500)
+    const malformedFlowsRes = await http.get("/w/%E0%A4%A/flows");
+    expect(malformedFlowsRes.status).toBe(404);
+
+    const malformedRunsRes = await http.get("/w/%E0%A4%A/runs");
+    expect(malformedRunsRes.status).toBe(404);
+
+    // 2. Placeholder slugs in workspace routes return 404 (not 500)
+    const placeholderBracesRes = await http.get("/w/{slug}/flows");
+    expect(placeholderBracesRes.status).toBe(404);
+
+    const placeholderColonRes = await http.get("/w/:slug/flows");
+    expect(placeholderColonRes.status).toBe(404);
+
+    const placeholderBracketsRes = await http.get("/w/[slug]/flows");
+    expect(placeholderBracketsRes.status).toBe(404);
+  },
+);
+
+

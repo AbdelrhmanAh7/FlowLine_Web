@@ -5,6 +5,8 @@ import type { Role } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { forbidden, notFound, unauthorized } from "./http";
 import { can, denyReason, isCapability, type Capability } from "./permissions";
+import { isPlaceholderSlug } from "@/lib/slug";
+export { isPlaceholderSlug };
 
 /** What a caller needs: a capability from the permission matrix, or (legacy) a minimum role. */
 export type Need = Capability | Role;
@@ -51,12 +53,13 @@ export async function requireUser(): Promise<CurrentUser> {
   return user;
 }
 
+
 /**
  * Resolves a workspace the user belongs to. Non-members get 404 (not 403) so
  * workspace existence isn't leaked across tenants.
  */
 export async function requireWorkspace(user: CurrentUser, workspaceId: string, minRole: Need = "viewer") {
-  if (!isUuid(workspaceId)) throw notFound("Workspace not found");
+  if (!isUuid(workspaceId) || isPlaceholderSlug(workspaceId)) throw notFound("Workspace not found");
   const [row] = await db
     .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
     .from(schema.workspaceMember)
@@ -68,6 +71,7 @@ export async function requireWorkspace(user: CurrentUser, workspaceId: string, m
 }
 
 export async function requireWorkspaceBySlug(user: CurrentUser, slug: string) {
+  if (isPlaceholderSlug(slug)) return null;
   const [row] = await db
     .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
     .from(schema.workspace)

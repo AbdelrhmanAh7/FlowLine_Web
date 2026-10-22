@@ -12,7 +12,13 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const user = await getCurrentUser();
   const { slug } = await params;
   if (!user) redirect(`/sign-in`);
-  const row = await requireWorkspaceBySlug(user, slug);
+  let decodedSlug: string;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
+  const row = await requireWorkspaceBySlug(user, decodedSlug);
   if (!row) notFound();
   const workspaces = await listWorkspaces(user);
   return (
