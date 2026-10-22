@@ -1,16 +1,5 @@
 # Next action — 2026-10-03
 
-## Issue #326 — fix: failing check `gate` (split from #244) (2026-10-20)
-
-Supersedes part of #244. Added 'Deal won → Mizano quote' template with approval step on `mizano.create_customer`.
-Fixed the root cause of `gate` failure in PR #244:
-- Avoided mutating button `aria-label` in templates gallery which broke `@critical` Chromium Playwright tests (`e2e/phase2.spec.ts`).
-- Avoided non-standard empty `<button>` wrappers on card titles in `src/app/w/[slug]/templates/page.tsx`.
-- Avoided bypassing workspace access control in `src/server/access.ts`.
-- Ensured Arabic template name uses `→` matching English (`صفقة مكسوبة → عرض سعر Mizano`).
-- Fully verified template unit tests, schema, availability, engine execution, and E2E scenarios.
-
-
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
