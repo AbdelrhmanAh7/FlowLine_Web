@@ -41,4 +41,17 @@ describe("integration catalog (#252 / #313)", () => {
     expect(data.providers.map((p: { id: string }) => p.id)).toEqual(CATALOG_IDS);
     expect(data.providers.some((p: { id: string }) => p.id === "mizano")).toBe(false);
   });
+
+  it("demonstrates regression: base logic returned all registered providers including mizano (13), while head filters pre-GA (12)", () => {
+    // Simulated base logic (which lacked the PRE_GA filter and returned allProviders()):
+    const baseIds = allProviders().map((p) => p.id);
+    expect(baseIds).toContain("mizano");
+    expect(baseIds.length).toBe(13);
+
+    // Head logic (filtered listProviders()):
+    const headIds = listProviders().map((p) => p.id);
+    expect(headIds).not.toContain("mizano");
+    expect(headIds.length).toBe(12);
+    expect(headIds).toEqual(CATALOG_IDS);
+  });
 });

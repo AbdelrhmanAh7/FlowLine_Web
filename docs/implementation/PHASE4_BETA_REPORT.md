@@ -366,4 +366,14 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Integrations catalog stable gate fix (issue #313, closes #252, supersedes #263) — 2026-10-22
+
+Resolved `fl-integrations` stable gate failure on main:
+1. Kept pre-GA Mizano out of `listProviders()` in `src/integrations/registry.ts` via `PRE_GA` set filter while retaining internal registration in `allProviders()`, `getProvider()` and `getAction()`.
+2. Verified `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order with `count: 12`.
+3. Added unit tests in `tests/unit/integrations-catalog.test.ts` (5/5 passing, demonstrating base failure vs head pass).
+4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
+5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
+
+
 
