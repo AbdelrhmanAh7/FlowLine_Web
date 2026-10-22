@@ -135,12 +135,16 @@ test(
 // Issue #375 (split from PR #362 finding r4337196672):
 // In PR #362 (which branched off main to add n8n import), AC2 asserted "the flow list did not change" on invalid import
 // relying solely on alert visibility without capturing flow count or IDs before/after.
-// Because PR #362 was closed without merging into main, the "Import from n8n" UI and n8n body handler do not exist on main
-// (n8n import is tracked and in-progress on #368). On main, 117-flows-list-dashboard.e2e.ts is the canonical test suite for
-// `feat:fl-flows-list`. Flow creation occurs via POST /api/workspaces/:wid/flows (direct creation and templates).
-// This test validates the flow list invariance contract across refusal paths on main: unknown templates return 400
-// UNKNOWN_TEMPLATE, invalid payload types return 400 VALIDATION, and invalid names return 400 VALIDATION.
-// In all cases, flow count and IDs captured before and after match exactly.
+//
+// Why this API test is the canonical substitute:
+// PR #362 was closed unmerged after 6 fix rounds. The n8n import feature was restarted in issue #368.
+// Because the n8n import UI and route do not exist on main, an e2e test calling 'Import from n8n' cannot run on main.
+// On main, 117-flows-list-dashboard.e2e.ts is the canonical test suite for `feat:fl-flows-list`. Flow creation occurs
+// via POST /api/workspaces/:wid/flows (direct creation and templates). This test validates the flow list invariance
+// contract across all refusal paths on main: unknown templates return 400 UNKNOWN_TEMPLATE, invalid payload types
+// return 400 VALIDATION, and whitespace-only names return 400 VALIDATION. In all cases, flow count and IDs captured
+// before and after match exactly. Route handler status codes and error responses are verified by unit tests in
+// tests/unit/flows-list-ac2-guard.test.ts.
 test(
   "@issue-375 AC1: invalid flow creation is rejected and flow count and IDs remain unchanged (supersedes part of #362)",
   { tags: ["feat:fl-flows-list", "lvl:api"] },

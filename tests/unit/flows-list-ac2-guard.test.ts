@@ -1,27 +1,105 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+
+interface DrizzleMockChain {
+  setRows: (newRows: unknown[]) => DrizzleMockChain;
+  then: <T1 = unknown, T2 = never>(
+    resolve?: ((val: unknown) => T1 | PromiseLike<T1>) | null,
+    reject?: ((err: unknown) => T2 | PromiseLike<T2>) | null,
+  ) => Promise<T1 | T2>;
+  catch: <T = never>(reject?: ((err: unknown) => T | PromiseLike<T>) | null) => Promise<unknown | T>;
+  finally: (cb?: (() => void) | null) => Promise<unknown>;
+  select: (...args: unknown[]) => DrizzleMockChain;
+  from: (...args: unknown[]) => DrizzleMockChain;
+  innerJoin: (...args: unknown[]) => DrizzleMockChain;
+  leftJoin: (...args: unknown[]) => DrizzleMockChain;
+  where: (...args: unknown[]) => DrizzleMockChain;
+  limit: (...args: unknown[]) => DrizzleMockChain;
+  offset: (...args: unknown[]) => DrizzleMockChain;
+  orderBy: (...args: unknown[]) => DrizzleMockChain;
+  insert: (...args: unknown[]) => DrizzleMockChain;
+  values: (...args: unknown[]) => DrizzleMockChain;
+  returning: (...args: unknown[]) => DrizzleMockChain;
+  update: (...args: unknown[]) => DrizzleMockChain;
+  set: (...args: unknown[]) => DrizzleMockChain;
+  delete: (...args: unknown[]) => DrizzleMockChain;
+  for: (...args: unknown[]) => DrizzleMockChain;
+  [Symbol.iterator]: () => Generator<unknown, void, unknown>;
+}
+
+function createDrizzleQueryMock(initialRows: unknown[] = []): DrizzleMockChain {
+  let rows = initialRows;
+  const chain: DrizzleMockChain = {
+    setRows: (newRows: unknown[]) => {
+      rows = newRows;
+      return chain;
+    },
+    then: (resolve, reject) =>
+      Promise.resolve(rows).then(resolve ?? undefined, reject ?? undefined),
+    catch: (reject) =>
+      Promise.resolve(rows).catch(reject ?? undefined),
+    finally: (cb) =>
+      Promise.resolve(rows).finally(cb ?? undefined),
+    select: vi.fn(() => chain),
+    from: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
+    leftJoin: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
+    offset: vi.fn(() => chain),
+    orderBy: vi.fn(() => chain),
+    insert: vi.fn(() => chain),
+    values: vi.fn(() => chain),
+    returning: vi.fn(() => chain),
+    update: vi.fn(() => chain),
+    set: vi.fn(() => chain),
+    delete: vi.fn(() => chain),
+    for: vi.fn(() => chain),
+    [Symbol.iterator]: function* () {
+      yield* rows;
+    },
+  };
+  return chain;
+}
+
+const mockDbChain = createDrizzleQueryMock([]);
 
 vi.mock("@/db", () => ({
   db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        innerJoin: vi.fn(() => ({
-          where: vi.fn(() => []),
-        })),
-      })),
-    })),
+    select: vi.fn(() => mockDbChain),
+    insert: vi.fn(() => mockDbChain),
+    update: vi.fn(() => mockDbChain),
+    delete: vi.fn(() => mockDbChain),
+    transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(mockDbChain)),
   },
   schema: {
     workspace: { id: "id", slug: "slug" },
     workspaceMember: { workspaceId: "workspace_id", userId: "user_id", role: "role" },
-    flow: { id: "id", workspaceId: "workspace_id" },
+    flow: { id: "id", workspaceId: "workspace_id", name: "name", graph: "graph", revision: "revision", deletedAt: "deleted_at" },
+    userSettings: { userId: "user_id", lastWorkspaceId: "last_workspace_id" },
+  },
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers()),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: {
+    api: {
+      getSession: vi.fn(async () => ({
+        user: { id: "user-1", email: "u@test.local", name: "User" },
+        session: { token: "token-123" },
+      })),
+    },
   },
 }));
 
 import { isPlaceholderSlug, requireWorkspace, requireWorkspaceBySlug, type CurrentUser } from "@/server/access";
 import { createFlow, flowNameSchema } from "@/server/flows";
+import { POST as postFlowRoute } from "@/app/api/workspaces/[wid]/flows/route";
 
 const root = resolve(__dirname, "../..");
 
@@ -141,6 +219,10 @@ export const HISTORICAL_PR362_AC8_SNIPPET = `test(
 );`;
 
 describe("@issue-375 guard against unverified flow list invariance (supersedes part of #362)", () => {
+  beforeEach(() => {
+    mockDbChain.setRows([]);
+  });
+
   it("AC2: flags blocker violations on historical PR #362 AC2 snippet (regression negative control)", () => {
     const violations = analyzeFlowInvarianceAssertion(HISTORICAL_PR362_AC2_SNIPPET);
     expect(violations).toContain(
@@ -199,15 +281,15 @@ describe("@issue-375 guard against unverified flow list invariance (supersedes p
     expect(topFiles.length).toBeLessThanOrEqual(8);
   });
 
-  it("AC5: isPlaceholderSlug correctly identifies placeholder slug strings and allows valid slugs", () => {
+  it("AC5: isPlaceholderSlug correctly identifies ambiguous placeholder slug strings and allows valid slugs", () => {
     expect(isPlaceholderSlug("{slug}")).toBe(true);
     expect(isPlaceholderSlug("[slug]")).toBe(true);
     expect(isPlaceholderSlug(":slug")).toBe(true);
-    expect(isPlaceholderSlug("slug")).toBe(true);
+    expect(isPlaceholderSlug("slug")).toBe(false); // Valid tenant slug
     expect(isPlaceholderSlug("{wid}")).toBe(true);
     expect(isPlaceholderSlug("[wid]")).toBe(true);
     expect(isPlaceholderSlug(":wid")).toBe(true);
-    expect(isPlaceholderSlug("wid")).toBe(true);
+    expect(isPlaceholderSlug("wid")).toBe(false); // Valid tenant slug
     expect(isPlaceholderSlug(" {slug} ")).toBe(true);
     expect(isPlaceholderSlug(null)).toBe(false);
     expect(isPlaceholderSlug(undefined)).toBe(false);
@@ -222,12 +304,14 @@ describe("@issue-375 guard against unverified flow list invariance (supersedes p
     await expect(requireWorkspace(fakeUser, "not-a-uuid")).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
   });
 
-  it("AC7: requireWorkspaceBySlug returns null for placeholder slugs", async () => {
+  it("AC7: requireWorkspaceBySlug returns null for ambiguous placeholder slugs and queries real slugs", async () => {
     const fakeUser: CurrentUser = { id: "user-1", email: "u@test.local", name: "User" };
     expect(await requireWorkspaceBySlug(fakeUser, "{slug}")).toBeNull();
     expect(await requireWorkspaceBySlug(fakeUser, "[slug]")).toBeNull();
-    expect(await requireWorkspaceBySlug(fakeUser, "slug")).toBeNull();
+    expect(await requireWorkspaceBySlug(fakeUser, ":slug")).toBeNull();
     expect(await requireWorkspaceBySlug(fakeUser, "{wid}")).toBeNull();
+    // Valid tenant slug "slug" is queried against the DB (returns null when row is not found, not blocked upfront)
+    expect(await requireWorkspaceBySlug(fakeUser, "slug")).toBeNull();
   });
 
   it("AC8: layout.tsx catches malformed URI escape sequences in slug and returns 404 rather than unhandled 500", () => {
@@ -287,5 +371,60 @@ describe("@issue-375 guard against unverified flow list invariance (supersedes p
       expect(body.error?.issues?.some((i) => i.code === "SETUP_REQUIRED")).toBe(true);
     `;
     expect(analyzePlaceholderRunRejection(validSnippet)).toEqual([]);
+  });
+
+  it("AC14: Drizzle mock query chain supports fluent chaining (.where, .limit, .returning, .for) without TypeError", async () => {
+    mockDbChain.setRows([{ id: "test-id" }]);
+    const selectRes = await mockDbChain.select().from({}).where({}).limit(1);
+    expect(selectRes).toEqual([{ id: "test-id" }]);
+
+    const insertRes = await mockDbChain.insert({}).values({}).returning();
+    expect(insertRes).toEqual([{ id: "test-id" }]);
+  });
+
+  it("AC15: POST /api/workspaces/[wid]/flows route handler returns real 400 status codes for invalid payloads", async () => {
+    const wid = "00000000-0000-0000-0000-000000000001";
+    mockDbChain.setRows([
+      {
+        workspace: { id: wid, slug: "ws-test" },
+        role: "owner",
+        id: "flow-123",
+        name: "Test Flow",
+        revision: 1,
+      },
+    ]);
+
+    // 1. Unknown templateId -> 400 UNKNOWN_TEMPLATE
+    const unknownTemplateReq = new Request(`https://flowline.example/api/workspaces/${wid}/flows`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ templateId: "non-existent-template-id" }),
+    });
+    const resTemplate = await postFlowRoute(unknownTemplateReq, { params: Promise.resolve({ wid }) });
+    expect(resTemplate.status).toBe(400);
+    const bodyTemplate = (await resTemplate.json()) as { error: { code: string } };
+    expect(bodyTemplate.error.code).toBe("UNKNOWN_TEMPLATE");
+
+    // 2. Numeric name ({ name: 12345 }) -> 400 VALIDATION
+    const invalidBodyReq = new Request(`https://flowline.example/api/workspaces/${wid}/flows`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: 12345 }),
+    });
+    const resBody = await postFlowRoute(invalidBodyReq, { params: Promise.resolve({ wid }) });
+    expect(resBody.status).toBe(400);
+    const bodyValidation = (await resBody.json()) as { error: { code: string } };
+    expect(bodyValidation.error.code).toBe("VALIDATION");
+
+    // 3. Whitespace-only name ({ name: "   " }) -> 400 VALIDATION
+    const whitespaceReq = new Request(`https://flowline.example/api/workspaces/${wid}/flows`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "   " }),
+    });
+    const resWhitespace = await postFlowRoute(whitespaceReq, { params: Promise.resolve({ wid }) });
+    expect(resWhitespace.status).toBe(400);
+    const bodyWhitespace = (await resWhitespace.json()) as { error: { code: string } };
+    expect(bodyWhitespace.error.code).toBe("VALIDATION");
   });
 });

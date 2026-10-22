@@ -359,20 +359,24 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
-## Flow list invariance test verification (issue #375) — 2026-10-21
+## Flow list invariance test verification (issue #375) — 2026-10-22
 
-Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related parent review findings split from PR #362:
+Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related parent review findings split from PR #362 (PR #380 round 1 fix):
 1. Flow list invariance: Previously, historical AC2 asserted "the flow list did not change" relying solely on alert visibility,
    without capturing flow count or IDs before the invalid creation/import attempt and comparing after. Added deterministic
    e2e test `@issue-375 AC1` to `e2e-army/117-flows-list-dashboard.e2e.ts` capturing flow count and IDs before an invalid
    creation attempt and verifying that after rejection (400 UNKNOWN_TEMPLATE, 400 VALIDATION), flow count and IDs are strictly
-   unchanged (`toHaveLength` and `toEqual`).
-2. Negative control guard: Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (13/13 passing) proving
-   negative control failure on historical PR #362 test code (missing snapshot, missing comparison, alert-only assertion,
-   bypassing upload button wiring, and missing SETUP_REQUIRED assertion) and clean verification on head.
-3. Workspace placeholder slug rejection (`src/server/access.ts`): `requireWorkspace` and `requireWorkspaceBySlug` explicitly
-   validate against and reject placeholder slugs/wids (e.g. `{slug}`, `slug`, `{wid}`) with 404 HttpError, preventing silent
-   creation/selection in an arbitrary workspace.
+   unchanged (`toHaveLength` and `toEqual`). Documented why this API test is the canonical substitute for unmerged n8n import on main.
+2. Route status codes and negative control guard: Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (15/15 passing):
+   - Proves negative control failure on historical PR #362 test code (missing snapshot, missing comparison, alert-only assertion,
+     bypassing upload button wiring, and missing SETUP_REQUIRED assertion) and clean verification on head.
+   - Verifies fluent Drizzle chaining (`.where`, `.limit`, `.returning`, `.for`) on mock DB without TypeErrors.
+   - Invokes real route handler `POST /api/workspaces/[wid]/flows` confirming HTTP 400 codes for unknown template (`UNKNOWN_TEMPLATE`),
+     numeric name (`VALIDATION`), and whitespace name (`VALIDATION`).
+3. Workspace placeholder slug rejection (`src/server/access.ts`): `isPlaceholderSlug` rejects ambiguous template placeholders
+   (`{slug}`, `[slug]`, `:slug`, `{wid}`, `[wid]`, `:wid`) while safely allowing real tenant slugs like `slug` or `wid`.
+   `requireWorkspace` rejects placeholder wids and non-UUIDs with 404 HttpError, and `requireWorkspaceBySlug` returns `null` (404)
+   for ambiguous placeholders, preventing silent creation or access in arbitrary workspaces.
 4. Safe slug decoding (`src/app/w/[slug]/layout.tsx`): Wrapped `decodeURIComponent(slug)` in try/catch to gracefully return
    404 on malformed URI escapes (such as `%E0%A4%A`) rather than an unhandled 500 `URIError`, with no placeholder fallback.
 Supersedes part of #362.
