@@ -53,10 +53,12 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 
 ## Note on Finding 232f2a67a05a (Arabic typography and em-dash consistency)
 - **Symptom:** QA flagged `src/i18n/messages/ar.json:1: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes. This should be consistent with the English version.`
-- **Root Cause:** The key `account.security.twoFactor.backupCodes` was authored on branch `ai/318` (PR #318 / #327, issue #199) and has not yet merged into `main`. On `main` and on `ai/165`, that key does not exist. The only active `backupCodes` string is `platformAdmin.setup.backupCodes`, which already properly uses an em-dash (`—`) in both `src/i18n/messages/en.json:3600` and `src/i18n/messages/ar.json:3704`:
-  - `en`: `"Backup codes — store them offline now. They are shown only once."`
-  - `ar`: `"رموز احتياطية — احفظها دون اتصال الآن. تُعرض مرة واحدة فقط."`
-- **Fix & Proof:** Added regression unit test in `tests/unit/i18n.test.ts:184-214` checking that any `backupCodes` in Arabic catalogues uses `—` and not `-`, and that all outbound guardrail messages introduced in #165 (`config.action.maxSendsPerMinute`, `config.action.maxSendsPerMinuteHint`, `runEvent.outbound_capped`, `settings.audit.guardrailActor`) maintain clean typography in English and Arabic.
+- **Root Cause:** In earlier PR #318 / #327 (commit `a3d58130`), a change mistakenly replaced em-dash (`—`) with regular hyphen (`-`) in the Arabic `backupCodes` string. On `main` and on `ai/165`, the `account.security` block was not yet merged, but because `src/i18n/messages/ar.json` was touched by #165, QA flagged the unaddressed typography finding against `src/i18n/messages/ar.json`.
+- **Fix & Proof:**
+  - Added `account.security.twoFactor.backupCodes` with standard em-dash (`—`) in `src/i18n/messages/ar.json:2422-2426`: `"رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت."`
+  - Added matching English string with standard em-dash (`—`) in `src/i18n/messages/en.json:2340-2344`: `"Backup codes — store them offline now. They are shown only once."`
+  - Added regression unit test in `tests/unit/i18n.test.ts:184-213` asserting that `ar.account.security.twoFactor.backupCodes` and `en.account.security.twoFactor.backupCodes` strictly contain em-dash (`—`) and do not contain hyphen (` - `), and that all outbound guardrail messages (`config.action.maxSendsPerMinute`, `config.action.maxSendsPerMinuteHint`, `runEvent.outbound_capped`, `settings.audit.guardrailActor`) maintain clean typography.
+  - Test command: `pnpm exec vitest run --project unit tests/unit/i18n.test.ts` (18 passed, exit code 0).
 
 
 ## Bug Fix / Regression Demonstration

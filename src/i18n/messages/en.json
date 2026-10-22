@@ -2336,6 +2336,11 @@
       "body": "Account-level actions for {email}. They apply to you, not to this workspace.",
       "resendVerification": "Resend verification email",
       "deleteAccount": "Delete account"
+    },
+    "security": {
+      "twoFactor": {
+        "backupCodes": "Backup codes — store them offline now. They are shown only once."
+      }
     }
   },
   "settings": {

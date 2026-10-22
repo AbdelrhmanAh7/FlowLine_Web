@@ -189,15 +189,13 @@ describe("Arabic typography and dash consistency (finding 232f2a67a05a)", () => 
     expect(en.platformAdmin.setup.backupCodes).not.toContain(" - ");
 
     // Finding 232f2a67a05a cites account.security.twoFactor.backupCodes (from PR #318 / #327 on branch ai/318).
-    // Ensure if account.security exists in the catalogue, it strictly uses an em-dash (—) and never a hyphen (-).
-    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown> | undefined;
-    const arSecurity = arAccount?.security as Record<string, unknown> | undefined;
-    const arTwoFactor = arSecurity?.twoFactor as Record<string, unknown> | undefined;
-    const arBackupCodes = arTwoFactor?.backupCodes as string | undefined;
-    if (arBackupCodes) {
-      expect(arBackupCodes).toContain("—");
-      expect(arBackupCodes).not.toContain(" - ");
-    }
+    // Ensure account.security.twoFactor.backupCodes strictly uses an em-dash (—) and never a hyphen (-) across both catalogues.
+    expect(ar.account.security.twoFactor.backupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+    expect(ar.account.security.twoFactor.backupCodes).toContain("—");
+    expect(ar.account.security.twoFactor.backupCodes).not.toContain(" - ");
+    expect(en.account.security.twoFactor.backupCodes).toBe("Backup codes — store them offline now. They are shown only once.");
+    expect(en.account.security.twoFactor.backupCodes).toContain("—");
+    expect(en.account.security.twoFactor.backupCodes).not.toContain(" - ");
   });
 
   it("outbound guardrail messages and node config hints maintain clean typography", () => {
