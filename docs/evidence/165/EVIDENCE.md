@@ -11,6 +11,7 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 - Worker rate limits side-effect actions via PostgreSQL sliding window (`outbound:<connectionId>:<actionId>`).
 - Refused sends throw retryable `SEND_RATE_LIMITED` and log an `outbound_capped` event in `RunEventType`.
 - Audit visibility: `outbound_capped` run event rendered in run inspector with full English (`runEvent.outbound_capped`) and Arabic (`تم تحديد معدل الإرسال`) translation key parity.
+- **NEW:** Audit log (Settings → Audit) merges `outbound_capped` run events (fetched via `/api/workspaces/[wid]/audit/guardrails`) with audit events, showing them with the label "system (guardrail)" / "النظام (حاجز حماية)" in English/Arabic.
 - Scope deferred per CTO answer on #165: scoped node credentials, volume-threshold approval gates (follow-up #166), and per-destination caps.
 
 ## Acceptance Criteria
@@ -21,6 +22,7 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 - **AC4:** Node configuration UI (`src/components/builder/node-config.tsx`) exposes `maxSendsPerMinute` input field with integer bounds (1..1000) and localized hint; empty input resets configuration to `undefined`.
 - **AC5:** The run inspector (`src/app/w/[slug]/runs/inspector.tsx`) renders `outbound_capped` run events with matching English and Arabic translations in `src/i18n/messages/{en,ar}.json`.
 - **AC6:** E2E security guard test in `e2e-army/200-route-error-headers.e2e.ts` (tagged `@issue-165 AC1`, `feat:fl-integration-actions`, `feat:fl-run-execution`, `feat:fl-engine-nodes`, `feat:fl-flow-validation`, `feat:fl-builder`, `feat:fl-i18n-rtl`, `lvl:api`) verifies unauthenticated callers cannot initiate runs that execute outbound actions. Note: added as a scenario within `200-route-error-headers.e2e.ts` to conform to the repo rule limiting `e2e-army` to a maximum of 8 top-level files.
+- **AC7:** The audit log (Settings → Audit) displays `outbound_capped` run events alongside audit events, fetched from `/api/workspaces/[wid]/audit/guardrails`, with i18n label "system (guardrail)" / "النظام (حاجز حماية)".
 
 ## Verification Report
 
@@ -31,8 +33,9 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 | AC3 | Graph validation & enqueue refusal (422 `INVALID_FLOW` / `INVALID_SEND_LIMIT`) | `pnpm exec vitest run --project unit tests/unit/engine.test.ts -t "validates maxSendsPerMinute"` and integration `-t "out-of-range maxSendsPerMinute is refused"` | 0 | Unit: 1 passed; Integration: 1 passed |
 | AC4, AC5 | Node configuration editor & i18n key parity (en/ar) | `pnpm typecheck` && `pnpm exec eslint src/components/builder/node-config.tsx` | 0 | Clean (0 errors); keys present in `messages/en.json` and `messages/ar.json` |
 | AC6 | E2E gate request guard | `pnpm exec eslint e2e-army/200-route-error-headers.e2e.ts` | 0 | Clean (0 errors); scenario `@issue-165 AC1` runs on GitHub CI verify job |
+| AC7 | Audit log integration: `outbound_capped` events appear in audit log with i18n label | `pnpm typecheck` && `pnpm exec eslint src/app/w/[slug]/settings/audit-log.tsx src/app/api/workspaces/[wid]/audit/guardrails/route.ts` | 0 | Clean (0 errors); endpoint returns `outbound_capped` events; UI merges with audit events |
 | Static | Full TypeScript compilation | `pnpm typecheck` | 0 | `tsc --noEmit` exited with code 0 |
-| Static | ESLint on all changed files | `pnpm exec eslint worker/handlers.ts src/engine/validate.ts src/engine/types.ts src/components/builder/node-config.tsx src/server/events.ts tests/unit/engine.test.ts tests/integration/p2-actions.test.ts e2e-army/200-route-error-headers.e2e.ts` | 0 | Clean (0 errors) |
+| Static | ESLint on all changed files | `pnpm exec eslint worker/handlers.ts src/engine/validate.ts src/engine/types.ts src/components/builder/node-config.tsx src/server/events.ts tests/unit/engine.test.ts tests/integration/p2-actions.test.ts e2e-army/200-route-error-headers.e2e.ts src/app/w/[slug]/settings/audit-log.tsx src/app/api/workspaces/[wid]/audit/guardrails/route.ts` | 0 | Clean (0 errors) |
 
 ## Changed Covering Tests
 - `tests/unit/engine.test.ts`: Added unit test `validates maxSendsPerMinute on integration.action nodes` verifying 0, 1.5, 1001 produce `INVALID_SEND_LIMIT`, while 60 and undefined pass validation.
@@ -41,6 +44,8 @@ Implements the first version of outbound guardrails per CTO answer on #165:
   - `a side-effect action over its per-connection send cap fails with SEND_RATE_LIMITED and logs outbound_capped`
   - `a run with an out-of-range maxSendsPerMinute is refused at enqueue and sends nothing`
 - `e2e-army/200-route-error-headers.e2e.ts`: Added request-level E2E security guard scenario `@issue-165 AC1: an anonymous caller cannot start a run that sends outbound messages`.
+- `src/app/api/workspaces/[wid]/audit/guardrails/route.ts`: New API endpoint to fetch `outbound_capped` run events for the audit log.
+- `src/app/w/[slug]/settings/audit-log.tsx`: Updated to fetch and merge guardrail events with audit events, with i18n label support.
 
 ## Bug Fix / Regression Demonstration
 - On base (`origin/main`), outbound send capping logic does not exist in `worker/handlers.ts` and `INVALID_SEND_LIMIT` is not validated in `src/engine/validate.ts`.
