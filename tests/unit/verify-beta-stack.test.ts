@@ -2,11 +2,14 @@
  * Issue #112: CodeQL triage B (scripts/ alerts) - verify-beta-stack (alert #8)
  */
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error TS7016: standalone script has no declaration file
 import { buildVerifyArgs, isLoopbackTarget, resolveTlsPolicy } from "../../scripts/release/verify-beta-stack.mjs";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
+const script = fileURLToPath(new URL("../../scripts/release/verify-beta-stack.mjs", import.meta.url));
 
 describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
   it("isLoopbackTarget identifies loopback targets and rejects non-loopback", () => {
@@ -38,5 +41,26 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
     expect(read("docs/security/codeql-triage-scripts.md")).toMatch(/\|\s*#8\s*\|\s*`js\/disabling-certificate-validation`\s*\|\s*`scripts\/release\/verify-beta-stack\.mjs`\s*\|\s*Fixed\s*\|/);
     expect(read("scripts/release/verify-beta-stack.mjs")).toContain("(alert #8)");
     expect(read("scripts/release/verify-beta-stack.mjs")).toContain("docs/security/codeql-triage-scripts.md");
+  });
+
+  it.each(["https://example.com", "https://93.184.216.34", "http://192.168.1.1"])(
+    "exits 1 on non-loopback target with BETA_STACK_ALLOW_INSECURE=1 %j",
+    (badTarget) => {
+      const res = spawnSync(process.execPath, [script, "--base", badTarget], {
+        env: { ...process.env, BETA_STACK_ALLOW_INSECURE: "1" },
+        encoding: "utf8",
+      });
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain("Refusing to disable certificate validation");
+    },
+  );
+
+  it("exits 1 on non-loopback target with --insecure-local flag", () => {
+    const res = spawnSync(process.execPath, [script, "--base", "https://example.com", "--insecure-local"], {
+      env: process.env,
+      encoding: "utf8",
+    });
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("Refusing to disable certificate validation");
   });
 });
