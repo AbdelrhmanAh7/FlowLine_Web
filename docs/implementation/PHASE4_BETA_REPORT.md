@@ -384,6 +384,11 @@ Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related paren
      rendering `src/app/not-found.tsx` cleanly instead of an unhandled 500 `Internal Server Error`.
    - For API routes, middleware returns an immediate JSON 404 response.
    - Covered by E2E test `@issue-375 AC2` in `e2e-army/117-flows-list-dashboard.e2e.ts` and unit tests `AC16` and `AC17`.
+5. Pre-push test runner configuration (`vitest.config.mts`): Pre-push hook and push gate run `vitest related` across files
+   touched in a push without database credentials. Guarded `integration` and `nightly` test suite inclusion and `globalSetup` behind
+   `hasTestDb` (verifying `DATABASE_URL` matches `flowline_test`). When run in unit/pre-push mode without database env vars,
+   `tests/integration/global-setup.ts` is omitted, eliminating spurious exit-1 unhandled errors while preserving full coverage in `test:integration`
+   and CI integration shards.
 Supersedes part of #362.
 
 

@@ -43,6 +43,10 @@
   - Valid tenant slugs (`slug`, `wid`, `my-workspace`) pass through clean without rewrite.
   - Added test `@issue-375 AC2` to `e2e-army/117-flows-list-dashboard.e2e.ts` and unit tests `AC16` and `AC17` to `tests/unit/flows-list-ac2-guard.test.ts`.
 
+### 6. `vitest.config.mts` — Guard integration globalSetup and file inclusion when test database is not configured
+- **Finding**: Pre-push verification runs `vitest related` across files touched in the push without `--project unit`. When source files imported by integration tests (e.g. `src/server/access.ts`) are changed, Vitest initialized the `integration` project, running `tests/integration/global-setup.ts` which threw `Error: Integration tests must run against flowline_test (got ). Use pnpm test:integration.` because no PostgreSQL instance is configured in pre-push environments.
+- **Resolution**: In `vitest.config.mts`, guarded `integration` and `nightly` projects with `hasTestDb = Boolean(process.env.DATABASE_URL && /\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(process.env.DATABASE_URL))`. When `DATABASE_URL` is configured for `flowline_test` (e.g. `pnpm test:integration` via `with-env.mjs .env.test`, or CI integration shards), integration tests and global setup run normally. In database-free unit and pre-push runs, integration global setup is not executed and integration test files are not erroneously triggered without a database. Tested in `AC18`.
+
 ---
 
 ## Numbered Acceptance Criteria
@@ -66,6 +70,7 @@
 | **AC15** | `POST /api/workspaces/[wid]/flows` route handler returns real HTTP 400 status codes for invalid payloads (unknown template, numeric name, whitespace name) | `tests/unit/flows-list-ac2-guard.test.ts` test `AC15` |
 | **AC16** | Middleware intercepts malformed URI percent-escape sequences (e.g. `%E0%A4%A`) in page and query paths, rewriting them to `/not-found` with HTTP 404, and returns JSON 404 for API routes | `src/middleware.ts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC16`, `e2e-army/117-flows-list-dashboard.e2e.ts` test `@issue-375 AC2` |
 | **AC17** | Middleware intercepts placeholder slugs (`{slug}`, `[slug]`, `:slug`) in workspace routes, rewriting them to `/not-found` with HTTP 404 (and JSON 404 for API routes), while allowing valid tenant slugs (`slug`, `wid`, `my-workspace`) without rewrite | `src/middleware.ts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC17`, `e2e-army/117-flows-list-dashboard.e2e.ts` test `@issue-375 AC2` |
+| **AC18** | `vitest.config.mts` guards `integration` and `nightly` test execution and `globalSetup` behind `hasTestDb`, allowing `vitest related` to run cleanly without database errors | `vitest.config.mts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC18` |
 
 ---
 
@@ -90,7 +95,8 @@
 | **AC15** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` (test 15) | Real `POST /api/workspaces/[wid]/flows` route returns 400 for unknown template and validation errors | Passed clean (HTTP 400 UNKNOWN_TEMPLATE, VALIDATION) | 0 |
 | **AC16** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` (test 16) | Middleware rewrites malformed URI escapes in page/query to `/not-found` with 404, and JSON 404 for API | Passed clean (HTTP 404, rewrite to /not-found) | 0 |
 | **AC17** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` (test 17) | Middleware rewrites placeholder slugs to `/not-found` with 404, passes valid tenant slugs | Passed clean (HTTP 404 on placeholders, allowed on valid slugs) | 0 |
-| **Unit Suite** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` | All 17 tests in suite pass | 17/17 passed | 0 |
+| **AC18** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` (test 18) | `vitest.config.mts` guards integration/nightly projects behind `hasTestDb`, enabling clean `vitest related` | Passed clean (18/18 passed) | 0 |
+| **Unit Suite** | `pnpm vitest run tests/unit/flows-list-ac2-guard.test.ts` | All 18 tests in suite pass | 18/18 passed | 0 |
 | **Lint** | `pnpm lint` (`eslint .`) | Clean lint with 0 errors/warnings across repo | Passed clean | 0 |
 | **Typecheck** | `pnpm typecheck` (`tsc --noEmit`) | TypeScript compiles with 0 errors across repo | Passed clean | 0 |
 
