@@ -1,5 +1,8 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+process.env.FLOWLINE_ENCRYPTION_KEY ??= Buffer.alloc(32, 1).toString("base64");
+
 import { db, schema } from "@/db";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { stopSandbox } from "@/engine/sandbox";
