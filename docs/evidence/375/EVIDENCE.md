@@ -10,7 +10,7 @@
 - **Parent Issues**: #295, #164
 - **Supersedes**: part of PR #362
 - **Branch**: `ai/375` (clean branch off `origin/main`)
-- **Tested Commit SHA**: 88f84430e2f1b9bf21a596a1a0c447abd94d6831
+- **Tested Commit SHA**: bed7f26463e1ea97c752bd5a685943ffca3edf61
 - **User-Facing UI Changed**: No (middleware URI/slug interception, backend validation, URL parsing, E2E request-level test assertions, unit test guards). Playwright screenshots and RTL/LTR Arabic visual captures are exempt for backend/middleware/test-only changes; Arabic strings and RTL layout are verified in `e2e/arabic.spec.ts`.
 
 ## Review Threads & Finding Resolutions
@@ -43,9 +43,16 @@
   - Valid tenant slugs (`slug`, `wid`, `my-workspace`) pass through clean without rewrite.
   - Added test `@issue-375 AC2` to `e2e-army/117-flows-list-dashboard.e2e.ts` and unit tests `AC16` and `AC17` to `tests/unit/flows-list-ac2-guard.test.ts`.
 
-### 6. `vitest.config.mts` — Guard integration globalSetup and file inclusion when test database is not configured
-- **Finding**: Pre-push verification runs `vitest related` across files touched in the push without `--project unit`. When source files imported by integration tests (e.g. `src/server/access.ts`) are changed, Vitest initialized the `integration` project, running `tests/integration/global-setup.ts` which threw `Error: Integration tests must run against flowline_test (got ). Use pnpm test:integration.` because no PostgreSQL instance is configured in pre-push environments.
-- **Resolution**: In `vitest.config.mts`, guarded `integration` project inclusion and `globalSetup` behind `hasTestDb = Boolean(process.env.DATABASE_URL && /\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(process.env.DATABASE_URL))`, while keeping `nightlyFiles` registered in the `nightly` project so CI workflow tests (`tests/unit/ci-workflows.test.ts`) verify that nightly files are properly tracked. When `DATABASE_URL` is configured for `flowline_test` (e.g. `pnpm test:integration` via `with-env.mjs .env.test`, or CI integration shards), integration tests and global setup run normally. In database-free unit and pre-push runs, integration global setup is not executed and integration test files are not erroneously triggered without a database. Tested in `AC18` and verified with `tests/unit/ci-workflows.test.ts`.
+### 6. `vitest.config.mts` — Guard integration, nightly, and live test projects when test database is not configured
+- **Finding**: Pre-push verification runs `vitest related` across files touched in the push without `--project unit`. When source files imported by integration and live tests (e.g. `src/server/access.ts`) are changed, Vitest initialized `integration`, `nightly`, and `live` projects:
+  - `integration` ran `tests/integration/global-setup.ts`, throwing `Error: Integration tests must run against flowline_test (got ).`
+  - `live` ran `tests/live/postgres.test.ts` and `tests/live/certification.test.ts`, failing with `TypeError: Invalid URL` and `DATABASE_URL is not set.`
+  - `nightly` ran `tests/integration/company-builder-cli.test.ts`, failing with `DATABASE_URL is not set.`
+- **Resolution**: In `vitest.config.mts`:
+  - Guarded `integration` project inclusion and `globalSetup` behind `hasTestDb = Boolean(process.env.DATABASE_URL && /\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(process.env.DATABASE_URL))`.
+  - Guarded `live` project test inclusion behind `hasTestDb ? ["tests/live/**/*.test.ts"] : []`.
+  - In `nightly`, set `exclude: hasTestDb ? [] : nightlyFiles` while keeping `include: nightlyFiles` so CI workflow tests (`tests/unit/ci-workflows.test.ts`) verify nightly registration, while database-free runs exclude integration files from executing without a database.
+  - When `DATABASE_URL` is configured for `flowline_test` (e.g. `pnpm test:integration` or `pnpm test:nightly` via `with-env.mjs .env.test`, or CI integration shards), all integration/nightly/live tests run normally. In database-free unit and pre-push runs, `vitest related` executes across all 167 related test files (2,388 tests) with 0 failures and exit code 0. Tested in `AC18` and verified with `tests/unit/ci-workflows.test.ts`.
 
 ---
 
@@ -70,7 +77,7 @@
 | **AC15** | `POST /api/workspaces/[wid]/flows` route handler returns real HTTP 400 status codes for invalid payloads (unknown template, numeric name, whitespace name) | `tests/unit/flows-list-ac2-guard.test.ts` test `AC15` |
 | **AC16** | Middleware intercepts malformed URI percent-escape sequences (e.g. `%E0%A4%A`) in page and query paths, rewriting them to `/not-found` with HTTP 404, and returns JSON 404 for API routes | `src/middleware.ts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC16`, `e2e-army/117-flows-list-dashboard.e2e.ts` test `@issue-375 AC2` |
 | **AC17** | Middleware intercepts placeholder slugs (`{slug}`, `[slug]`, `:slug`) in workspace routes, rewriting them to `/not-found` with HTTP 404 (and JSON 404 for API routes), while allowing valid tenant slugs (`slug`, `wid`, `my-workspace`) without rewrite | `src/middleware.ts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC17`, `e2e-army/117-flows-list-dashboard.e2e.ts` test `@issue-375 AC2` |
-| **AC18** | `vitest.config.mts` guards `integration` test execution and `globalSetup` behind `hasTestDb`, allowing `vitest related` to run cleanly without database errors while preserving nightly file registration | `vitest.config.mts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC18`, `tests/unit/ci-workflows.test.ts` |
+| **AC18** | `vitest.config.mts` guards `integration`, `nightly`, and `live` projects behind `hasTestDb`, allowing `vitest related` to run cleanly without database errors while preserving nightly file registration | `vitest.config.mts`, `tests/unit/flows-list-ac2-guard.test.ts` test `AC18`, `tests/unit/ci-workflows.test.ts` |
 
 ---
 
