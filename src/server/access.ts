@@ -5,6 +5,8 @@ import type { Role } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { forbidden, notFound, unauthorized } from "./http";
 import { can, denyReason, isCapability, type Capability } from "./permissions";
+import { isPlaceholderSlug } from "@/lib/slug";
+export { isPlaceholderSlug };
 
 /** What a caller needs: a capability from the permission matrix, or (legacy) a minimum role. */
 export type Need = Capability | Role;
@@ -50,9 +52,6 @@ export async function requireUser(): Promise<CurrentUser> {
   if (!user) throw unauthorized();
   return user;
 }
-
-import { isPlaceholderSlug } from "@/lib/slug";
-export { isPlaceholderSlug };
 
 
 /**
