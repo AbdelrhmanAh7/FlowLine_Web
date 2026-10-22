@@ -35,7 +35,7 @@ describe("docs index and PR #159 docs", () => {
     const cells = row!.split("|").slice(1, -1).map((c) => c.trim());
     expect(cells[0]).toBe("[security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md)");
     expect(cells[2]).toBe("yes");
-    expect(cells[3]).toBe("approved");
+    expect(cells[3]).toBe("draft");
 
     const content = read("security/ACCOUNT_SECURITY.md");
     expect(content).toContain("/account/security");
@@ -46,8 +46,11 @@ describe("docs index and PR #159 docs", () => {
     expect(content).toContain("src/server/federated-mfa.ts");
     expect(content).toContain("tests/unit/mfa-session-fence.test.ts");
     expect(content).toContain("tests/integration/sec-federated-mfa-regression.test.ts");
-    expect(content).toContain("Engine Decoupling and Access");
+    expect(content).toContain('data-testid="totp-secret"');
+    expect(content).toContain('data-testid="backup-codes"');
     expect(content).toContain("disabled={pending !== null}");
+    expect(content).not.toContain("Engine Decoupling");
+    expect(content).not.toContain("src/server/access.ts");
   });
 
   it("records valid, non-zero Playwright commands for account-security in PHASE4_BETA_REPORT.md and NEXT_ACTION.md", () => {

@@ -72,7 +72,7 @@ To add a doc: add one row (relative link, purpose, owner-review yes/no, status d
 | [integrations/CONNECTING.md](integrations/CONNECTING.md) | Connecting integrations | no | approved |
 | [integrations/LIVE-CERTIFICATION.md](integrations/LIVE-CERTIFICATION.md) | Live certification | yes | approved |
 | [integrations/SUPPORTED-ACTIONS.md](integrations/SUPPORTED-ACTIONS.md) | Supported actions | no | approved |
-| [security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md) | Account security and two-factor card | yes | approved |
+| [security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md) | Account security and two-factor card | yes | draft |
 | [security/codeql-triage-fakes.md](security/codeql-triage-fakes.md) | CodeQL triage of the e2e fake servers | yes | draft |
 | [security/CREDENTIALS_DESIGN.md](security/CREDENTIALS_DESIGN.md) | Credentials design | yes | approved |
 | [security/DEPENDENCIES.md](security/DEPENDENCIES.md) | Dependency advisories and pnpm overrides | yes | draft |

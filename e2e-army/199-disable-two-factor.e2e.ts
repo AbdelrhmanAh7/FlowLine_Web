@@ -42,3 +42,16 @@ test(
     }
   },
 );
+
+test(
+  "@issue-318 AC4: Arabic account security page renders RTL context with LTR credentials",
+  { tags: ["feat:fl-i18n-rtl"], session: "fl-user" },
+  async ({ app, browser, screen }) => {
+    await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+    await app.open("/account/security");
+    expect(await browser.evaluate(() => document.documentElement.lang)).toBe("ar");
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+    await expect(screen.getByRole("heading", { name: "التحقق بخطوتين" })).toBeVisible();
+    await expect(screen.getByRole("button", { name: "تفعيل" })).toBeVisible();
+  },
+);

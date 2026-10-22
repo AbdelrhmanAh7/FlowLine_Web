@@ -1,6 +1,6 @@
 # Flowline Phase 4: launch candidate & private beta report
 
-## Account security Disable review follow-up — 2026-10-14 (#199, PR #327 supersedes part of #269)
+## Account security Disable review follow-up — 2026-10-20 (#199, PR #327 supersedes part of #269)
 
 The existing MIT better-auth 1.7.6 twoFactor plugin defines `/two-factor/disable` as POST with JSON `{ password }` (`dist/plugins/two-factor/index.mjs`, password-only body schema and handler); the auth catch-all dispatches this endpoint. No code field, custom server implementation or new dependency is needed. The shared Button already defaults to `type="button"` (`src/components/ui/button.tsx`); all three account-security Cancel controls now state that type explicitly and are disabled while requests are pending (`disabled={pending !== null}`). The enable and disable password fields use separate refs; `cancel()` clears both and any pending code, increments a request ID to discard stale in-flight responses, and issues no request. Regression assertions check no mutation on Cancel, removal of enrolment secrets/backup codes, password clearing, and exactly password-only Disable requests.
 
