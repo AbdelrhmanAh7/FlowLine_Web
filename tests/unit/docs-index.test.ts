@@ -28,4 +28,35 @@ describe("docs index and PR #159 docs", () => {
       prevWasTable = true;
     }
   });
+
+  it("indexes security/ACCOUNT_SECURITY.md and documents /account/security and two-factor card", () => {
+    const row = tableLines(read("README.md")).find((line) => line.includes("[security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md)"));
+    expect(row).toBeDefined();
+    const cells = row!.split("|").slice(1, -1).map((c) => c.trim());
+    expect(cells[0]).toBe("[security/ACCOUNT_SECURITY.md](security/ACCOUNT_SECURITY.md)");
+    expect(cells[2]).toBe("yes");
+    expect(cells[3]).toBe("draft");
+
+    const content = read("security/ACCOUNT_SECURITY.md");
+    expect(content).toContain("/account/security");
+    expect(content.toLowerCase()).toContain("two-factor card");
+    expect(content).toContain("TOTP (SHA-1، 6 أرقام، خطوة 30 ثانية");
+    expect(content).toContain("SHA-1, 6 digits, 30-second step");
+    expect(content).toContain("cleared from the input on submit");
+    expect(content).toContain("src/server/federated-mfa.ts");
+    expect(content).toContain("tests/unit/mfa-session-fence.test.ts");
+    expect(content).toContain("tests/integration/sec-federated-mfa-regression.test.ts");
+    expect(content).toContain('data-testid="totp-secret"');
+    expect(content).toContain('data-testid="backup-codes"');
+    expect(content).toContain("disabled={pending !== null}");
+    expect(content).not.toContain("Engine Decoupling");
+    expect(content).not.toContain("src/server/access.ts");
+  });
+
+  it("records valid, non-zero Playwright commands for account-security in PHASE4_BETA_REPORT.md", () => {
+    const betaReport = read("implementation/PHASE4_BETA_REPORT.md");
+    expect(betaReport).toContain("pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1");
+    expect(betaReport).toContain('pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1');
+    expect(betaReport).toContain("PR #327 supersedes part of #269");
+  });
 });
