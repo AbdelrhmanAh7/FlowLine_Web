@@ -22,6 +22,14 @@
 
 ---
 
+## Review Threads Addressed
+- **`src/integrations/providers/mizano.ts:57`**: Verified and documented `moneyInput` schema validates and normalizes decimal values, rejecting negative inputs and using `ctx.addIssue` with `z.NEVER` to contain validation errors within `ZodError` instead of throwing raw `Error` exceptions.
+- **`tests/unit/mizano-money-input.test.ts:1`**: Documented unit test suite verification of all acceptance criteria (AC1–AC4), including negative rejection, Arabic-Indic normalization, and clean `ZodError` error handling.
+- **`tests/contract/mizano.test.ts:412`**: Documented contract test coverage verifying that negative `qty`, `unitPrice`, and `taxRate` values (both numbers and strings) are rejected under `safeParse` without throwing raw errors.
+- **`tests/unit/mizano-money-input.test.ts:172`**: Documented AC4 regression test explicitly demonstrating the PR #279 buggy pattern where raw errors escaped `safeParse` and confirming that the fix prevents unhandled exceptions.
+
+---
+
 ## Changed Covering Tests
 - `tests/unit/mizano-money-input.test.ts` (new): 10 dedicated unit tests covering:
   - `AC1`: Negative numbers (`-5`), negative decimal strings (`"-5.00"`), invalid strings (`"abc"`, `"12.345"`), non-finite numbers (`NaN`, `Infinity`, `0.1 + 0.2`), and non-primitive types (`null`, `undefined`, boolean, object, array, function).

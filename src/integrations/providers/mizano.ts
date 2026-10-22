@@ -58,8 +58,8 @@ const decimalString = z
 
 // Accepts a number or a decimal string, normalizes to a fixed-scale (2) decimal string.
 // Rejects negative values, non-decimal values, or excess precision for qty, unitPrice, taxRate.
-// Uses ctx.addIssue and returns z.NEVER so validation errors are reported cleanly without throwing
-// raw Errors from transform (which escapes safeParse/parse and causes unhandled 500 crashes).
+// Uses ctx.addIssue with z.NEVER so validation errors are properly contained within ZodError,
+// preventing unhandled raw Error exceptions from escaping safeParse/parse boundaries.
 export const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
   try {
     const result = toDecimalString(val, 2);

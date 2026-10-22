@@ -3,6 +3,8 @@ import { z } from "zod";
 import { moneyInput } from "@/integrations/providers/mizano";
 import { getAction } from "@/integrations/registry";
 
+// Comprehensive unit tests verifying all acceptance criteria (AC1-AC4) for moneyInput:
+// negative value rejection, valid input normalization to 2-decimal strings, and error containment in ZodError.
 describe("mizano moneyInput zod schema", () => {
   it("AC1: safeParse on negative numbers returns { success: false } without throwing raw Error", () => {
     // Regression proof: throwing raw Error in transform escaped safeParse in PR #279
@@ -169,6 +171,8 @@ describe("mizano moneyInput zod schema", () => {
     }
   });
 
+  // AC4 regression test: demonstrates the previous buggy pattern where raw errors escaped safeParse
+  // and confirms the fix (ctx.addIssue + z.NEVER) prevents this issue by containing errors in ZodError.
   it("AC4: proves regression where throwing raw Error in transform escapes safeParse (PR #279 bug)", async () => {
     const { toDecimalString } = await import("@/lib/format");
 
