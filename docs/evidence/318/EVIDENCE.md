@@ -2,6 +2,7 @@
 
 PR #327 (supersedes part of #269, parent issue #199).
 Branch: `ai/318`
+Tested commit SHA: `8ff9e77295b44634ead6d6dab4a3669e5d791ea1`
 
 ## Acceptance Criteria and Verification Report
 
@@ -12,6 +13,37 @@ Branch: `ai/318`
 | **AC3** | `TwoFactorCard` disables Cancel button while requests are pending (`disabled={pending !== null}`), and enforces request-id stale-response guards (`requestIdRef`) across `enable()`, `verify()`, `disable()`, and `cancel()` to discard late in-flight responses. Clears sensitive input fields from DOM on submit and cancel. | Verified via `tests/unit/account-security-two-factor.test.ts` ("Cancel button states while pending", "Input clearing and DOM security", and "API contract and stale response dropping on Cancel") with real render assertions and late-resolving promise simulation. | PASS (11/11 tests) | 0 |
 | **AC4** | Explicitly set `dir="ltr"` for TOTP secret (`data-testid="totp-secret"`), backup-codes container (`<ul dir="ltr" data-testid="backup-codes">`), individual backup codes (`<li dir="ltr">`), and the 6-digit code input (`inputMode="numeric"`, `autoComplete="one-time-code"`, `maxLength={6}`, `dir="ltr"`). Use `data-testid="totp-secret"` uniformly across tests and documentation. | Verified via `tests/unit/account-security-two-factor.test.ts` real render assertions under Arabic RTL context with `renderToStaticMarkup`. | PASS (11/11 tests) | 0 |
 | **AC5** | Use consistent em-dash (`—`, U+2014) in `src/i18n/messages/ar.json` for `account.security.twoFactor.backupCodes` matching `en.json`. Read string dynamically from `ar.json` in tests. Disable endpoint sends password-only JSON payload to `/api/auth/two-factor/disable` (no `code` field). | Verified via `tests/unit/account-security-two-factor.test.ts` ("Disable posts only password" and "renders enrolment state... Warning message comes directly from ar.json with em-dash") and `tests/unit/i18n.test.ts`. | PASS (16/16 tests) | 0 |
+
+---
+
+## Bug Fix Regression Analysis: Base vs Head
+
+### Base Behavior (commit `688eeafe`)
+1. **Missing LTR Attributes on RTL Surfaces**:
+   - `src/app/account/security/two-factor-card.tsx` rendered the TOTP secret (`<code id="two-factor-secret">`) and backup codes (`<ul data-testid="backup-codes">`) without `dir="ltr"`. Under Arabic locale (`dir="rtl"`), digits and hyphenated tokens inverted visual direction.
+   - The 6-digit code `<Input>` lacked `dir="ltr"`, `inputMode="numeric"`, and `autoComplete="one-time-code"`.
+   - As flagged by QA Second Opinion (`c6884dc66fc8`), assertions at `e2e/account-security.spec.ts:53-54` and `e2e/arabic.spec.ts:383-385` (`getComputedStyle(el).direction === "ltr"`) failed against base.
+2. **Punctuation Discrepancy in Arabic Localization**:
+   - `src/i18n/messages/ar.json` used an ASCII hyphen (`-`) instead of an em-dash (`—`, U+2014) in `account.security.twoFactor.backupCodes`, failing QA finding `1efdd3f4963a`.
+3. **Flaky Static Unit Test**:
+   - `tests/unit/account-security-two-factor.test.ts` used string regex scanning (`expect(src).toContain(...)`) that failed at line 13 on base (QA finding `7532d40eb9a4`) rather than validating rendered DOM attributes and behavior.
+4. **Documentation Inaccuracies**:
+   - `docs/README.md` listed `ACCOUNT_SECURITY.md` as `approved` instead of `draft`.
+   - `docs/security/ACCOUNT_SECURITY.md` included unverified statements regarding engine decoupling and `src/server/access.ts`.
+
+### Head Behavior (Verified Pass)
+1. **Explicit LTR Attributes**:
+   - `src/app/account/security/two-factor-card.tsx`:
+     - `<code id="two-factor-secret" dir="ltr" data-testid="totp-secret">` ensures base32 secret is explicitly LTR.
+     - `<ul dir="ltr" data-testid="backup-codes">` and `<li dir="ltr">` ensure backup codes are explicitly LTR.
+     - `<Input ref={codeRef} id="two-factor-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} dir="ltr" />` ensures input is LTR, numeric-optimized, and integrates with OTP autofill.
+2. **Consistent Em-Dash Localization**:
+   - `src/i18n/messages/ar.json`: `account.security.twoFactor.backupCodes` contains em-dash (`—`, U+2014) matching `en.json`.
+3. **Real Render Unit Assertions**:
+   - `tests/unit/account-security-two-factor.test.ts` renders `TwoFactorCard` via `renderToStaticMarkup` with `I18nProvider`, asserting `dir="ltr"` attributes, disabled states during pending requests, sensitive input clearing, and stale response rejection when Cancel resolves late.
+4. **Docs Verification & Compliance**:
+   - `docs/README.md` updated to `draft` (`owner-review: yes`).
+   - `docs/security/ACCOUNT_SECURITY.md` reflects verified implementation and cites `src/server/federated-mfa.ts` and test files directly.
 
 ---
 
@@ -94,6 +126,7 @@ Local Playwright execution requires `.env.test` with a running test stack (Postg
 
 - **Parent issue:** #199
 - **Split from:** PR #269 (finding `2c5fe85838f9`)
+- **Originating Sentry issue:** None (feature & QA finding split from PR #269 / parent issue #199; not triggered by an unhandled Sentry crash report).
 - **QA review findings resolved:**
   - Finding `16e8ebd254b1`: Explicit `dir="ltr"` on TOTP secret and backup codes in `two-factor-card.tsx`
   - Finding `1efdd3f4963a`: Em-dash (`—`) in `ar.json` for `account.security.twoFactor.backupCodes`
