@@ -1,6 +1,6 @@
 # Evidence — Issue #315: fix: qa finding: docs/implementation/PHASE4_BETA_REPORT.md, new #108 section: deadlock fix attribution
 
-Tested commit: `ai/315` merge of `origin/main`
+Tested commit: `cfdfbd1d7658cfca1154039b702a6fd83abcca70`
 Branch `ai/315`. Split from PR #214 (parent issue #108).
 Originating report: QA review on PR #214 (`https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574`).
 Originating Sentry issue: None (internal QA review finding split from PR #214; parent issue #108).

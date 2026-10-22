@@ -88,9 +88,10 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     );
   });
 
-  it("docs/evidence/315/EVIDENCE.md tracks AC5 linking the CTO decision", () => {
+  it("docs/evidence/315/EVIDENCE.md tracks AC5 linking the CTO decision and records real commit SHA", () => {
     expect(evidenceFile).toContain("AC5");
     expect(evidenceFile).toContain("https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574");
     expect(evidenceFile).toContain("b9ae3ee");
+    expect(evidenceFile).toMatch(/Tested commit: `[0-9a-f]{8,40}`/);
   });
 });
